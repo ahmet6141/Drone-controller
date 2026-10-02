@@ -1,0 +1,70 @@
+# Seviye A — GELİŞTİRME / EKONOMİK yapılandırma
+# Amaç: yazılım geliştirme, ayar uçuşları ve işaretli pedle avuca iniş testleri; Seviye B ile aynı
+# gövde, uçuş kontrolcüsü ve taşıyıcı kart (modül değişimiyle B'ye yükseltilir).
+# Hesap: python3 tools/budget_calc.py config/hardware/tier-a-gelistirme.yaml
+schema_version: 1
+
+profile:
+  id: tier-a-gelistirme
+  name: "Seviye A — Geliştirme / Ekonomik"
+  summary: >-
+    Orin Nano 8GB (Super) + ARK FPV (PX4 v1.17), SIYI A8 mini, IMX219-160 aşağı kamera + VL53L1X,
+    UART optik akış, M10 GNSS, WFB-ng IP link. VIO yok (GNSS'siz hover: akış + lidar).
+
+limits:
+  max_auw_g: 1600
+  min_tw_ratio: 2.2
+  min_hover_time_min: 15
+  max_hover_throttle: 0.35
+
+components:
+  - {name: "GEPRC MOZ7 V2 gövde (336 mm)", category: gövde, mass_g: 270, price_usd: 110}
+  - {name: "Tam pervane koruması + alt ağ (PA12-CF, 3B baskı)", category: gövde, mass_g: 110, price_usd: 40, notes: "tahmini"}
+  - {name: "Avuç iniş tutamağı (TPU + köpük, ≥120 mm)", category: gövde, mass_g: 40, price_usd: 15, notes: "tahmini"}
+  - {name: "Üst plaka, bağlantılar, kablolama", category: kablolama, mass_g: 65, price_usd: 55, notes: "tahmini"}
+  - {name: "ARK FPV uçuş kontrolcüsü (H743, IIM-42653 + ısıtıcı)", category: aviyonik, mass_g: 7.5, power_w: 1.5, price_usd: 195}
+  - {name: "Jetson Orin Nano 8GB (Super) + Auvidea JNX120X + soğutucu", category: companion, mass_g: 124, power_w: 15, price_usd: 975, notes: "modül ≈27 g türetilmiş; donanım video kodlayıcı yok"}
+  - {name: "SIYI A8 mini gimbal kamera", category: kamera, mass_g: 95, power_w: 5, price_usd: 257}
+  - {name: "IMX219 160° kamera (aşağı)", category: kamera, mass_g: 5, power_w: 0.5, price_usd: 25, notes: "tahmini"}
+  - {name: "VL53L1X ToF (aşağı + yukarı)", category: sensör, qty: 2, mass_g: 2, power_w: 0.1, price_usd: 15}
+  - {name: "MicoAir MTF-01 optik akış + ToF (UART)", category: sensör, mass_g: 4.5, power_w: 0.5, price_usd: 40, notes: "fiyat doğrulanmadı"}
+  - {name: "Holybro M10 GNSS + IST8310 pusula", category: sensör, mass_g: 32, power_w: 0.5, price_usd: 44}
+  - {name: "RadioMaster XR4 ELRS alıcı + anten", category: haberleşme, mass_g: 5, power_w: 0.3, price_usd: 30, notes: "fiyat tahmini"}
+  - {name: "WFB-ng: RTL8812AU/EU USB adaptör + antenler", category: haberleşme, mass_g: 20, power_w: 3, price_usd: 45, notes: "tahmini; BTK güç sınırı"}
+  - {name: "Remote ID modülü (Open Drone ID)", category: haberleşme, mass_g: 10, power_w: 0.5, price_usd: 60, notes: "tahmini"}
+  - {name: "BEC 12 V/6 A + 5 V (dönüşüm kayıpları ≈ %10)", category: aviyonik, mass_g: 20, power_w: 2.7, price_usd: 25}
+
+propulsion:
+  motor_count: 4
+  installation_factor: 0.90
+  motor: {name: "EMAX ECO II 2807 1300KV", kv: 1300, mass_g: 47.6, price_usd: 24}
+  prop: {name: "HQProp 7x4x3", diameter_in: 7.0, pitch_in: 4.0, blades: 3, mass_g: 8, price_usd: 3}
+  esc: {name: "Holybro Tekko32 F4 50A (AM32)", continuous_a: 50, mass_g: 13.8, price_usd: 63}
+  thrust_curve:
+    # ECO II için yayımlanmış ara nokta verisi yok → aynı sınıf T-Motor F90 eğrisi VEKİL olarak kullanıldı.
+    # İtki standında ölçülüp değiştirilmelidir.
+    source: "VEKİL: T-Motor F90 1300KV + HQ 7x4x3 @ 24.2 V — https://www.ligpower.com/product/f90-fpv-motor.html"
+    voltage_v: 24.2
+    points:
+      - [353, 52]
+      - [948, 213]
+      - [2361, 1059]
+    throttle_points:
+      - [0.3, 353]
+      - [0.5, 948]
+      - [1.0, 2361]
+
+battery:
+  name: "6S1P Molicel P50B (21700 Li-ion)"
+  chemistry: li-ion
+  cells_series: 6
+  capacity_mah: 5000
+  nominal_cell_v: 3.6
+  mass_g: 451
+  usable_fraction: 0.85
+  max_continuous_a: 60
+  price_usd: 80
+
+ground_equipment:
+  - {name: "RadioMaster TX15 (ELRS LR1121)", price_usd: 160}
+  - {name: "WFB-ng yer istasyonu (RTL8812AU/EU + yönlü anten)", price_usd: 80, notes: "tahmini"}

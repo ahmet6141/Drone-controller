@@ -1,0 +1,37 @@
+# DC7 — companion (Jetson) bağlantısı, sensör yolları
+# PX4 v1.17 (docs.px4.io/v1.17 parametre referansı ile doğrulandı: tools/validate_params.py)
+# Yükleme: QGroundControl → Vehicle Setup → Parameters → Tools → Load from file.
+# Sıra: base/10 → base/20 → base/30 → base/40 → profiles/<ortam>.params  (bkz. config/px4/README.md)
+#
+# Vehicle-Id	Component-Id	Name	Value	Type
+
+#
+# ROS 2: uXRCE-DDS TELEM2 üzerinden 921600 baud (Jetson: Micro XRCE-DDS Agent v2.4.x).
+# Ethernet'li FC'lerde (ör. Pixhawk 6X) UXRCE_DDS_CFG=1000 kullanılabilir.
+1	1	UXRCE_DDS_CFG	102	6
+1	1	SER_TEL2_BAUD	921600	6
+1	1	UXRCE_DDS_DOM_ID	0	6
+1	1	UXRCE_DDS_SYNCT	1	6
+#
+# MAVLink: TELEM1 → Jetson'daki mavlink-router → IP link → QGroundControl.
+1	1	MAV_0_CONFIG	101	6
+1	1	MAV_0_MODE	0	6
+1	1	MAV_0_RATE	0	6
+1	1	SER_TEL1_BAUD	921600	6
+#
+# Gimbal (SIYI A8 mini) doğrudan Jetson tarafından SIYI SDK ile sürülür → PX4 mount kapalı.
+1	1	MNT_MODE_IN	-1	6
+#
+# DroneCAN: optik akış + mesafe sensörü (Seviye B: Holybro H-Flow, C: ARK Flow MR).
+# Seviye A (MicoAir MTF-01, UART) için bu üç parametre gerekmez — bkz. config/px4/README.md.
+1	1	UAVCAN_ENABLE	2	6
+1	1	UAVCAN_SUB_FLOW	1	6
+1	1	UAVCAN_SUB_RNG	1	6
+#
+# Ön uçuş: mesafe sensörü ve optik akış zorunlu (yoksa arm edilmez).
+# Akış: 8 cm – 20 m arası güvenilir kabul edilir; montaj yönü döndürülmedi.
+1	1	SYS_HAS_NUM_DIST	1	6
+1	1	SYS_HAS_NUM_OF	1	6
+1	1	SENS_FLOW_MINHGT	0.08	9
+1	1	SENS_FLOW_MAXHGT	20.0	9
+1	1	SENS_FLOW_ROT	0	6

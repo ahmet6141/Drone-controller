@@ -10,8 +10,8 @@ planı ([09](09-yol-haritasi.md)) bu kimliklere referans verir.
 | Özellik | Hedef |
 |---|---|
 | Sınıf | Orta boy, 7 inç pervaneli quadcopter (X geometri), 6S |
-| Kalkış ağırlığı (AUW) | 1,3–1,6 kg (seviyeye göre, bkz. [donanım profilleri](../config/hardware/)) |
-| Uçuş süresi | ≥ 15 dk hover (Li-ion ile ≥ 18 dk hedef) |
+| Kalkış ağırlığı (AUW) | 1,5–1,7 kg (hesap: A 1,50 · B 1,67 · C 1,64 kg; bkz. [donanım profilleri](../config/hardware/)) |
+| Uçuş süresi | ≥ 15 dk hover (hesap: A 18,8 · B 15,7 · C 15,6 dk; C dayanım paketi 6S2P ile ≈ 23 dk) |
 | İtki/ağırlık | Batarya akım sınırı dahil ≥ 2,2; motor kapasitesi ≥ 3,5 |
 | Ana yetenekler | Profesyonel hover, açık avuç jestiyle **ele konma**, YZ destekli **hedef takibi** |
 | Çalışma ortamı | Açık alan (GNSS/RTK) + kapalı/GNSS'siz alan (optik akış + VIO) |
@@ -77,7 +77,7 @@ Jest kümesi bilerek küçük tutulmuştur: az sınıf → yüksek doğruluk ve 
 |---|---|---|
 | N-01 | Algı gecikmesi (kamera → setpoint) | CSI yolu ≤ 60 ms, RTSP (gimbal) yolu ≤ 150 ms |
 | N-02 | Algı hızı | Ana tespit ≥ 30 FPS, jest ≥ 15 FPS, avuç ≥ 30 FPS |
-| N-03 | Companion güç tüketimi | Ortalama ≤ 25 W |
+| N-03 | Companion güç tüketimi | Ortalama ≤ 30 W (tahmini A 15 · B 22 · C 28 W) |
 | N-04 | Kayıt | PX4 ulog + ROS 2 MCAP + 4K video; her uçuş zaman damgalı |
 | N-05 | Yazılım güncellemesi | Docker imajları, sürüm etiketli, geri alınabilir |
 | N-06 | Lisans | Ticari kullanım için model/veri seti lisansları uygun olmalı (bkz. [03](03-yapay-zeka-modelleri.md)) |

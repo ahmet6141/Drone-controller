@@ -1,0 +1,21 @@
+name: config-checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pyyaml
+      - name: Parametre dosyaları (PX4 v1.17 / ArduPilot 4.7.1 referansı)
+        run: python3 tools/validate_params.py
+      - name: Donanım bütçesi (limit kontrolleri)
+        run: python3 tools/budget_calc.py --all
+      - name: Tutarlılık testleri
+        run: python3 -m unittest discover -s tests -v

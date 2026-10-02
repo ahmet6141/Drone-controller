@@ -1,0 +1,64 @@
+# DC7 — gövde, motor çıkışı, filtreler, iç döngü
+# PX4 v1.17 (docs.px4.io/v1.17 parametre referansı ile doğrulandı: tools/validate_params.py)
+# Yükleme: QGroundControl → Vehicle Setup → Parameters → Tools → Load from file.
+# Sıra: base/10 → base/20 → base/30 → base/40 → profiles/<ortam>.params  (bkz. config/px4/README.md)
+#
+# Vehicle-Id	Component-Id	Name	Value	Type
+
+#
+# Kontrol tahsisi: Generic Quadcopter X (SYS_AUTOSTART=4001) üzerine. Konumlar [m], X ileri / Y sağ.
+# Motor 1 sağ-ön CCW, 2 sol-arka CCW, 3 sol-ön CW, 4 sağ-arka CW (KM > 0: CCW).
+1	1	CA_AIRFRAME	0	6
+1	1	CA_ROTOR_COUNT	4	6
+1	1	CA_ROTOR0_PX	0.119	9
+1	1	CA_ROTOR0_PY	0.119	9
+1	1	CA_ROTOR0_KM	0.05	9
+1	1	CA_ROTOR1_PX	-0.119	9
+1	1	CA_ROTOR1_PY	-0.119	9
+1	1	CA_ROTOR1_KM	0.05	9
+1	1	CA_ROTOR2_PX	0.119	9
+1	1	CA_ROTOR2_PY	-0.119	9
+1	1	CA_ROTOR2_KM	-0.05	9
+1	1	CA_ROTOR3_PX	-0.119	9
+1	1	CA_ROTOR3_PY	0.119	9
+1	1	CA_ROTOR3_KM	-0.05	9
+#
+# Motor çıkışı: DShot600 protokolü QGC Actuators ekranından seçilir (kod karta göre değişir).
+# Bidirectional DShot (RPM geri bildirimi): STM32H7'de yalnızca ilk 4 FMU çıkışı, aynı timer.
+# v1.18'de DSHOT_BIDIR_EN / MOT_POLE_COUNT yerini çıkış başına ayarlara bırakıyor.
+1	1	DSHOT_BIDIR_EN	1	6
+1	1	MOT_POLE_COUNT	14	6
+1	1	DSHOT_MIN	0.055	9
+#
+# İtki modeli: T-Motor F90 + HQ 7x4x3 itki verisinden tools/budget_calc.py ile ≈ 0.53 uyduruldu
+# (PX4 belgesi tipik 0.3–0.5). İtki standında ölçüp güncelleyin.
+1	1	THR_MDL_FAC	0.5	9
+#
+# Jiroskop: H7'de 800 Hz iç döngü. ESC RPM tabanlı dinamik notch (bit 0), 3 harmonik.
+# Hover ≈ 9–10 bin dev/dk (150–165 Hz). Kesim frekansları FFT ile notch doğrulanınca yükseltilir
+# (IMU_GYRO_CUTOFF 60–80 Hz, IMU_DGYRO_CUTOFF 30 Hz) — bkz. docs/07.
+1	1	IMU_GYRO_RATEMAX	800	6
+1	1	IMU_GYRO_DNF_EN	1	6
+1	1	IMU_GYRO_DNF_HMC	3	6
+1	1	IMU_GYRO_DNF_BW	15.0	9
+1	1	IMU_GYRO_DNF_MIN	25.0	9
+1	1	IMU_GYRO_CUTOFF	40.0	9
+1	1	IMU_DGYRO_CUTOFF	20.0	9
+#
+# Oran/tutum kontrolü: varsayılan kazançlarla başlanır, otomatik ayar (autotune) ile bulunur.
+# Airmode ayar süresince kapalı; batarya gerilim ölçeklemesi açık. IMU ısıtıcısı (ARK FPV: 1 W).
+1	1	MC_AIRMODE	0	6
+1	1	MC_AT_EN	1	6
+1	1	MC_AT_APPLY	1	6
+1	1	MC_BAT_SCALE_EN	1	6
+1	1	SENS_EN_THERMAL	1	6
+1	1	SENS_IMU_TEMP	55.0	9
+#
+# Hover itkisi: tools/budget_calc.py (Seviye B, AUW ≈ 1.67 kg) → ≈ 0.20. Tahminci (HTE) uçuşta öğrenir.
+1	1	MPC_THR_HOVER	0.2	9
+1	1	MPC_USE_HTE	1	6
+1	1	MPC_THR_MIN	0.08	9
+#
+# Kayıt: varsayılan + kestirimci tekrar (replay) profili; arm → disarm.
+1	1	SDLOG_PROFILE	3	6
+1	1	SDLOG_MODE	0	6

@@ -1,0 +1,17 @@
+# PX4 uXRCE-DDS ↔ ROS 2 köprüsü (Micro XRCE-DDS Agent v2.4.x; v3.x PX4 ile uyumsuz)
+# Kurulum: sudo cp micro-xrce-dds-agent.service /etc/systemd/system/ && sudo systemctl enable --now micro-xrce-dds-agent
+[Unit]
+Description=Micro XRCE-DDS Agent (PX4 <-> ROS 2)
+After=network-online.target dc7-power.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/default/dc7
+ExecStart=/usr/local/bin/MicroXRCEAgent serial --dev ${DC7_DDS_SERIAL} -b ${DC7_DDS_BAUD}
+Restart=always
+RestartSec=1
+SupplementaryGroups=dialout
+
+[Install]
+WantedBy=multi-user.target

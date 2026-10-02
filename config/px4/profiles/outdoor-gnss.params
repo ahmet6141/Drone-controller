@@ -1,0 +1,29 @@
+# DC7 profil — DIŞ MEKÂN: GNSS(/RTK) + baro + akış + koşullu lidar
+# PX4 v1.17 (docs.px4.io/v1.17 parametre referansı ile doğrulandı: tools/validate_params.py)
+# Yükleme: QGroundControl → Vehicle Setup → Parameters → Tools → Load from file.
+# Sıra: base/10 → base/20 → base/30 → base/40 → profiles/<ortam>.params  (bkz. config/px4/README.md)
+# Profiller AYNI parametre kümesini tanımlar; aralarında geçiş deterministiktir (test edilir).
+#
+# Vehicle-Id	Component-Id	Name	Value	Type
+
+#
+# EKF2: GNSS konum + yükseklik + hız; yükseklik referansı GNSS (RTK ile cm düzeyi), baro füzyonda.
+# Lidar koşullu (≤ 5 m, ≤ 1 m/s). Avuca inişte ELİN "zemin" sayılabileceğini unutmayın: mod, mesafeyi
+# kendi ToF ölçümüyle kontrol eder, EKF yükseklik referansı GNSS/baro'da kalır (docs/05, docs/07).
+# Harici görüş kapalı (EKF2_EV_DELAY yalnızca profil kümeleri aynı kalsın diye tanımlı).
+1	1	EKF2_GPS_CTRL	7	6
+1	1	EKF2_HGT_REF	1	6
+1	1	EKF2_BARO_CTRL	1	6
+1	1	EKF2_RNG_CTRL	1	6
+1	1	EKF2_RNG_A_HMAX	5.0	9
+1	1	EKF2_RNG_A_VMAX	1.0	9
+1	1	EKF2_OF_CTRL	1	6
+1	1	EKF2_EV_CTRL	0	6
+1	1	EKF2_EV_DELAY	50.0	9
+1	1	EKF2_MAG_TYPE	0	6
+1	1	EKF2_REQ_NSATS	8	6
+1	1	SENS_BAR_AUTOCAL	1	6
+#
+# GNSS olmadan arm edilmez (RTL için konum şart). RC kaybında eve/rally point'e dönüş.
+1	1	COM_ARM_WO_GPS	0	6
+1	1	NAV_RCL_ACT	2	6

@@ -1,0 +1,46 @@
+# DC7 — konum/hız kontrolü ve iniş (profesyonel hover)
+# PX4 v1.17 (docs.px4.io/v1.17 parametre referansı ile doğrulandı: tools/validate_params.py)
+# Yükleme: QGroundControl → Vehicle Setup → Parameters → Tools → Load from file.
+# Sıra: base/10 → base/20 → base/30 → base/40 → profiles/<ortam>.params  (bkz. config/px4/README.md)
+#
+# Vehicle-Id	Component-Id	Name	Value	Type
+
+#
+# Konum ve hız döngüsü kazançları. Rüzgârda konum tutma için XY hız I kazancı artırıldı.
+1	1	MPC_XY_P	0.95	9
+1	1	MPC_XY_VEL_P_ACC	2.2	9
+1	1	MPC_XY_VEL_I_ACC	0.8	9
+1	1	MPC_XY_VEL_D_ACC	0.2	9
+1	1	MPC_Z_P	1.0	9
+1	1	MPC_Z_VEL_P_ACC	4.0	9
+1	1	MPC_Z_VEL_I_ACC	2.0	9
+#
+# Pilot girişi: ivme tabanlı (yumuşak kamera hareketi). Yükseklik: mutlak irtifa takibi —
+# "terrain hold" (varsayılan 2) altına el/kişi girdiğinde yükseklik sıçrattığı için kapatıldı.
+1	1	MPC_POS_MODE	4	6
+1	1	MPC_ALT_MODE	0	6
+#
+# Hız sınırları — config/mission/safety.yaml → setpoint_limits ile aynı tutulur (test edilir).
+1	1	MPC_VEL_MANUAL	5.0	9
+1	1	MPC_XY_VEL_MAX	10.0	9
+1	1	MPC_XY_CRUISE	5.0	9
+1	1	MPC_Z_VEL_MAX_UP	3.0	9
+1	1	MPC_Z_VEL_MAX_DN	1.5	9
+1	1	MPC_Z_V_AUTO_UP	2.0	9
+1	1	MPC_Z_V_AUTO_DN	1.0	9
+1	1	MPC_TKO_SPEED	1.0	9
+#
+# Eğim, yaw ve ivme/jerk sınırları (görüntü kalitesi ve güvenlik için muhafazakâr).
+1	1	MPC_TILTMAX_AIR	35.0	9
+1	1	MPC_MAN_TILT_MAX	30.0	9
+1	1	MPC_MAN_Y_MAX	90.0	9
+1	1	MPC_ACC_HOR	3.0	9
+1	1	MPC_ACC_HOR_MAX	5.0	9
+1	1	MPC_JERK_AUTO	4.0	9
+1	1	MPC_JERK_MAX	8.0	9
+#
+# İniş: MPC_LAND_SPEED alt sınırı 0.6 m/s → avuca iniş bu hızla YAPILAMAZ; özel mod kendi
+# hız setpoint'lerini (0.20 → 0.08 m/s) üretir. LNDMC_Z_VEL_MAX < MPC_LAND_CRWL olmalı.
+1	1	MPC_LAND_SPEED	0.6	9
+1	1	MPC_LAND_CRWL	0.3	9
+1	1	LNDMC_Z_VEL_MAX	0.25	9

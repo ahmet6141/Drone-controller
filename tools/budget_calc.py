@@ -16,6 +16,7 @@ Kullanım:
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -29,6 +30,8 @@ HW_DIR = ROOT / "config" / "hardware"
 LOADED_VOLTAGE_RATIO = 0.90
 # Karma uçuşta (manevra + rüzgâr) hover süresine uygulanan düşüş katsayısı.
 MIXED_FLIGHT_FACTOR = 0.85
+# Ölçülen ilk noktanın altında itki-güç ilişkisi: momentum teorisi P ∝ T^1.5.
+LOW_THRUST_EXPONENT = 1.5
 
 
 @dataclass
@@ -61,6 +64,9 @@ class Budget:
     mixed_flight_time_min: float
     payload_margin_g: float
     thr_mdl_fac: float | None = None
+    airframe_cost_usd: float = 0.0
+    ground_cost_usd: float = 0.0
+    unpriced: list[str] = field(default_factory=list)
     checks: list[Check] = field(default_factory=list)
 
     @property
@@ -78,31 +84,44 @@ def _curve(points: list[list[float]]) -> list[tuple[float, float]]:
     return pts
 
 
+def _segment_exponent(t0: float, p0: float, t1: float, p1: float) -> float:
+    """İki ölçüm noktası arasında P = p0·(T/t0)^k üssü (log-log doğrusal)."""
+    return math.log(p1 / p0) / math.log(t1 / t0)
+
+
 def power_at_thrust(curve: list[tuple[float, float]], thrust_g: float) -> float:
-    """Motor başına itki (g) için elektrik gücü (W); parçalı doğrusal enterpolasyon."""
+    """Motor başına itki (g) için elektrik gücü (W).
+
+    Noktalar arası log-log (güç yasası) enterpolasyon: pervane gücü itkinin ~1.4–1.8. kuvvetiyle
+    arttığından doğrusal enterpolasyondan daha gerçekçidir. İlk noktanın altında k = 1.5.
+    """
+    if thrust_g <= 0:
+        return 0.0
     if thrust_g > curve[-1][0]:
         raise ValueError(
             f"{thrust_g:.0f} g itki, ölçülen eğrinin üstünde (maks {curve[-1][0]:.0f} g)"
         )
     if thrust_g <= curve[0][0]:
         t0, p0 = curve[0]
-        return p0 * thrust_g / t0  # sıfıra doğru doğrusal yaklaşım
+        return p0 * (thrust_g / t0) ** LOW_THRUST_EXPONENT
     for (t0, p0), (t1, p1) in zip(curve, curve[1:]):
         if t0 <= thrust_g <= t1:
-            return p0 + (p1 - p0) * (thrust_g - t0) / (t1 - t0)
+            return p0 * (thrust_g / t0) ** _segment_exponent(t0, p0, t1, p1)
     raise AssertionError("ulaşılamaz")
 
 
 def thrust_at_power(curve: list[tuple[float, float]], power_w: float) -> float:
-    """Motor başına güç (W) için itki (g); eğrinin maksimumunda sınırlanır."""
+    """Motor başına güç (W) için itki (g); `power_at_thrust`'ın tersi, eğri maksimumunda sınırlı."""
+    if power_w <= 0:
+        return 0.0
     if power_w >= curve[-1][1]:
         return curve[-1][0]
     if power_w <= curve[0][1]:
         t0, p0 = curve[0]
-        return t0 * max(power_w, 0.0) / p0
+        return t0 * (power_w / p0) ** (1.0 / LOW_THRUST_EXPONENT)
     for (t0, p0), (t1, p1) in zip(curve, curve[1:]):
         if p0 <= power_w <= p1:
-            return t0 + (t1 - t0) * (power_w - p0) / (p1 - p0)
+            return t0 * (power_w / p0) ** (1.0 / _segment_exponent(t0, p0, t1, p1))
     raise AssertionError("ulaşılamaz")
 
 
@@ -138,11 +157,24 @@ def compute(profile: dict) -> Budget:
 
     mass_by_cat: dict[str, float] = {}
     avionics_w = 0.0
+    cost = 0.0
+    unpriced: list[str] = []
+
+    def add_cost(item: dict, qty: float) -> float:
+        if item.get("price_usd") is None:
+            unpriced.append(item.get("name", "?"))
+            return 0.0
+        return float(item["price_usd"]) * qty
+
     for comp in profile.get("components", []):
         qty = comp.get("qty", 1)
         cat = comp.get("category", "diğer")
         mass_by_cat[cat] = mass_by_cat.get(cat, 0.0) + comp["mass_g"] * qty
         avionics_w += comp.get("power_w", 0.0) * qty
+        cost += add_cost(comp, qty)
+    cost += add_cost(prop["motor"], n) + add_cost(prop["prop"], n) + add_cost(prop["esc"], 1)
+    cost += add_cost(bat, 1)
+    ground = sum(add_cost(g, g.get("qty", 1)) for g in profile.get("ground_equipment", []))
 
     propulsion_g = n * (prop["motor"]["mass_g"] + prop["prop"]["mass_g"]) + prop["esc"]["mass_g"]
     mass_by_cat["itki"] = mass_by_cat.get("itki", 0.0) + propulsion_g
@@ -152,16 +184,22 @@ def compute(profile: dict) -> Budget:
     nominal_v = bat["cells_series"] * bat["nominal_cell_v"]
     usable_wh = nominal_v * bat["capacity_mah"] / 1000.0 * bat["usable_fraction"]
 
+    # Tezgâh verisi serbest pervane içindir; gövde gölgelemesi ve koruma/ağ itkiyi düşürür.
+    # Motor, uçuşta gereken itkinin 1/k katını "tezgâh eşdeğeri" olarak üretmelidir.
+    k_inst = float(prop.get("installation_factor", 1.0))
+    if not 0.5 <= k_inst <= 1.0:
+        raise ValueError("installation_factor 0.5–1.0 aralığında olmalı")
+
     hover_per_motor = auw / n
-    p_motor = power_at_thrust(curve, hover_per_motor)
+    p_motor = power_at_thrust(curve, hover_per_motor / k_inst)
     propulsion_hover_w = n * p_motor
     total_hover_w = propulsion_hover_w + avionics_w
 
-    max_thrust = n * curve[-1][0]
+    max_thrust = n * curve[-1][0] * k_inst
     # Bataryanın sürekli akım sınırında motorlara kalan güç → ulaşılabilir itki
     p_bat_max = bat["max_continuous_a"] * nominal_v * LOADED_VOLTAGE_RATIO
     p_motor_lim = (p_bat_max - avionics_w) / n
-    thrust_lim = n * thrust_at_power(curve, p_motor_lim)
+    thrust_lim = n * thrust_at_power(curve, p_motor_lim) * k_inst
 
     min_tw = limits.get("min_tw_ratio", 2.0)
     budget = Budget(
@@ -185,6 +223,9 @@ def compute(profile: dict) -> Budget:
         hover_time_min=usable_wh / total_hover_w * 60.0,
         mixed_flight_time_min=usable_wh / total_hover_w * 60.0 * MIXED_FLIGHT_FACTOR,
         payload_margin_g=thrust_lim / min_tw - auw,
+        airframe_cost_usd=cost,
+        ground_cost_usd=ground,
+        unpriced=unpriced,
     )
     if prop["thrust_curve"].get("throttle_points"):
         budget.thr_mdl_fac = fit_thr_mdl_fac(prop["thrust_curve"]["throttle_points"])
@@ -236,6 +277,8 @@ def render_text(b: Budget) -> str:
     ]
     if b.thr_mdl_fac is not None:
         lines.append(f"  THR_MDL_FAC (tahmini)   : {b.thr_mdl_fac:7.2f}     → PX4 itki modeli doğrusallaştırma")
+    lines.append(f"  Tahmini maliyet         : hava aracı ${b.airframe_cost_usd:,.0f} + yer ekipmanı ${b.ground_cost_usd:,.0f}"
+                 + (f"  (fiyatsız: {', '.join(b.unpriced)})" if b.unpriced else ""))
     for c in b.checks:
         lines.append(f"  [{'OK ' if c.ok else 'HATA'}] {c.name}: {c.detail}")
     return "\n".join(lines)
@@ -257,6 +300,8 @@ def render_markdown(budgets: list[Budget]) -> str:
         ("Karma uçuş (dk)", lambda b: f"{b.mixed_flight_time_min:.1f}"),
         ("Ek yük payı (g)", lambda b: f"{b.payload_margin_g:.0f}"),
         ("THR_MDL_FAC (tahmini)", lambda b: "—" if b.thr_mdl_fac is None else f"{b.thr_mdl_fac:.2f}"),
+        ("Maliyet: hava aracı (USD, ≈)", lambda b: f"{b.airframe_cost_usd:,.0f}"),
+        ("Maliyet: yer ekipmanı (USD, ≈)", lambda b: f"{b.ground_cost_usd:,.0f}"),
         ("Limit kontrolleri", lambda b: "✅" if b.ok else "⚠️ " + ", ".join(
             c.name for c in b.checks if not c.ok)),
     ]

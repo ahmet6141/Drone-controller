@@ -1,0 +1,135 @@
+# DC7 — ArduPilot Copter 4.7.1 YEDEK yapılandırması (birincil yığın PX4 v1.17; bkz. docs/02, docs/07)
+# Parametre adları ardupilot.org Copter 4.7.1 referansıyla doğrulandı: tools/validate_params.py
+# DİKKAT: 4.7.0 ile birçok parametre SI birime geçti ve yeniden adlandırıldı (ANGLE_MAX → ATC_ANGLE_MAX,
+# PSC_POSXY_P → PSC_NE_POS_P, LOIT_SPEED → LOIT_SPEED_MS, LAND_SPEED → LAND_SPD_MS ...). 4.6 dosyalarını
+# doğrudan yüklemeyin. Yükleme: Mission Planner → Config → Full Parameter List → Load from file.
+
+# --- Gövde: Quad X
+FRAME_CLASS,1
+FRAME_TYPE,1
+
+# --- Motor çıkışı: DShot600 + bidirectional DShot (M1–M4) + AM32 telemetrisi, 12N14P motor
+MOT_PWM_TYPE,6
+SERVO_BLH_BDMASK,15
+SERVO_BLH_POLES,14
+SERVO_DSHOT_ESC,1
+SERVO_BLH_AUTO,1
+
+# --- ESC RPM tabanlı harmonik notch: mod 3 (ESC telemetrisi), 1.+2. harmonik (bitmask 3),
+#     seçenekler: çoklu kaynak (bit 1) + döngü hızında güncelleme (bit 2) = 6
+INS_HNTCH_ENABLE,1
+INS_HNTCH_MODE,3
+INS_HNTCH_REF,1
+INS_HNTCH_FREQ,80
+INS_HNTCH_BW,40
+INS_HNTCH_HMNCS,3
+INS_HNTCH_OPTS,6
+# Filtre analizi (WebTools Filter Review) için ön/son filtre kaydı
+INS_LOG_BAT_MASK,1
+INS_LOG_BAT_OPT,4
+
+# --- Jiroskop/ivmeölçer filtreleri (7 inç: 5 inç için 80 Hz ile 10 inç için 40 Hz arası)
+INS_GYRO_FILTER,60
+INS_ACCEL_FILTER,10
+ATC_RAT_RLL_FLTD,30
+ATC_RAT_RLL_FLTT,30
+ATC_RAT_PIT_FLTD,30
+ATC_RAT_PIT_FLTT,30
+ATC_RAT_YAW_FLTE,2
+
+# --- İtki eğrisi ve motor sınırları (6S Li-ion: 4.2–3.3 V/hücre)
+MOT_THST_EXPO,0.58
+MOT_SPIN_ARM,0.10
+MOT_SPIN_MIN,0.15
+MOT_SPIN_MAX,0.95
+MOT_BAT_VOLT_MAX,25.2
+MOT_BAT_VOLT_MIN,19.8
+# Hover itkisi: tools/budget_calc.py (Seviye B) ≈ 0.20; öğren ve kaydet
+MOT_THST_HOVER,0.20
+MOT_HOVER_LEARN,2
+
+# --- Tutum: kamera için yumuşak tepki (4.7'de ATC_INPUT_TC 4.6'ya göre ~%33 düşük tutulmalı)
+ATC_INPUT_TC,0.15
+ATC_ANGLE_MAX,30
+
+# --- Konum kontrolü (4.7 SI adları), Loiter (profesyonel hover)
+PSC_NE_POS_P,1.0
+PSC_NE_VEL_P,2.0
+PSC_NE_VEL_I,1.0
+PSC_NE_VEL_D,0.25
+PSC_D_POS_P,1.0
+PSC_D_VEL_P,5.0
+PSC_D_ACC_P,0.05
+PSC_D_ACC_I,0.1
+LOIT_SPEED_MS,5
+LOIT_ACC_MAX_M,3
+LOIT_BRK_ACC_M,2.5
+LOIT_BRK_JRK_M,5
+
+# --- İniş / disarm / Guided zaman aşımı (companion komutu 1 s gelmezse dur)
+LAND_SPD_MS,0.5
+DISARM_DELAY,10
+GUID_TIMEOUT,1
+
+# --- EKF3 kaynak setleri: 1 = dış mekân GNSS, 2 = optik akış (GNSS'siz), 3 = Jetson VIO (ExternalNav)
+#     RC7 anahtarı ile setler arasında geçiş (seçenek 90)
+EK3_SRC1_POSXY,3
+EK3_SRC1_VELXY,3
+EK3_SRC1_POSZ,1
+EK3_SRC1_VELZ,3
+EK3_SRC1_YAW,1
+EK3_SRC2_POSXY,0
+EK3_SRC2_VELXY,5
+EK3_SRC2_POSZ,1
+EK3_SRC2_VELZ,0
+EK3_SRC2_YAW,1
+EK3_SRC3_POSXY,6
+EK3_SRC3_VELXY,6
+EK3_SRC3_POSZ,1
+EK3_SRC3_VELZ,6
+EK3_SRC3_YAW,6
+VISO_TYPE,1
+RC7_OPTION,90
+# QuikTune Lua uygulamacığı için anahtar (betik yüklendikten sonra QUIK_* parametreleri görünür)
+RC8_OPTION,300
+SCR_ENABLE,1
+
+# --- DroneCAN: optik akış + mesafe sensörü (H-Flow / ARK Flow MR), aşağı bakan lidar
+CAN_P1_DRIVER,1
+CAN_D1_PROTOCOL,1
+FLOW_TYPE,6
+RNGFND1_TYPE,24
+RNGFND1_ORIENT,25
+RNGFND1_MIN,0.1
+RNGFND1_MAX,30
+RNGFND1_GNDCLR,0.15
+# Lidar yükseklik kaynağı olarak KULLANILMAZ: avuca inişte el "zemin" sanılır (docs/05)
+EK3_RNG_USE_HGT,-1
+
+# --- Companion: SERIAL1 MAVLink2 (mavlink-router), SERIAL2 DDS/ROS 2 (921600)
+SERIAL1_PROTOCOL,2
+SERIAL1_BAUD,921
+SERIAL2_PROTOCOL,45
+SERIAL2_BAUD,921
+DDS_ENABLE,1
+
+# --- Failsafe: RC kaybında RTL, EKF bozulmasında Land, batarya düşükte RTL / kritikte Land
+FS_THR_ENABLE,1
+FS_OPTIONS,0
+FS_EKF_ACTION,1
+FS_EKF_THRESH,0.8
+BATT_CAPACITY,5000
+BATT_LOW_VOLT,19.8
+BATT_CRT_VOLT,19.2
+BATT_FS_LOW_ACT,2
+BATT_FS_CRT_ACT,1
+
+# --- Geofence: azami irtifa + ev merkezli daire, ihlalde RTL veya Land (safety.yaml ile aynı)
+FENCE_ENABLE,1
+FENCE_TYPE,3
+FENCE_ACTION,1
+FENCE_RADIUS,300
+FENCE_ALT_MAX,120
+
+# --- Gimbal: Jetson SIYI SDK ile sürer (0). Yerel sürücü istenirse MNT1_TYPE=8 + UART (SERIALx_PROTOCOL=8)
+MNT1_TYPE,0

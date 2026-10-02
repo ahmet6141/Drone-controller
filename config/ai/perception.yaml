@@ -1,0 +1,133 @@
+# Algı hattı yapılandırması (dc7_perception, dc7_gesture, dc7_palm_landing, dc7_vio).
+# Model seçimi ve gerekçeleri: docs/03-yapay-zeka-modelleri.md
+# Eşiklerin bir kısmı config/mission/behavior.yaml ile aynı olmalıdır (tests/test_configs.py kontrol eder).
+schema_version: 1
+
+runtime:
+  jetpack: "7.2.1"            # Ubuntu 24.04, CUDA 13.2, TensorRT 10.16 (Orin desteği 7.2 ile geldi)
+  tensorrt: "10.16"
+  ros_distro: jazzy           # PX4 v1.17 belgesi Humble önerir; v1.18 Jazzy → yedek: Humble Docker
+  isaac_ros: "4.6"            # Orin + JetPack 7.2 + Jazzy (5.0 → ROS 2 Lyrical, sonraki yükseltme)
+  engine_dir: /opt/dc7/models # .engine dosyaları HEDEF CİHAZDA derlenir, git'e girmez
+  default_precision: fp16     # int8: hedef cihazda ≥ 500 temsilî uçuş karesiyle kalibrasyondan sonra
+  use_dla: false              # TensorRT > 10.7'de DLA desteği belirsiz → GPU
+
+# research  : Ultralytics (AGPL-3.0) modelleri serbest — geliştirme/araştırma
+# commercial: yalnızca Apache/MIT/izinli lisanslı modeller (docs/03 §2) — kapalı kaynak ürün
+license_profile: research
+
+cameras:
+  front:                      # SIYI A8 mini (gimbal)
+    source: "rtsp://192.168.144.25:8554/main.264"
+    decoder: nvv4l2decoder
+    width: 1920
+    height: 1080
+    fps: 25                   # A8 mini tüm çözünürlüklerde 25 fps
+    hfov_deg: 81
+  down:                       # avuç kamerası (tutamak tabanında)
+    source: "csi://0"
+    sensor: ov9281            # Seviye A: imx219_160
+    width: 1280
+    height: 800
+    fps: 60
+    global_shutter: true
+    color: mono
+    distortion_model: kannala_brandt   # Kalibr ile kalibre edilir
+    calibration: /opt/dc7/calib/down_camera.yaml
+
+detection:
+  classes: [person, bicycle, car, motorcycle, bus, truck, boat]
+  conf_threshold: 0.35
+  min_box_px: 12
+  tiling:                     # yüksek irtifada küçük nesneler için SAHI döşeme
+    enabled: false
+    tile: 640
+    overlap: 0.2
+
+tracking:
+  mot:
+    track_high_thresh: 0.50
+    track_low_thresh: 0.10
+    new_track_thresh: 0.60
+    track_buffer_frames: 50   # 25 fps'de 2 s
+    match_thresh: 0.80
+  reid:
+    min_similarity: 0.60      # = behavior.follow.lost.reid_min_similarity
+    gallery_size: 20
+    update_min_confidence: 0.70
+  sot:
+    search_area_factor: 4.0
+    min_score: 0.30
+
+gesture:
+  classes: [none, open_palm, fist, thumbs_up, peace]
+  min_confidence: 0.70        # = behavior.gestures.min_confidence
+  pipeline:                   # iki aşamalı kırpma (uzak mesafe için, docs/03 §5.1)
+    person_roi_upper_fraction: 0.6
+    hand_detector_input: 384
+    landmarks: mediapipe_hand_landmarker   # 21 nokta; Jetson'da CPU (XNNPACK) veya ONNX→TensorRT
+    classifier: mlp_landmarks
+  training_data: [hagridv2, dc7_flight_gestures]
+
+palm:
+  detector_input: 320
+  min_confidence: 0.60        # = behavior.palm_landing.detection.min_palm_confidence
+  center_landmarks: [0, 5, 9, 13, 17]
+  normal_landmarks: [0, 5, 17]   # n = (p5 − p0) × (p17 − p0)
+  tof:
+    sensor: vl53l8cx          # Seviye A: vl53l1x (tek bölge)
+    resolution: 8x8
+    rate_hz: 15
+  marker:                     # behavior.palm_landing.target = marker_pad iken
+    detector: isaac_ros_apriltag
+    family: tag36h11
+  training_data: [hagridv2, dc7_down_palm]
+
+vio:
+  engine: isaac_ros_cuvslam
+  mode: stereo_inertial
+  rate_hz: 30
+  output_topic: /fmu/in/vehicle_visual_odometry
+  min_camera_sync_us: 100
+
+vlm:
+  role: target_selector_only  # ASLA setpoint üretmez; kutu → MOT eşleme → operatör onayı
+  max_rate_hz: 1.0
+  query_only_when_hovering: true
+
+# Seviye bazında model seçimi (anahtarlar config/hardware/*.yaml profile.id ile aynı)
+tiers:
+  tier-a-gelistirme:
+    detector: {arch: yolo26n, input: 640, precision: fp16, rate_hz: 15}
+    mot: {type: bytetrack, reid: null}
+    sot: {type: hit_s, fallback: opencv_vittrack}
+    click_to_box: nanosam
+    hand: {detector: yolo26n_hagridv2, landmarks_backend: cpu}
+    vio: null                 # GNSS'siz hover: optik akış + lidar
+    vlm: null
+  tier-b-pro:
+    detector: {arch: yolo26s, input: 960, precision: fp16, rate_hz: 25, p2_head: true}
+    mot: {type: botsort, reid: osnet_x0_25}
+    sot: {type: litetrack_b4, fallback: sutrack_t224}
+    click_to_box: nanosam
+    hand: {detector: yolo26n_hagridv2, landmarks_backend: tensorrt, pose: rtmpose_m_hand}
+    vio: {camera: oak_d_lite}
+    vlm: {model: qwen3_vl_4b, quantization: w4a16}
+  tier-c-ust:
+    detector: {arch: yolo26m, input: 1280, precision: fp16, rate_hz: 25, p2_head: true}
+    mot: {type: botsort, reid: osnet_x1_0}
+    sot: {type: sutrack_t224, fallback: ortrack}
+    click_to_box: nanosam
+    hand: {detector: yolo26s_hagridv2, landmarks_backend: tensorrt, pose: rtmpose_m_hand}
+    vio: {camera: oak_d_pro_w}
+    vlm: {model: qwen3_vl_4b, quantization: w4a16}
+
+# license_profile: commercial seçildiğinde kullanılacak Apache/MIT eşdeğerleri
+commercial_substitutes:
+  yolo26n: rf_detr_n
+  yolo26s: rf_detr_s
+  yolo26m: rf_detr_m
+  yolo26n_hagridv2: rtmdet_nano_hand_hagridv2
+  yolo26s_hagridv2: rtmdet_nano_hand_hagridv2
+  bytetrack: roboflow_trackers_bytetrack
+  botsort: roboflow_trackers_botsort

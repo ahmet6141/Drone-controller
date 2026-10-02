@@ -1,0 +1,28 @@
+# DC7 profil — İÇ MEKÂN: Jetson VIO (cuVSLAM) + akış + koşullu lidar, GNSS yok
+# PX4 v1.17 (docs.px4.io/v1.17 parametre referansı ile doğrulandı: tools/validate_params.py)
+# Yükleme: QGroundControl → Vehicle Setup → Parameters → Tools → Load from file.
+# Sıra: base/10 → base/20 → base/30 → base/40 → profiles/<ortam>.params  (bkz. config/px4/README.md)
+# Profiller AYNI parametre kümesini tanımlar; aralarında geçiş deterministiktir (test edilir).
+#
+# Vehicle-Id	Component-Id	Name	Value	Type
+
+#
+# EKF2: harici görüş (VIO) yatay+dikey konum, hız ve yaw (bit 0–3 = 15); yükseklik referansı VIO.
+# VIO 30–50 Hz /fmu/in/vehicle_visual_odometry; gecikme (EKF2_EV_DELAY) ölçülüp güncellenmeli.
+# Manyetometre kapalı (iç mekân bozulmaları; yaw VIO'dan). GNSS kapalı (EKF2_REQ_NSATS etkisiz).
+1	1	EKF2_GPS_CTRL	0	6
+1	1	EKF2_HGT_REF	3	6
+1	1	EKF2_BARO_CTRL	1	6
+1	1	EKF2_RNG_CTRL	1	6
+1	1	EKF2_RNG_A_HMAX	5.0	9
+1	1	EKF2_RNG_A_VMAX	1.0	9
+1	1	EKF2_OF_CTRL	1	6
+1	1	EKF2_EV_CTRL	15	6
+1	1	EKF2_EV_DELAY	50.0	9
+1	1	EKF2_MAG_TYPE	5	6
+1	1	EKF2_REQ_NSATS	6	6
+1	1	SENS_BAR_AUTOCAL	0	6
+#
+# GNSS ön uçuş kontrolü kapalı. RC kaybında yerinde iniş (iç mekânda RTL anlamsız).
+1	1	COM_ARM_WO_GPS	2	6
+1	1	NAV_RCL_ACT	3	6

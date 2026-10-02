@@ -26,9 +26,18 @@ gestures:
 
 palm_landing:
   enabled: true
+  # marker_pad: elde tutulan işaretli (AprilTag) iniş pedi — ilk ürün sürümü (docs/05 §3.3)
+  # bare_palm : çıplak avuç — yalnızca T4 kabul testlerinden sonra açılır
+  target: marker_pad
+  marker:
+    family: tag36h11
+    id: 7
+    size_m: 0.12
   require_guards: true            # pervane koruması doğrulanmadan özellik kilitli (S-07)
+  require_operator_confirm: true  # RC izin anahtarı veya başparmak yukarı jesti
   max_wind_mps: 5.0
   max_tilt_deg: 15.0
+  geofence_radius_m: 10.0         # mod boyunca kurulum noktası etrafında dar zarf
   ready:
     presentation_height_m: 1.1    # AGL; kullanıcı avucunu bu yükseklikte drone'un altına getirir
     vertical_speed_mps: 0.3
@@ -39,6 +48,9 @@ palm_landing:
     tof_valid_range_m: [0.10, 1.00]
     camera_tof_consistency_m: 0.08
     require_open_hand: true       # landmark tabanlı 5 parmak açık kontrolü
+    require_flat_surface: true    # ToF bölgelerine düzlem uydurma artığı küçük olmalı
+    hand_still_s: 1.0             # alçalmadan önce elin hareketsiz kalma süresi
+    max_hand_speed_mps: 0.15
   align:
     max_lateral_speed_mps: 0.25
     max_offset_from_ready_m: 0.20

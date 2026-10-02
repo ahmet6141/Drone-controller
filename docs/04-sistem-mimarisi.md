@@ -85,7 +85,7 @@ Notlar:
 
 | Bağlantı | Fiziksel | Protokol | Hız / Frekans | Not |
 |---|---|---|---|---|
-| FC ↔ Jetson (ROS 2) | UART (TELEM2) | uXRCE-DDS | 921 600 – 3 000 000 baud | RTS/CTS akış kontrolü önerilir |
+| FC ↔ Jetson (ROS 2) | UART (TELEM2) | uXRCE-DDS | 921 600 baud (PX4 varsayılanı; gerekirse 3 000 000) | RTS/CTS akış kontrolü önerilir |
 | FC ↔ Jetson (GCS köprüsü) | UART (TELEM1) | MAVLink 2 | 921 600 baud | `mavlink-router` → UDP → link |
 | FC → ESC | 4 sinyal + GND | Bidirectional DShot600 | — | RPM → dinamik notch filtresi |
 | RX → FC | UART | CRSF | 420 000 baud | RC failsafe |
@@ -93,7 +93,7 @@ Notlar:
 | Optik akış → FC | CAN veya UART | DroneCAN / MAVLink | 50–100 Hz | Lidar aynı modülde |
 | Gimbal ↔ Jetson | Ethernet | RTSP H.264/H.265 + SIYI SDK (UDP) | 30 FPS | Gimbal varsayılan IP 192.168.144.25 |
 | Aşağı kamera → Jetson | MIPI CSI-2 | Argus / V4L2 | 60 FPS | Global shutter → hareket bulanıklığı yok |
-| ToF → Jetson | I2C | VL53Lx ULD | 15–30 Hz | 8×8 bölge mesafe |
+| ToF → Jetson | I2C | VL53L8CX / VL53L1X ULD | 15 Hz (8×8) | Avuç mesafesi + baş üstü boşluk |
 | Link ↔ Jetson | Ethernet | UDP MAVLink, RTSP/RTP, ROS 2 (Zenoh köprüsü) | — | |
 
 ## 4. Yazılım mimarisi

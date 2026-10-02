@@ -1,0 +1,15 @@
+# Jetson güç kipini açılışta sabitler (uçuşta öngörülebilir algı gecikmesi için).
+# jetson_clocks saatleri en yükseğe kilitler: ısıl testten (30 dk tam yük) sonra etkinleştirin.
+[Unit]
+Description=DC7 Jetson guc kipi
+After=nvpmodel.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/default/dc7
+ExecStart=/usr/sbin/nvpmodel -m ${DC7_NVPMODEL_MODE}
+ExecStart=/usr/bin/jetson_clocks
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -7,18 +7,25 @@ yapılmıştır. Parametreler: [`config/mission/behavior.yaml`](../config/missio
 
 ## 1. Referanslar ve fark
 
-DJI (Spark/Mavic serisi "Palm Landing", Neo) ve HoverAir X1 serisi avuçtan kalkış/avuca iniş
-yapar. Bu ürünlerin ortak noktaları: **250 g civarı veya altı kütle**, küçük pervaneler ve
-(Neo/HoverAir'de) **tam kapalı pervane koruması**. Bizim platformumuz ≈ 1,3–1,6 kg ve 6S 7 inç
-pervanelidir; pervane uç hızı ve kinetik enerji çok daha yüksektir. Bu nedenle aşağıdaki
-mekanik önlemler **isteğe bağlı değil, zorunludur**; yazılım bu önlemler takılı değilse
-özelliği kilitler (`palm_landing.require_guards: true`).
+Avuca inişi ticari olarak sunan ürünlerin hepsi **≤ 250 g ve tam pervane korumalıdır**:
+
+| Ürün | Kütle | Algılama | Avuç davranışı |
+|---|---|---|---|
+| DJI Neo | 135 g | Aşağı görüş + IR, tam koruma | Yalnızca hover'dan, **hareketsiz ve düz** el, drone'un hemen altında ≤ 0,7 m; DJI: "el hareket ederken motorları durduramayabilir", "kavramayın" |
+| DJI Neo 2 (11/2025) | 151 g | Çok yönlü görüş, ön LiDAR, aşağı IR | Avuçtan kalkış, avuca dönüş-iniş, jest kontrolü |
+| HoverAir X1 ProMax | 192 g | — | Avuca iniş |
+
+Bizim platformumuz ≈ 1,5–1,7 kg ve 6S 7 inç pervanelidir: **8–10 kat ağır**, pervane uç hızı
+hover'da ≈ 76 m/s. Bu nedenle aşağıdaki mekanik önlemler **isteğe bağlı değil, zorunludur**;
+yazılım bu önlemler takılı değilse özelliği kilitler (`palm_landing.require_guards: true`).
+Çıkarılan dersler: hafif ve tam korumalı ol; aşağı görüş + IR/ToF kullan; yalnızca hover'dan,
+yakındaki **hareketsiz ve düz** bir ele in; temas ve motor durdurmayı en zayıf halka kabul et.
 
 ## 2. Tehlike analizi (özet FMEA)
 
 | # | Tehlike | Olası neden | Önlem | Kalan risk |
 |---|---|---|---|---|
-| H1 | Parmakların pervaneye değmesi | El pervane düzlemine yükselir; parmaklar yayık | Tam halka koruma + alt ağ; tutamak pervane düzleminin ≥ 90 mm altında; "parmaklar bitişik" kullanım talimatı | Düşük |
+| H1 | Parmakların pervaneye değmesi | El pervane düzlemine yükselir; parmaklar yayık | Tam halka koruma + alt ağ; tutamak pervane düzleminin ≥ 120 mm altında; "parmaklar bitişik" kullanım talimatı | Düşük |
 | H2 | Yanlış pozitif avuç | Yüz, beyaz nesne, zemin deseni | İki kamera onayı (ön kamerada jest + aşağı kamerada avuç), ToF mesafe tutarlılığı, zamansal onay | Düşük |
 | H3 | İniş sırasında avucun çekilmesi | Kullanıcı elini çeker | ToF mesafe artış hızı izlenir → iptal ve tırmanış | Düşük |
 | H4 | Erken motor durdurma (el yokken) | Hatalı temas kararı | Temas için ≥ 2 bağımsız ipucu + 100 ms süreklilik | Çok düşük |
@@ -30,7 +37,7 @@ mekanik önlemler **isteğe bağlı değil, zorunludur**; yazılım bu önlemler
 
 ## 3. Mekanik tasarım
 
-### 3.1 Geometri (7 inç, ≈ 300 mm dingil mesafesi)
+### 3.1 Geometri (7 inç, GEPRC MOZ7 V2: 336 mm dingil mesafesi)
 
 ```
              yan görünüş (ölçek yaklaşık)
@@ -38,7 +45,7 @@ mekanik önlemler **isteğe bağlı değil, zorunludur**; yazılım bu önlemler
    ┌──────── pervane koruma halkası + alt ağ ────────┐
    ║  ≈≈≈≈ pervane ≈≈≈≈     [gövde]     ≈≈≈≈ pervane ≈≈≈≈  ║   ← pervane düzlemi
                               │
-                              │  ≥ 90 mm dikey ayrım
+                              │  ≥ 120 mm dikey ayrım
                               │
                         ┌─────┴─────┐
                         │  tutamak  │  Ø 65–75 mm TPU + köpük
@@ -47,10 +54,10 @@ mekanik önlemler **isteğe bağlı değil, zorunludur**; yazılım bu önlemler
                      ~~~~ avuç (yukarı bakar) ~~~~
 ```
 
-- Motor–merkez mesafesi ≈ 150 mm, pervane yarıçapı 89 mm → pervane diskinin merkeze en yakın
-  noktası ≈ 61 mm. Açık bir yetişkin eli (parmaklar dahil ≈ 180–200 mm) bu diskin altına taşar;
-  bu yüzden **dikey ayrım** (tutamak tabanı pervane düzleminin ≥ 90 mm altında) ve **alt ağ** asıl
-  korumadır.
+- Motor–merkez mesafesi ≈ 168 mm, pervane yarıçapı 89 mm → pervane diskinin merkeze en yakın
+  noktası ≈ 79 mm (300 mm'lik gövdelerde ≈ 61 mm). Açık bir yetişkin eli (parmaklar dahil
+  ≈ 180–200 mm) bu diskin altına taşar; bu yüzden **dikey ayrım** (tutamak tabanı pervane
+  düzleminin ≥ 120 mm altında, pervaneler elin ≥ 10 cm üstünde) ve **alt ağ** asıl korumadır.
 - Tutamak, drone tutulurken taşıma kolu görevi de görür; batarya üstte/arka taraftadır.
 - Aşağı kamera ve ToF tutamak tabanının 25 mm içine gömülür: temas anında ToF ≈ 25–35 mm okur.
 - Yukarı bakan tek bölgeli ToF (≈ 4 m menzil) tırmanış öncesi baş üstü boşluğunu ölçer.
@@ -61,6 +68,16 @@ mekanik önlemler **isteğe bağlı değil, zorunludur**; yazılım bu önlemler
   (`tools/budget_calc.py`) yansıtılmalıdır.
 - Koruma takılı olduğu bir donanım anahtarı/kimlik direnci veya en azından ön uçuş kontrol
   listesiyle doğrulanır; doğrulanmazsa avuca iniş devre dışıdır.
+- 7 inç için hazır tam koruma/duct kiti bulunamadı → 3B baskı (PA12-CF) halka + ağ tasarlanacak;
+  `config/hardware` profillerinde ≈ 110 g ve %10 itki kaybı (`installation_factor: 0.90`)
+  varsayılmıştır, itki standında ölçülecektir.
+
+### 3.3 Aşamalı ürün yaklaşımı: önce işaretli iniş pedi
+Çıplak avuca inişten önce aynı yazılımla, kullanıcının elinde tuttuğu **20–25 cm'lik işaretli
+iniş pedi** (veya avuç içine AprilTag dikili eldiven) desteklenir:
+- İşaret (AprilTag) → yanlış pozitif neredeyse sıfır, 6-serbestlik dereceli hassas poz.
+- Ped, parmakları pervane diskinden fiziksel olarak uzak tutar.
+- Çıplak avuç modu (`target: bare_palm`) ancak T4 kabul testlerinden sonra açılır.
 
 ## 4. Algılama hattı
 
@@ -83,10 +100,13 @@ flowchart LR
 4. Yerel NED: `p_n = R_nb(q) · p_b + p_drone`; sabit hızlı Kalman filtresi + inovasyon kapısı.
 5. 12 cm'nin altında kamera görüşü doyar → yatay hizalama ToF bölge merkezine (centroid) geçer.
 
-### 4.2 Doğrulama kuralları
+### 4.2 Doğrulama kuralları (alçalma başlamadan önce hepsi)
 - Ön kamerada jest güveni ≥ 0,7 ve son 30 karenin ≥ 24'ünde OPEN_PALM.
 - Aşağı kamerada avuç güveni ≥ 0,6 **ve** ToF ile kamera mesafeleri ±8 cm içinde tutarlı.
+- ToF bölgeleri **düz bir yüzey** gösteriyor; optik akış/lidar ölçümü ile çelişmiyor.
+- El **≥ 1 s hareketsiz** (avuç hızı ≤ 0,15 m/s).
 - Landmark tabanlı açıklık: 5 parmağın uç–taban açıları "açık" eşiğinde; yumruk/yarım el reddedilir.
+- **Operatör onayı**: RC izin anahtarı açık veya başparmak yukarı jesti.
 
 ## 5. Kontrol akışı
 
@@ -109,7 +129,7 @@ flowchart LR
 
 Karar: **ToF zorunlu** + diğer üçünden en az biri. Eylem sırası:
 1. Companion → PX4: `VEHICLE_CMD_COMPONENT_ARM_DISARM` (param1 = 0, param2 = 21196 zorlamalı) —
-   motorlar anında durur.
+   motorlar anında durur; ESC'de (AM32) "durunca fren" açık olduğundan pervaneler hızla durur.
 2. Yedek: PX4 iniş algılayıcısı + `COM_DISARM_LAND` (kısa süre) — companion komutu ulaşmazsa.
 3. Son yedek: RC kill switch (emniyet pilotu).
 
@@ -121,6 +141,7 @@ Karar: **ToF zorunlu** + diğer üçünden en az biri. Eylem sırası:
 | Yatay hata | > 6 cm (`PALM_DESCEND`), > 20 cm (`PALM_ALIGN`) |
 | Avuç uzaklaşma hızı | ToF mesafe artışı > 0,3 m/s (el çekiliyor) |
 | Eğim / rüzgâr | Tutum > 15° veya kestirilen rüzgâr > 5 m/s |
+| Avuca iniş geofence'i | Kurulum noktasından > 10 m (mod boyunca dar zarf) |
 | Yumruk jesti, GCS iptal, RC mod değişimi | Anında |
 
 ## 6. Neden "drone kişiye yaklaşmaz"?
@@ -135,6 +156,7 @@ DJI'ın avuca iniş kullanım akışıyla da uyumludur.
 | Aşama | Ortam | Kabul ölçütü |
 |---|---|---|
 | T1 | PX4 SITL + Gazebo; rastgele hareket eden "el platformu" modeli, Monte Carlo (≥ 1000 deneme) | %100 doğru durum geçişi, iptal senaryoları çalışır |
+| T1b | Kapalı, fileli test hücresi; işaretli iniş pedi çubuğa sabit | Arka arkaya 50 başarılı iniş |
 | T2 | Tezgâh, pervanesiz; gerçek el + kamera/ToF | Temas → disarm gecikmesi p99 ≤ 150 ms |
 | T3 | Bağlı (tether) uçuş, çubuğa takılı köpük/silikon el modeli | Arka arkaya 50 başarılı iniş, temas hızı ≤ 0,1 m/s |
 | T4 | Kesilmeye dayanıklı eldiven (EN 388 seviye F) + gözlük/yüz siperi, emniyet pilotu | Arka arkaya 50 başarılı iniş, 0 yanlış temas |

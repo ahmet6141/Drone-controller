@@ -17,5 +17,7 @@ jobs:
         run: python3 tools/validate_params.py
       - name: Donanım bütçesi (limit kontrolleri)
         run: python3 tools/budget_calc.py --all
+      - name: Sensör kataloğu (sürücü parametreleri ve seviye seçimleri)
+        run: python3 tools/sensor_matrix.py
       - name: Tutarlılık testleri
         run: python3 -m unittest discover -s tests -v

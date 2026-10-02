@@ -77,6 +77,25 @@ def _check_value(name: str, value: float, lo, hi, codes, bitmask: bool, is_int: 
     return errs
 
 
+def px4_value_errors(name: str, value: float, entry: list) -> list[str]:
+    """Tek PX4 değerini referans girdisine ([tip, min, maks, kodlar, bitmask]) göre denetler."""
+    ptype, lo, hi, codes, bitmask = entry
+    is_int = ptype == "INT32"
+    errs = []
+    if is_int and codes and not bitmask:
+        # PX4'te INT32 enum'lar katıdır (aralık verilmiş olsa bile)
+        if value != int(value) or int(value) not in codes:
+            errs.append(f"{name}={value:g} izinli değerlerden biri değil {codes}")
+        codes = None
+    return errs + _check_value(name, value, lo, hi, codes, bitmask, is_int)
+
+
+def ap_value_errors(name: str, value: float, entry: list) -> list[str]:
+    """Tek ArduPilot değerini referans girdisine ([min, maks, kodlar, bitmask]) göre denetler."""
+    lo, hi, codes, bitmask = entry
+    return _check_value(name, value, lo, hi, codes, bitmask, False)
+
+
 def validate_px4(path: Path, ref: dict | None = None) -> list[str]:
     ref = ref or _load_ref(PX4_REF)
     errs, seen = [], set()
@@ -91,7 +110,7 @@ def validate_px4(path: Path, ref: dict | None = None) -> list[str]:
         if name not in ref:
             errs.append(f"{where}: {name} PX4 v1.17'de yok")
             continue
-        ptype_ref, lo, hi, codes, bitmask = ref[name]
+        ptype_ref = ref[name][0]
         if PX4_TYPE_CODES.get(ptype_ref) != ptype:
             errs.append(f"{where}: {name} tipi {ptype_ref}, dosyada {ptype}")
         try:
@@ -99,15 +118,9 @@ def validate_px4(path: Path, ref: dict | None = None) -> list[str]:
         except ValueError:
             errs.append(f"{where}: {name} sayısal değil")
             continue
-        is_int = ptype_ref == "INT32"
-        if is_int and not re.fullmatch(r"-?\d+", value):
+        if ptype_ref == "INT32" and not re.fullmatch(r"-?\d+", value):
             errs.append(f"{where}: {name} INT32, değer tam sayı yazılmalı")
-        if is_int and codes and not bitmask:
-            # PX4'te INT32 enum'lar katıdır (aralık verilmiş olsa bile)
-            if int(v) not in codes:
-                errs.append(f"{where}: {name}={value} izinli değerlerden biri değil {codes}")
-            codes = None
-        errs += [f"{where}: {e}" for e in _check_value(name, v, lo, hi, codes, bitmask, is_int)]
+        errs += [f"{where}: {e}" for e in px4_value_errors(name, v, ref[name])]
     return errs
 
 
@@ -125,13 +138,12 @@ def validate_ardupilot(path: Path, ref: dict | None = None) -> list[str]:
         if name not in ref:
             errs.append(f"{where}: {name} ArduPilot Copter 4.7.1'de yok")
             continue
-        lo, hi, codes, bitmask = ref[name]
         try:
             v = float(value)
         except ValueError:
             errs.append(f"{where}: {name} sayısal değil")
             continue
-        errs += [f"{where}: {e}" for e in _check_value(name, v, lo, hi, codes, bitmask, False)]
+        errs += [f"{where}: {e}" for e in ap_value_errors(name, v, ref[name])]
     return errs
 
 

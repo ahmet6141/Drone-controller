@@ -1,0 +1,409 @@
+# Sensör kataloğu: her görev için alternatifler ve uçuş yığını uyumluluğu (docs/11).
+# Parametre adları ve enum değerleri resmi referanslara göre test edilir:
+#   tools/data/px4_v1.17_params.json · tools/data/ardupilot_copter_4.7.1_params.json
+# Rapor:  python3 tools/sensor_matrix.py            (özet + doğrulama)
+#         python3 tools/sensor_matrix.py --markdown (karşılaştırma tabloları)
+#
+# Destek türleri (support):
+#   native     uçuş kontrolcüsünde yerel sürücü, parametreyle açılır
+#   dronecan   CAN veriyolu, standart DroneCAN mesajları (üreticiden bağımsız)
+#   mavlink    sensör kendisi MAVLink mesajı yollar (OPTICAL_FLOW_RAD, DISTANCE_SENSOR, OPEN_DRONE_ID_*)
+#   msp        MSP protokolü (yalnızca ArduPilot)
+#   companion  Raspberry Pi / Jetson okur → ROS 2 → PX4 DDS girişi veya ArduPilot'a MAVLink (bridges)
+# Parametre değeri "port": seri port seçimi (PX4: 101 TELEM1, 102 TELEM2, 201 GPS1 …;
+#   ArduPilot: SERIALn numarası). serial_protocol: ArduPilot SERIALn_PROTOCOL değeri.
+# Fiyatlar USD, 10/2026 yaklaşık; price_verified: false olanlar sipariş öncesi kontrol edilmeli.
+schema_version: 1
+retrieved: "2026-10-02"
+
+roles:
+  optical_flow:     {title: "Hareket (optik akış)", px4_bridge: sensor_optical_flow}
+  rangefinder_down: {title: "Lazer irtifa (aşağı)", px4_bridge: distance_sensor}
+  overhead:         {title: "Baş üstü mesafe (yukarı)", px4_bridge: distance_sensor}
+  palm_tof:         {title: "Avuç: çok bölgeli ToF", companion_only: true}
+  palm_thermal:     {title: "Avuç: termal doğrulama (opsiyonel)", companion_only: true}
+  obstacle:         {title: "Engel algılama (360° / ileri)", px4_bridge: obstacle_distance}
+  gnss:             {title: "GNSS"}
+  compass:          {title: "Harici pusula"}
+  remote_id:        {title: "Uzaktan kimlik (Remote ID)"}
+
+bridges:
+  px4_dds:
+    note: "PX4 v1.17 uXRCE-DDS giriş konuları; companion'ın okuyabildiği her sensör buradan PX4'e girer"
+    topics:
+      distance_sensor: /fmu/in/distance_sensor
+      obstacle_distance: /fmu/in/obstacle_distance
+      sensor_optical_flow: /fmu/in/sensor_optical_flow
+      vehicle_visual_odometry: /fmu/in/vehicle_visual_odometry
+  ardupilot_mavlink:
+    note: "companion → mavlink-router → FC; sensör verisi MAVLink mesajı olarak girer"
+    params: {RNGFND1_TYPE: 10, FLOW_TYPE: 5, PRX1_TYPE: 2}
+  companion_buses:
+    raspberry_pi_5: ["I2C", "SPI", "UART (overlay ile birden fazla)", "USB 3.0 ×2", "MIPI CSI ×2"]
+    jetson_orin_nx: ["I2C", "SPI", "UART", "USB 3.2", "MIPI CSI (taşıyıcıya bağlı)", "Ethernet"]
+
+# Uyumluluk genişliği: tools/sensor_matrix.py bu listeleri referans verisinde sayar.
+breadth:
+  px4:
+    rangefinder: [SENS_TFMINI_CFG, SENS_EN_TF02PRO, SENS_EN_VL53L0X, SENS_EN_VL53L1X, SENS_CM8JL65_CFG,
+                  SENS_SF0X_CFG, SENS_EN_SF1XX, SENS_EN_TRANGER, SENS_EN_LL40LS, SENS_EN_MPDT,
+                  SENS_LEDDAR1_CFG, SENS_ULAND_CFG, SENS_EN_MB12XX, SENS_EN_SR05, SENS_EN_PGA460]
+    optical_flow: [SENS_TFLOW_CFG, SENS_EN_PMW3901, SENS_EN_PAW3902, SENS_EN_PAA3905, SENS_EN_PX4FLOW]
+    obstacle: [SENS_EN_SF45_CFG]
+    gnss: {param: GPS_1_PROTOCOL, exclude: [0]}
+    dronecan: [UAVCAN_SUB_RNG, UAVCAN_SUB_FLOW, UAVCAN_SUB_GPS, UAVCAN_SUB_MAG, UAVCAN_SUB_BARO, UAVCAN_SUB_IMU]
+  ardupilot:
+    rangefinder: {param: RNGFND1_TYPE, exclude: [0, 36, 100]}   # None, Lua betiği, SITL
+    optical_flow: {param: FLOW_TYPE, exclude: [0, 10]}          # None, SITL
+    obstacle: {param: PRX1_TYPE, exclude: [0, 10, 12, 15]}      # None, SITL, AirSim, betik
+    gnss: {param: GPS1_TYPE, exclude: [0, 7]}                   # None, HIL
+    gimbal: {param: MNT1_TYPE, exclude: [0, 9]}                 # None, betik
+
+options:
+  # ---------------------------------------------------------------- hareket + irtifa
+  - id: mtf01
+    name: "MicoAir MTF-01 (akış + ToF lazer)"
+    roles: [optical_flow, rangefinder_down]
+    interface: UART
+    specs: "akış 42° FOV, ≥ 8 cm; ToF 8 m (60 klux'ta 5 m), 100 Hz"
+    mass_g: 4.5
+    price_usd: 35
+    price_verified: false
+    match: "MTF-01"
+    px4: {support: mavlink, params: {MAV_1_CONFIG: port},
+          note: "OPTICAL_FLOW_RAD + DISTANCE_SENSOR; sensör çıkışı PX4 MAVLink'e ayarlanır (MicoAssistant)"}
+    ardupilot: {support: mavlink, params: {FLOW_TYPE: 5, RNGFND1_TYPE: 10, RNGFND1_ORIENT: 25}, serial_protocol: 1,
+                note: "ArduPilot belgesi: 115200, MAVLink1, 4.7+ için MAVx_OPTIONS=2; sensör çıkışı mav-apm"}
+    notes: "Akış + lazer tek modülde en ucuz çözüm; Seviye A seçimi"
+
+  - id: matek_3901_l0x
+    name: "Matek 3901-L0X (PMW3901 + VL53L0X)"
+    roles: [optical_flow]
+    interface: UART (MSP)
+    specs: "dahili lidar ArduPilot belgesine göre ≤ 1,2 m → ayrı lazer şart"
+    mass_g: null
+    price_usd: 20
+    price_verified: false
+    px4: {support: companion, params: {}, note: "PX4'te MSP sensör girişi yok → Pi okur, /fmu/in/sensor_optical_flow"}
+    ardupilot: {support: msp, params: {FLOW_TYPE: 7, RNGFND1_TYPE: 32}, serial_protocol: 32}
+    notes: "ArduPilot'ta en ucuz yol; TF-Luna ile birlikte ≈ $42"
+
+  - id: thoneflow_3901u
+    name: "ThoneFlow-3901U (PMW3901)"
+    roles: [optical_flow]
+    interface: UART
+    specs: "yalnızca akış, ≥ 8 cm; ayrı lazer şart"
+    mass_g: null
+    price_usd: 20
+    price_verified: false
+    px4: {support: native, params: {SENS_TFLOW_CFG: port}}
+    ardupilot: {support: companion, params: {FLOW_TYPE: 5},
+                note: "ArduPilot listesinde yok → companion üzerinden MAVLink"}
+    notes: "PX4'te yerel sürücülü en ucuz akış"
+
+  - id: pmw3901_spi
+    name: "PMW3901 SPI kartı (Bitcraze / Pimoroni tipi)"
+    roles: [optical_flow]
+    interface: SPI
+    specs: "yalnızca akış; FC'de harici SPI gerekir (çoğu kartta yok)"
+    mass_g: null
+    price_usd: 20
+    price_verified: false
+    px4: {support: native, params: {SENS_EN_PMW3901: 1}}
+    ardupilot: {support: native, params: {FLOW_TYPE: 2}}
+    notes: "Pi 5'in SPI'ına bağlanıp companion ile de okunabilir"
+
+  - id: h_flow
+    name: "Holybro H-Flow (PAA3905 + AFBR-S50 + IMU)"
+    roles: [optical_flow, rangefinder_down]
+    interface: DroneCAN
+    specs: "kaliteli akış + lidar, CAN üzerinden tek kablo"
+    mass_g: 15.2
+    price_usd: 145
+    price_verified: true
+    match: "H-Flow"
+    px4: {support: dronecan, params: {UAVCAN_ENABLE: 2, UAVCAN_SUB_FLOW: 1, UAVCAN_SUB_RNG: 1}}
+    ardupilot: {support: dronecan, params: {CAN_P1_DRIVER: 1, CAN_D1_PROTOCOL: 1, FLOW_TYPE: 6, RNGFND1_TYPE: 24}}
+    notes: "Seviye B seçimi"
+
+  - id: ark_flow_mr
+    name: "ARK Flow MR (PAA3905 + AFBR-S50LX85D)"
+    roles: [optical_flow, rangefinder_down]
+    interface: DroneCAN
+    specs: "lidar 8 cm – 50 m (PX4 belgesi)"
+    mass_g: 5
+    price_usd: 350
+    price_verified: true
+    match: "ARK Flow MR"
+    px4: {support: dronecan, params: {UAVCAN_ENABLE: 2, UAVCAN_SUB_FLOW: 1, UAVCAN_SUB_RNG: 1}}
+    ardupilot: {support: dronecan, params: {CAN_P1_DRIVER: 1, CAN_D1_PROTOCOL: 1, FLOW_TYPE: 6, RNGFND1_TYPE: 24}}
+    notes: "Seviye C seçimi"
+
+  - id: tfmini_s
+    name: "Benewake TFmini-S"
+    roles: [rangefinder_down]
+    interface: UART / I2C
+    specs: "0,1–12 m, 70 klux'ta çalışır"
+    mass_g: 5
+    price_usd: 45
+    price_verified: false
+    px4: {support: native, params: {SENS_TFMINI_CFG: port}}
+    ardupilot: {support: native, params: {RNGFND1_TYPE: 20, RNGFND1_ORIENT: 25}, serial_protocol: 9,
+                note: "I2C ile RNGFND1_TYPE=25"}
+    notes: "Güneşli / yüksek uçuşta MTF-01'e ek lazer"
+
+  - id: tf_luna
+    name: "Benewake TF-Luna"
+    roles: [rangefinder_down, overhead]
+    interface: UART / I2C
+    specs: "0,2–8 m, ±6 cm, 250 Hz, ≤ 0,35 W, 2° FOV"
+    mass_g: 5
+    price_usd: 22
+    price_verified: false
+    px4: {support: companion, params: {},
+          note: "PX4 belgesinde yalnızca RaccoonLab DroneCAN adaptörüyle; UART çerçevesi TFmini ile aynı → SENS_TFMINI_CFG doğrulanacak"}
+    ardupilot: {support: native, params: {RNGFND1_TYPE: 27, RNGFND1_ORIENT: 25}, serial_protocol: 9,
+                note: "ArduPilot belgesi: seri 27 (BenewakeTF03), I2C 25"}
+    notes: "En ucuz uzun menzilli lazer"
+
+  - id: vl53l1x
+    name: "ST VL53L1X (tek nokta ToF)"
+    roles: [overhead, rangefinder_down]
+    interface: I2C
+    specs: "4 m, 50 Hz; güneşte menzil düşer → aşağı yönde yalnızca iç mekân"
+    mass_g: 1
+    price_usd: 15
+    price_verified: false
+    match: "VL53L1X"
+    px4: {support: native, params: {SENS_EN_VL53L1X: 1}}
+    ardupilot: {support: native, params: {RNGFND1_TYPE: 16, RNGFND1_ADDR: 41, RNGFND1_ORIENT: 24},
+                note: "adres 0x29 = 41; yukarı bakış ORIENT=24"}
+    notes: "Tüm seviyelerde baş üstü sensörü (companion okur; VL53L8CX ile aynı adres → L8CX SPI'da)"
+
+  # ---------------------------------------------------------------- avuç
+  - id: vl53l8cx
+    name: "ST VL53L8CX 8×8 ToF (Pololu kartı)"
+    roles: [palm_tof, obstacle]
+    interface: I2C / SPI
+    specs: "8×8 / 4×4 bölge, 45°×45° (65° D), 4 m; ortam ışığına L5CX'ten dayanıklı"
+    mass_g: 0.7
+    price_usd: 24.95
+    price_verified: true
+    match: "VL53L8CX"
+    px4: {support: companion, params: {}}
+    ardupilot: {support: companion, params: {}}
+    notes: "Tüm seviyelerin avuç sensörü (tools/tof8x8.py)"
+
+  - id: vl53l5cx
+    name: "ST VL53L5CX 8×8 ToF"
+    roles: [palm_tof]
+    interface: I2C
+    specs: "8×8, 45°×45° (63° D), 4 m; SPI yok, önceki nesil"
+    mass_g: 1
+    price_usd: 20
+    price_verified: false
+    px4: {support: companion, params: {}}
+    ardupilot: {support: companion, params: {}}
+    notes: "Hazır Python kütüphaneli kartlar var; L8CX yoksa yedek"
+
+  - id: vl53l7cx
+    name: "ST VL53L7CX 8×8 ToF (geniş açı)"
+    roles: [palm_tof, obstacle]
+    interface: I2C / SPI
+    specs: "8×8, 60°×60° (90° D), 3,5 m"
+    mass_g: 1
+    price_usd: 25
+    price_verified: false
+    px4: {support: companion, params: {}}
+    ardupilot: {support: companion, params: {}}
+    notes: "Yakında avucun tamamını görür (tof8x8.py --sensor vl53l7cx); ileri bakışta ucuz kısa menzil engel sensörü"
+
+  - id: mlx90640
+    name: "Melexis MLX90640 termal dizi (32×24)"
+    roles: [palm_thermal]
+    interface: I2C
+    specs: "32×24 piksel, 55°×35° veya 110°×75°, 64 Hz'e kadar (yüksek hızda gürültülü)"
+    mass_g: null
+    price_usd: 60
+    price_verified: false
+    px4: {support: companion, params: {}}
+    ardupilot: {support: companion, params: {}}
+    notes: "Sıcak el (≈ 30–35 °C) ↔ soğuk zemin: avucun gerçek bir el olduğunu doğrulayan ek ipucu"
+
+  - id: amg8833
+    name: "Panasonic AMG8833 termal dizi (8×8)"
+    roles: [palm_thermal]
+    interface: I2C
+    specs: "8×8 piksel, 60°, 10 Hz"
+    mass_g: null
+    price_usd: 40
+    price_verified: false
+    px4: {support: companion, params: {}}
+    ardupilot: {support: companion, params: {}}
+    notes: "Daha ucuz, daha kaba termal ipucu"
+
+  # ---------------------------------------------------------------- engel
+  - id: ld06
+    name: "LDROBOT LD06 360° lidar"
+    roles: [obstacle]
+    interface: UART 230400
+    specs: "12 m yarıçap, 4500 ölçüm/s, 30 klux, IPX4"
+    mass_g: null
+    price_usd: 80
+    price_verified: false
+    px4: {support: companion, params: {}, note: "PX4'te sürücü yok → /fmu/in/obstacle_distance (çarpışma önleme yalnızca Position modunda)"}
+    ardupilot: {support: native, params: {PRX1_TYPE: 16}, serial_protocol: 11}
+    notes: "En ucuz 360° engel algılama"
+
+  - id: sf45b
+    name: "LightWare SF45/B taramalı lidar"
+    roles: [obstacle]
+    interface: UART
+    specs: "taramalı lidar, PX4 çarpışma önleme belgesinde örnek sensör"
+    mass_g: null
+    price_usd: null
+    price_verified: false
+    px4: {support: native, params: {SENS_EN_SF45_CFG: port}}
+    ardupilot: {support: native, params: {PRX1_TYPE: 8}, serial_protocol: 11}
+    notes: "Her iki yığında yerel sürücülü, pahalı seçenek"
+
+  - id: oakd_lite
+    name: "Luxonis OAK-D Lite (stereo derinlik)"
+    roles: [obstacle]
+    interface: USB
+    specs: "global shutter stereo + IMU, cihaz üstü derinlik"
+    mass_g: 61
+    price_usd: 269
+    price_verified: true
+    match: "OAK-D Lite"
+    px4: {support: companion, params: {}}
+    ardupilot: {support: companion, params: {PRX1_TYPE: 2}}
+    notes: "Seviye B seçimi"
+
+  - id: oakd_pro_w
+    name: "Luxonis OAK-D Pro W (150° D, IR)"
+    roles: [obstacle]
+    interface: USB
+    specs: "geniş açı stereo + IR aydınlatma"
+    mass_g: 91
+    price_usd: 529
+    price_verified: true
+    match: "OAK-D Pro W"
+    px4: {support: companion, params: {}}
+    ardupilot: {support: companion, params: {PRX1_TYPE: 2}}
+    notes: "Seviye C seçimi"
+
+  # ---------------------------------------------------------------- GNSS ve pusula
+  - id: holybro_m10
+    name: "Holybro M10 GNSS + IST8310"
+    roles: [gnss, compass]
+    interface: UART + I2C
+    specs: "u-blox M10, dahili pusula"
+    mass_g: 32
+    price_usd: 44
+    price_verified: true
+    match: "M10 GNSS"
+    px4: {support: native, params: {GPS_1_CONFIG: port, GPS_1_PROTOCOL: 1}}
+    ardupilot: {support: native, params: {GPS1_TYPE: 2}, serial_protocol: 5}
+    notes: "Seviye A seçimi"
+
+  - id: matek_m10q
+    name: "Matek M10Q-5883 (u-blox M10 + QMC5883L)"
+    roles: [gnss, compass]
+    interface: UART + I2C
+    specs: "küçük M10 modülü"
+    mass_g: null
+    price_usd: 30
+    price_verified: false
+    px4: {support: native, params: {GPS_1_CONFIG: port, GPS_1_PROTOCOL: 1},
+          note: "GNSS yerel; QMC5883L pusulanın otomatik başlatılması doğrulanmalı"}
+    ardupilot: {support: native, params: {GPS1_TYPE: 2}, serial_protocol: 5}
+    notes: "Daha ucuz GNSS seçeneği"
+
+  - id: h_rtk_f9p
+    name: "Holybro H-RTK F9P Ultralight"
+    roles: [gnss]
+    interface: UART
+    specs: "çift frekans RTK"
+    mass_g: 25
+    price_usd: 279
+    price_verified: true
+    match: "H-RTK F9P"
+    px4: {support: native, params: {GPS_1_CONFIG: port, GPS_1_PROTOCOL: 1}}
+    ardupilot: {support: native, params: {GPS1_TYPE: 2}, serial_protocol: 5}
+    notes: "Seviye B seçimi"
+
+  - id: ark_x20_rtk
+    name: "ARK X20 RTK GPS (ZED-X20P)"
+    roles: [gnss]
+    interface: DroneCAN
+    specs: "L1/L2/L5/E6 RTK"
+    mass_g: 43.5
+    price_usd: 740
+    price_verified: true
+    match: "ARK X20"
+    px4: {support: dronecan, params: {UAVCAN_ENABLE: 2, UAVCAN_SUB_GPS: 1}}
+    ardupilot: {support: dronecan, params: {CAN_P1_DRIVER: 1, CAN_D1_PROTOCOL: 1, GPS1_TYPE: 9}}
+    notes: "Seviye C seçimi"
+
+  - id: rm3100_dronecan
+    name: "Holybro DroneCAN RM3100 pusula"
+    roles: [compass]
+    interface: DroneCAN
+    specs: "direk üstü harici pusula"
+    mass_g: 15
+    price_usd: 66
+    price_verified: true
+    match: "RM3100 pusula"
+    px4: {support: dronecan, params: {UAVCAN_ENABLE: 2, UAVCAN_SUB_MAG: 1}}
+    ardupilot: {support: dronecan, params: {CAN_P1_DRIVER: 1, CAN_D1_PROTOCOL: 1}}
+    notes: "Seviye B seçimi"
+
+  - id: ark_mag
+    name: "ARK MAG (RM3100, DroneCAN)"
+    roles: [compass]
+    interface: DroneCAN
+    specs: "hafif harici pusula"
+    mass_g: 3
+    price_usd: 175
+    price_verified: true
+    match: "ARK MAG"
+    px4: {support: dronecan, params: {UAVCAN_ENABLE: 2, UAVCAN_SUB_MAG: 1}}
+    ardupilot: {support: dronecan, params: {CAN_P1_DRIVER: 1, CAN_D1_PROTOCOL: 1}}
+    notes: "Seviye C seçimi"
+
+  # ---------------------------------------------------------------- Remote ID
+  - id: remote_id_module
+    name: "PX4 listesindeki Remote ID modülü (Holybro Remote ID, BlueMark Db201/Db202mav, Cube ID)"
+    roles: [remote_id]
+    interface: UART / DroneCAN
+    specs: "Open Drone ID yayını; COM_ARM_ODID ile kalkış kontrolü"
+    mass_g: 10
+    price_usd: 60
+    price_verified: false
+    match: "Remote ID modülü"
+    px4: {support: mavlink, params: {COM_ARM_ODID: 2, MAV_2_CONFIG: port},
+          note: "PX4 belgesi: seri (varsayılan TELEM2) veya CAN; bizde TELEM2 DDS'te → başka port"}
+    ardupilot: {support: native, params: {DID_ENABLE: 1, DID_MAVPORT: port}}
+    notes: "Tüm seviyelerin seçimi; mevzuat için uygunluk belgeli modül"
+
+  - id: esp32_arduremoteid
+    name: "ESP32-S3/C3 kartı + ArduRemoteID yazılımı"
+    roles: [remote_id]
+    interface: UART / DroneCAN
+    specs: "açık kaynak Open Drone ID (Wi-Fi + Bluetooth yayını)"
+    mass_g: 5
+    price_usd: 12
+    price_verified: false
+    px4: {support: mavlink, params: {COM_ARM_ODID: 1, MAV_2_CONFIG: port},
+          note: "PX4 listesindeki BlueMark modülleri ArduRemoteID ile gelir → çalışması beklenir, doğrulanmadı"}
+    ardupilot: {support: native, params: {DID_ENABLE: 1, DID_MAVPORT: port}}
+    notes: "Geliştirme için ucuz; operasyonda uygunluk belgeli modül gerekebilir (docs/08)"
+
+selection:
+  tier-a-ekonomik: {optical_flow: mtf01, rangefinder_down: mtf01, overhead: vl53l1x, palm_tof: vl53l8cx,
+                    gnss: holybro_m10, compass: holybro_m10, remote_id: remote_id_module}
+  tier-b-pro: {optical_flow: h_flow, rangefinder_down: h_flow, overhead: vl53l1x, palm_tof: vl53l8cx,
+               obstacle: oakd_lite, gnss: h_rtk_f9p, compass: rm3100_dronecan, remote_id: remote_id_module}
+  tier-c-ust: {optical_flow: ark_flow_mr, rangefinder_down: ark_flow_mr, overhead: vl53l1x, palm_tof: vl53l8cx,
+               obstacle: oakd_pro_w, gnss: ark_x20_rtk, compass: ark_mag, remote_id: remote_id_module}

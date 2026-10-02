@@ -19,5 +19,7 @@ jobs:
         run: python3 tools/budget_calc.py --all
       - name: Sensör kataloğu (sürücü parametreleri ve seviye seçimleri)
         run: python3 tools/sensor_matrix.py
+      - name: Bütçe kesinti senaryoları (paketler limitler içinde)
+        run: python3 tools/scenarios.py
       - name: Tutarlılık testleri
         run: python3 -m unittest discover -s tests -v

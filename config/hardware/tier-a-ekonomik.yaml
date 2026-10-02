@@ -26,7 +26,7 @@ components:
   - {name: "Üst plaka, bağlantılar, kablolama", category: kablolama, mass_g: 60, price_usd: 50, notes: "tahmini"}
   - {name: "ARK FPV uçuş kontrolcüsü (H743, IIM-42653 + ısıtıcı)", category: aviyonik, mass_g: 7.5, power_w: 1.5, price_usd: 195}
   - {name: "Raspberry Pi 5 8GB + Active Cooler + AI HAT+ 2 (Hailo-10H)", category: companion, mass_g: 90, power_w: 10, price_usd: 380, notes: "kütle ve güç tahmini; Pi 5 8GB $175 (PiShop, 10/2026), AI HAT+ 2 $200"}
-  - {name: "Raspberry Pi Camera Module 3 (IMX708, 66° yatay) — gimbal", category: kamera, mass_g: 4, power_w: 0.3, price_usd: 25}
+  - {name: "Raspberry Pi Camera Module 3 (IMX708, 66° yatay) — gimbal", category: kamera, mass_g: 4, power_w: 0.3, price_usd: 29.25, notes: "PiShop, 10/2026"}
   - {name: "Kendi tasarım 2 eksen fırçasız gimbal (2× motor, STorM32, IMU, baskı parçalar, sönümleyici)", category: kamera, mass_g: 85, power_w: 2.5, price_usd: 95, notes: "tahmini, docs/10 §3"}
   - {name: "Raspberry Pi Camera Module 3 Wide (102° yatay) — aşağı/avuç", category: kamera, mass_g: 4, power_w: 0.3, price_usd: 38.5}
   - {name: "VL53L8CX 8×8 ToF (Pololu kartı) — aşağı", category: sensör, mass_g: 1, power_w: 0.5, price_usd: 25}

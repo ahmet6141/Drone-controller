@@ -10,11 +10,11 @@ mesafe sensörünün nasıl çalıştığını ve drone'un boyutunu anlatır.
 | Soru | Cevap |
 |---|---|
 | Drone kaç inç? | **7 inç** (pervane çapı 17,8 cm). Gövde GEPRC MOZ7 V2, motorlar arası çapraz 336 mm; korumalarla ≈ **43 × 43 cm**, yükseklik ≈ 18 cm; ağırlık ≈ **1,46 kg** (Seviye A) – 1,68 kg (B). Gerekçe: §6 |
-| Hangi kameralar? | Gimbalda **Raspberry Pi Camera Module 3** (66°, 4 g, $25); aşağıda (avuç) **Camera Module 3 Wide** (102°, 4 g, ≈ $38,5). Jetson seviyelerinde IMX219 (Camera Module 2) |
+| Hangi kameralar? | Gimbalda **Raspberry Pi Camera Module 3** (66°, 4 g, ≈ $29); aşağıda (avuç) **Camera Module 3 Wide** (102°, 4 g, ≈ $38,5). Jetson seviyelerinde IMX219 (Camera Module 2) |
 | Gimbal? | **2 eksen fırçasız** (pitch + roll), yaw gövdeyle; STorM32 kontrolcü; ≈ 85 g, ≈ $95 (A8 mini: 95 g, $257) |
 | Lazer / hareket / mesafe? | **MicoAir MTF-01** (akış + 8 m lazer, 4,5 g), **TFmini-S** (12 m lazer, 5 g), **VL53L8CX** (8×8 mesafe, 0,7 g, $24,95), **VL53L1X** (yukarı) |
 | 8×8 sensör nasıl? | 64 bölgeli lazer mesafe ölçer: her bölge için ayrı mesafe → avucun konumu, mesafesi, eğimi (§5, çalışan örnek: `tools/tof8x8.py`) |
-| Toplam etki | Seviye A (Raspberry Pi): **1456 g, ≈ 20 dk hover, hava aracı ≈ $1.480** (önceki A: 1499 g, 18,8 dk, $2.200) |
+| Toplam etki | Seviye A (Raspberry Pi): **1456 g, ≈ 20 dk hover, hava aracı ≈ $1.490** (önceki A: 1499 g, 18,8 dk, $2.200) |
 
 ## 2. Raspberry Pi kameraları
 
@@ -22,7 +22,7 @@ mesafe sensörünün nasıl çalıştığını ve drone'un boyutunu anlatır.
 | Kamera | Sensör | Çözünürlük | Yatay / dikey FOV | Deklanşör | Odak | Kütle | Fiyat |
 |---|---|---|---|---|---|---|---|
 | Camera Module 2 | IMX219 | 3280×2464 | 62,2° / 48,8° | Rolling | Ayarlanabilir | 3 g | ≈ $25 |
-| **Camera Module 3** | IMX708 | 4608×2592 (1080p50, 720p120) | 66° / 41° | Rolling | Motorlu (PDAF) | 4 g | $25'ten |
+| **Camera Module 3** | IMX708 | 4608×2592 (1080p50, 720p120) | 66° / 41° | Rolling | Motorlu (PDAF) | 4 g | $25 liste, $29,25 (PiShop) |
 | **Camera Module 3 Wide** | IMX708 | aynı | 102° / 67° | Rolling | Motorlu (PDAF) | 4 g | $38,50 (PiShop) |
 | HQ Camera | IMX477 | 4056×3040 | lense bağlı | Rolling | Ayarlanabilir | 30,4 g + lens | — |
 | Global Shutter | IMX296 | 1456×1088 @ 60 fps | lense bağlı | **Global** | Ayarlanabilir | 34 g (41 g adaptörle) + lens | $50 (lens hariç) |

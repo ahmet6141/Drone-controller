@@ -53,7 +53,7 @@ koruma/gövde kaybı %10, kullanılabilir enerji %85, yük altında gerilim %90)
 | Karma uçuş (dk) | 17.0 | 13.2 | 13.2 |
 | Ek yük payı (g) | 379 | 132 | 149 |
 | THR_MDL_FAC (tahmini) | 0.53 | 0.53 | 0.53 |
-| Maliyet: hava aracı (USD, ≈) | 1,484 | 4,906 | 6,720 |
+| Maliyet: hava aracı (USD, ≈) | 1,488 | 4,906 | 6,720 |
 | Maliyet: yer ekipmanı (USD, ≈) | 240 | 200 | 1,505 |
 | Limit kontrolleri | ✅ | ✅ | ✅ |
 

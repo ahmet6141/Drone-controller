@@ -1,0 +1,159 @@
+# Bütçe kesinti senaryoları — Seviye A (Raspberry Pi) üzerine yamalar (docs/11 §3).
+# Hesap: python3 tools/scenarios.py            (metin)
+#        python3 tools/scenarios.py --markdown (tablolar)
+# Her senaryo temel profile ayrı ayrı, paketler ise sırayla uygulanır ve tools/budget_calc.py ile
+# yeniden hesaplanır (AUW, T/W, hover süresi, limitler).
+#
+# İşlemler (op):
+#   adjust   eşleşen bileşene fark ekler (mass_g / power_w / price_usd); üst üste uygulanabilir
+#   replace  eşleşen bileşeni yenisiyle değiştirir
+#   remove   eşleşen bileşeni çıkarır
+# target: components (varsayılan) | ground_equipment. match: adın bir parçası — tam olarak BİR öğeyle eşleşmeli.
+# scope: kalıcı (ürüne taşınabilir) | Ar-Ge (yalnızca geliştirme/test aşaması için).
+# Fiyatlar USD, 10/2026 yaklaşık; "doğrulanmadı" notlu olanlar sipariş öncesi kontrol edilmeli.
+schema_version: 1
+base: tier-a-ekonomik
+
+scenarios:
+  - id: pi5-4gb
+    title: "Raspberry Pi 5 8GB → 4GB"
+    risk: düşük
+    scope: kalıcı
+    effect: "Seviye A'da VLM/LLM yok; ROS 2 + iki kamera hattı 4 GB'a sığar (bellek izlenmeli)"
+    source: "PiShop 10/2026: Pi 5 4GB $110, 8GB $175"
+    ops:
+      - {op: adjust, match: "Raspberry Pi 5", price_usd: -65}
+
+  - id: ai-hat-26t
+    title: "AI HAT+ 2 (Hailo-10H, $200) → AI HAT+ 26 TOPS (Hailo-8, $119,95)"
+    risk: düşük
+    scope: kalıcı
+    effect: "Raspberry Pi duyurusu: YOLO, poz ve segmentasyonda AI HAT+ 2 ≈ 26 TOPS AI HAT+; kaybedilen yalnızca üretken YZ (VLM)"
+    source: "raspberrypi.com AI HAT+ 2 duyurusu; PiShop fiyatları"
+    excludes: [ai-hat-13t]
+    ops:
+      - {op: adjust, match: "Raspberry Pi 5", price_usd: -80.05}
+
+  - id: ai-hat-13t
+    title: "AI HAT+ 2 → AI HAT+ 13 TOPS (Hailo-8L, $76,95)"
+    risk: orta
+    scope: kalıcı
+    effect: "Hızlandırıcı verimi ≈ yarıya iner → daha küçük giriş çözünürlüğü veya daha düşük tespit hızı"
+    source: "PiShop fiyatı"
+    excludes: [ai-hat-26t]
+    ops:
+      - {op: adjust, match: "Raspberry Pi 5", price_usd: -123.05}
+
+  - id: fc-pixhawk-6c-mini
+    title: "ARK FPV → Holybro Pixhawk 6C Mini"
+    risk: orta
+    scope: kalıcı
+    effect: "+35 g; IMU ısıtıcısı yok (ARK FPV: endüstriyel IMU + ısıtıcı) → soğuk/sıcak havada hover kalitesi için sıcaklık kalibrasyonu şart; 2 TELEM + 2 GPS portu"
+    source: "Holybro teknik özellik sayfası (Model A 42,4 g, ICM-42688-P + BMI088)"
+    excludes: [fc-matek-h743]
+    ops:
+      - op: replace
+        match: "ARK FPV"
+        with: {name: "Holybro Pixhawk 6C Mini (H743, ICM-42688-P + BMI088)", category: aviyonik, mass_g: 42.4, power_w: 1.5, price_usd: 131, notes: "güç tahmini"}
+
+  - id: fc-matek-h743
+    title: "ARK FPV → Matek H743-SLIM V4"
+    risk: orta
+    scope: kalıcı
+    effect: "ArduPilot yolunda güçlü seçenek; PX4 desteği topluluk düzeyinde → PX4 için önce doğrulanmalı"
+    source: "£84,90 (Matek bayi) ≈ $114, kur ve kütle doğrulanmadı"
+    excludes: [fc-pixhawk-6c-mini]
+    ops:
+      - op: replace
+        match: "ARK FPV"
+        with: {name: "Matek H743-SLIM V4", category: aviyonik, mass_g: 7.5, power_w: 1.5, price_usd: 114, notes: "kütle ve kur tahmini"}
+
+  - id: gimbal-servo-tilt
+    title: "2 eksen fırçasız gimbal → tek eksen servo tilt + EIS"
+    risk: orta
+    scope: Ar-Ge
+    effect: "−60 g, −2 W; takip için yeterli, video kalitesi düşer (servo titremesi, roll yok); fırçasız gimbal sonra eklenir"
+    source: "docs/10 §3.5"
+    ops:
+      - op: replace
+        match: "2 eksen fırçasız gimbal"
+        with: {name: "Tek eksen servo tilt (mikro servo + baskı braket) + EIS", category: kamera, mass_g: 25, power_w: 0.5, price_usd: 15, notes: "tahmini"}
+
+  - id: link-wifi-dev
+    title: "WFB-ng video linki → Pi 5 dahili Wi-Fi (yakın mesafe) + ELRS telemetri"
+    risk: düşük
+    scope: Ar-Ge
+    effect: "Kontrollü test sahasında (onlarca metre) video + MAVLink için yeterli; uzun menzil yok; frekans/güç BTK sınırları içinde"
+    source: "Pi 5 dahili 2,4/5 GHz Wi-Fi"
+    ops:
+      - {op: remove, match: "WFB-ng"}
+      - {op: remove, target: ground_equipment, match: "WFB-ng"}
+
+  - id: remote-id-esp32
+    title: "Remote ID modülü → ESP32 + ArduRemoteID"
+    risk: orta
+    scope: Ar-Ge
+    effect: "Geliştirme için yeterli; PX4 ile çalışması bekleniyor (BlueMark modülleri aynı yazılımla), doğrulanmadı; operasyonda uygunluk belgeli modül (docs/08)"
+    source: "PX4 v1.17 Remote ID belgesi; github.com/ArduPilot/ArduRemoteID"
+    ops:
+      - op: replace
+        match: "Remote ID modülü"
+        with: {name: "Remote ID: ESP32-S3/C3 + ArduRemoteID", category: haberleşme, mass_g: 5, power_w: 0.5, price_usd: 12, notes: "tahmini"}
+
+  - id: self-print
+    title: "Koruma, ağ ve tutamak kendi 3B yazıcımızda (cad/)"
+    risk: düşük
+    scope: kalıcı
+    effect: "Yalnızca filament maliyeti; parametrik CAD modelleri (cad/) ile tasarım bizde"
+    source: "PETG / PA-CF filament ≈ $25–60/kg; parça kütlesi cad/build.py ile"
+    ops:
+      - {op: adjust, match: "Tam pervane koruması", price_usd: -30}
+      - {op: adjust, match: "Avuç iniş tutamağı", price_usd: -10}
+
+  - id: no-overhead-tof
+    title: "Baş üstü VL53L1X çıkarılır"
+    risk: düşük
+    scope: Ar-Ge
+    effect: "Açık alanda gerekmez; iç mekânda tavan algılama için geri takılır"
+    source: "config/sensors/catalog.yaml"
+    ops:
+      - {op: remove, match: "VL53L1X"}
+
+  - id: gnss-matek-m10q
+    title: "Holybro M10 → Matek M10Q-5883"
+    risk: orta
+    scope: kalıcı
+    effect: "Aynı u-blox M10 alıcı; QMC5883L pusulanın PX4'te otomatik başlatılması doğrulanmalı (kütle değişimi hesaba katılmadı)"
+    source: "fiyat doğrulanmadı"
+    ops:
+      - {op: adjust, match: "M10 GNSS", price_usd: -14}
+
+  - id: radio-pocket
+    title: "RadioMaster TX15 → küçük ELRS kumanda (ör. RadioMaster Pocket)"
+    risk: düşük
+    scope: kalıcı
+    effect: "Ergonomi ve ekran küçülür; ELRS ve EdgeTX aynı"
+    source: "fiyat doğrulanmadı (≈ $70)"
+    ops:
+      - {op: adjust, target: ground_equipment, match: "TX15", price_usd: -90}
+
+  - id: battery-diy
+    title: "Hazır 6S1P P50B paket → kendi paketimiz (6× P50B)"
+    risk: yüksek
+    scope: kalıcı
+    effect: "Punta kaynağı, denge kablosu ve yalıtım deneyimi ister; hatalı paket yangın riski"
+    source: "hücre fiyatı doğrulanmadı"
+    ops:
+      - {op: adjust, target: battery, price_usd: -30}
+
+packages:
+  - id: onerilen
+    title: "Önerilen — yetenek kaybı olmadan"
+    scenarios: [pi5-4gb, ai-hat-26t, self-print, radio-pocket]
+  - id: mvp
+    title: "MVP — ilk uçuş prototipi (Ar-Ge)"
+    scenarios: [pi5-4gb, ai-hat-26t, self-print, radio-pocket, gimbal-servo-tilt, link-wifi-dev, remote-id-esp32, no-overhead-tof]
+  - id: minimum
+    title: "En düşük maliyet (riskli kalemler dahil)"
+    scenarios: [pi5-4gb, ai-hat-13t, self-print, radio-pocket, gimbal-servo-tilt, link-wifi-dev, remote-id-esp32, no-overhead-tof,
+                fc-pixhawk-6c-mini, gnss-matek-m10q, battery-diy]

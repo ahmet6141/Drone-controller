@@ -1,13 +1,15 @@
-# Seviye B — ÖNERİLEN PRO yapılandırma (varsayılan hedef)
+# Seviye B — PRO (Jetson) yapılandırma: VIO, büyük modeller ve VLM için (önerilen başlangıç: Seviye A)
 # Kütle/güç/fiyat kaynakları: docs/02-donanim-analizi.md. "tahmini" notlu değerler ölçülerek güncellenecek.
 # Hesap: python3 tools/budget_calc.py config/hardware/tier-b-pro.yaml
 schema_version: 1
 
 profile:
   id: tier-b-pro
-  name: "Seviye B — Önerilen Pro"
+  name: "Seviye B — Pro (Jetson)"
+  platform: jetson
   summary: >-
-    Orin NX 16GB (Super) + ARK FPV (PX4 v1.17), SIYI A8 mini gimbal, global shutter aşağı kamera + 8×8 ToF,
+    Orin NX 16GB (Super) + ARK Jetson PAB V3 (22 pin FFC kamera girişi) + ARKV6X (PX4 v1.17);
+    IMX219 Pi kamera kendi tasarımımız 2 eksen gimbalda, global shutter aşağı kamera + 8×8 ToF,
     OAK-D Lite ile cuVSLAM VIO, RTK-hazır GNSS, DroneCAN akış/lidar, SIYI HM30 IP link.
 
 limits:
@@ -21,12 +23,12 @@ components:
   - {name: "Tam pervane koruması + alt ağ (PA12-CF, 3B baskı)", category: gövde, mass_g: 110, price_usd: 40, notes: "tahmini"}
   - {name: "Avuç iniş tutamağı (TPU + köpük, ≥120 mm)", category: gövde, mass_g: 40, price_usd: 15, notes: "tahmini"}
   - {name: "Üst plaka, bağlantılar, kablolama", category: kablolama, mass_g: 70, price_usd: 60, notes: "tahmini"}
-  - {name: "ARK FPV uçuş kontrolcüsü (H743, IIM-42653 + ısıtıcı)", category: aviyonik, mass_g: 7.5, power_w: 1.5, price_usd: 195}
-  - {name: "Jetson Orin NX 16GB + Auvidea JNX120X + soğutucu", category: companion, mass_g: 130, power_w: 22, price_usd: 1815, notes: "modül ≈28 g türetilmiş; güç ortalama tahmini (MAXN SUPER tepe ≈40 W)"}
-  - {name: "SIYI A8 mini gimbal kamera", category: kamera, mass_g: 95, power_w: 5, price_usd: 257}
-  - {name: "Arducam OV9281 global shutter (aşağı, 130°)", category: kamera, mass_g: 8, power_w: 0.6, price_usd: 40, notes: "kütle/fiyat tahmini"}
-  - {name: "VL53L8CX 8×8 ToF (aşağı)", category: sensör, mass_g: 3, power_w: 0.3, price_usd: 30, notes: "tahmini"}
-  - {name: "VL53L1X ToF (yukarı, baş üstü boşluk)", category: sensör, mass_g: 2, power_w: 0.1, price_usd: 15}
+  - {name: "Jetson Orin NX 16GB + ARK Jetson PAB V3 + ARKV6X (PAB) + soğutucu", category: companion, mass_g: 160, power_w: 23.5, price_usd: 2640, notes: "≈160 g türetilmiş (ARK v1: 174 g); güç ortalama tahmini (MAXN SUPER tepe ≈40 W)"}
+  - {name: "IMX219 Pi kamera (Camera Module 2 / eşdeğeri, 62° yatay) — gimbal", category: kamera, mass_g: 3, power_w: 0.3, price_usd: 25, notes: "Jetson'da NVIDIA'nın belgelediği Pi kamerası"}
+  - {name: "Kendi tasarım 2 eksen fırçasız gimbal (2× motor, STorM32, IMU, baskı parçalar, sönümleyici)", category: kamera, mass_g: 85, power_w: 2.5, price_usd: 95, notes: "tahmini, docs/10 §3"}
+  - {name: "Arducam OV9281 global shutter (Pi/Jetson uyumlu) — aşağı/avuç", category: kamera, mass_g: 8, power_w: 0.6, price_usd: 40, notes: "kütle/fiyat tahmini"}
+  - {name: "VL53L8CX 8×8 ToF (Pololu kartı) — aşağı", category: sensör, mass_g: 1, power_w: 0.5, price_usd: 25}
+  - {name: "VL53L1X ToF — yukarı (baş üstü boşluk)", category: sensör, mass_g: 1, power_w: 0.1, price_usd: 15, notes: "fiyat tahmini"}
   - {name: "Holybro H-Flow (PAA3905 + AFBR-S50, DroneCAN)", category: sensör, mass_g: 15.2, power_w: 0.6, price_usd: 145}
   - {name: "Holybro H-RTK F9P Ultralight GNSS", category: sensör, mass_g: 25, power_w: 0.8, price_usd: 279}
   - {name: "Holybro DroneCAN RM3100 pusula (direk üstü)", category: sensör, mass_g: 15, power_w: 0.2, price_usd: 66, notes: "kütle tahmini"}
@@ -34,7 +36,7 @@ components:
   - {name: "RadioMaster XR4 ELRS alıcı + anten", category: haberleşme, mass_g: 5, power_w: 0.3, price_usd: 30, notes: "fiyat tahmini"}
   - {name: "SIYI HM30 hava ünitesi + antenler", category: haberleşme, mass_g: 89, power_w: 6, price_usd: 650, notes: "güç ve set fiyatı doğrulanmadı"}
   - {name: "Remote ID modülü (Open Drone ID)", category: haberleşme, mass_g: 10, power_w: 0.5, price_usd: 60, notes: "tahmini"}
-  - {name: "BEC 12 V/6 A + 5 V (dönüşüm kayıpları ≈ %10)", category: aviyonik, mass_g: 25, power_w: 4.1, price_usd: 25}
+  - {name: "BEC 5 V/10 A (PAB V3) + 12 V (gimbal, link) (dönüşüm kayıpları ≈ %10)", category: aviyonik, mass_g: 30, power_w: 4.0, price_usd: 35}
 
 propulsion:
   motor_count: 4

@@ -7,58 +7,66 @@ değerleri [`config/hardware/`](../config/hardware/) altındadır; bütçe tablo
 
 ## 1. Özet: üç donanım seviyesi
 
-| Bileşen | Seviye A — Geliştirme | **Seviye B — Önerilen Pro** | Seviye C — Üst Seviye |
+| Bileşen | **Seviye A — Ekonomik (Raspberry Pi)** | Seviye B — Pro (Jetson) | Seviye C — Üst Seviye |
 |---|---|---|---|
 | Gövde | GEPRC MOZ7 V2 (336 mm) + tam koruma/ağ + avuç tutamağı | ← aynı | ← aynı |
 | Motor / pervane | EMAX ECO II 2807 1300KV / HQ 7×4×3 | T-Motor F90 2806.5 1300KV / HQ 7×4×3 | ← B |
 | ESC | Tekko32 F4 50A (AM32) | Tekko32 F4 Metal 65A (AM32) | ARK 4IN1 50/75 A |
 | Batarya | 6S1P Molicel P50B (5 Ah, 451 g) | ← aynı | ← aynı (dayanım: 6S2P) |
-| Uçuş kontrolcüsü | ARK FPV (H743, endüstriyel IMU + ısıtıcı) | ARK FPV | ARKV6X (3 IMU, PAB yuvası) |
-| Companion | Jetson Orin Nano 8GB Super + Auvidea JNX120X | **Jetson Orin NX 16GB** + JNX120X | Orin NX 16GB (MAXN SUPER) + JNX120X |
-| Gimbal kamera | SIYI A8 mini | ← | ← |
-| Aşağı kamera / ToF | IMX219-160° / VL53L1X | OV9281 global shutter / VL53L8CX 8×8 | ← B |
+| Uçuş kontrolcüsü | ARK FPV (H743, endüstriyel IMU + ısıtıcı) | ARKV6X (3 IMU, PAB yuvasında) | ← B |
+| Companion | **Raspberry Pi 5 8GB + AI HAT+ 2 (Hailo-10H)** | Jetson Orin NX 16GB + ARK Jetson PAB V3 | Orin NX 16GB (MAXN SUPER) + PAB V3 |
+| Gimbal | **Kendi tasarımımız 2 eksen** (STorM32) — docs/10 | ← aynı | ← aynı |
+| Gimbal kamerası | **Pi Camera Module 3** (66°) | IMX219 (Pi Camera Module 2 / eşdeğeri) | ← B |
+| Aşağı kamera / ToF | **Camera Module 3 Wide** / VL53L8CX 8×8 | OV9281 global shutter / VL53L8CX | ← B |
+| Baş üstü ToF | VL53L1X | VL53L1X | VL53L1X |
 | Stereo (VIO + engel) | — | OAK-D Lite | OAK-D Pro W (150°) |
-| Akış + lidar | MicoAir MTF-01 (UART) | Holybro H-Flow (DroneCAN) | ARK Flow MR (DroneCAN) |
+| Akış + lazer | MicoAir MTF-01 (akış + 8 m lazer, UART) | Holybro H-Flow (DroneCAN) | ARK Flow MR (DroneCAN) |
 | GNSS / pusula | Holybro M10 | H-RTK F9P Ultralight + RM3100 | ARK X20 RTK + ARK MAG |
 | RC | TX15 + XR4 (ELRS 4.1) | TX16S MK3 + XR4 | ← B |
 | Video/veri linki | WFB-ng (açık kaynak) | SIYI HM30 | Doodle Labs mini-OEM (mesh) |
 | Uçuş yığını | PX4 v1.17 | PX4 v1.17 | PX4 v1.17 |
 
-Üç seviye aynı gövde, aynı taşıyıcı kart ve aynı yazılım yığınını paylaşır; companion yükseltmesi
-(Orin Nano → Orin NX) aynı yuvada modül değişimidir. **Önerilen başlangıç: Seviye A ile geliştirme, Seviye B ile ürün.**
+Kameralar artık hazır gimbal kamera (SIYI A8 mini) yerine **Raspberry Pi kameraları + kendi
+tasarımımız gimbal** (ayrıntılar ve gerekçeler: [10](10-kamera-gimbal-ve-sensorler.md)). Pi
+kameralarıyla en uyumlu ve en ucuz yol Raspberry Pi 5'tir; Jetson'da NVIDIA'nın belgelediği Pi
+kamerası IMX219'dur ve 22 pin FFC girişli taşıyıcı (ARK Jetson PAB V3) gerekir.
+**Önerilen başlangıç: Seviye A.**
 
 ## 2. Ağırlık, güç ve uçuş süresi bütçesi
 
 `python3 tools/budget_calc.py --all --markdown` çıktısı (F90 itki verisi, log-log enterpolasyon,
 koruma/gövde kaybı %10, kullanılabilir enerji %85, yük altında gerilim %90):
 
-| Metrik | tier-a-gelistirme | tier-b-pro | tier-c-ust |
+| Metrik | tier-a-ekonomik | tier-b-pro | tier-c-ust |
 |---|---:|---:|---:|
-| AUW (g) | 1499 | 1666 | 1639 |
+| AUW (g) | 1456 | 1683 | 1659 |
 | Batarya (g) | 451 | 451 | 451 |
 | Maks itki (g) | 8500 | 8500 | 8500 |
-| T/W (motor) | 5.67 | 5.10 | 5.18 |
-| T/W (batarya sınırlı) | 2.68 | 2.39 | 2.42 |
-| Hover itkisi/motor (g) | 375 | 416 | 410 |
-| Hover verimi (g/W) | 5.69 | 5.44 | 5.48 |
-| Hover gazı (MPC_THR_HOVER) | 0.18 | 0.20 | 0.19 |
-| Hover gücü (W) | 293 | 352 | 352 |
-| Hover akımı (A) | 13.6 | 16.3 | 16.3 |
-| Hover süresi (dk) | 18.8 | 15.7 | 15.6 |
-| Karma uçuş (dk) | 16.0 | 13.3 | 13.3 |
-| Ek yük payı (g) | 329 | 147 | 167 |
+| T/W (motor) | 5.84 | 5.05 | 5.12 |
+| T/W (batarya sınırlı) | 2.77 | 2.37 | 2.40 |
+| Hover itkisi/motor (g) | 364 | 421 | 415 |
+| Hover verimi (g/W) | 5.76 | 5.42 | 5.45 |
+| Hover gazı (MPC_THR_HOVER) | 0.17 | 0.20 | 0.20 |
+| Hover gücü (W) | 275 | 354 | 355 |
+| Hover akımı (A) | 12.7 | 16.4 | 16.4 |
+| Hover süresi (dk) | 20.1 | 15.6 | 15.5 |
+| Karma uçuş (dk) | 17.0 | 13.2 | 13.2 |
+| Ek yük payı (g) | 379 | 132 | 149 |
 | THR_MDL_FAC (tahmini) | 0.53 | 0.53 | 0.53 |
-| Maliyet: hava aracı (USD, ≈) | 2,197 | 4,408 | 6,426 |
+| Maliyet: hava aracı (USD, ≈) | 1,484 | 4,906 | 6,720 |
 | Maliyet: yer ekipmanı (USD, ≈) | 240 | 200 | 1,505 |
 | Limit kontrolleri | ✅ | ✅ | ✅ |
 
-- **Korumanın bedeli**: Seviye B koruma ve ağ olmadan 1556 g / 18,2 dk → koruma ≈ 2,5 dk.
-- **Dayanım seçeneği** (Seviye C, 6S2P P50B, 902 g): AUW 2090 g, hover **23,1 dk**, batarya
-  sınırlı T/W 2,86. Ağırlık nedeniyle bu yapılandırmada avuca iniş yalnızca işaretli pedle önerilir.
+- **Korumanın bedeli**: koruma ve ağ olmadan Seviye A 1346 g / 23,8 dk, Seviye B 1573 g / 18,1 dk
+  → koruma ≈ 2,5–3,5 dk.
+- **Dayanım seçeneği** (Seviye C, 6S2P P50B, 902 g): AUW 2110 g, hover **23,0 dk**, batarya
+  sınırlı T/W 2,83. Ağırlık nedeniyle bu yapılandırmada avuca iniş yalnızca işaretli pedle önerilir.
+- Seviye B'nin maliyeti, Pi kameraları için gereken 22 pin FFC'li taşıyıcı (ARK Jetson PAB V3 +
+  ARKV6X) nedeniyle arttı; daha ucuz alternatif Holybro Pixhawk Jetson Baseboard + Pixhawk 6X
+  (≈ $535 daha ucuz, ≈ 43 g daha ağır).
 - T/W (motor) ≈ 5 → bol kontrol otoritesi; asıl sınır bataryanın sürekli akımıdır (60 A).
-- Maliyetler yaklaşık, vergi/kargo hariç; Jetson fiyatları Temmuz 2026 artışı sonrası.
-- Doğrulama: Faz 2'de itki standı (koruma takılı) → profil eğrileri güncellenir.
-
+- Maliyetler yaklaşık, vergi/kargo hariç; Jetson (Temmuz 2026) ve Raspberry Pi (Şubat 2026) fiyat
+  artışları sonrası.
 
 ## 3. Gövde (frame)
 
@@ -72,7 +80,7 @@ koruma/gövde kaybı %10, kullanılabilir enerji %85, yük altında gerilim %90)
 
 - Hiçbir FPV 7 inç gövde Jetson için tasarlanmamış → **özel üst plaka** (karbon/PA12-CF) gerekli.
 - **Gerçek-X (true-X)** seçildi: simetrik tam koruma, yönetilebilir ağırlık merkezi; gimbal ön
-  burunda alçakta (A8 mini: 81° yatay FOV, −90°…+25° eğim) pervaneleri görmez. Deadcat temiz görüş
+  burunda alçakta (Camera Module 3: 66° yatay FOV; gimbal pitch −90°…+30°) pervaneleri görmez. Deadcat temiz görüş
   sağlar ama asimetriktir ve korumalanması zordur.
 
 ## 4. İtki
@@ -133,21 +141,21 @@ bidirectional DShot notch filtresi için en düşük gecikmeli RPM geri bildirim
 ### 6.1 Platformlar
 | Platform | YZ (seyrek INT8) | RAM | Güç | Fiyat (1k adet) | Değerlendirme |
 |---|---|---|---|---|---|
-| Jetson Orin Nano 8GB (Super) | 67 TOPS | 8 GB | 7–25 W + MAXN SUPER | $399 (önce $299) | **Seviye A**. DLA yok, **donanım video kodlayıcı yok** (NVENC) |
+| **Raspberry Pi 5 8GB + AI HAT+ 2** | Hailo-10H: 40 TOPS (INT4) | 8 GB + 8 GB (HAT) | ≈ 10 W (tahmini) | $175 + $200 | **Seviye A**. Pi kameraları yerel; donanım video kodlayıcı yok; 0–70 °C; üretim ≥ 2036 |
+| Jetson Orin Nano 8GB (Super) | 67 TOPS | 8 GB | 7–25 W + MAXN SUPER | $399 (önce $299) | Geliştirme kiti / alternatif. DLA yok, **donanım video kodlayıcı yok** (NVENC) |
 | Jetson Orin NX 8GB | 117 TOPS | 8 GB | 10–40 W | $649 | — |
 | **Jetson Orin NX 16GB** | 157 TOPS | 16 GB | 10–40 W + MAXN SUPER | $999 (önce $599) | **Seviye B/C**. Donanım H.265 kodlama; algı + VIO + küçük VLM birlikte sığar |
 | Jetson T4000 / T5000 (Thor) | 1200 / 2070 FP4 TFLOPS | 64 / 128 GB | 40–130 W | $2999+ | 100×87 mm, güç → 7 inç için uygun değil |
 | Jetson T2000 (duyuru 15.07.2026) | 400 FP4 TFLOPS | 16 GB | ~40 W | — | **Q1 2027**; ~50×87 mm, yeni taşıyıcı gerekir → gelecek yükseltme yolu |
 | ModalAI VOXL 2 Mini | 15 TOPS | 8 GB | 0,5–8 W | $1350 | 11 g, PX4 + VIO dahili; Ubuntu 18.04, TFLite; YOLO çoğu zaman CPU'ya düşüyor |
 | ModalAI VOXL 3 (QCS6490) | 12 TOPS | 8 GB | 0,1–6 W | — | 16 g, 2S–6S doğrudan; belgeli ama mağaza sayfası yok |
-| RPi 5 + AI HAT+ 2 (Hailo-10H) | 40 TOPS INT4 | 8 GB (HAT) | ~2,5 W (HAT) | $200 (HAT) | CUDA yok → cuVSLAM yok; ayrı yazılım yığını |
 | Luxonis OAK 4 D / S | 48 TOPS | 8 GB | 10–25 W | $849 / $749 | 674 / 325 g → çok ağır |
 
 ### 6.2 Taşıyıcı kartlar (Orin Nano / NX)
 | Kart | Kütle | Giriş | Öne çıkan | Fiyat |
 |---|---|---|---|---|
-| **Auvidea JNX120X** (01/2026) | 47,2 g | 12–24 V (6S tam şarjda 25,2 V → 12 V BEC) | 5 portlu GbE switch (3 harici), 2× 4-şeritli kamera, 3 UART, CAN, **Pixhawk Autopilot Bus (PAB) yuvası** | €349 |
-| ARK Jetson PAB V3 (06/2026) | 66 g | 5 V, ≥ 4 A (çok girişli) | FC (ör. ARKV6X) ile Ethernet switch; NDAA uyumlu | $800 |
+| Auvidea JNX120X (01/2026) | 47,2 g | 12–24 V (6S tam şarjda 25,2 V → 12 V BEC) | 5 portlu GbE switch (3 harici), 3 UART, CAN, PAB yuvası; kamera girişi **micro-coax** → Pi kameraları doğrudan takılamaz | €349 |
+| **ARK Jetson PAB V3** (06/2026) | 66 g | 5 V, ≥ 4 A (çok girişli) | **2× 22 pin FFC kamera** (Pi kameraları), PAB yuvası (ARKV6X), Ethernet switch | $800 → **Seviye B/C** |
 | Connect Tech Hadron-DM | 56 g | 9–60 V (6S doğrudan) | −25…+85 °C | — |
 | WeAct N006 (06/2026) | 57,8 g | 16–28 V (6S) | Yalnızca Orin NX; 0–40 °C | $110 |
 | Holybro Pixhawk Jetson Baseboard | 85 g (+Jetson 110, +soğutucu 175 g) | 7–21 V | Pixhawk 6X ile birleşik | $396 |
@@ -175,7 +183,7 @@ Orin modülü ≈ 25–28 g, soğutucu ≈ 50–65 g (taşıyıcı tablolarında
 |---|---|---|
 | ROS 2 özel modlar | `px4-ros2-interface-lib`: ROS 2'den kaydedilen **gerçek uçuş modları**, failsafe entegrasyonu, yanıt vermezse yedek mod (hâlâ "deneysel") | Lua `register_custom_mode` + DDS `cmd_vel` (yalnızca guided tipi modlar, arm'lıyken) |
 | Hover araçları | RPM notch, hover itki tahmincisi, autotune | Zengin notch seçenekleri, QuikTune → AutoTune, Filter/PID Review |
-| SIYI A8 mini | Yerel sürücü yok → Jetson SIYI SDK ile sürer | Yerel sürücü (`MNT1_TYPE=8`) |
+| Gimbal (kendi tasarımımız, STorM32) | PX4'e bağlı değil → companion UART ile sürer | Yerel STorM32 sürücüsü (`MNT1_TYPE`=4 MAVLink / 5 seri) |
 | Takip | Follow-Me yalnızca `FOLLOW_TARGET`, `FLW_TGT_HT` ≥ 8 m, görüntü yok → **özel mod şart** | Follow modu, görüntü yok |
 | Lisans | **BSD-3** (kapalı ürün dostu) | GPLv3 (dağıtılan firmware kaynağı açılır; companion kodu kapalı kalabilir) |
 | Not | v1.18.0-rc1 (10.09.2026) kararlı değil; v1.18'de bazı adlar değişiyor | 4.7'de birçok parametre SI birime geçti ve yeniden adlandırıldı |
@@ -185,8 +193,8 @@ Karar: **PX4 v1.17** birincil; FC'ler her iki yığını da çalıştırabilen k
 ### 7.2 Uçuş kontrolcüleri
 | FC | MCU | IMU | Baro | Yığın | Montaj | Kütle | Fiyat | Not |
 |---|---|---|---|---|---|---|---|---|
-| **ARK FPV** | H743 | IIM-42653 (endüstriyel) + 1 W ısıtıcı | BMP390 | PX4 (varsayılan), AP 4.7 | 30,5 | 7,5 g | $195 | 1 CAN, 9 PWM, 12 V/2 A BEC, 5,5–54 V → **A, B** |
-| **ARKV6X** | H743 | 2× ICM-42688-P + IIM-42652, ısıtıcı | BMP390 | PX4, AP | PAB modül | 5 g | $400 | Taşıyıcı gerekir → **C** |
+| **ARK FPV** | H743 | IIM-42653 (endüstriyel) + 1 W ısıtıcı | BMP390 | PX4 (varsayılan), AP 4.7 | 30,5 | 7,5 g | $195 | 1 CAN, 9 PWM, 12 V/2 A BEC, 5,5–54 V → **A** |
+| **ARKV6X** | H743 | 2× ICM-42688-P + IIM-42652, ısıtıcı | BMP390 | PX4, AP | PAB modül | 5 g | $400 | PAB taşıyıcıda (ARK Jetson PAB V3) → **B, C** |
 | Pixhawk 6C Mini | H743 + IO | ICM-42688-P + BMI088 (ısıtmalı, izoleli) | MS5611 | PX4, AP | 54×39 | 42,4 g | $131 | 2 CAN; A alternatifi |
 | Pixhawk 6X Rev8 | H753 + IO | 3× ICM-45686 (ısıtmalı, izoleli) | ICP20100 + BMP388 | PX4, AP | modül | 31,3 g + 26,5 g taban | $269 / $389 | Ethernet (DDS) — C alternatifi |
 | Matek H743-SLIM V4 | H743 | 2× ICM42688P | DPS368 | AP birinci sınıf; PX4 yalnızca derleme hedefi | 30,5 | 7 g | £85 | ArduPilot yolu |
@@ -221,27 +229,28 @@ GNSS, pusula ve akış/lidar **DroneCAN** üzerinde (tek veri yolu yeterli); UAR
 
 ## 8. Kameralar ve mesafe sensörleri
 
-### 8.1 Gimbal kamera
-| Ürün | Özellik | Kütle | Güç | Fiyat | Not |
-|---|---|---|---|---|---|
-| **SIYI A8 mini** | 3 eksen; 1/1,7" 8 MP; 4K/2K/1080p **@25 fps**; 81° yatay FOV; 11–25,2 V | 95 g | 5 W ort. / 12 W tepe | $257 | Ethernet RTSP + SDK (UDP), ArduPilot sürücüsü, MAVLink gimbal v2; 6× **dijital** zoom (4K'da kapalı). Haziran 2023 öncesi partiler 25,2 V'u desteklemeyebilir → 12 V BEC |
-| XF Z-1 Mini | 3 eksen; 4K30 akış, 1080p kayıt; 63° diyagonal | 69 g | 4,5 W | €395 | Daha hafif alternatif |
-| Topotek GIP335 | Ağ gimbal | 60 g | — | — | ArduPilot 4.6+ |
-| SIYI A2 mini | Tek eksen, 160° | ~85 g | — | $106 | Gimbal'sız bütçe seçeneği |
+### 8.1 Gimbal ve gimbal kamerası
+| Seçenek | Özellik | Kütle | Fiyat | Not |
+|---|---|---|---|---|
+| **Kendi gimbalımız (2 eksen) + Pi Camera Module 3** | 66° yatay, 12 MP, PDAF; pitch + roll fırçasız, yaw gövdeyle | ≈ 89 g | ≈ $120 | **Seçildi (A)**; Jetson'da IMX219 ile (B/C) — tasarım: [10 §3](10-kamera-gimbal-ve-sensorler.md) |
+| SIYI A8 mini (hazır) | 3 eksen; 4K/2K/1080p @ 25 fps; 81° yatay; Ethernet RTSP + SDK | 95 g | $257 | Hazır alternatif: 4K SD kayıt ve optik kalite daha iyi, ama RTSP gecikmesi ve maliyet |
+| XF Z-1 Mini | 3 eksen; 4K30 akış, 1080p kayıt | 69 g | €395 | Hazır, hafif alternatif |
+| Tek eksen servo + EIS | Yalnızca tilt | ≈ 25 g | ≈ $15 | İlk prototip uçuşları için |
 
 ### 8.2 Aşağı kamera (avuç)
 | Kamera | Özellik | Not |
 |---|---|---|
-| **Arducam OV9281** | **Global shutter**, 1280×800 @ 80 fps, mono, 130° D | Hareket bulanıklığı yok → **Seviye B/C** |
-| IMX219-160° | Rolling shutter, renkli | JetPack stok sürücüsü → **Seviye A** |
-| Arducam IMX708 geniş | 120° yatay | JetPack 6'da sürücü sorunları raporlanmış |
+| **Raspberry Pi Camera Module 3 Wide** | 102° yatay, 720p120, 4 g | **Seviye A** (Pi 5) |
+| **Arducam OV9281** | **Global shutter**, 1280×800, mono | **Seviye B/C** (Jetson sürücülü) |
+| Raspberry Pi Global Shutter (IMX296) | 60 fps, global, 34 g + C/CS lens | Bulanıklık yok ama tutamak için ağır |
+| IMX219-160° | Rolling shutter, renkli | Ucuz alternatif |
 
 ### 8.3 ToF (avuç mesafesi + baş üstü boşluk)
 | Sensör | Bölge | Menzil | FOV | Not |
 |---|---|---|---|---|
-| VL53L1X | Tek | ~4 m | ~27° | Yukarı bakan boşluk sensörü; Seviye A aşağı |
-| VL53L7CX | 8×8 | 3,5 m | 60°×60° | Geniş açı |
-| **VL53L8CX** | 8×8 | 4 m | 63° D | Gün ışığında daha iyi (5 klux'ta 2,85 m) → **Seviye B/C aşağı** |
+| VL53L1X | Tek | ~4 m | ~27° | Yukarı bakan boşluk sensörü; PX4 yerel sürücü |
+| VL53L7CX | 8×8 | 3,5 m | 90° D (60°×60°) | Geniş açı |
+| **VL53L8CX** | 8×8 / 4×4 | 4 m | 65° D (45°×45°) | 5 klux'ta 2,8 m; I2C/SPI; Pololu kartı 0,7 g, $24,95 → **tüm seviyeler, aşağı** |
 | VL53L9 (26.06.2026) | 54×42 | 5 cm–9 m | 54°×42° | 100 fps, MIPI; seri üretim 07/2026, kart erişimi doğrulanmadı → gelecek |
 
 ### 8.4 Stereo / derinlik (VIO + engel)
@@ -265,10 +274,10 @@ GNSS, pusula ve akış/lidar **DroneCAN** üzerinde (tek veri yolu yeterli); UAR
 ### 9.2 IP video + telemetri linki
 | Link | Menzil | Gecikme | Hava ünitesi | Fiyat | Not |
 |---|---|---|---|---|---|
-| **SIYI HM30** | 20 km | 180–250 ms | 74 g | — | A8 mini ile aynı ekosistem; LAN girişi + UART telemetri. Jetson RTSP akışının taşınması **doğrulanacak** → Seviye B |
+| **SIYI HM30** | 20 km | 180–250 ms | 74 g | — | LAN girişi + UART telemetri; companion video akışının taşınması **doğrulanacak** → Seviye B |
 | Herelink 1.1 | 20 km | ~110 ms | 68 g | — | v1.1'de Ethernet |
 | **Doodle Labs mini-OEM** | 80+ km (üretici) | — | 25 g | $1305 | Şeffaf IP radyo, 80 Mbps, mesh → Seviye C |
-| WFB-ng (Jetson + RTL8812AU/EU) | ~20 km (yönlü antenle) | düşük | ~20 g | düşük | Açık kaynak, çift yönlü MAVLink + IP tüneli; **BTK güç sınırları** → Seviye A |
+| WFB-ng (companion + RTL8812AU/EU) | ~20 km (yönlü antenle) | düşük | ~20 g | düşük | Açık kaynak, çift yönlü MAVLink + IP tüneli; **BTK güç sınırları** → Seviye A |
 | OpenIPC | — | 80–100 ms @ 60 fps | — | — | Kendi kamerası; YZ katmanı zor |
 
 ## 10. Uzaktan tanımlama (Remote ID)
@@ -279,7 +288,9 @@ yayımlandığında entegrasyon güncellenecektir.
 ## 11. Tedarik ve fiyat riskleri
 | Risk | Etki | Önlem |
 |---|---|---|
-| Jetson fiyat artışı (07/2026) | Seviye B/C maliyeti | Seviye A ile geliştirme, modül değişimi aynı yuvada |
+| Jetson fiyat artışı (07/2026) | Seviye B/C maliyeti | Geliştirme Seviye A (Raspberry Pi) ile; Jetson yalnızca B/C |
+| Raspberry Pi bellek kaynaklı fiyat artışı (02/2026; 8GB +$30) | Seviye A maliyeti | 4GB Pi 5 de yeterli olabilir (ölçülecek) |
+| Pi kameralarının Jetson desteği sınırlı (resmî: IMX219) | B/C kamera seçimi | B/C'de IMX219 + OV9281; 22 pin FFC'li taşıyıcı |
 | T-Motor F90 bazı satıcılarda üretimden kalktı | Motor tedariki | ECO III 2807 / Axisflying C287 eşdeğerleri; itki standında doğrulama |
 | RealSense'in Cognex'e satışı | Yol haritası belirsiz | OAK-D / Orbbec tercih edildi |
 | VOXL 3 mağazada yok | — | Yalnızca alternatif mimari olarak not edildi |

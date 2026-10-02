@@ -46,7 +46,7 @@
 1	1	IMU_DGYRO_CUTOFF	20.0	9
 #
 # Oran/tutum kontrolü: varsayılan kazançlarla başlanır, otomatik ayar (autotune) ile bulunur.
-# Airmode ayar süresince kapalı; batarya gerilim ölçeklemesi açık. IMU ısıtıcısı (ARK FPV: 1 W).
+# Airmode ayar süresince kapalı; batarya gerilim ölçeklemesi açık. IMU ısıtıcısı (ARK FPV / ARKV6X: 1 W).
 1	1	MC_AIRMODE	0	6
 1	1	MC_AT_EN	1	6
 1	1	MC_AT_APPLY	1	6

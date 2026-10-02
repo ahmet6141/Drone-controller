@@ -12,25 +12,28 @@ yeteneğine sahip, orta boy (7 inç, 6S) bir quadcopter'ın yazılım ve donanı
 |---|---|---|
 | Platform | 7 inç X, GEPRC MOZ7 V2, **tam pervane koruması + alt ağ + avuç tutamağı** | 1,5–1,7 kg'lık bir drone için koruma zorunlu — [05](docs/05-avuca-inis-tasarimi.md) |
 | Uçuş yığını | **PX4 v1.17** (ArduPilot 4.7.1 yedek) | ROS 2'den kayıtlı gerçek uçuş modları, BSD-3 — [02 §7](docs/02-donanim-analizi.md) |
-| Uçuş kontrolcüsü | ARK FPV (A/B), ARKV6X (C) | Endüstriyel IMU + ısıtıcı, her iki yığın |
-| Companion | **Jetson Orin NX 16GB** (B/C), Orin Nano 8GB Super (A) — JetPack 7.2.1, ROS 2 Jazzy, Isaac ROS 4.6 | 157 TOPS, donanım video kodlama, VIO + algı + küçük VLM birlikte — [02 §6](docs/02-donanim-analizi.md) |
+| Uçuş kontrolcüsü | ARK FPV (A), ARKV6X (B/C) | Endüstriyel IMU + ısıtıcı, her iki yığın |
+| Companion | **Raspberry Pi 5 + AI HAT+ 2 (Hailo-10H)** (A) · Jetson Orin NX 16GB (B/C) — ROS 2 Jazzy | Pi kameraları yerel ve ucuz; Jetson: VIO + büyük modeller + VLM — [02 §6](docs/02-donanim-analizi.md) |
+| Kameralar ve gimbal | **Raspberry Pi Camera Module 3** (gimbal) + **CM3 Wide** (avuç), **kendi tasarımımız 2 eksen gimbal** (STorM32) | Hazır gimbal kameraya (A8 mini, $257) göre ≈ $135 ucuz, CSI ile düşük gecikme — [10](docs/10-kamera-gimbal-ve-sensorler.md) |
+| Sensörler | MTF-01 (akış + lazer), TFmini-S (lazer irtifa), **VL53L8CX 8×8**, VL53L1X | Uygun fiyatlı; PX4/ArduPilot sürücü desteği doğrulandı — [10 §4](docs/10-kamera-gimbal-ve-sensorler.md) |
 | Tespit | **YOLO26** (geliştirme) / **RF-DETR** (ticari, Apache-2.0) | Orin NX: YOLO26s INT8 4,78 ms — [03](docs/03-yapay-zeka-modelleri.md) |
 | Takip | BoT-SORT + OSNet ReID, SOT: LiteTrack/SUTrack | Örtülme sonrası yeniden yakalama — [06](docs/06-hedef-takip-tasarimi.md) |
-| Jest / avuç | İki aşamalı el hattı (HaGRIDv2 + MediaPipe/RTMPose) + global shutter aşağı kamera + 8×8 ToF | Uzak mesafede küçük el, hareket bulanıklığı — [03 §5](docs/03-yapay-zeka-modelleri.md) |
+| Jest / avuç | İki aşamalı el hattı (HaGRIDv2 + landmark) + aşağı kamera + 8×8 ToF (`tools/tof8x8.py`) | Uzak mesafede küçük el; ToF ile mesafe/eğim/temas — [03 §5](docs/03-yapay-zeka-modelleri.md), [10 §5](docs/10-kamera-gimbal-ve-sensorler.md) |
 | Hover | RPM notch (bidirectional DShot), RTK/akış/VIO EKF2 profilleri, autotune | [07](docs/07-hover-ayar-rehberi.md) |
 | Avuca iniş | Drone kişiye yaklaşmaz; ≥ 2 bağımsız temas ipucu → ≤ 150 ms zorlamalı disarm; önce **işaretli iniş pedi** | [05](docs/05-avuca-inis-tasarimi.md) |
 | Mevzuat | Yeni **SHT-İHA (30.07.2026)**: M0 sınıfı, YZ destekli otonomi için P2 + kontrollü izin; Ar-Ge kontrollü sahada saklı | [08](docs/08-guvenlik-ve-mevzuat.md) |
 
-## Donanım seviyeleri (hesaplanmış)
+## Donanım seviyeleri (hesaplanmış) — drone: **7 inç**
 
-| | Seviye A — Geliştirme | **Seviye B — Önerilen Pro** | Seviye C — Üst Seviye |
+| | **Seviye A — Ekonomik (Raspberry Pi)** | Seviye B — Pro (Jetson) | Seviye C — Üst Seviye |
 |---|---:|---:|---:|
-| Kalkış ağırlığı | 1499 g | 1666 g | 1639 g |
-| Hover süresi | 18,8 dk | 15,7 dk | 15,6 dk (6S2P: 23 dk) |
-| T/W (batarya sınırlı / motor) | 2,68 / 5,67 | 2,39 / 5,10 | 2,42 / 5,18 |
-| Hava aracı maliyeti (≈) | $2,2 bin | $4,4 bin | $6,4 bin |
+| Kalkış ağırlığı | 1456 g | 1683 g | 1659 g |
+| Hover süresi | 20,1 dk | 15,6 dk | 15,5 dk (6S2P: 23 dk) |
+| T/W (batarya sınırlı / motor) | 2,77 / 5,84 | 2,37 / 5,05 | 2,40 / 5,12 |
+| Hava aracı maliyeti (≈) | **$1,5 bin** | $4,9 bin | $6,7 bin |
 
-Ayrıntı: [`config/hardware/`](config/hardware/) · `python3 tools/budget_calc.py --all`
+7 inç pervane (17,8 cm), 336 mm gövde; korumalarla ≈ 43 × 43 cm. Ayrıntı: [`config/hardware/`](config/hardware/) ·
+`python3 tools/budget_calc.py --all`
 
 ## Dizin yapısı
 
@@ -45,19 +48,22 @@ docs/
   07-hover-ayar-rehberi.md     Profesyonel hover ayarı (PX4 v1.17), kabul uçuşları
   08-guvenlik-ve-mevzuat.md    SHT-İHA 2026 özeti, tasarım etkileri, güvenlik
   09-yol-haritasi.md           Faz planı ve gereksinim → test eşleşmesi
+  10-kamera-gimbal-ve-sensorler.md  Pi kameraları, kendi gimbalımız, ucuz sensörler, 8×8 ToF, boyut
 config/
   hardware/   Seviye A/B/C bileşen, kütle, güç, itki eğrisi, batarya, fiyat
   px4/        PX4 v1.17 parametreleri: base/ (ortak) + profiles/ (dış mekân GNSS, iç mekân VIO)
   ardupilot/  ArduPilot Copter 4.7.1 yedek parametreleri
   ai/         Algı hattı: seviye bazında modeller, eşikler, lisans profili
   mission/    Davranış (avuca iniş, takip, gimbal) ve güvenlik sınırları
-  companion/  Jetson: systemd servisleri, mavlink-router, netplan, kurulum rehberi
+  companion/  Raspberry Pi 5 ve Jetson: ortam dosyaları, systemd, mavlink-router, kurulum rehberi
 tools/
   budget_calc.py       AUW, T/W, hover gücü/süresi, MPC_THR_HOVER, THR_MDL_FAC, maliyet
   validate_params.py   Parametre dosyalarını resmi PX4 v1.17 / ArduPilot 4.7.1 referansına göre doğrular
+  tof8x8.py            8×8 ToF karesinden avuç tespiti: konum, mesafe, eğim, temas (demo + testler)
   data/                Resmi parametre referanslarından çıkarılmış veri (02.10.2026)
 tests/
   test_configs.py      Hesaplayıcı + tüm konfigürasyonların tutarlılık testleri
+  test_tof8x8.py       8×8 ToF avuç analizi testleri
 ```
 
 ## Hızlı başlangıç
@@ -66,6 +72,7 @@ tests/
 pip install pyyaml                         # tek bağımlılık
 python3 tools/budget_calc.py --all         # üç seviyenin bütçesi
 python3 tools/validate_params.py           # PX4 / ArduPilot parametre doğrulaması
+python3 tools/tof8x8.py --demo             # 8×8 mesafe sensörü nasıl görür? (avuç 0,40 m'de)
 python3 -m unittest discover -s tests -v   # tüm tutarlılık testleri
 ```
 
@@ -87,5 +94,5 @@ değişmezleri (koruma şartı, drone'un kişiye yaklaşmaması, ≤ 150 ms tema
 
 ## Sonraki adım: Faz 1
 ROS 2 çalışma alanı ve paket iskeleti, PX4 SITL + Gazebo'da `PalmLand` / `FollowTarget` özel
-modları, algı hattının kayıtlı videolarda çalıştırılması ve jest veri setinin hazırlanması
-([09](docs/09-yol-haritasi.md)).
+modları, 2 eksen gimbalın CAD tasarımı, algı hattının kayıtlı videolarda (Pi 5 + Hailo) çalıştırılması
+ve jest veri setinin hazırlanması ([09](docs/09-yol-haritasi.md)).

@@ -83,11 +83,11 @@ iniş pedi** (veya avuç içine AprilTag dikili eldiven) desteklenir:
 
 ```mermaid
 flowchart LR
-  F["Ön kamera (gimbal)"] --> HD["El/jest tespiti"] --> GC["Jest sınıfı: OPEN_PALM<br/>N/M kare onayı"]
+  F["Gimbal kamerası (Pi CSI)"] --> HD["El/jest tespiti"] --> GC["Jest sınıfı: OPEN_PALM<br/>N/M kare onayı"]
   GC -- "≥ 1 s" --> ARM["Avuca iniş KURULDU"]
-  D["Aşağı kamera<br/>global shutter, geniş açı"] --> PD["Avuç tespiti"] --> LM["21 nokta el landmark"]
+  D["Aşağı kamera<br/>A: CM3 Wide 720p120 · B/C: OV9281 GS"] --> PD["Avuç tespiti"] --> LM["21 nokta el landmark"]
   LM --> OK["Açıklık + yönelim kontrolü<br/>(5 parmak açık, avuç kameraya dönük)"]
-  T["ToF 8×8"] --> Z["Avuç bölgesindeki<br/>bölgelerin medyanı"]
+  T["ToF 8×8 (VL53L8CX)"] --> Z["Avuç kümesi: merkez,<br/>mesafe, eğim (tools/tof8x8.py)"]
   OK --> FUS["3B avuç konumu<br/>gövde → NED, Kalman"]
   Z --> FUS
   FUS --> PT["/dc7/palm/target<br/>xyz + güven"]
@@ -95,7 +95,8 @@ flowchart LR
 
 ### 4.1 3B avuç konumu
 1. Avuç merkezi piksel `(u, v)` → balıkgözü modeliyle distorsiyonsuz ışın `r_c`.
-2. ToF bölgeleri avuç sınırlayıcı kutusuyla eşleşenlerin medyanı → optik eksen boyunca mesafe `d`.
+2. ToF: avuç kümesi (en yakın bitişik bölgeler) → mesafe `d`, merkez ve düzlem eğimi
+   (`tools/tof8x8.py`, docs/10 §5); kamera kutusuyla tutarlılık kontrolü.
 3. Gövde çerçevesi: `p_b = R_bc · (r_c / r_c,z) · d + t_bc` (kamera–gövde kalibrasyonu, Kalibr).
 4. Yerel NED: `p_n = R_nb(q) · p_b + p_drone`; sabit hızlı Kalman filtresi + inovasyon kapısı.
 5. 12 cm'nin altında kamera görüşü doyar → yatay hizalama ToF bölge merkezine (centroid) geçer.

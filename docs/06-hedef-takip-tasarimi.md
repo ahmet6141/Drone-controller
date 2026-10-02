@@ -7,7 +7,7 @@ Parametreler: [`config/mission/behavior.yaml`](../config/mission/behavior.yaml) 
 
 ```mermaid
 flowchart LR
-  CAM["Gimbal kamerası<br/>RTSP 1080p30"] --> DEC["NVDEC çözme"] --> DET["Tespit<br/>(insan, araç, ...)"]
+  CAM["Gimbal kamerası (Pi)<br/>CSI 1080p30"] --> DEC["ISP + ön işleme<br/>libcamera / Argus"] --> DET["Tespit<br/>(insan, araç, ...)"]
   DET --> MOT["MOT: BoT-SORT + ReID"]
   DEC --> SOT["SOT (tıkla-takip et,<br/>keyfi nesne)"]
   MOT --> SEL["Hedef seçimi /<br/>ilişkilendirme"]
@@ -40,16 +40,18 @@ yalnızca yüksek güvenli ve örtülmemiş karelerle güncellenir (sürüklenme
 2. **Boyut önsel bilgisi**: `d ≈ f · H / h_piksel` (insan için H ≈ 1,7 m). Sığ açılarda ağırlığı artar.
 3. **Kalman filtresi**: sabit hız modeli (x, y, ẋ, ẏ; z = zemin). Ölçüm kovaryansı geometrinin
    açı hatasına duyarlılığından türetilir. Çıkış: konum, hız, kovaryans, görünürlük.
-4. **Gecikme telafisi**: RTSP gecikmesi (≈ 80–120 ms) kadar ileri tahmin yapılır.
+4. **Gecikme telafisi**: kamera → setpoint gecikmesi (CSI ile ≈ 25–45 ms) kadar ileri tahmin yapılır.
 
-## 4. Gimbal kontrolü
+## 4. Gimbal kontrolü (kendi tasarımımız 2 eksen gimbal, docs/10 §3)
 
 - Piksel hatası → açısal hata: `e_yaw = atan(e_x / f)`, `e_pitch = atan(e_y / f)`.
-- Komut: `ω = Kp·e + Kd·ė + ω_ff` (ileri besleme: hedefin drone'a göre açısal hızı), doyumlu.
-- **Gövde yaw'ı gimbal'ı izler**: `yaw_rate = K_yaw · gimbal_yaw_göreli` → gimbal yaw'ı merkezde
-  kalır, gimbal'ın mekanik yaw sınırına dayanılmaz.
-- Takip sırasında yakınlaştırma 1× sabit tutulur (iç parametreler değişmesin) veya zoom'a göre
-  odak uzaklığı güncellenir.
+- **Pitch** (gimbal): `ω_pitch = Kp·e_pitch + Kd·ė_pitch + ω_ff` → STorM32'ye UART ile açı/hız
+  komutu (30–50 Hz), doyumlu; sınırlar −90°…+30°.
+- **Yaw** (gövde): gimbalda yaw ekseni yoktur → gövde yaw'ı yatay hatayı sıfırlar:
+  `yaw_rate = K_yaw · e_yaw + ω_ff` (`gimbal.body_yaw_follow_gain`).
+- **Roll** (gimbal): yalnızca ufku sabit tutar; takip döngüsüne girmez.
+- **Yakınlaştırma**: 12 MP sensörde dijital ROI (kırpma); ROI değişince iç parametreler (odak
+  uzaklığı, ana nokta) güncellenir. Yazılım stabilizasyonu (EIS) %10 kırpma payı kullanır.
 
 ## 5. Takip modları
 

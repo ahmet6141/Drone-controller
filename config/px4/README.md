@@ -18,13 +18,16 @@ doğrulanır (`python3 tools/validate_params.py`; referans: `tools/data/px4_v1.1
    `EKF2_RNG_POS_*`, `EKF2_EV_POS_*` (ağırlık merkezine göre, metre).
 
 ## Seviye farkları
-| Konu | Seviye A | Seviye B (bu dosyalar) | Seviye C |
+| Konu | Seviye A — Ekonomik (Raspberry Pi) | Seviye B — Pro (bu dosyalar) | Seviye C |
 |---|---|---|---|
-| FC | ARK FPV | ARK FPV | ARKV6X (PAB) — `EKF2_MULTI_IMU=3`, `SENS_IMU_MODE=0` ekleyin |
-| Akış/lidar | MicoAir MTF-01 (UART, MAVLink) → `UAVCAN_SUB_FLOW/RNG` gerekmez; akış için bir MAVLink örneği yapılandırın | H-Flow (DroneCAN) | ARK Flow MR (DroneCAN) |
+| FC | ARK FPV (ayrı, 30×30) | ARKV6X (ARK Jetson PAB V3 yuvasında) | ARKV6X (PAB) |
+| Çoklu IMU | tek IMU | `EKF2_MULTI_IMU=3`, `SENS_IMU_MODE=0` ekleyin | aynı |
+| Companion bağlantısı | Pi 5 UART0 (TELEM2, DDS) + UART3 (TELEM1, MAVLink) | PAB V3 iç UART veya Ethernet (`UXRCE_DDS_CFG=1000`) | aynı |
+| Akış/lazer | MicoAir MTF-01 (UART, MAVLink): `UAVCAN_SUB_FLOW/RNG` gerekmez, akış için bir MAVLink örneği (`MAV_1_CONFIG`) | H-Flow (DroneCAN) | ARK Flow MR (DroneCAN) |
 | GNSS | M10 (`EKF2_GPS_CTRL=7`) | F9P RTK | X20 RTK |
 | İç mekân profili | VIO yok → `indoor-vio` yerine `EKF2_EV_CTRL=0`, `EKF2_HGT_REF=0` (baro) | `indoor-vio` | `indoor-vio` |
-| Hover itkisi | `MPC_THR_HOVER` ≈ 0.18 | 0.20 | 0.19 |
+| Hover itkisi | `MPC_THR_HOVER` ≈ 0.17 | 0.20 | 0.20 |
+| Gimbal | Pi'den STorM32 (UART) — PX4'e bağlı değil (`MNT_MODE_IN=-1`) | Jetson'dan (USB-UART) | aynı |
 
 ## Sürüm notları (PX4 v1.18'e geçerken)
 v1.18.0-rc1 (10.09.2026) kararlı değildir. v1.18'de değişecekler (kaynak: PX4 v1.18 sürüm notları):

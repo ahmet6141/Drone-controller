@@ -1,15 +1,17 @@
-# Seviye A — GELİŞTİRME / EKONOMİK yapılandırma
-# Amaç: yazılım geliştirme, ayar uçuşları ve işaretli pedle avuca iniş testleri; Seviye B ile aynı
-# gövde, uçuş kontrolcüsü ve taşıyıcı kart (modül değişimiyle B'ye yükseltilir).
-# Hesap: python3 tools/budget_calc.py config/hardware/tier-a-gelistirme.yaml
+# Seviye A — EKONOMİK (Raspberry Pi) yapılandırma — önerilen başlangıç
+# Raspberry Pi kameraları + kendi tasarımımız 2 eksen gimbal + uygun fiyatlı sensörler (docs/10).
+# Pi 5'in iki 4 şeritli MIPI girişi: gimbal kamerası + aşağı (avuç) kamerası.
+# Hesap: python3 tools/budget_calc.py config/hardware/tier-a-ekonomik.yaml
 schema_version: 1
 
 profile:
-  id: tier-a-gelistirme
-  name: "Seviye A — Geliştirme / Ekonomik"
+  id: tier-a-ekonomik
+  name: "Seviye A — Ekonomik (Raspberry Pi)"
+  platform: raspberry_pi
   summary: >-
-    Orin Nano 8GB (Super) + ARK FPV (PX4 v1.17), SIYI A8 mini, IMX219-160 aşağı kamera + VL53L1X,
-    UART optik akış, M10 GNSS, WFB-ng IP link. VIO yok (GNSS'siz hover: akış + lidar).
+    Raspberry Pi 5 8GB + AI HAT+ 2 (Hailo-10H) + ARK FPV (PX4 v1.17); Camera Module 3 (gimbal) ve
+    Camera Module 3 Wide (avuç); STorM32 tabanlı 2 eksen gimbal; MTF-01 akış + lazer, VL53L8CX 8×8,
+    VL53L1X; M10 GNSS; WFB-ng IP link. VIO yok (GNSS'siz hover: akış + lazer).
 
 limits:
   max_auw_g: 1600
@@ -21,18 +23,20 @@ components:
   - {name: "GEPRC MOZ7 V2 gövde (336 mm)", category: gövde, mass_g: 270, price_usd: 110}
   - {name: "Tam pervane koruması + alt ağ (PA12-CF, 3B baskı)", category: gövde, mass_g: 110, price_usd: 40, notes: "tahmini"}
   - {name: "Avuç iniş tutamağı (TPU + köpük, ≥120 mm)", category: gövde, mass_g: 40, price_usd: 15, notes: "tahmini"}
-  - {name: "Üst plaka, bağlantılar, kablolama", category: kablolama, mass_g: 65, price_usd: 55, notes: "tahmini"}
+  - {name: "Üst plaka, bağlantılar, kablolama", category: kablolama, mass_g: 60, price_usd: 50, notes: "tahmini"}
   - {name: "ARK FPV uçuş kontrolcüsü (H743, IIM-42653 + ısıtıcı)", category: aviyonik, mass_g: 7.5, power_w: 1.5, price_usd: 195}
-  - {name: "Jetson Orin Nano 8GB (Super) + Auvidea JNX120X + soğutucu", category: companion, mass_g: 124, power_w: 15, price_usd: 975, notes: "modül ≈27 g türetilmiş; donanım video kodlayıcı yok"}
-  - {name: "SIYI A8 mini gimbal kamera", category: kamera, mass_g: 95, power_w: 5, price_usd: 257}
-  - {name: "IMX219 160° kamera (aşağı)", category: kamera, mass_g: 5, power_w: 0.5, price_usd: 25, notes: "tahmini"}
-  - {name: "VL53L1X ToF (aşağı + yukarı)", category: sensör, qty: 2, mass_g: 2, power_w: 0.1, price_usd: 15}
-  - {name: "MicoAir MTF-01 optik akış + ToF (UART)", category: sensör, mass_g: 4.5, power_w: 0.5, price_usd: 40, notes: "fiyat doğrulanmadı"}
+  - {name: "Raspberry Pi 5 8GB + Active Cooler + AI HAT+ 2 (Hailo-10H)", category: companion, mass_g: 90, power_w: 10, price_usd: 380, notes: "kütle ve güç tahmini; Pi 5 8GB $175 (PiShop, 10/2026), AI HAT+ 2 $200"}
+  - {name: "Raspberry Pi Camera Module 3 (IMX708, 66° yatay) — gimbal", category: kamera, mass_g: 4, power_w: 0.3, price_usd: 25}
+  - {name: "Kendi tasarım 2 eksen fırçasız gimbal (2× motor, STorM32, IMU, baskı parçalar, sönümleyici)", category: kamera, mass_g: 85, power_w: 2.5, price_usd: 95, notes: "tahmini, docs/10 §3"}
+  - {name: "Raspberry Pi Camera Module 3 Wide (102° yatay) — aşağı/avuç", category: kamera, mass_g: 4, power_w: 0.3, price_usd: 38.5}
+  - {name: "VL53L8CX 8×8 ToF (Pololu kartı) — aşağı", category: sensör, mass_g: 1, power_w: 0.5, price_usd: 25}
+  - {name: "VL53L1X ToF — yukarı (baş üstü boşluk)", category: sensör, mass_g: 1, power_w: 0.1, price_usd: 15, notes: "fiyat tahmini"}
+  - {name: "MicoAir MTF-01 optik akış + ToF lazer (8 m)", category: sensör, mass_g: 4.5, power_w: 0.5, price_usd: 35, notes: "fiyat tahmini"}
   - {name: "Holybro M10 GNSS + IST8310 pusula", category: sensör, mass_g: 32, power_w: 0.5, price_usd: 44}
   - {name: "RadioMaster XR4 ELRS alıcı + anten", category: haberleşme, mass_g: 5, power_w: 0.3, price_usd: 30, notes: "fiyat tahmini"}
   - {name: "WFB-ng: RTL8812AU/EU USB adaptör + antenler", category: haberleşme, mass_g: 20, power_w: 3, price_usd: 45, notes: "tahmini; BTK güç sınırı"}
   - {name: "Remote ID modülü (Open Drone ID)", category: haberleşme, mass_g: 10, power_w: 0.5, price_usd: 60, notes: "tahmini"}
-  - {name: "BEC 12 V/6 A + 5 V (dönüşüm kayıpları ≈ %10)", category: aviyonik, mass_g: 20, power_w: 2.7, price_usd: 25}
+  - {name: "BEC 5 V/5 A (Pi 5) + 12 V (gimbal) (dönüşüm kayıpları ≈ %10)", category: aviyonik, mass_g: 25, power_w: 2.0, price_usd: 30}
 
 propulsion:
   motor_count: 4
@@ -42,7 +46,6 @@ propulsion:
   esc: {name: "Holybro Tekko32 F4 50A (AM32)", continuous_a: 50, mass_g: 13.8, price_usd: 63}
   thrust_curve:
     # ECO II için yayımlanmış ara nokta verisi yok → aynı sınıf T-Motor F90 eğrisi VEKİL olarak kullanıldı.
-    # İtki standında ölçülüp değiştirilmelidir.
     source: "VEKİL: T-Motor F90 1300KV + HQ 7x4x3 @ 24.2 V — https://www.ligpower.com/product/f90-fpv-motor.html"
     voltage_v: 24.2
     points:

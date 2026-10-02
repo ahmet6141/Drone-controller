@@ -1,29 +1,33 @@
 # 03 — Yapay Zekâ Modelleri: Analiz ve Seçim
 
 Durum tarihi: **2 Ekim 2026**. Gecikme değerleri aksi belirtilmedikçe 640×640, batch 1,
-TensorRT içindir. "tahmini" ibaresi mühendislik tahminidir; diğer değerler kaynaklıdır
+TensorRT (Jetson) veya HailoRT (Raspberry Pi 5 + AI HAT+ 2) içindir. "tahmini" ibaresi mühendislik tahminidir; diğer değerler kaynaklıdır
 (bkz. §11). Model ayarları: [`config/ai/perception.yaml`](../config/ai/perception.yaml).
 
 ## 1. Özet: seçilen model yığını
 
-| İşlev | Seviye A (Orin Nano Super 8GB) | Seviye B (Orin NX 16GB) — önerilen | Seviye C (Orin NX 16GB MAXN SUPER) |
+| İşlev | Seviye A — Raspberry Pi 5 + Hailo-10H | Seviye B — Orin NX 16GB | Seviye C — Orin NX 16GB MAXN SUPER |
 |---|---|---|---|
-| Nesne tespiti | YOLO26n/s @640, FP16→INT8 | **YOLO26s @960** (P2 başlığı, ince ayar) — Apache yolu: **RF-DETR-S** | YOLO26m @1280 veya RF-DETR-M, yüksek irtifada SAHI |
-| Çoklu nesne takibi (MOT) | ByteTrack | **BoT-SORT + OSNet x0_25 ReID** | BoT-SORT / OccluBoost + OSNet x1_0 |
-| Tek hedef takibi (SOT) | HiT-S / AsymTrack-T; yedek OpenCV VitTrack | **LiteTrack-B4** veya SUTrack-T224 | SUTrack-T224 + ORTrack (İHA, örtülmeye dayanıklı) |
-| Tıkla → kutu | MOT izi seçimi; yoksa NanoSAM | NanoSAM | NanoSAM / EdgeTAM |
-| El / jest | Kişi → el kırpma → MediaPipe Hand Landmarker (CPU) → MLP | **+ RTMPose-m hand (TRT)** | + RTMW tüm vücut |
-| Avuç (aşağı kamera) | El dedektörü (HaGRIDv2 + özel veri) + landmark + ToF | aynı, global shutter kamera | aynı + yoğun ToF |
-| Derinlik / engel | Stereo kameranın donanım derinliği | Donanım derinliği; opsiyonel Light ESS | ESS + Depth Anything 3 Metric |
-| VIO | Optik akış + lidar (VIO yok) | **cuVSLAM** stereo-ataletsel | cuVSLAM (geniş açılı stereo) |
-| Görsel-dil modeli (VLM) | Yok / Cosmos-Reason2-2B (yalnızca hover'da) | **Qwen3-VL-4B** veya Gemma 4 E4B, asenkron ≤ 1 Hz | Qwen3-VL-4B / Gemma 4 E4B |
+| Nesne tespiti | **YOLO26n @640, Hailo HEF (8 bit)**, 15–30 Hz | **YOLO26s @960** (P2 başlığı, ince ayar) — Apache yolu: **RF-DETR-S** | YOLO26m @1280 veya RF-DETR-M, yüksek irtifada SAHI |
+| Çoklu nesne takibi (MOT) | ByteTrack + OSNet x0_25 (Hailo) | **BoT-SORT + OSNet x0_25 ReID** | BoT-SORT / OccluBoost + OSNet x1_0 |
+| Tek hedef takibi (SOT) | OpenCV VitTrack (CPU) | **LiteTrack-B4** veya SUTrack-T224 | SUTrack-T224 + ORTrack (İHA, örtülmeye dayanıklı) |
+| Tıkla → kutu | MOT izi seçimi | NanoSAM | NanoSAM / EdgeTAM |
+| El / jest | Kişi → el kırpma → el landmark (Hailo `hand_landmark_lite`) → MLP | **+ RTMPose-m hand (TRT)** | + RTMW tüm vücut |
+| Avuç (aşağı kamera) | CM3 Wide (720p120) + el dedektörü + landmark + 8×8 ToF | aynı, OV9281 global shutter | aynı |
+| Derinlik / engel | — (8×8 ToF yakın mesafe) | OAK-D Lite donanım derinliği; opsiyonel Light ESS | ESS + Depth Anything 3 Metric |
+| VIO | Optik akış + lazer (VIO yok) | **cuVSLAM** stereo-ataletsel | cuVSLAM (geniş açılı stereo) |
+| Görsel-dil modeli (VLM) | Yok (Hailo-10H LLM/VLM çalıştırabilir; hız doğrulanmadı) | **Qwen3-VL-4B** veya Gemma 4 E4B, asenkron ≤ 1 Hz | Qwen3-VL-4B / Gemma 4 E4B |
+
+Hailo ölçümleri (Hailo model zoo, batch 1): Hailo-10H'de YOLO26n / YOLO26s **233 / 125 FPS** (x86
+konak, PCIe Gen3 x4); Raspberry Pi 5 üzerinde (PCIe x1) Hailo-8 ile YOLO11n **104,9 FPS** (7,75 ms) →
+Pi 5'te 30 FPS tespit için yeterli pay. Hailo-8'de `hand_landmark_lite` 3091 FPS, OSNet x1_0 215 FPS.
 
 **Temel ilkeler**
 - Kontrol döngüsünde yalnızca **deterministik, hızlı** modeller (tespit, takip, landmark) vardır.
   VLM yalnızca *hedef seçici* olarak asenkron çalışır; çıktısı bir kutudur ve operatör onayından
   sonra takipçiye verilir.
-- Hat, model bağımsız bir "TensorRT motoru" arayüzüyle kurulur; YOLO26 ↔ RF-DETR değişimi
-  yapılandırma düzeyindedir.
+- Hat, model bağımsız bir çıkarım arayüzüyle kurulur (Jetson: TensorRT `.engine`, Pi 5: Hailo
+  `.hef`); YOLO26 ↔ RF-DETR değişimi yapılandırma düzeyindedir.
 - **JetPack 7.2.x** hedeflenir: JetPack 6'daki TensorRT 10.3 ile NMS'siz (uçtan uca) YOLO26 INT8
   motoru derlenemiyor; Ultralytics bu durumda NMS'li başlığa geri dönüyor.
 
@@ -123,7 +127,7 @@ dayanır.
 
 | Model | Hız | Lisans | Kullanım |
 |---|---|---|---|
-| Stereo kameranın **donanım derinliği** (OAK-D, Orbbec) | GPU yükü yok | — | Seviye A/B birincil |
+| Stereo kameranın **donanım derinliği** (OAK-D, Orbbec) | GPU yükü yok | — | Seviye B/C birincil |
 | NVIDIA Light ESS / ESS | Orin Nano Super 82,2 / 34,8 FPS | NVIDIA | Seviye B/C opsiyonel |
 | Depth Anything V2-S | ~44 FPS "Jetson Orin" | Apache | Tek kamera yedeği |
 | Depth Anything 3 S/B, Metric-L | Orin NX ~23 ms (topluluk) | Apache (S/B/Metric-L) | Seviye C |
@@ -157,20 +161,20 @@ eşleme → GCS'de onay → takip. Hiçbir zaman doğrudan setpoint üretmez.
 
 ## 9. Uçtan uca hat ve gecikme bütçesi (30 FPS = 33,3 ms/kare)
 
-| Aşama | Orin NX 16GB (ms) | Orin Nano Super (ms) |
+| Aşama | Orin NX 16GB (ms) | Raspberry Pi 5 + Hailo-10H (ms, tahmini) |
 |---|---|---|
-| Ön işleme (VPI) | 1–2 | 1–2 |
-| YOLO26s 640 FP16 | ~6 | ~7 |
-| OSNet x0_25 (≤ 16 kırpma) | 1–2 | ~2 |
-| MOT ilişkilendirme (CPU) | ~1 | ~1 |
-| SOT (TRT) | 4–6 | 6–8 |
-| El ROI hattı | 3–4 | 4–5 |
-| Stereo DNN (opsiyonel; 10–15 Hz, kare başına amortize) | ~3 | — (donanım derinliği) |
-| cuVSLAM (ayrı iş parçacığı, kare başına GPU payı) | 2–3 | — (Seviye A'da VIO yok) |
-| **GPU toplamı / kare** | **~22–27 → sığar** | **~21–25 → sınırda (ısıl pay az)** |
+| Ön işleme (VPI / PiSP + CPU) | 1–2 | 2–4 |
+| Tespit (YOLO26s FP16 / YOLO26n Hailo) | ~6 | ~5–10 |
+| OSNet x0_25 (≤ 16 kırpma) | 1–2 | ~2–4 (Hailo) |
+| MOT ilişkilendirme (CPU) | ~1 | ~1–2 |
+| SOT (TRT / OpenCV VitTrack CPU) | 4–6 | ~15–20 (ayrı çekirdekte, 15 Hz) |
+| El ROI hattı | 3–4 | 4–6 (Hailo) |
+| Stereo DNN (opsiyonel; 10–15 Hz, kare başına amortize) | ~3 | — |
+| cuVSLAM (ayrı iş parçacığı, kare başına GPU payı) | 2–3 | — (VIO yok) |
+| **Toplam / kare** | **~22–27 → sığar** | **~15–25 hızlandırıcı + CPU paralel → 15–30 FPS** |
 
-Orin Nano'da tespit 15 Hz'e indirilip SOT ile dönüşümlü çalıştırılabilir. VLM sorguları
-asenkron (0,3–1,9 s).
+Pi 5'te tespit Hailo'da, SOT ve izleme CPU'da paralel çalışır; tespit 15 Hz'e indirilip SOT ile
+dönüşümlü çalıştırılabilir. VLM sorguları (yalnızca Jetson) asenkron (0,3–1,9 s).
 
 ## 10. Eğitim ve veri planı
 

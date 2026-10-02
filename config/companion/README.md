@@ -1,4 +1,4 @@
-# Companion (Jetson) kurulumu
+# Companion kurulumu (Jetson ve Raspberry Pi 5)
 
 Hedef yazılım yığını (Ekim 2026): **JetPack 7.2.1** (Ubuntu 24.04, CUDA 13.2, TensorRT 10.16),
 **ROS 2 Jazzy**, **Isaac ROS 4.6**, **Micro XRCE-DDS Agent v2.4.x**, PX4 **v1.17** ile eşleşen
@@ -6,13 +6,14 @@ Hedef yazılım yığını (Ekim 2026): **JetPack 7.2.1** (Ubuntu 24.04, CUDA 13
 
 | Dosya | Hedef konum | Görev |
 |---|---|---|
-| `dc7.env` | `/etc/default/dc7` | Seviye, seri port, ROS alan kimliği, güç kipi |
+| `dc7.env` | `/etc/default/dc7` | **Jetson** (B/C): seviye, seri portlar, ROS alan kimliği, güç kipi |
+| `dc7-rpi.env` | `/etc/default/dc7` | **Raspberry Pi 5** (A): seviye, UART'lar, ROS alan kimliği |
 | `systemd/micro-xrce-dds-agent.service` | `/etc/systemd/system/` | PX4 ↔ ROS 2 köprüsü (FC TELEM2) |
-| `systemd/dc7-power.service` | `/etc/systemd/system/` | `nvpmodel` + `jetson_clocks` |
+| `systemd/dc7-power.service` | `/etc/systemd/system/` | `nvpmodel` + `jetson_clocks` (yalnızca Jetson) |
 | `mavlink-router/main.conf` | `/etc/mavlink-router/main.conf` | FC TELEM1 → QGC (IP link) + yerel uygulamalar |
 | `network/10-dc7-ethernet.yaml` | `/etc/netplan/` | Gimbal + link alt ağı (192.168.144.0/24) |
 
-## Adımlar
+## Jetson (Seviye B/C) adımları
 
 1. **JetPack 7.2.1** kurun (Orin NX: SDK Manager; Orin Nano geliştirme kiti: USB'den ISO —
    7.2 ile SD kart imajı kalktı). Kurulumdan sonra `cat /etc/nv_tegra_release` ile sürümü doğrulayın.
@@ -48,3 +49,27 @@ Hedef yazılım yığını (Ekim 2026): **JetPack 7.2.1** (Ubuntu 24.04, CUDA 13
 - Orin Nano'da donanım video kodlayıcı (NVENC) **yoktur**; YZ katmanlı video yeniden kodlaması
   CPU'da yapılır (720p önerilir) veya kutular metaveri olarak gönderilir.
 - Model motorları (`.engine`) git'e girmez; hedef cihazda derlenir: `/opt/dc7/models/`.
+
+## Raspberry Pi 5 (Seviye A) adımları
+
+1. **Raspberry Pi OS (64-bit)** kurun ve güncelleyin. Pi kameraları (libcamera/PiSP) ve AI HAT+ 2
+   (Hailo) bu işletim sisteminde yerel olarak desteklenir; ROS 2 **Jazzy** Docker kapsayıcısında
+   çalışır (`/dev/ttyAMA*`, `/dev/i2c-*`, `/dev/spidev*`, `/dev/media*`, `/dev/video*`, Hailo aygıtı
+   kapsayıcıya verilir). Alternatif: Ubuntu 24.04 + yerel ROS 2 (kamera için Raspberry Pi'nin
+   libcamera çatalı gerekir).
+2. **Kameralar**: Pi 5'in iki 22 pinli MIPI girişi → gimbal kamerası (Camera Module 3) ve aşağı
+   kamera (Camera Module 3 Wide); 15 pin kameralar için "standart–mini" kablo. Kontrol:
+   `rpicam-hello --list-cameras` (iki kamera görünmeli).
+3. **AI HAT+ 2 (Hailo-10H)**: Raspberry Pi AI HAT+ 2 belgesindeki Hailo paketlerini kurun; modeller
+   `.hef` biçiminde (`/opt/dc7/models`).
+4. **UART'lar** (`/boot/firmware/config.txt`, aygıt adlarını overlay belgesinden doğrulayın):
+   `dtparam=uart0=on` (FC TELEM2, DDS), `dtoverlay=uart2-pi5` (gimbal), `dtoverlay=uart3-pi5`
+   (FC TELEM1, MAVLink). Seri konsolu kapatın (`raspi-config`). Değerler: `dc7-rpi.env`.
+5. **I2C/SPI**: VL53L8CX ve VL53L1X'in varsayılan I2C adresi aynıdır (7 bit 0x29) → ya VL53L8CX'i
+   **SPI** üzerinden bağlayın (hem daha hızlı), ya da açılışta LPn/XSHUT ile birinin adresini değiştirin.
+6. **Güç**: 5 V / 5 A BEC; USB'den beslenen cihazlar (WFB-ng adaptörü) için `config.txt` içinde
+   USB akım sınırını yükseltin (`usb_max_current_enable=1`, doğrulayın). Pi 5 0–70 °C'de çalışır;
+   kapalı gövdede Active Cooler + hava akışı şart.
+7. **Micro XRCE-DDS Agent v2.4.3** (Jetson ile aynı adım) + `micro-xrce-dds-agent.service`
+   (`dc7-power.service` Pi'de kullanılmaz). `mavlink-router` → `Device = /dev/ttyAMA3`.
+8. **Video**: Pi 5'te donanım H.264/HEVC kodlayıcı yoktur; YZ katmanlı akış 720p'de yazılımla kodlanır.

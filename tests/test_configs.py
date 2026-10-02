@@ -271,19 +271,35 @@ class TestValidatorCatchesErrors(unittest.TestCase):
 
 
 class TestCompanionConfig(unittest.TestCase):
-    def test_companion_matches_px4_ports(self):
+    ENV_FILES = {"dc7.env": "jetson", "dc7-rpi.env": "raspberry_pi"}
+
+    @staticmethod
+    def read_env(path: Path) -> dict[str, str]:
         env = {}
-        for line in (CONFIG / "companion" / "dc7.env").read_text(encoding="utf-8").splitlines():
+        for line in path.read_text(encoding="utf-8").splitlines():
             if line and not line.startswith("#") and "=" in line:
                 k, v = line.split("=", 1)
                 env[k.strip()] = v.strip()
+        return env
+
+    def test_env_files_match_px4_and_tiers(self):
         px4 = merged(PX4_BASE)
-        self.assertEqual(int(env["ROS_DOMAIN_ID"]), px4["UXRCE_DDS_DOM_ID"])
-        self.assertEqual(int(env["DC7_DDS_BAUD"]), px4["SER_TEL2_BAUD"])
+        tiers = {load_yaml(p)["profile"]["id"]: load_yaml(p)["profile"]["platform"]
+                 for p in budget_calc.all_profiles()}
+        for name, platform in self.ENV_FILES.items():
+            with self.subTest(env=name):
+                env = self.read_env(CONFIG / "companion" / name)
+                self.assertEqual(env["DC7_PLATFORM"], platform)
+                self.assertEqual(tiers[env["DC7_TIER"]], platform, "seviye ile platform uyumsuz")
+                self.assertEqual(int(env["ROS_DOMAIN_ID"]), px4["UXRCE_DDS_DOM_ID"])
+                self.assertEqual(int(env["DC7_DDS_BAUD"]), px4["SER_TEL2_BAUD"])
+                self.assertNotEqual(env["DC7_DDS_SERIAL"], env["DC7_GIMBAL_SERIAL"])
+
+    def test_mavlink_router_baud_matches_px4(self):
+        px4 = merged(PX4_BASE)
         router = (CONFIG / "companion" / "mavlink-router" / "main.conf").read_text(encoding="utf-8")
         baud = int(re.search(r"^Baud\s*=\s*(\d+)", router, re.M).group(1))
         self.assertEqual(baud, px4["SER_TEL1_BAUD"])
-        self.assertIn(env["DC7_TIER"], {load_yaml(p)["profile"]["id"] for p in budget_calc.all_profiles()})
 
 
 class TestAIConfig(unittest.TestCase):
@@ -317,6 +333,24 @@ class TestAIConfig(unittest.TestCase):
         missing = agpl - set(self.ai["commercial_substitutes"])
         self.assertFalse(missing, f"ticari profil için muadili tanımsız: {missing}")
         self.assertIn(self.ai["license_profile"], ("research", "commercial"))
+
+    def test_platforms_match_hardware(self):
+        for path in budget_calc.all_profiles():
+            prof = load_yaml(path)["profile"]
+            with self.subTest(tier=prof["id"]):
+                self.assertIn(prof["platform"], self.ai["platforms"])
+                self.assertEqual(self.ai["tiers"][prof["id"]]["platform"], prof["platform"])
+        for cam in self.ai["cameras"].values():
+            self.assertEqual(set(cam["options"]), set(self.ai["platforms"]),
+                             "her kamera rolü için her platformda bir seçenek olmalı")
+
+    def test_gimbal_limits(self):
+        g = self.behavior["gimbal"]
+        self.assertEqual(g["type"], "diy_2axis")
+        self.assertLessEqual(g["pitch_limits_deg"][0], -90, "avuç/nadir görüşü için tam aşağı bakabilmeli")
+        self.assertEqual(g["roll_limits_deg"][0], -g["roll_limits_deg"][1])
+        self.assertGreaterEqual(g["control_rate_hz"], 30)
+        self.assertGreater(g["body_yaw_follow_gain"], 0, "2 eksen gimbalda yaw gövdeyle yapılır")
 
     def test_vlm_never_in_control_loop(self):
         self.assertEqual(self.ai["vlm"]["role"], "target_selector_only")

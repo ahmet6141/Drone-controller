@@ -106,12 +106,19 @@ follow:
     reid_min_similarity: 0.60
 
 gimbal:
-  driver: siyi_sdk
-  ip: 192.168.144.25
-  port: 37260
-  control_rate_hz: 30
-  kp: 2.5
+  # Kendi tasarımımız 2 eksen fırçasız gimbal (docs/10 §3): pitch + roll, yaw gövdeyle
+  type: diy_2axis
+  controller: storm32          # storm32 | simplebgc | servo
+  protocol: storm32_serial     # companion ↔ gimbal kontrolcüsü UART; seri port: dc7*.env → DC7_GIMBAL_SERIAL
+  baud: 115200
+  control_rate_hz: 50
+  pitch_limits_deg: [-90, 30]  # mekanik durdurucular bu aralığın biraz dışında olmalı
+  roll_limits_deg: [-30, 30]
+  max_rate_dps: 120
+  kp: 2.5                      # piksel hatası → açısal hız
   kd: 0.15
-  max_rate_dps: 90.0
-  body_yaw_follow_gain: 1.2
-  tracking_zoom: 1.0
+  body_yaw_follow_gain: 1.2    # yaw ekseni yok: gövde yaw'ı hedefi ortalar
+  eis:
+    enabled: true              # kamera IMU'su / FC jiroskopu ile kırpmalı dijital stabilizasyon
+    crop_margin: 0.10
+  tracking_zoom: 1.0           # 12 MP sensörde dijital ROI ile yakınlaştırma (iç parametreler güncellenir)

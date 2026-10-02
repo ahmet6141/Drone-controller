@@ -51,3 +51,7 @@
 # Disarm: inişten 0.5 s sonra (avuca inişte companion'ın zorlamalı disarm'ına YEDEK).
 1	1	COM_DISARM_LAND	0.5	9
 1	1	COM_DISARM_PRFLT	10.0	9
+#
+# Remote ID (SHT-İHA, docs/08): Ar-Ge aşamasında 1 = modül yoksa yalnızca uyarı; operasyonda 2 = modülsüz kalkış yok.
+# Modül seri porttan (MAVLink, TELEM2 DDS için kullanıldığından başka port) veya DroneCAN ile bağlanır (config/sensors/catalog.yaml).
+1	1	COM_ARM_ODID	1	6

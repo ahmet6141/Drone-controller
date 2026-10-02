@@ -52,6 +52,13 @@ class TestCatalog(unittest.TestCase):
                                        "vehicle_visual_odometry"})
         self.assertTrue(all(t.startswith("/fmu/in/") for t in topics.values()))
 
+    def test_remote_id_arming_check(self):
+        """PX4 tabanı Remote ID kontrolünü açar (Ar-Ge: 1 uyarı); operasyon seçeneği 2 (zorunlu)."""
+        params = {n: float(v) for _, n, v, _ in sensor_matrix.validate_params.parse_px4(
+            sensor_matrix.ROOT / "config" / "px4" / "base" / "30-failsafe.params")}
+        self.assertIn(params.get("COM_ARM_ODID"), (1.0, 2.0))
+        self.assertEqual(CATALOG_BY_ID["remote_id_module"]["px4"]["params"]["COM_ARM_ODID"], 2)
+
     def test_unverified_prices_are_flagged(self):
         for o in CATALOG["options"]:
             if o.get("price_usd") is None:

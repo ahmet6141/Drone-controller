@@ -61,6 +61,11 @@ class TestLayout(unittest.TestCase):
         self.assertTrue(layout.in_cone((0, 0, -50), cam, -1.0, 21))
         self.assertFalse(layout.in_cone((30, 0, -50), cam, -1.0, 21))
 
+    def test_inertia_is_plausible(self):
+        ixx, iyy, izz = layout.inertia()
+        self.assertTrue(0.005 < ixx < 0.05 and 0.005 < iyy < 0.05, (ixx, iyy))
+        self.assertGreater(izz, max(ixx, iyy) * 0.9, "düz gövdede Izz en büyük olmalı")
+
     def test_down_camera_sees_through_bumper(self):
         self.assertGreaterEqual(layout.down_camera_clear_half_angle(), P.WIDE_HFOV / 2)
 

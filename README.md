@@ -3,8 +3,9 @@
 Açık avuç jestiyle **ele konan**, **hedef tespit edip takip eden** ve **profesyonel hover**
 yeteneğine sahip, orta boy (7 inç, 6S) bir quadcopter'ın yazılım ve donanım tasarımı.
 
-> **Durum: Faz 0 tamamlandı** — araştırma, analiz, mimari ve konfigürasyonlar (2 Ekim 2026
-> itibarıyla güncel cihaz, yazılım ve modeller). Uçuş yazılımı (ROS 2 paketleri) Faz 1'de yazılacak.
+> **Durum: Faz 0 tamamlandı + yazılım öncesi hazırlık** — araştırma, mimari ve konfigürasyonlar;
+> sensör alternatifleri ve uyumluluk matrisi, bütçe kesinti senaryoları, parametrik 3B modeller
+> ([docs/11](docs/11-yazilim-oncesi-hazirlik.md)). Uçuş yazılımı (ROS 2 paketleri) Faz 1'de yazılacak.
 
 ## Öne çıkan kararlar
 
@@ -22,6 +23,9 @@ yeteneğine sahip, orta boy (7 inç, 6S) bir quadcopter'ın yazılım ve donanı
 | Hover | RPM notch (bidirectional DShot), RTK/akış/VIO EKF2 profilleri, autotune | [07](docs/07-hover-ayar-rehberi.md) |
 | Avuca iniş | Drone kişiye yaklaşmaz; ≥ 2 bağımsız temas ipucu → ≤ 150 ms zorlamalı disarm; önce **işaretli iniş pedi** | [05](docs/05-avuca-inis-tasarimi.md) |
 | Mevzuat | Yeni **SHT-İHA (30.07.2026)**: M0 sınıfı, YZ destekli otonomi için P2 + kontrollü izin; Ar-Ge kontrollü sahada saklı | [08](docs/08-guvenlik-ve-mevzuat.md) |
+| Sensör alternatifleri | 9 görev, **26 seçenek**; PX4/ArduPilot parametreleri resmi referansla test edilir; Pi üzerinden ROS 2 → DDS köprüsüyle FC sürücüsü olmayan sensörler de | [11 §2–4](docs/11-yazilim-oncesi-hazirlik.md) |
+| Bütçe | Yetenek kaybı olmadan **−$275** (Pi 5 4GB, AI HAT+ 26 TOPS, kendi baskımız); Ar-Ge MVP **$1.185** | [11 §3](docs/11-yazilim-oncesi-hazirlik.md) |
+| 3B model | Kendimize özel parçalar **parametrik CadQuery** modelleri: koruma, avuç tutamağı, gimbal, üst katlar; STL hazır, kütle/çakışma/görüş kontrolleri | [cad/](cad/README.md), [11 §5](docs/11-yazilim-oncesi-hazirlik.md) |
 
 ## Donanım seviyeleri (hesaplanmış) — drone: **7 inç**
 
@@ -33,7 +37,9 @@ yeteneğine sahip, orta boy (7 inç, 6S) bir quadcopter'ın yazılım ve donanı
 | Hava aracı maliyeti (≈) | **$1,5 bin** | $4,9 bin | $6,7 bin |
 
 7 inç pervane (17,8 cm), 336 mm gövde; korumalarla ≈ 43 × 43 cm. Ayrıntı: [`config/hardware/`](config/hardware/) ·
-`python3 tools/budget_calc.py --all`
+`python3 tools/budget_calc.py --all` · Seviye A kesinti paketleri: `python3 tools/scenarios.py`
+
+![DC7 yerleşimi (cad/build.py)](cad/out/preview_assembly.png)
 
 ## Dizin yapısı
 
@@ -49,20 +55,34 @@ docs/
   08-guvenlik-ve-mevzuat.md    SHT-İHA 2026 özeti, tasarım etkileri, güvenlik
   09-yol-haritasi.md           Faz planı ve gereksinim → test eşleşmesi
   10-kamera-gimbal-ve-sensorler.md  Pi kameraları, kendi gimbalımız, ucuz sensörler, 8×8 ToF, boyut
+  11-yazilim-oncesi-hazirlik.md     Sensör alternatifleri, bütçe kesintileri, uyumluluk, 3B model, hazırlık listesi
 config/
-  hardware/   Seviye A/B/C bileşen, kütle, güç, itki eğrisi, batarya, fiyat
+  hardware/   Seviye A/B/C bileşen, kütle, güç, itki eğrisi, batarya, fiyat; thrust/ itki standı şablonu
+  sensors/    Sensör kataloğu: görev bazında alternatifler, PX4/ArduPilot sürücü eşlemesi, köprü konuları
+  budget/     Bütçe kesinti senaryoları ve paketleri (Seviye A üzerine yamalar)
   px4/        PX4 v1.17 parametreleri: base/ (ortak) + profiles/ (dış mekân GNSS, iç mekân VIO)
   ardupilot/  ArduPilot Copter 4.7.1 yedek parametreleri
   ai/         Algı hattı: seviye bazında modeller, eşikler, lisans profili
   mission/    Davranış (avuca iniş, takip, gimbal) ve güvenlik sınırları
   companion/  Raspberry Pi 5 ve Jetson: ortam dosyaları, systemd, mavlink-router, kurulum rehberi
+cad/
+  params.py, layout.py Ölçüler; ağırlık merkezi, batarya konumu, görüş alanı kontrolleri (CadQuery'siz)
+  prop_guard.py …      Koruma, avuç tutamağı, 2 eksen gimbal, üst katlar (CadQuery)
+  build.py             STL/STEP, kütle–bütçe raporu, önizlemeler → out/
 tools/
   budget_calc.py       AUW, T/W, hover gücü/süresi, MPC_THR_HOVER, THR_MDL_FAC, maliyet
+  scenarios.py         Bütçe kesinti senaryoları: maliyet, kütle, hover ve limit etkisi
+  sensor_matrix.py     Sensör kataloğu doğrulaması, uyumluluk matrisi ve genişliği
+  thrust_stand.py      İtki standı CSV → itki eğrisi, THR_MDL_FAC, kurulum katsayısı
   validate_params.py   Parametre dosyalarını resmi PX4 v1.17 / ArduPilot 4.7.1 referansına göre doğrular
   tof8x8.py            8×8 ToF karesinden avuç tespiti: konum, mesafe, eğim, temas (demo + testler)
   data/                Resmi parametre referanslarından çıkarılmış veri (02.10.2026)
 tests/
   test_configs.py      Hesaplayıcı + tüm konfigürasyonların tutarlılık testleri
+  test_sensors.py      Sensör kataloğu: parametreler, enum'lar, seviye seçimleri, uyumluluk sayıları
+  test_scenarios.py    Bütçe senaryoları: limitler, güvenlik bileşenleri korunuyor mu
+  test_thrust_stand.py İtki standı aracı
+  test_cad.py          Yerleşim kuralları (her zaman) + CAD parçaları (CadQuery kuruluysa)
   test_tof8x8.py       8×8 ToF avuç analizi testleri
 ```
 
@@ -73,13 +93,20 @@ pip install pyyaml                         # tek bağımlılık
 python3 tools/budget_calc.py --all         # üç seviyenin bütçesi
 python3 tools/validate_params.py           # PX4 / ArduPilot parametre doğrulaması
 python3 tools/tof8x8.py --demo             # 8×8 mesafe sensörü nasıl görür? (avuç 0,40 m'de)
+python3 tools/sensor_matrix.py --markdown  # sensör alternatifleri ve PX4/ArduPilot uyumluluğu
+python3 tools/scenarios.py --markdown      # bütçe kesinti senaryoları ve paketleri
+python3 cad/layout.py                      # ağırlık merkezi, batarya konumu, görüş alanları
 python3 -m unittest discover -s tests -v   # tüm tutarlılık testleri
+# 3B modeller (isteğe bağlı): pip install cadquery matplotlib && python3 cad/build.py
 ```
 
 Testler şunları garanti eder: her parametre adı/tipi/aralığı resmi referansta geçerli;
 PX4 ↔ `safety.yaml` sınırları (hız, geofence, batarya) aynı; `MPC_THR_HOVER` ve `THR_MDL_FAC`
 bütçe hesabıyla uyumlu; YZ eşikleri davranış eşikleriyle aynı; avuca iniş güvenlik
-değişmezleri (koruma şartı, drone'un kişiye yaklaşmaması, ≤ 150 ms temas onayı) korunuyor.
+değişmezleri (koruma şartı, drone'un kişiye yaklaşmaması, ≤ 150 ms temas onayı) korunuyor;
+sensör kataloğundaki her sürücü parametresi geçerli ve seviye seçimleri donanım profilleriyle aynı;
+bütçe paketleri limitleri ve güvenlik bileşenlerini koruyor; yerleşimde ağırlık merkezi ortada,
+kamera/sensör görüşleri temiz ve gimbal yazılım sınırı görüş kontrolüyle uyumlu.
 
 ## Önemli uyarılar
 
@@ -92,7 +119,10 @@ değişmezleri (koruma şartı, drone'un kişiye yaklaşmaması, ≤ 150 ms tema
   lisansı veya Apache yolu (RF-DETR + Roboflow trackers) gerekir ([03 §2](docs/03-yapay-zeka-modelleri.md)).
 - "tahmini" / "doğrulanmadı" notlu değerler Faz 2 ölçümleriyle güncellenecektir.
 
-## Sonraki adım: Faz 1
-ROS 2 çalışma alanı ve paket iskeleti, PX4 SITL + Gazebo'da `PalmLand` / `FollowTarget` özel
-modları, 2 eksen gimbalın CAD tasarımı, algı hattının kayıtlı videolarda (Pi 5 + Hailo) çalıştırılması
-ve jest veri setinin hazırlanması ([09](docs/09-yol-haritasi.md)).
+## Sonraki adım
+1. **Yazılım öncesi** ([11 §6](docs/11-yazilim-oncesi-hazirlik.md)): parçaları bas ve uydur, itki
+   standı (`tools/thrust_stand.py`), sensör tezgâh testleri, gecikme ölçümü, el tipi veri toplama,
+   port/EMI planı, mevzuat ve güvenlik ekipmanı.
+2. **Faz 1**: ROS 2 çalışma alanı ve paket iskeleti, PX4 SITL + Gazebo'da DC7 modeli (kütle ve atalet
+   `cad/layout.py`'den), `PalmLand` / `FollowTarget` özel modları, algı hattının kayıtlı videolarda
+   (Pi 5 + Hailo) çalıştırılması ([09](docs/09-yol-haritasi.md)).

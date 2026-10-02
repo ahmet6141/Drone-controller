@@ -29,6 +29,12 @@ doğrulanır (`python3 tools/validate_params.py`; referans: `tools/data/px4_v1.1
 | Hover itkisi | `MPC_THR_HOVER` ≈ 0.17 | 0.20 | 0.20 |
 | Gimbal | Pi'den STorM32 (UART) — PX4'e bağlı değil (`MNT_MODE_IN=-1`) | Jetson'dan (USB-UART) | aynı |
 
+## Remote ID
+`base/30-failsafe.params` içinde `COM_ARM_ODID=1`: Ar-Ge aşamasında Remote ID modülü yoksa yalnızca
+uyarı verir. Operasyonda `2` (modülsüz kalkış yok) yapılır. PX4 belgesindeki modüller: Holybro Remote
+ID, BlueMark Db201/Db202mav, Cube ID (seri veya DroneCAN). TELEM2 DDS'e ayrıldığından seri modül
+başka bir porta (`MAV_2_CONFIG`) bağlanır (`config/sensors/catalog.yaml`).
+
 ## Sürüm notları (PX4 v1.18'e geçerken)
 v1.18.0-rc1 (10.09.2026) kararlı değildir. v1.18'de değişecekler (kaynak: PX4 v1.18 sürüm notları):
 - `DSHOT_BIDIR_EN`, `MOT_POLE_COUNT` → çıkış başına protokol ve `DSHOT_MOT_POL1..12`

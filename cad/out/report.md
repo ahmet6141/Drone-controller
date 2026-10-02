@@ -31,6 +31,7 @@
 - Batarya konumu: x = -15.4 mm (ağırlık merkezini ortalar)
 - Gimbal roll ekseni kamera merkezinden y = +21.4 mm (dönen grubun ağırlık merkezi)
 - Devrilme açısı (motorlar kapalı): tutamakla 14.6°, Ø150 mm ayakla 29.2°
+- Atalet (CG'ye göre, SITL başlangıcı): Ixx 0.0095, Iyy 0.0108, Izz 0.0129 kg·m²
 
 ## Kontroller
 

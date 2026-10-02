@@ -19,6 +19,7 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import validate_params  # noqa: E402
 from validate_params import AP_REF, PX4_REF, _load_ref, ap_value_errors, px4_value_errors  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]

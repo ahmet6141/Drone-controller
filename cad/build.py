@@ -285,6 +285,7 @@ def write_report(rows: list[dict], budget: list[dict], checks: list, rules: list
               f"- Gimbal roll ekseni kamera merkezinden y = {y_roll:+.1f} mm (dönen grubun ağırlık merkezi)",
               f"- Devrilme açısı (motorlar kapalı): tutamakla {tips['tutamak']:.1f}°, "
               f"Ø{P.GROUND_FOOT_D:.0f} mm ayakla {tips['geniş ayak']:.1f}°",
+              "- Atalet (CG'ye göre, SITL başlangıcı): Ixx {:.4f}, Iyy {:.4f}, Izz {:.4f} kg·m²".format(*layout.inertia()),
               "", "## Kontroller", "", "| Kontrol | Sonuç | Değer |", "|---|---|---|"]
     for name, ok, detail in rules + checks:
         lines.append(f"| {name} | {'✅' if ok else '❌'} | {detail} |")

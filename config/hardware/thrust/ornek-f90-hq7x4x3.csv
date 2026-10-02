@@ -1,0 +1,9 @@
+# İtki standı ölçüm şablonu — ÖRNEK veri: T-Motor F90 1300KV + HQ 7x4x3 @ 24,2 V (yayımlanmış veri,
+# config/hardware/*.yaml'daki vekil eğri ile aynı). Kendi ölçümünüzü bu sütunlarla kaydedin:
+#   throttle_pct: ESC gaz yüzdesi · thrust_g: itki (g) · voltage_v: ESC girişi gerilim · current_a: akım
+# Öneri: %10 adımlarla %10–100, her adımda 3 s bekleyip ortalama; aynı ölçümü koruma + ağ takılıyken
+# tekrarlayın → python3 tools/thrust_stand.py serbest.csv --guarded korumali.csv
+throttle_pct,thrust_g,voltage_v,current_a
+30,353,24.2,2.149
+50,948,24.2,8.802
+100,2361,24.2,43.760

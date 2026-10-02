@@ -84,6 +84,35 @@ def center_of_gravity(profile: dict | None = None, battery: Point | None = None)
     return cg, total
 
 
+def inertia(profile: dict | None = None) -> tuple[float, float, float]:
+    """Ağırlık merkezine göre Ixx, Iyy, Izz (kg·m²) — SITL (Gazebo) modeli için başlangıç (≈ ±%30).
+
+    Nokta kütle yaklaşımı; korumalar motor konumlarına (halka öz ataleti dahil), gövdenin %60'ı
+    kol ortalarına dağıtılır.
+    """
+    profile = profile or budget_calc.load(PROFILE)
+    cg, _ = center_of_gravity(profile)
+    pts: list[tuple[float, Point]] = []
+    self_i = [0.0, 0.0, 0.0]
+    for name, m, pos in masses(profile) + [("batarya", profile["battery"]["mass_g"], battery_position(profile))]:
+        if "pervane koruması" in name:
+            r = P.guard_outer_r()
+            for x, y in P.motor_positions():
+                pts.append((m / 4, (x, y, pos[2])))
+                self_i[0] += m / 4 * r * r / 2
+                self_i[1] += m / 4 * r * r / 2
+                self_i[2] += m / 4 * r * r
+        elif "MOZ7" in name:
+            pts.append((0.4 * m, pos))
+            pts += [(0.15 * m, (x / 2, y / 2, -P.ARM_T / 2)) for x, y in P.motor_positions()]
+        else:
+            pts.append((m, pos))
+    ixx = sum(m * ((p[1] - cg[1]) ** 2 + (p[2] - cg[2]) ** 2) for m, p in pts) + self_i[0]
+    iyy = sum(m * ((p[0] - cg[0]) ** 2 + (p[2] - cg[2]) ** 2) for m, p in pts) + self_i[1]
+    izz = sum(m * ((p[0] - cg[0]) ** 2 + (p[1] - cg[1]) ** 2) for m, p in pts) + self_i[2]
+    return tuple(round(v * 1e-9, 5) for v in (ixx, iyy, izz))       # g·mm² → kg·m²
+
+
 # --- Görüş alanı kontrolleri -----------------------------------------------------------------
 
 def obstacle_points() -> dict[str, list[Point]]:
@@ -232,6 +261,8 @@ def main() -> int:
     tips = tip_angles(profile)
     print(f"Devrilme açısı (motorlar kapalı): tutamak tabanında {tips['tutamak']:.1f}°,"
           f" Ø{P.GROUND_FOOT_D:.0f} mm ayakla {tips['geniş ayak']:.1f}°")
+    ixx, iyy, izz = inertia(profile)
+    print(f"Atalet (CG'ye göre, SITL başlangıcı): Ixx {ixx:.4f}, Iyy {iyy:.4f}, Izz {izz:.4f} kg·m²")
     view = gimbal_view_report()
     for pitch, hits in sorted(view["blocked"].items()):
         print(f"  gimbal pitch {pitch:+.0f}°: görüşte {', '.join(hits)}")

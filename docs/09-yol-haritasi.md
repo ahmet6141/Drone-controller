@@ -21,9 +21,12 @@ gantt
 ```
 
 ## Faz 0 — Araştırma, mimari, konfigürasyon (bu çalışma)
-- Çıktılar: `docs/01–09`, `config/` altındaki tüm profiller ve parametreler,
-  `tools/budget_calc.py`, `tests/`.
-- Çıkış kriteri: donanım seviyesi seçildi (öneri: **Seviye A — Ekonomik, Raspberry Pi**), BOM siparişe hazır.
+- Çıktılar: `docs/01–11`, `config/` altındaki tüm profiller ve parametreler, sensör kataloğu ve
+  bütçe senaryoları, `tools/`, `cad/` (parametrik 3B modeller), `tests/`.
+- Çıkış kriteri: donanım seviyesi seçildi (öneri: **Seviye A — Ekonomik, Raspberry Pi** + "önerilen"
+  kesinti paketi, docs/11 §3), BOM siparişe hazır.
+- Yazılım öncesi hazırlık listesi (baskı, itki standı, sensör tezgâhı, gecikme, veri toplama, EMI,
+  mevzuat, güvenlik ekipmanı): [11 §6](11-yazilim-oncesi-hazirlik.md).
 
 ## Faz 1 — Simülasyon ve yazılım iskeleti
 - ROS 2 çalışma alanı ve paketler ([04 §4.2](04-sistem-mimarisi.md)).
@@ -33,8 +36,9 @@ gantt
 - Algı hattı kayıtlı videolarda: TensorRT motorları, MOT, SOT, jest.
 - Jest veri seti: HaGRIDv2 alt kümesi + aşağı kameradan toplanan özel avuç verisi.
 - CI: `colcon build`, birim testler, `tests/test_configs.py`.
-- **Gimbal tasarımı (CAD)**: 2 eksen fırçasız gimbal, kızaklı kamera plakası, FFC yolu, sönümleyici
-  tabanı; ilk baskı ve tezgâh dengesi ([10 §3](10-kamera-gimbal-ve-sensorler.md)).
+- **Gimbal tasarımı (CAD)**: ilk parametrik model hazır (`cad/gimbal_2axis.py`: kızaklı beşik, roll
+  ekseni ağırlık merkezinde, çakışma kontrolü); FFC yolu, ilk baskı ve tezgâh dengesi
+  ([10 §3](10-kamera-gimbal-ve-sensorler.md), [11 §5](11-yazilim-oncesi-hazirlik.md)).
 - **8×8 ToF**: `tools/tof8x8.py` mantığı ROS 2 düğümüne taşınır; gerçek sensörle radyal/dik mesafe
   doğrulaması.
 - **Çıkış**: SITL'de avuca iniş Monte Carlo (≥ 1000 deneme) %100 doğru durum geçişi (T1);
@@ -44,7 +48,8 @@ gantt
 - Seviye A montajı (Raspberry Pi 5 + AI HAT+ 2); kablolama ve EMI düzeni (pusula, GNSS anteni ↔
   ESC/companion ayrımı; STorM32'nin 868/915 MHz paraziti için ELRS menzil testi).
 - Gimbal: denge → motor gücü → PID → pervaneli titreşim testi.
-- İtki standı ölçümü (koruma + ağ takılı) → `config/hardware/*.yaml` eğrisi güncellenir.
+- İtki standı ölçümü (serbest ve koruma + ağ takılı) → `tools/thrust_stand.py` → `config/hardware/*.yaml`
+  eğrisi ve `installation_factor` güncellenir.
 - FC kurulumu: `config/px4` parametreleri, motor yönü/sırası, ESC telemetri, IMU sıcaklık kalibrasyonu.
 - Companion: termal test (30 dk tam yük; Pi 5 0–70 °C), kamera–IMU kalibrasyonu (Kalibr).
 - Avuç temas algılama tezgâh testi (T2): disarm gecikmesi p99 ≤ 150 ms.

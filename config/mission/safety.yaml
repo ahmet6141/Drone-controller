@@ -1,0 +1,40 @@
+# Companion güvenlik izleyicisinin (dc7_safety) sınırları.
+# PX4 tarafındaki karşılıkları config/px4/*.params dosyalarındadır; tests/test_configs.py
+# iki tarafın tutarlılığını kontrol eder. Nihai failsafe otoritesi PX4'tür (docs/04 §1).
+schema_version: 1
+
+people:
+  min_horizontal_distance_m: 3.0   # avuca iniş dışında (S-05)
+  near_zone_radius_m: 3.0
+  near_zone_max_speed_mps: 1.0
+  slow_zone_radius_m: 5.0
+  slow_zone_max_speed_mps: 3.0
+
+geofence:
+  max_horizontal_distance_m: 300   # PX4 GF_MAX_HOR_DIST
+  max_altitude_m: 120              # PX4 GF_MAX_VER_DIST
+  action: rtl
+
+battery:                           # PX4 BAT_LOW_THR / BAT_CRIT_THR / BAT_EMERGEN_THR
+  low_fraction: 0.25
+  critical_fraction: 0.15
+  emergency_fraction: 0.08
+
+companion_watchdog:
+  heartbeat_hz: 10
+  setpoint_timeout_s: 0.5
+
+links:
+  rc_loss_action: rtl
+  data_link_loss_action: hold_then_rtl
+
+obstacle:
+  forward_brake: true
+  brake_margin_m: 2.0
+  max_decel_mps2: 4.0
+
+setpoint_limits:
+  max_horizontal_speed_mps: 10.0
+  max_up_speed_mps: 3.0
+  max_down_speed_mps: 1.5
+  max_yaw_rate_dps: 120.0

@@ -1,0 +1,105 @@
+# Davranış yöneticisi ve özel PX4 modlarının (Avuca İniş, Hedef Takip) parametreleri.
+# Birimler SI: m, m/s, s. Derece cinsinden değerler *_deg / *_dps sonekiyle.
+# Tasarım: docs/04-sistem-mimarisi.md (durum makinesi), docs/05-avuca-inis-tasarimi.md,
+#          docs/06-hedef-takip-tasarimi.md
+schema_version: 1
+
+state_machine:
+  tick_hz: 50
+  takeoff_height_m: 2.0
+
+gestures:
+  # Ön kamera jest onayı: son `confirm_window_frames` karenin en az `confirm_min_frames`'i
+  confirm_window_frames: 30
+  confirm_min_frames: 24
+  min_confidence: 0.70
+  hold_time_s: 1.0
+  cooldown_s: 2.0
+  # Jest -> olay eşlemesi (docs/01 §2.4). Yumruk her durumda en yüksek önceliklidir.
+  bindings:
+    open_palm: palm_landing_request
+    fist: stop_hover
+    thumbs_up: confirm
+    peace: follow_me
+  # Jest komutları yalnızca pilot RC anahtarıyla izin verdiğinde dinlenir
+  require_rc_enable_switch: true
+
+palm_landing:
+  enabled: true
+  require_guards: true            # pervane koruması doğrulanmadan özellik kilitli (S-07)
+  max_wind_mps: 5.0
+  max_tilt_deg: 15.0
+  ready:
+    presentation_height_m: 1.1    # AGL; kullanıcı avucunu bu yükseklikte drone'un altına getirir
+    vertical_speed_mps: 0.3
+    timeout_s: 15.0
+    approach_person: false        # drone kişiye kendisi yaklaşmaz (docs/05 §6) — değiştirmeyin
+  detection:
+    min_palm_confidence: 0.60
+    tof_valid_range_m: [0.10, 1.00]
+    camera_tof_consistency_m: 0.08
+    require_open_hand: true       # landmark tabanlı 5 parmak açık kontrolü
+  align:
+    max_lateral_speed_mps: 0.25
+    max_offset_from_ready_m: 0.20
+    center_tolerance_m: 0.03
+    center_hold_s: 0.5
+    abort_lateral_error_m: 0.20
+    kp: 1.2
+    ki: 0.2
+  descend:
+    speed_far_mps: 0.20
+    speed_near_mps: 0.08
+    near_distance_m: 0.15
+    gain: 1.0                     # v = sat(gain * (d - tof_contact_m), speed_near, speed_far)
+    tof_only_below_m: 0.12        # altında yatay hizalama ToF bölge merkezine geçer
+    abort_lateral_error_m: 0.06
+    palm_lost_timeout_s: 0.3
+    withdraw_speed_mps: 0.30      # ToF mesafesi bundan hızlı artarsa (el çekiliyor) iptal
+  contact:
+    tof_contact_m: 0.035          # ToF tutamak tabanının 25 mm içinde; temas ≈ 25–35 mm
+    vz_stall_mps: 0.05
+    thrust_ratio_max: 0.6         # normalize itki < 0.6 x hover itkisi
+    imu_jerk_g: 0.3
+    imu_jerk_max_tof_m: 0.06
+    confirm_s: 0.10
+    min_extra_cues: 1             # ToF zorunlu + en az 1 ek ipucu
+    action: force_disarm          # VEHICLE_CMD_COMPONENT_ARM_DISARM, param2 = 21196
+  abort:
+    climb_m: 0.5
+    climb_speed_mps: 0.4
+    min_overhead_clearance_m: 0.8 # yukarı bakan ToF; daha azsa tırmanma, yerinde bekle
+    hold_on_blocked_s: 5.0
+
+follow:
+  default_mode: tripod            # tripod | behind | orbit | lead
+  allowed_modes: [tripod, behind, orbit]   # lead Faz 4'te açılır
+  distance_m: 6.0
+  min_distance_m: 3.0
+  height_agl_m: 4.0
+  min_height_agl_m: 2.5
+  max_speed_mps: 8.0
+  max_accel_mps2: 3.0
+  max_yaw_rate_dps: 90.0
+  heading_speed_threshold_mps: 0.5
+  kp_pos: 0.8
+  target_velocity_ff: 0.9
+  latency_compensation_s: 0.10
+  orbit:
+    radius_m: 8.0
+    angular_speed_dps: 10.0
+  lost:
+    coast_s: 1.0
+    search_timeout_s: 10.0
+    reid_min_similarity: 0.60
+
+gimbal:
+  driver: siyi_sdk
+  ip: 192.168.144.25
+  port: 37260
+  control_rate_hz: 30
+  kp: 2.5
+  kd: 0.15
+  max_rate_dps: 90.0
+  body_yaw_follow_gain: 1.2
+  tracking_zoom: 1.0

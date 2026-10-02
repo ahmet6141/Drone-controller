@@ -1,0 +1,13 @@
+# Netplan: Jetson Ethernet (gimbal kamera + IP veri linki + mini switch aynı alt ağda)
+# Kopyala: sudo cp 10-dc7-ethernet.yaml /etc/netplan/ && sudo netplan apply
+# SIYI ekipmanlarının varsayılan alt ağı 192.168.144.0/24'tür (gimbal kamera: .25).
+# Linkinizin hava/yer ünitesi IP'lerini üretici belgesinden kontrol edin; çakışma olmamalı.
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    eth0:
+      dhcp4: false
+      addresses: [192.168.144.60/24]
+      # Uçakta internet yok; varsayılan ağ geçidi tanımlanmaz.
+      mtu: 1500

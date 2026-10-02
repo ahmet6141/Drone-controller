@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Model ağırlıkları ve hedef cihazda derlenen TensorRT motorları (git'e girmez)
+models/
+*.engine
+*.onnx
+*.pt
+*.trt
+*.hef
+*.rknn
+
+# Uçuş ve algı kayıtları
+logs/
+*.ulg
+*.mcap
+*.bag
+*.tlog
+
+# ROS 2 çalışma alanı derleme çıktıları
+build/
+install/
+log/
+
+# Editör / OS
+.vscode/
+.idea/
+.DS_Store

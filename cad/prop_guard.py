@@ -34,13 +34,25 @@ def mesh_pitch() -> float:
     return P.MESH_OPENING + P.MESH_RIB
 
 
+def ring_profile() -> cq.Workplane:
+    """Halka kesiti (r, z): düz duvar + üstte dışa açılan çan ağzı + yuvarlatılmış kenar.
+
+    Çan ağzı halkanın üst kenarını flanş gibi rijitleştirir, parmağa keskin kenar bırakmaz ve
+    40° altı eğimle desteksiz basılır.
+    """
+    r_in, r_out = P.guard_inner_r(), P.guard_outer_r()
+    h = P.GUARD_BELOW + P.GUARD_ABOVE
+    f, d, t = P.GUARD_FLARE_H, P.GUARD_FLARE_OUT, P.GUARD_WALL
+    return (cq.Workplane("XZ").moveTo(r_in, 0.0).lineTo(r_out, 0.0).lineTo(r_out, h - f)
+            .lineTo(r_out + d, h).threePointArc((r_in + d + t / 2, h + t / 2), (r_in + d, h))
+            .lineTo(r_in, h - f).close())
+
+
 def guard_ring() -> cq.Workplane:
     r_in, r_out = P.guard_inner_r(), P.guard_outer_r()
     c_in, c_out = collar_radii()
     height = P.GUARD_BELOW + P.GUARD_ABOVE
-    ring = cq.Workplane("XY").circle(r_out).circle(r_in).extrude(height)
-    lip = (cq.Workplane("XY").workplane(offset=height - P.GUARD_LIP)
-           .circle(r_out + P.GUARD_LIP).circle(r_out - 0.1).extrude(P.GUARD_LIP))
+    ring = ring_profile().revolve(360.0, (0, 0, 0), (0, 1, 0))
 
     pitch = mesh_pitch()
     n = int(r_out // pitch) + 1
@@ -57,7 +69,7 @@ def guard_ring() -> cq.Workplane:
     mesh = bars_x.union(bars_y).intersect(annulus)
 
     collar = cq.Workplane("XY").circle(c_out).circle(c_in).extrude(P.SPOKE_T)
-    part = ring.union(lip).union(mesh).union(collar)
+    part = ring.union(mesh).union(collar)
     span = r_in - c_out + 1.0
     for k in range(P.SPOKES):
         spoke = (cq.Workplane("XY").center(c_out + span / 2 - 0.5, 0).rect(span, P.SPOKE_W).extrude(P.SPOKE_T)
@@ -81,11 +93,18 @@ def guard_mount() -> cq.Workplane:
     plate = plate.union(cq.Workplane("XY").pushPoints(post_points()).circle(P.POST_D / 2 + 1.0).extrude(P.HUB_T))
     holes = (cq.Workplane("XY").pushPoints([(s, s), (s, -s), (-s, s), (-s, -s)]).circle(P.M3 / 2).extrude(P.HUB_T)
              .union(cq.Workplane("XY").circle(4.5).extrude(P.HUB_T)))          # mil segmanı
-    posts = (cq.Workplane("XY").workplane(offset=P.HUB_T).pushPoints(post_points())
-             .circle(P.POST_D / 2).extrude(post_h))
+    plate = plate.cut(holes)
+    rp = P.POST_D / 2
+    foot_r, foot_h = P.POST_FOOT
+    for x, y in post_points():
+        # Konik ayaklı direk (döndürülmüş kesit): tabanda kesit büyür → kırılma noktası olmaz
+        post = (cq.Workplane("XZ").moveTo(0.0, 0.0).lineTo(rp + foot_r, 0.0).lineTo(rp, foot_h)
+                .lineTo(rp, post_h - 0.5).lineTo(rp - 0.5, post_h).lineTo(0.0, post_h).close()
+                .revolve(360.0, (0, 0, 0), (0, 1, 0)).translate((x, y, P.HUB_T)))
+        plate = plate.union(post)
     pilot = (cq.Workplane("XY").workplane(offset=P.HUB_T + post_h - 8.0).pushPoints(post_points())
              .circle(P.M2_PILOT / 2).extrude(8.0))
-    return plate.cut(holes).union(posts).cut(pilot)
+    return plate.cut(pilot)
 
 
 def blocked_fraction(ring: cq.Workplane | None = None) -> float:

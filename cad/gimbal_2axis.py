@@ -16,13 +16,17 @@ from __future__ import annotations
 
 import math
 
-import cadquery as cq
+try:
+    import cadquery as cq
+except ImportError:          # analitik yardımcılar (cad/analysis.py) CadQuery olmadan da çalışır
+    cq = None
 
 import params as P
 
 T = P.GIMBAL_PART_T
 CRADLE_BACK_X = -6.0            # beşik arka plakası x ∈ [−6, −3]; kart M2 ara parçalarla x = −1'de
 CRADLE_HALF = 14.0              # beşik yarı yüksekliği (z) ve kamera tarafı yarı genişliği (y)
+CRADLE_X1 = 12.0                # yan plakanın ön ucu
 CAM_CG_X = 1.5                  # kamera modülünün ağırlık merkezi (mercek öne kaydırır; tahmini)
 ARM_HALF = 15.0
 MOTOR_GAP = 0.5
@@ -38,6 +42,19 @@ def _cyl_y(cx, cz, y0, y1, r) -> cq.Workplane:
 
 def _cyl_x(cy, cz, x0, x1, r) -> cq.Workplane:
     return cq.Workplane("YZ").workplane(offset=x0).center(cy, cz).circle(r).extrude(x1 - x0)
+
+
+def _prism_xy(pts: list[tuple[float, float]], z0: float, z1: float, fillet: float = 0.0) -> cq.Workplane:
+    """x-y düzleminde çokgen (köşeleri yuvarlatılmış), z0 → z1 boyunca."""
+    sketch = cq.Sketch().polygon(list(pts) + [pts[0]])
+    if fillet > 0:
+        sketch = sketch.vertices().fillet(fillet)
+    return cq.Workplane("XY").workplane(offset=z0).placeSketch(sketch).extrude(z1 - z0)
+
+
+def _prism_xz(pts: list[tuple[float, float]], y0: float, y1: float) -> cq.Workplane:
+    """x-z düzleminde çokgen, y0 → y1 boyunca (köşebent ve kaburgalar için)."""
+    return cq.Workplane("XZ").workplane(offset=-y0).polyline(pts).close().extrude(-(y1 - y0))
 
 
 def _circle_pts(d: float, offset_deg: float = 45.0) -> list[tuple[float, float]]:
@@ -74,9 +91,10 @@ def camera() -> cq.Workplane:
 def gimbal_cradle() -> cq.Workplane:
     w, h, t = P.CAM_BOARD
     ys0, ys1 = cradle_side_y()
-    back = _box(CRADLE_BACK_X, CRADLE_BACK_X + T, -CRADLE_HALF, ys1, -CRADLE_HALF, CRADLE_HALF)
-    side = _box(CRADLE_BACK_X, 12.0, ys0, ys1, -CRADLE_HALF, CRADLE_HALF)
-    part = back.union(side)
+    # L kesit (x-y): arka plaka + yan plaka, iç köşe yuvarlak (dayanım) ve dış köşeler yuvarlak (görünüm)
+    outline = [(CRADLE_BACK_X, -CRADLE_HALF), (CRADLE_BACK_X + T, -CRADLE_HALF), (CRADLE_BACK_X + T, ys0),
+               (CRADLE_X1, ys0), (CRADLE_X1, ys1), (CRADLE_BACK_X, ys1)]
+    part = _prism_xy(outline, -CRADLE_HALF, CRADLE_HALF, P.GIMBAL_FILLET)
     # Kart delikleri (y, z) — Pi kamera deseni, üst kenardan CAM_HOLE_OFFSET
     hw, hh = P.CAM_HOLES
     top = h / 2 - P.CAM_HOLE_OFFSET
@@ -99,9 +117,18 @@ def swept_radius(shape: cq.Workplane) -> float:
     return max(math.hypot(x, z) for x in (bb.xmin, bb.xmax) for z in (bb.zmin, bb.zmax))
 
 
+def swept_radius_analytic() -> float:
+    """Pitch ekseni etrafında beşik + kameranın en uzak köşesi (yuvarlatmalar ihmal → muhafazakâr)."""
+    w, h, t = P.CAM_BOARD
+    lw, lh, ld = P.CAM_LENS
+    corners = ([(x, z) for x in (CRADLE_BACK_X, CRADLE_X1) for z in (-CRADLE_HALF, CRADLE_HALF)]
+               + [(x, z) for x in (-t, 0.0) for z in (-h / 2, h / 2)]
+               + [(x, z) for x in (0.0, ld) for z in (-lh / 2, lh / 2)])
+    return max(math.hypot(x, z) for x, z in corners)
+
+
 def arm_back_x() -> float:
-    r = max(swept_radius(gimbal_cradle()), swept_radius(camera()))
-    return -(r + P.GIMBAL_CLEARANCE)
+    return -(swept_radius_analytic() + P.GIMBAL_CLEARANCE)
 
 
 def pitch_motor() -> cq.Workplane:
@@ -112,9 +139,9 @@ def pitch_motor() -> cq.Workplane:
 def gimbal_roll_arm(y_roll: float) -> cq.Workplane:
     xb = arm_back_x()
     ya0, ya1 = arm_side_y()
-    side = _box(xb - T, 14.0, ya0, ya1, -ARM_HALF, ARM_HALF)
-    back = _box(xb - T, xb, y_roll - ARM_HALF - 2.0, ya1, -ARM_HALF, ARM_HALF)
-    part = side.union(back)
+    outline = [(xb - T, y_roll - ARM_HALF - 2.0), (xb, y_roll - ARM_HALF - 2.0), (xb, ya0),
+               (14.0, ya0), (14.0, ya1), (xb - T, ya1)]
+    part = _prism_xy(outline, -ARM_HALF, ARM_HALF, P.GIMBAL_FILLET)
     for x, z in _circle_pts(P.GIMBAL_MOTOR_HOLE_CIRCLE):          # pitch motoru statoru
         part = part.cut(cq.Workplane("XZ").workplane(offset=-ya0).center(x, z).circle(P.M2 / 2).extrude(-T))
     part = part.cut(cq.Workplane("XZ").workplane(offset=-ya0).circle(4.0).extrude(-T))
@@ -156,11 +183,21 @@ def gimbal_top(y_roll: float) -> cq.Workplane:
     xm = roll_stator_x()
     z_top = top_plate_z(y_roll)
     half = P.GIMBAL_MOTOR_D / 2 + 1.5
-    upright = _box(xm - T, xm, y_roll - half, y_roll + half, -half, z_top + T)
+    upright_shape = cq.Sketch().rect(2 * half, z_top + T + half).vertices("<Y").fillet(half - 2.0)
+    upright = (cq.Workplane("YZ").workplane(offset=xm - T)
+               .center(y_roll, (z_top + T - half) / 2).placeSketch(upright_shape).extrude(T))
     cx, cy = damper_center(y_roll)
     dx, dy = P.DAMPER_SPACING
-    plate = _box(xm - T, cx + dx / 2 + 5.0, cy - dy / 2 - 5.0, cy + dy / 2 + 5.0, z_top, z_top + T)
+    x1 = cx + dx / 2 + 5.0
+    plate_pts = [(xm - T, cy - dy / 2 - 5.0), (x1, cy - dy / 2 - 5.0), (x1, cy + dy / 2 + 5.0),
+                 (xm - T, cy + dy / 2 + 5.0)]
+    plate = _prism_xy(plate_pts, z_top, z_top + T, 4.0)
     part = upright.union(plate)
+    # Köşebentler: gimbalı taşıyan dik plaka ↔ üst plaka birleşimi en çok zorlanan nokta
+    g = min(12.0, z_top - 15.0)
+    for yg in (y_roll - 9.0, y_roll + 9.0):
+        part = part.union(_prism_xz([(xm - 0.1, z_top + 0.1), (xm + g, z_top + 0.1), (xm - 0.1, z_top - g)],
+                                    yg - 1.25, yg + 1.25))
     for y, z in _circle_pts(P.GIMBAL_MOTOR_HOLE_CIRCLE):
         part = part.cut(_cyl_x(y_roll + y, z, xm - T - 1, xm + 1, P.M2 / 2))
     part = part.cut(_cyl_x(y_roll, 0.0, xm - T - 1, xm + 1, 4.0))
@@ -180,26 +217,58 @@ def top_plate_top_z(y_roll: float) -> float:
     return top_plate_z(y_roll) + T
 
 
+def boom_clamp_x() -> tuple[float, float]:
+    """Gövde alt plakasına bağlanan iki cıvata sırası (x): ön sıra plaka ucundan BOOM_EDGE içeride."""
+    x1 = P.FRAME_FRONT_X - P.BOOM_EDGE
+    return x1 - P.BOOM_CLAMP_SPAN, x1
+
+
+def boom_tip_x() -> float:
+    """Sönümleyici deseninin merkezi (gövde x) — kolun yük noktası."""
+    return P.GIMBAL_POS[0] + damper_center(0.0)[0]
+
+
+def boom_section() -> dict[str, float]:
+    """Taşıyıcı kol kesiti (plaka + 2 kaburga): alan mm², atalet momenti mm⁴, serbest boy mm."""
+    width = P.DAMPER_SPACING[1] + 12.0
+    rib_t, rib_h = P.BOOM_RIB
+    a_p, z_p = width * T, -T / 2
+    a_r, z_r = 2 * rib_t * rib_h, rib_h / 2
+    zc = (a_p * z_p + a_r * z_r) / (a_p + a_r)
+    inertia = (width * T ** 3 / 12 + a_p * (z_p - zc) ** 2
+               + 2 * rib_t * rib_h ** 3 / 12 + a_r * (z_r - zc) ** 2)
+    return {"area": a_p + a_r, "I": inertia, "L": boom_tip_x() - boom_clamp_x()[1], "width": width}
+
+
 def gimbal_boom(y_roll: float) -> cq.Workplane:
     """Gövde koordinatında: alt plakaya 4 × M3, öne uzanan kaburgalı kol, ucunda sönümleyici deseni."""
     cx, cy = damper_center(y_roll)
     gx, gy, _ = P.GIMBAL_POS
     dcx, dcy = gx + cx, gy + cy
     dx, dy = P.DAMPER_SPACING
-    x0, x1 = P.BOOM_X[0], dcx + dx / 2 + 6.0
+    x0, x1 = boom_clamp_x()[0] - 5.0, dcx + dx / 2 + 6.0
     z1 = P.FRAME_BOTTOM_Z
     z0 = z1 - T
-    width = dy + 12.0
-    plate = _box(x0, x1, dcy - width / 2, dcy + width / 2, z0, z1)
+    width = boom_section()["width"]
+    plate = _prism_xy([(x0, dcy - width / 2), (x1, dcy - width / 2), (x1, dcy + width / 2), (x0, dcy + width / 2)],
+                      z0, z1, 5.0)
+    # Tutamak tüpü için kök tarafında yay biçimli boşluk
+    plate = plate.cut(cq.Workplane("XY").workplane(offset=z0).circle(P.GRIP_D / 2 + 2.0).extrude(T))
+    rib_t, rib_h = P.BOOM_RIB
+    xr0 = P.FRAME_FRONT_X + 1.0                                     # kaburga gövde plakasının önünde başlar
     for sy in (-1, 1):
-        yc = dcy + sy * (width / 2 - 2.5)
-        plate = plate.union(_box(x0 + 15.0, x1 - 3.0, yc - 1.5, yc + 1.5, z1, z1 + 6.0))
-    frame_holes = [(x0 + 5.0, dcy + sy * 10.0) for sy in (-1, 1)] + [(x0 + 12.0, dcy + sy * 10.0) for sy in (-1, 1)]
+        yc = dcy + sy * (width / 2 - rib_t / 2 - 1.0)
+        # Uçlara doğru incelen kaburga (x-z kesiti): gerilme yığılması yok, uçta kütle az
+        rib = [(xr0, z1 - 0.1), (x1 - 3.0, z1 - 0.1), (x1 - 3.0, z1 + 3.0), (xr0 + 2 * rib_h, z1 + rib_h),
+               (xr0 + rib_h, z1 + rib_h)]
+        plate = plate.union(_prism_xz(rib, yc - rib_t / 2, yc + rib_t / 2))
+    cx0, cx1 = boom_clamp_x()
+    frame_holes = [(cx, dcy + sy * 10.0) for cx in (cx0, cx1) for sy in (-1, 1)]
     damper_holes = [(dcx + sx * dx / 2, dcy + sy * dy / 2) for sx in (-1, 1) for sy in (-1, 1)]
     holes = (cq.Workplane("XY").workplane(offset=z0).pushPoints(frame_holes + damper_holes)
              .circle(P.M3 / 2).extrude(T))
     plate = plate.cut(holes)
-    for wx in (dcx, x0 + 22.0):                                     # hafifletme + kablo geçişi
+    for wx in (dcx, boom_clamp_x()[1] + 14.0):                      # hafifletme + kablo geçişi
         plate = plate.cut(cq.Workplane("XY").workplane(offset=z0).center(wx, dcy).circle(7.0).extrude(T))
     return plate
 

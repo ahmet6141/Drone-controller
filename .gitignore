@@ -30,5 +30,10 @@ log/
 .idea/
 .DS_Store
 
-# CAD: STEP dosyaları cad/build.py ile yeniden üretilir (STL ve önizlemeler depoda)
+# CAD: STEP, GLB ve .blend dosyaları cad/build.py / render_blender.py ile yeniden üretilir
 cad/out/step/
+cad/out/*.glb
+cad/out/*.blend
+cad/v2/out/step/
+cad/v2/out/*.glb
+cad/v2/out/*.blend

@@ -90,9 +90,45 @@ def battery_plate(battery_x: float | None = None) -> cq.Workplane:
     return _lighten(part, size, keep)
 
 
+def shell_height() -> float:
+    return P.BATTERY_PLATE_Z - (P.TRAY_Z + P.TRAY[2])
+
+
+def companion_shell() -> cq.Workplane:
+    """İsteğe bağlı kabuk: tepsi ile batarya plakası arasında yuvarlak köşeli bant.
+
+    Elektroniği pervane akışından, tozdan ve parmaklardan korur; yanlarda havalandırma yarıkları
+    (Active Cooler), arkada USB/Ethernet, önde FFC açıklığı. Dik duvarlar → desteksiz basılır.
+    """
+    h = shell_height()
+    lx, ly = P.TRAY[0] - 2 * P.SHELL_INSET, P.TRAY[1] - 2 * P.SHELL_INSET
+    w = P.SHELL_WALL
+    outer = cq.Sketch().rect(lx, ly).vertices().fillet(6.0 - P.SHELL_INSET)
+    inner = cq.Sketch().rect(lx - 2 * w, ly - 2 * w).vertices().fillet(6.0 - P.SHELL_INSET - w)
+    shell = (cq.Workplane("XY").placeSketch(outer).extrude(h)
+             .cut(cq.Workplane("XY").placeSketch(inner).extrude(h)))
+    # Arka: Pi 5 USB/Ethernet erişimi; ön: gimbal FFC ve sıcak hava çıkışı
+    shell = shell.cut(cq.Workplane("YZ").workplane(offset=-lx / 2 - 1).center(0, h / 2)
+                      .placeSketch(cq.Sketch().rect(48.0, h - 10.0).vertices().fillet(4.0)).extrude(w + 2))
+    shell = shell.cut(cq.Workplane("YZ").workplane(offset=lx / 2 - w - 1).center(0, h / 2)
+                      .placeSketch(cq.Sketch().rect(30.0, 12.0).vertices().fillet(3.0)).extrude(w + 2))
+    # Yan havalandırma yarıkları (Pi üzerinde)
+    vents = [(P.PI5_X - 24.0 + 8.0 * k, h / 2) for k in range(7)]
+    for side in (-1, 1):
+        y0 = side * (ly / 2 + 1) if side < 0 else ly / 2 - w - 1
+        for vx, vz in vents:
+            shell = shell.cut(cq.Workplane("XZ").workplane(offset=-y0).center(vx, vz)
+                              .slot2D(h - 14.0, 3.0, angle=90).extrude(-(w + 2)))
+    return shell
+
+
 def parts() -> dict[str, tuple[cq.Workplane, str, int]]:
-    return {"companion_tray": (companion_tray(), "PA-CF", 1), "battery_plate": (battery_plate(), "PA-CF", 1)}
+    return {"companion_tray": (companion_tray(), "PA-CF", 1), "battery_plate": (battery_plate(), "PA-CF", 1),
+            "companion_shell": (companion_shell(), "PA-CF", 1)}
 
 
-def placed(tray: cq.Workplane, plate: cq.Workplane) -> list[cq.Workplane]:
-    return [tray.translate((0, 0, P.TRAY_Z)), plate.translate((0, 0, P.BATTERY_PLATE_Z))]
+def placed(tray: cq.Workplane, plate: cq.Workplane, shell: cq.Workplane | None = None) -> list[cq.Workplane]:
+    out = [tray.translate((0, 0, P.TRAY_Z)), plate.translate((0, 0, P.BATTERY_PLATE_Z))]
+    if shell is not None:
+        out.append(shell.translate((0, 0, P.TRAY_Z + P.TRAY[2])))
+    return out

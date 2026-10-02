@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "cad"))
 sys.path.insert(0, str(ROOT / "tools"))
 
+import analysis  # noqa: E402
 import budget_calc  # noqa: E402
 import layout  # noqa: E402
 import params as P  # noqa: E402
@@ -70,6 +71,27 @@ class TestLayout(unittest.TestCase):
         self.assertGreaterEqual(layout.down_camera_clear_half_angle(), P.WIDE_HFOV / 2)
 
 
+class TestAnalysis(unittest.TestCase):
+    def test_engineering_checks(self):
+        for name, ok, detail in analysis.checks():
+            self.assertTrue(ok, f"{name}: {detail}")
+
+    def test_selected_rib_is_in_safe_window(self):
+        sweep = {h: band for h, _, band in analysis.rib_sweep()}
+        self.assertIsNone(sweep[P.BOOM_RIB[1]], "seçili kaburga yüksekliği bantların arasında olmalı")
+        self.assertTrue(any(band for band in sweep.values()), "tarama en az bir riskli yüksekliği göstermeli")
+
+    def test_isolation_beats_rigid_mount(self):
+        b = analysis.boom()
+        self.assertGreater(b["f_isolated"], b["f_rigid"])
+        self.assertLess(analysis.isolator()["f_n"], P.HOVER_ROT_HZ[0] / 2)
+
+    def test_boom_clears_grip(self):
+        import gimbal_2axis
+        self.assertGreater(gimbal_2axis.boom_tip_x(), gimbal_2axis.boom_clamp_x()[1])
+        self.assertLessEqual(gimbal_2axis.boom_clamp_x()[1], P.FRAME_FRONT_X - P.BOOM_EDGE + 1e-9)
+
+
 @unittest.skipUnless(HAS_CADQUERY, "CadQuery kurulu değil")
 class TestCadParts(unittest.TestCase):
     @classmethod
@@ -95,7 +117,7 @@ class TestCadParts(unittest.TestCase):
         import prop_guard
         ring = self.parts["guard_ring"][0]
         bb = ring.val().BoundingBox()
-        self.assertAlmostEqual(bb.xlen, 2 * (P.guard_outer_r() + P.GUARD_LIP), delta=0.2)
+        self.assertAlmostEqual(bb.xlen, 2 * P.guard_max_r(), delta=0.2)
         pitch = prop_guard.mesh_pitch()
         center = (4.5 * pitch, 2.5 * pitch)            # ağ gözü merkezi: çubuklar k·pitch'te, kollardan uzak
 
@@ -123,6 +145,14 @@ class TestCadParts(unittest.TestCase):
         self.assertTrue(gimbal_2axis.stack_fits(self.y_roll)[0])
         bx, bz = gimbal_2axis.pitch_balance()
         self.assertLessEqual(math.hypot(bx, bz), P.CRADLE_SLOT)
+
+    def test_analysis_inputs_match_cad(self):
+        import gimbal_2axis
+        cad_swept = max(gimbal_2axis.swept_radius(gimbal_2axis.gimbal_cradle()),
+                        gimbal_2axis.swept_radius(gimbal_2axis.camera()))
+        self.assertGreaterEqual(gimbal_2axis.swept_radius_analytic() + 1e-6, cad_swept)
+        printed = sum(self.rows[n]["mass_g"] for n in ("gimbal_cradle", "gimbal_roll_arm", "gimbal_top"))
+        self.assertAlmostEqual(printed, P.GIMBAL_PRINTED_G, delta=0.15 * P.GIMBAL_PRINTED_G)
 
     def test_step_export_roundtrip(self):
         import cadquery as cq

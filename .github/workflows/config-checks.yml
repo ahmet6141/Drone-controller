@@ -23,5 +23,7 @@ jobs:
         run: python3 tools/scenarios.py
       - name: CAD yerleşimi (ağırlık merkezi, görüş alanları, tasarım kuralları)
         run: python3 cad/layout.py
+      - name: Titreşim ve dayanım analizi (gimbal taşıyıcı kolu, sönümleyici, koruma direkleri)
+        run: python3 cad/analysis.py
       - name: Tutarlılık testleri
         run: python3 -m unittest discover -s tests -v

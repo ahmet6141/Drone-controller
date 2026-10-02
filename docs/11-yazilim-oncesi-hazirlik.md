@@ -148,7 +148,7 @@ kontrolleri otomatik çalışır; yerleşim testleri CI'da her değişiklikte ko
 2. **Yazdırılabilirlik**: tek parça koruma, havada asılı ağ yüzünden desteksiz basılamıyordu. Ağ +
    halka ve motor bağlantısı ayrı parçalara bölündü. Tutamağın sensör tablası da ayrı parça yapıldı,
    iç basamak 45° pahlı.
-3. **Gimbal görüşü**: gimbal x = 115 mm'de iken pitch +20° üstünde ön korumalar kadraja giriyor.
+3. **Gimbal görüşü**: gimbal x = 115 mm'de iken pitch +15° üstünde ön korumalar kadraja giriyor.
    Mekanik aralık −90…+30° kaldı, **yazılım sınırı +15°** yapıldı
    ([`behavior.yaml`](../config/mission/behavior.yaml)). Üst plaka, sönümleyici ve taşıyıcı kol için
    gimbal z = −56 mm'ye indirildi.

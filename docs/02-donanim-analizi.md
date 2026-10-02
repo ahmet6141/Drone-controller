@@ -81,7 +81,7 @@ koruma/gövde kaybı %10, kullanılabilir enerji %85, yük altında gerilim %90)
 - Hiçbir FPV 7 inç gövde Jetson için tasarlanmamış → **özel üst plaka** (karbon/PA12-CF) gerekli.
 - **Gerçek-X (true-X)** seçildi: simetrik tam koruma, yönetilebilir ağırlık merkezi; gimbal ön
   burunda alçakta (Camera Module 3: 66° yatay FOV). `cad/layout.py` görüş kontrolüne göre pitch
-  −90°…+20° arası korumalar/pervaneler kadraja girmez → yazılım sınırı +15°. Deadcat temiz görüş
+  −90°…+15° arası korumalar/pervaneler kadraja girmez → yazılım sınırı +15°. Deadcat temiz görüş
   sağlar ama asimetriktir ve korumalanması zordur.
 
 ## 4. İtki

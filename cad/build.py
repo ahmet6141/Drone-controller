@@ -27,7 +27,9 @@ import layout  # noqa: E402
 import palm_grip  # noqa: E402
 import params as P  # noqa: E402
 import prop_guard  # noqa: E402
+import standins  # noqa: E402
 import top_deck  # noqa: E402
+import visual  # noqa: E402
 
 OUT = HERE / "out"
 PRINT_NOTES = {
@@ -42,6 +44,7 @@ PRINT_NOTES = {
     "gimbal_boom": "plaka tablada; kaburgalar yukarı",
     "companion_tray": "düz",
     "battery_plate": "düz",
+    "companion_shell": "dik bant; yarıklar dikey → destek yok (isteğe bağlı)",
 }
 # Bütçe karşılaştırması: tier-a-ekonomik.yaml bileşeni → (parçalar, basılmayan ek kütle g, açıklama)
 BUDGET_GROUPS = {
@@ -50,15 +53,24 @@ BUDGET_GROUPS = {
     "2 eksen fırçasız gimbal": (["gimbal_cradle", "gimbal_roll_arm", "gimbal_top", "gimbal_boom"],
                                 2 * P.GIMBAL_MOTOR_MASS_G + 10.0 + 2.0 + 5.0,
                                 "+ 2 motor, STorM32, IMU, sönümleyiciler (docs/10 §3.2)"),
-    "Üst plaka, bağlantılar": (["companion_tray", "battery_plate"], 0.0, "kalan pay kablolama ve bağlantılar için"),
+    "Üst plaka, bağlantılar": (["companion_tray", "battery_plate", "companion_shell"], 0.0,
+                               "kabuk dahil; kalan pay kablolama ve bağlantılar için"),
 }
 COLORS = {
     "guard_ring": "#3b6ea5", "guard_mount": "#2f4f6f", "grip_tube": "#d98c2b", "grip_sensor_mount": "#9a5b13",
     "grip_bumper": "#444444", "gimbal_cradle": "#6aa84f", "gimbal_roll_arm": "#38761d", "gimbal_top": "#274e13",
-    "gimbal_boom": "#7f6000", "companion_tray": "#8e7cc3", "battery_plate": "#674ea7", "frame": "#555555",
-    "motor": "#999999", "prop": "#b7b7b7", "camera": "#cc0000", "pitch_motor": "#999999", "roll_motor": "#999999",
-    "pi": "#45818e", "battery": "#e6b8af", "gnss": "#f1c232", "flow": "#cc0000", "standoff": "#777777",
+    "gimbal_boom": "#7f6000", "companion_tray": "#8e7cc3", "battery_plate": "#674ea7",
+    "companion_shell": "#b4a7d6",
 }
+
+
+def preview_color(name: str) -> str:
+    """Önizleme rengi: basılan parçalar ayırt edici renklerde; temsili parçalar malzeme renginin açığı."""
+    if name in COLORS:
+        return COLORS[name]
+    r, g, b = visual.rgb(visual.MATERIALS[visual.material_for(name)]["color"])
+    lift = lambda c: min(1.0, 0.35 + 0.75 * c)                       # noqa: E731
+    return "#%02x%02x%02x" % tuple(int(255 * lift(c)) for c in (r, g, b))
 
 
 def volume(wp: cq.Workplane) -> float:
@@ -160,7 +172,7 @@ def render(ax, items: list[tuple[str, cq.Workplane]], az: float, el: float, titl
     light = tuple(c / ln for c in light)
     polys, depth, colors = [], [], []
     for name, wp in items:
-        base = to_rgb(COLORS.get(name, "#888888"))
+        base = to_rgb(preview_color(name))
         for a, b, c in _triangles(wp, tol):
             u = (b[0] - a[0], b[1] - a[1], b[2] - a[2])
             v = (c[0] - a[0], c[1] - a[1], c[2] - a[2])
@@ -184,50 +196,32 @@ def render(ax, items: list[tuple[str, cq.Workplane]], az: float, el: float, titl
     ax.axis("off")
 
 
-def _box(x0, x1, y0, y1, z0, z1) -> cq.Workplane:
-    return cq.Workplane("XY").box(x1 - x0, y1 - y0, z1 - z0, centered=False).translate((x0, y0, z0))
-
-
-def _cyl(x, y, z0, z1, r) -> cq.Workplane:
-    return cq.Workplane("XY").workplane(offset=z0).center(x, y).circle(r).extrude(z1 - z0)
-
-
 def assembly(parts: dict, y_roll: float) -> list[tuple[str, cq.Workplane]]:
+    """Gövde koordinatında tam montaj: basılan parçalar + satın alınan parçaların temsilleri."""
     items: list[tuple[str, cq.Workplane]] = []
     ring, mount = parts["guard_ring"][0], parts["guard_mount"][0]
     placed = prop_guard.placed(ring, mount)
     items += [("guard_ring" if i % 2 == 0 else "guard_mount", s) for i, s in enumerate(placed)]
     tube, smount, bumper = (parts[n][0] for n in ("grip_tube", "grip_sensor_mount", "grip_bumper"))
     items += list(zip(("grip_tube", "grip_sensor_mount", "grip_bumper"), palm_grip.placed(tube, smount, bumper)))
-    items += gimbal_2axis.placed(y_roll)
-    items += list(zip(("companion_tray", "battery_plate"),
-                      top_deck.placed(parts["companion_tray"][0], parts["battery_plate"][0])))
-    # temsili gövde, motorlar, pervaneler, Pi, batarya, GNSS, akış sensörü
-    items.append(("frame", _box(-55, 55, -30, 30, P.FRAME_BOTTOM_Z, P.FRAME_BOTTOM_Z + 2)))
-    items.append(("frame", _box(-55, 55, -30, 30, P.FRAME_TOP_Z - 2, P.FRAME_TOP_Z)))
-    for x, y in P.motor_positions():
-        heading = math.degrees(math.atan2(y, x))
-        arm = (cq.Workplane("XY").box(P.MOTOR_R, 14, P.ARM_T, centered=(False, True, False))
-               .translate((0, 0, -P.ARM_T)).rotate((0, 0, 0), (0, 0, 1), heading))
-        items.append(("frame", arm))
-        items.append(("motor", _cyl(x, y, P.HUB_T, P.HUB_T + 22, P.MOTOR_BELL_D / 2)))
-        for k in range(3):                                            # 3 kanatlı pervane (ağ görünsün)
-            blade = (cq.Workplane("XY").box(P.PROP_R, 16, 1.0, centered=(False, True, True))
-                     .rotate((0, 0, 0), (0, 0, 1), heading + 120 * k).translate((x, y, P.PROP_PLANE_Z)))
-            items.append(("prop", blade))
-    pz = P.TRAY_Z + P.TRAY[2]
-    items.append(("pi", _box(P.PI5_X - 42.5, P.PI5_X + 42.5, -28, 28, pz + 4, pz + P.COMPANION_STACK_H)))
-    for x, y in [(sx * P.TRAY_POSTS[0] / 2, sy * P.TRAY_POSTS[1] / 2) for sx in (-1, 1) for sy in (-1, 1)]:
-        items.append(("standoff", _cyl(x, y, pz, P.BATTERY_PLATE_Z, 2.5)))
-    bx, by, bz = layout.battery_position()
-    sx, sy, sz = P.BATTERY_SIZE
-    items.append(("battery", _box(bx - sx / 2, bx + sx / 2, by - sy / 2, by + sy / 2, bz - sz / 2, bz + sz / 2)))
-    gx, gy, gz = P.GNSS_POS
-    items.append(("standoff", _cyl(gx, gy, P.FRAME_TOP_Z, gz - 7, 4)))
-    items.append(("gnss", _cyl(gx, gy, gz - 7, gz + 7, 23)))
-    fx, _, fz = layout.PLACEMENT["MTF-01"]
-    items.append(("flow", _box(fx - 15, fx + 15, -7, 7, fz - 3, fz + 3)))
+    items += [(n, s) for n, s in gimbal_2axis.placed(y_roll) if n.startswith("gimbal_")]
+    items += list(zip(("companion_tray", "battery_plate", "companion_shell"),
+                      top_deck.placed(parts["companion_tray"][0], parts["battery_plate"][0],
+                                      parts["companion_shell"][0])))
+    items += standins.all_items(y_roll)
     return items
+
+
+def export_glb(items: list[tuple[str, cq.Workplane]], path: Path) -> Path:
+    """Blender / glTF görüntüleyiciler için tek dosya montaj (mm; Blender betiği ölçeği düzeltir)."""
+    assy = cq.Assembly(name="dc7")
+    counts: dict[str, int] = {}
+    for name, wp in items:
+        counts[name] = counts.get(name, 0) + 1
+        r, g, b = visual.rgb(visual.MATERIALS[visual.material_for(name)]["color"])
+        assy.add(wp, name=f"{name}.{counts[name]:03d}", color=cq.Color(r, g, b, 1.0))
+    assy.export(str(path), tolerance=0.03, angularTolerance=0.1)
+    return path
 
 
 def write_previews(parts: dict, y_roll: float, out: Path) -> list[Path]:
@@ -300,12 +294,15 @@ def write_report(rows: list[dict], budget: list[dict], checks: list, rules: list
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", type=Path, default=OUT)
-    ap.add_argument("--no-render", action="store_true")
+    ap.add_argument("--no-render", action="store_true", help="matplotlib önizlemelerini atla")
+    ap.add_argument("--no-glb", action="store_true", help="Blender için GLB montajını atla")
     args = ap.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
 
     parts, y_roll = build_parts()
     export(parts, args.out)
+    if not args.no_glb:
+        export_glb(assembly(parts, y_roll), args.out / "dc7_assembly.glb")
     rows = mass_table(parts)
     budget = budget_comparison(rows)
     checks = cad_checks(parts, y_roll)

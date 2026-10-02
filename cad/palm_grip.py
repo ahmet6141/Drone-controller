@@ -54,14 +54,22 @@ def _revolve(points: list[tuple[float, float]]) -> cq.Workplane:
     return cq.Workplane("XZ").polyline(points).close().revolve(360.0, (0, 0, 0), (0, 1, 0))
 
 
+def waist_z() -> tuple[float, float, float]:
+    """Bel bölgesi (parça koordinatı): başlangıç, en ince nokta, bitiş — pencerelerin olduğu kısım."""
+    return -8.0, -29.0, -50.0
+
+
 def grip_tube() -> cq.Workplane:
     r_out, r_in = radii()
     L, zl = tube_length(), ledge_z()
-    profile = [
-        (r_in, 0.0), (r_out, 0.0), (r_out, -L), (r_in, -L),
-        (r_in, zl), (r_in - LEDGE_W, zl), (r_in, zl + LEDGE_W),          # basamak + 45° pah
-    ]
-    tube = _revolve(profile)
+    za, zm, zb = waist_z()
+    w = P.GRIP_WAIST
+    # Kesit: düz üst → içe kavisli bel (ele oturur) → düz alt; iç yüzey aynı kavisle (sabit duvar)
+    tube = (cq.Workplane("XZ").moveTo(r_in, 0.0).lineTo(r_out, 0.0).lineTo(r_out, za)
+            .threePointArc((r_out - w, zm), (r_out, zb)).lineTo(r_out, -L).lineTo(r_in, -L)
+            .lineTo(r_in, zl).lineTo(r_in - LEDGE_W, zl).lineTo(r_in, zl + LEDGE_W)       # basamak + 45° pah
+            .lineTo(r_in, zb).threePointArc((r_in - w, zm), (r_in, za)).close()
+            .revolve(360.0, (0, 0, 0), (0, 1, 0)))
     # Üst flanş: iç bant + 4 kol; ortası açık (FFC ve ToF kabloları gövdeye çıkar)
     s = P.STACK / 2
     band_in = r_in - FLANGE_RING_W
@@ -77,14 +85,17 @@ def grip_tube() -> cq.Workplane:
     holes = (cq.Workplane("XY").workplane(offset=-FLANGE_T)
              .pushPoints([(s, s), (s, -s), (-s, s), (-s, -s)]).circle(P.M3 / 2).extrude(FLANGE_T))
     tube = tube.union(flange.cut(holes))
-    # Baklava pencereler: kare 45° döndürülmüş → üst kenarlar köprü değil, 45° eğim.
+    # Baklava pencereler: köşeleri yuvarlatılmış kare, 45° döndürülmüş → üst kenarlar 45° eğimli
+    # (desteksiz basılır), yuvarlak köşeler çentik etkisini azaltır.
     side = P.GRIP_WINDOW / math.sqrt(2)
+    window = cq.Sketch().rect(side, side).vertices().fillet(P.WINDOW_FILLET)
+    depth = P.GRIP_WALL + P.GRIP_WAIST + 3.0
     rows = (-15.0, -28.0, -41.0)
     for i, zc in enumerate(rows):
         for k in range(10):
             ang = 36.0 * k + (18.0 if i % 2 else 0.0)
-            cutter = (cq.Workplane("YZ").workplane(offset=r_in - 1.0).center(0, zc).rect(side, side)
-                      .extrude(P.GRIP_WALL + 2.0)
+            cutter = (cq.Workplane("YZ").workplane(offset=r_in - P.GRIP_WAIST - 1.5).center(0, zc)
+                      .placeSketch(window).extrude(depth)
                       .rotate((0, 0, zc), (1, 0, zc), 45.0)
                       .rotate((0, 0, 0), (0, 0, 1), ang))
             tube = tube.cut(cutter)
@@ -132,11 +143,15 @@ def grip_sensor_mount() -> cq.Workplane:
 
 
 def grip_bumper() -> cq.Workplane:
+    """TPU tampon: avuca değen alt kenar tam yuvarlak (keskin kenar yok), üstte tüpe geçen dudak."""
     r_out, r_in = radii()
     r_mouth = r_out - P.BUMPER_WALL
-    profile = [(r_mouth, 0.0), (r_out, 0.0), (r_out, P.BUMPER_H), (r_in - FIT, P.BUMPER_H),
-               (r_in - FIT, P.BUMPER_H + LIP_H), (r_mouth, P.BUMPER_H + LIP_H)]
-    return _revolve(profile)
+    rho = P.BUMPER_ROUND
+    return (cq.Workplane("XZ").moveTo(r_mouth, rho)
+            .threePointArc(((r_mouth + r_out) / 2, rho - (r_out - r_mouth) / 2), (r_out, rho))
+            .lineTo(r_out, P.BUMPER_H).lineTo(r_in - FIT, P.BUMPER_H).lineTo(r_in - FIT, P.BUMPER_H + LIP_H)
+            .lineTo(r_mouth, P.BUMPER_H + LIP_H).close()
+            .revolve(360.0, (0, 0, 0), (0, 1, 0)))
 
 
 def parts() -> dict[str, tuple[cq.Workplane, str, int]]:

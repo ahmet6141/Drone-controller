@@ -96,7 +96,7 @@ def inertia(profile: dict | None = None) -> tuple[float, float, float]:
     self_i = [0.0, 0.0, 0.0]
     for name, m, pos in masses(profile) + [("batarya", profile["battery"]["mass_g"], battery_position(profile))]:
         if "pervane koruması" in name:
-            r = P.guard_outer_r()
+            r = P.guard_outer_r() + P.GUARD_FLARE_OUT / 2
             for x, y in P.motor_positions():
                 pts.append((m / 4, (x, y, pos[2])))
                 self_i[0] += m / 4 * r * r / 2
@@ -117,7 +117,7 @@ def inertia(profile: dict | None = None) -> tuple[float, float, float]:
 
 def obstacle_points() -> dict[str, list[Point]]:
     """Görüşe girmemesi gereken yapılar: koruma halkaları, pervane uçları, tutamak, kollar, alt plaka."""
-    ring_r = P.guard_outer_r()
+    ring_r = P.guard_max_r()
     zs_ring = (P.PROP_PLANE_Z - P.GUARD_BELOW, P.PROP_PLANE_Z, P.PROP_PLANE_Z + P.GUARD_ABOVE)
     pts: dict[str, list[Point]] = {"koruma": [], "pervane": [], "tutamak": [], "kol": [], "alt plaka": []}
     for mx, my in P.motor_positions():
@@ -215,17 +215,26 @@ def down_camera_clear_half_angle() -> float:
 def design_rules() -> list[tuple[str, bool, str]]:
     """CAD'den bağımsız tasarım kuralları (docs/05 §3, docs/10 §3)."""
     m = P.MOTOR_XY
-    side_gap = 2 * m - 2 * P.guard_outer_r()
+    side_gap = 2 * m - 2 * P.guard_max_r()
     tray_corner = (P.TRAY[0] / 2, P.TRAY[1] / 2)
-    tray_to_ring = math.hypot(m - tray_corner[0], m - tray_corner[1]) - P.guard_outer_r()
+    tray_to_ring = math.hypot(m - tray_corner[0], m - tray_corner[1]) - P.guard_max_r()
     battery = battery_position()
     fits = abs(battery[0]) + P.BATTERY_SIZE[0] / 2 <= P.BATTERY_PLATE[0] / 2
     mast_gap = abs(P.GNSS_POS[0] - battery[0]) - P.BATTERY_SIZE[0] / 2
     cg, _ = center_of_gravity()
     drop = P.PROP_PLANE_Z - P.GRIP_BOTTOM_Z
     view = gimbal_view_report()
+    collar_in = P.MOTOR_BELL_D / 2 + P.COLLAR_GAP
+    collar_out = collar_in + P.COLLAR_W
+    mesh_z = P.PROP_PLANE_Z - P.GUARD_BELOW
+    blade_gap = min(
+        min(P.PROP_PLANE_Z - P.prop_half_height(r) - (mesh_z + P.SPOKE_T)
+            for r in (collar_in + 0.5 * k for k in range(int(2 * (collar_out - collar_in)) + 1))),
+        min(P.PROP_PLANE_Z - P.prop_half_height(r) - (mesh_z + P.MESH_T)
+            for r in range(int(collar_out), int(P.PROP_R))))
     return [
         ("pervane ↔ halka boşluğu", P.GUARD_CLEARANCE >= 6.0, f"{P.GUARD_CLEARANCE:.1f} mm ≥ 6"),
+        ("kanat ↔ ağ / göbek düşey boşluğu", blade_gap >= 2.0, f"{blade_gap:.1f} mm ≥ 2 (temsili kanat kesitleri)"),
         ("ağ gözü", P.MESH_OPENING <= 10.0, f"{P.MESH_OPENING:.1f} mm ≤ 10"),
         ("tutamak tabanı pervane düzleminin altında", drop >= P.GRIP_MIN_DROP, f"{drop:.0f} mm ≥ {P.GRIP_MIN_DROP:.0f}"),
         ("tutamak çapı", 65.0 <= P.GRIP_D <= 75.0, f"Ø {P.GRIP_D:.0f} mm (65–75)"),

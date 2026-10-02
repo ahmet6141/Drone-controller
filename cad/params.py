@@ -24,15 +24,22 @@ PROP_ABOVE_MOTOR_BASE = 27.0             # motor tabanı → pervane düzlemi (2
 PROP_PLANE_Z = HUB_T + PROP_ABOVE_MOTOR_BASE
 MOTOR_BELL_D = 34.0                      # 2807 çan çapı (tahmini)
 MOTOR_HOLE_SPACING = 16.0                # kare M3 deseni; motora göre 16 veya 19 (doğrulayın)
+PROP_PITCH = 4.0 * 25.4                  # HQ 7x4x3
+# Temsili kanat kesitleri (yarıçap, veter, kalınlık; mm) — tipik 7 inç 3 kanat; gerçek pervaneden ölçün.
+# Kanat açısı θ = atan(adım / (2π r)); düşey yarı yükseklik = veter/2·sinθ + kalınlık/2·cosθ
+PROP_STATIONS = ((7.0, 8.0, 3.5), (20.0, 13.0, 2.4), (40.0, 17.0, 1.9), (60.0, 15.0, 1.4),
+                 (78.0, 10.0, 1.0), (88.4, 5.0, 0.7))
+PROP_HUB = (7.0, 7.5)                    # göbek yarıçapı, yüksekliği
 M3, M2_5, M2 = 3.3, 2.8, 2.3             # vida geçiş delikleri
 M2_PILOT = 1.8                           # M2 kendinden kılavuzlu vida için pilot delik
 
 # --- Pervane koruması (docs/05 §3.2) ----------------------------------------------------
 GUARD_CLEARANCE = 6.0                    # pervane ucu ↔ halka iç yüzeyi
-GUARD_WALL = 1.2                         # PA-CF; üst kenarda dışa doğru boncuk (GUARD_LIP)
-GUARD_LIP = 1.2
+GUARD_WALL = 1.2                         # PA-CF
+GUARD_FLARE_H = 4.0                      # üst kenar dışa açılan "çan ağzı": daha rijit, kenarı yuvarlak, şık
+GUARD_FLARE_OUT = 3.0
 GUARD_ABOVE = 5.0                        # halka, pervane düzleminin bu kadar üstüne çıkar
-GUARD_BELOW = 8.0                        # ağ, pervane düzleminin bu kadar altında (kanat ≥ 6 mm uzakta)
+GUARD_BELOW = 10.0                       # ağ, pervane düzleminin bu kadar altında (kanat kökü ≥ 2 mm uzakta)
 MESH_OPENING = 10.0                      # ağ gözü ≤ 10 mm → parmak geçmez
 MESH_RIB = 1.0
 MESH_T = 1.0
@@ -44,6 +51,7 @@ COLLAR_GAP = 3.0                         # motor çanı ↔ ağ göbeği boşlu�
 COLLAR_W = 6.0
 POSTS = 4                                # bağlantı plakası → ağ göbeği direkleri
 POST_D = 5.0
+POST_FOOT = (2.0, 3.0)                   # direk tabanı konik ayak (yarıçap artışı, yükseklik): gerilme yığılmasını azaltır
 LUG_W = 7.0                              # bağlantı plakası kolları (X biçimi)
 
 # --- Avuç tutamağı (docs/05 §3.1) -------------------------------------------------------
@@ -57,6 +65,9 @@ BUMPER_WALL = 2.5                        # tampon duvarı → ağız yarıçapı
 GROUND_FOOT_D = 150.0                    # yerden kalkış için sökülebilir geniş ayak (öneri)
 STACK = 30.5                             # uçuş yığını M3 deseni (MOZ7: 30,5 / 25,5 / 20)
 GRIP_WINDOW = 16.0                       # baklava hafifletme pencereleri (45° → desteksiz basılır)
+WINDOW_FILLET = 2.5                      # pencere köşe yarıçapı (çentik etkisi azalır)
+GRIP_WAIST = 1.5                         # tutamak beli: orta kısımda yarıçap azalması (ele oturur)
+BUMPER_ROUND = 1.25                      # tamponun avuca değen kenarı tam yuvarlak
 
 # --- Kameralar ve sensörler -------------------------------------------------------------
 CAM_BOARD = (25.0, 24.0, 1.0)            # Pi Camera Module 3 kartı (g × y × kalınlık)
@@ -77,6 +88,7 @@ GIMBAL_MOTOR_H = 14.0
 GIMBAL_MOTOR_MASS_G = 20.0
 GIMBAL_MOTOR_HOLE_CIRCLE = 16.0          # 4 × M2, motora göre 12 / 16 / 19 mm
 GIMBAL_PART_T = 3.0                      # baskı kol kalınlığı (≥ 3 mm, docs/10 §3.3)
+GIMBAL_FILLET = 2.0                      # L parçalarda iç/dış köşe yarıçapı
 GIMBAL_CLEARANCE = 4.0
 CRADLE_SLOT = 5.0                        # kızak: kamera ± bu kadar kaydırılarak dengelenir
 PITCH_RANGE = (-90.0, 30.0)
@@ -85,7 +97,11 @@ GIMBAL_POS = (115.0, 0.0, -56.0)         # pitch ekseni gövde koordinatında (c
 PITCH_SOFT_MAX = 15.0                    # yazılım üst sınırı: üstünde ön korumalar kadraja girer
 DAMPER_SPACING = (30.0, 30.0)            # 4 sönümleyici deseni
 DAMPER_H = 8.0                           # sönümleyici yüksekliği
-BOOM_X = (50.0, 125.0)                   # taşıyıcı kol başlangıcı (gövde alt plakası ön delikleri; uç x hesaplanır)
+FRAME_FRONT_X = 55.0                     # gövde alt plakasının ön ucu (tahmini, gerçek gövdeden ölçün)
+BOOM_CLAMP_SPAN = 15.0                   # taşıyıcı kolun gövdeye iki cıvata sırası arası (x)
+BOOM_EDGE = 6.0                          # ön cıvata ↔ plaka ucu (≥ 2 × cıvata çapı)
+BOOM_RIB = (3.0, 8.0)                    # kaburga kalınlığı, yüksekliği — cad/analysis.py ile seçildi
+GIMBAL_PRINTED_G = 20.0                  # beşik + roll kolu + üst parça (cad/build.py raporu; analiz girdisi)
 
 # --- Üst katlar -------------------------------------------------------------------------
 PI5_BOARD = (85.0, 56.0)
@@ -103,11 +119,21 @@ STRAP_SPACING = 30.0                     # iki kayış arası (batarya merkezine
 TRAY_POSTS = (100.0, 52.0)               # tepsi ↔ batarya plakası M3 ara parça deseni
 GNSS_POS = (-75.0, 0.0, 140.0)           # arka direk (gövde üst plakası arka ucundan; Pi'den uzak)
 OVERHEAD_TOF_POS = (50.0, 0.0)           # batarya plakası ön ucu (x, y)
+SHELL_WALL = 1.2                         # companion kabuğu (isteğe bağlı): iki plaka arasında bant
+SHELL_INSET = 2.0
 LIGHTEN_HOLE = 11.0                      # plakalarda hafifletme deliği çapı
 LIGHTEN_PITCH = 15.0
 
 # --- Malzemeler (g/cm³, yaklaşık; ince duvarlı parçalar ≈ %100 dolu basılır) --------------
 DENSITY = {"PETG": 1.27, "PA-CF": 1.10, "TPU": 1.21}
+# Baskı PA-CF mekanik değerleri (katman yönünde, muhafazakâr tahmin; numune testiyle güncelleyin)
+E_PRINTED = {"PA-CF": 4.0e9, "PETG": 2.0e9}          # Pa
+SIGMA_ALLOW = {"PA-CF": 40e6, "PETG": 30e6}          # Pa (çekme/eğilme, katman yönü)
+
+# --- Titreşim (cad/analysis.py) ---------------------------------------------------------
+HOVER_ROT_HZ = (145.0, 170.0)            # hover motor dönüş frekansı bandı (≈ 9–10 bin dev/dk, docs/10)
+PROP_BLADES = 3                          # kanat geçiş frekansı = dönüş × 3
+DAMPER_K = 2.0                           # sönümleyici başına düşey yay sabiti N/mm (yumuşak kauçuk, tahmini)
 
 
 def guard_inner_r() -> float:
@@ -116,6 +142,26 @@ def guard_inner_r() -> float:
 
 def guard_outer_r() -> float:
     return guard_inner_r() + GUARD_WALL
+
+
+def prop_half_height(r: float) -> float:
+    """Pervanenin r yarıçapındaki düşey yarı yüksekliği (doğrusal ara değer)."""
+    import math as _m
+    pts = []
+    for rs, chord, th in PROP_STATIONS:
+        ang = _m.atan(PROP_PITCH / (2 * _m.pi * rs))
+        pts.append((rs, chord / 2 * _m.sin(ang) + th / 2 * _m.cos(ang)))
+    if r <= pts[0][0]:
+        return max(pts[0][1], PROP_HUB[1] / 2)
+    for (r0, h0), (r1, h1) in zip(pts, pts[1:]):
+        if r0 <= r <= r1:
+            return h0 + (h1 - h0) * (r - r0) / (r1 - r0)
+    return pts[-1][1]
+
+
+def guard_max_r() -> float:
+    """Halkanın en dış noktası (çan ağzı dahil) — yerleşim boşlukları bununla hesaplanır."""
+    return guard_outer_r() + GUARD_FLARE_OUT
 
 
 def motor_positions() -> list[tuple[float, float]]:

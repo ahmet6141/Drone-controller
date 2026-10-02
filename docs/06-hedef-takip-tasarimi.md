@@ -46,7 +46,8 @@ yalnızca yüksek güvenli ve örtülmemiş karelerle güncellenir (sürüklenme
 
 - Piksel hatası → açısal hata: `e_yaw = atan(e_x / f)`, `e_pitch = atan(e_y / f)`.
 - **Pitch** (gimbal): `ω_pitch = Kp·e_pitch + Kd·ė_pitch + ω_ff` → STorM32'ye UART ile açı/hız
-  komutu (30–50 Hz), doyumlu; sınırlar −90°…+30°.
+  komutu (30–50 Hz), doyumlu; yazılım sınırı −90°…+15° (mekanik −90°…+30°; +15° üstünde ön
+  pervane korumaları kadraj köşelerine girer — `cad/layout.py` görüş kontrolü).
 - **Yaw** (gövde): gimbalda yaw ekseni yoktur → gövde yaw'ı yatay hatayı sıfırlar:
   `yaw_rate = K_yaw · e_yaw + ω_ff` (`gimbal.body_yaw_follow_gain`).
 - **Roll** (gimbal): yalnızca ufku sabit tutar; takip döngüsüne girmez.

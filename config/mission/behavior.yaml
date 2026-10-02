@@ -112,7 +112,7 @@ gimbal:
   protocol: storm32_serial     # companion ↔ gimbal kontrolcüsü UART; seri port: dc7*.env → DC7_GIMBAL_SERIAL
   baud: 115200
   control_rate_hz: 50
-  pitch_limits_deg: [-90, 30]  # mekanik durdurucular bu aralığın biraz dışında olmalı
+  pitch_limits_deg: [-90, 15]  # yazılım sınırı; mekanik −90…+30. +15° üstünde ön korumalar kadraja girer (cad/layout.py)
   roll_limits_deg: [-30, 30]
   max_rate_dps: 120
   kp: 2.5                      # piksel hatası → açısal hız

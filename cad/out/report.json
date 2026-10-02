@@ -1,0 +1,286 @@
+{
+ "parts": [
+  {
+   "part": "guard_ring",
+   "material": "PA-CF",
+   "qty": 4,
+   "volume_cm3": 17.97,
+   "mass_g": 19.8,
+   "mass_petg_g": 22.8,
+   "solids": 1,
+   "print": "ağ yüzeyi tablada; destek yok"
+  },
+  {
+   "part": "guard_mount",
+   "material": "PA-CF",
+   "qty": 4,
+   "volume_cm3": 4.15,
+   "mass_g": 4.6,
+   "mass_petg_g": 5.3,
+   "solids": 1,
+   "print": "plaka tablada; direkler yukarı"
+  },
+  {
+   "part": "grip_tube",
+   "material": "PETG",
+   "qty": 1,
+   "volume_cm3": 22.76,
+   "mass_g": 28.9,
+   "mass_petg_g": 28.9,
+   "solids": 1,
+   "print": "ters: flanş tablada; pencereler ve basamak 45° → destek yok"
+  },
+  {
+   "part": "grip_sensor_mount",
+   "material": "PETG",
+   "qty": 1,
+   "volume_cm3": 7.33,
+   "mass_g": 9.3,
+   "mass_petg_g": 9.3,
+   "solids": 1,
+   "print": "disk tablada"
+  },
+  {
+   "part": "grip_bumper",
+   "material": "TPU",
+   "qty": 1,
+   "volume_cm3": 4.05,
+   "mass_g": 4.9,
+   "mass_petg_g": 5.1,
+   "solids": 1,
+   "print": "TPU 95A; ağız tablada"
+  },
+  {
+   "part": "companion_tray",
+   "material": "PA-CF",
+   "qty": 1,
+   "volume_cm3": 14.67,
+   "mass_g": 16.1,
+   "mass_petg_g": 18.6,
+   "solids": 1,
+   "print": "düz"
+  },
+  {
+   "part": "battery_plate",
+   "material": "PA-CF",
+   "qty": 1,
+   "volume_cm3": 14.05,
+   "mass_g": 15.5,
+   "mass_petg_g": 17.8,
+   "solids": 1,
+   "print": "düz"
+  },
+  {
+   "part": "gimbal_cradle",
+   "material": "PA-CF",
+   "qty": 1,
+   "volume_cm3": 3.83,
+   "mass_g": 4.2,
+   "mass_petg_g": 4.9,
+   "solids": 1,
+   "print": "arka plaka tablada; ara parçalar yukarı"
+  },
+  {
+   "part": "gimbal_roll_arm",
+   "material": "PA-CF",
+   "qty": 1,
+   "volume_cm3": 5.81,
+   "mass_g": 6.4,
+   "mass_petg_g": 7.4,
+   "solids": 1,
+   "print": "yan plaka tablada"
+  },
+  {
+   "part": "gimbal_top",
+   "material": "PA-CF",
+   "qty": 1,
+   "volume_cm3": 8.29,
+   "mass_g": 9.1,
+   "mass_petg_g": 10.5,
+   "solids": 1,
+   "print": "ters: üst plaka tablada"
+  },
+  {
+   "part": "gimbal_boom",
+   "material": "PA-CF",
+   "qty": 1,
+   "volume_cm3": 8.36,
+   "mass_g": 9.2,
+   "mass_petg_g": 10.6,
+   "solids": 1,
+   "print": "plaka tablada; kaburgalar yukarı"
+  }
+ ],
+ "budget": [
+  {
+   "component": "Tam pervane koruması + alt ağ (PA12-CF, 3B baskı)",
+   "budget_g": 110,
+   "model_g": 97.6,
+   "diff_pct": -11.3,
+   "note": "4 takım"
+  },
+  {
+   "component": "Avuç iniş tutamağı (TPU + köpük, ≥120 mm)",
+   "budget_g": 40,
+   "model_g": 43.1,
+   "diff_pct": 7.8,
+   "note": "köpük ped hariç"
+  },
+  {
+   "component": "Kendi tasarım 2 eksen fırçasız gimbal (2× motor, STorM32, IMU, baskı parçalar, sönümleyici)",
+   "budget_g": 85,
+   "model_g": 85.9,
+   "diff_pct": 1.1,
+   "note": "+ 2 motor, STorM32, IMU, sönümleyiciler (docs/10 §3.2)"
+  },
+  {
+   "component": "Üst plaka, bağlantılar, kablolama",
+   "budget_g": 60,
+   "model_g": 31.6,
+   "diff_pct": -47.3,
+   "note": "kalan pay kablolama ve bağlantılar için"
+  }
+ ],
+ "checks": [
+  [
+   "pervane ↔ halka boşluğu",
+   true,
+   "6.0 mm ≥ 6"
+  ],
+  [
+   "ağ gözü",
+   true,
+   "10.0 mm ≤ 10"
+  ],
+  [
+   "tutamak tabanı pervane düzleminin altında",
+   true,
+   "125 mm ≥ 120"
+  ],
+  [
+   "tutamak çapı",
+   true,
+   "Ø 70 mm (65–75)"
+  ],
+  [
+   "komşu korumalar arası boşluk",
+   true,
+   "45.4 mm ≥ 20"
+  ],
+  [
+   "tepsi köşesi ↔ koruma halkası",
+   true,
+   "6.3 mm ≥ 3"
+  ],
+  [
+   "batarya plakaya sığıyor",
+   true,
+   "batarya x = -15.4 mm"
+  ],
+  [
+   "GNSS direği ↔ batarya",
+   true,
+   "22.1 mm ≥ 5"
+  ],
+  [
+   "CG yatay ofset",
+   true,
+   "(-0.0, +0.0) mm ≤ 5"
+  ],
+  [
+   "akış sensörü görüşü temiz",
+   true,
+   "temiz"
+  ],
+  [
+   "yukarı ToF görüşü temiz",
+   true,
+   "temiz"
+  ],
+  [
+   "gimbal yazılım aralığında görüş temiz",
+   true,
+   "temiz -90° … +20°, yazılım sınırı ≤ +15°"
+  ],
+  [
+   "guard_ring: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "guard_mount: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "grip_tube: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "grip_sensor_mount: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "grip_bumper: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "companion_tray: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "battery_plate: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "gimbal_cradle: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "gimbal_roll_arm: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "gimbal_top: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "gimbal_boom: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "gimbal pitch −90…+30° çakışma",
+   true,
+   "0.000 mm³"
+  ],
+  [
+   "gimbal roll ±30° çakışma",
+   true,
+   "0.000 mm³"
+  ],
+  [
+   "gimbal dikey yığın gövdeye sığıyor",
+   true,
+   "pay 0.2 mm"
+  ],
+  [
+   "pitch dengesi kızak aralığında",
+   true,
+   "kayma (-0.26, +0.02) mm ≤ 5"
+  ],
+  [
+   "ağın kapattığı pervane alanı",
+   true,
+   "%20 → installation_factor itki standında ölçülmeli"
+  ]
+ ]
+}

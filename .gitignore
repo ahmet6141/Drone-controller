@@ -29,3 +29,6 @@ log/
 .vscode/
 .idea/
 .DS_Store
+
+# CAD: STEP dosyaları cad/build.py ile yeniden üretilir (STL ve önizlemeler depoda)
+cad/out/step/

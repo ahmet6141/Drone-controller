@@ -78,8 +78,9 @@ zaten gövde yaw'ını kullanıyor. 3. eksen gerekirse ileride eklenir.
 ### 3.3 Tasarım kuralları
 1. **Denge önce gelir**: kamera + plakanın ağırlık merkezi iki eksenin kesişiminde olmalı. Fırçasız
    gimbal motorları düşük torkludur; dengesiz yük titreşim, ısınma ve kayma yapar → kızaklı plaka ile ayar.
-2. **Eksen sırası**: dış eksen roll (gövdeye bağlı), iç eksen pitch (kamerayı taşır). Pitch −90°
-   (tam aşağı) ile +30° arası; mekanik durdurucular yazılım sınırlarının hemen dışında.
+2. **Eksen sırası**: dış eksen roll (gövdeye bağlı), iç eksen pitch (kamerayı taşır). Mekanik
+   aralık −90° (tam aşağı) ile +30°; yazılım sınırı +15° (üstünde ön korumalar kadraja girer,
+   `cad/layout.py`). Parametrik model ve denge/çakışma kontrolü: `cad/gimbal_2axis.py` (docs/11 §5).
 3. **Rijitlik**: 3B baskı kollar ≥ 3 mm, kaburgalı; motor montajı boşluksuz. Kol rezonansı motor
    frekanslarından (hover ≈ 150–165 Hz) uzak olmalı.
 4. **Titreşim izolasyonu**: gimbal tabanı gövdeye 4 kauçuk sönümleyiciyle; sönümleyici sertliği

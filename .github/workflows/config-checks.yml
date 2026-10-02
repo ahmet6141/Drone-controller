@@ -21,5 +21,7 @@ jobs:
         run: python3 tools/sensor_matrix.py
       - name: Bütçe kesinti senaryoları (paketler limitler içinde)
         run: python3 tools/scenarios.py
+      - name: CAD yerleşimi (ağırlık merkezi, görüş alanları, tasarım kuralları)
+        run: python3 cad/layout.py
       - name: Tutarlılık testleri
         run: python3 -m unittest discover -s tests -v

@@ -37,3 +37,4 @@ cad/out/*.blend
 cad/v2/out/step/
 cad/v2/out/*.glb
 cad/v2/out/*.blend
+cad/**/render/*.blend

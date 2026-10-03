@@ -5,7 +5,9 @@ yeteneğine sahip, orta boy (7 inç, 6S) bir quadcopter'ın yazılım ve donanı
 
 > **Durum: Faz 0 tamamlandı + yazılım öncesi hazırlık** — araştırma, mimari ve konfigürasyonlar;
 > sensör alternatifleri ve uyumluluk matrisi, bütçe kesinti senaryoları, parametrik 3B modeller
-> ([docs/11](docs/11-yazilim-oncesi-hazirlik.md)). Uçuş yazılımı (ROS 2 paketleri) Faz 1'de yazılacak.
+> ([docs/11](docs/11-yazilim-oncesi-hazirlik.md)), seri üretime uygun **v2 bütünleşik gövde** ve
+> Blender render hattı ([docs/12](docs/12-butunlesik-govde-ve-seri-uretim.md)). Uçuş yazılımı (ROS 2
+> paketleri) Faz 1'de yazılacak.
 
 ## Öne çıkan kararlar
 
@@ -25,7 +27,8 @@ yeteneğine sahip, orta boy (7 inç, 6S) bir quadcopter'ın yazılım ve donanı
 | Mevzuat | Yeni **SHT-İHA (30.07.2026)**: M0 sınıfı, YZ destekli otonomi için P2 + kontrollü izin; Ar-Ge kontrollü sahada saklı | [08](docs/08-guvenlik-ve-mevzuat.md) |
 | Sensör alternatifleri | 9 görev, **26 seçenek**; PX4/ArduPilot parametreleri resmi referansla test edilir; Pi üzerinden ROS 2 → DDS köprüsüyle FC sürücüsü olmayan sensörler de | [11 §2–4](docs/11-yazilim-oncesi-hazirlik.md) |
 | Bütçe | Yetenek kaybı olmadan **−$275** (Pi 5 4GB, AI HAT+ 26 TOPS, kendi baskımız); Ar-Ge MVP **$1.185** | [11 §3](docs/11-yazilim-oncesi-hazirlik.md) |
-| 3B model | Kendimize özel parçalar **parametrik CadQuery** modelleri: koruma, avuç tutamağı, gimbal, üst katlar; STL hazır, kütle/çakışma/görüş kontrolleri | [cad/](cad/README.md), [11 §5](docs/11-yazilim-oncesi-hazirlik.md) |
+| 3B model | Kendimize özel parçalar **parametrik CadQuery** modelleri: koruma, avuç tutamağı, gimbal, üst katlar; STL hazır, kütle/çakışma/görüş kontrolleri. Görseller **Blender/Cycles** ile (geometri CAD'de kalır) | [cad/](cad/README.md), [11 §5](docs/11-yazilim-oncesi-hazirlik.md), [12 §2](docs/12-butunlesik-govde-ve-seri-uretim.md) |
+| Gövde v2 (ürün) | **Bütünleşik gövde**: 3 kalıplı kabuk + **tek kalıptan 4 kol–kanal modülü** (≤ 10 mm ızgara) + burun bölmesinde gimbal + kuyruktan takılan akıllı batarya; yerleşim ağırlık merkezine göre kodla çözülür, DFM kuralları kontrol edilir | Seri üretime uygun, parmak korumalı; avuçta devrilme 14,6° → 20,0°; 1507 g, 19,2 dk (v1: 1456 g, 20,1 dk) — [12](docs/12-butunlesik-govde-ve-seri-uretim.md) |
 
 ## Donanım seviyeleri (hesaplanmış) — drone: **7 inç**
 
@@ -40,6 +43,8 @@ yeteneğine sahip, orta boy (7 inç, 6S) bir quadcopter'ın yazılım ve donanı
 `python3 tools/budget_calc.py --all` · Seviye A kesinti paketleri: `python3 tools/scenarios.py`
 
 ![DC7 yerleşimi (cad/build.py)](cad/out/preview_assembly.png)
+
+![DC7 v2 bütünleşik gövde (cad/v2/build_v2.py + Blender)](cad/v2/out/render/hero.jpg)
 
 ## Dizin yapısı
 
@@ -56,8 +61,10 @@ docs/
   09-yol-haritasi.md           Faz planı ve gereksinim → test eşleşmesi
   10-kamera-gimbal-ve-sensorler.md  Pi kameraları, kendi gimbalımız, ucuz sensörler, 8×8 ToF, boyut
   11-yazilim-oncesi-hazirlik.md     Sensör alternatifleri, bütçe kesintileri, uyumluluk, 3B model, hazırlık listesi
+  12-butunlesik-govde-ve-seri-uretim.md  CAD ↔ Blender, v2 bütünleşik gövde, CG yerleşimi, DFM, kalıp, EVT/DVT/PVT
 config/
-  hardware/   Seviye A/B/C bileşen, kütle, güç, itki eğrisi, batarya, fiyat; thrust/ itki standı şablonu
+  hardware/   Seviye A/B/C bileşen, kütle, güç, itki eğrisi, batarya, fiyat; thrust/ itki standı şablonu;
+              variants/ v2 bütünleşik gövde profili (gövde kütleleri CAD'den)
   sensors/    Sensör kataloğu: görev bazında alternatifler, PX4/ArduPilot sürücü eşlemesi, köprü konuları
   budget/     Bütçe kesinti senaryoları ve paketleri (Seviye A üzerine yamalar)
   px4/        PX4 v1.17 parametreleri: base/ (ortak) + profiles/ (dış mekân GNSS, iç mekân VIO)
@@ -68,7 +75,9 @@ config/
 cad/
   params.py, layout.py Ölçüler; ağırlık merkezi, batarya konumu, görüş alanı kontrolleri (CadQuery'siz)
   prop_guard.py …      Koruma, avuç tutamağı, 2 eksen gimbal, üst katlar (CadQuery)
-  build.py             STL/STEP, kütle–bütçe raporu, önizlemeler → out/
+  build.py             STL/STEP/GLB, kütle–bütçe raporu, önizlemeler → out/
+  render_blender.py    Blender/Cycles fotogerçekçi render (--model v1 | v2)
+  v2/                  Bütünleşik gövde: yerleşim, titreşim, kabuklar, kol–kanal modülü, akıllı batarya
 tools/
   budget_calc.py       AUW, T/W, hover gücü/süresi, MPC_THR_HOVER, THR_MDL_FAC, maliyet
   scenarios.py         Bütçe kesinti senaryoları: maliyet, kütle, hover ve limit etkisi
@@ -83,6 +92,7 @@ tests/
   test_scenarios.py    Bütçe senaryoları: limitler, güvenlik bileşenleri korunuyor mu
   test_thrust_stand.py İtki standı aracı
   test_cad.py          Yerleşim kuralları (her zaman) + CAD parçaları (CadQuery kuruluysa)
+  test_v2.py           v2 yerleşimi ve kol titreşimi (her zaman) + v2 CAD parçaları (CadQuery kuruluysa)
   test_tof8x8.py       8×8 ToF avuç analizi testleri
 ```
 
@@ -96,8 +106,11 @@ python3 tools/tof8x8.py --demo             # 8×8 mesafe sensörü nasıl görü
 python3 tools/sensor_matrix.py --markdown  # sensör alternatifleri ve PX4/ArduPilot uyumluluğu
 python3 tools/scenarios.py --markdown      # bütçe kesinti senaryoları ve paketleri
 python3 cad/layout.py                      # ağırlık merkezi, batarya konumu, görüş alanları
+python3 cad/v2/layout_v2.py                # v2 bütünleşik gövde: yerleşim ve ağırlık merkezi
+python3 cad/v2/analysis_v2.py              # v2 kol–kanal modülü titreşimi ve dayanımı
 python3 -m unittest discover -s tests -v   # tüm tutarlılık testleri
-# 3B modeller (isteğe bağlı): pip install cadquery matplotlib && python3 cad/build.py
+# 3B modeller (isteğe bağlı): pip install cadquery matplotlib && python3 cad/build.py && python3 cad/v2/build_v2.py
+# Render (isteğe bağlı, Python 3.11): pip install bpy==4.5.3 && python cad/render_blender.py --model v2
 ```
 
 Testler şunları garanti eder: her parametre adı/tipi/aralığı resmi referansta geçerli;
@@ -106,7 +119,9 @@ bütçe hesabıyla uyumlu; YZ eşikleri davranış eşikleriyle aynı; avuca ini
 değişmezleri (koruma şartı, drone'un kişiye yaklaşmaması, ≤ 150 ms temas onayı) korunuyor;
 sensör kataloğundaki her sürücü parametresi geçerli ve seviye seçimleri donanım profilleriyle aynı;
 bütçe paketleri limitleri ve güvenlik bileşenlerini koruyor; yerleşimde ağırlık merkezi ortada,
-kamera/sensör görüşleri temiz ve gimbal yazılım sınırı görüş kontrolüyle uyumlu.
+kamera/sensör görüşleri temiz ve gimbal yazılım sınırı görüş kontrolüyle uyumlu; v2'de bileşenler
+gövdenin içinde ve çakışmasız, GNSS gürültü kaynaklarından uzak, kol frekansı motor ve kanat geçiş
+bantlarının arasında.
 
 ## Önemli uyarılar
 
@@ -126,3 +141,5 @@ kamera/sensör görüşleri temiz ve gimbal yazılım sınırı görüş kontrol
 2. **Faz 1**: ROS 2 çalışma alanı ve paket iskeleti, PX4 SITL + Gazebo'da DC7 modeli (kütle ve atalet
    `cad/layout.py`'den), `PalmLand` / `FollowTarget` özel modları, algı hattının kayıtlı videolarda
    (Pi 5 + Hailo) çalıştırılması ([09](docs/09-yol-haritasi.md)).
+3. **v2 EVT (paralel)** ([12 §9](docs/12-butunlesik-govde-ve-seri-uretim.md)): MJF PA12 gövde seti, uydurma
+   ve kablo demeti, IMU FFT ile kol frekansı, STEP'ten FEA (kanal ve ızgara modları), kalıp teklifleri.

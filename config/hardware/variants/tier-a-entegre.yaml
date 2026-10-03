@@ -1,0 +1,78 @@
+# Seviye A — v2 BÜTÜNLEŞİK GÖVDE varyantı (DJI tarzı, seri üretime uygun; docs/12).
+# Elektronik ve itki tier-a-ekonomik.yaml ile aynı; FPV gövde + baskı korumalar + tutamak + plakalar
+# yerine kalıplanabilir gövde kabukları, 4 özdeş kol–kanal modülü, avuç ayağı ve akıllı batarya kabuğu.
+# Gövde parçalarının kütleleri cad/v2/build_v2.py raporundan (üretim malzemesi: PC/ABS, PA6-GF30);
+# prototip fiyatları MJF PA12 baskı için kaba tahmindir (doğrulanmadı).
+# Hesap: python3 tools/budget_calc.py config/hardware/variants/tier-a-entegre.yaml
+schema_version: 1
+
+profile:
+  id: tier-a-entegre
+  name: "Seviye A — v2 bütünleşik gövde"
+  platform: raspberry_pi
+  summary: >-
+    Kalıplanabilir gövde (üst kabuk, taşıyıcı alt kabuk, burun kapağı), 4 özdeş PA6-GF30 kol–kanal
+    modülü (çan ağızlı kanal + alt ızgara), burun bölmesinde 2 eksen gimbal, gövde altında avuç ayağı,
+    kuyruktan takılan akıllı batarya. Ağırlık merkezi bataryayla ortalanır (cad/v2/layout_v2.py);
+    kol kesiti titreşim analiziyle seçildi (cad/v2/analysis_v2.py).
+
+limits:
+  max_auw_g: 1600
+  min_tw_ratio: 2.2
+  min_hover_time_min: 15
+  max_hover_throttle: 0.35
+
+components:
+  - {name: "Üst kabuk (PC/ABS, 2 mm et)", category: gövde, mass_g: 55, price_usd: 35, notes: "CAD; prototip MJF fiyatı tahmini"}
+  - {name: "Alt kabuk / taşıyıcı (PC/ABS, kaburgalı)", category: gövde, mass_g: 60, price_usd: 45, notes: "CAD; prototip MJF fiyatı tahmini"}
+  - {name: "Burun kapağı (gimbal başlığı + arka perde)", category: gövde, mass_g: 28, price_usd: 20, notes: "CAD; prototip MJF fiyatı tahmini"}
+  - {name: "Kol–kanal modülü (PA6-GF30: kol + motor yuvası + çan ağızlı kanal + alt ızgara)", category: gövde, mass_g: 72, qty: 4, price_usd: 25, notes: "CAD; tek kalıp ×4; prototip fiyatı tahmini"}
+  - {name: "Avuç ayağı (PC/ABS + TPU uç)", category: gövde, mass_g: 36, price_usd: 15, notes: "CAD; prototip fiyatı tahmini"}
+  - {name: "Akıllı batarya kabuğu + kilit + konnektör", category: gövde, mass_g: 52, price_usd: 20, notes: "CAD kabuk + POM kilit + ≈ 10 g konnektör ve BMS kartı (tahmini)"}
+  - {name: "Kablolama ve bağlantılar (iç kablo demeti, konnektörler, vidalar)", category: kablolama, mass_g: 40, price_usd: 40, notes: "tahmini"}
+  - {name: "ARK FPV uçuş kontrolcüsü (H743, IIM-42653 + ısıtıcı)", category: aviyonik, mass_g: 7.5, power_w: 1.5, price_usd: 195}
+  - {name: "Raspberry Pi 5 8GB + Active Cooler + AI HAT+ 2 (Hailo-10H)", category: companion, mass_g: 90, power_w: 10, price_usd: 380, notes: "kütle ve güç tahmini"}
+  - {name: "Raspberry Pi Camera Module 3 (IMX708, 66° yatay) — gimbal", category: kamera, mass_g: 4, power_w: 0.3, price_usd: 29.25, notes: "PiShop, 10/2026"}
+  - {name: "Kendi tasarım 2 eksen fırçasız gimbal (burun başlığının altında sönümleyicilerle; taşıyıcı kol yok) + kamera başlığı", category: kamera, mass_g: 79, power_w: 2.5, price_usd: 92, notes: "cad/ raporu: basılan 19,7 g + 2 motor + STorM32 + IMU + sönümleyiciler; kamera başlığı (PC kapak + mercek halkası + cam) 2,2 g"}
+  - {name: "Raspberry Pi Camera Module 3 Wide (102° yatay) — aşağı/avuç", category: kamera, mass_g: 4, power_w: 0.3, price_usd: 38.5}
+  - {name: "VL53L8CX 8×8 ToF (Pololu kartı) — aşağı", category: sensör, mass_g: 1, power_w: 0.5, price_usd: 25}
+  - {name: "VL53L1X ToF — yukarı (baş üstü boşluk)", category: sensör, mass_g: 1, power_w: 0.1, price_usd: 15, notes: "fiyat tahmini"}
+  - {name: "MicoAir MTF-01 optik akış + ToF lazer (8 m)", category: sensör, mass_g: 4.5, power_w: 0.5, price_usd: 35, notes: "fiyat tahmini"}
+  - {name: "M10 GNSS modülü (25 mm seramik anten) + pusula — üst kabuk altında", category: sensör, mass_g: 10, power_w: 0.5, price_usd: 30, notes: "kütle/fiyat tahmini; radome altında"}
+  - {name: "RadioMaster XR4 ELRS alıcı + anten", category: haberleşme, mass_g: 5, power_w: 0.3, price_usd: 30, notes: "fiyat tahmini"}
+  - {name: "WFB-ng: RTL8812AU/EU USB adaptör + antenler", category: haberleşme, mass_g: 20, power_w: 3, price_usd: 45, notes: "tahmini; BTK güç sınırı"}
+  - {name: "Remote ID modülü (Open Drone ID)", category: haberleşme, mass_g: 10, power_w: 0.5, price_usd: 60, notes: "tahmini"}
+  - {name: "BEC 5 V/5 A (Pi 5) + 12 V (gimbal) (dönüşüm kayıpları ≈ %10)", category: aviyonik, mass_g: 25, power_w: 2.0, price_usd: 30}
+
+propulsion:
+  motor_count: 4
+  installation_factor: 0.90      # kanal + ızgara: itki standında ölçülecek (tools/thrust_stand.py)
+  motor: {name: "EMAX ECO II 2807 1300KV", kv: 1300, mass_g: 47.6, price_usd: 24}
+  prop: {name: "HQProp 7x4x3", diameter_in: 7.0, pitch_in: 4.0, blades: 3, mass_g: 8, price_usd: 3}
+  esc: {name: "Holybro Tekko32 F4 50A (AM32)", continuous_a: 50, mass_g: 13.8, price_usd: 63}
+  thrust_curve:
+    source: "VEKİL: T-Motor F90 1300KV + HQ 7x4x3 @ 24.2 V — https://www.ligpower.com/product/f90-fpv-motor.html"
+    voltage_v: 24.2
+    points:
+      - [353, 52]
+      - [948, 213]
+      - [2361, 1059]
+    throttle_points:
+      - [0.3, 353]
+      - [0.5, 948]
+      - [1.0, 2361]
+
+battery:
+  name: "6S1P Molicel P50B (21700 Li-ion) — hücreler kabukta"
+  chemistry: li-ion
+  cells_series: 6
+  capacity_mah: 5000
+  nominal_cell_v: 3.6
+  mass_g: 451
+  usable_fraction: 0.85
+  max_continuous_a: 60
+  price_usd: 80
+
+ground_equipment:
+  - {name: "RadioMaster TX15 (ELRS LR1121)", price_usd: 160}
+  - {name: "WFB-ng yer istasyonu (RTL8812AU/EU + yönlü anten)", price_usd: 80, notes: "tahmini"}

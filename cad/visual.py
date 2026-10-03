@@ -40,6 +40,19 @@ MATERIALS: dict[str, dict] = {
             "desc": "kablo / kayış"},
     "copper": {"color": "#b87333", "metallic": 1.0, "roughness": 0.35, "coat": 0.0, "pattern": None,
                "desc": "motor sargısı"},
+    # v2 bütünleşik gövde (docs/12): açık gri gövde, antrasit kanallar, parlak siyah burun, turuncu güvenlik vurguları
+    "shell_light": {"color": "#c9cdd2", "metallic": 0.0, "roughness": 0.52, "coat": 0.25, "pattern": "grain",
+                    "desc": "v2 gövde kabukları (PC/ABS, ince doku)"},
+    "shell_dark": {"color": "#26282c", "metallic": 0.0, "roughness": 0.60, "coat": 0.1, "pattern": "grain",
+                   "desc": "v2 kol–kanal modülleri ve batarya (PA6-GF30 / PC/ABS)"},
+    "gloss_black": {"color": "#0d0e10", "metallic": 0.0, "roughness": 0.40, "coat": 0.2, "pattern": "grain",
+                    "desc": "v2 burun kapağı ve kamera başlığı (saten-mat siyah, ince doku)"},
+    "led_red": {"color": "#ff2a1a", "metallic": 0.0, "roughness": 0.3, "coat": 0.5, "pattern": None,
+                "emission": 6.0, "desc": "seyir lambası (sol ön)"},
+    "led_green": {"color": "#19ff6a", "metallic": 0.0, "roughness": 0.3, "coat": 0.5, "pattern": None,
+                  "emission": 6.0, "desc": "seyir lambası (sağ ön)"},
+    "led_white": {"color": "#f4f7ff", "metallic": 0.0, "roughness": 0.3, "coat": 0.5, "pattern": None,
+                  "emission": 4.0, "desc": "durum lambası (arka)"},
 }
 
 # Parça adı öneki → malzeme (en uzun önek kazanır). Montajdaki her ad bir öneke uymalıdır.
@@ -58,6 +71,9 @@ PART_MATERIAL: dict[str, str] = {
     "gnss_mast": "carbon", "gnss": "plastic", "flow_pcb": "pcb", "flow_sensor": "plastic",
     "antenna": "plastic", "damper": "tpu", "standoff": "aluminum",
     "tof_pcb": "pcb", "tof_sensor": "plastic",
+    "top_shell": "shell_light", "bottom_tub": "shell_light", "nose_cover": "gloss_black", "arm_duct": "shell_dark",
+    "pod": "shell_dark", "pod_tip": "accent", "camera_housing": "gloss_black", "camera_bezel": "anodized", "battery_shell": "shell_dark", "battery_latch": "accent",
+    "led_red": "led_red", "led_green": "led_green", "led_white": "led_white", "esc_pcb": "pcb", "fc_pcb": "pcb",
 }
 
 

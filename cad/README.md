@@ -16,6 +16,8 @@ kodla (CadQuery) tanımlanır. Ölçüyü değiştirip yeniden üretmek tek komu
 | `standins.py` | Satın alınan parçaların görsel temsilleri (gövde, motor, pervane, Pi, batarya, GNSS …) |
 | `visual.py` | Renk–malzeme–yüzey (CMF) tanımları |
 | `build.py` | Hepsini üretir: `out/stl/*.stl` (baskı), `out/step/*.step` (CAD), `out/dc7_assembly.glb` (Blender), `out/report.md`, önizlemeler |
+| `render_blender.py` | Fotogerçekçi render (Blender 4.5 / Cycles): GLB + `visual.py` malzemeleri → `out/render/*.png`; `--model v1 \| v2` |
+| [`v2/`](v2/) | **Bütünleşik (DJI tarzı) gövde**: kalıplanabilir kabuklar, tek kalıptan 4 kol–kanal modülü, burun bölmesinde gimbal, akıllı batarya — [docs/12](../docs/12-butunlesik-govde-ve-seri-uretim.md) |
 
 ## Çalıştırma
 
@@ -27,6 +29,26 @@ python3 -m unittest tests.test_cad    # CadQuery varsa parça testleri de çalı
 ```
 
 STL dosyaları ve önizlemeler depoya eklenmiştir; STEP dosyaları (≈ 6 MB) `build.py` ile üretilir.
+
+## v2 — bütünleşik gövde (`cad/v2/`)
+
+```bash
+python3 cad/v2/layout_v2.py       # yalnızca PyYAML: yerleşim, ağırlık merkezi, 10 kural
+python3 cad/v2/analysis_v2.py     # kol–kanal modülü titreşimi ve düşme dayanımı
+python3 cad/v2/build_v2.py        # CadQuery, ≈ 5 dk: STL/STEP/GLB, çakışma + DFM kontrolleri, v2/out/report.md
+pip install bpy==4.5.3 && python cad/render_blender.py --model v2 --samples 96   # render (Python 3.11)
+python3 -m unittest tests.test_v2 # CadQuery varsa parça testleri de çalışır
+```
+
+| Dosya | İçerik |
+|---|---|
+| `v2_params.py` | Gövde kesit istasyonları, burun (gimbal) bölmesi, batarya, kanal, kol, malzemeler, CAD ağırlık merkezleri |
+| `layout_v2.py` | Bileşen yerleşimi, batarya konumu çözümü (CG = motor merkezi), kanal/EMI/IMU/avuç kontrolleri |
+| `analysis_v2.py` | Değişken kesitli kol + uç kütlesi (Stodola): dikey/yanal frekans, kesit taraması, düşme |
+| `airframe.py` | Üst kabuk, alt kabuk (taşıyıcı), burun kapağı, kol–kanal modülü, avuç ayağı, akıllı batarya |
+| `build_v2.py` | Montaj, çakışma (kol, batarya, gimbal hareketi, pervane, kartlar) ve DFM kuralları, kütle ↔ profil |
+
+![v2 önizleme](v2/out/preview_v2.png)
 
 ![Montaj önizlemesi](out/preview_assembly.png)
 

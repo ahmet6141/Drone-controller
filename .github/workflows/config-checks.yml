@@ -25,5 +25,11 @@ jobs:
         run: python3 cad/layout.py
       - name: Titreşim ve dayanım analizi (gimbal taşıyıcı kolu, sönümleyici, koruma direkleri)
         run: python3 cad/analysis.py
+      - name: v2 bütünleşik gövde — yerleşim (ağırlık merkezi, boşluklar, EMI, görüş alanı)
+        run: python3 cad/v2/layout_v2.py
+      - name: v2 kol–kanal modülü titreşim ve dayanım analizi
+        run: python3 cad/v2/analysis_v2.py
+      - name: v2 varyant bütçesi (limit kontrolleri)
+        run: python3 tools/budget_calc.py config/hardware/variants/tier-a-entegre.yaml
       - name: Tutarlılık testleri
         run: python3 -m unittest discover -s tests -v

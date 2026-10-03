@@ -122,9 +122,20 @@ def propulsion() -> list[Item]:
 
 # --- elektronik ---------------------------------------------------------------------------------
 def companion() -> list[Item]:
-    """Raspberry Pi 5 + Active Cooler + AI HAT+ (USB/Ethernet arkaya bakar)."""
-    z0 = P.TRAY_Z + P.TRAY[2] + 6.0
-    cx = P.PI5_X
+    """Raspberry Pi 5 + Active Cooler + AI HAT+ (v1: tepsi üstünde, USB/Ethernet arkaya bakar)."""
+    return companion_at(P.PI5_X, P.TRAY_Z + P.TRAY[2] + 6.0)
+
+
+def companion_at(cx: float, z0: float, yaw_deg: float = 0.0, pivot: tuple[float, float] | None = None) -> list[Item]:
+    """Pi 5 yığını: kart merkezi x = cx, kart alt yüzeyi z0; yaw_deg ile (pivot etrafında) döndürülür."""
+    items = _companion_items(cx, z0)
+    if yaw_deg:
+        px, py = pivot if pivot else (cx, 0.0)
+        items = [(n, s.rotate((px, py, 0), (px, py, 1), yaw_deg)) for n, s in items]
+    return items
+
+
+def _companion_items(cx: float, z0: float) -> list[Item]:
     lx, ly = P.PI5_BOARD
     x_rear, x_front = cx - lx / 2, cx + lx / 2
     items: list[Item] = [("pi_pcb", _box(x_rear, x_front, -ly / 2, ly / 2, z0, z0 + 1.6))]

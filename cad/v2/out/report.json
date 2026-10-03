@@ -1,0 +1,256 @@
+{
+ "parts": [
+  {
+   "part": "top_shell",
+   "qty": 1,
+   "material": "PC/ABS",
+   "volume_cm3": 48.1,
+   "mass_g": 55.3,
+   "proto_material": "PA12 (MJF)",
+   "proto_mass_g": 48.6,
+   "solids": 1,
+   "cg": [
+    0.4,
+    -0.1,
+    25.8
+   ],
+   "note": "kanopi; yarım kol soketleri ayrım düzlemine açık; kanopi emiş yarıkları dikey (maçasız)"
+  },
+  {
+   "part": "bottom_tub",
+   "qty": 1,
+   "material": "PC/ABS",
+   "volume_cm3": 52.34,
+   "mass_g": 60.2,
+   "proto_material": "PA12 (MJF)",
+   "proto_mass_g": 52.9,
+   "solids": 1,
+   "cg": [
+    2.5,
+    0.0,
+    -31.6
+   ],
+   "note": "taşıyıcı: V uçlu kol soketleri, batarya rayları, vida kuleleri; yan yarıklar için 2 kayar maça"
+  },
+  {
+   "part": "nose_cover",
+   "qty": 1,
+   "material": "PC/ABS",
+   "volume_cm3": 24.69,
+   "mass_g": 28.4,
+   "proto_material": "PA12 (MJF)",
+   "proto_mass_g": 24.9,
+   "solids": 1,
+   "cg": [
+    107.5,
+    -0.1,
+    -4.7
+   ],
+   "note": "saten-mat siyah; gimbal başlığı (tavan) + arka perde, yanaksız: gimbal altta açıkta"
+  },
+  {
+   "part": "arm_duct",
+   "qty": 4,
+   "material": "PA6-GF30",
+   "volume_cm3": 53.28,
+   "mass_g": 72.5,
+   "proto_material": "PA12 (MJF)",
+   "proto_mass_g": 53.8,
+   "solids": 1,
+   "cg": [
+    -23.5,
+    0.0,
+    12.1
+   ],
+   "note": "TEK kalıp × 4; U kesit kol + çan ağızlı kanal + bal peteği ızgara + 3 radyal kaburga; göbekten yolluk"
+  },
+  {
+   "part": "pod",
+   "qty": 1,
+   "material": "PC/ABS",
+   "volume_cm3": 28.51,
+   "mass_g": 32.8,
+   "proto_material": "PA12 (MJF)",
+   "proto_mass_g": 28.8,
+   "solids": 1,
+   "cg": [
+    -0.2,
+    0.1,
+    -64.9
+   ],
+   "note": "avuç ayağı; sensör tablası (tabandan 25 mm)"
+  },
+  {
+   "part": "pod_tip",
+   "qty": 1,
+   "material": "TPU",
+   "volume_cm3": 2.96,
+   "mass_g": 3.6,
+   "proto_material": "TPU",
+   "proto_mass_g": 3.6,
+   "solids": 1,
+   "cg": [
+    -0.0,
+    -0.0,
+    -91.8
+   ],
+   "note": "avuca değen uç (TPU 95A; seri üretimde ayağın üstüne ikinci enjeksiyon)"
+  },
+  {
+   "part": "battery_shell",
+   "qty": 1,
+   "material": "PC/ABS",
+   "volume_cm3": 37.21,
+   "mass_g": 42.8,
+   "proto_material": "PA12 (MJF)",
+   "proto_mass_g": 37.6,
+   "solids": 1,
+   "cg": [
+    -52.0,
+    0.3,
+    -12.1
+   ],
+   "note": "akıllı batarya kabuğu + kuyruk kapağı (gövde çizgisini tamamlar)"
+  }
+ ],
+ "comparison": [
+  {
+   "component": "Üst kabuk (PC/ABS, 2 mm et)",
+   "profile_g": 55,
+   "cad_g": 55.3,
+   "diff_pct": 0.5
+  },
+  {
+   "component": "Alt kabuk / taşıyıcı (PC/ABS, kaburgalı)",
+   "profile_g": 60,
+   "cad_g": 60.2,
+   "diff_pct": 0.3
+  },
+  {
+   "component": "Burun kapağı (gimbal başlığı + arka perde)",
+   "profile_g": 28,
+   "cad_g": 28.4,
+   "diff_pct": 1.4
+  },
+  {
+   "component": "Kol–kanal modülü (PA6-GF30: kol + motor yuvası + çan ağızlı kanal + alt ızgara)",
+   "profile_g": 72,
+   "cad_g": 72.5,
+   "diff_pct": 0.7
+  },
+  {
+   "component": "Avuç ayağı (PC/ABS + TPU uç)",
+   "profile_g": 36,
+   "cad_g": 36.4,
+   "diff_pct": 1.1
+  },
+  {
+   "component": "Akıllı batarya kabuğu + kilit + konnektör",
+   "profile_g": 52,
+   "cad_g": 53.0,
+   "diff_pct": 1.9
+  }
+ ],
+ "checks": [
+  [
+   "top_shell: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "bottom_tub: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "nose_cover: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "arm_duct: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "pod: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "pod_tip: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "battery_shell: tek katı",
+   true,
+   "1 katı"
+  ],
+  [
+   "gövde ↔ kanal halkası",
+   true,
+   "3.0 mm ≥ 2"
+  ],
+  [
+   "kol kökleri soketlerden temassız geçer",
+   true,
+   "0.00 mm³"
+  ],
+  [
+   "batarya tünele çakışmasız girer",
+   true,
+   "0.00 mm³"
+  ],
+  [
+   "pervane ↔ kanal / ızgara",
+   true,
+   "0.00 mm³"
+  ],
+  [
+   "gimbal ↔ burun kapağı (nötr)",
+   true,
+   "0.00 mm³"
+  ],
+  [
+   "gimbal + kamera başlığı hareket aralığı ↔ burun ve gimbal gövdesi",
+   true,
+   "0.00 mm³ (pitch −90/−45/0/+30, roll ±30)"
+  ],
+  [
+   "avuç ayağı en alçak nokta (avuca yalnızca o değer)",
+   true,
+   "ayak -95 mm; sonraki en alçak: gimbal_roll_arm -71.8 mm"
+  ],
+  [
+   "iç kartlar (Pi, FC, ESC, GNSS) ↔ kabuklar, kovanlar, kollar",
+   true,
+   "0.00 mm³"
+  ],
+  [
+   "kabuk et kalınlığı 1,5–2,5 mm",
+   true,
+   "2.0 mm"
+  ],
+  [
+   "kol / kanal et kalınlığı ≥ 1,5 mm",
+   true,
+   "kol 2.2, kanal 1.6 mm"
+  ],
+  [
+   "kaburga ≤ 0,6 × et",
+   true,
+   "0.6"
+  ],
+  [
+   "kalıptan çıkma açısı ≥ 1°",
+   true,
+   "1.5° (kanal iç duvarı)"
+  ],
+  [
+   "ızgara hücresi ≤ 10 mm, kaburga ≥ 1,2 mm",
+   true,
+   "hücre 10.0 mm, kaburga 1.2 mm"
+  ]
+ ]
+}

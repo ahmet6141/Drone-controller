@@ -19,11 +19,12 @@
 1	1	MAV_0_RATE	0	6
 1	1	SER_TEL1_BAUD	921600	6
 #
-# Gimbal (SIYI A8 mini) doğrudan Jetson tarafından SIYI SDK ile sürülür → PX4 mount kapalı.
+# Gimbal (kendi tasarımımız, STorM32) companion tarafından UART ile sürülür → PX4 mount kapalı.
 1	1	MNT_MODE_IN	-1	6
 #
 # DroneCAN: optik akış + mesafe sensörü (Seviye B: Holybro H-Flow, C: ARK Flow MR).
-# Seviye A (MicoAir MTF-01, UART) için bu üç parametre gerekmez — bkz. config/px4/README.md.
+# Seviye A (MicoAir MTF-01, UART): UAVCAN_SUB_FLOW/RNG gerekmez; UAVCAN_ENABLE Remote ID (CAN) için
+# kalır — ARK FPV'de boş çift yönlü UART yok, bkz. config/px4/README.md.
 1	1	UAVCAN_ENABLE	2	6
 1	1	UAVCAN_SUB_FLOW	1	6
 1	1	UAVCAN_SUB_RNG	1	6

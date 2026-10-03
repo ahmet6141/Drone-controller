@@ -71,7 +71,7 @@ options:
     price_verified: false
     match: "MTF-01"
     px4: {support: mavlink, params: {MAV_1_CONFIG: port},
-          note: "OPTICAL_FLOW_RAD + DISTANCE_SENSOR; sensör çıkışı PX4 MAVLink'e ayarlanır (MicoAssistant)"}
+          note: "OPTICAL_FLOW_RAD + DISTANCE_SENSOR; sensör çıkışı PX4 MAVLink'e ayarlanır (MicoAssistant); yalnızca gönderir → ARK FPV'de yalnız RX'li TELEM4 yeter (104)"}
     ardupilot: {support: mavlink, params: {FLOW_TYPE: 5, RNGFND1_TYPE: 10, RNGFND1_ORIENT: 25}, serial_protocol: 1,
                 note: "ArduPilot belgesi: 115200, MAVLink1, 4.7+ için MAVx_OPTIONS=2; sensör çıkışı mav-apm"}
     notes: "Akış + lazer tek modülde en ucuz çözüm; Seviye A seçimi"
@@ -383,7 +383,7 @@ options:
     price_verified: false
     match: "Remote ID modülü"
     px4: {support: mavlink, params: {COM_ARM_ODID: 2, MAV_2_CONFIG: port},
-          note: "PX4 belgesi: seri (varsayılan TELEM2) veya CAN; bizde TELEM2 DDS'te → başka port"}
+          note: "PX4 belgesi: seri (varsayılan TELEM2) veya CAN; bizde TELEM2 DDS'te → başka port. ARK FPV'de (Seviye A) boş çift yönlü UART kalmaz → CAN (Holybro Remote ID, Cube ID)"}
     ardupilot: {support: native, params: {DID_ENABLE: 1, DID_MAVPORT: port}}
     notes: "Tüm seviyelerin seçimi; mevzuat için uygunluk belgeli modül"
 

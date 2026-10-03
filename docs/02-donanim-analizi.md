@@ -143,6 +143,7 @@ bidirectional DShot notch filtresi için en düşük gecikmeli RPM geri bildirim
 | Platform | YZ (seyrek INT8) | RAM | Güç | Fiyat (1k adet) | Değerlendirme |
 |---|---|---|---|---|---|
 | **Raspberry Pi 5 8GB + AI HAT+ 2** | Hailo-10H: 40 TOPS (INT4) | 8 GB + 8 GB (HAT) | ≈ 10 W (tahmini) | $175 + $200 | **Seviye A**. Pi kameraları yerel; donanım video kodlayıcı yok; 0–70 °C; üretim ≥ 2036 |
+| Raspberry Pi Zero 2 W (+ AI Camera) | Hızlandırıcı yok: CPU'da YOLO11n ≈ 0,3 FPS (NCNN, 640). AI Camera (IMX500, çip üstü) ile YOLO11n ≈ 17 FPS | 512 MB | ≈ 2–3 W (tahmini) | $15 + $70 | **Elendi.** Tek kamera girişi (tasarım iki kamera ister), PCIe yok (AI HAT takılamaz), 2 UART, tek USB. AI Camera'da aynı anda tek model çalışır; el iskeleti, SOT ve ReID CPU'ya kalır. Tek kameralı küçük demolar ve video vericisi (donanım H.264) için uygun |
 | Jetson Orin Nano 8GB (Super) | 67 TOPS | 8 GB | 7–25 W + MAXN SUPER | $399 (önce $299) | Geliştirme kiti / alternatif. DLA yok, **donanım video kodlayıcı yok** (NVENC) |
 | Jetson Orin NX 8GB | 117 TOPS | 8 GB | 10–40 W | $649 | — |
 | **Jetson Orin NX 16GB** | 157 TOPS | 16 GB | 10–40 W + MAXN SUPER | $999 (önce $599) | **Seviye B/C**. Donanım H.265 kodlama; algı + VIO + küçük VLM birlikte sığar |
@@ -194,7 +195,7 @@ Karar: **PX4 v1.17** birincil; FC'ler her iki yığını da çalıştırabilen k
 ### 7.2 Uçuş kontrolcüleri
 | FC | MCU | IMU | Baro | Yığın | Montaj | Kütle | Fiyat | Not |
 |---|---|---|---|---|---|---|---|---|
-| **ARK FPV** | H743 | IIM-42653 (endüstriyel) + 1 W ısıtıcı | BMP390 | PX4 (varsayılan), AP 4.7 | 30,5 | 7,5 g | $195 | 1 CAN, 9 PWM, 12 V/2 A BEC, 5,5–54 V → **A** |
+| **ARK FPV** | H743 | IIM-42653 (endüstriyel) + 1 W ısıtıcı | BMP390 | PX4 (varsayılan), AP 4.7 | 30,5 | 7,5 g | $195 | 1 CAN, 9 PWM (1–4 çift yönlü DShot), 12 V/2 A BEC, 5,5–54 V; 4 çift yönlü UART + 2 yalnız RX → Remote ID CAN'de ([port planı](../config/px4/README.md)) → **A** |
 | **ARKV6X** | H743 | 2× ICM-42688-P + IIM-42652, ısıtıcı | BMP390 | PX4, AP | PAB modül | 5 g | $400 | PAB taşıyıcıda (ARK Jetson PAB V3) → **B, C** |
 | Pixhawk 6C Mini | H743 + IO | ICM-42688-P + BMI088 (ısıtmalı, izoleli) | MS5611 | PX4, AP | 54×39 | 42,4 g | $131 | 2 CAN; A alternatifi |
 | Pixhawk 6X Rev8 | H753 + IO | 3× ICM-45686 (ısıtmalı, izoleli) | ICP20100 + BMP388 | PX4, AP | modül | 31,3 g + 26,5 g taban | $269 / $389 | Ethernet (DDS) — C alternatifi |
@@ -308,3 +309,5 @@ yayımlandığında entegrasyon güncellenecektir.
 - FC/ESC/sensör: https://arkelectron.com/product/ark-fpv-flight-controller/ · https://arkelectron.com/product/arkv6x/ · https://holybro.com/products/tekko32-f4-metal-4in1-65a-esc-65a · https://arkelectron.com/product/ark-4in1-esc/ · https://github.com/am32-firmware/AM32/releases · https://holybro.com/products/h-flow · https://arkelectron.com/product/ark-flow-mr/ · https://arkelectron.com/product/ark-x20-rtk-gps/ · https://holybro.com/products/h-rtk-f9p-ultralight
 - Linkler: https://github.com/ExpressLRS/ExpressLRS/releases · https://www.siyi.biz/en/product/image-digital-link/hm30/spec/ · https://docs.px4.io/main/en/companion_computer/video_streaming_wfb_ng_wifi
 - RealSense/Cognex: https://www.sec.gov/Archives/edgar/data/0000851205/000085120526000071/exhibit991-pressrelease.htm
+- Zero 2 W ve AI Camera: https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/ · https://www.raspberrypi.com/documentation/accessories/ai-camera.html · https://docs.ultralytics.com/integrations/sony-imx500/ · https://mjrovai.github.io/EdgeML_Made_Ease_ebook/raspi/object_detection/cv_yolo.html
+- ARK FPV portları ve Remote ID: https://docs.px4.io/v1.17/en/flight_controller/ark_fpv · https://ardupilot.org/copter/docs/common-ark-fpv.html · https://github.com/PX4/PX4-Autopilot/blob/v1.17.0/boards/ark/fpv/default.px4board · https://docs.px4.io/v1.17/en/peripherals/remote_id

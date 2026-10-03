@@ -29,11 +29,31 @@ doğrulanır (`python3 tools/validate_params.py`; referans: `tools/data/px4_v1.1
 | Hover itkisi | `MPC_THR_HOVER` ≈ 0.17 | 0.20 | 0.20 |
 | Gimbal | Pi'den STorM32 (UART) — PX4'e bağlı değil (`MNT_MODE_IN=-1`) | Jetson'dan (USB-UART) | aynı |
 
+## Seviye A seri port planı (ARK FPV)
+
+ARK FPV'de dört çift yönlü UART vardır (GPS1, RC, TELEM1, TELEM2). TELEM3 ve TELEM4 **yalnızca veri alır**
+(TX pini dışarı çıkmaz). Kaynak: PX4 v1.17 kart tanımı (`boards/ark/fpv/default.px4board`) ve ArduPilot ARK FPV
+sayfası.
+
+| PX4 portu | Soket (UART) | Bağlı | Parametre |
+|---|---|---|---|
+| GPS1 | GPS (USART1) + I2C | M10 GNSS + pusula | `GPS_1_CONFIG=201` |
+| RC | RC (USART6) | ELRS XR4 (CRSF) | `RC_CRSF_PRT_CFG=300` |
+| TELEM1 | TELEM (UART7, akış kontrollü) | Pi 5 UART3 — MAVLink | `MAV_0_CONFIG=101` |
+| TELEM2 | HD VTX (UART5) | Pi 5 UART0 — uXRCE-DDS | `UXRCE_DDS_CFG=102` |
+| TELEM4 | ESC soketindeki telemetri pini (UART4, yalnız RX) | MTF-01 (yalnızca gönderir). ESC'nin telemetri teli bağlanmaz; RPM çift yönlü DShot'tan gelir | `MAV_1_CONFIG=104`, `SER_TEL4_BAUD=115200` |
+| TELEM3 | HD VTX soketindeki SBUS pini (USART2, yalnız RX) | boş | — |
+| CAN1 | CAN | Remote ID (DroneCAN: Holybro Remote ID veya Cube ID) | `UAVCAN_ENABLE=2` |
+| Motor 1–4 | ESC | Tekko32 F4 (AM32) | DShot600, `DSHOT_BIDIR_EN=1` |
+
+Gimbal kontrolcüsü (STorM32), 8×8 ToF ve kameralar Pi'ye bağlanır; FC'den port istemez.
+
 ## Remote ID
 `base/30-failsafe.params` içinde `COM_ARM_ODID=1`: Ar-Ge aşamasında Remote ID modülü yoksa yalnızca
 uyarı verir. Operasyonda `2` (modülsüz kalkış yok) yapılır. PX4 belgesindeki modüller: Holybro Remote
-ID, BlueMark Db201/Db202mav, Cube ID (seri veya DroneCAN). TELEM2 DDS'e ayrıldığından seri modül
-başka bir porta (`MAV_2_CONFIG`) bağlanır (`config/sensors/catalog.yaml`).
+ID ve Cube ID (seri veya CAN), BlueMark Db201/Db202mav (seri). TELEM2 DDS'e ayrıldığından seri modül
+başka bir porta (`MAV_2_CONFIG`) bağlanır. **Seviye A'da (ARK FPV) boş çift yönlü seri port kalmaz** (yukarıdaki
+plan): modül CAN'e bağlanır (DroneCAN, `UAVCAN_ENABLE=2`) (`config/sensors/catalog.yaml`).
 
 ## Sürüm notları (PX4 v1.18'e geçerken)
 v1.18.0-rc1 (10.09.2026) kararlı değildir. v1.18'de değişecekler (kaynak: PX4 v1.18 sürüm notları):

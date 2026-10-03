@@ -40,7 +40,8 @@ RIB_RATIO = 0.6                # kaburga kalınlığı ≤ 0,6 × et (çökünt�
 ARC_STEPS = 6                  # köşe yayı örnek sayısı
 
 # --- Burun (gimbal) bölmesi -------------------------------------------------------------------
-BAY = {"x0": 79.0, "x1": 160.0, "half_y": 60.0, "z0": -100.0, "z1": -12.0}   # yanaksız: gimbal başlığın altında açıkta
+BAY = {"x0": 79.0, "x1": 160.0, "half_y": 60.0, "z0": -100.0, "z1": -2.0}    # yanaksız: gimbal başlığın altında açıkta
+# z1: başlık alt yüzü = sönümleyici bağlantısı. −12 → −2: gimbal 10 mm yükseldi → avuç ayağı kısaldı (docs/12 §3)
 GIMBAL_MOUNT_Z = BAY["z1"]                       # sönümleyiciler bölme tavanına bağlanır
 BAY_WALL = 1.6                                   # bölme tavanı ve arka perde (burun kapağının parçası, siyah)
 GIMBAL_STACK_ABOVE = 36.8                        # kamera merkezi → üst plaka üstü (cad/gimbal_2axis)
@@ -57,6 +58,11 @@ TAIL_CAP = 14.0                                  # batarya kapağı (gövde kuyr
 BATTERY_CLEAR = 0.6                              # batarya ↔ tünel boşluğu (yarıçapta)
 GRILLE = {"cell": 10.0, "rib": 1.2, "t": 1.2}    # altıgen ızgara: hücre iç çapı ≤ 10 mm (parmak), kalıp için ≥ 1,2 mm kaburga
 SPOKE = (2.0, 5.0)                               # ızgara altındaki 3 radyal kaburga (genişlik, yükseklik): halka desteği + kalıpta akış yolu
+# Üst ızgara (çıkarılabilir, PC, tek kalıp ×4): çan ağzına 6 ayak + 3 geçme tırnakla oturur; halka ile ızgara
+# arasındaki ≈ 4 mm yan aralık ek hava girişidir (parmak geçmez). Kanat üstüne ≥ 5 mm (gürültü), somuna ≥ 3 mm.
+TOP_GRILLE = {"z": 40.0, "t": 1.0, "cell": 10.0, "rib": 1.0, "r_out": 101.6, "cap_r": 13.2, "cap_top": 44.2,
+              "spoke": (1.6, 2.5)}
+BELL_SKIRT = (1.4, 3.0)                          # motor çanı eteği: et, havalandırma yarığı genişliği (alt ızgara → yuva)
 BATTERY_CAP_G = 18.0                             # kuyruk kapağı + kilit düğmeleri (CAD; kabuğun geri kalanı paket boyunca)
 BATTERY_ELEC_G = 10.0                            # konnektör + BMS / yakıt göstergesi kartı + yaylar (tahmini; paketin ön ucunda)
 
@@ -70,24 +76,34 @@ ARM_INSERT = 14.0                                # soket derinliği: kol kökü 
 ARM_PRISM = 18.0                                 # gövde yüzeyinden sonra da sabit kesit (yan duvar kolu 45° keser)
 ARM_FIT = 0.3                                    # kol kökü ↔ soket boşluğu (her yüzde)
 SLEEVE_WALL = 1.6                                # gövde içindeki soket kovanı eti
-ARM_ROOT = (22.0, 34.0)                          # kök genişlik, yükseklik (U kesit) — titreşim: cad/v2/analysis_v2.py
-ARM_TIP = (16.0, 17.0)                           # motor ucunda
+ARM_ROOT = (22.0, 35.0)                          # kök genişlik, yükseklik (U kesit) — titreşim: cad/v2/analysis_v2.py
+ARM_TIP = (16.0, 17.5)                           # motor ucunda
 ARM_WALL = 2.2
 ARM_TOP_TIP_Z = 0.0                              # motor yuvası üstü (motor tabanı P.HUB_T'de)
-MOTOR_POD = (20.0, 17.0)                         # motor yuvası yarıçap, yükseklik (alt yüzü kolla aynı hizada)
+MOTOR_POD = (20.0, 17.5)                         # motor yuvası yarıçap, yükseklik (alt yüzü kolla aynı hizada)
 # Üst kabuk ↔ alt kabuk vida kuleleri (x, y; ±y simetrik): kol kökleri, batarya tüneli ve kartlardan uzakta.
 # Kule tabandan ayrım düzlemine (alt kabuk, Ø2,8 geçiş), oradan omuz iç yüzeyine (üst kabuk, Ø2,2 pilot) uzanır.
 BOSSES = ((0.0, 43.0), (72.0, 30.0), (-68.0, 40.0))
 BOSS_D = 6.4
 
 # --- Avuç ayağı -------------------------------------------------------------------------------
-POD_TOP_R, POD_BOTTOM_R = 37.0, 33.0             # aşağı doğru hafif incelen
+POD_TOP_R, POD_BOTTOM_R = 37.0, 37.0             # silindir: geniş taban sensör görüşünü açar, avuçta dengeyi artırır
 POD_X = 0.0
+POD_BOTTOM_Z = -72.0                             # avuca değen taban (v1: −95); gimbalın en alçak noktasının ≥ 10 mm altı
+SENSOR_RECESS = 22.0                             # sensör camı tabandan içeride: avuç ≥ 2 cm (VL53L8CX/MTF-01 ölü bölgesi)
+SENSOR_WINDOW_T = 1.0                            # IR geçirgen koruyucu cam (PC/PMMA), sensörlere sıfır hava boşluğuyla
+# Tam kapalı pervane (üst + alt ızgara + motor çanı eteği) → el hiçbir yönden pervaneye uzanamaz; dikey ayrım
+# yalnızca aşağı akış ve parmak payı içindir: v1'in 120 mm kuralı yerine 100 mm (docs/05 H1, docs/12 §3)
+POD_MIN_DROP_ENCLOSED = 100.0
+# Ayak tabanındaki sensörler: (x, y) ayak eksenine göre, gereken yarım görüş açısı (°) — ayak ağzından
+# kırpılmadan görmeli. CM3 Wide 102° yatay; VL53L8CX 45°×45° (köşe bölgeleri: 65° köşegen); MTF-01 akış 42°
+POD_SENSORS = {"CM3 Wide": ((0.0, 0.0), 51.0), "VL53L8CX": ((0.0, 18.0), 32.5), "MTF-01": ((-5.0, -19.0), 21.0)}
+GIMBAL_BELOW_CENTER = 15.0                       # gimbalın kamera merkezinin altındaki en alçak noktası (roll kolu)
 
 # --- CAD ağırlık merkezleri (cad/v2/build_v2.py; tests/test_v2.py ±3 mm ile doğrular), mm ----------
-PART_CG = {"top_shell": (0.4, 0.0, 25.8), "bottom_tub": (2.4, 0.0, -31.6), "nose_cover": (107.5, 0.0, -4.7),
-           "pod": (0.0, 0.0, -67.6)}
-ARM_DUCT_CG = (-24.0, 12.0)                      # kol–kanal modülü: motor ekseninden kol yönünde (yerel x), z
+PART_CG = {"top_shell": (0.4, 0.0, 25.8), "bottom_tub": (2.4, 0.0, -31.6), "nose_cover": (103.3, 0.0, -1.0),
+           "pod": (0.0, 0.0, -53.9)}
+ARM_DUCT_CG = (-22.8, 11.7)                      # kol–kanal modülü: motor ekseninden kol yönünde (yerel x), z
 
 # --- Malzemeler (g/cm³) -----------------------------------------------------------------------
 DENSITY = {"PC/ABS": 1.15, "PA6-GF30": 1.36, "PA12 (MJF)": 1.01, "TPU": 1.21, "PC": 1.20, "POM": 1.41}

@@ -25,7 +25,7 @@ yakındaki **hareketsiz ve düz** bir ele in; temas ve motor durdurmayı en zay�
 
 | # | Tehlike | Olası neden | Önlem | Kalan risk |
 |---|---|---|---|---|
-| H1 | Parmakların pervaneye değmesi | El pervane düzlemine yükselir; parmaklar yayık | Tam halka koruma + alt ağ; tutamak pervane düzleminin ≥ 120 mm altında; "parmaklar bitişik" kullanım talimatı | Düşük |
+| H1 | Parmakların pervaneye değmesi | El pervane düzlemine yükselir; parmaklar yayık | Tam halka koruma + alt ağ; tutamak pervane düzleminin ≥ 120 mm altında; "parmaklar bitişik" kullanım talimatı. v2: pervane tam kapalı (üst + alt ızgara + motor çanı eteği) → ayak ≥ 100 mm; üst ızgara takılı algılanmazsa avuca iniş kilitlenir ([12 §3](12-butunlesik-govde-ve-seri-uretim.md)) | Düşük |
 | H2 | Yanlış pozitif avuç | Yüz, beyaz nesne, zemin deseni | İki kamera onayı (ön kamerada jest + aşağı kamerada avuç), ToF mesafe tutarlılığı, zamansal onay | Düşük |
 | H3 | İniş sırasında avucun çekilmesi | Kullanıcı elini çeker | ToF mesafe artış hızı izlenir → iptal ve tırmanış | Düşük |
 | H4 | Erken motor durdurma (el yokken) | Hatalı temas kararı | Temas için ≥ 2 bağımsız ipucu + 100 ms süreklilik | Çok düşük |
@@ -58,6 +58,11 @@ yakındaki **hareketsiz ve düz** bir ele in; temas ve motor durdurmayı en zay�
   noktası ≈ 79 mm (300 mm'lik gövdelerde ≈ 61 mm). Açık bir yetişkin eli (parmaklar dahil
   ≈ 180–200 mm) bu diskin altına taşar; bu yüzden **dikey ayrım** (tutamak tabanı pervane
   düzleminin ≥ 120 mm altında, pervaneler elin ≥ 10 cm üstünde) ve **alt ağ** asıl korumadır.
+- **v2 bütünleşik gövde** ([12 §3](12-butunlesik-govde-ve-seri-uretim.md)): pervaneler üstten de ≤ 10 mm
+  ızgarayla kapalıdır ve dönen motor çanının yanı etekle örtülür. El hiçbir yönden pervaneye ulaşamadığı
+  için dikey ayrımın görevi yalnızca aşağı akış ve parmak payıdır: ayak tabanı pervane düzleminin
+  **≥ 100 mm** altında yeterlidir (v2: 102 mm). Bu kural üst ızgaralara bağlıdır: her üst ızgaradaki
+  mıknatıs kanal halkasındaki hall sensörüyle algılanır; dördü takılı değilse avuca iniş kilitlenir.
 - Tutamak, drone tutulurken taşıma kolu görevi de görür; batarya üstte/arka taraftadır.
 - Aşağı kamera ve ToF tutamak tabanının 25 mm içine gömülür: temas anında ToF ≈ 25–35 mm okur.
 - Yukarı bakan tek bölgeli ToF (≈ 4 m menzil) tırmanış öncesi baş üstü boşluğunu ölçer.

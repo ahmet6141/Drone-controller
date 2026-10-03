@@ -28,7 +28,7 @@ yeteneğine sahip, orta boy (7 inç, 6S) bir quadcopter'ın yazılım ve donanı
 | Sensör alternatifleri | 9 görev, **26 seçenek**; PX4/ArduPilot parametreleri resmi referansla test edilir; Pi üzerinden ROS 2 → DDS köprüsüyle FC sürücüsü olmayan sensörler de | [11 §2–4](docs/11-yazilim-oncesi-hazirlik.md) |
 | Bütçe | Yetenek kaybı olmadan **−$275** (Pi 5 4GB, AI HAT+ 26 TOPS, kendi baskımız); Ar-Ge MVP **$1.185** | [11 §3](docs/11-yazilim-oncesi-hazirlik.md) |
 | 3B model | Kendimize özel parçalar **parametrik CadQuery** modelleri: koruma, avuç tutamağı, gimbal, üst katlar; STL hazır, kütle/çakışma/görüş kontrolleri. Görseller **Blender/Cycles** ile (geometri CAD'de kalır) | [cad/](cad/README.md), [11 §5](docs/11-yazilim-oncesi-hazirlik.md), [12 §2](docs/12-butunlesik-govde-ve-seri-uretim.md) |
-| Gövde v2 (ürün) | **Bütünleşik gövde**: 3 kalıplı kabuk + **tek kalıptan 4 kol–kanal modülü** (≤ 10 mm ızgara) + burun bölmesinde gimbal + kuyruktan takılan akıllı batarya; yerleşim ağırlık merkezine göre kodla çözülür, DFM kuralları kontrol edilir | Seri üretime uygun, parmak korumalı; avuçta devrilme 14,6° → 20,0°; 1507 g, 19,2 dk (v1: 1456 g, 20,1 dk) — [12](docs/12-butunlesik-govde-ve-seri-uretim.md) |
+| Gövde v2 (ürün) | **Bütünleşik gövde**: 3 kalıplı kabuk + **tek kalıptan 4 kol–kanal modülü** + **üstten ve alttan ≤ 10 mm ızgarayla tam kapalı pervane** + burun başlığı altında gimbal + kısa avuç ayağı + kuyruktan takılan akıllı batarya; yerleşim ağırlık merkezine göre kodla çözülür, DFM kuralları kontrol edilir | Seri üretime uygun, parmak hiçbir yönden pervaneye ulaşamaz; avuçta devrilme 14,6° → 27,8°; 1564 g, 16,9 dk (v1: 1456 g, 20,1 dk) — [12](docs/12-butunlesik-govde-ve-seri-uretim.md) |
 
 ## Donanım seviyeleri (hesaplanmış) — drone: **7 inç**
 

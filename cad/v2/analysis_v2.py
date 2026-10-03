@@ -34,7 +34,8 @@ SIGMA_ALLOW = {"PA6-GF30": 90e6}   # Pa, nemli durum çekme dayanımı (kuru ≈
 DROP_G = 10.0                  # kanal kenarına düşme / çarpma: tüm kütlenin 10 g ivmesi tek kanala (kaba)
 MIN_SAFETY = 2.0
 PARTICIPATION = (0.0, 0.5, 1.0)
-POD_MASS_G = 13.2              # motor yuvası (CAD: airframe.motor_pod(); tests/test_v2.py ±%10 ile doğrular)
+POD_MASS_G = 13.4              # motor yuvası (CAD: airframe.motor_pod(); tests/test_v2.py ±%10 ile doğrular)
+TOP_GRILLE_G = 11.2            # üst ızgara, PC (CAD: airframe.top_grille(); test ±%10) — halkaya oturur, onunla salınır
 
 
 def u_section(w: float, h: float, t: float) -> dict[str, float]:
@@ -74,7 +75,10 @@ def duct_masses_g() -> dict[str, float]:
     spokes = 3 * (V.DUCT_IN_R - c_out) * V.SPOKE[0] * (V.SPOKE[1] - g["t"])
     c_in = P.MOTOR_BELL_D / 2 + P.COLLAR_GAP
     hub = math.pi * (c_out ** 2 - c_in ** 2) * P.SPOKE_T + 3 * math.pi * (P.POST_D / 2) ** 2 * (z0 - P.HUB_T)
-    return {"ring": ring, "grille": (disc + spokes) * rho / 1000, "hub": hub * rho / 1000}
+    st, slot_w = V.BELL_SKIRT                                     # motor çanı eteği (12 yarık)
+    h = z0 - P.HUB_T
+    hub += math.pi * ((c_in + st) ** 2 - c_in ** 2) * h - 12 * st * slot_w * (h - 6.0)
+    return {"ring": ring, "grille": (disc + spokes) * rho / 1000, "hub": hub * rho / 1000, "top": TOP_GRILLE_G}
 
 
 def tip_mass_g(p: float, profile: dict | None = None) -> float:
@@ -85,7 +89,7 @@ def tip_mass_g(p: float, profile: dict | None = None) -> float:
     d = duct_masses_g()
     # Halka köprü noktası etrafında dönerse: halka noktaları 0…2δ hareket eder → <(1+cos φ)²> = 1,5;
     # ızgara (disk) için <(1 + (r/R)cos φ)²> = 1,25
-    rigid = 1.5 * d["ring"] + 1.25 * d["grille"]
+    rigid = 1.5 * d["ring"] + 1.25 * (d["grille"] + d["top"])
     return prop["motor"]["mass_g"] + prop["prop"]["mass_g"] + POD_MASS_G + d["hub"] + p * rigid
 
 
@@ -141,7 +145,7 @@ def drop_safety(profile: dict | None = None) -> dict[str, float]:
     return {"force_N": force, "sigma_MPa": sigma / 1e6, "safety": SIGMA_ALLOW[MATERIAL] / sigma}
 
 
-def section_sweep(heights=(24.0, 28.0, 34.0, 37.0)) -> list[tuple[float, float, float, bool]]:
+def section_sweep(heights=(24.0, 28.0, 35.0, 38.0)) -> list[tuple[float, float, float, bool]]:
     """Kök yüksekliğine göre dikey frekans aralığı (uç yüksekliği oranla) — tasarım kararı için."""
     lo, hi = window()
     out = []
@@ -172,8 +176,8 @@ def main() -> int:
     d = duct_masses_g()
     print(f"Kol: serbest boy {free_length():.0f} mm, kök {V.ARM_ROOT[0]:g}×{V.ARM_ROOT[1]:g} → uç "
           f"{V.ARM_TIP[0]:g}×{V.ARM_TIP[1]:g} mm, et {V.ARM_WALL} mm ({MATERIAL})")
-    print(f"Uç kütlesi: {tip_mass_g(0):.0f} g (+ halka {d['ring']:.1f} g ve ızgara {d['grille']:.1f} g'ın katılan payı "
-          f"→ p = 1'de {tip_mass_g(1):.0f} g)")
+    print(f"Uç kütlesi: {tip_mass_g(0):.0f} g (+ halka {d['ring']:.1f} g, alt ızgara {d['grille']:.1f} g ve üst ızgara "
+          f"{d['top']:.1f} g'ın katılan payı → p = 1'de {tip_mass_g(1):.0f} g)")
     print(f"Güvenli pencere (1× üst payı … 3× alt payı): {lo:.0f}–{hi:.0f} Hz")
     print("Kök yüksekliği → dikey frekans aralığı:")
     for h, fmin, fmax, ok in section_sweep():

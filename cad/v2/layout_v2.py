@@ -102,7 +102,7 @@ def components(profile: dict | None = None, battery_x: float = 0.0) -> list[Comp
         Comp("gimbal kamerası (CM3)", m("Camera Module 3 (IMX708"), None, cg=V.GIMBAL_POS, inside=False),
         Comp("avuç ayağı sensörleri (CM3 Wide + 8×8 ToF + MTF-01)",
              m("Camera Module 3 Wide") + m("VL53L8CX") + m("MTF-01"), None,
-             cg=(V.POD_X, 0.0, P.GRIP_BOTTOM_Z + P.SENSOR_RECESS), inside=False),
+             cg=(V.POD_X, 0.0, V.POD_BOTTOM_Z + V.SENSOR_RECESS), inside=False),
         Comp("kablolama ve bağlantılar", m("Kablolama"), None, cg=(0.0, 0.0, -4.0), inside=False),
     ]
     # Gövde parçaları: CAD ağırlık merkezleri (v2_params.PART_CG)
@@ -110,10 +110,12 @@ def components(profile: dict | None = None, battery_x: float = 0.0) -> list[Comp
                       ("Avuç ayağı", "pod")):
         comps.append(Comp(key, m(key), None, cg=V.PART_CG[part], inside=False))
     arm_mass = m("Kol–kanal modülü")
+    top_mass = m("Üst ızgara")
     prop = pr["propulsion"]
     f = 1.0 + V.ARM_DUCT_CG[0] / P.MOTOR_R
     for x, y in P.motor_positions():
         comps.append(Comp("kol–kanal modülü", arm_mass / 4, None, cg=(x * f, y * f, V.ARM_DUCT_CG[1]), inside=False))
+        comps.append(Comp("üst ızgara", top_mass / 4, None, cg=(x, y, V.TOP_GRILLE["z"] + 1.0), inside=False))
         comps.append(Comp("motor", prop["motor"]["mass_g"], None, cg=(x, y, P.HUB_T + 12.0), inside=False))
         comps.append(Comp("pervane", prop["prop"]["mass_g"], None, cg=(x, y, P.PROP_PLANE_Z), inside=False))
     return comps
@@ -223,11 +225,15 @@ def checks(profile: dict | None = None) -> list[tuple[str, bool, str]]:
     near = min(dists.items(), key=lambda kv: kv[1])
     out.append(("GNSS/pusula ↔ gürültü kaynakları", near[1] >= GNSS_MIN_DIST,
                 f"en yakın {near[0]} {near[1]:.0f} mm ≥ {GNSS_MIN_DIST:.0f}"))
-    drop = P.PROP_PLANE_Z - P.GRIP_BOTTOM_Z
-    out.append(("avuç ayağı pervane düzleminin altında", drop >= P.GRIP_MIN_DROP, f"{drop:.0f} mm ≥ {P.GRIP_MIN_DROP:.0f}"))
-    gimbal_low = V.GIMBAL_POS[2] - 22.0
-    out.append(("gimbal avuç ayağından yukarıda", gimbal_low > P.GRIP_BOTTOM_Z + 10.0,
-                f"gimbal alt ucu {gimbal_low:.0f} mm, ayak tabanı {P.GRIP_BOTTOM_Z:.0f} mm"))
+    drop = P.PROP_PLANE_Z - V.POD_BOTTOM_Z
+    out.append(("avuç ayağı pervane düzleminin altında (tam kapalı pervane)", drop >= V.POD_MIN_DROP_ENCLOSED,
+                f"{drop:.0f} mm ≥ {V.POD_MIN_DROP_ENCLOSED:.0f} (üst + alt ızgara + motor eteği; açık üstte 120)"))
+    gimbal_low = V.GIMBAL_POS[2] - V.GIMBAL_BELOW_CENTER
+    out.append(("gimbal avuç ayağından yukarıda", gimbal_low >= V.POD_BOTTOM_Z + 10.0,
+                f"gimbal alt ucu {gimbal_low:.0f} mm, ayak tabanı {V.POD_BOTTOM_Z:.0f} mm (≥ 10 mm pay)"))
+    clear = pod_sensor_clearance()
+    out.append(("ayak sensörleri ağızdan kırpılmadan görür", all(c >= need for c, need in clear.values()),
+                ", ".join(f"{n} {c:.0f}° ≥ {need:.0f}°" for n, (c, need) in clear.items())))
     return out
 
 
@@ -244,7 +250,17 @@ def gimbal_view() -> dict:
 def tip_angle(profile: dict | None = None) -> float:
     pr = profile or load_variant()
     cg, _ = cg_of(components(pr, solve_battery_x(pr)))
-    return math.degrees(math.atan2(V.POD_BOTTOM_R, cg[2] - P.GRIP_BOTTOM_Z))
+    return math.degrees(math.atan2(V.POD_BOTTOM_R, cg[2] - V.POD_BOTTOM_Z))
+
+
+def pod_sensor_clearance() -> dict[str, tuple[float, float]]:
+    """Her ayak sensörünün TPU uç ağzından (iç yarıçap) kırpılmadan görebildiği yarım açı (°) ve gereken açı.
+    Mercek sensör camına değer → derinlik = SENSOR_RECESS; en kötü yön: ağız kenarına en yakın taraf."""
+    r_open = V.POD_BOTTOM_R - P.BUMPER_WALL
+    out = {}
+    for name, ((x, y), need) in V.POD_SENSORS.items():
+        out[name] = (math.degrees(math.atan2(r_open - math.hypot(x, y), V.SENSOR_RECESS)), need)
+    return out
 
 
 def main() -> int:

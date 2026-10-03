@@ -38,16 +38,19 @@ PRODUCTION = {
     "top_shell": ("PC/ABS", 1, "kanopi; yarım kol soketleri ayrım düzlemine açık; kanopi emiş yarıkları dikey (maçasız)"),
     "bottom_tub": ("PC/ABS", 1, "taşıyıcı: V uçlu kol soketleri, batarya rayları, vida kuleleri; yan yarıklar için 2 kayar maça"),
     "nose_cover": ("PC/ABS", 1, "saten-mat siyah; gimbal başlığı (tavan) + arka perde, yanaksız: gimbal altta açıkta"),
-    "arm_duct": ("PA6-GF30", 4, "TEK kalıp × 4; U kesit kol + çan ağızlı kanal + bal peteği ızgara + 3 radyal kaburga; göbekten yolluk"),
-    "pod": ("PC/ABS", 1, "avuç ayağı; sensör tablası (tabandan 25 mm)"),
+    "arm_duct": ("PA6-GF30", 4, "TEK kalıp × 4; U kesit kol + çan ağızlı kanal + bal peteği ızgara + 3 radyal kaburga + motor çanı eteği; göbekten yolluk"),
+    "top_grille": ("PC", 4, "çıkarılabilir üst ızgara: 6 ayak + 3 geçme tırnak; pervane değişiminde çıkar; tek kalıp × 4"),
+    "pod": ("PC/ABS", 1, f"avuç ayağı (kısa, Ø{2 * V.POD_BOTTOM_R:.0f}); sensör tablası tabandan {V.SENSOR_RECESS:.0f} mm, IR camlı"),
     "pod_tip": ("TPU", 1, "avuca değen uç (TPU 95A; seri üretimde ayağın üstüne ikinci enjeksiyon)"),
+    "sensor_window": ("PC", 1, "IR geçirgen sensör camı (siyah IR mürekkep maskeli), sensörlere sıfır boşlukla"),
     "battery_shell": ("PC/ABS", 1, "akıllı batarya kabuğu + kuyruk kapağı (gövde çizgisini tamamlar)"),
 }
 PROTOTYPE_MATERIAL = {"TPU": "TPU"}                 # diğerleri MJF PA12 ile basılır
 # Varyant profilindeki bileşen adı → (CAD parçaları, CAD dışı ek kütle g)
 VARIANT_MAP = {
     "Üst kabuk": (["top_shell"], 0.0), "Alt kabuk": (["bottom_tub"], 0.0), "Burun kapağı": (["nose_cover"], 0.0),
-    "Kol–kanal modülü": (["arm_duct"], 0.0), "Avuç ayağı": (["pod", "pod_tip"], 0.0),
+    "Kol–kanal modülü": (["arm_duct"], 0.0), "Avuç ayağı": (["pod", "pod_tip", "sensor_window"], 0.0),
+    "Üst ızgara": (["top_grille"], 0.0),
     # kabuk + kilit düğmeleri (POM) + konnektör, BMS/yakıt göstergesi kartı, yaylar ≈ 10 g
     "Akıllı batarya kabuğu": (["battery_shell", "battery_latch"], 10.0),
 }
@@ -63,6 +66,8 @@ def build_parts() -> dict[str, cq.Workplane]:
     parts["arm_duct"] = A.arm_duct()
     parts["pod"] = A.pod()
     parts["pod_tip"] = A.pod_tip()
+    parts["sensor_window"] = A.sensor_window()
+    parts["top_grille"] = A.top_grille()
     bat = A.battery_parts()
     parts["battery_shell"] = bat["battery_shell"]
     parts["battery_latch"] = bat["battery_latch"]
@@ -99,7 +104,7 @@ def gimbal_items(y_roll: float) -> list[tuple[str, cq.Workplane]]:
     """v1 gimbal parçaları burun bölmesinde (taşıyıcı kol yok; sönümleyiciler bölme tavanına)."""
     items = _with_gimbal_pos(lambda: [(n, s) for n, s in G.placed(y_roll) if n.startswith("gimbal_")
                                       and n != "gimbal_boom"])
-    details = _with_gimbal_pos(lambda: S.gimbal_details(y_roll))
+    details = _with_gimbal_pos(lambda: S.gimbal_details(y_roll, mount_z=V.GIMBAL_MOUNT_Z))
     items += [(n, s) for n, s in details if n != "damper"]
     items += [(n, w.translate(V.GIMBAL_POS)) for n, w in A.camera_head().items()]
     g = V.GIMBAL_POS
@@ -126,15 +131,7 @@ def internals() -> list[tuple[str, cq.Workplane]]:
         items.append((name, S._box(b[0], b[1], b[2], b[3], b[4], b[4] + 1.6)))
     gb = comps["GNSS + pusula"].box
     items.append(("gnss", S._box(gb[0], gb[1], gb[2], gb[3], gb[4], gb[5])))
-    # Ayak tabanı: CM3 Wide (ortada), VL53L8CX (+y), MTF-01 (−y) — sensör tablasının üstünde
-    z = P.GRIP_BOTTOM_Z + P.SENSOR_RECESS + 2.0
-    w, h, t = P.CAM_BOARD
-    items += [("camera_pcb", S._box(-h / 2, h / 2, -w / 2, w / 2, z, z + t)),
-              ("camera_lens", S._cyl(0, 0, z - 2.0, z, 6.0)),
-              ("camera_glass", S._cyl(0, 0, z - 2.2, z - 2.0, 4.0)),
-              ("tof_pcb", S._box(-6.5, 6.5, 11.5, 24.5, z, z + 1.0)),
-              ("flow_pcb", S._box(-20.0, 10.0, -26.0, -12.0, z, z + 1.2)),
-              ("flow_sensor", S._cyl(-5.0, -19.0, z - 2.0, z, 3.0))]
+    items += pod_sensors()
     # Seyir lambaları: motor yuvalarının dış yüzünde (ızgaranın altında; önden ve alttan görünür)
     for (mx, my) in P.motor_positions():
         ang = math.atan2(my, mx)
@@ -146,10 +143,26 @@ def internals() -> list[tuple[str, cq.Workplane]]:
     return items
 
 
+def pod_sensors() -> list[tuple[str, cq.Workplane]]:
+    """Ayak tabanı sensörleri (tablanın üstünde; mercekler tabladan aşağı uzanıp sensör camına değer)."""
+    z = V.POD_BOTTOM_Z + V.SENSOR_RECESS + 2.0
+    (cx, cy), _ = V.POD_SENSORS["CM3 Wide"]
+    (tx, ty), _ = V.POD_SENSORS["VL53L8CX"]
+    (fx, fy), _ = V.POD_SENSORS["MTF-01"]
+    w, h, t = P.CAM_BOARD
+    return [("camera_pcb", S._box(cx - h / 2, cx + h / 2, cy - w / 2, cy + w / 2, z, z + t)),
+            ("camera_lens", S._cyl(cx, cy, z - 2.0, z, 6.0)),
+            ("tof_pcb", S._box(tx - 6.5, tx + 6.5, ty - 6.0, ty + 6.5, z, z + 1.0)),
+            ("flow_pcb", S._box(fx - 15.0, fx + 15.0, fy - 7.0, fy + 7.0, z, z + 1.2)),
+            ("flow_sensor", S._cyl(fx, fy, z - 2.0, z, 3.0))]
+
+
 def assembly(parts: dict[str, cq.Workplane], y_roll: float) -> list[tuple[str, cq.Workplane]]:
     items: list[tuple[str, cq.Workplane]] = [(n, parts[n]) for n in ("top_shell", "bottom_tub", "nose_cover", "pod",
-                                                                      "pod_tip", "battery_shell", "battery_latch")]
+                                                                      "pod_tip", "sensor_window", "battery_shell",
+                                                                      "battery_latch")]
     items += [("arm_duct", m) for m in A.arm_duct_placed(parts["arm_duct"])]
+    items += [("top_grille", m) for m in A.arm_duct_placed(parts["top_grille"])]
     for i, (x, y) in enumerate(P.motor_positions()):
         items += S.motor(x, y)
         items += S.prop(x, y, phase=17.0 + 41.0 * i, ccw=bool(i % 2))
@@ -214,9 +227,22 @@ def cad_checks(parts: dict[str, cq.Workplane], asm: list[tuple[str, cq.Workplane
             worst = max(worst, _overlap(rot, parts["nose_cover"]), _overlap(rot, static))
         out.append(("gimbal + kamera başlığı hareket aralığı ↔ burun ve gimbal gövdesi", worst < 1.0,
                     f"{worst:.2f} mm³ (pitch −90/−45/0/+30, roll ±30)"))
-    low = min((w.val().BoundingBox().zmin, n) for n, w in asm if n not in ("pod", "pod_tip"))
-    out.append(("avuç ayağı en alçak nokta (avuca yalnızca o değer)", low[0] >= P.GRIP_BOTTOM_Z + 5.0,
-                f"ayak {P.GRIP_BOTTOM_Z:.0f} mm; sonraki en alçak: {low[1]} {low[0]:.1f} mm"))
+    low = min((w.val().BoundingBox().zmin, n) for n, w in asm if n not in ("pod", "pod_tip", "sensor_window"))
+    out.append(("avuç ayağı en alçak nokta (avuca yalnızca o değer)", low[0] >= V.POD_BOTTOM_Z + 5.0,
+                f"ayak {V.POD_BOTTOM_Z:.0f} mm; sonraki en alçak: {low[1]} {low[0]:.1f} mm"))
+    # Tam kapalı pervane: üst ızgara ↔ pervane / somun, motor çanı ↔ etek boşlukları (tek modül yeterli: ×4 özdeş)
+    top = parts["top_grille"].val()
+    blade = min(w.val().distance(top) for w in [s for n, s in S.prop(0, 0, phase=17.0, ccw=False)])
+    mot = dict(S.motor(0, 0))
+    hub = min(mot["motor_nut"].val().distance(top), mot["motor_shaft"].val().distance(top))
+    bell = mot["motor_bell"].val().distance(parts["arm_duct"].val())
+    out.append(("üst ızgara ↔ pervane (gürültü payı) / somun", blade >= 4.0 and hub >= 3.0,
+                f"kanat {blade:.1f} mm ≥ 4, somun ve mil {hub:.1f} mm ≥ 3"))
+    out.append(("motor çanı ↔ etek (dönen çan yandan kapalı)", bell >= 2.0, f"{bell:.1f} mm ≥ 2"))
+    sensors = _union([w for _, w in pod_sensors()])
+    near = _union([w for n, w in asm if n.startswith(("pi_", "hat_"))] + [parts["battery_shell"]])
+    gap = sensors.val().distance(near.val())
+    out.append(("ayak sensörleri ↔ Pi ve batarya", gap >= 1.5, f"{gap:.1f} mm ≥ 1,5"))
     inside = _union([w for n, w in asm if n.startswith(("pi_", "hat_", "fc_pcb", "esc_pcb", "gnss"))])
     shells = [parts[n] for n in ("top_shell", "bottom_tub", "nose_cover", "pod")]
     clash = sum(_overlap(inside, w) for w in shells + arms)

@@ -46,6 +46,20 @@ class TestLayoutV2(unittest.TestCase):
         self.assertGreaterEqual(view["clear_max"], P.PITCH_SOFT_MAX)
         self.assertGreater(layout_v2.tip_angle(), 18.0, "v2 avuçta v1'den (≈ 15°) daha kararlı olmalı")
 
+    def test_enclosed_props_allow_short_pod(self):
+        """Üst ızgara + alt ızgara + motor eteği varsa 100 mm, yoksa v1'in 120 mm kuralı geçerli."""
+        self.assertTrue(V.TOP_GRILLE and V.BELL_SKIRT, "kısa ayak yalnızca tam kapalı pervaneyle")
+        drop = P.PROP_PLANE_Z - V.POD_BOTTOM_Z
+        self.assertGreaterEqual(drop, V.POD_MIN_DROP_ENCLOSED)
+        self.assertLess(drop, P.GRIP_MIN_DROP, "v2 ayağı v1 kuralından kısa (amaç bu)")
+        self.assertGreaterEqual(V.GIMBAL_POS[2] - V.GIMBAL_BELOW_CENTER - V.POD_BOTTOM_Z, 10.0,
+                                "gimbal avuç düzleminin ≥ 10 mm üstünde")
+
+    def test_pod_sensors_see_through_opening(self):
+        for name, (clear, need) in layout_v2.pod_sensor_clearance().items():
+            self.assertGreaterEqual(clear, need, name)
+        self.assertGreaterEqual(V.SENSOR_RECESS, 20.0, "ToF ölü bölgesi ≈ 2 cm: temas anında avuç ölçülebilmeli")
+
     def test_sections_are_consistent(self):
         for st in V.STATIONS:
             x, z0 = st[0], st[1]
@@ -132,8 +146,23 @@ class TestCadV2(unittest.TestCase):
         self.assertEqual(probe(V.GRILLE["cell"] - 0.4), 0.0, "hücre bu çaptan küçük olmamalı")
         self.assertGreater(probe(V.GRILLE["cell"] + 0.4), 0.0, "≥ 10,4 mm parmak geçmemeli")
 
+    def test_top_grille_blocks_fingers(self):
+        import cadquery as cq
+        g = V.TOP_GRILLE
+        top = self.parts["top_grille"]
+        pitch = g["cell"] + g["rib"]
+        center = (3 * pitch * math.sin(math.radians(60)), (2 + 0.5) * pitch)
+
+        def probe(d: float) -> float:
+            pin = cq.Workplane("XY").workplane(offset=g["z"]).center(*center).circle(d / 2).extrude(g["t"])
+            return self._overlap(top, pin)
+        self.assertEqual(probe(g["cell"] - 0.4), 0.0)
+        self.assertGreater(probe(g["cell"] + 0.4), 0.0, "≥ 10,4 mm parmak üstten de geçmemeli")
+
     def test_analysis_inputs_match_cad(self):
         d = analysis_v2.duct_masses_g()
+        top = self.B.volume(self.parts["top_grille"]) / 1000 * V.DENSITY["PC"]
+        self.assertAlmostEqual(analysis_v2.TOP_GRILLE_G, top, delta=0.10 * top)
         rho = V.DENSITY[analysis_v2.MATERIAL]
         ring = self.B.volume(self.A.duct_ring()) / 1000 * rho
         self.assertAlmostEqual(d["ring"], ring, delta=0.10 * ring)
@@ -147,8 +176,8 @@ class TestCadV2(unittest.TestCase):
         for name in ("top_shell", "bottom_tub", "nose_cover"):
             for a, b in zip(rows[name]["cg"], V.PART_CG[name]):
                 self.assertAlmostEqual(a, b, delta=3.0, msg=name)
-        pod, tip = rows["pod"], rows["pod_tip"]
-        z = (pod["mass_g"] * pod["cg"][2] + tip["mass_g"] * tip["cg"][2]) / (pod["mass_g"] + tip["mass_g"])
+        group = [rows[n] for n in ("pod", "pod_tip", "sensor_window")]
+        z = sum(r["mass_g"] * r["cg"][2] for r in group) / sum(r["mass_g"] for r in group)
         self.assertAlmostEqual(z, V.PART_CG["pod"][2], delta=3.0)
         arm = rows["arm_duct"]["cg"]
         self.assertAlmostEqual(arm[0], V.ARM_DUCT_CG[0], delta=1.5)

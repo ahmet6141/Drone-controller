@@ -224,30 +224,35 @@ def duct_ring() -> cq.Workplane:
             .lineTo(r0 + dr, z1 - f).close().revolve(360.0, (0, 0, 0), (0, 1, 0)))
 
 
+def _honeycomb(z0: float, t: float, r_out: float, r_in: float, cell: float, rib: float) -> cq.Workplane:
+    """Bal peteği disk (z0 … z0 + t), r_in … r_out arası: hücre iç çapı (düzlükler arası) `cell`, kaburga `rib`.
+    polygon() köşesi +x'te → düzlükler ±y'ye bakar; y aralığı = hücre + kaburga, sütunlar x'te pitch·sin60
+    aralıklı ve yarım adım kaydırılmış."""
+    disc = cq.Workplane("XY").workplane(offset=z0).circle(r_out).circle(r_in).extrude(t)
+    pitch = cell + rib
+    d_circ = cell / math.cos(math.radians(30))
+    n = int(r_out // (pitch * math.sin(math.radians(60)))) + 2
+    pts = []
+    for j in range(-n, n + 1):
+        for i in range(-n, n + 1):
+            x = j * pitch * math.sin(math.radians(60))
+            y = (i + 0.5 * (j % 2)) * pitch
+            r = math.hypot(x, y)
+            if r_in - d_circ / 2 < r < r_out + d_circ / 2:
+                pts.append((x, y))
+    holes = (cq.Workplane("XY").workplane(offset=z0 - 1).pushPoints(pts)
+             .polygon(6, d_circ).extrude(t + 2))
+    return disc.cut(holes)
+
+
 def grille() -> cq.Workplane:
-    """Altıgen parmak ızgarası: hücre iç çapı ≤ 10 mm; göbek + 3 direk motor yuvasına iner."""
+    """Alt parmak ızgarası: hücre iç çapı ≤ 10 mm; göbek bileziği + 3 direk motor yuvasına iner;
+    bilezikten yuvaya inen motor çanı eteği dönen çanı yandan da kapatır."""
     z0 = V.DUCT_Z[0]
     g = V.GRILLE
     c_in = P.MOTOR_BELL_D / 2 + P.COLLAR_GAP
     c_out = c_in + P.COLLAR_W
-    disc = cq.Workplane("XY").workplane(offset=z0).circle(V.DUCT_IN_R + 0.5).circle(c_out - 0.5).extrude(g["t"])
-    pitch = g["cell"] + g["rib"]
-    d_circ = g["cell"] / math.cos(math.radians(30))
-    pts = []
-    rows = int(V.DUCT_IN_R // (pitch * math.sin(math.radians(60)))) + 2
-    cols = int(V.DUCT_IN_R // pitch) + 2
-    # Bal peteği: polygon() köşesi +x'te → düzlükler ±y'ye bakar; y aralığı = hücre + kaburga,
-    # sütunlar x'te pitch·sin60 aralıklı ve yarım adım kaydırılmış.
-    for j in range(-cols, cols + 1):
-        for i in range(-rows, rows + 1):
-            x = j * pitch * math.sin(math.radians(60))
-            y = (i + 0.5 * (j % 2)) * pitch
-            r = math.hypot(x, y)
-            if c_out - d_circ / 2 < r < V.DUCT_IN_R + d_circ / 2:
-                pts.append((x, y))
-    holes = (cq.Workplane("XY").workplane(offset=z0 - 1).pushPoints(pts)
-             .polygon(6, d_circ).extrude(g["t"] + 2))
-    disc = disc.cut(holes)
+    disc = _honeycomb(z0, g["t"], V.DUCT_IN_R + 0.5, c_out - 0.5, g["cell"], g["rib"])
     collar = cq.Workplane("XY").workplane(offset=z0).circle(c_out).circle(c_in).extrude(P.SPOKE_T)
     # Radyal kaburgalar (60°, 180° = kol üstü, 300°): halkayı göbeğe bağlar, kalıpta göbekteki yolluktan
     # halkaya akış yolu olur
@@ -263,7 +268,50 @@ def grille() -> cq.Workplane:
         post = (cq.Workplane("XY").workplane(offset=P.HUB_T).center(x, y).circle(P.POST_D / 2)
                 .extrude(z0 - P.HUB_T + 0.1))
         posts = post if posts is None else posts.union(post)
-    return disc.union(collar).union(posts)
+    # Motor çanı eteği: dikey havalandırma yarıkları (parmak geçmez), direklerin arasında
+    st, slot_w = V.BELL_SKIRT
+    h = z0 - P.HUB_T
+    skirt = cq.Workplane("XY").workplane(offset=P.HUB_T).circle(c_in + st).circle(c_in).extrude(h + 0.1)
+    slots = None
+    for k in range(12):
+        sl = (cq.Workplane("XY").box(st + 2.0, slot_w, h - 6.0, centered=(False, True, False))
+              .translate((c_in - 1.0, 0, P.HUB_T + 3.0)).rotate((0, 0, 0), (0, 0, 1), 15.0 + 30.0 * k))
+        slots = sl if slots is None else slots.union(sl)
+    return disc.union(collar).union(posts).union(skirt.cut(slots))
+
+
+def top_grille() -> cq.Workplane:
+    """Üst parmak ızgarası (yerel: motor ekseni orijinde; çıkarılabilir PC parça, tek kalıp ×4).
+    Bal peteği disk + dış bant + göbekte somun kapağı + üstte 3 radyal kaburga; çan ağzının üst kenarına
+    6 ayakla oturur, 3 geçme tırnakla kenarın altından tutunur. Kenar ile disk arasındaki ≈ 4 mm'lik
+    yan aralık ek hava girişidir ve parmak geçirmez."""
+    g = V.TOP_GRILLE
+    z, t = g["z"], g["t"]
+    dr = (V.DUCT_Z[1] - V.DUCT_Z[0] - V.DUCT_FLARE[0]) * math.tan(math.radians(V.DRAFT_DEG))
+    lip_in = V.DUCT_IN_R + dr + V.DUCT_FLARE[1]
+    lip_out = lip_in + V.DUCT_WALL
+    lip_top = V.DUCT_Z[1] + V.DUCT_WALL / 2
+    r_out, cap_r, cap_top = g["r_out"], g["cap_r"], g["cap_top"]
+    part = _honeycomb(z, t, r_out - 2.5, cap_r - 0.5, g["cell"], g["rib"])
+    part = part.union(cq.Workplane("XY").workplane(offset=z).circle(r_out).circle(r_out - 3.0).extrude(t))
+    cap = (cq.Workplane("XY").workplane(offset=z).circle(cap_r).extrude(cap_top - z)
+           .cut(cq.Workplane("XY").workplane(offset=z - 0.1).circle(cap_r - 1.2).extrude(cap_top - z - 1.1)))
+    part = part.union(cap)
+    sw, sh = g["spoke"]
+    for ang in (90.0, 210.0, 330.0):
+        part = part.union(cq.Workplane("XY").box(r_out - 1.0 - (cap_r - 0.5), sw, sh, centered=(False, True, False))
+                          .translate((cap_r - 0.5, 0, z + t - 0.1)).rotate((0, 0, 0), (0, 0, 1), ang))
+    r_leg = (lip_in + lip_out) / 2
+    for k in range(6):
+        part = part.union(cq.Workplane("XY").box(1.4, 2.4, z - lip_top - 0.05 + 0.1, centered=(True, True, False))
+                          .translate((r_leg, 0, lip_top + 0.05)).rotate((0, 0, 0), (0, 0, 1), 60.0 * k))
+    for ang in (30.0, 150.0, 270.0):                                  # geçme tırnakları
+        tab = (cq.Workplane("XY").box(1.2, 8.0, z + 0.1 - (lip_top - 3.5), centered=(False, True, False))
+               .translate((lip_out + 0.4, 0, lip_top - 3.5)))
+        hook = (cq.Workplane("XY").box(1.0, 8.0, 1.0, centered=(False, True, False))
+                .translate((lip_out - 0.6, 0, lip_top - 3.5)))
+        part = part.union(tab.union(hook).rotate((0, 0, 0), (0, 0, 1), ang))
+    return part
 
 
 def arm_duct() -> cq.Workplane:
@@ -293,31 +341,52 @@ def belly_z() -> float:
 
 
 def pod() -> cq.Workplane:
-    """İncelen ayak gövdesi: üstte karın deliğine giren boyun, içte sensör tablası (tabandan 25 mm)."""
+    """Avuç ayağı: üstte karın deliğine giren boyun, içte sensör tablası (tabandan SENSOR_RECESS).
+    Sensörlerin mercekleri tabladan aşağı uzanır ve sensör camına (sensor_window) sıfır boşlukla değer."""
     t = V.WALL
     z_top = belly_z()
-    z_bot = P.GRIP_BOTTOM_Z + P.BUMPER_H
+    z_bot = V.POD_BOTTOM_Z + P.BUMPER_H
     r0, r1 = V.POD_TOP_R, V.POD_BOTTOM_R
     neck_r = V.POD_TOP_R - 3.0 - 0.3
+    z_mid = (z_top + z_bot) / 2 + 0.25 * (z_top - z_bot)
     body = (cq.Workplane("XZ").moveTo(neck_r - t, z_top + 4.0).lineTo(neck_r, z_top + 4.0).lineTo(neck_r, z_top)
-            .lineTo(r0, z_top).spline([(r0 - 0.8, (z_top + z_bot) / 2 + 6.0), (r1, z_bot)], includeCurrent=True)
-            .lineTo(r1 - t, z_bot).spline([(r0 - 0.8 - t, (z_top + z_bot) / 2 + 6.0), (r0 - t, z_top - t)],
-                                          includeCurrent=True)
+            .lineTo(r0, z_top).spline([(r0 - 0.8, z_mid), (r1, z_bot)], includeCurrent=True)
+            .lineTo(r1 - t, z_bot).spline([(r0 - 0.8 - t, z_mid), (r0 - t, z_top - t)], includeCurrent=True)
             .lineTo(neck_r - t, z_top - t).close().revolve(360.0, (0, 0, 0), (0, 1, 0)))
-    shelf_z = P.GRIP_BOTTOM_Z + P.SENSOR_RECESS
+    shelf_z = V.POD_BOTTOM_Z + V.SENSOR_RECESS
     shelf = cq.Workplane("XY").workplane(offset=shelf_z).circle(r1 + 0.5).extrude(2.0)
-    shelf = shelf.intersect(cq.Workplane("XZ").moveTo(0, z_top).lineTo(r0 - 0.2, z_top)
-                            .spline([(r0 - 1.0, (z_top + z_bot) / 2 + 6.0), (r1 - 0.2, z_bot)], includeCurrent=True)
-                            .lineTo(0, z_bot).close().revolve(360.0, (0, 0, 0), (0, 1, 0)))
-    for (x, y, d) in ((0.0, 0.0, 13.0), (0.0, 18.0, 0.0), (0.0, -19.0, 0.0)):
-        if d:
-            shelf = shelf.cut(cq.Workplane("XY").workplane(offset=shelf_z).center(x, y).circle(d / 2).extrude(2.0))
-    shelf = shelf.cut(cq.Workplane("XY").workplane(offset=shelf_z).center(0, 18.0).rect(9.0, 5.0).extrude(2.0))
-    shelf = shelf.cut(cq.Workplane("XY").workplane(offset=shelf_z).center(-5.0, -19.0).rect(18.0, 7.0).extrude(2.0))
+    shelf = shelf.intersect(_pod_inner())
+    openings = {"CM3 Wide": ("circle", 13.0), "VL53L8CX": ("rect", (9.0, 5.0)), "MTF-01": ("rect", (18.0, 7.0))}
+    for name, ((x, y), _) in V.POD_SENSORS.items():
+        kind, size = openings[name]
+        wp = cq.Workplane("XY").workplane(offset=shelf_z - 0.1).center(x, y)
+        wp = wp.circle(size / 2) if kind == "circle" else wp.rect(*size)
+        shelf = shelf.cut(wp.extrude(2.2))
     # Üst kenar gövde alt yüzeyine tam oturur (karın x yönünde eğimli → arkada boşluk kalmasın)
     collar = (cq.Workplane("XY").workplane(offset=z_top - 1.0).circle(r0).circle(r0 - t).extrude(8.0)
               .cut(outer().translate((-V.POD_X, 0, 0))))
     return body.union(shelf).union(collar).translate((V.POD_X, 0, 0))
+
+
+def _pod_inner() -> cq.Workplane:
+    """Ayak gövdesinin iç hacmi (tabla ve cam bunun içinde kalır)."""
+    z_top, z_bot = belly_z(), V.POD_BOTTOM_Z + P.BUMPER_H
+    r0, r1 = V.POD_TOP_R, V.POD_BOTTOM_R
+    z_mid = (z_top + z_bot) / 2 + 0.25 * (z_top - z_bot)
+    return (cq.Workplane("XZ").moveTo(0, z_top).lineTo(r0 - 0.2, z_top)
+            .spline([(r0 - 1.0, z_mid), (r1 - 0.2, z_bot)], includeCurrent=True)
+            .lineTo(0, z_bot).close().revolve(360.0, (0, 0, 0), (0, 1, 0)))
+
+
+def sensor_window() -> cq.Workplane:
+    """IR geçirgen koruyucu cam (PC/PMMA, siyah IR mürekkep maskeli): tablanın hemen altında, sensörlere
+    sıfır hava boşluğuyla (ToF çapraz konuşması en az); toz ve sudan korur."""
+    shelf_z = V.POD_BOTTOM_Z + V.SENSOR_RECESS
+    disc = cq.Workplane("XY").workplane(offset=shelf_z - V.SENSOR_WINDOW_T).circle(V.POD_BOTTOM_R).extrude(V.SENSOR_WINDOW_T)
+    inner = _pod_inner().translate((0, 0, 0))
+    r_fit = V.POD_BOTTOM_R - V.WALL - 0.6
+    return disc.intersect(inner).intersect(
+        cq.Workplane("XY").workplane(offset=shelf_z - 2.0).circle(r_fit).extrude(3.0)).translate((V.POD_X, 0, 0))
 
 
 def pod_tip() -> cq.Workplane:
@@ -325,7 +394,7 @@ def pod_tip() -> cq.Workplane:
     r_out = V.POD_BOTTOM_R
     r_in = r_out - P.BUMPER_WALL
     rho = (r_out - r_in) / 2
-    z0 = P.GRIP_BOTTOM_Z
+    z0 = V.POD_BOTTOM_Z
     return (cq.Workplane("XZ").moveTo(r_in, z0 + rho).threePointArc(((r_in + r_out) / 2, z0), (r_out, z0 + rho))
             .lineTo(r_out, z0 + P.BUMPER_H + 0.2).lineTo(r_in, z0 + P.BUMPER_H + 0.2).close()
             .revolve(360.0, (0, 0, 0), (0, 1, 0)).translate((V.POD_X, 0, 0)))

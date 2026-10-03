@@ -72,7 +72,8 @@ PART_MATERIAL: dict[str, str] = {
     "antenna": "plastic", "damper": "tpu", "standoff": "aluminum",
     "tof_pcb": "pcb", "tof_sensor": "plastic",
     "top_shell": "shell_light", "bottom_tub": "shell_light", "nose_cover": "gloss_black", "arm_duct": "shell_dark",
-    "pod": "shell_dark", "pod_tip": "accent", "camera_housing": "gloss_black", "camera_bezel": "anodized", "battery_shell": "shell_dark", "battery_latch": "accent",
+    "pod": "shell_dark", "pod_tip": "accent", "camera_housing": "gloss_black", "camera_bezel": "anodized",
+    "top_grille": "shell_dark", "sensor_window": "glass", "battery_shell": "shell_dark", "battery_latch": "accent",
     "led_red": "led_red", "led_green": "led_green", "led_white": "led_white", "esc_pcb": "pcb", "fc_pcb": "pcb",
 }
 

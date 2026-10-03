@@ -213,8 +213,9 @@ def down_camera() -> list[Item]:
             ("tof_sensor", _box(-3.2, 3.2, palm_grip.TOF_Y - 1.5, palm_grip.TOF_Y + 1.5, z - 1.0, z))]
 
 
-def gimbal_details(y_roll: float) -> list[Item]:
-    """Gimbal motorları, kamera ayrıntısı ve sönümleyiciler (basılan parçalar build.py'de)."""
+def gimbal_details(y_roll: float, mount_z: float | None = None) -> list[Item]:
+    """Gimbal motorları, kamera ayrıntısı ve sönümleyiciler (basılan parçalar build.py'de).
+    mount_z: sönümleyicilerin bağlandığı yüzey (varsayılan v1 taşıyıcı kolunun alt yüzü)."""
     g = P.GIMBAL_POS
     w, h, t = P.CAM_BOARD
     lw, lh, ld = P.CAM_LENS
@@ -227,7 +228,7 @@ def gimbal_details(y_roll: float) -> list[Item]:
     cx, cy = G.damper_center(y_roll)
     dx, dy = P.DAMPER_SPACING
     z_top = g[2] + G.top_plate_top_z(y_roll)
-    z_boom = P.FRAME_BOTTOM_Z - P.GIMBAL_PART_T
+    z_boom = P.FRAME_BOTTOM_Z - P.GIMBAL_PART_T if mount_z is None else mount_z
     zc = (z_top + z_boom) / 2
     rad = (z_boom - z_top) / 2 + 0.3
     for sx in (-1, 1):

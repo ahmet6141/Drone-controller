@@ -1,6 +1,6 @@
 """cad/v2/ — bütünleşik gövde: yerleşim ve titreşim (her zaman), parametrik parçalar (CadQuery kuruluysa).
 
-CadQuery testleri ≈ 4 dk sürer; CI yalnızca CadQuery gerektirmeyen testleri çalıştırır.
+CadQuery testleri ≈ 13 dk sürer (hassas kütle integrali); CI yalnızca CadQuery gerektirmeyen testleri çalıştırır.
 """
 from __future__ import annotations
 
@@ -150,6 +150,23 @@ class TestCadV2(unittest.TestCase):
     def test_single_solids(self):
         for name in list(self.B.PRODUCTION) + list(self.B.GIMBAL_PRODUCTION):
             self.assertEqual(self.parts[name].solids().size(), 1, name)
+
+    def test_mass_props_accurate(self):
+        """Kütle hesabı uyarlamalı integralle: basit katıda kesin, simetrik alt kabukta ağırlık merkezi orta hatta.
+        Varsayılan integral bu kabukta %7 eksik hacim ve 2 mm yanlış ağırlık merkezi veriyordu (docs/12 §7, #16)."""
+        import cadquery as cq
+        vol, c = self.A.mass_props(cq.Workplane("XY").box(10.0, 20.0, 30.0).translate((1.0, 2.0, 3.0)))
+        self.assertAlmostEqual(vol, 6000.0, delta=1e-3)
+        for a, b in zip(c, (1.0, 2.0, 3.0)):
+            self.assertAlmostEqual(a, b, delta=1e-6)
+        self.assertLess(abs(self.rows["bottom_tub"]["cg"][1]), 0.5, "simetrik parça: ağırlık merkezi y ≈ 0")
+
+    def test_surface_skin_is_thin(self):
+        """Yüzey ayrıntılarının kesildiği dış zar ince kalmalı: uç yüzler çakışırsa fark işlemi tüm hacmi döndürür ve
+        kesimler parçaları dilimler (docs/12 §7, #17)."""
+        skin, _ = self.A.mass_props(self.A._skin(V.SHUT_LINE[1]))
+        whole, _ = self.A.mass_props(self.A.outer())
+        self.assertLess(skin, 0.05 * whole)
 
     def test_gimbal_balance_and_parameters(self):
         """Pitch ekseni kapsülün ağırlık merkezinde, roll ekseni optik eksende; parametreler CAD ile aynı."""

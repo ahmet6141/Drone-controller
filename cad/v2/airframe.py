@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import math
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 import cadquery as cq
@@ -29,6 +30,23 @@ import params as P  # noqa: E402
 import v2_params as V  # noqa: E402
 
 BIG = 1000.0
+GPROP_EPS = 1e-6               # hacim integrali göreli hassasiyeti (uyarlamalı)
+
+
+def mass_props(wp: cq.Workplane) -> tuple[float, tuple[float, float, float]]:
+    """Hacim (mm³) ve ağırlık merkezi: uyarlamalı integral. CadQuery'nin varsayılanı (sabit dereceli Gauss) spline
+    loft'lu ince kabuklarda %1–7 hata ve simetrik parçada yanlış ağırlık merkezi verir (docs/12 §7, #16)."""
+    from OCP.BRepGProp import BRepGProp
+    from OCP.GProp import GProp_GProps
+    total, moment = 0.0, [0.0, 0.0, 0.0]
+    for solid in wp.solids().vals():
+        props = GProp_GProps()
+        BRepGProp.VolumeProperties_s(solid.wrapped, props, GPROP_EPS, True)
+        c = props.CentreOfMass()
+        total += props.Mass()
+        for i, v in enumerate((c.X(), c.Y(), c.Z())):
+            moment[i] += props.Mass() * v
+    return total, tuple(m / total for m in moment) if total else (0.0, 0.0, 0.0)
 
 
 def _loft(inset: float = 0.0, xs: list[float] | None = None) -> cq.Workplane:
@@ -59,7 +77,9 @@ def cap_x() -> tuple[float, float]:
     return x0, x0 + V.TAIL_CAP
 
 
+@lru_cache(maxsize=1)
 def outer() -> cq.Workplane:
+    """Gövdenin dış hacmi (önbellekli: CadQuery işlemleri yeni nesne döndürür, bu nesne değişmez)."""
     return _loft(0.0)
 
 
@@ -107,7 +127,7 @@ def body_parts() -> dict[str, cq.Workplane]:
     body = sh.cut(_xbox(V.NOSE_SPLIT_X, BIG))
     # Burun (ince et): ağız gimbal kapsülünü yanaklar arasında taşır; astar ve motor/pim geçişleri
     nose = (shell(V.NOSE_WALL).intersect(_xbox(V.NOSE_SPLIT_X, BIG)).cut(mouth())
-            .union(_mouth_lining()).cut(_mouth_holes()))
+            .union(_mouth_lining()).cut(_mouth_holes()).cut(_mouth_rim()))
     top = body.intersect(_xbox(-BIG, BIG, z0=V.Z_SPLIT))
     bottom = body.intersect(_xbox(-BIG, BIG, z1=V.Z_SPLIT))
     nose_top = nose.intersect(_xbox(-BIG, BIG, z0=V.PIVOT_Z))
@@ -117,12 +137,38 @@ def body_parts() -> dict[str, cq.Workplane]:
 
 def mouth(grow: float = 0.0) -> cq.Workplane:
     """Burun ağzı (gövde koordinatında): gimbal kapsülünün süpürme hacmi + boşluk. Arkası pitch ekseni etrafında
-    yay, üstü düz alın, önü ve altı açık (kamera −90°'de aşağı bakar). grow > 0: astarın dış yüzü."""
+    yay, üstü düz alın (köşeleri yuvarlak), önü ve altı açık (kamera −90°'de aşağı bakar). grow > 0: astarın dış
+    yüzü."""
     px, _, pz = V.GIMBAL_PIVOT
     hy, r, top = V.MOUTH_HALF_Y + grow, V.MOUTH_R + grow, pz + V.MOUTH_TOP + grow
     disc = _cyl_y(px, pz, -hy, hy, r)
     front = _xbox(px, BIG, y=hy, z0=-BIG, z1=top)
-    return disc.union(front).intersect(_xbox(-BIG, BIG, y=hy, z1=top))
+    clip = _yz_rect_prism(hy, pz - 80.0, top, V.MOUTH_CORNER_R + grow, px - r - 5.0, 300.0)
+    return disc.union(front).intersect(clip)
+
+
+def _rr_sketch(w: float, h: float, r: float) -> cq.Sketch:
+    return cq.Sketch().rect(w, h).vertices().fillet(min(r, w / 2 - 0.1, h / 2 - 0.1))
+
+
+def _yz_rect_prism(hy: float, z0: float, z1: float, r: float, x0: float, x1: float) -> cq.Workplane:
+    """x boyunca sabit kesitli prizma: |y| ≤ hy, z0 … z1, kesit köşeleri r yarıçaplı."""
+    return (cq.Workplane("YZ").workplane(offset=x0).center(0, (z0 + z1) / 2)
+            .placeSketch(_rr_sketch(2 * hy, z1 - z0, r)).extrude(x1 - x0))
+
+
+def _mouth_rim() -> cq.Workplane:
+    """Ağız kenarında pah (kalıplanmış dudak): yüzün MOUTH_RIM gerisinden öne doğru açılan, köşeleri yuvarlak huni.
+    Üst kenarda pah 0,6 × (ince alın korunur)."""
+    c = V.MOUTH_RIM
+    x_face = V.STATIONS[-1][0]
+    _, _, pz = V.GIMBAL_PIVOT
+    hy, top, r = V.MOUTH_HALF_Y, pz + V.MOUTH_TOP, V.MOUTH_CORNER_R
+    zlo = pz - 80.0
+
+    def sec(x: float, gy: float, gz: float) -> cq.Sketch:
+        return _rr_sketch(2 * (hy + gy), top + gz - zlo, r + gy).moved(cq.Location(cq.Vector(0, (top + gz + zlo) / 2, x)))
+    return cq.Workplane("YZ").placeSketch(sec(x_face - c, 0.0, 0.0), sec(x_face + 0.5, c + 0.5, 0.6 * (c + 0.5))).loft(ruled=True)
 
 
 def _cyl_y(cx: float, cz: float, y0: float, y1: float, r: float) -> cq.Workplane:
@@ -137,7 +183,7 @@ def _mouth_lining() -> cq.Workplane:
 
 def mouth_liner() -> cq.Workplane:
     """Ağız astarı tek başına (render: 2K kalıpta siyah ikinci enjeksiyon)."""
-    return _mouth_lining().cut(_mouth_holes())
+    return _mouth_lining().cut(_mouth_holes()).cut(_mouth_rim())
 
 
 def _mouth_holes() -> cq.Workplane:
@@ -456,6 +502,19 @@ def battery_parts() -> dict[str, cq.Workplane]:
     pack = pack.cut(cq.Workplane("XY").box(x1 - x0 - 2 * t, y1 - y0 - 2 * t, z1 - z0 - 2 * t)
                     .translate(((x0 + x1) / 2, 0, (z0 + z1) / 2)))
     shell_ = cap.union(pack)
+    # Yakıt göstergesi (4 LED ışık borusu) + düğme: kuyruk kapağının arka yüzünde
+    g = V.BATTERY_GAUGE
+    leds = [(g["pitch"] * (k - 1.5), g["z"]) for k in range(4)]
+    for y, z in leds:
+        shell_ = shell_.cut(cq.Workplane("YZ").workplane(offset=cx0 - 1.0).center(y, z).circle(g["led_d"] / 2).extrude(3.5))
+    shell_ = shell_.cut(cq.Workplane("YZ").workplane(offset=cx0 - 1.0).center(0, g["button_z"])
+                        .circle(g["button_d"] / 2 + 0.5).extrude(1.8))
+    shell_ = shell_.cut(_shut_lines())
+    gauge = [("led_green" if k >= 4 - g["lit"] else "battery_led",           # arkadan bakana soldan sağa dolar
+              cq.Workplane("YZ").workplane(offset=cx0 + 0.15).center(y, z).circle(g["led_d"] / 2 - 0.05).extrude(2.0))
+             for k, (y, z) in enumerate(leds)]
+    gauge.append(("battery_button", cq.Workplane("YZ").workplane(offset=cx0 + 0.3).center(0, g["button_z"])
+                  .circle(g["button_d"] / 2).extrude(1.2).faces("<X").edges().fillet(0.6)))
     latch = None
     for sy in (-1, 1):                                                # kapak yanlarında kilit düğmeleri
         hw = V.half_width(cx0 + 7.0, (z0 + z1) / 2)
@@ -470,7 +529,7 @@ def battery_parts() -> dict[str, cq.Workplane]:
             c = (cq.Workplane("YZ").workplane(offset=x1 - V.CELL_L - 3.0).center(yc, zc).circle(V.CELL_D / 2 - 0.2)
                  .extrude(V.CELL_L))
             cells = c if cells is None else cells.union(c)
-    return {"battery_shell": shell_, "battery_latch": latch, "battery_cells": cells}
+    return {"battery_shell": shell_, "battery_latch": latch, "battery_cells": cells, "battery_gauge": gauge}
 
 
 # --- gövde iç detayları ----------------------------------------------------------------------------
@@ -520,18 +579,96 @@ def _rails() -> cq.Workplane:
     return out
 
 
-def _vents(shell_: cq.Workplane) -> cq.Workplane:
-    """Yan havalandırma yarıkları (Pi bölgesi) ve kanopi önünde emiş yarıkları."""
-    for side in (-1, 1):
-        for k in range(6):
-            x = 18.0 + 8.0 * k
-            cutter = (cq.Workplane("XZ").workplane(offset=-side * 60.0).center(x, -28.0)
-                      .slot2D(16.0, 3.4, angle=90).extrude(side * 30.0))
-            shell_ = shell_.cut(cutter)
-    for k in range(5):
-        shell_ = shell_.cut(cq.Workplane("XY").workplane(offset=20.0).center(46.0 + 5.0 * k, 0)
-                            .slot2D(26.0, 2.6, angle=90).extrude(40.0))
-    return shell_
+@lru_cache(maxsize=8)
+def _skin(depth: float) -> cq.Workplane:
+    """Dış yüzeyin `depth` kalınlığındaki zarı: çukur, kanal ve yazı yüzeyi izleyerek kesilir. İç loft uçlardan
+    kırpılır: iki loft'un uç yüzleri çakışırsa fark işlemi başarısız olur ve tüm hacmi döndürür."""
+    x_lo, x_hi = V.body_x_range()
+    return outer().cut(_loft(depth).intersect(_xbox(x_lo + depth, x_hi - depth)))
+
+
+def _rr_prism_z(cx: float, cy: float, lx: float, ly: float, r: float, z0: float, z1: float) -> cq.Workplane:
+    return cq.Workplane("XY").workplane(offset=z0).center(cx, cy).placeSketch(_rr_sketch(lx, ly, r)).extrude(z1 - z0)
+
+
+def _hex_field(cx: float, cy: float, lx: float, ly: float, z0: float, z1: float) -> cq.Workplane:
+    """Dikey bal peteği delikleri (kanal ızgarasıyla aynı dil), lx × ly alanına tam sığanlar."""
+    cell, rib = V.VENT_HEX
+    pitch = cell + rib
+    rc = cell / math.cos(math.radians(30)) / 2                       # çevrel yarıçap (köşe ±x'te)
+    dx = pitch * math.sin(math.radians(60))
+    pts = []
+    for j in range(-int(lx // dx) - 1, int(lx // dx) + 2):
+        x = cx + j * dx
+        if abs(x - cx) > lx / 2 - rc:
+            continue
+        for i in range(-int(ly // pitch) - 1, int(ly // pitch) + 2):
+            y = cy + (i + 0.5 * (j % 2)) * pitch
+            if abs(y - cy) <= ly / 2 - cell / 2:
+                pts.append((x, y))
+    return cq.Workplane("XY").workplane(offset=z0).pushPoints(pts).polygon(6, 2 * rc).extrude(z1 - z0)
+
+
+def _top_vent_parts() -> tuple[cq.Workplane, cq.Workplane]:
+    """Kanopi paneli: (0,6 mm çukur, delikler = önde ToF penceresi + arkada bal peteği çıkış delikleri)."""
+    cx, cy, lx, ly, r = V.TOP_VENT
+    recess = _skin(V.VENT_RECESS).intersect(_rr_prism_z(cx, cy, lx, ly, r, 0.0, 70.0))
+    xw, dw = V.TOF_WINDOW
+    window = cq.Workplane("XY").center(xw, cy).circle(dw / 2).extrude(70.0)
+    xf0, xf1 = xw + dw / 2 + 2.0, cx + lx / 2 - 1.5
+    field = _hex_field((xf0 + xf1) / 2, cy, xf1 - xf0, ly - 3.0, 20.0, 70.0)
+    return recess, window.union(field)
+
+
+def top_trim() -> cq.Workplane:
+    """Kanopi vizörü: panel çukurunu dolduran siyah parlak ikinci enjeksiyon (2K, PC), delikler açık. Yüzeyin
+    0,05 mm altında biter (render'da üst üste binme olmaz)."""
+    recess, holes = _top_vent_parts()
+    return recess.intersect(_loft(0.05)).cut(holes)
+
+
+def top_window() -> cq.Workplane:
+    """ToF penceresi camı (render; IR geçirgen PC, siyah): çukurun 0,2 mm altında."""
+    xw, dw = V.TOF_WINDOW
+    z = V.section_at(xw)[3] - V.VENT_RECESS - 0.2
+    return cq.Workplane("XY").workplane(offset=z - 1.0).center(xw, V.TOP_VENT[1]).circle(dw / 2 - 0.2).extrude(1.0)
+
+
+def _bottom_vents() -> cq.Workplane:
+    """Taban panelleri: Pi bölmesinin emişi (çıkış kanopide). Yan yarıkların yerine → alt kalıpta kayar maça yok."""
+    out = None
+    for cx, cy, lx, ly, r in V.BOTTOM_VENTS:
+        v = (_skin(V.VENT_RECESS).intersect(_rr_prism_z(cx, cy, lx, ly, r, -90.0, -20.0))
+             .union(_hex_field(cx, cy, lx - 3.0, ly - 3.0, -90.0, -36.0)))
+        out = v if out is None else out.union(v)
+    return out
+
+
+def _shut_lines() -> cq.Workplane:
+    """Ayrım çizgisi kanalları (SHUT_LINE): üst/alt kabuk (z = Z_SPLIT), burun yarıları (z = PIVOT_Z), burun ve
+    batarya ek yerleri. Ayrım çizgileri bilinçli, eşit genişlikte gölge çizgileri olur (kalıpta her iki yarıda pah)."""
+    w, d = V.SHUT_LINE
+    skin = _skin(d)
+    bands = [_xbox(-BIG, V.NOSE_SPLIT_X, z0=V.Z_SPLIT - w / 2, z1=V.Z_SPLIT + w / 2),
+             _xbox(V.NOSE_SPLIT_X, BIG, z0=V.PIVOT_Z - w / 2, z1=V.PIVOT_Z + w / 2),
+             _xbox(V.NOSE_SPLIT_X - w / 2, V.NOSE_SPLIT_X + w / 2),
+             _xbox(cap_x()[1] - w / 2, cap_x()[1] + w / 2)]
+    out = bands[0]
+    for b in bands[1:]:
+        out = out.union(b)
+    return skin.intersect(out)
+
+
+def logo() -> tuple[cq.Workplane, cq.Workplane]:
+    """Kanopi üstünde marka (LOGO): çukur (deboss) ve render için tampon baskı dolgusu (yüzeyin 0,08 mm altında).
+    Arkadan bakana okunur: yazının üstü burna bakar."""
+    lg = V.LOGO
+    txt = (cq.Workplane("XY").text(lg["text"], lg["size"], 70.0, font="DejaVu Sans", kind="bold",
+                                   halign="center", valign="center")
+           .rotate((0, 0, 0), (0, 0, 1), -90.0).translate((lg["x"], 0.0, 0.0)))
+    cut = txt.intersect(_skin(lg["depth"]))
+    fill = cut.intersect(_loft(0.08))
+    return cut, fill
 
 
 def body_parts_detailed() -> dict[str, cq.Workplane]:
@@ -542,9 +679,11 @@ def body_parts_detailed() -> dict[str, cq.Workplane]:
     top = parts["top_shell"].union(sleeves.intersect(_xbox(-BIG, V.NOSE_SPLIT_X, z0=V.Z_SPLIT))).union(boss_top)
     bottom = parts["bottom_tub"].union(sleeves.intersect(_xbox(-BIG, V.NOSE_SPLIT_X, z1=V.Z_SPLIT))).union(boss_bottom)
     bottom = bottom.union(_rails().intersect(_loft(V.WALL - 0.3)))             # raylar kabuk etine gömülür
-    top = _vents(top)
-    bottom = _vents(bottom)
-    # Kol kökleri soket ağızlarından geçer: soketleri tekrar aç
-    cut = _arm_root_cut()
-    return {"top_shell": top.cut(cut), "bottom_tub": bottom.cut(cut), "nose_cover": parts["nose_cover"],
-            "nose_chin": parts["nose_chin"]}
+    recess, holes = _top_vent_parts()
+    top = top.cut(recess).cut(holes).cut(logo()[0]).union(top_trim())       # vizör 2K: parçanın içinde
+    bottom = bottom.cut(_bottom_vents())
+    # Kol kökleri soket ağızlarından geçer: soketleri tekrar aç; ayrım çizgisi kanalları
+    lines = _shut_lines()
+    cut = _arm_root_cut().union(lines)
+    return {"top_shell": top.cut(cut), "bottom_tub": bottom.cut(cut), "nose_cover": parts["nose_cover"].cut(lines),
+            "nose_chin": parts["nose_chin"].cut(lines)}

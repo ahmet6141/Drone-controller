@@ -4,18 +4,18 @@
 
 | Parça | Adet | Üretim malzemesi | Hacim (cm³) | Kütle (g) | Prototip (MJF) (g) | Ağırlık merkezi (mm) | Not |
 |---|---:|---|---:|---:|---:|---|---|
-| top_shell | 1 | PC/ABS | 48.0 | 55.2 | 48.5 | (+0, -0, +26) | kanopi; yarım kol soketleri ayrım düzlemine açık; kanopi emiş yarıkları dikey (maçasız) |
-| bottom_tub | 1 | PC/ABS | 52.8 | 60.7 | 53.3 | (+3, +0, -32) | taşıyıcı: V uçlu kol soketleri, batarya rayları, vida kuleleri; yan yarıklar için 2 kayar maça |
-| nose_cover | 1 | PC/ABS | 16.7 | 19.2 | 16.9 | (+116, -0, +11) | burun üst yarısı: alın + yanak üstleri + ağız astarı (2K: dış gövde rengi, astar siyah) |
-| nose_chin | 1 | PC/ABS | 19.3 | 22.2 | 19.5 | (+99, -0, -19) | burun alt yarısı + sönümleyici perdesi; gimbal iki yarının arasına oturur (ayrım = pitch ekseni) |
-| arm_duct | 4 | PA6-GF30 | 56.4 | 76.6 | 56.9 | (-23, -0, +12) yerel | TEK kalıp × 4; U kesit kol + çan ağızlı kanal + bal peteği ızgara + 3 radyal kaburga + motor çanı eteği; göbekten yolluk |
+| top_shell | 1 | PC/ABS | 48.6 | 55.9 | 49.1 | (+1, +0, +26) | kanopi; yarım kol soketleri ayrım düzlemine açık; 2K siyah vizör (ToF penceresi + bal peteği çıkış), logo; maçasız |
+| bottom_tub | 1 | PC/ABS | 53.7 | 61.7 | 54.2 | (+2, +0, -31) | taşıyıcı: V uçlu kol soketleri, batarya rayları, vida kuleleri; havalandırma tabanda (bal peteği) → maçasız |
+| nose_cover | 1 | PC/ABS | 16.7 | 19.2 | 16.9 | (+115, -1, +11) | burun üst yarısı: alın + yanak üstleri + ağız astarı (2K: dış gövde rengi, astar siyah) |
+| nose_chin | 1 | PC/ABS | 19.7 | 22.7 | 19.9 | (+99, +0, -19) | burun alt yarısı + sönümleyici perdesi; gimbal iki yarının arasına oturur (ayrım = pitch ekseni) |
+| arm_duct | 4 | PA6-GF30 | 56.4 | 76.6 | 56.9 | (-23, +0, +12) yerel | TEK kalıp × 4; U kesit kol + çan ağızlı kanal + bal peteği ızgara + 3 radyal kaburga + motor çanı eteği; göbekten yolluk |
 | top_grille | 4 | PC | 9.4 | 11.2 | 9.4 | (-0, -0, +41) | çıkarılabilir üst ızgara: 6 ayak + 3 geçme tırnak; pervane değişiminde çıkar; tek kalıp × 4 |
 | pod | 1 | PC/ABS | 20.0 | 23.0 | 20.2 | (-0, +0, -52) | avuç ayağı (kısa, Ø74); sensör tablası tabandan 22 mm, IR camlı |
-| pod_tip | 1 | TPU | 3.3 | 4.0 | 4.0 | (+0, -0, -69) | avuca değen uç (TPU 95A; seri üretimde ayağın üstüne ikinci enjeksiyon) |
-| sensor_window | 1 | PC | 3.7 | 4.5 | 3.8 | (-0, +0, -50) | IR geçirgen sensör camı (siyah IR mürekkep maskeli), sensörlere sıfır boşlukla |
-| battery_shell | 1 | PC/ABS | 38.2 | 43.9 | 38.6 | (-54, +0, -12) | akıllı batarya kabuğu + kuyruk kapağı (gövde çizgisini tamamlar) |
+| pod_tip | 1 | TPU | 3.3 | 4.0 | 4.0 | (-0, -0, -69) | avuca değen uç (TPU 95A; seri üretimde ayağın üstüne ikinci enjeksiyon) |
+| sensor_window | 1 | PC | 3.7 | 4.5 | 3.8 | (+0, -0, -50) | IR geçirgen sensör camı (siyah IR mürekkep maskeli), sensörlere sıfır boşlukla |
+| battery_shell | 1 | PC/ABS | 39.5 | 45.5 | 39.9 | (-55, -0, -10) | akıllı batarya kabuğu + kuyruk kapağı (gövde çizgisini tamamlar) |
 
-Gövde toplamı: **584 g** (üretim) · 470 g (MJF PA12 prototip)
+Gövde toplamı: **588 g** (üretim) · 473 g (MJF PA12 prototip)
 
 ## Ön gimbal (cad/v2/gimbal_v2.py)
 
@@ -36,27 +36,27 @@ Görüş temiz: -90° … +20° (mekanik -90…+30°, yazılım sınırı +15°)
 
 | Bileşen | Profil (g) | CAD (g) | Fark |
 |---|---:|---:|---:|
-| Üst kabuk (PC/ABS, 2 mm et) | 55 | 55.2 | %+0 |
-| Alt kabuk / taşıyıcı (PC/ABS, kaburgalı) | 61 | 60.7 | %-0 |
-| Burun kapağı (iki yarım: alın, yanaklar, siyah ağız astarı, sönümleyici perdesi) | 41 | 41.4 | %+1 |
+| Üst kabuk (PC/ABS, 2 mm et) | 56 | 55.9 | %-0 |
+| Alt kabuk / taşıyıcı (PC/ABS, kaburgalı) | 62 | 61.7 | %-0 |
+| Burun kapağı (iki yarım: alın, yanaklar, siyah ağız astarı, sönümleyici perdesi) | 42 | 41.9 | %-0 |
 | Kol–kanal modülü (PA6-GF30: kol + motor yuvası + çan ağızlı kanal + alt ızgara + motor çanı eteği) | 77 | 76.6 | %-0 |
 | Avuç ayağı (PC/ABS + TPU uç + IR geçirgen sensör camı) | 32 | 31.5 | %-2 |
 | Üst ızgara (PC, çıkarılabilir; pervane üstü parmak koruması) | 11 | 11.2 | %+2 |
-| Akıllı batarya kabuğu + kilit + konnektör | 54 | 54.1 | %+0 |
+| Akıllı batarya kabuğu + kilit + konnektör | 56 | 55.7 | %-1 |
 | Kendi tasarım 2 eksen fırçasız gimbal (burun ağzında, ortada: dışta pitch, içte roll; sönümlü taşıyıcı) + kamera başlığı | 85 | 84.7 | %-0 |
 
 ## v1 (FPV gövde) ↔ v2 (bütünleşik)
 
 | | v1 | v2 |
 |---|---:|---:|
-| Kalkış ağırlığı | 1456 g | 1589 g |
-| Hover süresi | 20.1 dk | 16.6 dk |
-| T/W (batarya sınırlı) | 2.77 | 2.40 |
+| Kalkış ağırlığı | 1456 g | 1594 g |
+| Hover süresi | 20.1 dk | 16.5 dk |
+| T/W (batarya sınırlı) | 2.77 | 2.39 |
 | Hover gazı | 0.17 | 0.20 |
 
 ## Yerleşim (cad/v2/layout_v2.py)
 
-- Toplam 1589 g; batarya paketi merkezi x = -36.7 mm; ağırlık merkezi (+0.0, +0.3, -0.7) mm
+- Toplam 1594 g; batarya paketi merkezi x = -36.8 mm; ağırlık merkezi (-0.0, +0.3, -0.8) mm
 - Avuçta devrilme açısı 27.4°
 
 ## Kontroller
@@ -67,10 +67,10 @@ Görüş temiz: -90° … +20° (mekanik -90…+30°, yazılım sınırı +15°)
 | bileşenler çakışmıyor | ✅ | temiz |
 | bileşen ↔ kanal boşluğu | ✅ | en yakın: GNSS + pusula 13.5 mm |
 | gövde ↔ kanal boşluğu | ✅ | 3.8 mm ≥ 3 |
-| batarya kuyruktan takılıyor (kapak = kuyruk) | ✅ | hücre merkezi x = -36.7 mm; kapaktan ön uca 94.4 mm (en az 92.2; BMS boşluğu +2.2 mm, en çok +8) |
-| CG yatay ofset | ✅ | (+0.0, +0.3) mm |
-| IMU ↔ CG (EKF2_IMU_POS) | ✅ | (-0, -0, +21) mm |
-| GNSS/pusula ↔ gürültü kaynakları | ✅ | en yakın batarya konnektörü 75 mm ≥ 70 |
+| batarya kuyruktan takılıyor (kapak = kuyruk) | ✅ | hücre merkezi x = -36.8 mm; kapaktan ön uca 94.3 mm (en az 92.2; BMS boşluğu +2.1 mm, en çok +8) |
+| CG yatay ofset | ✅ | (-0.0, +0.3) mm |
+| IMU ↔ CG (EKF2_IMU_POS) | ✅ | (+0, -0, +21) mm |
+| GNSS/pusula ↔ gürültü kaynakları | ✅ | en yakın batarya konnektörü 74 mm ≥ 70 |
 | avuç ayağı pervane düzleminin altında (tam kapalı pervane) | ✅ | 102 mm ≥ 100 (üst + alt ızgara + motor eteği; açık üstte 120) |
 | gimbal sarkmıyor (burun alt çizgisinde, ayağın üstünde) | ✅ | en alçak -31 mm (−90…+30° pitch); burun altı -29, ayak -72 mm |
 | kamera orta hatta, gövde orta yüksekliğinde | ✅ | y = 0; kamera z -9, ağırlık merkezi -1, burun ortası -2 mm |

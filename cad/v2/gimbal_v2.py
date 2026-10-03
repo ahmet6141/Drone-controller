@@ -31,6 +31,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent))
 
+import airframe as A  # noqa: E402  (mass_props: hassas hacim integrali)
 import gimbal_2axis as G  # noqa: E402  (kamera temsili ve yardımcılar)
 import params as P  # noqa: E402
 import v2_params as V  # noqa: E402
@@ -230,9 +231,8 @@ def bulkhead_x(xp: float) -> float:
 
 # --- denge -------------------------------------------------------------------------------------
 def _mass(shape: cq.Workplane, density: float) -> tuple[float, tuple[float, float, float]]:
-    solid = cq.Compound.makeCompound(shape.solids().vals())
-    c = cq.Shape.centerOfMass(solid)
-    return solid.Volume() / 1000.0 * density, (c.x, c.y, c.z)
+    vol, c = A.mass_props(shape)
+    return vol / 1000.0 * density, c
 
 
 def capsule_masses(xp: float) -> list[tuple[str, float, tuple[float, float, float]]]:

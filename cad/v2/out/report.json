@@ -4,47 +4,47 @@
    "part": "top_shell",
    "qty": 1,
    "material": "PC/ABS",
-   "volume_cm3": 47.97,
-   "mass_g": 55.2,
+   "volume_cm3": 48.6,
+   "mass_g": 55.9,
    "proto_material": "PA12 (MJF)",
-   "proto_mass_g": 48.5,
+   "proto_mass_g": 49.1,
    "solids": 1,
    "cg": [
+    0.6,
     0.0,
-    -0.1,
     25.8
    ],
-   "note": "kanopi; yarım kol soketleri ayrım düzlemine açık; kanopi emiş yarıkları dikey (maçasız)"
+   "note": "kanopi; yarım kol soketleri ayrım düzlemine açık; 2K siyah vizör (ToF penceresi + bal peteği çıkış), logo; maçasız"
   },
   {
    "part": "bottom_tub",
    "qty": 1,
    "material": "PC/ABS",
-   "volume_cm3": 52.77,
-   "mass_g": 60.7,
+   "volume_cm3": 53.66,
+   "mass_g": 61.7,
    "proto_material": "PA12 (MJF)",
-   "proto_mass_g": 53.3,
+   "proto_mass_g": 54.2,
    "solids": 1,
    "cg": [
-    2.6,
-    0.0,
-    -31.6
+    2.5,
+    0.3,
+    -31.3
    ],
-   "note": "taşıyıcı: V uçlu kol soketleri, batarya rayları, vida kuleleri; yan yarıklar için 2 kayar maça"
+   "note": "taşıyıcı: V uçlu kol soketleri, batarya rayları, vida kuleleri; havalandırma tabanda (bal peteği) → maçasız"
   },
   {
    "part": "nose_cover",
    "qty": 1,
    "material": "PC/ABS",
-   "volume_cm3": 16.69,
+   "volume_cm3": 16.68,
    "mass_g": 19.2,
    "proto_material": "PA12 (MJF)",
    "proto_mass_g": 16.9,
    "solids": 1,
    "cg": [
-    115.7,
-    -0.0,
-    10.8
+    115.1,
+    -0.6,
+    10.6
    ],
    "note": "burun üst yarısı: alın + yanak üstleri + ağız astarı (2K: dış gövde rengi, astar siyah)"
   },
@@ -52,15 +52,15 @@
    "part": "nose_chin",
    "qty": 1,
    "material": "PC/ABS",
-   "volume_cm3": 19.32,
-   "mass_g": 22.2,
+   "volume_cm3": 19.74,
+   "mass_g": 22.7,
    "proto_material": "PA12 (MJF)",
-   "proto_mass_g": 19.5,
+   "proto_mass_g": 19.9,
    "solids": 1,
    "cg": [
-    99.2,
-    -0.5,
-    -19.3
+    99.1,
+    0.0,
+    -19.4
    ],
    "note": "burun alt yarısı + sönümleyici perdesi; gimbal iki yarının arasına oturur (ayrım = pitch ekseni)"
   },
@@ -75,7 +75,7 @@
    "solids": 1,
    "cg": [
     -22.8,
-    -0.0,
+    0.0,
     11.7
    ],
    "note": "TEK kalıp × 4; U kesit kol + çan ağızlı kanal + bal peteği ızgara + 3 radyal kaburga + motor çanı eteği; göbekten yolluk"
@@ -122,7 +122,7 @@
    "proto_mass_g": 4.0,
    "solids": 1,
    "cg": [
-    0.0,
+    -0.0,
     -0.0,
     -68.8
    ],
@@ -138,8 +138,8 @@
    "proto_mass_g": 3.8,
    "solids": 1,
    "cg": [
-    -0.0,
     0.0,
+    -0.0,
     -50.5
    ],
    "note": "IR geçirgen sensör camı (siyah IR mürekkep maskeli), sensörlere sıfır boşlukla"
@@ -148,15 +148,15 @@
    "part": "battery_shell",
    "qty": 1,
    "material": "PC/ABS",
-   "volume_cm3": 38.2,
-   "mass_g": 43.9,
+   "volume_cm3": 39.52,
+   "mass_g": 45.5,
    "proto_material": "PA12 (MJF)",
-   "proto_mass_g": 38.6,
+   "proto_mass_g": 39.9,
    "solids": 1,
    "cg": [
-    -53.7,
-    0.4,
-    -11.7
+    -54.6,
+    -0.2,
+    -10.4
    ],
    "note": "akıllı batarya kabuğu + kuyruk kapağı (gövde çizgisini tamamlar)"
   }
@@ -205,7 +205,7 @@
    "solids": 1,
    "cg": [
     125.0,
-    -0.0,
+    0.0,
     -8.9
    ],
    "note": "beşik: roll rotoruna bağlı; CM3 kartı ara parçalarla önünde"
@@ -230,21 +230,21 @@
  "comparison": [
   {
    "component": "Üst kabuk (PC/ABS, 2 mm et)",
-   "profile_g": 55,
-   "cad_g": 55.2,
-   "diff_pct": 0.4
+   "profile_g": 56,
+   "cad_g": 55.9,
+   "diff_pct": -0.2
   },
   {
    "component": "Alt kabuk / taşıyıcı (PC/ABS, kaburgalı)",
-   "profile_g": 61,
-   "cad_g": 60.7,
+   "profile_g": 62,
+   "cad_g": 61.7,
    "diff_pct": -0.5
   },
   {
    "component": "Burun kapağı (iki yarım: alın, yanaklar, siyah ağız astarı, sönümleyici perdesi)",
-   "profile_g": 41,
-   "cad_g": 41.4,
-   "diff_pct": 1.0
+   "profile_g": 42,
+   "cad_g": 41.9,
+   "diff_pct": -0.2
   },
   {
    "component": "Kol–kanal modülü (PA6-GF30: kol + motor yuvası + çan ağızlı kanal + alt ızgara + motor çanı eteği)",
@@ -266,9 +266,9 @@
   },
   {
    "component": "Akıllı batarya kabuğu + kilit + konnektör",
-   "profile_g": 54,
-   "cad_g": 54.1,
-   "diff_pct": 0.1
+   "profile_g": 56,
+   "cad_g": 55.7,
+   "diff_pct": -0.6
   },
   {
    "component": "Kendi tasarım 2 eksen fırçasız gimbal (burun ağzında, ortada: dışta pitch, içte roll; sönümlü taşıyıcı) + kamera başlığı",

@@ -45,7 +45,7 @@ python3 -m unittest tests.test_v2 # CadQuery varsa parça testleri de çalışı
 | `v2_params.py` | Gövde kesit istasyonları, burun ağzı ve gimbal ekseni, batarya, kanal, kol, malzemeler, CAD ağırlık merkezleri |
 | `layout_v2.py` | Bileşen yerleşimi, batarya konumu çözümü (CG = motor merkezi), kanal/EMI/IMU/avuç kontrolleri, gimbal görüşü (−90…+30°) |
 | `analysis_v2.py` | Değişken kesitli kol + uç kütlesi (Stodola): dikey/yanal frekans, kesit taraması, düşme |
-| `airframe.py` | Üst kabuk, alt kabuk (taşıyıcı), burun (iki yarım + ağız astarı + sönümleyici perdesi), kol–kanal modülü, avuç ayağı, akıllı batarya |
+| `airframe.py` | Üst kabuk, alt kabuk (taşıyıcı), burun (iki yarım + ağız astarı + sönümleyici perdesi), kol–kanal modülü, avuç ayağı, akıllı batarya (LED göstergeli); yüzey ayrıntıları: bal peteği havalandırma, kanopi vizörü, ayrım çizgileri, logo; hassas kütle/ağırlık merkezi (`mass_props`) |
 | `gimbal_v2.py` | Ön gimbal: dışta pitch (yanaklarda motor + rulman), içte eş eksenli roll; kapsül, U çerçeve, sönümlü taşıyıcı, denge (pitch ekseni = kapsül ağırlık merkezi), süpürme |
 | `build_v2.py` | Montaj, çakışma (kol, batarya, gimbal hareket aralığı ↔ burun/kanallar, pervane, kartlar) ve DFM kuralları, kütle ↔ profil |
 

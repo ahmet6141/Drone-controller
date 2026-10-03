@@ -35,8 +35,8 @@ import v2_params as V  # noqa: E402
 OUT = HERE / "out"
 # parça → (üretim malzemesi, adet, kalıp/üretim notu)
 PRODUCTION = {
-    "top_shell": ("PC/ABS", 1, "kanopi; yarım kol soketleri ayrım düzlemine açık; kanopi emiş yarıkları dikey (maçasız)"),
-    "bottom_tub": ("PC/ABS", 1, "taşıyıcı: V uçlu kol soketleri, batarya rayları, vida kuleleri; yan yarıklar için 2 kayar maça"),
+    "top_shell": ("PC/ABS", 1, "kanopi; yarım kol soketleri ayrım düzlemine açık; 2K siyah vizör (ToF penceresi + bal peteği çıkış), logo; maçasız"),
+    "bottom_tub": ("PC/ABS", 1, "taşıyıcı: V uçlu kol soketleri, batarya rayları, vida kuleleri; havalandırma tabanda (bal peteği) → maçasız"),
     "nose_cover": ("PC/ABS", 1, "burun üst yarısı: alın + yanak üstleri + ağız astarı (2K: dış gövde rengi, astar siyah)"),
     "nose_chin": ("PC/ABS", 1, "burun alt yarısı + sönümleyici perdesi; gimbal iki yarının arasına oturur (ayrım = pitch ekseni)"),
     "arm_duct": ("PA6-GF30", 4, "TEK kalıp × 4; U kesit kol + çan ağızlı kanal + bal peteği ızgara + 3 radyal kaburga + motor çanı eteği; göbekten yolluk"),
@@ -69,7 +69,7 @@ LATCH_MATERIAL = "POM"
 
 
 def volume(wp: cq.Workplane) -> float:
-    return sum(s.Volume() for s in wp.solids().vals())
+    return A.mass_props(wp)[0]
 
 
 def build_parts() -> dict[str, cq.Workplane]:
@@ -82,14 +82,15 @@ def build_parts() -> dict[str, cq.Workplane]:
     bat = A.battery_parts()
     parts["battery_shell"] = bat["battery_shell"]
     parts["battery_latch"] = bat["battery_latch"]
+    parts["battery_gauge"] = bat["battery_gauge"]                  # [(ad, katı)]: LED ışık boruları + düğme (render)
     for name, shape in GV.printed_parts().items():                 # gövde koordinatında (nötr poz)
         parts[name] = shape.translate(V.GIMBAL_POS)
     return parts
 
 
 def center_of_mass(wp: cq.Workplane) -> tuple[float, float, float]:
-    c = cq.Shape.centerOfMass(cq.Compound.makeCompound(wp.solids().vals()))
-    return (round(c.x, 1), round(c.y, 1), round(c.z, 1))
+    c = A.mass_props(wp)[1]
+    return (round(c[0], 1), round(c[1], 1), round(c[2], 1))
 
 
 def mass_rows(parts: dict[str, cq.Workplane], table: dict | None = None) -> list[dict]:
@@ -148,10 +149,11 @@ def pod_sensors() -> list[tuple[str, cq.Workplane]]:
 
 
 def assembly(parts: dict[str, cq.Workplane]) -> list[tuple[str, cq.Workplane]]:
-    items: list[tuple[str, cq.Workplane]] = [(n, parts[n]) for n in ("top_shell", "bottom_tub", "pod",
+    items: list[tuple[str, cq.Workplane]] = [(n, parts[n]) for n in ("bottom_tub", "pod",
                                                                       "pod_tip", "sensor_window", "battery_shell",
                                                                       "battery_latch")]
     items += nose_items(parts)
+    items += parts["battery_gauge"] + [("top_window", A.top_window()), ("logo", A.logo()[1])]
     items += [("arm_duct", m) for m in A.arm_duct_placed(parts["arm_duct"])]
     items += [("top_grille", m) for m in A.arm_duct_placed(parts["top_grille"])]
     for i, (x, y) in enumerate(P.motor_positions()):
@@ -163,15 +165,17 @@ def assembly(parts: dict[str, cq.Workplane]) -> list[tuple[str, cq.Workplane]]:
 
 
 def nose_items(parts: dict[str, cq.Workplane]) -> list[tuple[str, cq.Workplane]]:
-    """Burun yarıları render için iki renkli (2K): dış kabuk gövde renginde, ağız astarı siyah."""
-    liner = A.mouth_liner()
+    """İki renkli (2K) parçalar render için ayrılır: burun yarıları (gövde rengi + siyah ağız astarı) ve üst kabuk
+    (gövde rengi + siyah kanopi vizörü)."""
+    liner, trim = A.mouth_liner(), A.top_trim()
     return [("nose_cover", parts["nose_cover"].cut(liner)), ("nose_chin", parts["nose_chin"].cut(liner)),
-            ("nose_liner", liner)]
+            ("nose_liner", liner), ("top_shell", parts["top_shell"].cut(trim)), ("top_trim", trim)]
 
 
 def _overlap(a: cq.Workplane, b: cq.Workplane) -> float:
+    """Çakışma hacmi (mm³): yalnızca sıfırdan farkı aranır, hızlı (varsayılan) integral yeterli."""
     try:
-        return volume(a.intersect(b))
+        return sum(s.Volume() for s in a.intersect(b).solids().vals())
     except Exception:
         return 0.0
 

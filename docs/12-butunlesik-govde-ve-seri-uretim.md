@@ -23,14 +23,15 @@ Her sayı bir araçla yeniden üretilir:
 
 | Soru | Cevap |
 |---|---|
-| Modelleme iyileştirilebilir mi? | **Evet, iki adımda yapıldı.** Önce v1 parçaları rafine edildi: radyuslar, çan ağızlı koruma halkası, konik direk ayakları, belli tutamak, kabuk, kaburgalı gimbal kolu, titreşim analizi. Sonra tamamen yeni **v2 bütünleşik gövde** tasarlandı (bu belge). Modeller ve render incelemesi tasarım sırasında **15 gerçek sorun** yakaladı (§7) |
+| Modelleme iyileştirilebilir mi? | **Evet, iki adımda yapıldı.** Önce v1 parçaları rafine edildi: radyuslar, çan ağızlı koruma halkası, konik direk ayakları, belli tutamak, kabuk, kaburgalı gimbal kolu, titreşim analizi. Sonra tamamen yeni **v2 bütünleşik gövde** tasarlandı (bu belge). Modeller ve render incelemesi tasarım sırasında **17 gerçek sorun** yakaladı (§7) |
 | Blender'da daha kaliteli ve estetik olur mu? | **Görselde evet, mühendislikte hayır.** Blender bir çokgen ağı (mesh) aracıdır. Kalıpçının istediği STEP (tam B-rep yüzey) Blender'da yoktur; et kalınlığı, kalıp açısı, kütle ve tolerans kontrolü de yoktur. Doğru yol **hibrittir**: geometri CadQuery'de (ölçü ve üretim gerçeği), malzeme, ışık ve render Blender'da. Bu hat kuruldu: CadQuery → GLB → `cad/render_blender.py` (Cycles) (§2) |
-| Bütünleşik gövde daha iyi mi? | **Ürün için evet.** v2 şunlardan oluşur: kalıplanabilir kabuklar (üst, alt, iki yarım burun), **tek kalıptan 4 özdeş kol–kanal modülü**, burnun ortasında sarkmayan ön gimbal, avuç ayağı ve kuyruktan takılan akıllı batarya. Pervaneler üstten ve alttan ≤ 10 mm ızgarayla tam kapalıdır. Avuçta devrilme açısı 14,6° → **27,4°**; ağırlık merkezi yatayda 0,3 mm içinde. Kalkış ağırlığı **1589 g** (v1: 1456 g, +%9); fark akıllı batarya kabuğu, üst ızgaralar, kablo demeti ve ön gimbalın burnundan gelir (§8). İlk uçuş geliştirmesi v1 (hazır FPV gövde) ile sürer; v2 MJF baskıyla paralel prototiplenir (§10) |
+| Bütünleşik gövde daha iyi mi? | **Ürün için evet.** v2 şunlardan oluşur: kalıplanabilir kabuklar (üst, alt, iki yarım burun), **tek kalıptan 4 özdeş kol–kanal modülü**, burnun ortasında sarkmayan ön gimbal, avuç ayağı ve kuyruktan takılan akıllı batarya. Pervaneler üstten ve alttan ≤ 10 mm ızgarayla tam kapalıdır. Avuçta devrilme açısı 14,6° → **27,4°**; ağırlık merkezi yatayda 0,3 mm içinde. Kalkış ağırlığı **1594 g** (v1: 1456 g, +%9); fark akıllı batarya kabuğu, üst ızgaralar, kablo demeti ve ön gimbalın burnundan gelir (§8). İlk uçuş geliştirmesi v1 (hazır FPV gövde) ile sürer; v2 MJF baskıyla paralel prototiplenir (§10) |
 | Kamera ön bölmede olabilir mi? | **Evet, burnun ortasında (§3.2).** Kamera, burnun önündeki siyah astarlı ağızdadır: gövdenin orta hattında, orta yüksekliğinde. Kartı, mercek halkalı ve camlı bir kamera başlığı örter; arkadaki perde elektronik bölmesini kapatır. Görüş −90…+20° arası temiz (yazılım sınırı +15°). Pitch −90…+30° × roll ±30° aralığında çakışma yoktur |
 | Gimbal yatay ve ortada olsa, aşağı sarkmasa daha iyi olmaz mı? | **Evet, öyle yapıldı (§3.2).** Pitch ekseni yanaklar arasında yataydır: motor sağ yanakta, rulman sol yanakta. Roll motoru kameranın tam arkasındadır, kamera kendi ekseni etrafında döner. Ön görünüş simetriktir ve karşı ağırlık gerekmez. Kamera z = −46,8 → **−9 mm**'ye çıktı (ağırlık merkezinin 8 mm altı). Gimbalın en alçak noktası −62 → −31 mm oldu, yani burnun alt çizgisi. Bedeli: +25 g ve hover −0,3 dk. Ayrıca kamera aşağı baktıkça gövde roll'ünün bir kısmını EIS düzeltir |
-| Yerleşim ağırlık merkezine göre planlanabilir mi? | **Evet, kodla.** Her bileşen bir kutu ya da CAD'den gelen ağırlık merkezli bir kütle olarak yerleşir. Batarya konumu, ağırlık merkezini motor merkezine getirecek şekilde **çözülür** (hücre merkezi x = −36,7 mm). Ardından 12 yerleşim kuralı, 3 titreşim/dayanım kontrolü ve 33 CAD kontrolü çalışır; hepsi geçiyor (§4–§6) |
-| Pervanenin üstü de korunup avuç ayağı kısaltılabilir mi? | **Evet (§3.1).** Üst ızgara ve motor çanı eteğiyle pervane her yönden kapalı; ayak 49 → 26 mm kısaldı, gimbal 10 mm yükseldi. Üç sensör sığıyor, ayak ağzından kırpılmadan görüyor ve temas mesafesini ölçebiliyor. Avuçta denge 20° → 27,8°. Bedeli: +57 g ve girişte tahmini %5 itki → hover 19,2 → 16,9 dk (o adımda; gimbal ortaya alındıktan sonra 16,6 dk, §3.2) |
-| Seri üretime uygun mu? | **Tasarım kuralları kodda.** PC/ABS 2,0 mm et, PA6-GF30 1,6–2,2 mm, kaburga ≤ 0,6 × et, ≥ 1° kalıp açısı, maçasız U kesit kol, ayrım düzlemine açık yarım soketler, tek kalıp ×4. Kalıp maliyeti kaba tahminle: alüminyum (pilot) ≈ $63–101 bin, çelik (seri) ≈ $182–306 bin — **teklif alınmalı** (§5) |
+| Gövde daha estetik ve profesyonel olabilir mi? | **Evet (§3.3).** Tek parça okunan açık renk paleti; kaba yarıklar yerine ızgaralarla aynı dilde bal peteği havalandırma (kanopide parlak siyah vizör, tabanda emiş panelleri); köşeleri yuvarlatılmış, pahlı kamera ağzı; parça ayrımlarında eşit ayrım çizgileri; logo, ToF penceresi ve kuyrukta 4 LED'li batarya göstergesi. Yan yarıklar kalktığı için alt kalıpta kayar maça gerekmez. Bu turda hacim hesabındaki bir hata da düzeltildi; tüm kütleler hassas hesaplandı |
+| Yerleşim ağırlık merkezine göre planlanabilir mi? | **Evet, kodla.** Her bileşen bir kutu ya da CAD'den gelen ağırlık merkezli bir kütle olarak yerleşir. Batarya konumu, ağırlık merkezini motor merkezine getirecek şekilde **çözülür** (hücre merkezi x = −36,8 mm). Ardından 12 yerleşim kuralı, 3 titreşim/dayanım kontrolü ve 33 CAD kontrolü çalışır; hepsi geçiyor (§4–§6) |
+| Pervanenin üstü de korunup avuç ayağı kısaltılabilir mi? | **Evet (§3.1).** Üst ızgara ve motor çanı eteğiyle pervane her yönden kapalı; ayak 49 → 26 mm kısaldı, gimbal 10 mm yükseldi. Üç sensör sığıyor, ayak ağzından kırpılmadan görüyor ve temas mesafesini ölçebiliyor. Avuçta denge 20° → 27,8°. Bedeli: +57 g ve girişte tahmini %5 itki → hover 19,2 → 16,9 dk (o adımda; bugün 16,5 dk, §3.2–3.3) |
+| Seri üretime uygun mu? | **Tasarım kuralları kodda.** PC/ABS 2,0 mm et, PA6-GF30 1,6–2,2 mm, kaburga ≤ 0,6 × et, ≥ 1° kalıp açısı, maçasız U kesit kol, ayrım düzlemine açık yarım soketler, tek kalıp ×4. Hiçbir parça yan maça gerektirmez. Kalıp maliyeti kaba tahminle: alüminyum (pilot) ≈ $64–102 bin, çelik (seri) ≈ $183–308 bin — **teklif alınmalı** (§5) |
 
 ## 2. CAD mi, Blender mı? — İkisi, ayrı işler için
 
@@ -69,7 +70,7 @@ Blender modeli "daha kaliteli" yapmaz; ama kalitesini görünür kılar. Ters y�
    - Cycles + OpenImageDenoise;
    - kadrajı kutu köşelerinin izdüşümüyle otomatik ayarlar.
 
-   v2 görünümleri: `hero, front, rear, side, top, under, nose`.
+   v2 görünümleri: `hero, front, rear, side, top, under, nose, tail`.
 
 İlk denemelerde koyu plastikler beyaz görünüyordu; nedeni Blender değil, ışık kurgusuydu. Büyük bir tepe ışığı yukarı bakan tüm yüzeylerde yansıyordu ve pozlama ≈ 4 kat fazlaydı. Işık enerjileri fiziksel olarak (E = P / πd²) hesaplanınca renkler doğru çıktı.
 
@@ -83,14 +84,14 @@ Blender modeli "daha kaliteli" yapmaz; ama kalitesini görünür kılar. Ters y�
 
 | Parça | İşlev | Seri üretim | Prototip | Kütle (CAD) |
 |---|---|---|---|---:|
-| Üst kabuk (kanopi) | Elektronik kapağı; kol yarım soketleri; GNSS ve anten penceresi; emiş yarıkları | PC/ABS enjeksiyon, ince doku | MJF PA12 | 55 g |
-| Alt kabuk (taşıyıcı) | V uçlu kol soketleri, batarya tüneli rayları, 6 vida kulesi; Pi ve ESC tablası; yan havalandırma | PC/ABS enjeksiyon | MJF PA12 | 60 g |
-| Burun (iki yarım) | Alın, yanaklar (içte pitch motoru ve rulman), siyah ağız astarı; alt yarıda sönümleyici perdesi. Ayrım düzlemi pitch ekseni (z = −9) | PC/ABS 1,6 mm, **2K**: dış gövde renginde, astar siyah | MJF PA12 + boya | 19 + 22 g |
+| Üst kabuk (kanopi) | Elektronik kapağı; kol yarım soketleri; GNSS ve anten penceresi; siyah vizör (ToF penceresi + bal peteği çıkış delikleri); logo | PC/ABS enjeksiyon, ince doku; vizör 2K (parlak siyah PC) | MJF PA12 + boya | 56 g |
+| Alt kabuk (taşıyıcı) | V uçlu kol soketleri, batarya tüneli rayları, 6 vida kulesi; Pi ve ESC tablası; tabanda bal peteği havalandırma (maçasız) | PC/ABS enjeksiyon | MJF PA12 | 62 g |
+| Burun (iki yarım) | Alın, yanaklar (içte pitch motoru ve rulman), siyah ağız astarı; alt yarıda sönümleyici perdesi. Ayrım düzlemi pitch ekseni (z = −9) | PC/ABS 1,6 mm, **2K**: dış gövde renginde, astar siyah | MJF PA12 + boya | 19 + 23 g |
 | Kol–kanal modülü ×4 | U kesit kol, motor yuvası, çan ağızlı kanal, alt bal peteği ızgara, 3 radyal kaburga, motor çanı eteği | **PA6-GF30, tek kalıp ×4** | MJF PA12 | 4 × 76,6 g |
 | Üst ızgara ×4 | Pervane üstü parmak koruması; göbekte somun kapağı; 6 ayak + 3 geçme tırnak (pervane değişiminde çıkar); kenarda ≈ 4 mm yan hava girişi | PC, tek kalıp ×4 | MJF PA12 | 4 × 11,2 g |
 | Avuç ayağı + uç + cam | Kısa silindir (Ø74, karından 26 mm); sensör tablası (CM3 Wide, VL53L8CX, MTF-01) IR geçirgen camın arkasında; avuca değen TPU uç; üst kenarı gövdeye oturur | PC/ABS + TPU 95A (2K) + PC cam | MJF PA12 + TPU baskı | 23 + 4 + 4,5 g |
-| Akıllı batarya | Paket kabuğu + kuyruk kapağı (gövde çizgisini tamamlar) + 2 kilit düğmesi | PC/ABS (V-0) + POM | MJF PA12 | 44 g (+ ≈ 10 g konnektör ve BMS) |
-| **Toplam (gövde)** | | | | **584 g** (MJF prototip: 470 g) |
+| Akıllı batarya | Paket kabuğu + kuyruk kapağı (gövde çizgisini tamamlar) + 2 kilit düğmesi | PC/ABS (V-0) + POM | MJF PA12 | 46 g (+ ≈ 10 g konnektör ve BMS) |
+| **Toplam (gövde)** | | | | **588 g** (MJF prototip: 473 g) |
 | Ön gimbal (ayrı tablo, §3.2) | Sönümlü taşıyıcı, pitch çerçevesi, beşik, kamera başlığı + 2 motor, kontrolcü, IMU, sönümleyiciler | PA6-GF30 + PC | MJF PA12 / PA-CF | 85 g |
 
 **Form dili**
@@ -98,7 +99,8 @@ Blender modeli "daha kaliteli" yapmaz; ama kalitesini görünür kılar. Ters y�
 - **Omuzlu kesit.** Alt "şasi" 96–98 mm geniştir; batarya, Pi ve ESC burada, kanal yüksekliğinin altında durur. Üst "kanopi" 50–66 mm geniştir ve kanallar arasındaki koridora sığar. Gövde ↔ kanal halkası boşluğu 3,0 mm'dir (CAD); kanallar gövdeye gömülü görünür (DJI Avata benzeri).
 - **Sürekli yüzey.** Kesitler 10 istasyonda tanımlıdır. Her kesit köşeleri yuvarlatılmış bir 8 köşeli çokgendir. Her köşe yayı ve her kenar, tüm kesitlerde aynı sayıda noktayla örneklenir (96 nokta, alt ortadan başlar). Böylece k. nokta her kesitte aynı özelliğe düşer: loft yüzeyi kıvrılmaz, parlak yüzeyde dalgalı yansıma oluşmaz. Sonuç: y = 0'a göre simetrik, kırıksız yüzey (§7).
 - **Burun ve kuyruk.** Burun gövde renginde bir "yüz"dür: iki yanak, düz bir alın ve ortada siyah astarlı ağız. Kamera ağzın içinde, ortadadır (DJI Neo/Avata benzeri); burun ucu yuvarlatılmıştır ve kamerayı 3 mm geride korur. Kuyrukta batarya kapağı gövde çizgisini tamamlar (Mavic/Air tarzı).
-- **CMF.** Gövde ve burun açık gri, ince dokulu PC/ABS; kanallar, batarya ve avuç ayağı antrasit; ağız astarı ve kamera başlığı saten-mat siyah (ince doku). Güvenlik turuncusu ayak ucunda ve batarya kilidinde kullanılır, böylece avuç noktası uzaktan görünür. Seyir lambaları: sol ön kırmızı, sağ ön yeşil (motor yuvalarının altında), arka beyaz.
+- **CMF (tek parça okunan açık palet, §3.3).** Gövde ve burun beyaz-gri, kol–kanal modülleri bir ton koyu açık gri (ince doku): drone dört siyah halka ile bir gövde değil, tek bir ürün gibi okunur. Üst ızgara, avuç ayağı ve batarya grafit; ağız astarı, kanopi vizörü ve kamera başlığı siyah. Güvenlik turuncusu yalnızca ayak ucunda ve batarya kilidinde kullanılır, böylece avuç noktası uzaktan görünür. Seyir lambaları: sol ön kırmızı, sağ ön yeşil (motor yuvalarının altında), arka beyaz.
+- **Ayrım çizgileri.** Parça ayrımları (üst/alt kabuk z = −4, burun yarıları z = −9, burun ve batarya ek yerleri) 0,8 × 0,4 mm'lik eşit kanallardır: kalıp ayrımı rastgele bir çizgi değil, gövdeyi saran bilinçli bir tasarım çizgisi olur.
 
 **Kanal (pervane koruması)**
 
@@ -193,7 +195,7 @@ Kamera artık burnun önündeki ağızdadır: gövdenin orta hattında ve orta y
 | Roll ekseni | kameranın 21 mm yanında (asimetrik) | optik eksen (simetrik) |
 | Görüş (temiz) | −90…+25° | −90…+20° (yazılım sınırı +15°) |
 | Burun / gimbal | 25 g / 79 g | 41 g / 85 g |
-| Kalkış ağırlığı / hover | 1564 g / 16,9 dk | 1589 g / 16,6 dk |
+| Kalkış ağırlığı / hover | 1564 g / 16,9 dk | 1589 g / 16,6 dk (o adımda; hassas kütlelerle 1594 g / 16,5 dk, §3.3) |
 | Avuçta devrilme açısı | 27,8° | 27,4° |
 
 **Neden eski gimbalı yukarı taşımak yetmedi?** v1 gimbalında roll motoru kameranın arkasındaydı ama dengeyi
@@ -248,14 +250,40 @@ yüksekliğinin 7 mm, ağırlık merkezinin 8 mm altıdır; eski konumda kamera 
   ise yalnızca dijital olarak düzeltilir. Mekanik roll gerekmiyorsa daha hafif ve daha yüksek bir kamera konumu
   sağlar.
 
+### 3.3 Estetik ve profesyonel ayrıntılar
+
+Soru: *"Gövde tasarımını optimize et, daha estetik ve profesyonel bir tasarım olsun."* Mühendislikten ödün
+verilmedi: tüm yerleşim, titreşim ve CAD kontrolleri geçiyor. İyileştirmeler beş başlıkta toplandı:
+
+| | Önce | Şimdi | Neden |
+|---|---|---|---|
+| Renk–malzeme (CMF) | Beyaz gövde + dört siyah halka | Tek parça okunan açık palet: beyaz-gri gövde, bir ton koyu açık gri kanallar, grafit ızgara/ayak/batarya, siyah vurgular | Göz gövdeyi ve halkaları tek ürün olarak görür. Siyah yalnızca işlev bildirir: kamera, sensör, ızgara |
+| Havalandırma | Kanopide 5, yanlarda 12 düz yarık ("radyatör" görünümü); alt kalıpta 2 kayar maça | Kanopide siyah parlak vizör içinde bal peteği çıkış delikleri ve ToF penceresi; tabanda iki çukur bal peteği emiş paneli | Izgaralarla aynı tasarım dili. Yanlar temiz kalır. Kalıp maçasızdır (çelik alt kabuk kalıbı ≈ $4–6 bin ucuzlar) |
+| Kamera ağzı | Keskin dikdörtgen kesim | Üst köşeleri R4, kenarı pahlı (kalıplanmış dudak) | Işık kenarda yumuşak kırılır; ağız kesilmiş değil, kalıplanmış görünür |
+| Ayrım çizgileri | Görünmez ya da rastgele ek yerleri | 0,8 × 0,4 mm eşit kanallar (gövde, burun, batarya) | Ek yeri farkları gölgede kalır ve gövdeyi saran bir tasarım çizgisi oluşur |
+| Ürün ayrıntıları | — | Kanopide "DC7" (çukur + tampon baskı), kuyrukta 4 LED'li yakıt göstergesi ve düğme, yukarı bakan ToF için cam pencere | Ürün tamamlanmış görünür; akıllı batarya gerçek işlevini gösterir |
+
+| Üstten: vizör, logo, tek parça palet | Kuyruk: akıllı batarya göstergesi |
+|---|---|
+| ![v2 üstten](../cad/v2/out/render/top.jpg) | ![v2 kuyruk](../cad/v2/out/render/tail.jpg) |
+
+- **Vizör ve pencere:** yukarı bakan VL53L1X, vizördeki 9 mm'lik IR geçirgen camın altındadır; bal peteği
+  delikleri (3,2 mm hücre, 1,2 mm kaburga) Pi bölmesinin sıcak havasını kanopiden atar. Hava tabandaki iki
+  panelden girer (baca etkisi).
+- **Kalıp:** tüm delikler dikeydir; üst kabuk +z, alt kabuk −z yönünde çıkar. 2K vizör ve ağız astarı aynı
+  kalıpta ikinci enjeksiyondur (boya ve yapıştırma yok).
+- **Kütle:** görsel değişikliklerin toplam etkisi 1 g'ın altındadır.
+- **Ölçüm düzeltmesi:** çalışma sırasında hacim integralinin ince kabuklarda %1–7 hata verdiği ortaya çıktı
+  (§7, #16). Tüm kütle ve ağırlık merkezleri hassas integralle yeniden hesaplandı, profil buna göre güncellendi.
+
 ## 4. Ağırlık merkezi odaklı yerleşim
 
 ![v2 yandan](../cad/v2/out/render/side.jpg)
 
 | Bileşen | Konum (x, z) mm | Kütle | Gerekçe |
 |---|---|---:|---|
-| Batarya (6S1P 21700) | x = −36,7 (çözülen), z −34…+12 | 451 g | En ağır kütle; CG'yi motor merkezine getiren konum çözülür. Kuyruktan takılır; kapağı gövdenin kuyruğudur |
-| Batarya kabuğu | Kapak kuyrukta (sabit), paket kabuğu boyunca, konnektör + BMS ön uçta | 54 g | Kabuk üç kütleye ayrılarak modellenir (kapak, paket kabuğu, ön uç) |
+| Batarya (6S1P 21700) | x = −36,8 (çözülen), z −34…+12 | 451 g | En ağır kütle; CG'yi motor merkezine getiren konum çözülür. Kuyruktan takılır; kapağı gövdenin kuyruğudur |
+| Batarya kabuğu | Kapak kuyrukta (sabit), paket kabuğu boyunca, konnektör + BMS ön uçta | 56 g | Kabuk üç kütleye ayrılarak modellenir (kapak, paket kabuğu, ön uç) |
 | FC (IMU) | (0, +20) | 7,5 g | CG'nin hemen üstünde: IMU ofseti yalnızca düşeyde (+21 mm) |
 | ESC (4'ü 1 arada) | (26, −1) | 13,8 g | Merkezde: 4 motora eşit kablo boyu; kanopi emişinden hava alır |
 | Pi 5 + AI HAT+ 2 | (36, −24), 90° döndürülmüş | 90 g | Ön alt şasi: gimbal CSI kablosu kısa, yan havalandırma yarıklarının önünde |
@@ -266,9 +294,9 @@ yüksekliğinin 7 mm, ağırlık merkezinin 8 mm altıdır; eski konumda kamera 
 | Gimbal (taşıyıcı, motorlar, kapsül) + kamera | (113, −9) / (129,4, −9) | 75 + 4 g | Burnun ortasındaki ağızda; pitch ekseni kapsülün ağırlık merkezinde (§3.2) |
 | Gimbal kontrolcüsü | (10, +30,5), FC'nin üstünde | 10 g | Ağır burnu dengeler (ağırlık merkezine yakın); GNSS'ten 77 mm |
 | Avuç ayağı sensörleri | (0, −50) | 9,5 g | CG'nin tam altında: avuç = dönme ekseni |
-| Gövde parçaları | CAD ağırlık merkezleri ([`v2_params.PART_CG`](../cad/v2/v2_params.py)) | 584 g | Test, CAD ile ±3 mm uyumu doğrular |
+| Gövde parçaları | CAD ağırlık merkezleri ([`v2_params.PART_CG`](../cad/v2/v2_params.py)) | 588 g | Test, CAD ile ±3 mm uyumu doğrular |
 
-**Sonuç:** ağırlık merkezi (0,0, +0,3, −0,7) mm'dedir, yani pervane düzleminin 31 mm altında. Avuçta devrilme açısı **27,4°**'dir (v1: 14,6°); motorlar durduktan sonra ayak avuçta çok daha kararlı durur. Gimbal yükselince ağırlık merkezi 1,2 mm yukarı çıktı; kamera artık ağırlık merkezinin yalnızca 8 mm altındadır.
+**Sonuç:** ağırlık merkezi (0,0, +0,3, −0,8) mm'dedir, yani pervane düzleminin 31 mm altında. Avuçta devrilme açısı **27,4°**'dir (v1: 14,6°); motorlar durduktan sonra ayak avuçta çok daha kararlı durur. Gimbal yükselince ağırlık merkezi 1,2 mm yukarı çıktı; kamera artık ağırlık merkezinin yalnızca 8 mm altındadır.
 
 **EKF montaj ofsetleri** — ilk değerler; montajdan sonra ölçülerek güncellenir ([07](07-hover-ayar-rehberi.md)). PX4 gövde ekseni FRD'dir (x ileri, y sağ, z aşağı):
 
@@ -287,7 +315,9 @@ yüksekliğinin 7 mm, ağırlık merkezinin 8 mm altıdır; eski konumda kamera 
 | Et kalınlığı | PC/ABS 2,0 mm (burun 1,6; ağız astarı ve perde 1,2); PA6-GF30: kol 2,2, kanal 1,6, gimbal parçaları 3,0 mm | 1,5–2,5 mm aralığı dolum ile çöküntü arasındaki dengedir |
 | Kaburga | ≤ 0,6 × et (1,2 / 1,3 mm) | Yüzeyde çöküntü izi (sink mark) oluşmaz |
 | Kalıp açısı | ≥ 1° (kanal iç duvarı 1,5°) | Parça kalıptan çıkar |
-| Alttan kesik yok | Kol U kesit (altı açık); soketler ayrım düzlemine açık; kanopi yarıkları dikey | Yan maça gerekmez. Tek istisna: alt kabuktaki yan havalandırma yarıkları için 2 kayar maça (yarıklar tabana alınırsa kalkar) |
+| Alttan kesik yok | Kol U kesit (altı açık); soketler ayrım düzlemine açık; havalandırma delikleri dikey (kanopide ve tabanda) | Hiçbir parçada yan maça gerekmez. Eski yan yarıklar (2 kayar maça) tabana taşındı (§3.3) |
+| İki renkli (2K) parçalar | Burun yarıları: gövde rengi + siyah ağız astarı; üst kabuk: gövde rengi + siyah parlak vizör | İkinci enjeksiyon aynı kalıpta (döner tabla); boya ve yapıştırma yok |
+| Ayrım çizgisi | 0,8 × 0,4 mm kanal, her iki kalıp yarısında pah | Ek yeri farkı (boşluk, kademe) kanalın gölgesinde kalır; görünüm parçadan parçaya tutarlı olur |
 | Ortak kalıp | 4 kol–kanal modülü özdeş (C4 simetri) | Tek kalıp. V uçlu kol kökünün yüzleri her konumda gövde eksenlerine paraleldir: arkada batarya tüneline, önde Pi'ye |
 | Ayrım düzlemi | Gövde z = −4 mm, kol köklerinin içinden; burun z = −9 mm (pitch ekseni) | Kollar iki kabuk arasında sıkışır; vidalar alttan, görünmez yüzeydedir. Gimbal burnun iki yarısı arasına oturur: motor ve rulman delikleri ayrım düzleminde ikiye bölünür |
 | Boşluklar | Kol kökü 0,3 mm/yüz, batarya tüneli 0,6 mm, gimbal taşıyıcısı ↔ burun ≥ 1,5 mm, kapsül ↔ ağız ≥ 2 mm | Montaj payı ve sönümleyici yolu. CAD'de çakışma 0 mm³: kol ↔ gövde, batarya ↔ gövde ve kollar, kartlar ↔ kabuklar, gimbal kapsülü (pitch −90…+30° × roll ±30°) ↔ burun, taşıyıcı ve kanallar |
@@ -298,15 +328,15 @@ yüksekliğinin 7 mm, ağırlık merkezinin 8 mm altıdır; eski konumda kamera 
 
 | Parça | Alüminyum kalıp (EVT/DVT, ≈ 1–10 bin baskı) | Çelik kalıp (seri, ≥ 300 bin baskı) | Not |
 |---|---:|---:|---|
-| Üst kabuk | $8–12 bin | $25–40 bin | Tekstürlü yüzey |
-| Alt kabuk | $10–16 bin | $30–50 bin | 2 kayar maça |
+| Üst kabuk | $10–15 bin | $30–48 bin | Tekstürlü yüzey; 2K vizör |
+| Alt kabuk | $9–14 bin | $26–44 bin | Maçasız (havalandırma tabanda) |
 | Burun (2 yarım) | $10–16 bin | $30–48 bin | 2K (gövde rengi + siyah astar), iki kalıp |
 | Gimbal parçaları (taşıyıcı, çerçeve, beşik, kamera başlığı) | $6–10 bin | $16–28 bin | Küçük parçalar, aile kalıbı |
 | Kol–kanal modülü | $9–15 bin | $25–45 bin | İnce bal peteği; 1 kalıp ×4 parça |
 | Avuç ayağı + TPU uç + sensör camı | $6–10 bin | $18–30 bin | 2K enjeksiyon (veya ayrı TPU parça); cam hazır kesim |
 | Üst ızgara | $6–10 bin | $18–30 bin | İnce bal peteği (1,0 mm kaburga), 1 kalıp ×4 parça |
-| Batarya kabuğu + kapak + kilit | $8–12 bin | $20–35 bin | Kabuk iki parça, ultrasonik kaynak |
-| **Toplam** | **≈ $63–101 bin** | **≈ $182–306 bin** | |
+| Batarya kabuğu + kapak + kilit | $8–12 bin | $20–35 bin | Kabuk iki parça, ultrasonik kaynak; gösterge ışık boruları |
+| **Toplam** | **≈ $64–102 bin** | **≈ $183–308 bin** | |
 
 **Prototip seti:** MJF PA12 ile ≈ 465 cm³, kabaca **$270** (serviste değişir; profilde tahmini fiyat). PA12 hafiftir (1,01 g/cm³), bu yüzden prototip gövde seti seri üretimden ≈ 115 g hafif çıkar (470 ↔ 584 g). Uçuş testlerinde bu fark balastla telafi edilir.
 
@@ -372,14 +402,16 @@ Her biri bir kontrolle bulundu ve düzeltildi. Düzeltmeler artık kalıcı kont
 | 13 | Yükselen yanak omuzları ön kanal halkasının alt kenarına 1,4 mm yaklaştı | CAD mesafe kontrolü (≥ 2 mm) | Pitch ekseni z = −8 → −9, omuzlar 1 mm aşağı: 2,7 mm |
 | 14 | Burun ağırlaşınca (25 → 49 g) batarya dengede kalmak için kuyruktan 1,7 mm taşıyordu | Yerleşim kuralı (batarya kuyruktan takılıyor) | Burun eti 1,6 mm, astar 1,2 mm, perde 1,2 mm + pullar (41 g); gimbal kontrolcüsü FC'nin üstüne alındı: kuyruk payı +2,2 mm |
 | 15 | Batarya geri kayınca sağ batarya rayı bir ucunda tabandan ayrıldı (alt kabuk 2 katı) | Tek katı kontrolü | Raylar tüm boyunca en alçak tabana göre kurulur ve kabuk etine 0,3 mm gömülür |
+| 16 | CadQuery'nin varsayılan hacim integrali spline loft'lu ince kabuklarda %1–7 hata veriyordu (kuyruk kapağında %6); simetrik alt kabuğun ağırlık merkezini 2 mm yana koyuyordu | Bir kesim eklenince batarya kabuğunun hacmi **arttı** (fiziksel olarak imkânsız); üç yöntemle karşılaştırma (integral, birleşim hesabı, ağ hacmi) | Uyarlamalı integral (göreli hassasiyet 10⁻⁶): tüm kütle ve ağırlık merkezleri yeniden hesaplandı, profil güncellendi (kalkış ağırlığı +5 g) |
+| 17 | Yüzey çukurları ve ayrım çizgileri için "dış zar" (loft − iç loft) işlemi uç yüzler çakışınca ince zar yerine tüm hacmi döndürdü; kesimler parçaları dilimledi (2–6 katı) | Tek katı kontrolü + zar hacmi (28 yerine 1508 cm³) | İç loft uçlardan kırpılır |
 
 ## 8. v1 ↔ v2
 
 | | v1 (FPV gövde + baskı parçalar) | v2 (bütünleşik) |
 |---|---:|---:|
-| Kalkış ağırlığı | 1456 g | 1589 g |
-| Hover süresi | 20,1 dk | 16,6 dk (üst ızgarasız uzun ayakla ≈ 19 dk) |
-| T/W (batarya sınırlı) | 2,77 | 2,40 |
+| Kalkış ağırlığı | 1456 g | 1594 g |
+| Hover süresi | 20,1 dk | 16,5 dk (üst ızgarasız uzun ayakla ≈ 19 dk) |
+| T/W (batarya sınırlı) | 2,77 | 2,39 |
 | Hava aracı maliyeti (prototip) | $1.488 | $1.570 |
 | Pervane koruması | Baskı halka + alt ağ (ayrı parçalar), üstü açık | Kanal + alt ve üst ızgara + motor çanı eteği: her yönden kapalı |
 | Avuçta devrilme açısı | 14,6° | **27,4°** |
@@ -389,12 +421,12 @@ Her biri bir kontrolle bulundu ve düzeltildi. Düzeltmeler artık kalıcı kont
 | Üretim | Hazır gövde + 3B baskı (el işçiliği) | 9 kalıp, vidalı montaj (seri) |
 | Değişiklik esnekliği | Yüksek | Kalıptan sonra düşük → tasarım EVT/DVT'de dondurulur |
 
-**Kütle notu.** v2'nin kabukları ve kol–kanal modülleri (465 g), v1'in gövde, korumalar ve üst plakasıyla (440 g) aynı sınıftadır. 133 g'lık farkın kaynağı:
+**Kütle notu.** v2'nin kabukları ve kol–kanal modülleri (468 g), v1'in gövde, korumalar ve üst plakasıyla (440 g) aynı sınıftadır. 138 g'lık farkın kaynağı:
 
-- akıllı batarya kabuğu: +54 g (v1'de yok);
+- akıllı batarya kabuğu: +56 g (v1'de yok);
 - üst ızgaralar: +44 g (v1'de üst koruma yok);
 - ayrı kablo demeti: +40 g;
-- kabuklar: +25 g (ön gimbalı taşıyan iki yarım burun dahil);
+- kabuklar: +28 g (ön gimbalı taşıyan iki yarım burun dahil);
 - buna karşılık GNSS direği (−22 g) ve kısa ayak (−8 g). Gimbal iki tasarımda da 85 g'dır.
 
 Kol, titreşim nedeniyle büyütüldü.

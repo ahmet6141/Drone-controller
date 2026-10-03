@@ -69,6 +69,19 @@ GIMBAL_CG = (113.0, 7.3, -9.0)                   # gimbal donanımı (kamera ve 
 # yakın (burun ağırlaştı) ve GNSS'ten ≥ 70 mm uzak. (x, y, z) merkez ve (lx, ly, lz) ölçü, mm
 GIMBAL_CTRL = {"g": 10.0, "center": (10.0, 0.0, 30.5), "size": (40.0, 30.0, 3.0)}
 
+# --- Yüzey ayrıntıları (estetik + işlev, docs/12 §3.3) ------------------------------------------
+MOUTH_CORNER_R = 4.0                             # ağzın üst köşeleri yuvarlak (kapsül süpürmesinin dışında)
+MOUTH_RIM = 1.5                                  # ağız kenarında pah (kalıplanmış dudak); üstte 0,6 ×
+SHUT_LINE = (0.8, 0.4)                           # ayrım çizgisi kanalı (genişlik, derinlik): parça ayrımları tasarım çizgisi
+VENT_HEX = (3.2, 1.2)                            # havalandırma bal peteği: hücre (düzlükler arası), kaburga — ızgara dili
+VENT_RECESS = 0.6                                # havalandırma panellerinin çukuru
+# Panel: (merkez x, merkez y, boy x, en y, köşe yarıçapı). Dikey delikler → maçasız (üst kalıp +z, alt kalıp −z)
+TOP_VENT = (59.5, 0.0, 33.0, 20.0, 7.0)          # kanopi: önde ToF penceresi (yukarı bakan VL53L1X), arkada bal peteği
+TOF_WINDOW = (50.0, 9.0)                         # x, çap (IR geçirgen cam)
+BOTTOM_VENTS = ((52.0, 19.0, 22.0, 16.0, 6.0), (52.0, -19.0, 22.0, 16.0, 6.0))   # taban: Pi bölmesi emişi
+LOGO = {"text": "DC7", "x": -34.0, "size": 9.0, "depth": 0.4}                      # kanopi üstü, tampon baskı dolgulu
+BATTERY_GAUGE = {"z": 0.0, "pitch": 6.0, "led_d": 2.2, "button_z": -10.0, "button_d": 7.0, "lit": 3}
+
 # --- Batarya (6S1P 21700, hücreler x yönünde, 3 × 2 dizilim) --------------------------------
 CELL_D, CELL_L = 21.7, 70.2
 PACK_WALL = 1.2                                  # paket kabuğu (hücreler + BMS içte)
@@ -121,7 +134,7 @@ POD_MIN_DROP_ENCLOSED = 100.0
 POD_SENSORS = {"CM3 Wide": ((0.0, 0.0), 51.0), "VL53L8CX": ((0.0, 18.0), 32.5), "MTF-01": ((-5.0, -19.0), 21.0)}
 
 # --- CAD ağırlık merkezleri (cad/v2/build_v2.py; tests/test_v2.py ±3 mm ile doğrular), mm ----------
-PART_CG = {"top_shell": (0.0, -0.1, 25.8), "bottom_tub": (2.6, 0.0, -31.6), "nose_cover": (106.9, -0.3, -5.3),
+PART_CG = {"top_shell": (0.6, 0.0, 25.8), "bottom_tub": (2.5, 0.3, -31.3), "nose_cover": (106.4, -0.3, -5.7),
            "pod": (-0.2, 0.1, -53.8)}                      # nose_cover: iki burun yarısının ortak ağırlık merkezi
 ARM_DUCT_CG = (-22.8, 11.7)                      # kol–kanal modülü: motor ekseninden kol yönünde (yerel x), z
 

@@ -24,17 +24,17 @@ limits:
 
 components:
   - {name: "Üst kabuk (PC/ABS, 2 mm et)", category: gövde, mass_g: 55, price_usd: 35, notes: "CAD; prototip MJF fiyatı tahmini"}
-  - {name: "Alt kabuk / taşıyıcı (PC/ABS, kaburgalı)", category: gövde, mass_g: 60, price_usd: 45, notes: "CAD; prototip MJF fiyatı tahmini"}
-  - {name: "Burun kapağı (gimbal başlığı + arka perde)", category: gövde, mass_g: 25, price_usd: 20, notes: "CAD; prototip MJF fiyatı tahmini"}
+  - {name: "Alt kabuk / taşıyıcı (PC/ABS, kaburgalı)", category: gövde, mass_g: 61, price_usd: 45, notes: "CAD; prototip MJF fiyatı tahmini"}
+  - {name: "Burun kapağı (iki yarım: alın, yanaklar, siyah ağız astarı, sönümleyici perdesi)", category: gövde, mass_g: 41, price_usd: 28, notes: "CAD; seri üretimde 2K (gövde rengi + siyah astar); prototip MJF fiyatı tahmini"}
   - {name: "Kol–kanal modülü (PA6-GF30: kol + motor yuvası + çan ağızlı kanal + alt ızgara + motor çanı eteği)", category: gövde, mass_g: 77, qty: 4, price_usd: 25, notes: "CAD; tek kalıp ×4; prototip fiyatı tahmini"}
-  - {name: "Avuç ayağı (PC/ABS + TPU uç + IR geçirgen sensör camı)", category: gövde, mass_g: 31, price_usd: 18, notes: "CAD; kısa ve geniş ayak (taban −72 mm); prototip fiyatı tahmini"}
+  - {name: "Avuç ayağı (PC/ABS + TPU uç + IR geçirgen sensör camı)", category: gövde, mass_g: 32, price_usd: 18, notes: "CAD; kısa ve geniş ayak (taban −72 mm); prototip fiyatı tahmini"}
   - {name: "Üst ızgara (PC, çıkarılabilir; pervane üstü parmak koruması)", category: gövde, mass_g: 11, qty: 4, price_usd: 6, notes: "CAD; tek kalıp ×4; prototip MJF fiyatı tahmini"}
-  - {name: "Akıllı batarya kabuğu + kilit + konnektör", category: gövde, mass_g: 53, price_usd: 20, notes: "CAD kabuk + POM kilit + ≈ 10 g konnektör ve BMS kartı (tahmini)"}
+  - {name: "Akıllı batarya kabuğu + kilit + konnektör", category: gövde, mass_g: 54, price_usd: 20, notes: "CAD kabuk + POM kilit + ≈ 10 g konnektör ve BMS kartı (tahmini)"}
   - {name: "Kablolama ve bağlantılar (iç kablo demeti, konnektörler, vidalar)", category: kablolama, mass_g: 40, price_usd: 40, notes: "tahmini"}
   - {name: "ARK FPV uçuş kontrolcüsü (H743, IIM-42653 + ısıtıcı)", category: aviyonik, mass_g: 7.5, power_w: 1.5, price_usd: 195}
   - {name: "Raspberry Pi 5 8GB + Active Cooler + AI HAT+ 2 (Hailo-10H)", category: companion, mass_g: 90, power_w: 10, price_usd: 380, notes: "kütle ve güç tahmini"}
   - {name: "Raspberry Pi Camera Module 3 (IMX708, 66° yatay) — gimbal", category: kamera, mass_g: 4, power_w: 0.3, price_usd: 29.25, notes: "PiShop, 10/2026"}
-  - {name: "Kendi tasarım 2 eksen fırçasız gimbal (burun başlığının altında sönümleyicilerle; taşıyıcı kol yok) + kamera başlığı", category: kamera, mass_g: 79, power_w: 2.5, price_usd: 92, notes: "cad/ raporu: basılan 19,7 g + 2 motor + STorM32 + IMU + sönümleyiciler; kamera başlığı (PC kapak + mercek halkası + cam) 2,2 g"}
+  - {name: "Kendi tasarım 2 eksen fırçasız gimbal (burun ağzında, ortada: dışta pitch, içte roll; sönümlü taşıyıcı) + kamera başlığı", category: kamera, mass_g: 85, power_w: 2.5, price_usd: 96, notes: "cad/v2/gimbal_v2.py: PA6-GF30 taşıyıcı + çerçeve + beşik 23,7 g, 2 motor, STorM32 sınıfı kontrolcü, IMU, 4 sönümleyici, pim + 685 rulman, kamera başlığı 2,2 g"}
   - {name: "Raspberry Pi Camera Module 3 Wide (102° yatay) — aşağı/avuç", category: kamera, mass_g: 4, power_w: 0.3, price_usd: 38.5}
   - {name: "VL53L8CX 8×8 ToF (Pololu kartı) — aşağı", category: sensör, mass_g: 1, power_w: 0.5, price_usd: 25}
   - {name: "VL53L1X ToF — yukarı (baş üstü boşluk)", category: sensör, mass_g: 1, power_w: 0.1, price_usd: 15, notes: "fiyat tahmini"}

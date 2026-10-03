@@ -26,7 +26,7 @@ import airframe as A  # noqa: E402
 import analysis_v2 as AN  # noqa: E402
 import budget_calc  # noqa: E402
 import build as B  # noqa: E402  (v1 çizici ve GLB yardımcıları)
-import gimbal_2axis as G  # noqa: E402
+import gimbal_v2 as GV  # noqa: E402
 import layout_v2 as K  # noqa: E402
 import params as P  # noqa: E402
 import standins as S  # noqa: E402
@@ -37,7 +37,8 @@ OUT = HERE / "out"
 PRODUCTION = {
     "top_shell": ("PC/ABS", 1, "kanopi; yarım kol soketleri ayrım düzlemine açık; kanopi emiş yarıkları dikey (maçasız)"),
     "bottom_tub": ("PC/ABS", 1, "taşıyıcı: V uçlu kol soketleri, batarya rayları, vida kuleleri; yan yarıklar için 2 kayar maça"),
-    "nose_cover": ("PC/ABS", 1, "saten-mat siyah; gimbal başlığı (tavan) + arka perde, yanaksız: gimbal altta açıkta"),
+    "nose_cover": ("PC/ABS", 1, "burun üst yarısı: alın + yanak üstleri + ağız astarı (2K: dış gövde rengi, astar siyah)"),
+    "nose_chin": ("PC/ABS", 1, "burun alt yarısı + sönümleyici perdesi; gimbal iki yarının arasına oturur (ayrım = pitch ekseni)"),
     "arm_duct": ("PA6-GF30", 4, "TEK kalıp × 4; U kesit kol + çan ağızlı kanal + bal peteği ızgara + 3 radyal kaburga + motor çanı eteği; göbekten yolluk"),
     "top_grille": ("PC", 4, "çıkarılabilir üst ızgara: 6 ayak + 3 geçme tırnak; pervane değişiminde çıkar; tek kalıp × 4"),
     "pod": ("PC/ABS", 1, f"avuç ayağı (kısa, Ø{2 * V.POD_BOTTOM_R:.0f}); sensör tablası tabandan {V.SENSOR_RECESS:.0f} mm, IR camlı"),
@@ -45,14 +46,24 @@ PRODUCTION = {
     "sensor_window": ("PC", 1, "IR geçirgen sensör camı (siyah IR mürekkep maskeli), sensörlere sıfır boşlukla"),
     "battery_shell": ("PC/ABS", 1, "akıllı batarya kabuğu + kuyruk kapağı (gövde çizgisini tamamlar)"),
 }
+# Gimbal parçaları (gimbal_v2): gövde toplamından ayrı raporlanır, profilde "fırçasız gimbal" kalemindedir
+GIMBAL_PRODUCTION = {
+    "gimbal_bracket": (GV.MATERIAL, 1, "sönümlü U taşıyıcı: arka plaka 4 sönümleyiciyle perdeye; yan plakalar yanakların içinde"),
+    "gimbal_frame": (GV.MATERIAL, 1, "pitch çerçevesi: roll motoru arka plakada; kollar pitch eksenine (+y motor, −y pim)"),
+    "gimbal_cradle": (GV.MATERIAL, 1, "beşik: roll rotoruna bağlı; CM3 kartı ara parçalarla önünde"),
+    "camera_housing": ("PC", 1, "kamera başlığı: öne daralan kapak (1 mm); mercek halkası alüminyum, koruyucu cam"),
+}
 PROTOTYPE_MATERIAL = {"TPU": "TPU"}                 # diğerleri MJF PA12 ile basılır
 # Varyant profilindeki bileşen adı → (CAD parçaları, CAD dışı ek kütle g)
 VARIANT_MAP = {
-    "Üst kabuk": (["top_shell"], 0.0), "Alt kabuk": (["bottom_tub"], 0.0), "Burun kapağı": (["nose_cover"], 0.0),
+    "Üst kabuk": (["top_shell"], 0.0), "Alt kabuk": (["bottom_tub"], 0.0),
+    "Burun kapağı": (["nose_cover", "nose_chin"], 0.0),
     "Kol–kanal modülü": (["arm_duct"], 0.0), "Avuç ayağı": (["pod", "pod_tip", "sensor_window"], 0.0),
     "Üst ızgara": (["top_grille"], 0.0),
     # kabuk + kilit düğmeleri (POM) + konnektör, BMS/yakıt göstergesi kartı, yaylar ≈ 10 g
     "Akıllı batarya kabuğu": (["battery_shell", "battery_latch"], 10.0),
+    # basılan/kalıplanan parçalar + 2 motor, IMU, kontrolcü, sönümleyiciler, pim + rulman, mercek halkası ve cam
+    "fırçasız gimbal": (list(GIMBAL_PRODUCTION), None),
 }
 LATCH_MATERIAL = "POM"
 
@@ -71,6 +82,8 @@ def build_parts() -> dict[str, cq.Workplane]:
     bat = A.battery_parts()
     parts["battery_shell"] = bat["battery_shell"]
     parts["battery_latch"] = bat["battery_latch"]
+    for name, shape in GV.printed_parts().items():                 # gövde koordinatında (nötr poz)
+        parts[name] = shape.translate(V.GIMBAL_POS)
     return parts
 
 
@@ -79,9 +92,9 @@ def center_of_mass(wp: cq.Workplane) -> tuple[float, float, float]:
     return (round(c.x, 1), round(c.y, 1), round(c.z, 1))
 
 
-def mass_rows(parts: dict[str, cq.Workplane]) -> list[dict]:
+def mass_rows(parts: dict[str, cq.Workplane], table: dict | None = None) -> list[dict]:
     rows = []
-    for name, (mat, qty, note) in PRODUCTION.items():
+    for name, (mat, qty, note) in (PRODUCTION if table is None else table).items():
         v = volume(parts[name]) / 1000.0
         proto = PROTOTYPE_MATERIAL.get(mat, "PA12 (MJF)")
         rows.append({"part": name, "qty": qty, "material": mat, "volume_cm3": round(v, 2),
@@ -91,33 +104,10 @@ def mass_rows(parts: dict[str, cq.Workplane]) -> list[dict]:
     return rows
 
 
-def _with_gimbal_pos(fn):
-    old = P.GIMBAL_POS
-    P.GIMBAL_POS = V.GIMBAL_POS
-    try:
-        return fn()
-    finally:
-        P.GIMBAL_POS = old
-
-
-def gimbal_items(y_roll: float) -> list[tuple[str, cq.Workplane]]:
-    """v1 gimbal parçaları burun bölmesinde (taşıyıcı kol yok; sönümleyiciler bölme tavanına)."""
-    items = _with_gimbal_pos(lambda: [(n, s) for n, s in G.placed(y_roll) if n.startswith("gimbal_")
-                                      and n != "gimbal_boom"])
-    details = _with_gimbal_pos(lambda: S.gimbal_details(y_roll, mount_z=V.GIMBAL_MOUNT_Z))
-    items += [(n, s) for n, s in details if n != "damper"]
-    items += [(n, w.translate(V.GIMBAL_POS)) for n, w in A.camera_head().items()]
-    g = V.GIMBAL_POS
-    cx, cy = G.damper_center(y_roll)
-    dx, dy = P.DAMPER_SPACING
-    z_top = g[2] + G.top_plate_top_z(y_roll)
-    zc = (z_top + V.GIMBAL_MOUNT_Z) / 2
-    rad = (V.GIMBAL_MOUNT_Z - z_top) / 2 + 0.3
-    for sx in (-1, 1):
-        for sy in (-1, 1):
-            items.append(("damper", cq.Workplane("XY").sphere(rad)
-                          .translate((g[0] + cx + sx * dx / 2, g[1] + cy + sy * dy / 2, zc))))
-    return items
+def gimbal_items(pitch: float = 0.0, roll: float = 0.0) -> list[tuple[str, cq.Workplane]]:
+    """Ön gimbal (gimbal_v2) gövde koordinatında + uçuş kontrolcüsünün üstündeki gimbal kontrolcüsü kartı."""
+    b = GV.controller_box()
+    return GV.placed(pitch, roll) + [("gimbal_ctrl_pcb", S._box(*b))]
 
 
 def internals() -> list[tuple[str, cq.Workplane]]:
@@ -157,18 +147,26 @@ def pod_sensors() -> list[tuple[str, cq.Workplane]]:
             ("flow_sensor", S._cyl(fx, fy, z - 2.0, z, 3.0))]
 
 
-def assembly(parts: dict[str, cq.Workplane], y_roll: float) -> list[tuple[str, cq.Workplane]]:
-    items: list[tuple[str, cq.Workplane]] = [(n, parts[n]) for n in ("top_shell", "bottom_tub", "nose_cover", "pod",
+def assembly(parts: dict[str, cq.Workplane]) -> list[tuple[str, cq.Workplane]]:
+    items: list[tuple[str, cq.Workplane]] = [(n, parts[n]) for n in ("top_shell", "bottom_tub", "pod",
                                                                       "pod_tip", "sensor_window", "battery_shell",
                                                                       "battery_latch")]
+    items += nose_items(parts)
     items += [("arm_duct", m) for m in A.arm_duct_placed(parts["arm_duct"])]
     items += [("top_grille", m) for m in A.arm_duct_placed(parts["top_grille"])]
     for i, (x, y) in enumerate(P.motor_positions()):
         items += S.motor(x, y)
         items += S.prop(x, y, phase=17.0 + 41.0 * i, ccw=bool(i % 2))
-    items += gimbal_items(y_roll)
+    items += gimbal_items()
     items += internals()
     return items
+
+
+def nose_items(parts: dict[str, cq.Workplane]) -> list[tuple[str, cq.Workplane]]:
+    """Burun yarıları render için iki renkli (2K): dış kabuk gövde renginde, ağız astarı siyah."""
+    liner = A.mouth_liner()
+    return [("nose_cover", parts["nose_cover"].cut(liner)), ("nose_chin", parts["nose_chin"].cut(liner)),
+            ("nose_liner", liner)]
 
 
 def _overlap(a: cq.Workplane, b: cq.Workplane) -> float:
@@ -185,13 +183,55 @@ def _union(items: list[cq.Workplane]) -> cq.Workplane:
     return out
 
 
-def cad_checks(parts: dict[str, cq.Workplane], asm: list[tuple[str, cq.Workplane]], y_roll: float,
+GIMBAL_POSES = [(p, r) for p in (P.PITCH_RANGE[0], -45.0, 0.0, P.PITCH_SOFT_MAX, P.PITCH_RANGE[1])
+                for r in (P.ROLL_RANGE[0], 0.0, P.ROLL_RANGE[1])]
+
+
+def gimbal_checks(parts: dict[str, cq.Workplane], arms: list[cq.Workplane], tops: list[cq.Workplane],
+                  fast: bool = False) -> list[tuple[str, bool, str]]:
+    """Ön gimbal: sabit parçaların burna boşluğu (sönümleyici yolu), kapsülün tüm hareket aralığında burun, taşıyıcı,
+    kanallar ve üst ızgaralarla çakışmaması, denge ve ağız payı."""
+    out: list[tuple[str, bool, str]] = []
+    xp = GV.pitch_axis_x()
+    g = V.GIMBAL_POS
+    nose = {n: parts[n] for n in ("nose_cover", "nose_chin")}
+    static = {"taşıyıcı": GV.bracket(xp).translate(g), "pitch motoru": GV.pitch_motor(xp).translate(g),
+              "rulman": GV.bearing(xp).translate(g)}
+    gaps = {f"{a} ↔ {b}": wa.val().distance(wb.val()) for a, wa in static.items() for b, wb in nose.items()}
+    worst = min(gaps.items(), key=lambda kv: kv[1])
+    out.append(("gimbal taşıyıcısı ↔ burun (sönümleyici yolu)", worst[1] >= 1.0, f"en yakın {worst[0]} {worst[1]:.1f} mm ≥ 1"))
+    front = [w for w in arms + tops if w.val().BoundingBox().xmin > 0.0]           # ön iki modül
+    poses = GIMBAL_POSES if not fast else [(P.PITCH_RANGE[0], 0.0), (0.0, P.ROLL_RANGE[1]), (P.PITCH_RANGE[1], 0.0)]
+    worst_v = 0.0
+    for pitch, roll in poses:
+        cap = GV.capsule(pitch, roll)
+        worst_v = max([worst_v] + [_overlap(cap, w) for w in list(nose.values()) + list(static.values()) + front])
+    out.append(("gimbal kapsülü hareket aralığı ↔ burun, taşıyıcı, kanallar", worst_v < 1.0,
+                f"{worst_v:.2f} mm³ (pitch −90/−45/0/+15/+30 × roll −30/0/+30)" if not fast else f"{worst_v:.2f} mm³ (3 poz)"))
+    clear = min(GV.capsule(p_, r_).val().distance(w.val()) for p_, r_ in ((P.PITCH_RANGE[0], 0.0), (0.0, 0.0),
+                                                                          (P.PITCH_RANGE[1], P.ROLL_RANGE[1]))
+                for w in nose.values())
+    out.append(("gimbal kapsülü ↔ ağız boşluğu", clear >= 1.5, f"{clear:.1f} mm ≥ 1,5 (−90°, 0°, +30° / roll 30°)"))
+    ext = GV.sweep_extent(poses)
+    ok = (ext["r_max"] <= V.GIMBAL_SWEEP_R + 0.15 and ext["z_max"] <= V.GIMBAL_SWEEP_Z[1] + 0.15
+          and ext["z_min"] >= V.GIMBAL_SWEEP_Z[0] - 0.15)
+    out.append(("ağız payı (süpürme + 2 mm) ve parametreler CAD ile uyumlu",
+                ok and V.MOUTH_R - ext["r_max"] >= 2.0 and V.MOUTH_TOP - ext["z_max"] >= 2.0,
+                f"süpürme r {ext['r_max']:.1f} / z {ext['z_min']:+.1f}…{ext['z_max']:+.1f} mm; ağız r {V.MOUTH_R}, üst {V.MOUTH_TOP}"))
+    roll_off = math.hypot(*GV.roll_balance())
+    out.append(("gimbal dengesi: pitch ekseni kapsül ağırlık merkezinde, roll ekseni optik eksende",
+                abs(xp - V.PITCH_AXIS_DX) <= 0.3 and roll_off <= 0.3,
+                f"pitch ekseni x {xp:+.2f} mm (parametre {V.PITCH_AXIS_DX:+.1f}); roll kaçıklığı {roll_off:.2f} mm"))
+    return out
+
+
+def cad_checks(parts: dict[str, cq.Workplane], asm: list[tuple[str, cq.Workplane]],
                fast: bool = False) -> list[tuple[str, bool, str]]:
     out: list[tuple[str, bool, str]] = []
-    for name in PRODUCTION:
+    for name in list(PRODUCTION) + list(GIMBAL_PRODUCTION):
         n = parts[name].solids().size()
         out.append((f"{name}: tek katı", n == 1, f"{n} katı"))
-    body = _union([parts["top_shell"], parts["bottom_tub"], parts["nose_cover"]])
+    body = _union([parts[n] for n in ("top_shell", "bottom_tub", "nose_cover", "nose_chin")])
     rings = [A.duct_ring().rotate((0, 0, 0), (0, 0, 1), math.degrees(math.atan2(my, mx))).translate((mx, my, 0))
              for mx, my in P.motor_positions()]
     gap = min(body.val().distance(r.val()) for r in rings)
@@ -205,28 +245,7 @@ def cad_checks(parts: dict[str, cq.Workplane], asm: list[tuple[str, cq.Workplane
     props = [w for n, w in asm if n == "prop"]
     prop_clash = sum(_overlap(p, a) for p in props for a in arms) if not fast else 0.0
     out.append(("pervane ↔ kanal / ızgara", prop_clash < 1.0, f"{prop_clash:.2f} mm³" if not fast else "atlandı (--fast)"))
-    gim = [w for n, w in asm if n.startswith(("gimbal_", "camera_housing", "camera_bezel"))
-           or n in ("camera_pcb", "camera_lens", "gimbal_motor")]
-    gim = [w for w in gim if w.val().BoundingBox().xmin > V.NOSE_SPLIT_X - 60]
-    nose_clash = sum(_overlap(g, parts["nose_cover"]) for g in gim)
-    out.append(("gimbal ↔ burun kapağı (nötr)", nose_clash < 1.0, f"{nose_clash:.2f} mm³"))
-    if not fast:
-        g = V.GIMBAL_POS
-        worst = 0.0
-        head = _union(list(A.camera_head().values()))
-        moving = G.gimbal_cradle().union(G.camera()).union(head)
-        group = G.roll_group(y_roll).union(head)
-        static = G.gimbal_top(y_roll).translate(g)
-        arm = G.gimbal_roll_arm(y_roll).translate(g)
-        for pitch in (P.PITCH_RANGE[0], -45.0, 0.0, P.PITCH_RANGE[1]):
-            rot = moving.rotate((0, 0, 0), (0, 1, 0), -pitch).translate(g)
-            worst = max(worst, _overlap(rot, parts["nose_cover"]), _overlap(rot, parts["bottom_tub"]),
-                        _overlap(rot, static), _overlap(rot, arm))
-        for roll in P.ROLL_RANGE:
-            rot = group.rotate((0, y_roll, 0), (1, y_roll, 0), roll).translate(g)
-            worst = max(worst, _overlap(rot, parts["nose_cover"]), _overlap(rot, static))
-        out.append(("gimbal + kamera başlığı hareket aralığı ↔ burun ve gimbal gövdesi", worst < 1.0,
-                    f"{worst:.2f} mm³ (pitch −90/−45/0/+30, roll ±30)"))
+    out += gimbal_checks(parts, arms, [w for n, w in asm if n == "top_grille"], fast)
     low = min((w.val().BoundingBox().zmin, n) for n, w in asm if n not in ("pod", "pod_tip", "sensor_window"))
     out.append(("avuç ayağı en alçak nokta (avuca yalnızca o değer)", low[0] >= V.POD_BOTTOM_Z + 5.0,
                 f"ayak {V.POD_BOTTOM_Z:.0f} mm; sonraki en alçak: {low[1]} {low[0]:.1f} mm"))
@@ -243,13 +262,15 @@ def cad_checks(parts: dict[str, cq.Workplane], asm: list[tuple[str, cq.Workplane
     near = _union([w for n, w in asm if n.startswith(("pi_", "hat_"))] + [parts["battery_shell"]])
     gap = sensors.val().distance(near.val())
     out.append(("ayak sensörleri ↔ Pi ve batarya", gap >= 1.5, f"{gap:.1f} mm ≥ 1,5"))
-    inside = _union([w for n, w in asm if n.startswith(("pi_", "hat_", "fc_pcb", "esc_pcb", "gnss"))])
-    shells = [parts[n] for n in ("top_shell", "bottom_tub", "nose_cover", "pod")]
+    inside = _union([w for n, w in asm if n.startswith(("pi_", "hat_", "fc_pcb", "esc_pcb", "gnss", "gimbal_ctrl"))])
+    shells = [parts[n] for n in ("top_shell", "bottom_tub", "nose_cover", "nose_chin", "pod")]
     clash = sum(_overlap(inside, w) for w in shells + arms)
-    out.append(("iç kartlar (Pi, FC, ESC, GNSS) ↔ kabuklar, kovanlar, kollar", clash < 1.0, f"{clash:.2f} mm³"))
+    out.append(("iç kartlar (Pi, FC, ESC, GNSS, gimbal kontrolcüsü) ↔ kabuklar, kovanlar, kollar", clash < 1.0,
+                f"{clash:.2f} mm³"))
     # Kalıp (DFM) kuralları — tasarım parametrelerinden
     out += [
-        ("kabuk et kalınlığı 1,5–2,5 mm", 1.5 <= V.WALL <= 2.5, f"{V.WALL} mm"),
+        ("kabuk et kalınlığı 1,5–2,5 mm", 1.5 <= min(V.WALL, V.NOSE_WALL) and max(V.WALL, V.NOSE_WALL) <= 2.5,
+         f"gövde {V.WALL}, burun {V.NOSE_WALL} mm (iç duvarlar: ağız astarı {V.MOUTH_WALL}, perde {V.BAY_WALL})"),
         ("kol / kanal et kalınlığı ≥ 1,5 mm", min(V.ARM_WALL, V.DUCT_WALL) >= 1.5, f"kol {V.ARM_WALL}, kanal {V.DUCT_WALL} mm"),
         ("kaburga ≤ 0,6 × et", V.RIB_RATIO <= 0.6, f"{V.RIB_RATIO:.1f}"),
         ("kalıptan çıkma açısı ≥ 1°", V.DRAFT_DEG >= 1.0, f"{V.DRAFT_DEG}° (kanal iç duvarı)"),
@@ -266,7 +287,10 @@ def variant_comparison(rows: list[dict], parts: dict[str, cq.Workplane]) -> list
     out = []
     for key, (names, extra) in VARIANT_MAP.items():
         comp = next(c for c in variant["components"] if key in c["name"])
-        cad = sum(by[n] for n in names) + extra                       # tek modül (adet profildedir)
+        if extra is None:                                             # gimbal: CAD parçaları + satın alınan donanım
+            cad = GV.hardware_cg()[1]
+        else:
+            cad = sum(by[n] for n in names) + extra                   # tek modül (adet profildedir)
         out.append({"component": comp["name"], "profile_g": comp["mass_g"], "cad_g": round(cad, 1),
                     "diff_pct": round(100 * (cad - comp["mass_g"]) / comp["mass_g"], 1)})
     return out
@@ -288,7 +312,28 @@ def write_previews(asm: list[tuple[str, cq.Workplane]], out: Path) -> Path:
     return path
 
 
-def write_report(rows, comparison, checks, out: Path) -> Path:
+def gimbal_report(grows: list[dict]) -> list[str]:
+    """Ön gimbal bölümü: parçalar, satın alınan donanım, eksenler, görüş."""
+    xp = GV.pitch_axis_x()
+    (cx, cy, cz), total = GV.hardware_cg()
+    view = K.gimbal_view()
+    lines = ["## Ön gimbal (cad/v2/gimbal_v2.py)", "",
+             f"Kamera merkezi ({V.GIMBAL_POS[0]:.1f}, {V.GIMBAL_POS[1]:.0f}, {V.GIMBAL_POS[2]:.0f}) mm: burnun önünde, orta "
+             f"hatta; pitch ekseni {-xp:.1f} mm arkada, kapsülün ağırlık merkezinde. Eksen sırası: dışta pitch (motor sağ "
+             f"yanakta, rulman sol yanakta), içte roll (kameranın arkasında, optik eksenle eş eksenli).", "",
+             "| Parça | Malzeme | Hacim (cm³) | Kütle (g) | Prototip (MJF) (g) | Not |", "|---|---|---:|---:|---:|---|"]
+    for r in grows:
+        lines.append(f"| {r['part']} | {r['material']} | {r['volume_cm3']:.1f} | {r['mass_g']:.1f} | {r['proto_mass_g']:.1f} "
+                     f"| {r['note']} |")
+    bought = [(n, m) for n, m, _ in GV.hardware_masses() if not n.startswith(("gimbal_", "camera_housing"))]
+    lines += ["", "Satın alınan / temsili: " + ", ".join(f"{n} {m:.1f} g" for n, m in bought) + ".",
+              f"Gimbal toplamı (kamera hariç) **{total:.1f} g**, ağırlık merkezi ({cx:.1f}, {cy:+.1f}, {cz:.1f}) mm.",
+              f"Görüş temiz: {view['clear_min']:+.0f}° … {view['clear_max']:+.0f}° (mekanik {P.PITCH_RANGE[0]:+.0f}…"
+              f"{P.PITCH_RANGE[1]:+.0f}°, yazılım sınırı +{P.PITCH_SOFT_MAX:.0f}°).", ""]
+    return lines
+
+
+def write_report(rows, grows, comparison, checks, out: Path) -> Path:
     variant = budget_calc.load(K.VARIANT)
     b2 = budget_calc.compute(variant)
     b1 = budget_calc.compute(budget_calc.load(budget_calc.HW_DIR / "tier-a-ekonomik.yaml"))
@@ -304,8 +349,9 @@ def write_report(rows, comparison, checks, out: Path) -> Path:
                      f"| {r['proto_mass_g']:.1f} | ({cg_txt}){' yerel' if r['part'] == 'arm_duct' else ''} | {r['note']} |")
     air_prod = sum(r["mass_g"] * r["qty"] for r in rows)
     air_proto = sum(r["proto_mass_g"] * r["qty"] for r in rows)
-    lines += ["", f"Gövde toplamı: **{air_prod:.0f} g** (üretim) · {air_proto:.0f} g (MJF PA12 prototip)", "",
-              "## Varyant profiliyle karşılaştırma (config/hardware/variants/tier-a-entegre.yaml)", "",
+    lines += ["", f"Gövde toplamı: **{air_prod:.0f} g** (üretim) · {air_proto:.0f} g (MJF PA12 prototip)", ""]
+    lines += gimbal_report(grows)
+    lines += ["## Varyant profiliyle karşılaştırma (config/hardware/variants/tier-a-entegre.yaml)", "",
               "| Bileşen | Profil (g) | CAD (g) | Fark |", "|---|---:|---:|---:|"]
     for c in comparison:
         lines.append(f"| {c['component']} | {c['profile_g']:.0f} | {c['cad_g']:.1f} | %{c['diff_pct']:+.0f} |")
@@ -331,7 +377,7 @@ def write_report(rows, comparison, checks, out: Path) -> Path:
         lines.append(f"| {h:.0f} mm{sel} | {fmin:.0f}–{fmax:.0f} Hz | {'pencerede' if ok else 'bant payına giriyor'} |")
     path = out / "report.md"
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    (out / "report.json").write_text(json.dumps({"parts": rows, "comparison": comparison,
+    (out / "report.json").write_text(json.dumps({"parts": rows, "gimbal_parts": grows, "comparison": comparison,
                                                 "checks": [[n, ok, d] for n, ok, d in checks]},
                                                ensure_ascii=False, indent=1), encoding="utf-8")
     return path
@@ -344,18 +390,18 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
     parts = build_parts()
-    y_roll = G.roll_axis_y()
-    asm = assembly(parts, y_roll)
+    asm = assembly(parts)
     rows = mass_rows(parts)
-    checks = cad_checks(parts, asm, y_roll, fast=args.fast)
+    grows = mass_rows(parts, GIMBAL_PRODUCTION)
+    checks = cad_checks(parts, asm, fast=args.fast)
     comparison = variant_comparison(rows, parts)
     (args.out / "stl").mkdir(exist_ok=True)
     (args.out / "step").mkdir(exist_ok=True)
-    for name in PRODUCTION:
+    for name in list(PRODUCTION) + list(GIMBAL_PRODUCTION):
         cq.exporters.export(parts[name], str(args.out / "stl" / f"{name}.stl"), tolerance=0.05, angularTolerance=0.2)
         cq.exporters.export(parts[name], str(args.out / "step" / f"{name}.step"))
     B.export_glb(asm, args.out / "dc7_v2.glb")
-    report = write_report(rows, comparison, checks, args.out)
+    report = write_report(rows, grows, comparison, checks, args.out)
     if not args.fast:
         write_previews(asm, args.out)
     print(report.read_text(encoding="utf-8"))

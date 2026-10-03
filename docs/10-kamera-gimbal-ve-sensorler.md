@@ -81,6 +81,11 @@ zaten gövde yaw'ını kullanıyor. 3. eksen gerekirse ileride eklenir.
 2. **Eksen sırası**: dış eksen roll (gövdeye bağlı), iç eksen pitch (kamerayı taşır). Mekanik
    aralık −90° (tam aşağı) ile +30°; yazılım sınırı +15° (üstünde ön korumalar kadraja girer,
    `cad/layout.py`). Parametrik model ve denge/çakışma kontrolü: `cad/gimbal_2axis.py` (docs/11 §5).
+   **v2 bütünleşik gövdede sıra terstir** ([12 §3.2](12-butunlesik-govde-ve-seri-uretim.md)): dışta pitch
+   (motor ve rulman burun yanaklarında), içte roll (motor kameranın tam arkasında, optik eksenle eş eksenli).
+   Kamera böylece burnun ortasında durur ve aşağı sarkmaz; roll grubu simetrik olduğu için karşı ağırlık
+   gerekmez (`cad/v2/gimbal_v2.py`). Bedeli: kamera θ kadar aşağı baktığında gövde roll'ünün sin θ kadarı
+   görüntüde yatay kayma olarak kalır ve EIS ile giderilir (takipte θ = 0…−20° → ≤ %34).
 3. **Rijitlik**: 3B baskı kollar ≥ 3 mm, kaburgalı; motor montajı boşluksuz. Kol rezonansı motor
    frekanslarından (hover ≈ 150–165 Hz) uzak olmalı.
 4. **Titreşim izolasyonu**: gimbal tabanı gövdeye 4 kauçuk sönümleyiciyle; sönümleyici sertliği

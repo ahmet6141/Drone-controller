@@ -3,7 +3,9 @@
 Parçalar (üretim malzemesi):
   * top_shell        — üst kabuk / kanopi (PC/ABS), z > Z_SPLIT
   * bottom_tub       — taşıyıcı alt kabuk (PC/ABS): kol soketleri, batarya rayları, vida göbekleri
-  * nose_cover       — burun kapağı + gimbal bölmesi başlığı (PC/ABS), x > NOSE_SPLIT_X
+  * nose_cover       — burun üst yarısı: alın + yanakların üstü (PC/ABS), x > NOSE_SPLIT_X, z > PIVOT_Z
+  * nose_chin        — burun alt yarısı: yanakların altı + sönümleyici perdesi (PC/ABS); gimbal iki yarının
+                       arasına oturur (pitch ekseni ayrım düzleminde), cad/v2/gimbal_v2.py
   * arm_duct         — kol (U kesit, kaburgalı) + motor yuvası + çan ağızlı kanal + altıgen ızgara
                        (PA6-GF30, tek kalıp ×4)
   * pod              — avuç ayağı (PC/ABS) + tpu_tip (TPU)
@@ -61,10 +63,10 @@ def outer() -> cq.Workplane:
     return _loft(0.0)
 
 
-def shell() -> cq.Workplane:
+def shell(wall: float = V.WALL) -> cq.Workplane:
     """Kapalı uçlu kabuk: dış loft − iç loft (uçlardan et kalınlığı kadar kırpılmış)."""
     x_lo, x_hi = V.body_x_range()
-    inner = _loft(V.WALL).intersect(_xbox(x_lo + V.WALL, x_hi - V.WALL))
+    inner = _loft(wall).intersect(_xbox(x_lo + wall, x_hi - wall))
     return outer().cut(inner)
 
 
@@ -98,34 +100,73 @@ def body_parts() -> dict[str, cq.Workplane]:
     # Batarya tüneli ağzı (kuyruk) — kapak bu dilimi doldurur
     cx0, cx1 = cap_x()
     sh = sh.cut(_xbox(cx0 - 1.0, cx1))
-    # Gimbal bölmesi: burnun alt-önü açık başlık
-    b = V.BAY
-    sh = sh.cut(cq.Workplane("XY").box(b["x1"] - b["x0"], 2 * b["half_y"], b["z1"] - b["z0"], centered=False)
-                .translate((b["x0"], -b["half_y"], b["z0"])))
     # Avuç ayağı açıklığı (karın)
     sh = sh.cut(cq.Workplane("XY").workplane(offset=-80.0).center(V.POD_X, 0).circle(V.POD_TOP_R - 3.0).extrude(40.0))
     # Kol soketleri
     sh = sh.cut(_arm_root_cut())
-    nose = sh.intersect(_xbox(V.NOSE_SPLIT_X, BIG)).union(_bay_walls())
     body = sh.cut(_xbox(V.NOSE_SPLIT_X, BIG))
+    # Burun (ince et): ağız gimbal kapsülünü yanaklar arasında taşır; astar ve motor/pim geçişleri
+    nose = (shell(V.NOSE_WALL).intersect(_xbox(V.NOSE_SPLIT_X, BIG)).cut(mouth())
+            .union(_mouth_lining()).cut(_mouth_holes()))
     top = body.intersect(_xbox(-BIG, BIG, z0=V.Z_SPLIT))
     bottom = body.intersect(_xbox(-BIG, BIG, z1=V.Z_SPLIT))
-    return {"top_shell": top, "bottom_tub": bottom, "nose_cover": nose}
+    nose_top = nose.intersect(_xbox(-BIG, BIG, z0=V.PIVOT_Z))
+    chin = nose.intersect(_xbox(-BIG, BIG, z1=V.PIVOT_Z)).union(_bulkhead())
+    return {"top_shell": top, "bottom_tub": bottom, "nose_cover": nose_top, "nose_chin": chin}
 
 
-def _bay_walls() -> cq.Workplane:
-    """Gimbal bölmesi: tavan plakası (sönümleyiciler buraya bağlanır) + arka perde (elektronik bölmesini toz
-    ve sudan ayırır). Burun kapağının parçasıdır: siyah iç yüzey lense yansıma yapmaz."""
-    b = V.BAY
-    t = V.BAY_WALL
-    x0, x1 = V.NOSE_SPLIT_X, V.STATIONS[-1][0] - V.WALL
-    ceiling = _xbox(x0, x1, z0=b["z1"], z1=b["z1"] + t)
-    bulkhead = _xbox(x0, x0 + t, z1=b["z1"] + t)
-    walls = ceiling.union(bulkhead).intersect(_loft(V.WALL))
-    # Kablo geçişi: kamera CSI şeridi (16 mm) + gimbal beslemesi
-    slot = (cq.Workplane("YZ").workplane(offset=x0 - 1.0).center(0, b["z1"] - 6.0).slot2D(24.0, 6.0)
-            .extrude(t + 2.0))
-    return walls.cut(slot)
+def mouth(grow: float = 0.0) -> cq.Workplane:
+    """Burun ağzı (gövde koordinatında): gimbal kapsülünün süpürme hacmi + boşluk. Arkası pitch ekseni etrafında
+    yay, üstü düz alın, önü ve altı açık (kamera −90°'de aşağı bakar). grow > 0: astarın dış yüzü."""
+    px, _, pz = V.GIMBAL_PIVOT
+    hy, r, top = V.MOUTH_HALF_Y + grow, V.MOUTH_R + grow, pz + V.MOUTH_TOP + grow
+    disc = _cyl_y(px, pz, -hy, hy, r)
+    front = _xbox(px, BIG, y=hy, z0=-BIG, z1=top)
+    return disc.union(front).intersect(_xbox(-BIG, BIG, y=hy, z1=top))
+
+
+def _cyl_y(cx: float, cz: float, y0: float, y1: float, r: float) -> cq.Workplane:
+    return cq.Workplane("XZ").workplane(offset=-y0).center(cx, cz).circle(r).extrude(-(y1 - y0))
+
+
+def _mouth_lining() -> cq.Workplane:
+    """Ağız astarı (burunla aynı parça, siyah): yanakların iç yüzleri, alın alt yüzü ve arka yay. Kabuğun içini
+    ağızdan ayırır; kabuk etine 0,3 mm girerek onunla birleşir."""
+    return mouth(V.MOUTH_WALL).cut(mouth()).intersect(_loft(V.NOSE_WALL - 0.3))
+
+
+def mouth_liner() -> cq.Workplane:
+    """Ağız astarı tek başına (render: 2K kalıpta siyah ikinci enjeksiyon)."""
+    return _mouth_lining().cut(_mouth_holes())
+
+
+def _mouth_holes() -> cq.Workplane:
+    """Sağ astarda pitch motoru geçişi, sol astarda rulman pimi geçişi (sönümleyici yolu için ≥ 2 mm boşluk)."""
+    px, _, pz = V.GIMBAL_PIVOT
+    hy, t = V.MOUTH_HALF_Y, V.MOUTH_WALL
+    motor = _cyl_y(px, pz, hy - 1.0, hy + t + 1.0, P.GIMBAL_MOTOR_D / 2 + 2.0)
+    pin = _cyl_y(px, pz, -hy - t - 1.0, -hy + 1.0, 4.5)
+    return motor.union(pin)
+
+
+def _bulkhead() -> cq.Workplane:
+    """Burun perdesi (alt yarıya ait): gimbal taşıyıcısı 4 sönümleyiciyle önüne bağlanır; elektronik bölmesini
+    toz ve sudan ayırır. Sönümleyici cıvatalarında arkaya doğru pullar (2 × et); ortada kablo geçişi (kamera FFC
+    şeridi + motor kabloları)."""
+    x0, t = V.NOSE_SPLIT_X, V.BAY_WALL
+    _, _, pz = V.GIMBAL_PIVOT
+    # Alt kısmı alt yarının etiyle birleşir; üst kısmı üst yarıdan 0,1 mm ayrık (ayrı parçalar)
+    wall = (_xbox(x0, x0 + t, z1=pz).intersect(_loft(V.NOSE_WALL - 0.3))
+            .union(_xbox(x0, x0 + t, z0=pz - 0.5).intersect(_loft(V.NOSE_WALL + 0.1))))
+    dy, dz = V.GIMBAL_DAMPERS
+    for sy in (-1, 1):
+        for sz in (-1, 1):
+            c = (sy * dy / 2, pz + sz * dz / 2)
+            wall = wall.union(cq.Workplane("YZ").workplane(offset=x0 - t).center(*c).circle(4.5).extrude(t + 0.1))
+            wall = wall.cut(cq.Workplane("YZ").workplane(offset=x0 - t - 1.0).center(*c)
+                            .circle(P.M3 / 2).extrude(2 * t + 2.0))
+    slot = cq.Workplane("YZ").workplane(offset=x0 - 1.0).center(0, pz).slot2D(20.0, 7.0).extrude(t + 2.0)
+    return wall.cut(slot)
 
 
 # --- kol–kanal modülü (yerel: motor ekseni orijinde, kol −x yönünde gövdeye uzanır) ---------------
@@ -400,31 +441,6 @@ def pod_tip() -> cq.Workplane:
             .revolve(360.0, (0, 0, 0), (0, 1, 0)).translate((V.POD_X, 0, 0)))
 
 
-# --- kamera başlığı (gimbal koordinatında: orijin kamera merkezi, x ileri) -------------------------
-def camera_head() -> dict[str, cq.Workplane]:
-    """Beşiğe takılan ön kapak: kartı ve mercek bloğunu örter (PC, 1 mm); mercek halkası ve koruyucu cam.
-    Beşik arka plakasının (x ≤ −3) ve yan plakasının (y ≥ 16) içinde kalır → pitch süpürme yarıçapı ve roll
-    aralığı değişmez."""
-    w, h, _ = P.CAM_BOARD
-    half_y, half_z = 14.0, 14.0
-    x0, x1 = -2.7, 8.5
-    y1 = 16.0 - 0.3                                                   # beşik yan plakası y = 16
-    t = 1.0
-    outer_ = (cq.Workplane("XY").box(x1 - x0, y1 + half_y, 2 * half_z, centered=False)
-              .translate((x0, -half_y, -half_z)).edges("|X").fillet(3.0).faces(">X").edges().fillet(2.5))
-    inner_ = (cq.Workplane("XY").box(x1 - t - x0 + 1.0, y1 + half_y - 2 * t, 2 * (half_z - t), centered=False)
-              .translate((x0 - 1.0, -half_y + t, -(half_z - t))).edges("|X").fillet(2.0))   # kart köşeleri sığar
-    lens = cq.Workplane("YZ").workplane(offset=x1 - t - 0.5).circle(5.0).extrude(t + 1.0)
-    # Beşiğin arka plaka ↔ yan plaka iç köşe yuvarlatması için çentik
-    f = P.GIMBAL_FILLET + 0.4
-    notch = (cq.Workplane("XY").box(f, f, 2 * half_z + 2, centered=False)
-             .translate((x0 - 0.1, 16.0 - f, -half_z - 1)))
-    housing = outer_.cut(inner_).cut(lens).cut(notch)
-    bezel = cq.Workplane("YZ").workplane(offset=x1 - 0.2).circle(7.0).circle(5.0).extrude(1.7).faces(">X").edges().chamfer(0.4)
-    glass = cq.Workplane("YZ").workplane(offset=x1 - 0.6).circle(5.0).extrude(0.6)
-    return {"camera_housing": housing, "camera_bezel": bezel, "camera_glass": glass}
-
-
 # --- akıllı batarya ------------------------------------------------------------------------------
 def battery_parts() -> dict[str, cq.Workplane]:
     x0, x1, y0, y1, z0, z1 = battery_box()
@@ -495,7 +511,7 @@ def _bosses() -> tuple[cq.Workplane, cq.Workplane]:
 
 def _rails() -> cq.Workplane:
     x0, x1, y0, y1, z0, z1 = battery_box(clear=V.BATTERY_CLEAR)
-    floor = V.section_at((x0 + x1) / 2, V.WALL)[0]
+    floor = min(V.section_at(x0 + (x1 - x0) * k / 8, V.WALL)[0] for k in range(9))     # tüm boyunca tabana otursun
     out = None
     for y in (y0 - 0.6, y1 + 0.6):
         r = (cq.Workplane("XY").box(x1 - x0, V.RIB_RATIO * V.WALL, z0 - floor + 6.0, centered=(False, True, False))
@@ -525,9 +541,10 @@ def body_parts_detailed() -> dict[str, cq.Workplane]:
     boss_top, boss_bottom = _bosses()
     top = parts["top_shell"].union(sleeves.intersect(_xbox(-BIG, V.NOSE_SPLIT_X, z0=V.Z_SPLIT))).union(boss_top)
     bottom = parts["bottom_tub"].union(sleeves.intersect(_xbox(-BIG, V.NOSE_SPLIT_X, z1=V.Z_SPLIT))).union(boss_bottom)
-    bottom = bottom.union(_rails().intersect(inner))
+    bottom = bottom.union(_rails().intersect(_loft(V.WALL - 0.3)))             # raylar kabuk etine gömülür
     top = _vents(top)
     bottom = _vents(bottom)
     # Kol kökleri soket ağızlarından geçer: soketleri tekrar aç
     cut = _arm_root_cut()
-    return {"top_shell": top.cut(cut), "bottom_tub": bottom.cut(cut), "nose_cover": parts["nose_cover"]}
+    return {"top_shell": top.cut(cut), "bottom_tub": bottom.cut(cut), "nose_cover": parts["nose_cover"],
+            "nose_chin": parts["nose_chin"]}

@@ -1,6 +1,6 @@
 """cad/v2/ — bütünleşik gövde: yerleşim ve titreşim (her zaman), parametrik parçalar (CadQuery kuruluysa).
 
-CadQuery testleri ≈ 2 dk sürer; CI yalnızca CadQuery gerektirmeyen testleri çalıştırır.
+CadQuery testleri ≈ 4 dk sürer; CI yalnızca CadQuery gerektirmeyen testleri çalıştırır.
 """
 from __future__ import annotations
 
@@ -52,8 +52,34 @@ class TestLayoutV2(unittest.TestCase):
         drop = P.PROP_PLANE_Z - V.POD_BOTTOM_Z
         self.assertGreaterEqual(drop, V.POD_MIN_DROP_ENCLOSED)
         self.assertLess(drop, P.GRIP_MIN_DROP, "v2 ayağı v1 kuralından kısa (amaç bu)")
-        self.assertGreaterEqual(V.GIMBAL_POS[2] - V.GIMBAL_BELOW_CENTER - V.POD_BOTTOM_Z, 10.0,
-                                "gimbal avuç düzleminin ≥ 10 mm üstünde")
+        low, _, _ = layout_v2.gimbal_heights()
+        self.assertGreaterEqual(low - V.POD_BOTTOM_Z, 10.0, "gimbal avuç düzleminin ≥ 10 mm üstünde")
+
+    def test_gimbal_centered_and_not_hanging(self):
+        """Kamera orta hatta ve gövde orta yüksekliğinde; kapsül tüm pitch aralığında burnun alt çizgisinde kalır."""
+        low, nose_low, mid = layout_v2.gimbal_heights()
+        cg, _ = layout_v2.cg_of(layout_v2.components(None, layout_v2.solve_battery_x()))
+        self.assertEqual(V.GIMBAL_POS[1], 0.0)
+        self.assertLessEqual(abs(V.GIMBAL_POS[2] - mid), 8.0, "kamera burnun orta yüksekliğinde")
+        self.assertLessEqual(abs(V.GIMBAL_POS[2] - cg[2]), 10.0, "optik eksen ağırlık merkezine yakın (eskiden 44 mm altta)")
+        self.assertGreaterEqual(low, nose_low - 3.0, "gimbal burnun altına sarkmaz")
+        self.assertGreater(V.GIMBAL_POS[2], -20.0, "eski asılı gimbal: kamera z = −46,8")
+
+    def test_mouth_fits_capsule_and_corridor(self):
+        """Ağız, kapsülün süpürmesine ≥ 2 mm pay bırakır; alın kapalıdır (ağız kabuğu üstten delmez); kamera burun
+        ucunun gerisinde (çarpmada önce yanaklar değer)."""
+        self.assertGreaterEqual(V.MOUTH_R - V.GIMBAL_SWEEP_R, 2.0)
+        self.assertGreaterEqual(V.MOUTH_TOP - V.GIMBAL_SWEEP_Z[1], 2.0)
+        px, r, t = V.GIMBAL_PIVOT[0], V.MOUTH_R + V.MOUTH_WALL, V.MOUTH_WALL
+        x_tip = V.STATIONS[-1][0]
+        for i in range(int(V.STATIONS[-2][0] - (px - r)) + 1):                 # son istasyon: yuvarlatılmış uç
+            x = px - r + i
+            arc = math.sqrt(max(r * r - (x - px) ** 2, 0.0)) if x < px else math.inf
+            z_lining = V.PIVOT_Z + min(V.MOUTH_TOP + t, arc)                  # astarın üst yüzü
+            self.assertGreaterEqual(V.half_width(x, z_lining + 0.3), V.MOUTH_HALF_Y + t, f"alın x = {x:.1f}")
+        bezel = V.GIMBAL_POS[0] + 10.0
+        self.assertLess(bezel, x_tip, "mercek burun ucunun gerisinde")
+        self.assertGreater(bezel, x_tip - 8.0, "mercek çok içeride değil")
 
     def test_pod_sensors_see_through_opening(self):
         for name, (clear, need) in layout_v2.pod_sensor_clearance().items():
@@ -122,8 +148,22 @@ class TestCadV2(unittest.TestCase):
         return self.B._overlap(a, b)
 
     def test_single_solids(self):
-        for name in self.B.PRODUCTION:
+        for name in list(self.B.PRODUCTION) + list(self.B.GIMBAL_PRODUCTION):
             self.assertEqual(self.parts[name].solids().size(), 1, name)
+
+    def test_gimbal_balance_and_parameters(self):
+        """Pitch ekseni kapsülün ağırlık merkezinde, roll ekseni optik eksende; parametreler CAD ile aynı."""
+        import gimbal_v2 as GV
+        self.assertAlmostEqual(GV.pitch_axis_x(), V.PITCH_AXIS_DX, delta=0.3)
+        self.assertLess(math.hypot(*GV.roll_balance()), 0.3, "roll ekseninde karşı ağırlık gerekmemeli")
+        cg, _ = GV.hardware_cg(controller=False)                    # kontrolcü yerleşimde ayrı bileşen
+        for a, b in zip(cg, V.GIMBAL_CG):
+            self.assertAlmostEqual(a, b, delta=1.5)
+        poses = [(p, r) for p in (P.PITCH_RANGE[0], -60.0, -45.0, 0.0, P.PITCH_RANGE[1]) for r in (-30.0, 0.0, 30.0)]
+        ext = GV.sweep_extent(poses)
+        self.assertLessEqual(ext["r_max"], V.GIMBAL_SWEEP_R + 0.15)
+        self.assertLessEqual(ext["z_max"], V.GIMBAL_SWEEP_Z[1] + 0.15)
+        self.assertGreaterEqual(ext["z_min"], V.GIMBAL_SWEEP_Z[0] - 0.15)
 
     def test_arm_roots_and_battery_fit(self):
         body = self.B._union([self.parts[n] for n in ("top_shell", "bottom_tub", "nose_cover")])
@@ -173,9 +213,13 @@ class TestCadV2(unittest.TestCase):
 
     def test_layout_uses_cad_centers_of_mass(self):
         rows = self.rows
-        for name in ("top_shell", "bottom_tub", "nose_cover"):
+        for name in ("top_shell", "bottom_tub"):
             for a, b in zip(rows[name]["cg"], V.PART_CG[name]):
                 self.assertAlmostEqual(a, b, delta=3.0, msg=name)
+        nose = [rows[n] for n in ("nose_cover", "nose_chin")]                 # profilde tek kalem: burun
+        m = sum(r["mass_g"] for r in nose)
+        for i in range(3):
+            self.assertAlmostEqual(sum(r["mass_g"] * r["cg"][i] for r in nose) / m, V.PART_CG["nose_cover"][i], delta=3.0)
         group = [rows[n] for n in ("pod", "pod_tip", "sensor_window")]
         z = sum(r["mass_g"] * r["cg"][2] for r in group) / sum(r["mass_g"] for r in group)
         self.assertAlmostEqual(z, V.PART_CG["pod"][2], delta=3.0)

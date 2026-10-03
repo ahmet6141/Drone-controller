@@ -27,26 +27,47 @@ STATIONS = (
     (0.0, -46.0, 14.0, 6.0, 48.0, 98.0, 66.0, 10.0, 6.0, 24.0),
     (35.0, -46.0, 13.0, 6.0, 46.0, 98.0, 62.0, 10.0, 6.0, 22.0),
     (64.0, -52.0, 11.0, 6.0, 38.0, 98.0, 50.0, 12.0, 6.0, 18.0),
-    (82.0, -40.0, 8.5, 5.5, 28.0, 92.0, 43.0, 12.0, 5.5, 14.0),      # alt şasi öne doğru incelir (arka perde küçük)
-    (100.0, -22.0, 6.0, 5.0, 18.0, 96.0, 36.0, 8.0, 5.0, 10.0),      # burun başlığı (z < −12 bölme için kesilir)
-    (121.0, -20.0, 2.0, 4.5, 13.0, 89.0, 33.0, 6.0, 4.5, 7.5),
-    (142.0, -18.0, -2.0, 4.0, 8.0, 82.0, 30.0, 5.0, 4.0, 5.0),
+    (82.0, -40.0, 11.0, 6.0, 28.0, 94.0, 40.0, 12.0, 6.0, 14.0),      # alt şasi öne doğru incelir
+    (100.0, -31.0, 13.0, 5.0, 26.0, 92.0, 32.0, 10.0, 5.0, 10.0),     # yanaklar (pitch motoru ve rulman içte) + alın
+    (121.0, -29.0, 13.0, 5.0, 25.0, 90.0, 30.0, 10.0, 5.0, 8.0),
+    (138.0, -27.0, 13.0, 5.0, 24.0, 86.0, 28.0, 9.0, 5.0, 6.0),
+    (143.0, -24.0, 13.0, 4.0, 22.0, 78.0, 24.0, 7.0, 4.0, 5.0),       # burun ucu yuvarlatılır; ağız ortada, kamera ≈ 3 mm içeride
 )
 WALL = 2.0                     # kabuk et kalınlığı (PC/ABS enjeksiyon: 1,5–2,5 mm)
+NOSE_WALL = 1.6                # burun yarıları: küçük parça, kısa akış boyu (ağırlık merkezinin önünde her gram sayılır)
 Z_SPLIT = -4.0                 # üst kabuk / alt kabuk ayrım düzlemi
 NOSE_SPLIT_X = 80.0            # burun kapağı ayrımı (gimbal servisi, farklı renk/malzeme)
 DRAFT_DEG = 1.5                # kalıptan çıkma açısı (dik duvarlar)
 RIB_RATIO = 0.6                # kaburga kalınlığı ≤ 0,6 × et (çöküntü izi olmasın)
 ARC_STEPS = 6                  # köşe yayı örnek sayısı
 
-# --- Burun (gimbal) bölmesi -------------------------------------------------------------------
-BAY = {"x0": 79.0, "x1": 160.0, "half_y": 60.0, "z0": -100.0, "z1": -2.0}    # yanaksız: gimbal başlığın altında açıkta
-# z1: başlık alt yüzü = sönümleyici bağlantısı. −12 → −2: gimbal 10 mm yükseldi → avuç ayağı kısaldı (docs/12 §3)
-GIMBAL_MOUNT_Z = BAY["z1"]                       # sönümleyiciler bölme tavanına bağlanır
-BAY_WALL = 1.6                                   # bölme tavanı ve arka perde (burun kapağının parçası, siyah)
-GIMBAL_STACK_ABOVE = 36.8                        # kamera merkezi → üst plaka üstü (cad/gimbal_2axis)
-# Kamera merkezi: gimbal üst parçasının arka dikey plakası arka perdeden (x = NOSE_SPLIT_X + BAY_WALL) ≥ 3 mm önde
-GIMBAL_POS = (128.0, 0.0, GIMBAL_MOUNT_Z - P.DAMPER_H - GIMBAL_STACK_ABOVE)
+# --- Burun ağzı ve ön gimbal (cad/v2/gimbal_v2.py) ----------------------------------------------
+# Kamera burnun önünde, gövdenin orta hattında ve orta yüksekliğinde; aşağı sarkmaz. Pitch ekseni yanaklar
+# arasında yataydır: pitch motoru sağ yanakta, rulman sol yanakta, roll motoru kameranın tam arkasında.
+# Gimbal, burun perdesine (x = NOSE_SPLIT_X + BAY_WALL) 4 sönümleyiciyle bağlı U taşıyıcıdadır.
+BAY_WALL = 1.2                                   # burun perdesi (sönümleyici cıvatalarında 2,4 mm pul); toz bariyeri
+MOUTH_WALL = 1.2                                 # ağız astarı (taşıyıcı değil; kısa akış boyu → 1,2 mm yeterli)
+BRACKET_GAP = 1.5                                # gimbal taşıyıcısı ↔ ağız astarı (sönümleyici yolu)
+GIMBAL_DAMPERS = (30.0, 24.0)                    # sönümleyici deseni (y × z), eksenleri x yönünde
+PITCH_AXIS_DX = -10.0                            # pitch ekseni kamera kartı ön yüzünün bu kadar arkasında (CAD: kapsül
+                                                 # ağırlık merkezi, gimbal_v2.pitch_axis_x; tests/test_v2.py ±0,3 mm)
+PIVOT_Z = -9.0                                   # pitch ve roll eksenlerinin yüksekliği = kamera merkezi
+# Ağız: kapsülün süpürme hacmi + 2 mm (sönümleyici yolu). Arkası pitch ekseni etrafında yay, üstü düz alın (kaş),
+# önü ve altı açık (−90° görüş). Üst sınır kanallardan gelir: z ≥ 19'da gövde |y| ≤ 16,5 mm ve yanak
+# omuzları kanal halkasının alt kenarına (z = 20) ≥ 2 mm uzak.
+MOUTH_HALF_Y = 24.5                              # çerçeve kolları (|y| ≤ 22,5) + 2
+MOUTH_R = 24.5                                   # pitch ekseninden arka/alt yay yarıçapı
+MOUTH_TOP = 23.0                                 # alın alt yüzü, pitch ekseninin üstünde (kapsül +30°'de 20,9)
+# Pitch ekseni: perde → sönümleyiciler → taşıyıcı arka plakası → boşluk → ağız astarı → ağız yayı
+GIMBAL_PIVOT = (NOSE_SPLIT_X + BAY_WALL + P.DAMPER_H + P.GIMBAL_PART_T + BRACKET_GAP + MOUTH_WALL + MOUTH_R, 0.0, PIVOT_Z)
+GIMBAL_POS = (GIMBAL_PIVOT[0] - PITCH_AXIS_DX, 0.0, PIVOT_Z)     # kamera kartı ön yüzünün merkezi (optik eksen)
+CAM_PUPIL_X = 5.5                                # mercek giriş göz bebeği, kart ön yüzünün önünde (görüş kontrolü)
+GIMBAL_SWEEP_R = 22.1                            # kapsülün pitch ekseninden en uzak noktası, tüm pozlarda (CAD; ağız ≥ +2)
+GIMBAL_SWEEP_Z = (-22.0, 20.9)                   # kapsülün pitch eksenine göre en alçak / en yüksek noktası (CAD)
+GIMBAL_CG = (113.0, 7.3, -9.0)                   # gimbal donanımı (kamera ve kontrolcü hariç), CAD
+# Gimbal kontrolcüsü (STorM32 sınıfı, 10 g): uçuş kontrolcüsünün üstünde, kanopi altında yatay — ağırlık merkezine
+# yakın (burun ağırlaştı) ve GNSS'ten ≥ 70 mm uzak. (x, y, z) merkez ve (lx, ly, lz) ölçü, mm
+GIMBAL_CTRL = {"g": 10.0, "center": (10.0, 0.0, 30.5), "size": (40.0, 30.0, 3.0)}
 
 # --- Batarya (6S1P 21700, hücreler x yönünde, 3 × 2 dizilim) --------------------------------
 CELL_D, CELL_L = 21.7, 70.2
@@ -98,11 +119,10 @@ POD_MIN_DROP_ENCLOSED = 100.0
 # Ayak tabanındaki sensörler: (x, y) ayak eksenine göre, gereken yarım görüş açısı (°) — ayak ağzından
 # kırpılmadan görmeli. CM3 Wide 102° yatay; VL53L8CX 45°×45° (köşe bölgeleri: 65° köşegen); MTF-01 akış 42°
 POD_SENSORS = {"CM3 Wide": ((0.0, 0.0), 51.0), "VL53L8CX": ((0.0, 18.0), 32.5), "MTF-01": ((-5.0, -19.0), 21.0)}
-GIMBAL_BELOW_CENTER = 15.0                       # gimbalın kamera merkezinin altındaki en alçak noktası (roll kolu)
 
 # --- CAD ağırlık merkezleri (cad/v2/build_v2.py; tests/test_v2.py ±3 mm ile doğrular), mm ----------
-PART_CG = {"top_shell": (0.4, 0.0, 25.8), "bottom_tub": (2.4, 0.0, -31.6), "nose_cover": (103.3, 0.0, -1.0),
-           "pod": (0.0, 0.0, -53.9)}
+PART_CG = {"top_shell": (0.0, -0.1, 25.8), "bottom_tub": (2.6, 0.0, -31.6), "nose_cover": (106.9, -0.3, -5.3),
+           "pod": (-0.2, 0.1, -53.8)}                      # nose_cover: iki burun yarısının ortak ağırlık merkezi
 ARM_DUCT_CG = (-22.8, 11.7)                      # kol–kanal modülü: motor ekseninden kol yönünde (yerel x), z
 
 # --- Malzemeler (g/cm³) -----------------------------------------------------------------------

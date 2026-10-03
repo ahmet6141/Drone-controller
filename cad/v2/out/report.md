@@ -4,83 +4,109 @@
 
 | Parça | Adet | Üretim malzemesi | Hacim (cm³) | Kütle (g) | Prototip (MJF) (g) | Ağırlık merkezi (mm) | Not |
 |---|---:|---|---:|---:|---:|---|---|
-| top_shell | 1 | PC/ABS | 47.9 | 55.1 | 48.4 | (+0, -0, +26) | kanopi; yarım kol soketleri ayrım düzlemine açık; kanopi emiş yarıkları dikey (maçasız) |
-| bottom_tub | 1 | PC/ABS | 52.4 | 60.2 | 52.9 | (+2, +0, -32) | taşıyıcı: V uçlu kol soketleri, batarya rayları, vida kuleleri; yan yarıklar için 2 kayar maça |
-| nose_cover | 1 | PC/ABS | 22.1 | 25.4 | 22.3 | (+103, +0, -1) | saten-mat siyah; gimbal başlığı (tavan) + arka perde, yanaksız: gimbal altta açıkta |
+| top_shell | 1 | PC/ABS | 48.0 | 55.2 | 48.5 | (+0, -0, +26) | kanopi; yarım kol soketleri ayrım düzlemine açık; kanopi emiş yarıkları dikey (maçasız) |
+| bottom_tub | 1 | PC/ABS | 52.8 | 60.7 | 53.3 | (+3, +0, -32) | taşıyıcı: V uçlu kol soketleri, batarya rayları, vida kuleleri; yan yarıklar için 2 kayar maça |
+| nose_cover | 1 | PC/ABS | 16.7 | 19.2 | 16.9 | (+116, -0, +11) | burun üst yarısı: alın + yanak üstleri + ağız astarı (2K: dış gövde rengi, astar siyah) |
+| nose_chin | 1 | PC/ABS | 19.3 | 22.2 | 19.5 | (+99, -0, -19) | burun alt yarısı + sönümleyici perdesi; gimbal iki yarının arasına oturur (ayrım = pitch ekseni) |
 | arm_duct | 4 | PA6-GF30 | 56.4 | 76.6 | 56.9 | (-23, -0, +12) yerel | TEK kalıp × 4; U kesit kol + çan ağızlı kanal + bal peteği ızgara + 3 radyal kaburga + motor çanı eteği; göbekten yolluk |
 | top_grille | 4 | PC | 9.4 | 11.2 | 9.4 | (-0, -0, +41) | çıkarılabilir üst ızgara: 6 ayak + 3 geçme tırnak; pervane değişiminde çıkar; tek kalıp × 4 |
-| pod | 1 | PC/ABS | 19.9 | 22.9 | 20.1 | (-0, +0, -52) | avuç ayağı (kısa, Ø74); sensör tablası tabandan 22 mm, IR camlı |
+| pod | 1 | PC/ABS | 20.0 | 23.0 | 20.2 | (-0, +0, -52) | avuç ayağı (kısa, Ø74); sensör tablası tabandan 22 mm, IR camlı |
 | pod_tip | 1 | TPU | 3.3 | 4.0 | 4.0 | (+0, -0, -69) | avuca değen uç (TPU 95A; seri üretimde ayağın üstüne ikinci enjeksiyon) |
 | sensor_window | 1 | PC | 3.7 | 4.5 | 3.8 | (-0, +0, -50) | IR geçirgen sensör camı (siyah IR mürekkep maskeli), sensörlere sıfır boşlukla |
-| battery_shell | 1 | PC/ABS | 37.4 | 43.1 | 37.8 | (-52, +0, -12) | akıllı batarya kabuğu + kuyruk kapağı (gövde çizgisini tamamlar) |
+| battery_shell | 1 | PC/ABS | 38.2 | 43.9 | 38.6 | (-54, +0, -12) | akıllı batarya kabuğu + kuyruk kapağı (gövde çizgisini tamamlar) |
 
-Gövde toplamı: **566 g** (üretim) · 455 g (MJF PA12 prototip)
+Gövde toplamı: **584 g** (üretim) · 470 g (MJF PA12 prototip)
+
+## Ön gimbal (cad/v2/gimbal_v2.py)
+
+Kamera merkezi (129.4, 0, -9) mm: burnun önünde, orta hatta; pitch ekseni 10.0 mm arkada, kapsülün ağırlık merkezinde. Eksen sırası: dışta pitch (motor sağ yanakta, rulman sol yanakta), içte roll (kameranın arkasında, optik eksenle eş eksenli).
+
+| Parça | Malzeme | Hacim (cm³) | Kütle (g) | Prototip (MJF) (g) | Not |
+|---|---|---:|---:|---:|---|
+| gimbal_bracket | PA6-GF30 | 10.9 | 14.9 | 11.0 | sönümlü U taşıyıcı: arka plaka 4 sönümleyiciyle perdeye; yan plakalar yanakların içinde |
+| gimbal_frame | PA6-GF30 | 4.2 | 5.8 | 4.3 | pitch çerçevesi: roll motoru arka plakada; kollar pitch eksenine (+y motor, −y pim) |
+| gimbal_cradle | PA6-GF30 | 2.3 | 3.1 | 2.3 | beşik: roll rotoruna bağlı; CM3 kartı ara parçalarla önünde |
+| camera_housing | PC | 1.5 | 1.8 | 1.5 | kamera başlığı: öne daralan kapak (1 mm); mercek halkası alüminyum, koruyucu cam |
+
+Satın alınan / temsili: kamera IMU 2.0 g, roll motoru 20.0 g, camera_bezel 0.3 g, camera_glass 0.1 g, pitch motoru 20.0 g, pim + rulman 2.8 g, sönümleyiciler 4.0 g, kontrolcü 10.0 g.
+Gimbal toplamı (kamera hariç) **84.7 g**, ağırlık merkezi (100.8, +6.5, -4.3) mm.
+Görüş temiz: -90° … +20° (mekanik -90…+30°, yazılım sınırı +15°).
 
 ## Varyant profiliyle karşılaştırma (config/hardware/variants/tier-a-entegre.yaml)
 
 | Bileşen | Profil (g) | CAD (g) | Fark |
 |---|---:|---:|---:|
-| Üst kabuk (PC/ABS, 2 mm et) | 55 | 55.1 | %+0 |
-| Alt kabuk / taşıyıcı (PC/ABS, kaburgalı) | 60 | 60.2 | %+0 |
-| Burun kapağı (gimbal başlığı + arka perde) | 25 | 25.4 | %+2 |
+| Üst kabuk (PC/ABS, 2 mm et) | 55 | 55.2 | %+0 |
+| Alt kabuk / taşıyıcı (PC/ABS, kaburgalı) | 61 | 60.7 | %-0 |
+| Burun kapağı (iki yarım: alın, yanaklar, siyah ağız astarı, sönümleyici perdesi) | 41 | 41.4 | %+1 |
 | Kol–kanal modülü (PA6-GF30: kol + motor yuvası + çan ağızlı kanal + alt ızgara + motor çanı eteği) | 77 | 76.6 | %-0 |
-| Avuç ayağı (PC/ABS + TPU uç + IR geçirgen sensör camı) | 31 | 31.4 | %+1 |
+| Avuç ayağı (PC/ABS + TPU uç + IR geçirgen sensör camı) | 32 | 31.5 | %-2 |
 | Üst ızgara (PC, çıkarılabilir; pervane üstü parmak koruması) | 11 | 11.2 | %+2 |
-| Akıllı batarya kabuğu + kilit + konnektör | 53 | 53.3 | %+0 |
+| Akıllı batarya kabuğu + kilit + konnektör | 54 | 54.1 | %+0 |
+| Kendi tasarım 2 eksen fırçasız gimbal (burun ağzında, ortada: dışta pitch, içte roll; sönümlü taşıyıcı) + kamera başlığı | 85 | 84.7 | %-0 |
 
 ## v1 (FPV gövde) ↔ v2 (bütünleşik)
 
 | | v1 | v2 |
 |---|---:|---:|
-| Kalkış ağırlığı | 1456 g | 1564 g |
-| Hover süresi | 20.1 dk | 16.9 dk |
-| T/W (batarya sınırlı) | 2.77 | 2.44 |
-| Hover gazı | 0.17 | 0.19 |
+| Kalkış ağırlığı | 1456 g | 1589 g |
+| Hover süresi | 20.1 dk | 16.6 dk |
+| T/W (batarya sınırlı) | 2.77 | 2.40 |
+| Hover gazı | 0.17 | 0.20 |
 
 ## Yerleşim (cad/v2/layout_v2.py)
 
-- Toplam 1564 g; batarya paketi merkezi x = -34.3 mm; ağırlık merkezi (-0.0, +0.4, -1.9) mm
-- Avuçta devrilme açısı 27.8°
+- Toplam 1589 g; batarya paketi merkezi x = -36.7 mm; ağırlık merkezi (+0.0, +0.3, -0.7) mm
+- Avuçta devrilme açısı 27.4°
 
 ## Kontroller
 
 | Kontrol | Sonuç | Değer |
 |---|---|---|
-| iç bileşenler gövdenin içinde | ✅ | 10 bileşen |
+| iç bileşenler gövdenin içinde | ✅ | 11 bileşen |
 | bileşenler çakışmıyor | ✅ | temiz |
 | bileşen ↔ kanal boşluğu | ✅ | en yakın: GNSS + pusula 13.5 mm |
-| gövde ↔ kanal boşluğu | ✅ | 3.6 mm ≥ 3 |
-| batarya kuyruktan takılıyor (kapak = kuyruk) | ✅ | hücre merkezi x = -34.3 mm; kapaktan ön uca 96.8 mm (en az 92.2; BMS boşluğu +4.6 mm, en çok +8) |
-| CG yatay ofset | ✅ | (-0.0, +0.4) mm |
-| IMU ↔ CG (EKF2_IMU_POS) | ✅ | (+0, -0, +22) mm |
-| GNSS/pusula ↔ gürültü kaynakları | ✅ | en yakın batarya konnektörü 77 mm ≥ 70 |
+| gövde ↔ kanal boşluğu | ✅ | 3.8 mm ≥ 3 |
+| batarya kuyruktan takılıyor (kapak = kuyruk) | ✅ | hücre merkezi x = -36.7 mm; kapaktan ön uca 94.4 mm (en az 92.2; BMS boşluğu +2.2 mm, en çok +8) |
+| CG yatay ofset | ✅ | (+0.0, +0.3) mm |
+| IMU ↔ CG (EKF2_IMU_POS) | ✅ | (-0, -0, +21) mm |
+| GNSS/pusula ↔ gürültü kaynakları | ✅ | en yakın batarya konnektörü 75 mm ≥ 70 |
 | avuç ayağı pervane düzleminin altında (tam kapalı pervane) | ✅ | 102 mm ≥ 100 (üst + alt ızgara + motor eteği; açık üstte 120) |
-| gimbal avuç ayağından yukarıda | ✅ | gimbal alt ucu -62 mm, ayak tabanı -72 mm (≥ 10 mm pay) |
+| gimbal sarkmıyor (burun alt çizgisinde, ayağın üstünde) | ✅ | en alçak -31 mm (−90…+30° pitch); burun altı -29, ayak -72 mm |
+| kamera orta hatta, gövde orta yüksekliğinde | ✅ | y = 0; kamera z -9, ağırlık merkezi -1, burun ortası -2 mm |
 | ayak sensörleri ağızdan kırpılmadan görür | ✅ | CM3 Wide 57° ≥ 51°, VL53L8CX 37° ≥ 32°, MTF-01 34° ≥ 21° |
 | kol dikey eğilme frekansı bantların arasında | ✅ | 210–333 Hz (katılım 0–1, E %70–100); pencere 204–348 Hz |
 | kol yanal eğilme frekansı 1× bandının üstünde | ✅ | 208 Hz ≥ 204 (p = 0,5, nemli; ızgara düzlem içinde rijit olduğundan gerçekte daha yüksek) |
-| kanal kenarına düşme (kol kökü) | ✅ | F 153 N → σ 27 MPa, emniyet 3.4 ≥ 2 |
+| kanal kenarına düşme (kol kökü) | ✅ | F 156 N → σ 27 MPa, emniyet 3.3 ≥ 2 |
 | top_shell: tek katı | ✅ | 1 katı |
 | bottom_tub: tek katı | ✅ | 1 katı |
 | nose_cover: tek katı | ✅ | 1 katı |
+| nose_chin: tek katı | ✅ | 1 katı |
 | arm_duct: tek katı | ✅ | 1 katı |
 | top_grille: tek katı | ✅ | 1 katı |
 | pod: tek katı | ✅ | 1 katı |
 | pod_tip: tek katı | ✅ | 1 katı |
 | sensor_window: tek katı | ✅ | 1 katı |
 | battery_shell: tek katı | ✅ | 1 katı |
-| gövde ↔ kanal halkası | ✅ | 3.0 mm ≥ 2 |
+| gimbal_bracket: tek katı | ✅ | 1 katı |
+| gimbal_frame: tek katı | ✅ | 1 katı |
+| gimbal_cradle: tek katı | ✅ | 1 katı |
+| camera_housing: tek katı | ✅ | 1 katı |
+| gövde ↔ kanal halkası | ✅ | 2.7 mm ≥ 2 |
 | kol kökleri soketlerden temassız geçer | ✅ | 0.00 mm³ |
 | batarya tünele çakışmasız girer | ✅ | 0.00 mm³ |
 | pervane ↔ kanal / ızgara | ✅ | 0.00 mm³ |
-| gimbal ↔ burun kapağı (nötr) | ✅ | 0.00 mm³ |
-| gimbal + kamera başlığı hareket aralığı ↔ burun ve gimbal gövdesi | ✅ | 0.00 mm³ (pitch −90/−45/0/+30, roll ±30) |
-| avuç ayağı en alçak nokta (avuca yalnızca o değer) | ✅ | ayak -72 mm; sonraki en alçak: gimbal_roll_arm -61.8 mm |
+| gimbal taşıyıcısı ↔ burun (sönümleyici yolu) | ✅ | en yakın taşıyıcı ↔ nose_cover 1.5 mm ≥ 1 |
+| gimbal kapsülü hareket aralığı ↔ burun, taşıyıcı, kanallar | ✅ | 0.00 mm³ (pitch −90/−45/0/+15/+30 × roll −30/0/+30) |
+| gimbal kapsülü ↔ ağız boşluğu | ✅ | 2.0 mm ≥ 1,5 (−90°, 0°, +30° / roll 30°) |
+| ağız payı (süpürme + 2 mm) ve parametreler CAD ile uyumlu | ✅ | süpürme r 22.1 / z -21.6…+20.9 mm; ağız r 24.5, üst 23.0 |
+| gimbal dengesi: pitch ekseni kapsül ağırlık merkezinde, roll ekseni optik eksende | ✅ | pitch ekseni x -9.97 mm (parametre -10.0); roll kaçıklığı 0.02 mm |
+| avuç ayağı en alçak nokta (avuca yalnızca o değer) | ✅ | ayak -72 mm; sonraki en alçak: bottom_tub -52.2 mm |
 | üst ızgara ↔ pervane (gürültü payı) / somun | ✅ | kanat 5.4 mm ≥ 4, somun ve mil 3.8 mm ≥ 3 |
 | motor çanı ↔ etek (dönen çan yandan kapalı) | ✅ | 3.0 mm ≥ 2 |
 | ayak sensörleri ↔ Pi ve batarya | ✅ | 6.8 mm ≥ 1,5 |
-| iç kartlar (Pi, FC, ESC, GNSS) ↔ kabuklar, kovanlar, kollar | ✅ | 0.00 mm³ |
-| kabuk et kalınlığı 1,5–2,5 mm | ✅ | 2.0 mm |
+| iç kartlar (Pi, FC, ESC, GNSS, gimbal kontrolcüsü) ↔ kabuklar, kovanlar, kollar | ✅ | 0.00 mm³ |
+| kabuk et kalınlığı 1,5–2,5 mm | ✅ | gövde 2.0, burun 1.6 mm (iç duvarlar: ağız astarı 1.2, perde 1.2) |
 | kol / kanal et kalınlığı ≥ 1,5 mm | ✅ | kol 2.2, kanal 1.6 mm |
 | kaburga ≤ 0,6 × et | ✅ | 0.6 |
 | kalıptan çıkma açısı ≥ 1° | ✅ | 1.5° (kanal iç duvarı) |

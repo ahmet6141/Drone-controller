@@ -97,8 +97,9 @@ def components(profile: dict | None = None, battery_x: float = 0.0) -> list[Comp
         Comp("ELRS alıcı", m("XR4"), _box(-36.0, 0, 20.0, 20, 12, 6)),
         Comp("Remote ID", m("Remote ID"), _box(28.0, 0, 20.0, 26, 18, 6)),
         Comp("VL53L1X (yukarı)", m("VL53L1X"), _box(50.0, 0, 33.0, 13, 13, 2)),
-        Comp("gimbal (motorlar, kontrolcü, basılan)", m("fırçasız gimbal"), None,
-             cg=(V.GIMBAL_POS[0] - 12.0, 8.0, V.GIMBAL_POS[2] + 18.0), inside=False),
+        Comp("gimbal (motorlar, taşıyıcı, kapsül)", m("fırçasız gimbal") - V.GIMBAL_CTRL["g"], None, cg=V.GIMBAL_CG,
+             inside=False),
+        Comp("gimbal kontrolcüsü", V.GIMBAL_CTRL["g"], _box(*V.GIMBAL_CTRL["center"], *V.GIMBAL_CTRL["size"])),
         Comp("gimbal kamerası (CM3)", m("Camera Module 3 (IMX708"), None, cg=V.GIMBAL_POS, inside=False),
         Comp("avuç ayağı sensörleri (CM3 Wide + 8×8 ToF + MTF-01)",
              m("Camera Module 3 Wide") + m("VL53L8CX") + m("MTF-01"), None,
@@ -219,7 +220,7 @@ def checks(profile: dict | None = None) -> list[tuple[str, bool, str]]:
                 f"({imu[0]:+.0f}, {imu[1]:+.0f}, {imu[2]:+.0f}) mm"))
     gnss = next(c for c in comps if c.name == "GNSS + pusula").center
     noisy = {n: next(c for c in comps if c.name == n).center
-             for n in ("ESC (4'ü 1 arada)", "companion (Pi 5 + AI HAT+)", "WFB-ng adaptör")}
+             for n in ("ESC (4'ü 1 arada)", "companion (Pi 5 + AI HAT+)", "WFB-ng adaptör", "gimbal kontrolcüsü")}
     connector = (pack[1], 0.0, (pack[4] + pack[5]) / 2)                      # konnektör ve akım yolu
     dists = {n: math.dist(gnss, p) for n, p in noisy.items()} | {"batarya konnektörü": math.dist(gnss, connector)}
     near = min(dists.items(), key=lambda kv: kv[1])
@@ -228,23 +229,86 @@ def checks(profile: dict | None = None) -> list[tuple[str, bool, str]]:
     drop = P.PROP_PLANE_Z - V.POD_BOTTOM_Z
     out.append(("avuç ayağı pervane düzleminin altında (tam kapalı pervane)", drop >= V.POD_MIN_DROP_ENCLOSED,
                 f"{drop:.0f} mm ≥ {V.POD_MIN_DROP_ENCLOSED:.0f} (üst + alt ızgara + motor eteği; açık üstte 120)"))
-    gimbal_low = V.GIMBAL_POS[2] - V.GIMBAL_BELOW_CENTER
-    out.append(("gimbal avuç ayağından yukarıda", gimbal_low >= V.POD_BOTTOM_Z + 10.0,
-                f"gimbal alt ucu {gimbal_low:.0f} mm, ayak tabanı {V.POD_BOTTOM_Z:.0f} mm (≥ 10 mm pay)"))
+    low, nose_low, mid = gimbal_heights()
+    out.append(("gimbal sarkmıyor (burun alt çizgisinde, ayağın üstünde)",
+                low >= nose_low - 3.0 and low >= V.POD_BOTTOM_Z + 10.0,
+                f"en alçak {low:.0f} mm (−90…+30° pitch); burun altı {nose_low:.0f}, ayak {V.POD_BOTTOM_Z:.0f} mm"))
+    out.append(("kamera orta hatta, gövde orta yüksekliğinde", V.GIMBAL_POS[1] == 0.0 and abs(V.GIMBAL_POS[2] - mid) <= 8.0,
+                f"y = 0; kamera z {V.GIMBAL_POS[2]:.0f}, ağırlık merkezi {cg[2]:.0f}, burun ortası {mid:.0f} mm"))
     clear = pod_sensor_clearance()
     out.append(("ayak sensörleri ağızdan kırpılmadan görür", all(c >= need for c, need in clear.values()),
                 ", ".join(f"{n} {c:.0f}° ≥ {need:.0f}°" for n, (c, need) in clear.items())))
     return out
 
 
-def gimbal_view() -> dict:
-    """v1 görüş kontrolünü v2 gimbal konumuyla çalıştırır."""
-    old = P.GIMBAL_POS
-    try:
-        P.GIMBAL_POS = V.GIMBAL_POS
-        return layout.gimbal_view_report()
-    finally:
-        P.GIMBAL_POS = old
+def gimbal_heights() -> tuple[float, float, float]:
+    """(kapsülün en alçak noktası, pitch eksenindeki burun alt yüzü, kamera kesitinde burnun orta yüksekliği)."""
+    low = V.PIVOT_Z + V.GIMBAL_SWEEP_Z[0]
+    nose_low = V.section_at(V.GIMBAL_PIVOT[0])[0]
+    z0, *_, z1 = V.section_at(V.GIMBAL_POS[0])[:4]
+    return low, nose_low, (z0 + z1) / 2
+
+
+def lens_at(pitch: float) -> tuple[float, float, float]:
+    """Mercek giriş göz bebeği (gövde koordinatı): pitch ekseni etrafında döner (+ = burun yukarı)."""
+    px, _, pz = V.GIMBAL_PIVOT
+    d = V.CAM_PUPIL_X - V.PITCH_AXIS_DX
+    th = math.radians(pitch)
+    return (px + d * math.cos(th), 0.0, pz + d * math.sin(th))
+
+
+def view_obstacles() -> dict[str, list[tuple[float, float, float]]]:
+    """Gimbal kamerasının görüşüne girmemesi gereken v2 yapıları (nokta bulutu): kanal halkaları ve çan ağızları,
+    üst ızgaralar, kollar, avuç ayağı ve burnun ağız çevresi."""
+    pts: dict[str, list[tuple[float, float, float]]] = {"kanal": [], "üst ızgara": [], "kol": [], "ayak": [], "burun": []}
+    r_ring = V.DUCT_IN_R + V.DUCT_WALL + V.DUCT_FLARE[1]
+    g = V.TOP_GRILLE
+    for mx, my in P.motor_positions():
+        for k in range(120):
+            a = math.radians(3 * k)
+            for r, z in ((V.DUCT_IN_R, V.DUCT_Z[0]), (r_ring, V.DUCT_Z[1]), (r_ring, V.DUCT_Z[1] + V.DUCT_FLARE[0])):
+                pts["kanal"].append((mx + r * math.cos(a), my + r * math.sin(a), z))
+            for r in (g["r_out"], g["r_out"] * 0.7, g["r_out"] * 0.4):
+                pts["üst ızgara"].append((mx + r * math.cos(a), my + r * math.sin(a), g["z"]))
+        for t in range(31):
+            f = 0.25 + 0.75 * t / 30
+            for z in (-17.0, 0.0, 18.0):
+                pts["kol"].append((mx * f, my * f, z * (1.0 - 0.5 * f)))
+    for k in range(72):
+        a = math.radians(5 * k)
+        for z in (V.POD_BOTTOM_Z, V.POD_BOTTOM_Z + 15.0, belly_z_estimate()):
+            pts["ayak"].append((V.POD_X + V.POD_TOP_R * math.cos(a), V.POD_TOP_R * math.sin(a), z))
+    hy, top = V.MOUTH_HALF_Y, V.PIVOT_Z + V.MOUTH_TOP
+    x_tip = V.STATIONS[-1][0]
+    for i in range(41):
+        x = V.GIMBAL_PIVOT[0] - 10.0 + (x_tip - V.GIMBAL_PIVOT[0] + 10.0) * i / 40
+        for y, z in V.section_points(x):
+            if abs(y) <= hy and z <= top:                       # ağzın içi: kabuk yok
+                continue
+            pts["burun"].append((x, y, z))
+    return pts
+
+
+def belly_z_estimate() -> float:
+    return V.section_at(V.POD_X)[0]
+
+
+def gimbal_view(step: float = 5.0) -> dict:
+    """Pitch aralığında (mekanik −90…+30°) kamera görüşüne giren yapılar; kamera her açıda pitch ekseni etrafında
+    döner (mercek konumu lens_at)."""
+    pts = view_obstacles()
+    blocked: dict[float, list[str]] = {}
+    n = int(round((P.PITCH_RANGE[1] - P.PITCH_RANGE[0]) / step))
+    pitches = [P.PITCH_RANGE[0] + i * step for i in range(n + 1)]
+    for pitch in pitches:
+        cam = lens_at(pitch)
+        hits = [name for name, group in pts.items()
+                if any(layout.in_camera_view(p, cam, pitch, P.CAM_HFOV, P.CAM_VFOV) for p in group)]
+        if hits:
+            blocked[pitch] = hits
+    clear = [p for p in pitches if p not in blocked]
+    return {"blocked": blocked, "clear_min": min(clear) if clear else None,
+            "clear_max": max(clear) if clear else None}
 
 
 def tip_angle(profile: dict | None = None) -> float:

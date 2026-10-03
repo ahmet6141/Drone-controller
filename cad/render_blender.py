@@ -23,11 +23,13 @@ from mathutils import Vector
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE / "v2"))
 import params as P  # noqa: E402
+import v2_params as V  # noqa: E402
 import visual  # noqa: E402
 
 BACKGROUND = (0.80, 0.82, 0.84)          # doğrusal; AgX sonrası ≈ açık gri stüdyo fonu
-V2_GIMBAL = (128.0, 0.0, -56.8)          # cad/v2/v2_params.GIMBAL_POS (mm)
+V2_GIMBAL = V.GIMBAL_POS                 # kamera merkezi (mm)
 # Görünümler: (azimut°, yükseklik°, hedef (m), çerçeve yarıçapı (m) | None = tüm drone, çözünürlük, f-stop | None)
 # azimut 0° = burnun önü, −90° = sağ yan
 MODELS = {
@@ -51,7 +53,7 @@ MODELS = {
             "side": (-90.0, 2.0, None, None, (1920, 900), None),
             "top": (0.0, 90.0, None, None, (1500, 1500), None),
             "under": (-28.0, -24.0, (0.010, 0.0, -0.045), 0.15, (1600, 1100), 5.6),
-            "nose": (-24.0, 4.0, (V2_GIMBAL[0] / 1000 - 0.006, 0.0, V2_GIMBAL[2] / 1000 + 0.014), 0.075,
+            "nose": (-28.0, 10.0, (V2_GIMBAL[0] / 1000 - 0.014, 0.0, V2_GIMBAL[2] / 1000 + 0.004), 0.072,
                      (1600, 1100), 4.0),
         },
     },

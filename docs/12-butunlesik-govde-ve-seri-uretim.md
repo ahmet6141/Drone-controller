@@ -32,6 +32,8 @@ Her sayı bir araçla yeniden üretilir:
 | Yerleşim ağırlık merkezine göre planlanabilir mi? | **Evet, kodla.** Her bileşen bir kutu ya da CAD'den gelen ağırlık merkezli bir kütle olarak yerleşir. Batarya konumu, ağırlık merkezini motor merkezine getirecek şekilde **çözülür** (hücre merkezi x = −36,8 mm). Ardından 12 yerleşim kuralı, 3 titreşim/dayanım kontrolü ve 33 CAD kontrolü çalışır; hepsi geçiyor (§4–§6) |
 | Pervanenin üstü de korunup avuç ayağı kısaltılabilir mi? | **Evet (§3.1).** Üst ızgara ve motor çanı eteğiyle pervane her yönden kapalı; ayak 49 → 26 mm kısaldı, gimbal 10 mm yükseldi. Üç sensör sığıyor, ayak ağzından kırpılmadan görüyor ve temas mesafesini ölçebiliyor. Avuçta denge 20° → 27,8°. Bedeli: +57 g ve girişte tahmini %5 itki → hover 19,2 → 16,9 dk (o adımda; bugün 16,5 dk, §3.2–3.3) |
 | Seri üretime uygun mu? | **Tasarım kuralları kodda.** PC/ABS 2,0 mm et, PA6-GF30 1,6–2,2 mm, kaburga ≤ 0,6 × et, ≥ 1° kalıp açısı, maçasız U kesit kol, ayrım düzlemine açık yarım soketler, tek kalıp ×4. Hiçbir parça yan maça gerektirmez. Kalıp maliyeti kaba tahminle: alüminyum (pilot) ≈ $64–102 bin, çelik (seri) ≈ $183–308 bin — **teklif alınmalı** (§5) |
+| Alttaki yuvarlak kısım ne işe yarıyor? | **Avuç ayağı (§3).** Avuca değen tek noktadır (turuncu TPU uç) ve avucu pervane düzleminin 102 mm altında tutar. Tabanında, camın arkasında aşağı bakan üç sensör vardır: CM3 Wide (avuç ve jest), VL53L8CX 8×8 ToF (mesafe, eğim, temas) ve MTF-01 (optik akış + lazer: GNSS'siz konum tutma ve irtifa). Ağırlık merkezinin tam altında olduğundan drone avuçta 27,4°'ye kadar devrilmez. Masada ve zeminde iniş takımıdır |
+| Türkiye'de kaça mal olur? | **Kabaca 115–140 bin TL** (3 Ekim 2026, 1 USD = 49,14 TL). Bunun ≈ 100–120 bin TL'si hava aracı, ≈ 15–19 bin TL'si kumanda ve video yer istasyonudur. Malzeme listesi $1.570 + $240 tutar; vergisiz kur çevirisi ≈ 89 bin TL'dir. Aradaki fark yurt dışı siparişlerindeki götürü vergiden (AB %30, diğer ülkeler %60) ve yurt içi KDV'den gelir. En pahalı kalem Pi 5 + AI HAT+ 2'dir (%24; RAM krizi). Seri üretim kalıpları ≈ 3–15 milyon TL'dir (§5.3) |
 
 ## 2. CAD mi, Blender mı? — İkisi, ayrı işler için
 
@@ -133,7 +135,7 @@ Avuca iniş için şarttır ve beş işi aynı anda yapar:
    - CM3 Wide: avuç ve jest tespiti.
    - VL53L8CX 8×8 ToF: avuç mesafesi, eğimi ve temas.
    - MTF-01: optik akış + lazer; konum tutma ve irtifa.
-4. **Ağırlık merkezinin tam altında:** avuç dönme ekseni olur; motorlar durunca drone avuçta ≈ 28°'ye kadar devrilmez.
+4. **Ağırlık merkezinin tam altında:** avuç dönme ekseni olur; motorlar durunca drone avuçta 27,4°'ye kadar devrilmez.
 5. **İniş takımı:** masada ve zeminde de bu ayağın üzerinde durur.
 
 Çapı (74 mm) sensörlerden ve görüş açılarından, boyu güvenlik kuralından gelir (gimbal artık sarkmadığı için ayağın boyunu sınırlamaz); tamamen kaldırılırsa avuca iniş güvenliği bozulur. Pervanenin üstü de kapatılınca 49 mm'den 26 mm'ye kısaldı (§3.1).
@@ -338,9 +340,57 @@ verilmedi: tüm yerleşim, titreşim ve CAD kontrolleri geçiyor. İyileştirmel
 | Batarya kabuğu + kapak + kilit | $8–12 bin | $20–35 bin | Kabuk iki parça, ultrasonik kaynak; gösterge ışık boruları |
 | **Toplam** | **≈ $64–102 bin** | **≈ $183–308 bin** | |
 
-**Prototip seti:** MJF PA12 ile ≈ 465 cm³, kabaca **$270** (serviste değişir; profilde tahmini fiyat). PA12 hafiftir (1,01 g/cm³), bu yüzden prototip gövde seti seri üretimden ≈ 115 g hafif çıkar (470 ↔ 584 g). Uçuş testlerinde bu fark balastla telafi edilir.
+**Prototip seti:** MJF PA12 ile ≈ 468 cm³, kabaca **$270** (serviste değişir; profilde tahmini fiyat). PA12 hafiftir (1,01 g/cm³), bu yüzden prototip gövde seti seri üretimden ≈ 115 g hafif çıkar (473 ↔ 588 g). Uçuş testlerinde bu fark balastla telafi edilir.
 
-### 5.3 EVT → DVT → PVT
+### 5.3 Türkiye'de maliyet (TL, 3 Ekim 2026)
+
+Kur: 1 USD = 49,14 TL. Profilin malzeme listesi hava aracı için **$1.570**, yer ekipmanı (TX15 kumanda + WFB-ng yer
+istasyonu) için **$240**'tır. Şubat 2026'dan beri yurt dışından bireysel siparişte vergi muafiyeti yoktur. Her pakete
+götürü vergi uygulanır: AB'den gelen gönderilerde %30, diğer ülkelerden %60; ÖTV (IV) listesindeki ürünlerde buna %20
+eklenir. Gövde baskısı ve kablo demeti yurt içinden alınır (+%20 KDV).
+
+| Senaryo | Hava aracı | Yer ekipmanı | Toplam |
+|---|---:|---:|---:|
+| Vergisiz kur çevirisi (teorik alt sınır) | 77.100 TL | 11.800 TL | 88.900 TL |
+| Elektronik AB'den (%30) + gövde ve kablo yurt içinden | 98.800 TL | 15.300 TL | 114.100 TL |
+| Elektronik ABD/Çin'den (%60) + gövde ve kablo yurt içinden | 117.300 TL | 18.900 TL | 136.200 TL |
+| Türkiye'deki satıcılardan (KDV dahil, liste fiyatının 1,4–2 katı) | 105–142 bin TL | 16,5–23,6 bin TL | 121–166 bin TL |
+
+Karışık alımla gerçekçi bütçe **≈ 115–140 bin TL**'dir. Perakende katsayısı Raspberry Pi 5 8GB'den çıkarıldı: liste
+fiyatı $175 ≈ 8.600 TL, Türkiye'de 12.000–17.700 TL. Paranın üçte ikisi dört kalemdedir:
+
+| Kalem | Fiyat | Pay |
+|---|---:|---:|
+| Pi 5 8GB + AI HAT+ 2 | $380 | %24 |
+| MJF gövde seti | $270 | %17 |
+| Uçuş kontrolcüsü + BEC | $225 | %14 |
+| İtki (motor, pervane, ESC) | $171 | %11 |
+
+Pi kaleminin pahalı olmasının nedeni RAM krizidir. Pi 5 8GB'nin liste fiyatı $80'dan $175'e, AI HAT+ 2'ninki $130'dan
+$180'e çıktı (Nisan 2026). Profildeki fiyatlar sokak fiyatıdır (PiShop: $175 + $200).
+
+Yetenek kaybetmeden ≈ $235 (vergilerle ≈ 15–18 bin TL) düşürülebilir: Pi 5 4GB, AI HAT+ 26 TOPS ve küçük kumanda
+(`tools/scenarios.py`, "Önerilen" paketi; paketteki "kendi baskımız" kalemi v2 için geçerli değildir).
+
+**Dahil olmayanlar:**
+
+- kargo ve gümrükleme hizmet bedelleri;
+- şarj cihazı, yedek batarya ve pervaneler;
+- tekrar baskılar ve kaza yedekleri.
+
+Li-ion hücreler hava kargosunda kısıtlıdır; yurt içinden almak genelde daha kolaydır.
+
+**Seri üretim:** §5.2'deki kalıplar alüminyumda ≈ 3,1–5,0 milyon TL, çelikte ≈ 9,0–15,1 milyon TL tutar. 1.000 adetlik
+pilot seride alüminyum kalıp payı adet başına ≈ 3–5 bin TL'dir.
+
+Kaynaklar:
+
+- kur: [Bloomberg HT](https://www.bloomberght.com/doviz/dolar);
+- götürü vergi: [Hürriyet](https://www.hurriyet.com.tr/bilgi/galeri/yurt-disi-gumruk-vergisi-siniri-2026-ne-kadar-oldu-dustu-mu-30-euro-siniri-kalkti-mi-43078592);
+- Pi fiyatları: [OMG! Ubuntu](https://www.omgubuntu.co.uk/2026/02/raspberry-pi-annouce-more-price-rises), [Gigazine](https://gigazine.net/gsc_news/en/20260402-raspberry-pi-price-increases);
+- Türkiye fiyatı: [Akakçe](https://www.akakce.com/elektronik-devre-elemani/en-ucuz-raspberry-pi-5-8-gb-fiyati,483293766.html).
+
+### 5.4 EVT → DVT → PVT
 
 | Aşama | Gövde | Amaç |
 |---|---|---|
@@ -455,7 +505,7 @@ Hafifletme yolları:
 ## 10. Öneri ve sonraki adımlar
 
 1. **Faz 1–2 v1 ile sürer:** yazılım ve ilk uçuşlar hazır gövdede yapılır, çünkü kaza sonrası hızlı onarılır. Elektronik v2'ye aynen taşınır.
-2. **v2 EVT:** MJF PA12 seti (≈ $235) basılır. Ardından uydurma, kablo demeti ve ilk uçuşlar gelir; IMU FFT ile kol frekansı ölçülür.
+2. **v2 EVT:** MJF PA12 seti (≈ $270, §5.2) basılır. Ardından uydurma, kablo demeti ve ilk uçuşlar gelir; IMU FFT ile kol frekansı ölçülür.
 3. **FEA:** STEP'ten modal analiz ve düşme simülasyonu yapılır. Gerekirse kaburga veya et kalınlığı ayarlanır (`v2_params.py` → yeniden üret).
 4. **Endüstriyel tasarım rötuşu (isteğe bağlı):** kanopi yüzeyleri Plasticity veya Fusion'da G2'ye çıkarılır; ön engel sensörleri için pencereler eklenir. Sonuç STEP olarak geri alınır, renderlar Blender'da kalır.
 5. **DVT hazırlığı:** 9 kalıp için teklif alınır; akıllı batarya BMS'i (yakıt göstergesi) ve konnektör seçilir; UN38.3 planlanır.

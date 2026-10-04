@@ -1,0 +1,3519 @@
+{
+ "model": "YELKOVAN YK-38",
+ "date": "2026-10-04",
+ "bed_mm": [
+  220.0,
+  220.0,
+  250.0
+ ],
+ "bed_margin_mm": 6.0,
+ "solver": {
+  "segment_cut": "EXACT",
+  "shell_features": "MANIFOLD",
+  "boolean_ops": 392,
+  "boolean_s": 18.3,
+  "elapsed_s": 82.2
+ },
+ "totals": {
+  "unique_parts": 57,
+  "pieces": 92,
+  "mass_g": 3627.0,
+  "print_h": 268.2,
+  "stl_mb": 0.0,
+  "spec_estimate": {
+   "print_mass_kg": 3.33,
+   "print_hours": 316,
+   "segment_count": 125
+  }
+ },
+ "by_material": {
+  "LW-PLA": {
+   "pieces": 71,
+   "mass_g": 2711.3,
+   "hours": 209.8,
+   "volume_cm3": 4171.0
+  },
+  "LW-ASA": {
+   "pieces": 3,
+   "mass_g": 270.5,
+   "hours": 17.9,
+   "volume_cm3": 360.7
+  },
+  "PETG": {
+   "pieces": 8,
+   "mass_g": 152.1,
+   "hours": 9.0,
+   "volume_cm3": 119.8
+  },
+  "PA-CF": {
+   "pieces": 7,
+   "mass_g": 393.8,
+   "hours": 25.7,
+   "volume_cm3": 328.2
+  },
+  "TPU": {
+   "pieces": 1,
+   "mass_g": 3.3,
+   "hours": 0.7,
+   "volume_cm3": 2.7
+  },
+  "PETG-füme": {
+   "pieces": 2,
+   "mass_g": 96.1,
+   "hours": 5.2,
+   "volume_cm3": 75.7
+  }
+ },
+ "by_group": {
+  "Kanat": {
+   "pieces": 22,
+   "mass_g": 1408.3,
+   "hours": 101.7
+  },
+  "Kuyruk": {
+   "pieces": 12,
+   "mass_g": 297.9,
+   "hours": 25.2
+  },
+  "Kumanda yüzeyleri": {
+   "pieces": 28,
+   "mass_g": 350.9,
+   "hours": 36.5
+  },
+  "Gövde": {
+   "pieces": 13,
+   "mass_g": 942.5,
+   "hours": 65.2
+  },
+  "İtki": {
+   "pieces": 6,
+   "mass_g": 293.9,
+   "hours": 18.8
+  },
+  "Kaplamalar": {
+   "pieces": 4,
+   "mass_g": 199.3,
+   "hours": 12.7
+  },
+  "Faydalı yük": {
+   "pieces": 1,
+   "mass_g": 79.6,
+   "hours": 3.8
+  },
+  "Takım kapakları": {
+   "pieces": 6,
+   "mass_g": 54.7,
+   "hours": 4.3
+  }
+ },
+ "all_manifold": true,
+ "all_fit": true,
+ "parts": [
+  {
+   "key": "wing_panel_1",
+   "name": "Kanat dış paneli 1/7 (y 0.36–0.57)",
+   "group": "Kanat",
+   "material": "LW-PLA",
+   "zone": "wing_panel",
+   "wall_mm": 0.6,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 5025,
+    "faces": 10130,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 141.0,
+   "mass_g": 91.6,
+   "mass_total_g": 183.3,
+   "print_h": 6.46,
+   "print_h_total": 12.92,
+   "size_mm": [
+    215.1,
+    213.1,
+    210.0
+   ],
+   "orientation": {
+    "up_world": [
+     -0.0,
+     1.0,
+     -0.0
+    ],
+    "up_words": "+y (sol/iskele)",
+    "z_rot_deg": 49.0,
+    "bed_end": "y=0.360"
+   },
+   "bed_margin_mm": 2.5,
+   "fits": false,
+   "fits_tight": true,
+   "overhang_cm2": 13.7,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.045,
+    "p05_mm": 0.449,
+    "median_mm": 0.794
+   },
+   "note": "",
+   "pin_holes": 1,
+   "features": []
+  },
+  {
+   "key": "wing_panel_2",
+   "name": "Kanat dış paneli 2/7 (y 0.57–0.78)",
+   "group": "Kanat",
+   "material": "LW-PLA",
+   "zone": "wing_panel",
+   "wall_mm": 0.6,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 4660,
+    "faces": 9384,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 2,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 141.03,
+   "mass_g": 91.7,
+   "mass_total_g": 183.3,
+   "print_h": 6.46,
+   "print_h_total": 12.92,
+   "size_mm": [
+    165.0,
+    167.2,
+    210.0
+   ],
+   "orientation": {
+    "up_world": [
+     -0.0,
+     1.0,
+     -0.0
+    ],
+    "up_words": "+y (sol/iskele)",
+    "z_rot_deg": 136.0,
+    "bed_end": "y=0.570"
+   },
+   "bed_margin_mm": 26.4,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 16.9,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.135,
+    "p05_mm": 0.449,
+    "median_mm": 0.794
+   },
+   "note": "",
+   "pin_holes": 2,
+   "features": [
+    "servo yuvası 36×24 mm, derinlik 29.3 mm"
+   ]
+  },
+  {
+   "key": "wing_panel_3",
+   "name": "Kanat dış paneli 3/7 (y 0.78–0.99)",
+   "group": "Kanat",
+   "material": "LW-PLA",
+   "zone": "wing_panel",
+   "wall_mm": 0.6,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 4795,
+    "faces": 9674,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 134.12,
+   "mass_g": 87.2,
+   "mass_total_g": 174.4,
+   "print_h": 6.17,
+   "print_h_total": 12.35,
+   "size_mm": [
+    165.8,
+    165.9,
+    210.0
+   ],
+   "orientation": {
+    "up_world": [
+     -0.0,
+     1.0,
+     -0.0
+    ],
+    "up_words": "+y (sol/iskele)",
+    "z_rot_deg": 46.0,
+    "bed_end": "y=0.780"
+   },
+   "bed_margin_mm": 27.0,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 2.1,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.108,
+    "p05_mm": 0.449,
+    "median_mm": 0.794
+   },
+   "note": "",
+   "pin_holes": 2,
+   "features": []
+  },
+  {
+   "key": "wing_panel_4",
+   "name": "Kanat dış paneli 4/7 (y 0.99–1.20)",
+   "group": "Kanat",
+   "material": "LW-PLA",
+   "zone": "wing_panel",
+   "wall_mm": 0.6,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 5645,
+    "faces": 11374,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 128.36,
+   "mass_g": 83.4,
+   "mass_total_g": 166.9,
+   "print_h": 5.93,
+   "print_h_total": 11.87,
+   "size_mm": [
+    202.4,
+    203.9,
+    210.0
+   ],
+   "orientation": {
+    "up_world": [
+     -0.0,
+     1.0,
+     -0.0
+    ],
+    "up_words": "+y (sol/iskele)",
+    "z_rot_deg": 47.0,
+    "bed_end": "y=0.990"
+   },
+   "bed_margin_mm": 8.1,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 20.6,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.102,
+    "p05_mm": 0.449,
+    "median_mm": 0.794
+   },
+   "note": "",
+   "pin_holes": 2,
+   "features": []
+  },
+  {
+   "key": "wing_panel_5",
+   "name": "Kanat dış paneli 5/7 (y 1.20–1.41)",
+   "group": "Kanat",
+   "material": "LW-PLA",
+   "zone": "wing_panel",
+   "wall_mm": 0.6,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 4770,
+    "faces": 9626,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 111.52,
+   "mass_g": 72.5,
+   "mass_total_g": 145.0,
+   "print_h": 5.23,
+   "print_h_total": 10.47,
+   "size_mm": [
+    141.4,
+    142.2,
+    210.0
+   ],
+   "orientation": {
+    "up_world": [
+     -0.0,
+     1.0,
+     -0.0
+    ],
+    "up_words": "+y (sol/iskele)",
+    "z_rot_deg": 45.0,
+    "bed_end": "y=1.200"
+   },
+   "bed_margin_mm": 38.9,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 15.2,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.344,
+    "p05_mm": 0.449,
+    "median_mm": 0.794
+   },
+   "note": "",
+   "pin_holes": 2,
+   "features": [
+    "servo yuvası 36×24 mm, derinlik 22.5 mm"
+   ]
+  },
+  {
+   "key": "wing_panel_6",
+   "name": "Kanat dış paneli 6/7 (y 1.41–1.62)",
+   "group": "Kanat",
+   "material": "LW-PLA",
+   "zone": "wing_panel",
+   "wall_mm": 0.6,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 4782,
+    "faces": 9648,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 89.5,
+   "mass_g": 58.2,
+   "mass_total_g": 116.4,
+   "print_h": 4.32,
+   "print_h_total": 8.63,
+   "size_mm": [
+    124.7,
+    123.0,
+    210.0
+   ],
+   "orientation": {
+    "up_world": [
+     -0.0,
+     1.0,
+     -0.0
+    ],
+    "up_words": "+y (sol/iskele)",
+    "z_rot_deg": 44.0,
+    "bed_end": "y=1.410"
+   },
+   "bed_margin_mm": 47.7,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 5.7,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.175,
+    "p05_mm": 0.449,
+    "median_mm": 0.794
+   },
+   "note": "",
+   "pin_holes": 2,
+   "features": []
+  },
+  {
+   "key": "wing_panel_7",
+   "name": "Kanat dış paneli 7/7 (y 1.62–1.83)",
+   "group": "Kanat",
+   "material": "LW-PLA",
+   "zone": "wing_panel",
+   "wall_mm": 0.6,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 4502,
+    "faces": 9074,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 1
+   },
+   "volume_cm3": 69.6,
+   "mass_g": 45.2,
+   "mass_total_g": 90.5,
+   "print_h": 3.5,
+   "print_h_total": 7.0,
+   "size_mm": [
+    122.1,
+    123.9,
+    215.4
+   ],
+   "orientation": {
+    "up_world": [
+     -0.0,
+     1.0,
+     -0.0
+    ],
+    "up_words": "+y (sol/iskele)",
+    "z_rot_deg": 41.0,
+    "bed_end": "y=1.620"
+   },
+   "bed_margin_mm": 48.1,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 6.3,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.113,
+    "p05_mm": 0.449,
+    "median_mm": 0.794
+   },
+   "note": "",
+   "pin_holes": 2,
+   "features": []
+  },
+  {
+   "key": "wing_tip",
+   "name": "Kanat uç kapağı (eğik uç, seyrüsefer LED yuvası)",
+   "group": "Kanat",
+   "material": "LW-PLA",
+   "zone": "tip_cap",
+   "wall_mm": 0.6,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 24981,
+    "faces": 49994,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 21.54,
+   "mass_g": 14.0,
+   "mass_total_g": 28.0,
+   "print_h": 1.16,
+   "print_h_total": 2.33,
+   "size_mm": [
+    114.2,
+    115.8,
+    72.0
+   ],
+   "orientation": {
+    "up_world": [
+     0.068,
+     0.995,
+     0.072
+    ],
+    "up_words": "+y (sol/iskele) (6° eğik)",
+    "z_rot_deg": 49.0,
+    "bed_end": "uç düzlemi"
+   },
+   "bed_margin_mm": 52.1,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 5.9,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.345,
+    "p05_mm": 0.599,
+    "median_mm": 0.6
+   },
+   "note": "",
+   "pin_holes": 1,
+   "features": [
+    "voksel onarım"
+   ]
+  },
+  {
+   "key": "root_block_2",
+   "name": "Kök bloğu 2 (y 0.231–0.36)",
+   "group": "Kanat",
+   "material": "LW-PLA",
+   "zone": "root_block",
+   "wall_mm": 0.8,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 6526,
+    "faces": 13104,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 94.86,
+   "mass_g": 61.7,
+   "mass_total_g": 123.3,
+   "print_h": 4.35,
+   "print_h_total": 8.7,
+   "size_mm": [
+    214.8,
+    212.2,
+    128.7
+   ],
+   "orientation": {
+    "up_world": [
+     -0.0,
+     -1.0,
+     -0.0
+    ],
+    "up_words": "−y (sağ/sancak)",
+    "z_rot_deg": 134.0,
+    "bed_end": "y=0.360 (sökülebilir)"
+   },
+   "bed_margin_mm": 2.6,
+   "fits": false,
+   "fits_tight": true,
+   "overhang_cm2": 13.5,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.02,
+    "p05_mm": 0.79,
+    "median_mm": 0.799
+   },
+   "note": "",
+   "pin_holes": 1,
+   "features": []
+  },
+  {
+   "key": "root_block_1",
+   "name": "Kök bloğu 1 (gövde yanı–y 0.231)",
+   "group": "Kanat",
+   "material": "LW-PLA",
+   "zone": "root_block",
+   "wall_mm": 0.8,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 9036,
+    "faces": 18250,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 1
+   },
+   "volume_cm3": 112.52,
+   "mass_g": 73.1,
+   "mass_total_g": 146.3,
+   "print_h": 5.23,
+   "print_h_total": 10.45,
+   "size_mm": [
+    214.3,
+    212.9,
+    188.8
+   ],
+   "orientation": {
+    "up_world": [
+     -0.0,
+     -1.0,
+     -0.0
+    ],
+    "up_words": "−y (sağ/sancak)",
+    "z_rot_deg": 40.0,
+    "bed_end": "y=0.231"
+   },
+   "bed_margin_mm": 2.9,
+   "fits": false,
+   "fits_tight": true,
+   "overhang_cm2": 73.5,
+   "support": "destek önerilir",
+   "min_wall": {
+    "min_mm": 0.056,
+    "p05_mm": 0.775,
+    "median_mm": 0.801
+   },
+   "note": "gövdeye oturan kök yüzü gövde konturunu izler (0,3 mm boşluk)",
+   "pin_holes": 3,
+   "features": []
+  },
+  {
+   "key": "glove_strake",
+   "name": "Glove strake (36° kök hücum kenarı)",
+   "group": "Kanat",
+   "material": "LW-PLA",
+   "zone": "glove_strake",
+   "wall_mm": 0.8,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 2621,
+    "faces": 5234,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 2,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 39.16,
+   "mass_g": 25.5,
+   "mass_total_g": 50.9,
+   "print_h": 2.02,
+   "print_h_total": 4.03,
+   "size_mm": [
+    124.4,
+    124.4,
+    122.8
+   ],
+   "orientation": {
+    "up_world": [
+     1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "+x (burun)",
+    "z_rot_deg": 38.0,
+    "bed_end": "strake ayrımı"
+   },
+   "bed_margin_mm": 47.8,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 30.3,
+   "support": "destek önerilir",
+   "min_wall": {
+    "min_mm": 0.04,
+    "p05_mm": 0.799,
+    "median_mm": 1.199
+   },
+   "note": "",
+   "pin_holes": 3,
+   "features": []
+  },
+  {
+   "key": "stab_1a",
+   "name": "Stabilize yarısı 1/2 (%25 ok eksenine dik ek) — parça A (tablaya sığması için bölündü)",
+   "group": "Kuyruk",
+   "material": "LW-PLA",
+   "zone": "stab",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 2314,
+    "faces": 4628,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 5,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 27.79,
+   "mass_g": 18.1,
+   "mass_total_g": 36.1,
+   "print_h": 1.55,
+   "print_h_total": 3.09,
+   "size_mm": [
+    68.9,
+    69.1,
+    124.6
+   ],
+   "orientation": {
+    "up_world": [
+     0.481,
+     -0.877,
+     -0.0
+    ],
+    "up_words": "−y (sağ/sancak) (29° eğik)",
+    "z_rot_deg": 17.0,
+    "bed_end": "stabilize eki"
+   },
+   "bed_margin_mm": 75.5,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 13.8,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.01,
+    "p05_mm": 0.499,
+    "median_mm": 0.499
+   },
+   "note": "kök yüzü kuyruk konisi konturunu izler; borular koni içindeki eyerde birleşir",
+   "pin_holes": 2,
+   "features": [
+    "servo yuvası 36×22 mm, derinlik 12.4 mm"
+   ]
+  },
+  {
+   "key": "stab_1b",
+   "name": "Stabilize yarısı 1/2 (%25 ok eksenine dik ek) — parça B (tablaya sığması için bölündü)",
+   "group": "Kuyruk",
+   "material": "LW-PLA",
+   "zone": "stab",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 2649,
+    "faces": 5306,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 3,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 22.5,
+   "mass_g": 14.6,
+   "mass_total_g": 29.3,
+   "print_h": 1.36,
+   "print_h_total": 2.71,
+   "size_mm": [
+    107.7,
+    108.0,
+    137.3
+   ],
+   "orientation": {
+    "up_world": [
+     0.481,
+     -0.877,
+     -0.0
+    ],
+    "up_words": "−y (sağ/sancak) (29° eğik)",
+    "z_rot_deg": 17.0,
+    "bed_end": "stabilize eki"
+   },
+   "bed_margin_mm": 56.0,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 31.2,
+   "support": "destek önerilir",
+   "min_wall": {
+    "min_mm": 0.003,
+    "p05_mm": 0.493,
+    "median_mm": 0.499
+   },
+   "note": "kök yüzü kuyruk konisi konturunu izler; borular koni içindeki eyerde birleşir",
+   "pin_holes": 2,
+   "features": [
+    "servo yuvası 36×22 mm, derinlik 12.4 mm"
+   ]
+  },
+  {
+   "key": "stab_2a",
+   "name": "Stabilize yarısı 2/2 (%25 ok eksenine dik ek) — parça A (tablaya sığması için bölündü)",
+   "group": "Kuyruk",
+   "material": "LW-PLA",
+   "zone": "stab",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 2063,
+    "faces": 4126,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 3,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 29.42,
+   "mass_g": 19.1,
+   "mass_total_g": 38.2,
+   "print_h": 1.72,
+   "print_h_total": 3.45,
+   "size_mm": [
+    63.5,
+    62.6,
+    172.0
+   ],
+   "orientation": {
+    "up_world": [
+     -0.481,
+     0.877,
+     0.0
+    ],
+    "up_words": "+y (sol/iskele) (29° eğik)",
+    "z_rot_deg": 106.0,
+    "bed_end": "stabilize eki"
+   },
+   "bed_margin_mm": 78.2,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 5.4,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.023,
+    "p05_mm": 0.499,
+    "median_mm": 0.499
+   },
+   "note": "uç dikey içine 5 mm gömülür",
+   "pin_holes": 2,
+   "features": []
+  },
+  {
+   "key": "stab_2b",
+   "name": "Stabilize yarısı 2/2 (%25 ok eksenine dik ek) — parça B (tablaya sığması için bölündü)",
+   "group": "Kuyruk",
+   "material": "LW-PLA",
+   "zone": "stab",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 2084,
+    "faces": 4180,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 19.16,
+   "mass_g": 12.5,
+   "mass_total_g": 24.9,
+   "print_h": 1.3,
+   "print_h_total": 2.59,
+   "size_mm": [
+    76.8,
+    78.0,
+    172.0
+   ],
+   "orientation": {
+    "up_world": [
+     -0.481,
+     0.877,
+     0.0
+    ],
+    "up_words": "+y (sol/iskele) (29° eğik)",
+    "z_rot_deg": 16.0,
+    "bed_end": "stabilize eki"
+   },
+   "bed_margin_mm": 71.0,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 13.2,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.062,
+    "p05_mm": 0.493,
+    "median_mm": 0.499
+   },
+   "note": "uç dikey içine 5 mm gömülür",
+   "pin_holes": 2,
+   "features": []
+  },
+  {
+   "key": "fin_1",
+   "name": "Dikey 1/2 (%25 ok eksenine dik ek)",
+   "group": "Kuyruk",
+   "material": "LW-PLA",
+   "zone": "fin",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 3890,
+    "faces": 7808,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 84.94,
+   "mass_g": 55.2,
+   "mass_total_g": 110.4,
+   "print_h": 4.15,
+   "print_h_total": 8.29,
+   "size_mm": [
+    153.1,
+    153.4,
+    219.4
+   ],
+   "orientation": {
+    "up_world": [
+     0.447,
+     -0.186,
+     -0.875
+    ],
+    "up_words": "−z (aşağı) (29° eğik)",
+    "z_rot_deg": 3.0,
+    "bed_end": "dikey eki"
+   },
+   "bed_margin_mm": 33.3,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 68.7,
+   "support": "destek önerilir",
+   "min_wall": {
+    "min_mm": 0.004,
+    "p05_mm": 0.498,
+    "median_mm": 0.5
+   },
+   "note": "iç yüzde stabilize ucu yuvası (0,3 mm boşluk)",
+   "pin_holes": 1,
+   "features": [
+    "servo yuvası 36×24 mm, derinlik 16.6 mm"
+   ]
+  },
+  {
+   "key": "fin_2",
+   "name": "Dikey 2/2 (%25 ok eksenine dik ek)",
+   "group": "Kuyruk",
+   "material": "LW-PLA",
+   "zone": "fin",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 3072,
+    "faces": 6148,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 45.4,
+   "mass_g": 29.5,
+   "mass_total_g": 59.0,
+   "print_h": 2.51,
+   "print_h_total": 5.03,
+   "size_mm": [
+    99.2,
+    98.6,
+    225.7
+   ],
+   "orientation": {
+    "up_world": [
+     -0.447,
+     0.186,
+     0.875
+    ],
+    "up_words": "+z (yukarı) (29° eğik)",
+    "z_rot_deg": 42.0,
+    "bed_end": "dikey eki"
+   },
+   "bed_margin_mm": 60.4,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 16.7,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.11,
+    "p05_mm": 0.499,
+    "median_mm": 0.499
+   },
+   "note": "",
+   "pin_holes": 1,
+   "features": []
+  },
+  {
+   "key": "aileron_1",
+   "name": "Kanatçık 1/4",
+   "group": "Kumanda yüzeyleri",
+   "material": "LW-PLA",
+   "zone": "control_surface",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 1492,
+    "faces": 3000,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 21.87,
+   "mass_g": 14.2,
+   "mass_total_g": 28.4,
+   "print_h": 1.43,
+   "print_h_total": 2.87,
+   "size_mm": [
+    63.6,
+    64.3,
+    182.4
+   ],
+   "orientation": {
+    "up_world": [
+     0.068,
+     0.995,
+     0.072
+    ],
+    "up_words": "+y (sol/iskele) (6° eğik)",
+    "z_rot_deg": 57.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 77.9,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 4.7,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.021,
+    "p05_mm": 0.493,
+    "median_mm": 0.499
+   },
+   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "aileron_2",
+   "name": "Kanatçık 2/4",
+   "group": "Kumanda yüzeyleri",
+   "material": "LW-PLA",
+   "zone": "control_surface",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 1659,
+    "faces": 3338,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 20.63,
+   "mass_g": 13.4,
+   "mass_total_g": 26.8,
+   "print_h": 1.38,
+   "print_h_total": 2.77,
+   "size_mm": [
+    56.4,
+    56.8,
+    183.4
+   ],
+   "orientation": {
+    "up_world": [
+     0.068,
+     0.995,
+     0.072
+    ],
+    "up_words": "+y (sol/iskele) (6° eğik)",
+    "z_rot_deg": 56.0,
+    "bed_end": "yüzey eki"
+   },
+   "bed_margin_mm": 81.6,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 3.5,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.001,
+    "p05_mm": 0.497,
+    "median_mm": 0.499
+   },
+   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "pin_holes": 0,
+   "features": [
+    "G10 horn yarığı"
+   ]
+  },
+  {
+   "key": "aileron_3",
+   "name": "Kanatçık 3/4",
+   "group": "Kumanda yüzeyleri",
+   "material": "LW-PLA",
+   "zone": "control_surface",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 1570,
+    "faces": 3152,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 18.7,
+   "mass_g": 12.2,
+   "mass_total_g": 24.3,
+   "print_h": 1.3,
+   "print_h_total": 2.61,
+   "size_mm": [
+    49.9,
+    49.7,
+    183.4
+   ],
+   "orientation": {
+    "up_world": [
+     0.068,
+     0.995,
+     0.072
+    ],
+    "up_words": "+y (sol/iskele) (6° eğik)",
+    "z_rot_deg": 55.0,
+    "bed_end": "yüzey eki"
+   },
+   "bed_margin_mm": 85.0,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 2.2,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.052,
+    "p05_mm": 0.497,
+    "median_mm": 0.499
+   },
+   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "aileron_4",
+   "name": "Kanatçık 4/4",
+   "group": "Kumanda yüzeyleri",
+   "material": "LW-PLA",
+   "zone": "control_surface",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 1594,
+    "faces": 3200,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 16.25,
+   "mass_g": 10.6,
+   "mass_total_g": 21.1,
+   "print_h": 1.2,
+   "print_h_total": 2.4,
+   "size_mm": [
+    42.9,
+    43.4,
+    182.4
+   ],
+   "orientation": {
+    "up_world": [
+     0.068,
+     0.995,
+     0.072
+    ],
+    "up_words": "+y (sol/iskele) (6° eğik)",
+    "z_rot_deg": 55.0,
+    "bed_end": "yüzey eki"
+   },
+   "bed_margin_mm": 88.3,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 1.4,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.063,
+    "p05_mm": 0.496,
+    "median_mm": 0.499
+   },
+   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "flapin",
+   "name": "İç flap",
+   "group": "Kumanda yüzeyleri",
+   "material": "LW-PLA",
+   "zone": "control_surface",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 2190,
+    "faces": 4392,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 22.17,
+   "mass_g": 14.4,
+   "mass_total_g": 28.8,
+   "print_h": 1.4,
+   "print_h_total": 2.8,
+   "size_mm": [
+    68.4,
+    68.5,
+    163.4
+   ],
+   "orientation": {
+    "up_world": [
+     -0.0,
+     0.998,
+     0.07
+    ],
+    "up_words": "+y (sol/iskele) (4° eğik)",
+    "z_rot_deg": 143.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 75.8,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 7.5,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.031,
+    "p05_mm": 0.493,
+    "median_mm": 0.499
+   },
+   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "pin_holes": 0,
+   "features": [
+    "G10 horn yarığı"
+   ]
+  },
+  {
+   "key": "flapout_1",
+   "name": "Dış flap 1/4",
+   "group": "Kumanda yüzeyleri",
+   "material": "LW-PLA",
+   "zone": "control_surface",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 1364,
+    "faces": 2744,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 23.21,
+   "mass_g": 15.1,
+   "mass_total_g": 30.2,
+   "print_h": 1.47,
+   "print_h_total": 2.94,
+   "size_mm": [
+    69.2,
+    68.3,
+    174.4
+   ],
+   "orientation": {
+    "up_world": [
+     0.008,
+     0.997,
+     0.07
+    ],
+    "up_words": "+y (sol/iskele) (4° eğik)",
+    "z_rot_deg": 53.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 75.4,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 7.7,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.029,
+    "p05_mm": 0.494,
+    "median_mm": 0.499
+   },
+   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "flapout_2",
+   "name": "Dış flap 2/4",
+   "group": "Kumanda yüzeyleri",
+   "material": "LW-PLA",
+   "zone": "control_surface",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 1483,
+    "faces": 2986,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 24.28,
+   "mass_g": 15.8,
+   "mass_total_g": 31.6,
+   "print_h": 1.52,
+   "print_h_total": 3.04,
+   "size_mm": [
+    69.5,
+    70.3,
+    175.4
+   ],
+   "orientation": {
+    "up_world": [
+     0.008,
+     0.997,
+     0.07
+    ],
+    "up_words": "+y (sol/iskele) (4° eğik)",
+    "z_rot_deg": 143.0,
+    "bed_end": "yüzey eki"
+   },
+   "bed_margin_mm": 74.9,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 8.1,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.003,
+    "p05_mm": 0.499,
+    "median_mm": 0.499
+   },
+   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "pin_holes": 0,
+   "features": [
+    "G10 horn yarığı"
+   ]
+  },
+  {
+   "key": "flapout_3",
+   "name": "Dış flap 3/4",
+   "group": "Kumanda yüzeyleri",
+   "material": "LW-PLA",
+   "zone": "control_surface",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 1662,
+    "faces": 3376,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 4
+   },
+   "volume_cm3": 24.78,
+   "mass_g": 16.1,
+   "mass_total_g": 32.2,
+   "print_h": 1.54,
+   "print_h_total": 3.08,
+   "size_mm": [
+    71.4,
+    70.7,
+    175.4
+   ],
+   "orientation": {
+    "up_world": [
+     0.008,
+     0.997,
+     0.07
+    ],
+    "up_words": "+y (sol/iskele) (4° eğik)",
+    "z_rot_deg": 53.0,
+    "bed_end": "yüzey eki"
+   },
+   "bed_margin_mm": 74.3,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 8.4,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.002,
+    "p05_mm": 0.499,
+    "median_mm": 0.499
+   },
+   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "flapout_4",
+   "name": "Dış flap 4/4",
+   "group": "Kumanda yüzeyleri",
+   "material": "LW-PLA",
+   "zone": "control_surface",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 1578,
+    "faces": 3188,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 24.09,
+   "mass_g": 15.7,
+   "mass_total_g": 31.3,
+   "print_h": 1.51,
+   "print_h_total": 3.02,
+   "size_mm": [
+    72.0,
+    71.3,
+    174.4
+   ],
+   "orientation": {
+    "up_world": [
+     0.008,
+     0.997,
+     0.07
+    ],
+    "up_words": "+y (sol/iskele) (4° eğik)",
+    "z_rot_deg": 53.0,
+    "bed_end": "yüzey eki"
+   },
+   "bed_margin_mm": 74.0,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 6.7,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.031,
+    "p05_mm": 0.494,
+    "median_mm": 0.499
+   },
+   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "elevator_1",
+   "name": "Elevatör 1/2",
+   "group": "Kumanda yüzeyleri",
+   "material": "LW-PLA",
+   "zone": "control_surface",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 1887,
+    "faces": 3794,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 20.1,
+   "mass_g": 13.1,
+   "mass_total_g": 26.1,
+   "print_h": 1.5,
+   "print_h_total": 3.0,
+   "size_mm": [
+    43.3,
+    43.8,
+    243.3
+   ],
+   "orientation": {
+    "up_world": [
+     -0.45,
+     0.893,
+     -0.0
+    ],
+    "up_words": "+y (sol/iskele) (27° eğik)",
+    "z_rot_deg": 18.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 88.1,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 6.8,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.009,
+    "p05_mm": 0.499,
+    "median_mm": 0.499
+   },
+   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "pin_holes": 0,
+   "features": [
+    "G10 horn yarığı"
+   ]
+  },
+  {
+   "key": "elevator_2a",
+   "name": "Elevatör 2/2 — parça A (tablaya sığması için bölündü)",
+   "group": "Kumanda yüzeyleri",
+   "material": "LW-PLA",
+   "zone": "control_surface",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 904,
+    "faces": 1816,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 1
+   },
+   "volume_cm3": 10.83,
+   "mass_g": 7.0,
+   "mass_total_g": 14.1,
+   "print_h": 0.85,
+   "print_h_total": 1.7,
+   "size_mm": [
+    37.6,
+    38.1,
+    129.6
+   ],
+   "orientation": {
+    "up_world": [
+     -0.45,
+     0.893,
+     -0.0
+    ],
+    "up_words": "+y (sol/iskele) (27° eğik)",
+    "z_rot_deg": 18.0,
+    "bed_end": "yüzey eki"
+   },
+   "bed_margin_mm": 90.9,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 1.7,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.01,
+    "p05_mm": 0.499,
+    "median_mm": 0.499
+   },
+   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "elevator_2b",
+   "name": "Elevatör 2/2 — parça B (tablaya sığması için bölündü)",
+   "group": "Kumanda yüzeyleri",
+   "material": "LW-PLA",
+   "zone": "control_surface",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 840,
+    "faces": 1688,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 9.13,
+   "mass_g": 5.9,
+   "mass_total_g": 11.9,
+   "print_h": 0.78,
+   "print_h_total": 1.56,
+   "size_mm": [
+    34.3,
+    34.7,
+    129.6
+   ],
+   "orientation": {
+    "up_world": [
+     -0.45,
+     0.893,
+     -0.0
+    ],
+    "up_words": "+y (sol/iskele) (27° eğik)",
+    "z_rot_deg": 18.0,
+    "bed_end": "yüzey eki"
+   },
+   "bed_margin_mm": 92.6,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 1.5,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.111,
+    "p05_mm": 0.498,
+    "median_mm": 0.499
+   },
+   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "rudder_a",
+   "name": "Dümen — parça A (tablaya sığması için bölündü)",
+   "group": "Kumanda yüzeyleri",
+   "material": "LW-PLA",
+   "zone": "control_surface",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 1312,
+    "faces": 2640,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 18.09,
+   "mass_g": 11.8,
+   "mass_total_g": 23.5,
+   "print_h": 1.23,
+   "print_h_total": 2.46,
+   "size_mm": [
+    62.3,
+    62.7,
+    162.1
+   ],
+   "orientation": {
+    "up_world": [
+     -0.35,
+     0.195,
+     0.916
+    ],
+    "up_words": "+z (yukarı) (24° eğik)",
+    "z_rot_deg": 43.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 78.7,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 12.7,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.062,
+    "p05_mm": 0.497,
+    "median_mm": 0.499
+   },
+   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "pin_holes": 0,
+   "features": [
+    "G10 horn yarığı"
+   ]
+  },
+  {
+   "key": "rudder_b",
+   "name": "Dümen — parça B (tablaya sığması için bölündü)",
+   "group": "Kumanda yüzeyleri",
+   "material": "LW-PLA",
+   "zone": "control_surface",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 1242,
+    "faces": 2492,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 1
+   },
+   "volume_cm3": 15.86,
+   "mass_g": 10.3,
+   "mass_total_g": 20.6,
+   "print_h": 1.14,
+   "print_h_total": 2.27,
+   "size_mm": [
+    51.6,
+    51.9,
+    162.1
+   ],
+   "orientation": {
+    "up_world": [
+     -0.35,
+     0.195,
+     0.916
+    ],
+    "up_words": "+z (yukarı) (24° eğik)",
+    "z_rot_deg": 43.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 84.1,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 2.3,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.077,
+    "p05_mm": 0.499,
+    "median_mm": 0.499
+   },
+   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "pin_holes": 0,
+   "features": [
+    "1 kopuk kıymık atıldı (0.01 cm³)",
+    "G10 horn yarığı"
+   ]
+  },
+  {
+   "key": "fus_nose_cone",
+   "name": "Burun konisi (s 0–0.148)",
+   "group": "Gövde",
+   "material": "LW-PLA",
+   "zone": "fuselage_nose",
+   "wall_mm": 0.8,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 5612,
+    "faces": 11220,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 35.01,
+   "mass_g": 22.8,
+   "mass_total_g": 22.8,
+   "print_h": 1.9,
+   "print_h_total": 1.9,
+   "size_mm": [
+    134.7,
+    127.8,
+    148.0
+   ],
+   "orientation": {
+    "up_world": [
+     1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "+x (burun)",
+    "z_rot_deg": 71.0,
+    "bed_end": "s=0.148"
+   },
+   "bed_margin_mm": 42.7,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 2.9,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.031,
+    "p05_mm": 0.791,
+    "median_mm": 0.799
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "fus_nose_module_a",
+   "name": "Burun görev modülü halkası (s 0.148–0.400, taret yuvası) — parça A (tablaya sığması için bölündü)",
+   "group": "Gövde",
+   "material": "LW-PLA",
+   "zone": "fuselage_nose",
+   "wall_mm": 0.8,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 3859,
+    "faces": 7770,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 110.63,
+   "mass_g": 71.9,
+   "mass_total_g": 71.9,
+   "print_h": 5.0,
+   "print_h_total": 5.0,
+   "size_mm": [
+    193.5,
+    195.0,
+    126.0
+   ],
+   "orientation": {
+    "up_world": [
+     1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "+x (burun)",
+    "z_rot_deg": 11.0,
+    "bed_end": "s=0.400 (sökülebilir)"
+   },
+   "bed_margin_mm": 12.5,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 3.6,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.014,
+    "p05_mm": 0.796,
+    "median_mm": 0.799
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": [
+    "burun modülü: 4×M4 kelebek + 2×Ø4 pim"
+   ]
+  },
+  {
+   "key": "fus_nose_module_b",
+   "name": "Burun görev modülü halkası (s 0.148–0.400, taret yuvası) — parça B (tablaya sığması için bölündü)",
+   "group": "Gövde",
+   "material": "LW-PLA",
+   "zone": "fuselage_nose",
+   "wall_mm": 0.8,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 3451,
+    "faces": 6902,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 68.24,
+   "mass_g": 44.4,
+   "mass_total_g": 44.4,
+   "print_h": 3.23,
+   "print_h_total": 3.23,
+   "size_mm": [
+    174.1,
+    177.4,
+    126.0
+   ],
+   "orientation": {
+    "up_world": [
+     1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "+x (burun)",
+    "z_rot_deg": 18.0,
+    "bed_end": "tabla bölmesi"
+   },
+   "bed_margin_mm": 21.3,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 45.0,
+   "support": "destek önerilir",
+   "min_wall": {
+    "min_mm": 0.076,
+    "p05_mm": 0.786,
+    "median_mm": 0.799
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": [
+    "burun modülü: 4×M4 kelebek + 2×Ø4 pim"
+   ]
+  },
+  {
+   "key": "fus_ring_1",
+   "name": "Gövde halkası 1 (s 0.400–0.592)",
+   "group": "Gövde",
+   "material": "LW-PLA",
+   "zone": "fuselage_mid",
+   "wall_mm": 0.8,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 5702,
+    "faces": 11472,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 2
+   },
+   "volume_cm3": 155.96,
+   "mass_g": 101.4,
+   "mass_total_g": 101.4,
+   "print_h": 7.04,
+   "print_h_total": 7.04,
+   "size_mm": [
+    200.5,
+    200.6,
+    191.7
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 11.0,
+    "bed_end": "s=0.400"
+   },
+   "bed_margin_mm": 9.7,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 8.9,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.157,
+    "p05_mm": 0.793,
+    "median_mm": 0.801
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": [
+    "2 kopuk kıymık atıldı (0.23 cm³)",
+    "burun modülü: 4×M4 kelebek + 2×Ø4 pim"
+   ]
+  },
+  {
+   "key": "fus_ring_2",
+   "name": "Gövde halkası 2 (s 0.592–0.783)",
+   "group": "Gövde",
+   "material": "LW-PLA",
+   "zone": "fuselage_mid",
+   "wall_mm": 0.8,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 4835,
+    "faces": 9712,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 133.38,
+   "mass_g": 86.7,
+   "mass_total_g": 86.7,
+   "print_h": 6.1,
+   "print_h_total": 6.1,
+   "size_mm": [
+    200.3,
+    201.1,
+    191.6
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 11.0,
+    "bed_end": "s=0.592"
+   },
+   "bed_margin_mm": 9.5,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 44.6,
+   "support": "destek önerilir",
+   "min_wall": {
+    "min_mm": 0.772,
+    "p05_mm": 0.79,
+    "median_mm": 0.799
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "fus_ring_3",
+   "name": "Gövde halkası 3 (s 0.783–0.975)",
+   "group": "Gövde",
+   "material": "LW-PLA",
+   "zone": "fuselage_mid",
+   "wall_mm": 0.8,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 4129,
+    "faces": 8282,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 128.55,
+   "mass_g": 83.6,
+   "mass_total_g": 83.6,
+   "print_h": 5.9,
+   "print_h_total": 5.9,
+   "size_mm": [
+    202.7,
+    202.7,
+    191.7
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 8.0,
+    "bed_end": "s=0.783"
+   },
+   "bed_margin_mm": 8.6,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.6,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.004,
+    "p05_mm": 0.794,
+    "median_mm": 0.799
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "fus_ring_4",
+   "name": "Gövde halkası 4 (s 0.975–1.167)",
+   "group": "Gövde",
+   "material": "LW-PLA",
+   "zone": "fuselage_mid",
+   "wall_mm": 0.8,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 4636,
+    "faces": 9288,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 131.77,
+   "mass_g": 85.7,
+   "mass_total_g": 85.7,
+   "print_h": 6.03,
+   "print_h_total": 6.03,
+   "size_mm": [
+    201.5,
+    201.6,
+    191.7
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 7.0,
+    "bed_end": "s=0.975"
+   },
+   "bed_margin_mm": 9.2,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.0,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.789,
+    "p05_mm": 0.794,
+    "median_mm": 0.799
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "fus_ring_5",
+   "name": "Gövde halkası 5 (s 1.167–1.379)",
+   "group": "Gövde",
+   "material": "LW-PLA",
+   "zone": "fuselage_mid",
+   "wall_mm": 0.8,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 5072,
+    "faces": 10190,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 135.58,
+   "mass_g": 88.1,
+   "mass_total_g": 88.1,
+   "print_h": 6.24,
+   "print_h_total": 6.24,
+   "size_mm": [
+    203.3,
+    196.0,
+    212.3
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 0.0,
+    "bed_end": "s=1.167"
+   },
+   "bed_margin_mm": 8.4,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 7.6,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.531,
+    "p05_mm": 0.793,
+    "median_mm": 0.799
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": [
+    "kanat kutusu geçişi (G10 köprü + Ø30 soket)"
+   ]
+  },
+  {
+   "key": "fus_ring_6",
+   "name": "Gövde halkası 6 (s 1.379–1.550)",
+   "group": "Gövde",
+   "material": "LW-PLA",
+   "zone": "fuselage_mid",
+   "wall_mm": 0.8,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 3903,
+    "faces": 7822,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 107.1,
+   "mass_g": 69.6,
+   "mass_total_g": 69.6,
+   "print_h": 4.96,
+   "print_h_total": 4.96,
+   "size_mm": [
+    199.9,
+    199.9,
+    171.0
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 45.0,
+    "bed_end": "s=1.379"
+   },
+   "bed_margin_mm": 10.0,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 1.1,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.771,
+    "p05_mm": 0.792,
+    "median_mm": 0.799
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "fus_ring_7",
+   "name": "Kuyruk konisi halkası (s 1.550–1.760, LW-ASA)",
+   "group": "Gövde",
+   "material": "LW-ASA",
+   "zone": "tail_cone",
+   "wall_mm": 1.0,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 4317,
+    "faces": 8670,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 145.59,
+   "mass_g": 109.2,
+   "mass_total_g": 109.2,
+   "print_h": 7.2,
+   "print_h_total": 7.2,
+   "size_mm": [
+    205.5,
+    205.5,
+    210.0
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 45.0,
+    "bed_end": "s=1.550"
+   },
+   "bed_margin_mm": 7.2,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 5.7,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.38,
+    "p05_mm": 0.794,
+    "median_mm": 0.999
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": [
+    "G10 flanş: 4×M4"
+   ]
+  },
+  {
+   "key": "fus_ring_8",
+   "name": "Kuyruk konisi halkası (s 1.760–1.845, LW-ASA)",
+   "group": "Gövde",
+   "material": "LW-ASA",
+   "zone": "tail_cone",
+   "wall_mm": 1.0,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 2396,
+    "faces": 4808,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 66.26,
+   "mass_g": 49.7,
+   "mass_total_g": 49.7,
+   "print_h": 3.31,
+   "print_h_total": 3.31,
+   "size_mm": [
+    189.7,
+    189.7,
+    85.0
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 45.0,
+    "bed_end": "s=1.760"
+   },
+   "bed_margin_mm": 15.1,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 4.7,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.009,
+    "p05_mm": 0.794,
+    "median_mm": 0.999
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "fus_ring_9",
+   "name": "Kuyruk konisi halkası (s 1.845–2.058, LW-ASA)",
+   "group": "Gövde",
+   "material": "LW-ASA",
+   "zone": "tail_cone",
+   "wall_mm": 1.0,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 4611,
+    "faces": 9262,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 148.8,
+   "mass_g": 111.6,
+   "mass_total_g": 111.6,
+   "print_h": 7.36,
+   "print_h_total": 7.36,
+   "size_mm": [
+    199.8,
+    199.8,
+    212.5
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 45.0,
+    "bed_end": "s=1.845"
+   },
+   "bed_margin_mm": 10.1,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 6.2,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.187,
+    "p05_mm": 0.794,
+    "median_mm": 0.999
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "fus_nose_flange",
+   "name": "Burun modülü PETG bağlantı flanşı (4×M4, 2 pim)",
+   "group": "Gövde",
+   "material": "PETG",
+   "zone": "frames",
+   "wall_mm": 3.0,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 928,
+    "faces": 1880,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true
+   },
+   "volume_cm3": 14.04,
+   "mass_g": 17.8,
+   "mass_total_g": 17.8,
+   "print_h": 0.89,
+   "print_h_total": 0.89,
+   "size_mm": [
+    189.8,
+    188.3,
+    3.0
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     0.0,
+     0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 79.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 15.1,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 5.1,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.106,
+    "p05_mm": 2.999,
+    "median_mm": 2.999
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "cowl_top",
+   "name": "Motor kaportası (PA-CF; yanak açıklıkları flanşlı)",
+   "group": "İtki",
+   "material": "PA-CF",
+   "zone": "cowl",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 7136,
+    "faces": 14328,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 108.1,
+   "mass_g": 129.7,
+   "mass_total_g": 129.7,
+   "print_h": 7.75,
+   "print_h_total": 7.75,
+   "size_mm": [
+    169.7,
+    169.7,
+    127.5
+   ],
+   "orientation": {
+    "up_world": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "up_words": "+x (burun)",
+    "z_rot_deg": 45.0,
+    "bed_end": "yangın perdesi"
+   },
+   "bed_margin_mm": 25.1,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 83.8,
+   "support": "destek önerilir",
+   "min_wall": {
+    "min_mm": 0.032,
+    "p05_mm": 1.29,
+    "median_mm": 1.599
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "cowl_cheek_L",
+   "name": "Kaporta sol yanak (susturucu tarafı)",
+   "group": "İtki",
+   "material": "PA-CF",
+   "zone": "cowl",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 2147,
+    "faces": 4290,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 33.91,
+   "mass_g": 40.7,
+   "mass_total_g": 40.7,
+   "print_h": 2.64,
+   "print_h_total": 2.64,
+   "size_mm": [
+    102.1,
+    101.0,
+    80.0
+   ],
+   "orientation": {
+    "up_world": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "up_words": "+z (yukarı)",
+    "z_rot_deg": 33.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 59.0,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 18.7,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.02,
+    "p05_mm": 1.581,
+    "median_mm": 1.599
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "cowl_cheek_R",
+   "name": "Kaporta sağ yanak (panjurlu)",
+   "group": "İtki",
+   "material": "PA-CF",
+   "zone": "cowl",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 2474,
+    "faces": 4944,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 1
+   },
+   "volume_cm3": 33.95,
+   "mass_g": 40.7,
+   "mass_total_g": 40.7,
+   "print_h": 2.64,
+   "print_h_total": 2.64,
+   "size_mm": [
+    101.0,
+    102.1,
+    80.0
+   ],
+   "orientation": {
+    "up_world": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "up_words": "+z (yukarı)",
+    "z_rot_deg": 57.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 59.0,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 18.3,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.132,
+    "p05_mm": 1.549,
+    "median_mm": 1.599
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": [
+    "1 kopuk kıymık atıldı (0.01 cm³)"
+   ]
+  },
+  {
+   "key": "exhaust_ring",
+   "name": "Lüle halkası (PA-CF)",
+   "group": "İtki",
+   "material": "PA-CF",
+   "zone": "exhaust_ring",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 2576,
+    "faces": 5152,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 2,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 26.6,
+   "mass_g": 31.9,
+   "mass_total_g": 31.9,
+   "print_h": 1.93,
+   "print_h_total": 1.93,
+   "size_mm": [
+    120.8,
+    120.8,
+    17.0
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 45.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 49.6,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 25.7,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.006,
+    "p05_mm": 1.579,
+    "median_mm": 1.598
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "scuff_pad",
+   "name": "Kaporta altı sürtünme pabucu (TPU)",
+   "group": "İtki",
+   "material": "TPU",
+   "zone": "cowl",
+   "wall_mm": 2.0,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 1304,
+    "faces": 2604,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 2.73,
+   "mass_g": 3.3,
+   "mass_total_g": 3.3,
+   "print_h": 0.66,
+   "print_h_total": 0.66,
+   "size_mm": [
+    21.6,
+    21.6,
+    49.2
+   ],
+   "orientation": {
+    "up_world": [
+     -0.987,
+     0.0,
+     0.159
+    ],
+    "up_words": "−x (kuyruk) (9° eğik)",
+    "z_rot_deg": 45.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 99.2,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.2,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.007,
+    "p05_mm": 1.73,
+    "median_mm": 2.526
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "intake",
+   "name": "Sırt hava alığı (PA-CF)",
+   "group": "İtki",
+   "material": "PA-CF",
+   "zone": "intake",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 5812,
+    "faces": 11624,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 39.66,
+   "mass_g": 47.6,
+   "mass_total_g": 47.6,
+   "print_h": 3.22,
+   "print_h_total": 3.22,
+   "size_mm": [
+    76.3,
+    76.3,
+    138.0
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 45.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 71.8,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 28.8,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.002,
+    "p05_mm": 0.226,
+    "median_mm": 1.599
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "root_fairing",
+   "name": "Kök kaportası + ER-150 kabartması (PA-CF)",
+   "group": "Kaplamalar",
+   "material": "PA-CF",
+   "zone": "root_fairing",
+   "wall_mm": 1.6,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 7555,
+    "faces": 15144,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 2,
+    "ok": true,
+    "removed_islands": 2
+   },
+   "volume_cm3": 42.99,
+   "mass_g": 51.6,
+   "mass_total_g": 103.2,
+   "print_h": 3.74,
+   "print_h_total": 7.49,
+   "size_mm": [
+    211.0,
+    208.0,
+    224.1
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 50.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 4.5,
+   "fits": false,
+   "fits_tight": true,
+   "overhang_cm2": 27.7,
+   "support": "kısa köprü (iç)",
+   "min_wall": {
+    "min_mm": 0.0,
+    "p05_mm": 0.358,
+    "median_mm": 1.599
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "turret_collar",
+   "name": "Taret yakası (8 faset, PETG)",
+   "group": "Faydalı yük",
+   "material": "PETG",
+   "zone": "turret_collar",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 640,
+    "faces": 1280,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 2,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 62.66,
+   "mass_g": 79.6,
+   "mass_total_g": 79.6,
+   "print_h": 3.84,
+   "print_h_total": 3.84,
+   "size_mm": [
+    122.4,
+    122.4,
+    74.1
+   ],
+   "orientation": {
+    "up_world": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "up_words": "+z (yukarı)",
+    "z_rot_deg": 23.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 48.8,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 77.4,
+   "support": "destek önerilir",
+   "min_wall": {
+    "min_mm": 0.151,
+    "p05_mm": 1.558,
+    "median_mm": 1.581
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "hatch_a",
+   "name": "Aviyonik kapağı (füme PETG, mıknatıslı) — parça A (tablaya sığması için bölündü)",
+   "group": "Kaplamalar",
+   "material": "PETG-füme",
+   "zone": "hatch",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 748,
+    "faces": 1492,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 39.8,
+   "mass_g": 50.5,
+   "mass_total_g": 50.5,
+   "print_h": 2.71,
+   "print_h_total": 2.71,
+   "size_mm": [
+    172.5,
+    172.1,
+    116.0
+   ],
+   "orientation": {
+    "up_world": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "up_words": "+y (sol/iskele)",
+    "z_rot_deg": 140.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 23.8,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.0,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.027,
+    "p05_mm": 1.24,
+    "median_mm": 1.434
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "hatch_b",
+   "name": "Aviyonik kapağı (füme PETG, mıknatıslı) — parça B (tablaya sığması için bölündü)",
+   "group": "Kaplamalar",
+   "material": "PETG-füme",
+   "zone": "hatch",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 688,
+    "faces": 1372,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 35.9,
+   "mass_g": 45.6,
+   "mass_total_g": 45.6,
+   "print_h": 2.5,
+   "print_h_total": 2.5,
+   "size_mm": [
+    164.1,
+    163.0,
+    116.0
+   ],
+   "orientation": {
+    "up_world": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "up_words": "+y (sol/iskele)",
+    "z_rot_deg": 47.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 28.0,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.0,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.053,
+    "p05_mm": 1.24,
+    "median_mm": 1.434
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "door_N_1",
+   "name": "Burun takımı kapağı (PETG 1,2 mm)",
+   "group": "Takım kapakları",
+   "material": "PETG",
+   "zone": "gear_doors",
+   "wall_mm": 1.2,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 928,
+    "faces": 1852,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 7.29,
+   "mass_g": 9.3,
+   "mass_total_g": 18.5,
+   "print_h": 0.59,
+   "print_h_total": 1.18,
+   "size_mm": [
+    188.3,
+    191.3,
+    25.0
+   ],
+   "orientation": {
+    "up_world": [
+     -0.0,
+     -1.0,
+     -0.0
+    ],
+    "up_words": "−y (sağ/sancak)",
+    "z_rot_deg": 45.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 14.4,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.4,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.003,
+    "p05_mm": 1.184,
+    "median_mm": 1.195
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "door_L_1",
+   "name": "Ana takım kuyu kapağı (PETG 1,2 mm)",
+   "group": "Takım kapakları",
+   "material": "PETG",
+   "zone": "gear_doors",
+   "wall_mm": 1.2,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 2528,
+    "faces": 5052,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 9.41,
+   "mass_g": 12.0,
+   "mass_total_g": 23.9,
+   "print_h": 0.63,
+   "print_h_total": 1.25,
+   "size_mm": [
+    94.0,
+    89.0,
+    1.2
+   ],
+   "orientation": {
+    "up_world": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "up_words": "−z (aşağı)",
+    "z_rot_deg": 0.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 63.0,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.0,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 1.199,
+    "p05_mm": 1.199,
+    "median_mm": 1.199
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  },
+  {
+   "key": "door_L_2",
+   "name": "Ana takım bacak kapağı (PETG 1,2 mm)",
+   "group": "Takım kapakları",
+   "material": "PETG",
+   "zone": "gear_doors",
+   "wall_mm": 1.2,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 2624,
+    "faces": 5244,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 4.84,
+   "mass_g": 6.2,
+   "mass_total_g": 12.3,
+   "print_h": 0.93,
+   "print_h_total": 1.86,
+   "size_mm": [
+    45.6,
+    45.4,
+    161.5
+   ],
+   "orientation": {
+    "up_world": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "up_words": "−z (aşağı)",
+    "z_rot_deg": 119.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 87.2,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.0,
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.03,
+    "p05_mm": 0.809,
+    "median_mm": 1.154
+   },
+   "note": "",
+   "pin_holes": 0,
+   "features": []
+  }
+ ],
+ "verified_stl": [],
+ "warnings": [
+  "wing_tip: voksel onarım (0.15 mm), hacim 21.5 → 21.5 cm³, manifold evet"
+ ],
+ "hinges": {
+  "Aileron": {
+   "lugs": 8,
+   "length_mm": 733.6
+  },
+  "FlapIn": {
+   "lugs": 1,
+   "length_mm": 165.4
+  },
+  "FlapOut": {
+   "lugs": 8,
+   "length_mm": 701.8
+  },
+  "Elevator": {
+   "lugs": 4,
+   "length_mm": 487.0
+  },
+  "Rudder": {
+   "lugs": 2,
+   "length_mm": 309.6
+  }
+ },
+ "bom": [
+  {
+   "group": "CF boru/çubuk",
+   "item": "Merkez soket (G10 köprüde 4° açılı)",
+   "spec": "Ø30/27 mm × 400 mm",
+   "qty": 2
+  },
+  {
+   "group": "CF boru/çubuk",
+   "item": "Panel borusu ve birleştirici (0,30 m sokete girer)",
+   "spec": "Ø27/25 mm × 1040 mm",
+   "qty": 2
+  },
+  {
+   "group": "CF boru/çubuk",
+   "item": "Soket ağzında iç takviye",
+   "spec": "Ø25/22 mm × 350 mm",
+   "qty": 2
+  },
+  {
+   "group": "CF boru/çubuk",
+   "item": "Uç borusu",
+   "spec": "Ø16/14 mm × 700 mm",
+   "qty": 2
+  },
+  {
+   "group": "CF boru/çubuk",
+   "item": "Kademeli CF burç",
+   "spec": "Ø25/16 mm × 100 mm",
+   "qty": 2
+  },
+  {
+   "group": "CF boru/çubuk",
+   "item": "Arka kiriş (yalnız panelde)",
+   "spec": "Ø8/6 mm × 1440 mm",
+   "qty": 2
+  },
+  {
+   "group": "CF boru/çubuk",
+   "item": "Açı pimi, dolu CF",
+   "spec": "Ø6 mm dolu × 100 mm",
+   "qty": 2
+  },
+  {
+   "group": "CF boru/çubuk",
+   "item": "Gövde longeronu",
+   "spec": "Ø8/6 mm × 1660 mm",
+   "qty": 4
+  },
+  {
+   "group": "CF boru/çubuk",
+   "item": "Stabilize kirişi (30° oklu)",
+   "spec": "Ø12/10 mm × 560 mm",
+   "qty": 2
+  },
+  {
+   "group": "CF boru/çubuk",
+   "item": "Stabilize arka çubuğu",
+   "spec": "Ø6/4 mm × 500 mm",
+   "qty": 2
+  },
+  {
+   "group": "CF boru/çubuk",
+   "item": "Dikey kirişi",
+   "spec": "Ø8/6 mm × 320 mm",
+   "qty": 2
+  },
+  {
+   "group": "CF boru/çubuk",
+   "item": "Menteşe pimi (çelik yay teli)",
+   "spec": "Ø1.5 mm, toplam ≈ 4.89 m (yüzey başına tek parça)",
+   "qty": 10
+  },
+  {
+   "group": "CF boru/çubuk",
+   "item": "Segment hizalama pimi (CF çubuk)",
+   "spec": "Ø3 mm × 18 mm",
+   "qty": 31
+  },
+  {
+   "group": "G10 / kontrplak",
+   "item": "Dihedral köprüsü (epoksi dolgulu yuvalar)",
+   "spec": "2× 3×45×300 mm G10, boru başına 2×M4",
+   "qty": 1
+  },
+  {
+   "group": "G10 / kontrplak",
+   "item": "Yangın perdesi (s = 2,06)",
+   "spec": "G10 4 mm, gövde konturu",
+   "qty": 1
+  },
+  {
+   "group": "G10 / kontrplak",
+   "item": "Ön gövde / kuyruk modülü flanşı (s = 1,55)",
+   "spec": "G10 2 mm, 4×M4",
+   "qty": 1
+  },
+  {
+   "group": "G10 / kontrplak",
+   "item": "ER-150 takım montaj plakası",
+   "spec": "G10 3 mm (kök bloğu)",
+   "qty": 3
+  },
+  {
+   "group": "G10 / kontrplak",
+   "item": "Kumanda hornu",
+   "spec": "G10 1,6 mm, yarığa yapıştırma",
+   "qty": 10
+  },
+  {
+   "group": "G10 / kontrplak",
+   "item": "Kuyruk eyeri (stabilize boruları V birleşimi)",
+   "spec": "G10 2 mm + epoksi, koni içinde",
+   "qty": 1
+  },
+  {
+   "group": "Dolgu",
+   "item": "Kanat üstü fileto (basılmaz: sıfıra inen kama)",
+   "spec": "epoksi + mikrobalon, kanat kökü–chine arası, ≈ 2 × 17 cm³; şablon: U_Fairing_Fillet_L/R",
+   "qty": 2
+  },
+  {
+   "group": "Dolgu",
+   "item": "Stabilize kök filetosu (basılmaz: 0,1–3 mm kama)",
+   "spec": "epoksi + mikrobalon (ısı bölgesi; LW-PLA yok), ≈ 2 × 4 cm³",
+   "qty": 2
+  },
+  {
+   "group": "Bağlantı",
+   "item": "M4 cıvata + kelebek somun (burun modülü)",
+   "spec": "A2 paslanmaz",
+   "qty": 4
+  },
+  {
+   "group": "Bağlantı",
+   "item": "M4 cıvata + somun (G10 köprü, flanş, motor)",
+   "spec": "12.9",
+   "qty": 12
+  },
+  {
+   "group": "Bağlantı",
+   "item": "M3 cıvata + ısıl gömme dişli (kaporta, yanaklar)",
+   "spec": "M3×8",
+   "qty": 14
+  },
+  {
+   "group": "Bağlantı",
+   "item": "Hizalama pimi (burun modülü)",
+   "spec": "çelik Ø4×20 mm",
+   "qty": 2
+  },
+  {
+   "group": "Bağlantı",
+   "item": "Neodim mıknatıs (aviyonik kapağı)",
+   "spec": "Ø6×3 mm",
+   "qty": 6
+  },
+  {
+   "group": "Bağlantı",
+   "item": "MPX 6 pin konnektör (kanat paneli), 8 pin (burun modülü)",
+   "spec": "",
+   "qty": 3
+  },
+  {
+   "group": "Servolar",
+   "item": "10 mm ince kanat servosu (KST X10 sınıfı)",
+   "spec": "kanatçık, dış/iç flap, elevatör, dümen",
+   "qty": 10
+  },
+  {
+   "group": "Servolar",
+   "item": "Gaz, jikle, burun yönlendirme servosu",
+   "spec": "mini",
+   "qty": 3
+  },
+  {
+   "group": "Servolar",
+   "item": "Kapak servoları + sıralayıcı + fren",
+   "spec": "mikro",
+   "qty": 1
+  },
+  {
+   "group": "İniş takımı",
+   "item": "JP Hobby ER-150 15 mm ×3 (20 kg sınıfı, 'inside'; ünite 160 g, 26×102×32 mm, 12 kg·cm, 90°, 8,4 V'ta 5 s)",
+   "spec": "",
+   "qty": 1
+  },
+  {
+   "group": "İniş takımı",
+   "item": "Ana tekerlek",
+   "spec": "Ø82.5 mm, frenli",
+   "qty": 2
+  },
+  {
+   "group": "İniş takımı",
+   "item": "Burun tekerleği",
+   "spec": "Ø70 mm",
+   "qty": 1
+  },
+  {
+   "group": "İtki",
+   "item": "DLE Engines DLE-20 (20 cc, tek silindir, 2 zamanlı benzinli, yan egzoz, arka pompalı karbüratör)",
+   "spec": "susturucu + CDI dahil",
+   "qty": 1
+  },
+  {
+   "group": "İtki",
+   "item": "Xoar PJA-P 16x8 itici (ters hatveli), kayın",
+   "spec": "",
+   "qty": 1
+  },
+  {
+   "group": "İtki",
+   "item": "Spinner",
+   "spec": "Al Ø64 mm",
+   "qty": 1
+  },
+  {
+   "group": "İtki",
+   "item": "Yakıt deposu",
+   "spec": "2 × 0.7 L",
+   "qty": 2
+  },
+  {
+   "group": "İtki",
+   "item": "Isı kalkanı",
+   "spec": "0,5 mm Al kalkan, seramik keçe, 15 mm hava boşluğu; 150 mm içinde LW-PLA yok",
+   "qty": 1
+  },
+  {
+   "group": "Faydalı yük / aviyonik",
+   "item": "SIYI ZT6 sınıfı (4K optik + 640×512 termal, 3 eksen)",
+   "spec": "",
+   "qty": 1
+  },
+  {
+   "group": "Faydalı yük / aviyonik",
+   "item": "Ana akü 4S2P Molicel P45B",
+   "spec": "130 Wh",
+   "qty": 1
+  },
+  {
+   "group": "Faydalı yük / aviyonik",
+   "item": "Uçuş kontrolcüsü, 2× GNSS, telemetri, RC alıcı, LED'ler",
+   "spec": "",
+   "qty": 1
+  }
+ ],
+ "settings": {
+  "rib_mm": 1.2,
+  "frame_mm": [
+   1.6,
+   8.0
+  ],
+  "land_mm": [
+   2.4,
+   6.0
+  ],
+  "sleeve_mm": 0.8,
+  "web_mm": 0.8,
+  "lattice_mm": 0.45,
+  "tube_clear_mm": 0.4,
+  "pin_mm": 3.0,
+  "hinge_pin_mm": 1.5
+ }
+}

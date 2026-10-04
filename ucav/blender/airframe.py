@@ -106,6 +106,7 @@ def build(scene: bpy.types.Scene | None = None, *, cut_wells: bool = True, verbo
                 add(md, "UCAV_Airframe")
             else:
                 surfaces[name] = md
+        add(S.fin_root_fairing(sd), "UCAV_Airframe", f"U_Fin_{sd}")
         add(S.wing_fillet(sd), "UCAV_Airframe", "U_Fuselage")
         add(S.root_fairing(sd), "UCAV_Airframe", f"U_WingCenter_{sd}")
         add(S.unit_blister(sd), "UCAV_Airframe", f"U_WingCenter_{sd}")
@@ -145,19 +146,33 @@ def build(scene: bpy.types.Scene | None = None, *, cut_wells: bool = True, verbo
         add(S.gear_bay(leg), "UCAV_Airframe", ROOT if leg == "N" else f"U_WingCenter_{leg}")
     for d in P.gear_doors():
         g = S.gear_door(d.name)
-        add(g.mesh, "UCAV_Gear", ROOT, np.asarray(P.to_blender(*g.origin)), g.frame_b, ucav_role="gear_door",
+        o_b = np.asarray(P.to_blender(*g.origin))
+        add(g.mesh, "UCAV_Gear", ROOT, o_b, g.frame_b, ucav_role="gear_door",
             door_attach=g.attach, door_open_deg=float(g.open_deg), door_leg=d.leg,
             door_retract_deg=float(P.gear_leg(d.leg).retract_deg))
+        hw = S.door_hardware(d.name)
+        if hw is not None:                                 # menteşe bilekleri/kulakları: kapakla döner
+            add(hw, "UCAV_Gear", d.name, o_b, g.frame_b, ucav_role="door_hardware")
     log("kuyu/kapak")
+
+    # ------------------------------------------------------------------ paketleme zarfları (render/GLB dışı)
+    for name, md in S.envelopes().items():
+        ob = add(md, "UCAV_Envelopes", ROOT, ucav_role="envelope")
+        ob.display_type = "WIRE"
+        ob.hide_render = True
+        ob.visible_shadow = False
 
     # ------------------------------------------------------------------ ayrıntılar
     add(S.hatch(), "UCAV_Details", "U_Fuselage")
+    add(S.hatch_frame(), "UCAV_Details", "U_Fuselage")
     for sd in ("L", "R"):
         add(S.stripe(sd), "UCAV_Details", "U_Fuselage")
     add(S.chevron(), "UCAV_Details", "U_WingOuter_L")
     for a in P.antennas():
         md = S.blade_antenna(a) if a.kind == "blade" else S.gnss_puck(a) if a.kind == "puck" else S.dipole(a)
         add(md, "UCAV_Details", "U_Fuselage")
+        if a.kind == "blade":
+            add(S.antenna_doubler(a), "UCAV_Details", "U_Fuselage")
     add(S.pitot_tube(), "UCAV_Details", "U_WingCenter_L")
     add(S.landing_light(), "UCAV_Details", "U_WingCenter_R")
     for f in P.lights():
@@ -173,7 +188,9 @@ def build(scene: bpy.types.Scene | None = None, *, cut_wells: bool = True, verbo
         if cutters.name not in scene.collection.children.keys():
             scene.collection.children.link(cutters)
         jobs = [(md, ["U_Fuselage"]) for md in S.gear_cutters("N")]
-        jobs += [(S.turret_cutter(), ["U_Fuselage"]), (S.hatch_cutter(), ["U_Fuselage"])]
+        jobs += [(S.turret_cutter(), ["U_Fuselage"]), (S.hatch_cutter(), ["U_Fuselage"]),
+                 (S.intake_cutter(), ["U_Fuselage"]), (S.cooling_exit_cutter(), ["U_Cowl"])]
+        jobs += [(md, ["U_Cowl"]) for md in S.louver_cutters()]
         for sd in ("L", "R"):
             for md in S.gear_cutters(sd):           # önce dişli deri dudağı, sonra düz duvarlı kuyu hacmi
                 jobs.append((md, ["U_Fuselage", f"U_WingCenter_{sd}", f"U_Fairing_Root_{sd}",
@@ -181,7 +198,7 @@ def build(scene: bpy.types.Scene | None = None, *, cut_wells: bool = True, verbo
         for md, targets in jobs:
             cut = U.object_from_mesh(md, cutters)
             for tn in targets:
-                U.boolean_difference(objs[tn], cut)
+                U.boolean_difference_safe(objs[tn], cut)
             U.remove_object(cut.name)
         bpy.data.collections.remove(cutters)
         log("boolean")
@@ -190,8 +207,36 @@ def build(scene: bpy.types.Scene | None = None, *, cut_wells: bool = True, verbo
     for name, par in parents.items():
         U.parent_keep_world(objs[name], objs[par])
     bpy.context.view_layer.update()
+
+    # ------------------------------------------------------------------ şablon yazılar / servis işaretleri (F8)
+    objs.update(build_stencils(cols["UCAV_Details"]))
     log(f"{len(objs)} nesne")
     return objs
+
+
+def build_stencils(collection: bpy.types.Collection) -> dict:
+    """``shapes.stencil_specs()`` işaretlerini kurar (``U_Stencil_*``; ev sahibine bağlı, kapalı ince katı). Ev sahibi
+    yoksa ya da yüzeye oturmazsa o işaret atlanır. Dönüş: {ad: nesne}."""
+    out: dict = {}
+    bvhs: dict = {}
+    for st in S.stencil_specs():
+        host = bpy.data.objects.get(st.host)
+        if host is None:
+            continue
+        if st.host not in bvhs:
+            bvhs[st.host] = U._host_bvh_world(host)
+        if st.text is not None:
+            V2, F = U.text_mesh_2d(st.text, st.height)
+        else:
+            V2, F = st.poly
+        ob = U.stencil_object(st.name, host, V2, F, P.to_blender(*st.center), st.u_b, st.n_b, st.mat, collection,
+                              bvh=bvhs[st.host])
+        if ob is None:
+            print(f"[airframe] uyarı: {st.name} yüzeye oturmadı ({st.host})")
+            continue
+        ob["ucav_stencil"] = st.text or "işaret"
+        out[ob.name] = ob
+    return out
 
 
 def catalog() -> list[dict]:

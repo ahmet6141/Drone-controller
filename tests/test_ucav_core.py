@@ -356,7 +356,7 @@ class TestGearPropTurret(unittest.TestCase):
             moved = P.rotate_about_axis(ax, g.pivot_b, g.retract_axis_b, g.retract_deg)
             np.testing.assert_allclose(P.from_blender(*moved), g.axle_retracted, atol=1e-12)
         n, l, r = P.gear_leg("N"), P.gear_leg("L"), P.gear_leg("R")
-        self.assertGreater(n.axle_retracted[0], n.pivot[0] + 0.2)                  # burun geriye
+        self.assertGreater(n.axle_retracted[0], n.pivot[0] + 0.18)                 # burun geriye
         self.assertAlmostEqual(l.axle_retracted[1], 0.115, delta=0.001)          # ana içe
         self.assertAlmostEqual(r.axle_retracted[1], -0.115, delta=0.001)
         self.assertAlmostEqual(l.axle_retracted[2], -0.042, delta=1e-9)
@@ -369,7 +369,8 @@ class TestGearPropTurret(unittest.TestCase):
     def test_doors_open_downward(self):
         doors = P.gear_doors()
         self.assertEqual({d.name for d in doors},
-                         {"U_Door_N_1", "U_Door_N_2", "U_Door_L_1", "U_Door_R_1", "U_Door_L_2", "U_Door_R_2"})
+                         {"U_Door_N_1", "U_Door_N_2", "U_Door_N_3", "U_Door_L_1", "U_Door_R_1", "U_Door_L_2",
+                          "U_Door_R_2"})
         for d in doors:
             if d.attach != "skin":
                 continue
@@ -393,7 +394,8 @@ class TestGearPropTurret(unittest.TestCase):
         self.assertAlmostEqual(math.degrees(math.asin(pr.axis_aft_b[2])), 5.0, places=9)
         bottom = pr.disk_point(0.0)
         self.assertGreater(bottom[0], pr.hub[0])                                  # disk tabanı geride
-        self.assertAlmostEqual(P.thrust_line_z(P.CG.s), 0.044, delta=0.001)
+        self.assertAlmostEqual(P.thrust_line_z(P.CG.s),
+                               P.SPEC["propulsion"]["performance"]["thrust_line_z_at_cg_m"], delta=0.001)
         t = P.TURRET
         self.assertAlmostEqual(t.ground_clearance, 0.156, delta=0.0005)
         self.assertLess(t.ball_center[2] + t.ball_d / 2, t.belly_z + 0.03)       # yarı gömülü
@@ -413,6 +415,125 @@ class TestGearPropTurret(unittest.TestCase):
         self.assertAlmostEqual(cuts["wing_panel_y"][-1], 1.90)
         self.assertIn(1.55, cuts["fuselage_s"])
         self.assertLessEqual(max(np.diff(cuts["fuselage_s"][1:-1])), 0.215 + 1e-9)
+
+
+class TestGeometryFixes(unittest.TestCase):
+    """Tasarım incelemesi düzeltmelerinin (geometri) gerilemeye karşı kilitleri: motor bölmesi zarfları, sırt çizgisi,
+    stabilize kirişi, düz longeronlar, ana takım ünitesi, NACA dudağı, kapak, flap aralığı, işaretler."""
+
+    @classmethod
+    def setUpClass(cls):
+        from ucav import shapes as S
+        cls.S = S
+
+    def test_engine_envelopes_inside_cowl(self):
+        cl = P.SPEC["propulsion"]["engine"]["clearance_m"]
+        r = self.S.engine_bay_clearance()
+        for part in ("front_bearing", "crankcase", "carb", "cylinder", "spark_cap"):
+            self.assertGreaterEqual(r[part], float(cl["cowl"]) - 1e-4, part)
+        self.assertGreaterEqual(r["muffler"], float(cl["muffler_air_gap"]) - 1e-4)
+        self.assertGreaterEqual(r["carb_to_firewall"], float(cl["carb_to_firewall"]) - 1e-4)
+        self.assertGreaterEqual(r["spinner_to_ring"], 0.005 - 1e-4)
+
+    def test_spine_taut_no_hump(self):
+        """Kanattan lüle halkasına sırt çizgisi tek yönlü yükselir (eski 'deve hörgücü' yok), eğim ≤ 8°."""
+        S = self.S
+        s_cowl = float(P.SPEC["propulsion"]["cowl"]["s_from_m"])
+        s_ring = float(P.SPEC["propulsion"]["exhaust_ring"]["s_from_m"])
+        ss = np.linspace(1.0, s_ring - 0.002, 80)
+        z = np.array([P.fuselage_section(s).z_top if s < s_cowl else S.cowl_section_yz(s)[:, 1].max() for s in ss])
+        self.assertTrue(np.all(np.diff(z) >= -2e-4), "sırt çizgisinde yerel tepe")
+        self.assertLess(math.degrees(math.atan(np.max(np.diff(z) / np.diff(ss)))), 8.0)
+
+    def test_stab_spar_fit(self):
+        f = P.stab_spar_fit()
+        self.assertGreaterEqual(f["margin_min"], 0.0008)
+        self.assertGreaterEqual(f["skin_min"], 0.0005)
+
+    def test_longerons_straight_and_inside(self):
+        L = P.SPEC["fuselage"]["longerons"]
+        br = [float(L["s_from_m"])] + [float(b) for b in L["breaks_s_m"]] + [float(L["s_to_m"])]
+        r = 0.5 * float(L["od_m"])
+        for kind in ("chine", "shoulder"):
+            pcs = P.longeron_pieces(kind, "L")
+            self.assertEqual([round(float(p0[0]), 6) for p0, _ in pcs] + [round(float(pcs[-1][1][0]), 6)], br)
+            for (a0, a1), (b0, _) in zip(pcs[:-1], pcs[1:]):
+                np.testing.assert_allclose(a1, b0, atol=1e-12)                       # kırıkta süreklilik
+            path = P.longeron_path(kind, "L", n=60)
+            for p in path:                                                          # yol = parçaların doğruları
+                seg = next((p0, p1) for p0, p1 in pcs if p0[0] - 1e-9 <= p[0] <= p1[0] + 1e-9)
+                d = np.linalg.norm(np.cross(seg[1] - seg[0], p - seg[0])) / np.linalg.norm(seg[1] - seg[0])
+                self.assertLess(d, 1e-9)
+                self.assertGreater(P.fuselage_half_width_at(float(p[0]), float(p[2])) - p[1], r, kind)
+
+    def test_main_unit_clears_spar_tubes(self):
+        S = self.S
+        for side in ("L", "R"):
+            box, top_margin = S.main_unit_box(side)
+            self.assertGreaterEqual(top_margin, 0.0)
+            pts = box.surface_points(16)
+            for t in P.spar_tubes(side):
+                if t.name not in ("centre_socket", "panel_tube", "inner_reinforce", "rear_spar", "incidence_pin"):
+                    continue
+                d = _seg_dist(pts, np.array([t.p0, t.p1])).min() - 0.5 * t.od
+                self.assertGreater(d, 0.002, f"{side} {t.name}")
+            self.assertGreater(box.center[0] - box.half[0], P.gear_leg(side).pivot[0])   # ünite bacak yuvasının arkasında
+
+    def test_nose_gear_trail_and_flap_gap(self):
+        self.assertGreaterEqual(P.gear_leg("N").trail, 0.010)
+        self.assertLessEqual(P.gear_leg("N").trail, 0.015)
+        cs = P.SPEC["wing"]["control_surfaces"]
+        gap = float(cs["flap_out"]["y_from_m"]) - float(cs["flap_in"]["y_to_m"])
+        self.assertGreaterEqual(gap, 0.008)
+        self.assertLessEqual(gap, 0.012)
+
+    def test_hatch_flush(self):
+        h = P.SPEC["details"]["hatch"]
+        self.assertLessEqual(float(h["bulge_m"]) + self.S.HATCH_FACET["rim"], 0.002)
+        o = P.hatch_outline()
+        area = 0.5 * abs(np.dot(o[:, 0], np.roll(o[:, 1], -1)) - np.dot(o[:, 1], np.roll(o[:, 0], -1)))
+        self.assertLessEqual(area, 0.040)
+
+    def test_naca_lip_follows_belly(self):
+        """NACA boğaz çerçevesi karın derisinin en çok 1 mm altına iner (dikdörtgen köşeler dışarı taşmaz)."""
+        S = self.S
+        m = S.intake()
+        self.assertEqual(m.check()["boundary"], 0)
+        V = np.asarray(m.verts)
+        for s, y, z in V:
+            self.assertGreater(z, S._skin_bottom(float(s), float(y)) - 0.001)
+
+    def test_prop_swept_gap_and_exit_area(self):
+        """Elevatör firar kenarı ↔ pala süpürme hacmi (pervane yerel ağı döndürülerek, (eksenel, yarıçap) düzleminde)
+        ≥ 0,25 D ve spec ``gap_swept_min_m`` ile tutarlı; lüle akış alanı = π/4·(ID² − spinner²)."""
+        pr = P.PROP
+        hub, ax = np.asarray(pr.hub), np.asarray(pr.axis_aft)
+        V = np.asarray(self.S.prop().verts)
+        bx, br = V[:, 0], np.hypot(V[:, 1], V[:, 2])
+        z = float(P.SPEC["tail"]["stab"]["z_m"])
+        best = 1.0
+        for y in np.linspace(0.0, 0.6, 121):
+            d = np.array([P.stab_station(float(y)).te_s, y, z]) - hub
+            a = float(d @ ax)
+            r = float(np.linalg.norm(d - a * ax))
+            best = min(best, float(np.min(np.hypot(bx - a, br - r))))
+        self.assertGreaterEqual(best, 0.25 * pr.diameter)
+        self.assertAlmostEqual(best, float(P.SPEC["tail"]["reference"]["gap_swept_min_m"]), delta=0.002)
+        er = P.SPEC["propulsion"]["exhaust_ring"]
+        flow = math.pi / 4 * (float(er["id_m"]) ** 2 - pr.spinner_d ** 2) * 1e4
+        self.assertAlmostEqual(flow, float(er["area_cm2"]), delta=0.01 * flow)
+        ann = math.pi / 4 * (float(er["od_m"]) ** 2 - float(er["id_m"]) ** 2) * 1e4
+        self.assertAlmostEqual(ann, float(er["annulus_cm2"]), delta=0.01 * ann)
+
+    def test_stencils_named_and_hosted(self):
+        st = self.S.stencil_specs()
+        names = [x.name for x in st]
+        self.assertEqual(len(names), len(set(names)))
+        self.assertGreaterEqual(len(st), 20)
+        self.assertTrue(all(n.startswith("U_Stencil_") and x.host.startswith("U_") for n, x in zip(names, st)))
+        for side in ("L", "R"):
+            for host in ("Aileron", "Elevator", "FlapIn", "FlapOut"):
+                self.assertIn(f"U_Stencil_AdimAtma_{host}_{side}", names)
 
 
 class TestSizing(unittest.TestCase):

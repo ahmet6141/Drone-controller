@@ -18,19 +18,31 @@
 Işık yönü ``set_sun(azimut, yükseklik)`` ile değişir (azimut uçak eksenine göre: 0° = burun yönü, +90° =
 iskele/sol). Pistte Güneş lambası, gökyüzü ve zemindeki pus rengi birlikte döner; stüdyoda ışık düzeneği döner.
 
+Pozlama ve yer dolgusu
+----------------------
+* Pozlama ortama göredir (``EXPOSURE``): pistte −0,4 EV (beyaz boya AgX omzunda sıkışmaz, iki boya şeması ayrı
+  okunur), stüdyoda 0. ``configure_cycles`` sahnenin ``ucav_env`` değerinden okur.
+* ``S_UnderFill``: zeminin 3 cm üstünde yukarı bakan, kameraya/yansımaya görünmez alan ışığı — koyu asfaltın
+  vermediği yer yansıması (beyaz alt yüzeyler ve kanat kökü gölgede beyaz okunur). ``U_Root``'un X/Y'sini izler;
+  gücü ``ucav_fill_w`` × irtifa sönümüdür (basit ifade sürücüsü: dinlenme yüksekliğinin 1,5 m üstünde sıfır →
+  gösterim klibinde kalkıştan ≈ 1 s sonra söner). Pistte varsayılan 35 W, stüdyoda kapalı; görünüm başına
+  ``under_fill`` (``under`` 60 W, ``top`` 0).
+
 Kameralar (``VIEWS``)
 ---------------------
-``U_Cam_<görünüm>``: hero (ön-sol 3/4, 70 mm, alçak), rear34 (arka-sağ 3/4), side (iskele yanı, 135 mm), front
+``U_Cam_<görünüm>``: hero (ön-sol 3/4, 70 mm, alçak, f/5.6, güneş 24° — uzun gölge), rear34 (arka-sağ 3/4),
+side (iskele yanı, ORTOGRAFİK, yükseklik = kanat dihedrali 4° → yakın kanat ince çizgi; alçak güneş), front
 (135 mm), top, under (alttan; takım toplu, zemin kamera ışınına görünmez, alttan dolgu ışığı), nose (taret yakın
 plan, 85 mm, f/4), tail (U-kuyruk ve itici pervane, f/5.6), gearbay (sol ana takım ve açık kuyu, 28 mm, f/4).
 Uzaklık, uçağın gerçek köşe noktalarından kadraja sığdırılarak hesaplanır (``fit=None``, ``margin`` > 1 kanat
-uçlarını kırpar) ya da hedef çevresinde verilen yarıçapa göre (``fit``); uçak yoksa params zarfı kullanılır.
+uçlarını kırpar) ya da hedef çevresinde verilen yarıçapa göre (``fit``); ortografik görünümde (``ortho``) ölçek ve
+kadraj ortası aynı noktalardan bulunur. Uçak yoksa params zarfı kullanılır.
 Kameralar ``U_CamRig_Stills`` boşluğuna bağlıdır; bu boşluk ``U_Root`` konumunu ve baş açısını izler →
 animasyonun herhangi bir karesinde de sabit kameralar uçağı kadrajlar.
 
 Görünüm başına ``controls`` (``U_Root`` kontrol paneli değerleri), ``hide_ground``, ``sun``, ``under_fill`` ve
-alan derinliği (``fstop``) ``apply_view`` ile uygulanır, ``restore_view`` ile geri alınır (``render.render_stills``
-bunu her görünümde yapar; animasyonlu kontrol eğrileri o süre için susturulur).
+alan derinliği (``fstop``, odak = uzaklık × ``focus``) ``apply_view`` ile uygulanır, ``restore_view`` ile geri
+alınır (``render.render_stills`` bunu her görünümde yapar; animasyonlu kontrol eğrileri o süre için susturulur).
 
 Nesne adları: stüdyo ağları/ışıkları ``S_*``, malzemeleri ``SM_*``, dünyalar ``SW_*`` (``UM_*`` uçak
 malzemelerinden ayrı), hepsi ``UCAV_Studio`` koleksiyonunda. ``setup`` tekrar çağrılabilir (eski stüdyo
@@ -75,6 +87,13 @@ GROUND_HALF = 6000.0               # zemin düzlemi yarı boyu (m)
 
 UNDER_FILL = "S_UnderFill"
 UNDER_FILL_W = 60.0                # alt görünüş dolgu ışığı (zeminden yansıyan gün ışığı taklidi)
+GROUND_FILL_W = 35.0               # diğer pist görünüşleri ve animasyon: koyu asfaltın vermediği yer yansıması
+FILL_PROP = "ucav_fill_w"          # S_UnderFill nesne özelliği: temel güç (W); sürücü irtifayla söndürür
+FILL_FADE_M = 1.5                  # U_Root dinlenme yüksekliğinin bu kadar üstünde dolgu sıfır (kalkıştan ≈ 1 s sonra)
+ENV_FILL_W = {"pist": GROUND_FILL_W, "studyo": 0.0}
+
+# Pozlama (EV): pistte iki boya şeması da AgX omzunun altında kalsın (standart boya ≤ 240, taktik koyu okunur)
+EXPOSURE = {"pist": -0.4, "studyo": 0.0}
 
 # Stüdyo
 STUDIO_FLOOR_R = 40.0
@@ -85,9 +104,10 @@ STUDIO_BG = (0.040, 0.042, 0.046)  # doğrusal fon: koyu antrasit (beyaz uçakla
 # Cycles ve renk yönetimi
 # =====================================================================================================
 def configure_cycles(scene: bpy.types.Scene | None = None, samples: int = 96, *, adaptive: float = 0.015,
-                     look: str = "AgX - Medium High Contrast") -> None:
+                     look: str = "AgX - Medium High Contrast", exposure: float | None = None) -> None:
     """Cycles CPU, uyarlamalı örnekleme, OIDN gürültü giderme (albedo+normal), ışık ağacı, sınırlı sekmeler,
-    AgX görünüm dönüşümü. 4 çekirdekli CPU için dengeli varsayılanlar."""
+    AgX görünüm dönüşümü. 4 çekirdekli CPU için dengeli varsayılanlar. ``exposure`` None → ortamın değeri
+    (``EXPOSURE``: pist −0,4 EV, stüdyo 0)."""
     scene = scene or bpy.context.scene
     r = scene.render
     r.engine = "CYCLES"
@@ -131,7 +151,7 @@ def configure_cycles(scene: bpy.types.Scene | None = None, samples: int = 96, *,
         vs.look = look
     except TypeError:
         vs.look = "None"
-    vs.exposure = 0.0
+    vs.exposure = float(EXPOSURE.get(scene.get("ucav_env", "pist"), 0.0) if exposure is None else exposure)
     vs.gamma = 1.0
 
 
@@ -525,18 +545,57 @@ def build_lights_pist(scene, az=SUN_AZ_DEG, el=SUN_EL_DEG) -> list[str]:
     col = _studio_col(scene)
     sun = _light(SUN, "SUN", col, SUN_STRENGTH, (1.0, 0.955, 0.90), angle=math.radians(SUN_ANGLE_DEG))
     _orient_sun(sun, az, el)
-    return [sun.name, _under_fill(col).name]
+    return [sun.name, _under_fill(col, ENV_FILL_W["pist"]).name]
 
 
-def _under_fill(col) -> bpy.types.Object:
-    """Alt görünüş için zeminin hemen üstünde yukarı bakan geniş, kameraya görünmez dolgu ışığı (kapalı)."""
+def _under_fill(col, watts: float = 0.0) -> bpy.types.Object:
+    """Zeminin 3 cm üstünde yukarı bakan geniş, kameraya ve yansımalara görünmez dolgu ışığı: koyu asfaltın
+    vermediği yer yansımasını (beyaz alt yüzeyler gölgede beyaz okunsun) taklit eder. ``U_Root``'un X/Y'sini
+    izler (Z zeminde kilitli); güç = ``ucav_fill_w`` × irtifa sönümü (basit ifade sürücüsü: dinlenme
+    yüksekliğinden ``FILL_FADE_M`` yukarıda sıfır → kalkıştan sonra kendiliğinden söner)."""
     ob = _light(UNDER_FILL, "AREA", col, 0.0, (1.0, 0.98, 0.95), shape="RECTANGLE", size=5.0, size_y=3.5)
     ob.location = (P.U_ROOT_B[0], 0.0, P.GROUND_Z + 0.03)
     ob.rotation_euler = (math.pi, 0.0, 0.0)                         # ışık +Z yönünde
     ob.visible_camera = False
     ob.visible_glossy = False
-    ob.hide_render = True
+    ob.visible_transmission = False
+    ob[FILL_PROP] = float(watts)
+    ob.id_properties_ui(FILL_PROP).update(min=0.0, max=200.0, description="Yer yansıması dolgu gücü (W)")
+    ob.hide_render = watts <= 0
+    root = bpy.data.objects.get("U_Root")
+    if root is not None:
+        cl = ob.constraints.new("COPY_LOCATION")
+        cl.target = root
+        cl.use_z = False
+        cl.use_offset = False
+    li = ob.data
+    fc = li.driver_add("energy")
+    d = fc.driver
+    d.type = "SCRIPTED"
+    v = d.variables.new()
+    v.name, v.type = "w", "SINGLE_PROP"
+    v.targets[0].id_type = "OBJECT"
+    v.targets[0].id = ob
+    v.targets[0].data_path = f'["{FILL_PROP}"]'
+    if root is not None:
+        z = d.variables.new()
+        z.name, z.type = "z", "TRANSFORMS"
+        z.targets[0].id = root
+        z.targets[0].transform_type = "LOC_Z"
+        z.targets[0].transform_space = "WORLD_SPACE"
+        d.expression = f"w * clamp(1 - (z - {P.U_ROOT_B[2]:.6g}) / {FILL_FADE_M:.6g}, 0, 1)"
+    else:
+        d.expression = "w"
     return ob
+
+
+def set_fill(watts: float) -> None:
+    """Yer yansıması dolgu gücü (W; 0 = kapalı)."""
+    ob = bpy.data.objects.get(UNDER_FILL)
+    if ob is None:
+        return
+    ob[FILL_PROP] = float(watts)
+    ob.hide_render = watts <= 0
 
 
 def _orient_sun(sun, az, el) -> None:
@@ -635,23 +694,31 @@ class ViewSpec:
     up: tuple | None = None          # tepe/alt görünüşte ekran yukarısı (dünya)
     shift: tuple = (0.0, 0.0)
     under_fill: float = 0.0          # alttan dolgu ışığı gücü (W); 0 = kapalı
+    ortho: bool = False              # ortografik kamera (ölçek ``margin`` ile uçağa sığdırılır)
+    focus: float = 1.0               # alan derinliği odak uzaklığı = kamera uzaklığı × bu
 
 
+GF = GROUND_FILL_W
 VIEWS: dict[str, ViewSpec] = {v.name: v for v in [
-    ViewSpec("hero", "Kahraman — ön-sol 3/4", 33.0, 6.0, (1.05, 0.0, 0.0), 70.0, margin=1.42, sun=(118.0, 30.0)),
-    ViewSpec("rear34", "Arka-sağ 3/4", -138.0, 15.0, (1.25, 0.0, 0.03), 50.0, margin=1.12, sun=(-80.0, 34.0)),
-    ViewSpec("side", "Yan (iskele)", 90.0, 1.5, (1.24, 0.0, 0.02), 135.0, margin=0.93, sun=(62.0, 38.0)),
-    ViewSpec("front", "Ön", 0.0, 3.0, (1.20, 0.0, 0.0), 135.0, margin=0.93, sun=(40.0, 36.0)),
+    ViewSpec("hero", "Kahraman — ön-sol 3/4", 33.0, 6.0, (1.05, 0.0, 0.0), 70.0, margin=1.42, sun=(118.0, 24.0),
+             fstop=5.6, focus=0.92, under_fill=GF),
+    ViewSpec("rear34", "Arka-sağ 3/4", -138.0, 15.0, (1.25, 0.0, 0.03), 50.0, margin=1.12, sun=(-80.0, 34.0),
+             under_fill=GF),
+    # yan: ortografik, yükseklik = kanat dihedrali → yakın kanat ince bir çizgi (alt yüzü "koyu çokgen" olmaz);
+    # alçak, kamera tarafından güneş + biraz güçlü yer dolgusu → beyaz alt yüz (RAL 9003) üstten açık okunur
+    ViewSpec("side", "Yan (iskele, ortografik)", 90.0, P.WING_DIHEDRAL, (1.24, 0.0, 0.02), 135.0, margin=0.93,
+             sun=(70.0, 16.0), under_fill=42.0, ortho=True),
+    ViewSpec("front", "Ön", 0.0, 3.0, (1.20, 0.0, 0.0), 135.0, margin=0.93, sun=(40.0, 36.0), under_fill=GF),
     ViewSpec("top", "Üst", 0.0, 89.9, (1.24, 0.0, 0.0), 85.0, margin=0.92, aspect=1.6, up=(1.0, 0.0, 0.0),
              sun=(70.0, 55.0)),
     ViewSpec("under", "Alt (takım toplu)", 0.0, -89.9, (1.24, 0.0, 0.0), 85.0, margin=0.92, up=(1.0, 0.0, 0.0),
              hide_ground=True, controls={"gear": 0.0}, sun=(70.0, 55.0), under_fill=UNDER_FILL_W),
     ViewSpec("nose", "Burun ve EO/IR taret", 32.0, -4.0, (0.25, 0.0, -0.075), 85.0, fit=0.20, fstop=4.0,
-             controls={"turret_pan_deg": 18.0, "turret_tilt_deg": -12.0}, sun=(70.0, 24.0)),
+             controls={"turret_pan_deg": 18.0, "turret_tilt_deg": -12.0}, sun=(70.0, 24.0), under_fill=GF),
     ViewSpec("tail", "U-kuyruk ve itici pervane", -152.0, 9.0, (2.21, 0.0, 0.12), 70.0, fit=0.42, fstop=5.6,
-             sun=(-95.0, 30.0)),
+             sun=(-95.0, 30.0), under_fill=GF),
     ViewSpec("gearbay", "Sol ana takım ve kuyu", 38.0, -10.0, (1.31, 0.20, -0.10), 28.0, fit=0.24, fstop=4.0,
-             controls={"gear_doors": 1.0}, sun=(80.0, 28.0)),
+             controls={"gear_doors": 1.0}, sun=(80.0, 28.0), under_fill=GF),
 ]}
 
 
@@ -731,6 +798,22 @@ def _fit_distance(view: ViewSpec, target: Vector, pts: np.ndarray, sensor: float
     return hi
 
 
+def _fit_ortho(view: ViewSpec, target: Vector, pts: np.ndarray, dist: float = 30.0) -> tuple[Vector, float]:
+    """Ortografik kadraj: kamera ekseni ``target``'tan geçen bakış yönünde; uçak zarfının ortası kadraj ortasına
+    kaydırılır, ölçek (geniş kenar) zarf + ``margin`` payına göre. Döndürür: (kamera konumu, ortho_scale)."""
+    d = _view_dir(view)
+    cam = target + d * dist
+    R = _look_rotation(cam, target, Vector(view.up) if view.up else None)
+    Q = (np.asarray(pts) - np.asarray(cam)) @ np.asarray(R)
+    lo, hi = Q[:, :2].min(0), Q[:, :2].max(0)
+    c = 0.5 * (lo + hi)
+    w, h = hi - lo
+    scale = max(w, h * view.aspect) / view.margin
+    Rm = np.asarray(R)
+    cam = cam + Vector(Rm[:, 0] * c[0] + Rm[:, 1] * c[1])
+    return cam, float(scale)
+
+
 def _view_dir(view: ViewSpec) -> Vector:
     return _sun_vector(view.az, view.el)
 
@@ -786,19 +869,26 @@ def build_cameras(scene=None) -> list[str]:
         cam.clip_end = 12000.0
         cam.shift_x, cam.shift_y = v.shift
         tgt = Vector(P.to_blender(*v.target))
-        if v.fit is None:
-            dist = _fit_distance(v, tgt, pts)
-        else:                                                   # yarıçap kısa kenara (düşey) sığar
-            dist = v.fit / ((36.0 / 2) / v.lens / v.aspect)
-        pos = tgt + _view_dir(v) * dist
-        R = _look_rotation(pos, tgt, Vector(v.up) if v.up else None)
+        if v.ortho:
+            pos, scale = _fit_ortho(v, tgt, pts)
+            cam.type = "ORTHO"
+            cam.ortho_scale = scale
+            dist = (pos - tgt).length
+            ob["ucav_ortho_scale"] = round(scale, 4)
+        else:
+            if v.fit is None:
+                dist = _fit_distance(v, tgt, pts)
+            else:                                               # yarıçap kısa kenara (düşey) sığar
+                dist = v.fit / ((36.0 / 2) / v.lens / v.aspect)
+            pos = tgt + _view_dir(v) * dist
+        R = _look_rotation(pos, pos - _view_dir(v), Vector(v.up) if v.up else None)
         ob.parent = rig                                         # dünya = rig · rest⁻¹ · taban → dinlenmede taban
         ob.matrix_parent_inverse = rest.inverted()
         ob.matrix_basis = Matrix.Translation(pos) @ R.to_4x4()
-        cam.dof.use_dof = v.fstop is not None
-        if v.fstop is not None:
+        cam.dof.use_dof = v.fstop is not None and not v.ortho
+        if cam.dof.use_dof:
             cam.dof.aperture_fstop = v.fstop
-            cam.dof.focus_distance = dist
+            cam.dof.focus_distance = dist * v.focus
             cam.dof.aperture_blades = 7
         ob["ucav_view"] = v.title
         ob["ucav_distance_m"] = round(dist, 3)
@@ -833,9 +923,8 @@ def apply_view(name: str, scene=None) -> dict:
         set_sun(v.sun[0], v.sun[1], scene)
     fill = bpy.data.objects.get(UNDER_FILL)
     if fill is not None:
-        state["fill"] = (fill.hide_render, fill.data.energy)
-        fill.hide_render = v.under_fill <= 0
-        fill.data.energy = v.under_fill
+        state["fill"] = (fill.hide_render, float(fill.get(FILL_PROP, 0.0)))
+        set_fill(v.under_fill)
     for g in _GROUND:
         ob = bpy.data.objects.get(g)
         if ob is not None:
@@ -855,6 +944,8 @@ def apply_view(name: str, scene=None) -> dict:
                         state["muted"].append(fc.data_path)
             root[k] = float(val)
         _refresh()
+    else:
+        bpy.context.view_layer.update()
     return state
 
 
@@ -869,7 +960,8 @@ def restore_view(state: dict, scene=None) -> None:
     set_sun(*state["sun"], scene=scene)
     fill = bpy.data.objects.get(UNDER_FILL)
     if fill is not None and "fill" in state:
-        fill.hide_render, fill.data.energy = state["fill"]
+        fill[FILL_PROP] = state["fill"][1]
+        fill.hide_render = state["fill"][0]
     for g, vis in state["ground"].items():
         ob = bpy.data.objects.get(g)
         if ob is not None:
@@ -920,6 +1012,7 @@ def setup(scene: bpy.types.Scene | None = None, *, env: str = "pist", samples: i
     scene = scene or bpy.context.scene
     if env not in ENVS:
         raise KeyError(f"bilinmeyen ortam: {env!r} ({', '.join(ENVS)})")
+    scene["ucav_env"] = env
     configure_cycles(scene, samples)
     _remove(("S_",))
     az, el = sun if sun is not None else (SUN_AZ_DEG, SUN_EL_DEG)
@@ -928,8 +1021,8 @@ def setup(scene: bpy.types.Scene | None = None, *, env: str = "pist", samples: i
         objs = build_ground_pist(scene, az, el) + build_lights_pist(scene, az, el)
     else:
         world = build_world_studio(scene)
-        objs = build_ground_studio(scene) + build_lights_studio(scene) + [_under_fill(_studio_col(scene)).name]
-    scene["ucav_env"] = env
+        objs = build_ground_studio(scene) + build_lights_studio(scene) + \
+            [_under_fill(_studio_col(scene), ENV_FILL_W["studyo"]).name]
     set_sun(az, el, scene)
     cams = build_cameras(scene) if cameras else []
     if cams and (scene.camera is None or not scene.camera.name.startswith("U_Cam_")):

@@ -45,11 +45,12 @@ meta:
 overall:
   span_m: 3.80
   length_m: 2.475                 # burun ucu → dikey ucu firar kenarı
-  length_with_spinner_m: 2.285
+  length_with_spinner_m: 2.310   # 25 mm pervane uzatma mili (lüle halkası ile dönen parçalar arası ≥ 5 mm)
   fuselage_length_m: 2.205        # burun ucu → lüle halkası arka yüzü
-  height_m: 0.668                 # takım açık: zemin z = −0,2904 → dikey ucu z = +0,378
+  height_m: 0.668                 # takım açık: zemin z = −0,2904 → dikey ucu z = +0,378 (YAPI; strobe lensi hariç)
+  height_with_lights_m: 0.6725    # strobe lensi tepesi z = +0,382 ile (sahnede ölçülen en yüksek nokta; AERO-19d)
   wheel_track_m: 0.66
-  wheelbase_m: 0.908
+  wheelbase_m: 0.785              # burun takımı s 0,53'e alındı (P5); statik temas noktaları arası
 
 # -----------------------------------------------------------------------------------------------------
 # Gövde
@@ -57,8 +58,13 @@ overall:
 fuselage:
   length_m: 2.205
   # İstasyonlar: [s, genişlik w, yükseklik h, kesit merkezi z_c] (m). Burun sarkması (z_c(0) = −0,014)
-  # ve kuyruk konisinin yukarı kalkışı (z_c 0,005 → 0,135) bu tabloda kodludur. Son istasyon lüle
-  # halkasının dış çapıdır (Ø0,112, merkez z = 0,130 = pervane göbeği).
+  # ve kuyruk konisinin yukarı kalkışı bu tabloda kodludur. Son istasyon lüle halkasının dış çapıdır
+  # (Ø0,112, merkez z = 0,130 = pervane göbeği).
+  # Sırt çizgisi (z_c + h/2) s 1,10 → 2,175 arasında TEK, gergin bir rampadır (0,103 → 0,185; ≈ 4,4°) ve lüle
+  # halkasının tepesine (0,186) basamaksız biter: motor ters (silindir aşağıda) bağlandığından kaporta tepesi artık
+  # silindir başını değil krank karterini örter → "deve hörgücü" yok. Kaporta altı (s 2,12–2,175, z ≈ 0,010)
+  # ters silindir başı + buji başlığı + 5 mm + 1,6 mm et ile belirlenir; arkasındaki çene kapanışı soğutma çıkış
+  # yarığıdır (propulsion.cowl.cooling_exit).
   stations:
     - [0.000, 0.000, 0.000, -0.014]
     - [0.060, 0.084, 0.068, -0.013]
@@ -67,18 +73,20 @@ fuselage:
     - [0.500, 0.204, 0.198,  0.000]
     - [0.850, 0.205, 0.200,  0.002]
     - [1.100, 0.200, 0.196,  0.005]
-    - [1.400, 0.170, 0.186,  0.022]
-    - [1.700, 0.138, 0.200,  0.068]
-    - [1.950, 0.120, 0.212,  0.112]
-    - [2.120, 0.110, 0.196,  0.135]
+    - [1.400, 0.170, 0.188,  0.023]
+    - [1.700, 0.140, 0.179,  0.0535]
+    - [1.950, 0.124, 0.172,  0.080]
+    - [2.120, 0.122, 0.172,  0.096]
+    - [2.175, 0.118, 0.173,  0.0985]
+    - [2.190, 0.112, 0.112,  0.130]     # kaporta arkası = lüle halkası önü (daire); çene kapanışı s 2,175–2,19
     - [2.205, 0.112, 0.112,  0.130]
   # Kesit: chine çizgisinde birleşen iki süperelips yarısı. |y/a|^n + |z'/b|^n = 1; a = w/2,
   # üst yarıda b = z_üst − z_chine, alt yarıda b = z_chine − z_alt.
   # İstasyon başına üs (panel: üst 2,5, alt 2,2). Kuyrukta kesit lüle halkasının dairesine (n = 2) açılır.
-  n_upper: [2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.4, 2.3, 2.2, 2.0]   # s ≥ 1,70: varsayım (sırt omurgası → daire)
-  n_lower: [2.2, 2.2, 2.2, 2.2, 2.2, 2.2, 2.2, 2.2, 2.2, 2.2, 2.1, 2.0]   # s ≥ 2,12: varsayım
+  n_upper: [2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.4, 2.3, 2.2, 2.1, 2.0, 2.0]   # s ≥ 1,70: varsayım (sırt omurgası → daire)
+  n_lower: [2.2, 2.2, 2.2, 2.2, 2.2, 2.2, 2.2, 2.2, 2.2, 2.2, 2.1, 2.05, 2.0, 2.0]  # s ≥ 2,12: varsayım
   # Chine keskinliği (0 = yumuşak, 1 = tam "ok çizgisi"). Burundan glove'a tam, kuyrukta söner. varsayım
-  chine_crease: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.6, 0.4, 0.3, 0.2, 0.0]
+  chine_crease: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.6, 0.4, 0.3, 0.2, 0.1, 0.0, 0.0]
   interpolation: "PCHIP (monoton, aşma yapmaz); w ve h burunda √s uzayında (küt burun yarıçapı), z_c ve üsler s uzayında"
   nose:
     droop_m: 0.014                # burun ucu FRL'nin 14 mm altında ("gaga" burun)
@@ -93,22 +101,26 @@ fuselage:
     lean_lower: 0.38              # alt yanak ≈ 24° → toplam ≈ 40° kırık; "yuvarlatılmış eşkenar dörtgen" kesit. varsayım
     stripe_lead_in: {s_from_m: 0.88, slope_deg: 9.0}   # turkuaz çizgi chine'dan ayrılıp 9° alçalarak glove HK köküne iner (panel: "9° alçalarak")
   tail_cone:                      # yukarı kalkık kuyruk konisi (referans; istasyonlardan doğrulanır)
-    belly_upsweep_deg: {s_1p10_1p95: 6.6, s_1p40_1p95: 8.0}
+    belly_upsweep_deg: {s_1p10_1p95: 5.84, s_1p40_1p95: 6.74}
   reference:
     max_width_m: 0.205
-    max_height_m: 0.214           # panel değeri; istasyon tablosunun tepesi 0,212 (s = 1,95). Fark: kaporta silindir kabartısı
-    fineness_ratio: 10.6
-    wetted_area_m2: 1.24
-  longerons:                      # 4 × CF 8/6, s 0,40–2,06
+    max_height_m: 0.200           # kabin (s 0,85). Ters motorla kuyruk konisi 0,172'ye iner (eski 0,212 kaporta kamburu yok)
+    fineness_ratio: 10.9
+    wetted_area_m2: 1.21
+  longerons:                      # 4 × CF 8/6, s 0,40–2,045 (yangın perdesine kadar)
     od_m: 0.008
     s_from_m: 0.40
-    s_to_m: 2.06
+    s_to_m: 2.045
+    # Her longeron 3 DÜZ parçadır (kırıklar halka sınırlarında): 0,40–1,167 | 1,167–1,55 | 1,55–2,045. Parça uçları
+    # 1,6 mm çerçevelere yapıştırılmış, kırık açısına göre basılı PETG soket bloklarına girer. s 1,55 gerçek ayrılabilir
+    # kuyruk ekidir: G10 flanş 4×M4 (ısıl gömme somun) + longeron başına Ø6 × 60 mm CF manşon (P3)
+    breaks_s_m: [1.167, 1.55]
     chine: {y_frac_of_half_width: 1.0, inset_m: 0.006}    # chine köşesinde, kabuğa gömülü (iç yüzden 6 mm). inset varsayım
     shoulder: {y_frac_of_width: 0.30, z_frac_of_height: 0.35}   # y = ±0,30·w, z = z_c + 0,35·h
   modules:
     nose_module_s_m: [0.00, 0.40]          # sökülebilir burun görev modülü (2 pim, 4×M4 kelebek, 8 pin)
     flange_s_m: 1.55                       # ön gövde | kuyruk–motor modülü, G10 flanş 4×M4
-    firewall_s_m: 2.060                    # G10 4 mm
+    firewall_s_m: 2.045                    # G10 4 mm. 2,060'tan öne alındı: karbüratör girişi ile perde arası ≥ 15 mm
     firewall_t_m: 0.004
   internals:                               # görsel/kütle yerleşimi için
     battery_sled_s_m: [0.40, 0.64]         # 4S2P Molicel P45B, 130 Wh, 0,60 kg; nominal 0,469
@@ -171,17 +183,19 @@ wing:
     nose_thickness_factor: 0.70   # glove ucunda burun kalınlığı (keskin strake görünümü). varsayım
     area_both_m2: 0.0138
   root_fairing:                   # kök geçiş kaportası: ana takım kuyularını barındırır (panel)
-    s_from_m: 1.19                # varsayım
-    s_to_m: 1.43                  # varsayım
+    s_from_m: 1.150               # uzun ön rampa (kano burnu, ≤ 9°). varsayım
+    s_to_m: 1.449                 # firar kenarına (1,451) teğet biter (AERO-11). varsayım
+    ramp_m: {front: 0.125, aft: 0.073}   # düz tabana çıkış / tabandan kanada dönüş boyları (smoothstep). varsayım
     y_to_m: 0.175                 # düz taban bu y'ye kadar. varsayım
     y_blend_m: 0.22               # kanat alt yüzeyine teğet geçiş. varsayım
     bottom_z_m: -0.060            # düz taban; kuyu derinliği 36 mm (tavan −0,024). varsayım
-    unit_blister:                 # ER-150 ünitesinin altı (y 0,23–0,33) için kanat altı kabartma
-      s_from_m: 1.255             # varsayım
-      s_to_m: 1.320               # varsayım
-      y_from_m: 0.215             # varsayım
-      y_to_m: 0.350               # varsayım
-      depth_m: 0.009              # pivot (z −0,042) kanat altının 6 mm altında (panel "6 mm kaporta") + 1,6 mm PA-CF + pay. varsayım
+    unit_blister:                 # trunnion + ER-150 ünitesi (yuvanın arkası) için kanat altı kabartma
+      s_from_m: 1.258             # pim ön kaportasının önü. varsayım
+      s_to_m: 1.362               # iç flap oyuğu alt dudağının (s 1,3654) 3 mm önünde biter. varsayım
+      y_from_m: 0.206             # varsayım
+      y_to_m: 0.352               # varsayım
+      depth_m: 0.0105             # ünite arka-iç köşesi (s 1,351) + pivot (kanat altının 6 mm altında) + 1,6 mm PA-CF. varsayım
+      ramp_m: {front: 0.026, aft: 0.006, side: 0.020}   # düz derinliğe çıkış (smoothstep) boyları. varsayım
   control_surfaces:
     hinge_gap_m: 0.001            # menteşe aralığı 1,0 mm; yuvarlak burunlu yüzey + sabit tarafta oyuk
     hinge_pin_d_m: 0.0015         # 1,5 mm çelik pim, basılı menteşe bilekleri
@@ -196,22 +210,22 @@ wing:
       chord_root_tip_m: [0.077, 0.045]
     flap_in:                      # kök bloğundaki iç flap (U_FlapIn_L/R)
       y_from_m: 0.18
-      y_to_m: 0.345
+      y_to_m: 0.355               # panel ekine 5 mm (iç/dış flap arası ≈ 10 mm: iki 1,2 mm ek kaburgası + 2 × 1 mm aralık; AERO-15)
       chord_fraction: 0.28
       down_deg: 30                # en fazla 30°; kalkış ve iniş 20°
       up_deg: 0
       takeoff_deg: 20
       landing_deg: 20
     flap_out:                     # dış paneldeki flap (U_FlapOut_L/R)
-      y_from_m: 0.38
+      y_from_m: 0.365             # panel ekinden 5 mm (AERO-15)
       y_to_m: 1.08
       chord_fraction: 0.28
       down_deg: 30
       up_deg: 0
       takeoff_deg: 20
       landing_deg: 20
-    flap_area_total_m2: 0.14
-    flapped_area_ratio: 0.513
+    flap_area_total_m2: 0.144       # iç flap 0,355'e, dış flap 0,365'ten (AERO-15)
+    flapped_area_ratio: 0.528       # aero.CLmax flap değerleri 0,513 ile hesaplandı (≈ %3 muhafazakâr)
     type: "Düz (plain) flap ve kanatçık; menteşe %72 veterde, servo panel içinde"
   aero:                           # panel kaldırma çizgisi (NeuralFoil, Ncrit 7) çıktıları — sizing için girdi
     a_w_per_rad: 5.41
@@ -262,6 +276,9 @@ tail:
     incidence_axis_chord_fraction: 0.25   # açı bu veter noktası etrafında verilir. varsayım
     root_fillet: {y_to_m: 0.15, material: "PA-CF"}   # susturucuya 150 mm kuralı
     spar: {od_m: 0.012, id_m: 0.010, length_m: 0.56, offset_from_le_m: 0.040, y_from_m: 0.0}   # 30° oklu, HK'ye paralel. ofset varsayım
+    # Kalınlık geçişi: kökte NACA 0010, y 0,15 → 0,52 doğrusal olarak uçta %12 (NACA 0012). Ø12 kiriş dış uca kadar
+    # profil içinde (≥ 0,8 mm kabuk); uçta Re ≈ 1,5–2·10⁵'te irtifa dümeni etkinliğine de yarar (AERO-10/P8)
+    thickness_blend: {y_m: [0.15, 0.52], tc_tip: 0.12}
     rear_rod: {od_m: 0.006, id_m: 0.004, length_m: 0.50, chord_fraction: 0.50}               # sabit %50 veter çizgisi boyunca (menteşe %65'in önü). varsayım
   fin:                            # iki dikey, stabilize uçlarında; pervane diskinin dışında
     y_root_m: 0.52                # stabilize ucu
@@ -316,9 +333,11 @@ tail:
     fin_tip_y_m: 0.587
     fin_tip_z_m: 0.378
     tip_to_tip_m: 1.173
-    gap_te_to_prop_m: 0.103       # pala ucunda (disk içinde en dar), 5° disk eğimiyle
-    gap_root_m: 0.193
-    gap_over_D: 0.25
+    gap_te_to_prop_m: 0.128       # pala ucunda (disk içinde en dar), 5° disk eğimiyle; 25 mm uzatma milinden sonra
+    gap_root_m: 0.218
+    gap_over_D: 0.316             # 0,25 D şartının üstünde (daha az pala/iz gürültüsü)
+    gap_swept_min_m: 0.114        # elevatör FK ↔ pala SÜPÜRME hacmi (pala ön yüzü düzlemin ≈ 10 mm önünde) en kısa
+                                  # uzaklık (y ≈ 0,245, disk ucunun hemen dışı); ≥ 0,25 D = 0,102 (AERO-19c)
 
 # -----------------------------------------------------------------------------------------------------
 # İtki: DLE-20 + 16x8 itici pervane
@@ -326,7 +345,10 @@ tail:
 propulsion:
   engine:
     model: "DLE Engines DLE-20 (20 cc, tek silindir, 2 zamanlı benzinli, yan egzoz, arka pompalı karbüratör)"
-    mounting: "İtici: yangın perdesine ters bağlanır, silindir YUKARIDA, susturucu SOL (iskele) yanakta"
+    mounting: "İtici, TERS: silindir AŞAĞIDA (DLE her konumda çalışır; yer çalıştırmasında buji kirlenmesi ve rölanti
+      denetlenir), karbüratör yangın perdesine bakar, susturucu sol (iskele) alt yanakta. Kaporta tepesi karteri
+      örter (silindir başını değil) → sırtta kambur yok"
+    orientation: "inverted"
     displacement_cc: 20
     bore_mm: 32
     stroke_mm: 25
@@ -334,21 +356,28 @@ propulsion:
     rpm_range: [1750, 9000]
     mass_kg: 0.82                 # motor 0,650 + susturucu 0,050 + CDI 0,120
     mount_mass_kg: 0.12
-    carb_to_washer_m: 0.138       # satıcı verisi
+    carb_to_washer_m: 0.138       # satıcı verisi (rondela = pervane göbeği ön yüzü, uzatma milinden önce)
     isolator_m: 0.007
     crank_to_head_top_m: 0.090    # krank ekseni → silindir kafası üstü (satıcı)
     spark_cap_m: 0.012            # buji + başlık. varsayım
     crankcase_d_m: 0.056          # varsayım (görsel zarf)
+    crankcase_len_m: 0.078        # karter gövdesi (rondela önündeki rulman burnu hariç). varsayım
+    front_bearing_d_m: 0.032      # pervane tarafı rulman burnu. varsayım
+    front_bearing_len_m: 0.018    # varsayım
+    carb_d_m: 0.032               # karbüratör + emme bloğu zarfı. varsayım
     cylinder_fin_w_m: 0.050       # varsayım
     cylinder_fin_l_m: 0.046       # varsayım
+    cyl_axis_from_washer_m: 0.060 # silindir ekseni rondelanın bu kadar önünde. varsayım — gerçek motordan ölçülecek
     mount_hole_spacing_m: 0.060   # kiriş tipi montaj, delik merkezleri (satıcı)
     rotation_from_prop_end: "CCW" # pervane ucundan bakınca saat yönünün tersi (itici: arkadan bakınca CCW)
+    clearance_m: {cowl: 0.005, carb_to_firewall: 0.015, muffler_air_gap: 0.0155}   # zarf payları (AERO-08)
   prop:
     model: "Xoar PJA-P 16x8 itici (ters hatveli), kayın"
     diameter_in: 16
     pitch_in: 8
     blades: 2
-    plane_s_m: 2.215              # pervane düzlemi (göbek merkezinde)
+    extension_m: 0.025            # çelik pervane uzatma mili: dönen parçalar ile lüle halkası arasında ≥ 5 mm
+    plane_s_m: 2.240              # pervane düzlemi (göbek merkezinde) = rondela 2,205 + uzatma 0,025 + göbek/2
     hub_z_m: 0.130
     downthrust_deg: 5.0           # itki ekseni öne doğru 5° aşağı (disk tabanı geride)
     hub_d_m: 0.034                # varsayım (görsel)
@@ -361,39 +390,53 @@ propulsion:
     alternatives: "15x8 veya 17x6 itici"
   spinner:
     d_m: 0.064
-    base_s_m: 2.207               # lüle halkasına 2 mm. varsayım
-    tip_s_m: 2.285
+    base_s_m: 2.2130              # taban plakası dudağı 2,2105'te: lüle halkası arka yüzüne 5 mm (AERO-02). varsayım
+    tip_s_m: 2.310
     material: "Al"
   cowl:                           # PA-CF motor kaportası
-    s_from_m: 2.060
+    s_from_m: 2.045
     s_to_m: 2.205
     wall_m: 0.0016
-    top_outer_z_m: 0.233          # silindir başı üstünde 5 mm boşluk
-    cheek_left: {s_from_m: 2.075, s_to_m: 2.185, z_from_m: 0.085, z_to_m: 0.165, bulge_m: 0.016}   # susturucu yanağı. varsayım
-    cheek_right: {s_from_m: 2.075, s_to_m: 2.185, z_from_m: 0.085, z_to_m: 0.165, bulge_m: 0.010, louvers: 4, louver_angle_deg: 36}   # "köpekbalığı solungacı". varsayım
-    scuff_pad: {s_m: 2.12, material: "TPU", t_m: 0.002}   # kaporta altında sürtünme pabucu
-  intake:                         # sırt hava alığı, sınır tabaka ayırıcılı (jet hava alığı gibi okunur)
-    type: "raised_scoop_bl_diverter"
-    s_from_m: 1.62                # ağız
-    s_to_m: 1.72                  # sırta karıştığı yer
+    top_outer_z_m: 0.185          # karter üstü (≈ 0,153) + 5 mm + 1,6 mm et → sırt çizgisi lüle halkası tepesine (0,186) düz biter
+    bottom_outer_z_m: 0.010       # ters silindir başı + buji başlığı (≈ 0,020) − 5 mm − 1,6 mm et (5° itki eğimiyle)
+    # Yanak kabartıları (dış normal boyunca yumuşak tümsek): sol = susturucu kabartısı (15 mm hava boşluğu + kalkan),
+    # sağ = panjur paneli. edge: pencere kenar yumuşatma oranı (0–0,5). varsayım
+    # sol yanak: geniş z penceresi + uzun kenar rampaları → en dik eğim z'de ≈ 40°, s'de ≈ 54° (kutu görünümü yok);
+    # susturucu hava boşluğu ≥ 15,5 mm korunur (shapes.engine_bay_clearance)
+    cheek_left: {s_from_m: 2.046, s_to_m: 2.188, z_from_m: 0.000, z_to_m: 0.160, bulge_m: 0.031, edge_s: 0.24, edge_z: 0.34}
+    cheek_right: {s_from_m: 2.060, s_to_m: 2.180, z_from_m: 0.040, z_to_m: 0.160, bulge_m: 0.008, edge_s: 0.30, edge_z: 0.35,
+                  louvers: 6, louver_angle_deg: 36, louver_slot_m: [0.003, 0.024], louver_recess_m: 0.002, louver_lip_m: 0.0008}
+    cooling_exit: {w_m: 0.060, h_m: 0.010, note: "çene kapanışında arkaya bakan soğutma çıkışı (lüle halkasına ek ≈ 6 cm²)"}
+    scuff_pad: {s_m: 2.12, material: "TPU", t_m: 0.002}   # kaporta (çene) altında sürtünme pabucu
+  intake:                         # karın NACA (gömülü) hava alığı: ters silindir başını besler; sırt temiz kalır
+    type: "naca_flush_ventral"
+    s_from_m: 2.020               # boğaz (ağız), gövde ekseninde karında
+    s_to_m: 2.045                 # kanal yangın perdesinden kaportaya geçer
+    ramp_deg: 7.0                 # rampa tabanı eğimi; rampa başı = boğaz − h/tan(7°) ≈ 1,727
+    ramp_w0_m: 0.040              # rampa başında genişlik (NACA ıraksak planform, 40 → 75 mm)
     mouth_w_m: 0.075
     mouth_h_m: 0.036
-    diverter_m: 0.008             # sınır tabaka ayırıcı yüksekliği
     lip_r_m: 0.003                # dudak yarıçapı. varsayım
-    area_cm2: 27
+    area_cm2: 22                  # ağız alanı: düz tavan (rampa tabanı) − karın eğrisini izleyen dudak (deri + 3 mm);
+                                  # çıkış (lüle 34,3 + çene 6 cm²) / giriş ≈ 1,8 → kaporta içi akış hızlanır, geri basınç yok
   exhaust_ring:                   # "lüle" halka soğutma çıkışı (spinner çevresinde)
     s_from_m: 2.19
     s_to_m: 2.205
     od_m: 0.112
     id_m: 0.092
-    area_cm2: 35
+    area_cm2: 34.3                # AKIŞ alanı: halka iç çapı ile spinner arası (π/4·(0,092² − 0,064²) = 34,3 cm²)
+    annulus_cm2: 32.0             # halka ön yüzü OD/ID (π/4·(0,112² − 0,092²)); akış alanı DEĞİL (AERO-19b)
   muffler:
     side: "L"
-    outlet_s_m: 2.17
+    outlet_s_m: 2.150
     outlet_down_deg: 35
     outlet_out_deg: 35
     envelope_m: [0.080, 0.036, 0.040]   # s × y × z. varsayım
+    center_s_m: 2.110             # silindirin solunda, egzoz portu hizasında. varsayım
+    center_below_axis_m: 0.048    # krank ekseninin altında (silindir aşağıda). varsayım
+    fin_gap_m: 0.004              # silindir kanatçıklarına. varsayım
     shield: "0,5 mm Al kalkan, seramik keçe, 15 mm hava boşluğu; 150 mm içinde LW-PLA yok"
+    outlet: {scarf_deg: 45, shield_m: [0.030, 0.020, 0.0005]}   # 45° eğik kesik uç + ısı kalkanı plakası
   fuel:
     tank_l: 1.4
     density_kg_l: 0.745
@@ -402,8 +445,8 @@ propulsion:
   performance:
     static_thrust_kgf: 5.57
     thrust_to_weight: 0.48
-    thrust_line_z_at_cg_m: 0.044  # CG'nin 38 mm üstü
-    thrust_moment_nm: 2.1         # tam güçte burun aşağı
+    thrust_line_z_at_cg_m: 0.042  # CG'nin 36 mm üstü (göbek s 2,240'ta, 5° eğim)
+    thrust_moment_nm: 1.95        # tam güçte burun aşağı
 
 # -----------------------------------------------------------------------------------------------------
 # Faydalı yük: EO/IR çene tareti (yalnız kamera)
@@ -436,11 +479,11 @@ payload:
 # Ayrıntılar: kapak, antenler, pitot, ışıklar
 # -----------------------------------------------------------------------------------------------------
 details:
-  hatch:                          # RF geçirgen, alçak, fasetli füme PETG aviyonik kapağı ("sahte kanopi")
-    s_from_m: 0.45
-    s_to_m: 0.90
-    half_width_m: 0.058           # varsayım
-    bulge_m: 0.010                # gövde üstünden yükseklik. varsayım
+  hatch:                          # RF geçirgen, sırta gömülü, hafif fasetli füme PETG aviyonik kapağı (F9/AERO-16)
+    s_from_m: 0.50
+    s_to_m: 0.86
+    half_width_m: 0.054           # GNSS pukları (y ±0,035, Ø28) için ≥ 0,052. varsayım
+    bulge_m: 0.0010               # faset kabarıklığı; kenar basamağı 0,6 mm ile deriden en çok ≈ 1,6 mm. varsayım
     chevron_deg: 36               # ön ve arka kenar 36° ok (planform hizalama). varsayım
     facets: 3                     # üst + iki yan faset. varsayım
     wall_m: 0.0016
@@ -475,6 +518,22 @@ details:
       name_text: "YELKOVAN"
       name_text_h_m: 0.022        # kuyruk konisi yanında, chine'a paralel
       prop_band_w_m: 0.012        # dikeylerin iç yüzü, pervane düzleminde (5° eğimi izler)
+    # Şablon yazılar ve servis işaretleri (airframe.build_stencils → U_Stencil_*; ev sahibine bağlı ince katılar,
+    # menteşe/kapak aralığını geçmez). Gerçek tescil, logo, bayrak YOK. Rol → malzeme: accent (düşük kontrastlı
+    # şablon gri, boya şemasını izler), hazard (RAL 3020), seal (koyu port deliği), steel. varsayım (F8)
+    stencils:
+      - {name: "AdimAtma", text: "ADIM ATMA", h_m: 0.007, role: "accent", where: "surface_upper",
+         surfaces: {FlapIn: null, FlapOut: 0.73, Aileron: 1.47, Elevator: 0.28}, aft_of_hinge_m: 0.008}
+      - {name: "Tutma", text: "TUTMA NOKTASI", h_m: 0.005, role: "accent", where: "handling_zone",
+         s_m: [1.192, 1.342], y_m: [0.142, 0.330], line_m: 0.002, dash_m: [0.010, 0.006]}
+      - {name: "StatikPort", text: "STATİK PORT — TIKAMAYIN", h_m: 0.0035, role: "hazard", where: "static_port",
+         s_m: 0.95, dz_chine_m: 0.022, port_d_m: 0.005, ring_d_m: 0.014, ring_w_m: 0.0015}
+      - {name: "Yakit", text: "YAKIT · BENZİN/2T 30:1 · 1,4 L", h_m: 0.004, role: "accent", where: "fuel_filler",
+         s_m: 1.233, ring_d_m: 0.026, cap_d_m: 0.018}
+      - {name: "Pervane", text: "PERVANE — UZAK DUR", h_m: 0.005, role: "hazard", where: "cowl_side", s_m: 2.10, z_m: 0.152}
+      - {name: "Seri", text: "001", h_m: 0.010, role: "accent", where: "fin_root", h_fin_m: 0.055}
+      - {name: "Kriko", text: "KRİKO", h_m: 0.004, role: "accent", where: "jack", s_m: [0.80, 1.62], tri_m: 0.010}
+    antenna_doubler: {length_x_chord: 1.35, w_m: 0.014, t_m: 0.0012, screw_d_m: 0.0016}   # bıçak anten tabanı
 
 # -----------------------------------------------------------------------------------------------------
 # Blender kontrol paneli (U_Root özel özellikleri) — sürücü aralıkları. Fiziksel sınırlar yukarıdaki
@@ -494,6 +553,7 @@ rig:
 landing_gear:
   product: "JP Hobby ER-150 15 mm ×3 (20 kg sınıfı, 'inside'; ünite 160 g, 26×102×32 mm, 12 kg·cm, 90°, 8,4 V'ta 5 s)"
   ground_z_m: -0.2904             # takım açık, statik yükte
+  door_sawtooth: {pitch_m: 0.012, flank_deg: 36.0}   # kapak/kuyu dudağı testere dişi (yalnız deri katmanında). varsayım
   sequence:                       # Blender: gear 0 → 1 tek sürücü; kapak–bacak–kapak
     doors_open: [0.00, 0.15]
     legs: [0.15, 0.85]
@@ -509,25 +569,33 @@ landing_gear:
     retract_deg: 90                      # boylamasına eksen etrafında İÇE
     retract_direction: "inward"
     wheel_d_m: 0.0825
-    wheel_w_m: 0.026                     # varsayım. Kuyuya bugün 22,5 mm sığar (kuyu tavanı arka-iç köşede kanat üst
-                                         # derisiyle sınırlı; gear.tyre_fit_width). Tavan yükseltilirse 26 mm'ye döner.
+    wheel_w_m: 0.026                     # varsayım. Kuyuya bugün 20,5 mm sığar: toplu tekerde tavana ≥ 2,5 mm pay (AERO-06);
+                                         # tavan arka-iç köşede kanat üst derisiyle sınırlı (gear.tyre_fit_width).
     hub_d_m: 0.040                       # varsayım
     strut_d_m: 0.015                     # amortisör gövdesi. varsayım
     slider_d_m: 0.010                    # alt kayar boru. varsayım
     brake: true
-    unit_span_y_m: [0.23, 0.33]          # ER-150 ünitesi kök bloğunda açıklık boyunca
+    unit_span_y_m: [0.218, 0.320]        # ER-150 gövdesi (102 mm) kök bloğunda açıklık boyunca, pim kaportasının 3 mm içinde
+    unit_placement: "bacak yuvasının ARKASINDA (ön kenar = yuva arka kenarı + 2,5 mm), 26 mm kenar düşey, 32 mm veter
+      boyunca: Ø30 merkez soket / Ø27 panel borusu / Ø25 takviye borusunun arkasında (AERO-01). Pime 3 mm G10 plaka"
+    unit_clearance_m: 0.0025             # ünite ↔ bacak yuvası ön kenarı / CF boru dış çapı en az pay. varsayım
     mount_plate: "3 mm G10, sokete ve kök kaburgalarına bağlı"
     well:                                # tekerlek kuyusu (kanat kökü + gövde alt yanı + kök kaportası)
       s_m: [1.279, 1.374]
-      y_m: [0.070, 0.160]
-      depth_m: 0.036
+      y_m: [0.0675, 0.160]               # iç duvar 2,5 mm içe: toplu tekerde duvara ≥ 2,5 mm (AERO-06)
+      depth_m: 0.039                     # tavan −0,021 (kalın kanat bölgesinde; incelen arka-iç köşede kanat üst derisi − 1,5 mm)
     leg_slot_w_m: 0.026                  # katlanmış bacak yuvası genişliği (bacak kapağıyla örtülür). varsayım
+    leg_slot_front_extra_m: 0.002        # yuvanın ön kenarı ayrıca öne: toplu kayar boru/çatal tacına ≥ 2,5 mm. varsayım
     doors:
       wheel: {hinge: "inboard", open_deg: 92}     # kuyu kapağı, gövde–kaporta kenarından menteşeli, 1 servo
       leg: {attach: "strut"}                      # bacağa bağlı kapak, yuvayı örter
   nose:
-    pivot: [0.42, 0.0, -0.056]
-    leg_length_m: 0.208                  # pivot–aks, yüksüz
+    # Pivot s 0,42 → 0,53: ER-150 ünitesi ve kuyu sökülebilir burun modülü ekinin (s 0,40) tamamen arkasında (P5).
+    # Pivot 12 mm alçaldı ve bacak 12 mm kısaldı: 12 mm çatal ofsetinin (iz/trail) toplu tekerde tavan payını
+    # yemesini önler; statik aks yüksekliği ve sıkışma değişmez.
+    pivot: [0.53, 0.0, -0.068]
+    leg_length_m: 0.196                  # pivot–aks (bacak boyunca), yüksüz
+    trail_m: 0.012                       # çatal ofseti: aks, yönlendirme ekseninin 12 mm gerisinde (≈ 0,34 R; shimmy'ye karşı)
     rake_aft_deg: 0.0
     retract_deg: 90                      # yanal eksen etrafında GERİYE
     retract_direction: "aft"
@@ -539,27 +607,30 @@ landing_gear:
     steer_deg: 30                        # U_GearSteer_N, servo yönlendirme
     stroke_m: 0.015                      # ER-150 15 mm (ana takımla aynı). varsayım
     well:
-      s_m: [0.400, 0.667]
+      s_m: [0.510, 0.766]
       half_width_m: 0.026                # varsayım
       roof_z_m: -0.012                   # akü kızağının altı. varsayım
+      # Tıkaç cebi: bacak tıkacı (U_Door_N_3, trunnion bloğuna bağlı) takım açıkken kuyunun önünde bu cepte durur
+      plug_pocket: {length_m: 0.022, half_width_m: 0.0145, top_above_pivot_m: 0.022}
     doors:
-      clamshell: {count: 2, open_deg: 95, strut_notch: {s_m: [0.402, 0.448], half_width_m: 0.010}}   # varsayım: çentik
+      clamshell: {count: 2, open_deg: 95, strut_notch: {s_m: [0.512, 0.546], half_width_m: 0.010}}   # varsayım: çentik
+      strut_plug: {attach: "knuckle"}    # U_Door_N_3: takım topluyken çentiği deriyle aynı hizada kapatır (F2)
   reference:                             # panel değerleri — sizing.py geometriden yeniden hesaplar
     main_axle_s_m: 1.328
     retracted_main_wheel: [1.328, 0.115, -0.042]
-    retracted_nose_wheel_s_m: 0.628     # panel 0,620 (statik boyla); uçuşta amortisör açık → 0,42 + 0,208
+    retracted_nose_wheel_s_m: 0.726     # uçuşta amortisör açık → 0,53 + 0,196 (çatal ofseti toplu konumda yukarı bakar)
     track_m: 0.66
-    wheelbase_m: 0.908
+    wheelbase_m: 0.785
     cg_height_m: 0.296
     tip_back_deg: 18.0
     tip_back_aft_cg_deg: 15.7
-    overturn_deg: 46.9
-    nose_load_pct: 10.6
-    static_loads_n: {main_each: 51.3, nose: 12.2}
+    overturn_deg: 47.9
+    nose_load_pct: 12.0
+    static_loads_n: {main_each: 50.5, nose: 13.8}
     prop_clearance_mm: 218
-    prop_strike_deg: 13.6
-    prop_clearance_at_6deg_mm: 122
-    cowl_contact_deg: 22.5
+    prop_strike_deg: 13.2         # pervane 25 mm geride (uzatma mili); ≥ 13° şartı sağlanır
+    prop_clearance_at_6deg_mm: 119
+    cowl_contact_deg: 19.6        # ters motor: kaporta çenesi (s ≈ 2,175) kritik; pervane çarpmasının 6,4° üstünde
     stab_tip_contact_deg: 20.4
     wingtip_clearance_mm: 366
     bank_to_wingtip_deg: 13.1
@@ -670,7 +741,7 @@ materials:
   UM_Accent:      {ral: "RAL 7016", name_tr: "antrasit vurgu: chine bandı, burun ucu, HK şeridi, dudaklar", hex: "#383E42", roughness: 0.45, metallic: 0.0}
   UM_Turquoise:   {ral: "RAL 5018", name_tr: "turkuaz ince çizgi, lens halkası", hex: "#21888F", roughness: 0.40, metallic: 0.0}
   UM_Orange:      {ral: "RAL 2005", name_tr: "parlak turuncu: kuyu ve kapak içleri, pala uçları, uyarı bandı", hex: "#FF2301", roughness: 0.50, metallic: 0.0}
-  UM_SmokeHatch:  {ral: null, name_tr: "füme parlak PETG aviyonik kapağı (yarı saydam)", hex: "#2B3036", roughness: 0.08, metallic: 0.0, transmission: 0.55, ior: 1.57}
+  UM_SmokeHatch:  {ral: null, name_tr: "füme parlak PETG aviyonik kapağı (yarı saydam)", hex: "#2B3036", roughness: 0.04, metallic: 0.0, transmission: 0.55, ior: 1.57}
   UM_PACF:        {ral: null, name_tr: "boyasız PA-CF (fileto, pabuç, bafıl)", hex: "#2E3032", roughness: 0.70, metallic: 0.0}
   UM_Nozzle:      {ral: "RAL 7016", name_tr: "lüle halkası, ısı tonu efektli antrasit", hex: "#383E42", roughness: 0.35, metallic: 0.6, heat_tint: ["#6A4A2E", "#3B4F7A"]}
   UM_Prop:        {ral: null, name_tr: "kayın pervane (vernikli)", hex: "#B98B5E", roughness: 0.30, metallic: 0.0}
@@ -688,12 +759,21 @@ materials:
   UM_NavRed:      {ral: null, name_tr: "iskele seyrüsefer (kırmızı, ışıyan)", hex: "#FF1A1A", roughness: 0.20, metallic: 0.0, emission: 8.0}
   UM_NavGreen:    {ral: null, name_tr: "sancak seyrüsefer (yeşil, ışıyan)", hex: "#18FF5A", roughness: 0.20, metallic: 0.0, emission: 8.0}
   UM_Strobe:      {ral: null, name_tr: "beyaz strobe (ışıyan)", hex: "#F4F7FF", roughness: 0.20, metallic: 0.0, emission: 20.0}
-  UM_StatusLED:   {ral: "RAL 5018", name_tr: "taret durum LED halkası", hex: "#21C8D0", roughness: 0.20, metallic: 0.0, emission: 4.0}
+  UM_StatusLED:   {ral: "RAL 5018", name_tr: "taret durum LED halkası (yalnız yerde, kısık)", hex: "#21C8D0", roughness: 0.20, metallic: 0.0, emission: 0.8}
+  UM_Liner:       {ral: "RAL 7035", name_tr: "takım kuyusu astarı ve kapak içleri (açık gri, ipek mat astar boya)", hex: "#B4B9B6", roughness: 0.62, metallic: 0.0}
+  UM_Seal:        {ral: null, name_tr: "kapak/kuyu kenarı fitili ve gölge (ayrım) çizgileri, mat koyu kauçuk", hex: "#1C1D1E", roughness: 0.85, metallic: 0.0}
+  UM_Bezel:       {ral: null, name_tr: "anodize koyu gri lens çerçevesi (taret pencereleri)", hex: "#2C2F33", roughness: 0.38, metallic: 0.6}
+  UM_Exhaust:     {ral: null, name_tr: "susturucu çıkışı ve ısı kalkanı (ısıl boyalı paslanmaz)", hex: "#4D4A46", roughness: 0.48, metallic: 0.75}
+  UM_Erosion:     {ral: null, name_tr: "hücum kenarı aşınma bandı (poliüretan erozyon bandı)", hex: "#A9AFB1", roughness: 0.32, metallic: 0.0, coat: 0.5}
+  UM_Hazard:      {ral: "RAL 3020", name_tr: "uyarı yazıları ve statik port halkası (trafik kırmızısı)", hex: "#C1121C", roughness: 0.45, metallic: 0.0}
   liveries:
     standard: "Üst RAL 7035, alt RAL 9003 (karşı gölgeli mat iki ton)"
     standart: "standard ile aynı (Blender/CLI adı)"
-    taktik: {UM_SkinTop: "#82898E", UM_SkinBottom: "#CBD0CC", UM_Turquoise: "#3F5A5E", UM_StatusLED: "#2E8C93",
-             note: "yalnız render (RAL 7046 / 7035; turkuaz çizgi ve LED düşük görünürlüklü). Koyu boya LW-PLA'yı ısıtır (Tg ≈ 55 °C)"}
+    taktik: {UM_SkinTop: "#4A5055", UM_SkinBottom: "#6F777C", UM_Accent: "#2A2E32", UM_Antenna: "#2A2E32",
+             UM_Turquoise: "#4E5B60", UM_Spinner: "#3A3F44", UM_StatusLED: "#2E8C93", UM_Erosion: "#62686C",
+             UM_Liner: "#80878B",
+             note: "yalnız render: koyu düşük görünürlüklü gri (üst ≈ RAL 7015 arduvaz gri, alt ≈ RAL 7046); turkuaz çizgi
+               ve LED düşük görünürlüklü. Koyu boya LW-PLA'yı ısıtır (Tg ≈ 55 °C)"}
 
 # -----------------------------------------------------------------------------------------------------
 # Baskı (FDM)
@@ -729,8 +809,8 @@ print:
   zones:                          # parça bölgesi → malzeme ve et
     - {zone: "fuselage_nose",   s_m: [0.00, 0.40], material: "LW-PLA", wall_mm: 0.8}
     - {zone: "fuselage_mid",    s_m: [0.40, 1.55], material: "LW-PLA", wall_mm: 0.8}
-    - {zone: "tail_cone",       s_m: [1.55, 2.06], material: "LW-ASA", wall_mm: 1.0}
-    - {zone: "cowl",            s_m: [2.06, 2.205], material: "PA-CF", wall_mm: 1.6}
+    - {zone: "tail_cone",       s_m: [1.55, 2.045], material: "LW-ASA", wall_mm: 1.0}
+    - {zone: "cowl",            s_m: [2.045, 2.205], material: "PA-CF", wall_mm: 1.6}
     - {zone: "exhaust_ring",    s_m: [2.19, 2.205], material: "PA-CF", wall_mm: 1.6}
     - {zone: "wing_panel",      material: "LW-PLA", wall_mm: 0.6}
     - {zone: "root_block",      material: "LW-PLA", wall_mm: 0.8}
@@ -753,7 +833,7 @@ print:
     fuselage_nose_module: {s_m: [0.00, 0.40], parts: ["burun konisi", "taret yakası", "modül halkası"]}
     fuselage_rings:               # x = 1,55 flanşı halka sınırı olmalı → 6 + 3 halka (panel 8 diyordu). varsayım
       - {s_m: [0.40, 1.55], count: 6}
-      - {s_m: [1.55, 2.06], count: 3}
+      - {s_m: [1.55, 2.045], count: 3}
     cowl: {parts: ["kaporta", "lüle halkası", "sol yanak", "sağ yanak"]}
     aileron: {count: 4, length_m: 0.1825}
     flap_out: {count: 4, length_m: 0.175}
@@ -770,7 +850,7 @@ print:
     - {name: "tip_tube",        name_tr: "Uç borusu", od_mm: 16, id_mm: 14, length_m: 0.70, qty: 2, y_m: [1.00, 1.70], chord_fraction: 0.28}
     - {name: "step_bushing",    name_tr: "Kademeli CF burç", od_mm: 25, id_mm: 16, length_m: 0.10, qty: 2, y_m: [1.00, 1.10], chord_fraction: 0.28}
     - {name: "rear_spar",       name_tr: "Arka kiriş (yalnız panelde)", od_mm: 8, id_mm: 6, length_m: 1.44, qty: 2, y_m: [0.38, 1.82], chord_fraction: 0.65}
-    - {name: "incidence_pin",   name_tr: "Açı pimi, dolu CF", od_mm: 6, id_mm: 0, length_m: 0.10, qty: 2, y_m: [0.31, 0.41], chord_fraction: 0.60}   # konum varsayım
+    - {name: "incidence_pin",   name_tr: "Açı pimi, dolu CF", od_mm: 6, id_mm: 0, length_m: 0.10, qty: 2, y_m: [0.334, 0.434], chord_fraction: 0.60}   # ER-150 ünitesinin dışında (y ≥ 0,334). varsayım
     - {name: "longeron",        name_tr: "Gövde longeronu", od_mm: 8, id_mm: 6, length_m: 1.66, qty: 4}
     - {name: "stab_spar",       name_tr: "Stabilize kirişi (30° oklu)", od_mm: 12, id_mm: 10, length_m: 0.56, qty: 2}
     - {name: "stab_rear_rod",   name_tr: "Stabilize arka çubuğu", od_mm: 6, id_mm: 4, length_m: 0.50, qty: 2}

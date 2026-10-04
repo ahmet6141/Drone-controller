@@ -391,27 +391,70 @@ def fuselage_z_at(s: float, y: float, side: str = "bottom") -> float | None:
     return float(0.5 * (lo + hi))
 
 
+def _longeron_curve_point(kind: str, s: float) -> tuple[float, float]:
+    """Gövdeyi izleyen (eğri) longeron konumu ``(|y|, z)``: chine köşesinden ``inset`` içeride ya da omuz."""
+    L = _F["longerons"]
+    sec = fuselage_section(float(s))
+    if kind == "chine":
+        return sec.half_width - float(L["chine"]["inset_m"]), sec.z_chine
+    if kind == "shoulder":
+        return (float(L["shoulder"]["y_frac_of_width"]) * sec.width,
+                sec.z_center + float(L["shoulder"]["z_frac_of_height"]) * sec.height)
+    raise ValueError("kind 'chine' ya da 'shoulder' olmalı")
+
+
+def longeron_pieces(kind: str = "chine", side: str = "L") -> list[tuple[np.ndarray, np.ndarray]]:
+    """Longeron DÜZ parçaları ``[(p0, p1)]`` (spec takımı): kırık istasyonları (``longerons.breaks_s_m``, halka
+    sınırları) arasında gövde eğrisinin kirişi. Kesit dışbükey olduğundan kiriş gövdenin içinde kalır; parça uçları
+    açılı basılı PETG soket bloklarına girer (P3: 1,66 m boru kıvrık kanallardan geçirilemez)."""
+    return [(np.array([p0[0], _side_sign(side) * p0[1], p0[2]]), np.array([p1[0], _side_sign(side) * p1[1], p1[2]]))
+            for p0, p1 in _longeron_pieces_l(kind)]
+
+
+@functools.lru_cache(maxsize=None)
+def _longeron_pieces_l(kind: str) -> tuple:
+    """Sol longeron parçaları: kırık noktaları önce eğri üzerinde; sonra her parçanın gövde yanına en dar yanal
+    payı chine kenar payının (``inset``) altına düşerse parça uçları içe kaydırılır (kirişin sehim payı; komşu
+    parçalar ortak kırık noktasını paylaşır → kırıkta süreklilik)."""
+    L = _F["longerons"]
+    br = [float(L["s_from_m"])] + [float(b) for b in L.get("breaks_s_m", [])] + [float(L["s_to_m"])]
+    P_ = [np.array([s, *_longeron_curve_point(kind, s)]) for s in br]
+    target = float(L["chine"]["inset_m"]) if kind == "chine" else 0.010
+    for _ in range(8):
+        shift = np.zeros(len(P_))
+        for k in range(len(P_) - 1):
+            worst = 1.0
+            for f in np.linspace(0.0, 1.0, 33):
+                p = P_[k] + f * (P_[k + 1] - P_[k])
+                worst = min(worst, fuselage_half_width_at(float(p[0]), float(p[2])) - p[1])
+            d = max(0.0, target - worst)
+            shift[k] = max(shift[k], d)
+            shift[k + 1] = max(shift[k + 1], d)
+        if shift.max() < 1e-5:
+            break
+        for k in range(len(P_)):
+            P_[k] = P_[k] - np.array([0.0, shift[k] + (2e-4 if shift[k] > 0 else 0.0), 0.0])
+    return tuple((P_[k], P_[k + 1]) for k in range(len(P_) - 1))
+
+
 def longeron_path(kind: str = "chine", side: str = "L", n: int = 40) -> np.ndarray:
     """CF 8/6 longeron ekseni, ``(n, 3)`` ``(s, y, z)``: ``kind`` = ``"chine"`` ya da ``"shoulder"``.
 
     Chine longeronu kabuğa gömülüdür (chine köşesinden ``inset`` kadar içeride); omuz longeronu
-    ``y = ±0,30·w``, ``z = z_c + 0,35·h``. Boru s 0,40 → 2,06 boyunca hafif eğilerek gövdeyi izler.
+    ``y = ±0,30·w``, ``z = z_c + 0,35·h``. Boru üç DÜZ parçadır (``longeron_pieces``; kırıklar halka sınırlarında,
+    s 1,167 ve 1,55): her gövde halkasının longeron kanalı tek bir parçanın üzerinde ve eş eksenlidir. Örnekler kırık
+    istasyonlarını içerir (doğrusal enterpolasyon yolu tam olarak verir).
     """
     L = _F["longerons"]
-    sg = _side_sign(side)
-    ss = np.linspace(float(L["s_from_m"]), float(L["s_to_m"]), n)
+    pieces = longeron_pieces(kind, side)
+    ss = np.unique(np.r_[np.linspace(float(L["s_from_m"]), float(L["s_to_m"]), n), [p[0][0] for p in pieces[1:]]])
     pts = []
     for s in ss:
-        sec = fuselage_section(float(s))
-        if kind == "chine":
-            y = sec.half_width - float(L["chine"]["inset_m"])
-            z = sec.z_chine
-        elif kind == "shoulder":
-            y = float(L["shoulder"]["y_frac_of_width"]) * sec.width
-            z = sec.z_center + float(L["shoulder"]["z_frac_of_height"]) * sec.height
-        else:
-            raise ValueError("kind 'chine' ya da 'shoulder' olmalı")
-        pts.append((s, sg * y, z))
+        for p0, p1 in pieces:
+            if p0[0] - 1e-12 <= s <= p1[0] + 1e-12:
+                f = (s - p0[0]) / (p1[0] - p0[0])
+                pts.append(tuple(p0 + f * (p1 - p0)))
+                break
     return np.asarray(pts)
 
 
@@ -755,10 +798,26 @@ def tail_airfoil(n: int = N_AIRFOIL, chord: float = 0.15, te_thickness: float | 
     return AF.blunt_te(af, te / chord) if te > 0 else af
 
 
+def stab_tc(y: float) -> float:
+    """Stabilize yerel kalınlık oranı: kökte NACA 0010 (0,10), ``tail.stab.thickness_blend.y_m`` aralığında doğrusal
+    olarak uçta ``tc_tip``'e (0,12) kalınlaşır — Ø12 kiriş borusu dış uca kadar profil içinde kalır (AERO-10/P8)."""
+    tb = _ST.get("thickness_blend")
+    t0 = AF.max_thickness(AF.section(_T["airfoil"]))[0]
+    if not tb:
+        return t0
+    y0, y1 = (float(v) for v in tb["y_m"])
+    u = float(np.clip((abs(float(y)) - y0) / (y1 - y0), 0.0, 1.0))
+    return t0 + (float(tb["tc_tip"]) - t0) * u
+
+
 def stab_section(y: float, n: int = N_AIRFOIL, te_thickness: float | None = None) -> np.ndarray:
-    """Stabilize kesiti ``(2n − 1, 3)`` ``(s, y, z)``; ``incidence_axis_chord_fraction`` noktası etrafında döndürülmüş."""
+    """Stabilize kesiti ``(2n − 1, 3)`` ``(s, y, z)``; ``incidence_axis_chord_fraction`` noktası etrafında döndürülmüş.
+    Kalınlık ``stab_tc(y)`` (kökte %10, uca doğru %12)."""
     st = stab_station(y)
     af = tail_airfoil(n, st.chord, te_thickness)
+    k = stab_tc(y) / AF.max_thickness(AF.section(_T["airfoil"]))[0]
+    if abs(k - 1.0) > 1e-9:
+        af = AF.scale_thickness(af, k)
     xr = float(_ST["incidence_axis_chord_fraction"])
     dx = (af[:, 0] - xr) * st.chord
     dz = af[:, 1] * st.chord
@@ -941,6 +1000,7 @@ def hinge_line(name: str, side: str = "L") -> HingeLine:
         pts, rr, cc = [], [], []
         af = tail_airfoil(N_AIRFOIL, 0.15, 0.0)
         half_t = 0.5 * float(AF.thickness_at(af, 1.0 - cf))
+        t_ref = AF.max_thickness(AF.section(_T["airfoil"]))[0]
         for yy in (y0, y1):
             st = stab_station(sg * yy)
             s_h = st.le_s + (1.0 - cf) * st.chord
@@ -951,7 +1011,7 @@ def hinge_line(name: str, side: str = "L") -> HingeLine:
             zl = np.interp(s_h, np.maximum.accumulate(lo[:, 0]), lo[:, 2])
             pts.append((s_h, sg * yy, 0.5 * (zu + zl)))
             cc.append(st.te_s - s_h)
-            rr.append(half_t * st.chord)
+            rr.append(half_t * st.chord * stab_tc(yy) / t_ref)
         ym = sg * 0.5 * (y0 + y1)
         stm = stab_station(ym)
         te_pt = (stm.te_s, ym, stm.z)
@@ -1011,6 +1071,8 @@ class GearLeg:
     * ``axle_unloaded`` / ``axle_static`` — yüksüz (uçuşta) ve statik yükte aks merkezi; statik konumda tekerlek
       zemine (``GROUND_Z``) değer. ``static_sag`` (dikey) bu koşuldan türetilir.
     * ``axle_retracted`` — yüksüz bacak ``retract_deg`` kadar katlanınca aks merkezi.
+    * ``trail`` — çatal ofseti (m): aks, bacak (yönlendirme) ekseninin bu kadar gerisinde, bacağa dik; temas noktası
+      yönlendirme ekseninin zeminle kesiştiği noktanın ≈ ``trail`` gerisindedir (burun tekeri shimmy'ye karşı).
     * ``retract_axis_b`` — Blender'da birim eksen: + ``retract_deg`` dönüş bacağı TOPLAR (açık → kapalı).
     * ``wheel_axis_b`` — açık konumda tekerlek dönme ekseni (sözleşme: teker yerel Y etrafında döner).
     """
@@ -1034,6 +1096,7 @@ class GearLeg:
     static_compression: float
     retract_axis_b: tuple[float, float, float]
     wheel_axis_b: tuple[float, float, float]
+    trail: float = 0.0
 
     @property
     def wheel_r(self) -> float:
@@ -1059,11 +1122,13 @@ def _make_leg(name: str, d: dict, sg: float) -> GearLeg:
     L = float(d["leg_length_m"])
     rake = _rad(float(d.get("rake_aft_deg", 0.0)))
     leg_dir = (math.sin(rake), 0.0, -math.cos(rake))
+    aft_dir = (math.cos(rake), 0.0, math.sin(rake))           # bacağa dik, geriye (çatal ofseti yönü)
+    trail = float(d.get("trail_m", 0.0))
     r = 0.5 * float(d["wheel_d_m"])
-    axle_u = tuple(p + L * u for p, u in zip(pivot, leg_dir))
+    axle_u = tuple(p + L * u + trail * a for p, u, a in zip(pivot, leg_dir, aft_dir))
     # statik: bacak boyunca sıkışma, teker zemine değsin
     comp = (GROUND_Z - (axle_u[2] - r)) / math.cos(rake)
-    axle_s = tuple(p + (L - comp) * u for p, u in zip(pivot, leg_dir))
+    axle_s = tuple(p + (L - comp) * u + trail * a for p, u, a in zip(pivot, leg_dir, aft_dir))
     # toplama ekseni ve hedef yön
     pivot_b = np.asarray(to_blender(*pivot))
     axle_b = np.asarray(to_blender(*axle_u))
@@ -1083,7 +1148,7 @@ def _make_leg(name: str, d: dict, sg: float) -> GearLeg:
                    retract_direction=d["retract_direction"], leg_dir=leg_dir, axle_unloaded=axle_u,
                    axle_static=axle_s, axle_retracted=from_blender(*axle_r_b),
                    static_sag=GROUND_Z - (axle_u[2] - r), static_compression=comp,
-                   retract_axis_b=tuple(map(float, axis)), wheel_axis_b=(0.0, 1.0, 0.0))
+                   retract_axis_b=tuple(map(float, axis)), wheel_axis_b=(0.0, 1.0, 0.0), trail=trail)
 
 
 @functools.lru_cache(maxsize=None)
@@ -1159,17 +1224,35 @@ def _sawtooth_edge(s0: float, y_a: float, y_b: float, depth: float, pitch: float
     return [(s0 + (inward * depth if k % 2 else 0.0), float(v)) for k, v in enumerate(ys)]
 
 
-SAWTOOTH = {"pitch_m": 0.016, "depth_m": 0.016 / 2 * math.tan(math.radians(36.0))}   # diş yanları 36° (planform kuralı)
+_SAW = _G.get("door_sawtooth", {"pitch_m": 0.012, "flank_deg": 36.0})
+SAWTOOTH = {"pitch_m": float(_SAW["pitch_m"]),
+            "depth_m": float(_SAW["pitch_m"]) / 2 * math.tan(math.radians(float(_SAW["flank_deg"])))}   # diş yanları 36°
+
+
+def nose_plug_pocket() -> dict[str, float] | None:
+    """Burun kuyusunun önündeki tıkaç cebi (``U_Door_N_3`` takım açıkken burada durur): ``s0``…``s1``, yarı genişlik
+    ``hw``, tavan ``z_top`` (pivotun ``top_above_pivot`` üstü). Spec'te yoksa None."""
+    nw = _G["nose"]["well"]
+    pk = nw.get("plug_pocket")
+    if not pk:
+        return None
+    s0 = float(nw["s_m"][0])
+    return {"s0": s0 - float(pk["length_m"]), "s1": s0, "hw": float(pk["half_width_m"]),
+            "z_top": float(_G["nose"]["pivot"][2]) + float(pk["top_above_pivot_m"])}
 
 
 def gear_wells() -> list[GearWell]:
-    """Üç kuyu: burun (s 0,40–0,667) ve iki ana kuyu (tekerlek kuyusu + katlanmış bacak yuvası birleşimi)."""
+    """Üç kuyu: burun (s 0,51–0,766; önünde tıkaç cebi) ve iki ana kuyu (tekerlek kuyusu + katlanmış bacak yuvası)."""
     out = []
     nw = _G["nose"]["well"]
     s0, s1 = nw["s_m"]
     hw = float(nw["half_width_m"])
     mouth = fuselage_section(0.5 * (s0 + s1)).z_bottom
-    out.append(GearWell("N", "U_Bay_N", ((s0, -hw), (s1, -hw), (s1, hw), (s0, hw)), mouth, float(nw["roof_z_m"])))
+    pk = nose_plug_pocket()
+    poly = [(s0, -hw), (s1, -hw), (s1, hw), (s0, hw)]
+    if pk is not None:
+        poly += [(s0, pk["hw"]), (pk["s0"], pk["hw"]), (pk["s0"], -pk["hw"]), (s0, -pk["hw"])]
+    out.append(GearWell("N", "U_Bay_N", tuple(poly), mouth, float(nw["roof_z_m"])))
     mw = _G["main"]["well"]
     fair = _W["root_fairing"]
     for side in ("L", "R"):
@@ -1182,7 +1265,7 @@ def gear_wells() -> list[GearWell]:
     return out
 
 
-LEG_SLOT_OUT = 0.0075       # yuva açıklığı pivot ekseninin bu kadar dışında biter (Ø13 trunnion kovanı doldurur). varsayım
+LEG_SLOT_OUT = 0.0095       # yuva açıklığı pivot ekseninin bu kadar dışında biter (Ø13 trunnion kovanı + 1,8 mm pay). varsayım
 LEG_DOOR_OUT = -0.0075      # bacak kapağı pivotun bu kadar İÇİNDE biter: dönerken kanada/kovana girmez. varsayım
 
 
@@ -1194,6 +1277,7 @@ def _leg_slot(side: str, out: float = LEG_SLOT_OUT) -> list[tuple[float, float]]
     sg = _side_sign(side)
     mw = _G["main"]
     w = 0.5 * float(mw["leg_slot_w_m"])
+    wf = w + float(mw.get("leg_slot_front_extra_m", 0.0))
     p = np.asarray(leg.pivot)
     a = np.asarray(leg.axle_retracted)
     y_in = float(mw["well"]["y_m"][1])
@@ -1203,7 +1287,7 @@ def _leg_slot(side: str, out: float = LEG_SLOT_OUT) -> list[tuple[float, float]]
         t = (abs(p[1]) - yv) / max(abs(p[1]) - abs(a[1]), 1e-9)
         return p[0] + t * (a[0] - p[0])
 
-    return [(s_at(y_in) - w, sg * y_in), (s_at(y_out) - w, sg * y_out), (s_at(y_out) + w, sg * y_out),
+    return [(s_at(y_in) - wf, sg * y_in), (s_at(y_out) - wf, sg * y_out), (s_at(y_out) + w, sg * y_out),
             (s_at(y_in) + w, sg * y_in)]
 
 
@@ -1233,6 +1317,9 @@ def gear_doors() -> list[GearDoor]:
         ax = _axis_sign_for(_unit(vec_to_blender(np.subtract(h1, h0))), mid_b, free_b, np.array([0, 0, -1.0]))
         doors.append(GearDoor(f"U_Door_N_{k}", "N", "skin", tuple(poly), h0, h1, float(nd["open_deg"]),
                               tuple(map(float, ax))))
+    if _G["nose"]["doors"].get("strut_plug") is not None:     # çentik tıkacı: trunnion bloğuna bağlı (toplu konumda)
+        doors.append(GearDoor("U_Door_N_3", "N", "strut", ((s0, -nh), (n1, -nh), (n1, nh), (s0, nh)), None, None,
+                              0.0, None))
     mw = _G["main"]
     fair_z = float(_W["root_fairing"]["bottom_z_m"])
     for side in ("L", "R"):
@@ -1454,24 +1541,182 @@ def lights() -> list[Feature]:
 
 
 def intake_spec() -> dict[str, Any]:
-    """Sırt hava alığı: ağız merkezi ``mouth_center`` ``(s, y, z)``, ağız ölçüleri ve ayırıcı; spec değerleriyle."""
+    """Karın NACA (gömülü) hava alığı. Dönüş: spec değerleri + türetilmişler:
+
+    * ``throat_s``, ``ramp_s`` (rampa başı = boğaz − h/tan(rampa açısı)), ``skin_z_throat`` (boğazda karın derisi z),
+      ``ramp_floor_z(s)`` yerine ``ramp_depth_at(s)`` fonksiyonu, ``half_width_at(s)`` (NACA ıraksak planform).
+    * Geriye uyumlu anahtarlar (baskı modülü kanal kesicisi için): ``mouth_center`` = boğaz kesitinin merkezi
+      (kanal tavanı + 4 mm), ``skin_z_at_mouth`` = kanal tabanı + 30 mm → eski "alık arkasında kutu" kesicisi
+      (s boğaz + 6…30 mm, z [skin_z_at_mouth − 30 mm, mouth_center − 4 mm]) tam olarak dudak üstündeki kanalı
+      (karın derisi + 3 mm … boğaz tavanı) deler.
+    """
     i = dict(_P["intake"])
-    s0 = float(i["s_from_m"])
-    top = fuselage_section(s0).z_top
-    i["mouth_center"] = (s0, 0.0, top + float(i["diverter_m"]) + 0.5 * float(i["mouth_h_m"]))
-    i["skin_z_at_mouth"] = top
+    st = float(i["s_from_m"])
+    w, h = float(i["mouth_w_m"]), float(i["mouth_h_m"])
+    ramp = _rad(float(i.get("ramp_deg", 7.0)))
+    s_r = st - h / math.tan(ramp)
+    zb = fuselage_section(st).z_bottom
+    lip = 0.003
+    i["type"] = str(i.get("type", "naca_flush_ventral"))
+    i["throat_s"], i["ramp_s"], i["skin_z_throat"] = st, s_r, zb
+    i["duct_z"] = (zb + lip, zb + h)
+    i["mouth_center"] = (st, 0.0, zb + h + 0.004)
+    i["skin_z_at_mouth"] = zb + lip + 0.030
+    w0 = float(i.get("ramp_w0_m", 0.4 * w))
+
+    def half_width_at(s: float) -> float:
+        """NACA planform yarı genişliği: rampa başında w0/2, boğazda w/2 (ıraksak, dışbükey eğri)."""
+        u = float(np.clip((s - s_r) / (st - s_r), 0.0, 1.0))
+        return 0.5 * (w0 + (w - w0) * (1.0 - (1.0 - u) ** 2.2))
+
+    def depth_at(s: float) -> float:
+        """Rampa tabanının karın derisinden derinliği (m): rampa başında 0, boğazda h."""
+        return float(np.clip((s - s_r) / (st - s_r), 0.0, 1.0)) * h
+
+    i["half_width_at"], i["depth_at"] = half_width_at, depth_at
+    i["area_m2"] = w * h
     return i
 
 
+# =====================================================================================================
+# Motor bölmesi zarfları (ters DLE-20, susturucu) ve iç yerleşim zarfları (depo, akü)
+# =====================================================================================================
+@dataclass(frozen=True)
+class EnvPart:
+    """Paketleme zarfı (spec takımı): ``kind`` = ``"cyl"`` (eksen = ``axes[:, 0]``, ``half`` = (yarı boy, r, r)) ya da
+    ``"box"`` (``half`` = üç eksen boyunca yarı ölçüler). ``axes`` sütunları birim vektörler."""
+
+    name: str
+    kind: str
+    center: tuple[float, float, float]
+    axes: tuple
+    half: tuple[float, float, float]
+
+    def surface_points(self, n: int = 14) -> np.ndarray:
+        """Zarf yüzeyinden örnek noktalar (spec), ``(k, 3)``."""
+        A = np.asarray(self.axes, float)
+        c = np.asarray(self.center, float)
+        hx, hy, hz = self.half
+        pts = []
+        if self.kind == "cyl":
+            for u in np.linspace(-1.0, 1.0, n):
+                for th in np.linspace(0.0, 2 * math.pi, 2 * n, endpoint=False):
+                    pts.append(c + A[:, 0] * u * hx + hy * (math.cos(th) * A[:, 1] + math.sin(th) * A[:, 2]))
+            for rr in np.linspace(0.0, hy, max(2, n // 3)):
+                for th in np.linspace(0.0, 2 * math.pi, 2 * n, endpoint=False):
+                    for u in (-1.0, 1.0):
+                        pts.append(c + A[:, 0] * u * hx + rr * (math.cos(th) * A[:, 1] + math.sin(th) * A[:, 2]))
+        else:
+            g = np.linspace(-1.0, 1.0, n)
+            for ax in range(3):
+                o1, o2 = [k for k in range(3) if k != ax]
+                for sgn in (-1.0, 1.0):
+                    for a in g:
+                        for b in g:
+                            q = np.zeros(3)
+                            q[ax], q[o1], q[o2] = sgn, a, b
+                            pts.append(c + A @ (q * np.asarray(self.half)))
+        return np.asarray(pts)
+
+
+def thrust_axis() -> tuple[np.ndarray, np.ndarray]:
+    """İtki ekseni (spec takımı): (pervane göbeği, birim yön geriye-yukarı)."""
+    t = _rad(float(_P["prop"]["downthrust_deg"]))
+    return np.array([float(_P["prop"]["plane_s_m"]), 0.0, float(_P["prop"]["hub_z_m"])]), \
+        np.array([math.cos(t), 0.0, math.sin(t)])
+
+
+def engine_washer() -> np.ndarray:
+    """Motor pervane rondelası (krank ekseninde; uzatma milinin ön ucu), spec takımı."""
+    hub, a = thrust_axis()
+    return hub - a * (0.5 * float(_P["prop"]["hub_len_m"]) + float(_P["prop"].get("extension_m", 0.0)))
+
+
+def engine_envelope() -> list[EnvPart]:
+    """Ters bağlı DLE-20 ve susturucu zarfları (spec takımı): rulman burnu, karter, karbüratör + emme, silindir
+    kanatçık bloğu (krank ekseninin ALTINDA), buji başlığı, susturucu (sol, silindirin yanında). Ölçüler
+    ``propulsion.engine`` / ``muffler``; silindir ekseni rondelanın ``cyl_axis_from_washer_m`` önünde."""
+    E, Mf = _P["engine"], _P["muffler"]
+    hub, a = thrust_axis()
+    d = np.array([a[2], 0.0, -a[0]])                      # silindir yönü: itki eksenine dik, aşağı (5° geriye)
+    yv = np.array([0.0, 1.0, 0.0])
+    W = engine_washer()
+    inv = str(E.get("orientation", "inverted")) == "inverted"
+    if not inv:
+        d = -d
+    ax_cyl = (tuple(a), tuple(yv), tuple(np.cross(a, yv)))
+    fb_l, cc_l = float(E["front_bearing_len_m"]), float(E["crankcase_len_m"])
+    out = []
+
+    def cyl(name, p0, p1, r):
+        p0, p1 = np.asarray(p0), np.asarray(p1)
+        L = float(np.linalg.norm(p1 - p0))
+        u = (p1 - p0) / L
+        v = np.cross(u, yv) if abs(u[1]) < 0.9 else np.cross(u, [1.0, 0, 0])
+        v = v / np.linalg.norm(v)
+        w = np.cross(u, v)
+        out.append(EnvPart(name, "cyl", tuple(0.5 * (p0 + p1)), (tuple(u), tuple(v), tuple(w)), (0.5 * L, r, r)))
+
+    cyl("front_bearing", W - a * fb_l, W, 0.5 * float(E["front_bearing_d_m"]))
+    c0 = W - a * (fb_l + cc_l)
+    cyl("crankcase", c0, W - a * fb_l, 0.5 * float(E["crankcase_d_m"]))
+    carb_tip = W - a * float(E["carb_to_washer_m"])
+    cyl("carb", carb_tip, c0, 0.5 * float(E["carb_d_m"]))
+    Pc = W - a * float(E["cyl_axis_from_washer_m"])
+    r_cc = 0.5 * float(E["crankcase_d_m"])
+    h_head = float(E["crank_to_head_top_m"])
+    lo = 0.6 * r_cc
+    out.append(EnvPart("cylinder", "box", tuple(Pc + d * 0.5 * (lo + h_head)), ax_cyl[:1] + (tuple(yv), tuple(d)),
+                       (0.5 * float(E["cylinder_fin_l_m"]), 0.5 * float(E["cylinder_fin_w_m"]), 0.5 * (h_head - lo))))
+    cyl("spark_cap", Pc + d * h_head, Pc + d * (h_head + float(E["spark_cap_m"])), 0.008)
+    env = [float(v) for v in Mf["envelope_m"]]
+    s_m = float(Mf["center_s_m"])
+    P0 = hub + a * (s_m - hub[0]) / a[0]
+    side = _side_sign(Mf.get("side", "L"))
+    yc = side * (0.5 * float(E["cylinder_fin_w_m"]) + float(Mf.get("fin_gap_m", 0.004)) + 0.5 * env[1])
+    cm = P0 + d * float(Mf["center_below_axis_m"]) + yv * yc
+    out.append(EnvPart("muffler", "box", tuple(cm), (tuple(a), tuple(yv), tuple(d)), tuple(0.5 * v for v in env)))
+    return out
+
+
+def tank_envelopes() -> list[EnvPart]:
+    """İki yakıt deposu zarfı (2 × 0,70 L + %30 et/şekil payı), kanat kutusunun (G10 köprü) üstünde, CG'de yan yana."""
+    F = _F["internals"]["fuel_tanks"]
+    vol = float(F["volume_l_each"]) * 1.30 / 1000.0
+    sc = float(F["centre_s_m"])
+    z0, z1 = -0.016, 0.066                               # köprü üstü → omuz longeronu altı. varsayım
+    y0, y1 = 0.004, 0.072
+    L = vol / ((z1 - z0) * (y1 - y0))
+    out = []
+    for sd in ("L", "R"):
+        sg = _side_sign(sd)
+        out.append(EnvPart(f"tank_{sd}", "box", (sc, sg * 0.5 * (y0 + y1), 0.5 * (z0 + z1)),
+                           ((1.0, 0, 0), (0, 1.0, 0), (0, 0, 1.0)), (0.5 * L, 0.5 * (y1 - y0), 0.5 * (z1 - z0))))
+    return out
+
+
+def battery_envelope() -> EnvPart:
+    """Ana akü (4S2P 21700, 130 Wh) zarfı: kızakta, burun kuyusu tavanının üstünde, nominal s'de."""
+    sc = float(_F["internals"]["battery_nominal_s_m"])
+    z0 = float(_G["nose"]["well"]["roof_z_m"]) + 0.003
+    half = (0.044, 0.037, 0.024)
+    return EnvPart("battery", "box", (sc, 0.0, z0 + half[2]), ((1.0, 0, 0), (0, 1.0, 0), (0, 0, 1.0)), half)
+
+
 def muffler_outlet() -> Feature:
-    """Susturucu çıkışı (sol yanak): konum ve yön (35° aşağı, 35° dışa, geriye)."""
+    """Susturucu çıkışı (sol alt yanak, susturucu zarfının arka ucu): konum (kaporta yüzeyi) ve yön (35° aşağı,
+    35° dışa, geriye). ``params``: ``scarf_deg``, ``shield_m``."""
     m = _P["muffler"]
     s = float(m["outlet_s_m"])
-    z = 0.5 * (float(_P["cowl"]["cheek_left"]["z_from_m"]) + float(_P["cowl"]["cheek_left"]["z_to_m"])) - 0.02
-    y = fuselage_half_width_at(s, z) + float(_P["cowl"]["cheek_left"]["bulge_m"])
+    mf = next(p for p in engine_envelope() if p.name == "muffler")
+    z = float(mf.center[2])
+    cl = _P["cowl"]["cheek_left"]
+    y = fuselage_half_width_at(s, z) + float(cl["bulge_m"]) * 0.75
     dn, ou = _rad(float(m["outlet_down_deg"])), _rad(float(m["outlet_out_deg"]))
     d = (math.cos(dn) * math.cos(ou), math.cos(dn) * math.sin(ou), -math.sin(dn))
-    return Feature("Muffler", "U_Exhaust_Muffler", "exhaust", (s, y, z), d, {})
+    o = m.get("outlet", {}) or {}
+    return Feature("Muffler", "U_Exhaust_Muffler", "exhaust", (s, y, z), d,
+                   {"scarf_deg": float(o.get("scarf_deg", 0.0)), "shield_m": tuple(o.get("shield_m", (0.03, 0.02, 0.0005)))})
 
 
 # =====================================================================================================
@@ -1542,6 +1787,29 @@ def spar_tubes(side: str = "L") -> list[SparTube]:
     return out
 
 
+def stab_spar_fit(n: int = 60) -> dict[str, float]:
+    """Stabilize kirişi (Ø12/10) boyunca profil payı: her y'de boru eksenindeki yerel kesit kalınlığı − (OD + 2 ×
+    kuyruk kabuğu) (AERO-10, ≥ 0,5 mm) ve delik (OD + 0,4 mm) üstünde kalan en ince kabuk (P8, ≥ 0,8 mm). Dönüş (m):
+    ``margin_min``, ``skin_min``, ``y_at_min``."""
+    t = next(x for x in spar_tubes("L") if x.name == "stab_spar")
+    skin = float(SPEC["print"]["walls_mm"]["tail_skin"]) / 1000.0
+    p0, p1 = np.asarray(t.p0), np.asarray(t.p1)
+    best = (1.0, 1.0, 0.0)
+    for f in np.linspace(0.0, 1.0, n):
+        p = p0 + f * (p1 - p0)
+        sec = stab_section(float(p[1]), 161)
+        m = (len(sec) + 1) // 2
+        up, lo = sec[:m][::-1], sec[m - 1:]
+        zu = float(np.interp(p[0], np.maximum.accumulate(up[:, 0]), up[:, 2]))
+        zl = float(np.interp(p[0], np.maximum.accumulate(lo[:, 0]), lo[:, 2]))
+        margin = (zu - zl) - (t.od + 2 * skin)
+        skin_hole = min(zu - (p[2] + 0.5 * (t.od + 0.0004)), (p[2] - 0.5 * (t.od + 0.0004)) - zl)
+        if margin < best[0]:
+            best = (margin, min(best[1], skin_hole), float(p[1]))
+        best = (best[0], min(best[1], skin_hole), best[2])
+    return {"margin_min": best[0], "skin_min": best[1], "y_at_min": best[2]}
+
+
 # =====================================================================================================
 # Malzemeler
 # =====================================================================================================
@@ -1588,7 +1856,7 @@ def _materials() -> dict[str, MaterialSpec]:
     for name, m in SPEC["materials"].items():
         if not name.startswith("UM_"):
             continue
-        known = {"ral", "name_tr", "hex", "roughness", "metallic", "transmission", "ior", "emission"}
+        known = {"ral", "name_tr", "hex", "roughness", "metallic", "transmission", "ior", "emission"}   # diğerleri → extra
         out[name] = MaterialSpec(name=name, label=m["name_tr"], ral=m.get("ral"), hex=m["hex"],
                                  rgb_srgb=hex_to_rgb(m["hex"]), rgb_linear=hex_to_linear(m["hex"]),
                                  roughness=float(m["roughness"]), metallic=float(m["metallic"]),
@@ -1604,7 +1872,8 @@ LIVERIES: dict = SPEC["materials"].get("liveries", {})
 # Rol → malzeme adı (gövde/takım modülleri slot atarken kullanır)
 MATERIAL_ROLES: dict[str, str] = {
     "skin_top": "UM_SkinTop", "skin_bottom": "UM_SkinBottom", "accent": "UM_Accent", "stripe": "UM_Turquoise",
-    "bay": "UM_Orange", "door_inner": "UM_Orange", "warning": "UM_Orange", "hatch": "UM_SmokeHatch",
+    "bay": "UM_Liner", "door_inner": "UM_Liner", "warning": "UM_Orange", "hatch": "UM_SmokeHatch",
+    "seal": "UM_Seal", "bezel": "UM_Bezel", "exhaust": "UM_Exhaust", "le_strip": "UM_Erosion", "hazard": "UM_Hazard",
     "pacf": "UM_PACF", "nozzle": "UM_Nozzle", "prop": "UM_Prop", "spinner": "UM_Spinner", "gear": "UM_Gear",
     "hub": "UM_Hub", "tire": "UM_Tire", "turret": "UM_TurretBody", "glass": "UM_SensorGlass",
     "engine": "UM_Engine", "carbon": "UM_Carbon", "steel": "UM_Steel", "antenna": "UM_Antenna", "tpu": "UM_TPU",

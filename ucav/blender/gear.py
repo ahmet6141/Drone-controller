@@ -57,7 +57,6 @@ Kullanım::
 from __future__ import annotations
 
 import math
-import re
 import time
 from dataclasses import dataclass, field
 
@@ -77,14 +76,13 @@ M_GEAR, M_STEEL, M_HUB, M_TIRE = P.MATERIAL_ROLES["gear"], P.MATERIAL_ROLES["ste
 M_DARK, M_SKIN, M_PLATE = P.MATERIAL_ROLES["engine"], P.MATERIAL_ROLES["skin_bottom"], P.MATERIAL_ROLES["pacf"]
 
 # ----------------------------------------------------------------------------------------------- ER-150 gövdesi
-_ER = re.search(r"(\d+)\s*×\s*(\d+)\s*×\s*(\d+)\s*mm", str(P.SPEC["landing_gear"]["product"]))
-ER150_BODY = tuple(float(v) / 1000.0 for v in _ER.groups()) if _ER else (0.026, 0.102, 0.032)   # G × U × Y (spec ürün metni)
+ER150_BODY = S.ER150_BODY                                   # G × U × Y (spec ürün metni)
 
 # ----------------------------------------------------------------------------------------------- görünmeyen ayrıntılar (varsayım)
 PIN_D = 0.004                     # trunnion pimi (çelik). varsayım
 MAIN_STRUT_OFFSET = 0.0082        # ana amortisör ekseni pivot hattından içe (toplu konumda yukarı). varsayım
 MAIN_KNUCKLE_R = 0.0065           # dönen trunnion kovanı / kaporta yarıçapı. varsayım
-SLOT_CLEAR = 0.0005               # dönen parça ile kuyu astarı arası en az pay. varsayım
+SLOT_CLEAR = 0.0025               # dönen parça ile kuyu astarı arası en az pay (AERO-06: ≥ 2,5 mm). varsayım
 FORK_GAP = 0.0010                 # lastik ile çatal kolu arası. varsayım
 FORK_T = 0.0016                   # çatal kolu kalınlığı (7075 levha). varsayım
 CROWN_T = 0.0050                  # çatal tacı kalınlığı. varsayım
@@ -94,11 +92,11 @@ NOSE_STROKE = float(P.SPEC["landing_gear"]["nose"].get("stroke_m", STROKE_DEFAUL
 LINK_ANGLE_MAIN = 32.0            # ana tork bağlantısı: ileriden içe doğru açı (°); toplu konumda yuvaya sığar. varsayım
 LINK_T = 0.0030                   # bağlantı plakası kalınlığı (pim ekseni boyunca). varsayım
 LINK_MAIN = {"ell": 0.032, "r_lug": 0.0080, "knee_off": 0.0018, "w_pin": 0.0022, "w_knee": 0.0020}   # varsayım
-LINK_NOSE = {"ell": 0.037, "r_lug": 0.0080, "z_u": -0.094, "w_pin": 0.0030, "w_knee": 0.0024}        # varsayım
+LINK_NOSE = {"ell": 0.037, "r_lug": 0.0080, "z_u": -0.082, "w_pin": 0.0030, "w_knee": 0.0024}        # varsayım (bacak 0,196)
 TYRE = {"bead": 0.70, "rm": 0.32, "p_out": 1.85, "groove_a": 0.30, "groove_w": 0.0012, "groove_d": 0.0009}
                                   # lastik kesiti: topuk eni oranı, en geniş yerin kesit yüksekliğindeki yeri, sırt
                                   # süperelips üssü, oluk konumu (yarı ene oran)/eni/derinliği. varsayım
-TYRE_CLEAR = 0.0006               # toplu tekerin kuyu tavanına en az payı (lastik eni buna göre sınırlanır). varsayım
+TYRE_CLEAR = 0.0025               # toplu tekerin kuyu tavanına en az payı (AERO-06: ≥ 2,5 mm; lastik eni buna göre). varsayım
 DOOR_BRACKET_Z = (0.035, 0.085)   # bacak kapağı braketleri (pivottan bacak boyunca). varsayım
 
 
@@ -238,6 +236,7 @@ class LegGeom:
     strut_r: float
     slider_r: float
     stroke: float
+    trail: float = 0.0                          # çatal ofseti (aks bacak ekseninin gerisinde, bacak −X)
     z: dict = field(default_factory=dict)      # istasyonlar (bacak Z'si, pivot = 0)
     link: dict = field(default_factory=dict)   # tork bağlantısı
 
@@ -260,7 +259,7 @@ class LegGeom:
 
     @property
     def axle_l(self) -> np.ndarray:
-        return np.array([0.0, 0.0, -self.L])
+        return np.array([-self.trail, 0.0, -self.L])
 
 
 def tyre_half_width_factor(r, R: float, r_rim: float) -> np.ndarray:
@@ -309,7 +308,8 @@ def leg_geom(name: str) -> LegGeom:
     nose = name == "N"
     W = g.wheel_w if nose else min(g.wheel_w, tyre_fit_width(name))
     lg = LegGeom(name, g, sg, pivot_b, Fp, Fl, g.leg_length, 0.0 if nose else -sg * MAIN_STRUT_OFFSET, g.wheel_r,
-                 W, 0.5 * g.hub_d, 0.5 * g.strut_d, 0.5 * g.slider_d, NOSE_STROKE if nose else STROKE_DEFAULT)
+                 W, 0.5 * g.hub_d, 0.5 * g.strut_d, 0.5 * g.slider_d, NOSE_STROKE if nose else STROKE_DEFAULT,
+                 float(getattr(g, "trail", 0.0)))
     R_w, L = lg.R_w, lg.L
     crown_bot = -(L - R_w) + CROWN_GAP
     if nose:
@@ -458,7 +458,7 @@ def wheel(name: str, lg: LegGeom, brake_side: float = 0.0) -> S.MeshData:
 def _fork_arm(lg: LegGeom, side: float, origin_z: float) -> S.MeshData:
     """Çatal kolu: taçtan aksa daralan levha (bacak XZ düzleminde), ``side`` (±1) tarafta."""
     zc, za = lg.z["crown_top"] - 0.0010, lg.z["axle"]
-    poly = stadium((0.0, zc), (0.0, za), 0.0062, 0.0048, 8)
+    poly = stadium((0.0, zc), (-lg.trail, za), 0.0062, 0.0048, 8)      # çatal ofsetinde geriye eğik
     y0 = side * (0.5 * lg.W_w + FORK_GAP)
     y1 = y0 + side * FORK_T
     md = prism("arm", poly, (0, 0, -origin_z), (1, 0, 0), (0, 0, 1), min(-y0, -y1), max(-y0, -y1), M_GEAR, 40.0)
@@ -483,11 +483,12 @@ def slider_parts(lg: LegGeom) -> S.MeshData:
     # aks (gömme uçlu)
     ya = 0.5 * lg.W_w + FORK_GAP + FORK_T
     ax_r = 0.0025 if not lg.is_nose else 0.0020
-    parts.append(cyl("axle", np.array([0, -ya + 0.0002, lg.z["axle"]]) - o, np.array([0, ya - 0.0002, lg.z["axle"]]) - o,
+    xa = -lg.trail
+    parts.append(cyl("axle", np.array([xa, -ya + 0.0002, lg.z["axle"]]) - o, np.array([xa, ya - 0.0002, lg.z["axle"]]) - o,
                      ax_r, M_STEEL, 16))
     for sd in (-1.0, 1.0):
-        parts.append(cyl("axcap", np.array([0, sd * (ya - 0.0001), lg.z["axle"]]) - o,
-                         np.array([0, sd * (ya + 0.00015), lg.z["axle"]]) - o, ax_r + 0.0008, M_STEEL, 16))
+        parts.append(cyl("axcap", np.array([xa, sd * (ya - 0.0001), lg.z["axle"]]) - o,
+                         np.array([xa, sd * (ya + 0.00015), lg.z["axle"]]) - o, ax_r + 0.0008, M_STEEL, 16))
     # alt tork bağlantısı kulağı (tacın üstünde, n yönünde)
     lk = lg.link
     n = lk["n"]
@@ -528,10 +529,10 @@ def strut_parts(lg: LegGeom) -> S.MeshData:
         half = _knuckle_half_len(lg)
         parts.append(cyl("knuckle", -pin_l * half, pin_l * half, MAIN_KNUCKLE_R, M_SKIN, 40, chamfer=0.0006))
         # soket bloğu: X'te geniş, Y'de boru kadar (toplu konumda tavan/kapak arası)
-        parts.append(prism("socket", rrect(0.0092, lg.strut_r + 0.0003, 0.0040), (0, ye, 0), (1, 0, 0), (0, 1, 0),
+        parts.append(prism("socket", rrect(0.0078, lg.strut_r + 0.0003, 0.0036), (0, ye, 0), (1, 0, 0), (0, 1, 0),
                            z["sock_bot"], z["sock_top"], M_GEAR))
         for zz in (-0.010, -0.019):            # sıkma cıvataları (arka yüz)
-            parts.append(cyl("bolt", (-0.0090, ye, zz), (-0.0102, ye, zz), 0.0014, M_STEEL, 6))
+            parts.append(cyl("bolt", (-0.0076, ye, zz), (-0.0088, ye, zz), 0.0014, M_STEEL, 6))
         # kapak braketleri (dış yana)
         for d in DOOR_BRACKET_Z:
             L_tab = _door_tab_len(lg, -d)
@@ -657,38 +658,32 @@ def _spec_part(md: S.MeshData, lg: LegGeom, mirror: bool = True) -> S.MeshData:
 
 
 def main_unit(lg: LegGeom) -> S.MeshData:
-    """``U_GearUnit_L/R``: ER-150 gövdesi (yuvanın önünde, kanat içinde, dihedral boyunca eğik), uç kapağı, düşey
-    braket, trunnion pimi ve pim etrafında ön/arka trunnion kaportası (deri rengi). Yerel: orijin pivot, dünya eksenleri."""
+    """``U_GearUnit_L/R``: ER-150 gövdesi (``shapes.main_unit_box``: bacak yuvasının ARKASINDA, Ø30/27/25 CF kiriş
+    borularının ≥ 60 mm gerisinde, 26 mm kenar düşey, dihedral boyunca eğik), iç uç kapağı, pime uzanan 3 mm G10
+    bağlantı plakası, trunnion pimi ve pim etrafında ön/arka trunnion kaportası (deri rengi). Yerel: orijin pivot,
+    dünya eksenleri."""
     g = lg.leg
     py = abs(g.pivot[1])
-    bw, bl, bh = ER150_BODY
-    y0, y1 = (float(v) for v in P.SPEC["landing_gear"]["main"]["unit_span_y_m"])
-    y1 = max(y1, py + 0.002)
-    s1 = min(_slot_edges_s(y)[0] for y in np.linspace(y0, py + MAIN_KNUCKLE_R, 9)) - 0.0025
-    s0 = s1 - bw
-    dih = math.tan(_rad(P.WING_DIHEDRAL))
-    ss, ys = np.linspace(s0, s1, 5), np.linspace(y0, y1, 9)
-    tab = S.wing_table("L")
-    base0 = max(S.belly_z(s, y) + 0.0021 - dih * (y - y0) for s in ss for y in ys)     # deri + 1,6 mm et + pay
-    top0 = min(tab.z(s, y, "upper") - 0.0013 - dih * (y - y0) for s in ss for y in ys)
-    h = min(bh, top0 - base0)
-    zc0 = base0 + 0.5 * h
-    ang = math.atan(dih)
-    Rb = np.array([[1.0, 0.0, 0.0], [0.0, math.cos(ang), -math.sin(ang)], [0.0, math.sin(ang), math.cos(ang)]])
-    yc = 0.5 * (y0 + y1)
-    c_spec = np.array([0.5 * (s0 + s1), yc, zc0 + dih * (yc - y0)])
+    env, _ = S.main_unit_box("L")
+    A = np.asarray(env.axes, float).T                      # sütunlar: s, açıklık (dihedral), düşey
+    c = np.asarray(env.center, float)
+    hs, hy, hz = env.half
     parts = []
-    body = box("er150", np.zeros(3), (0.5 * bw, 0.5 * (y1 - y0), 0.5 * h), None, M_DARK, r=0.0025)
-    body.verts = body.verts @ Rb.T + c_spec
+    body = box("er150", np.zeros(3), (hs, hy, hz), None, M_DARK, r=0.0025)
+    body.verts = body.verts @ A.T + c
     parts.append(_spec_part(body, lg))
-    cap = box("cap", np.zeros(3), (0.5 * bw + 0.0004, 0.010, 0.5 * h + 0.0004), None, M_GEAR, r=0.0025)
-    cap.verts = cap.verts @ Rb.T + c_spec + Rb @ np.array([0.0, -0.5 * (y1 - y0) + 0.012, 0.0])
+    cap = box("cap", np.zeros(3), (hs + 0.0004, 0.010, hz + 0.0004), None, M_GEAR, r=0.0025)
+    cap.verts = cap.verts @ A.T + c + A @ np.array([0.0, -hy + 0.012, 0.0])
     parts.append(_spec_part(cap, lg))
-    # düşey braket: gövde dış ucundan pime (yuvanın önünde, ön kaportanın içinde)
-    z_bot = zc0 + dih * (py - y0) - 0.5 * h
-    br = box("drop", np.zeros(3), (0.0035, 0.0040, 0.5 * (z_bot + 0.002 - g.pivot[2])), None, M_GEAR, r=0.0015)
-    br.verts = br.verts + np.array([s1 - 0.0045, py, 0.5 * (z_bot + 0.002 + g.pivot[2])])
-    parts.append(_spec_part(br, lg))
+    # G10 bağlantı plakası: gövdenin dış-ön köşesinden pime (arka trunnion kaportasının içinden), 3 mm
+    y_pl = py - 0.0105
+    s_a = _slot_edges_s(y_pl + 0.0015)[1] + 0.003
+    s_b = c[0] - hs + 0.004
+    z_top = c[2] + A[2, 1] * (y_pl - c[1]) + 0.004
+    z_bot = g.pivot[2] + 0.0015
+    plate = box("plate", np.zeros(3), (0.5 * (s_b - s_a), 0.0015, 0.5 * (z_top - z_bot)), None, M_PLATE, r=0.0012)
+    plate.verts = plate.verts + np.array([0.5 * (s_a + s_b), y_pl, 0.5 * (z_top + z_bot)])
+    parts.append(_spec_part(plate, lg))
     # pim (kaportaların içinden geçer)
     sa, sb = _slot_edges_s(py)[0] - 0.010, _slot_edges_s(py)[1] + 0.010
     pa = np.asarray(P.to_blender(sa, g.pivot[1], g.pivot[2])) - lg.pivot_b
@@ -750,14 +745,21 @@ def trunnion_fairings(lg: LegGeom) -> list[S.MeshData]:
     return out
 
 
+NOSE_CHEEK_Y = (0.0102, 0.0122)          # burun trunnion yanakları (|y|): tıkaç (|y| ≤ 9,5 mm) ile cep duvarı arası. varsayım
+
+
 def nose_unit(lg: LegGeom) -> S.MeshData:
-    """``U_GearUnit_N``: ER-150 gövdesi kuyunun önünde (gövde içinde), boyuna; G10 plaka; pimi taşıyan iki yanak
-    (kuyu ön duvarından geçer), çelik pim ve somunlar. Yerel: orijin pivot, dünya eksenleri."""
+    """``U_GearUnit_N``: ER-150 gövdesi kuyunun önünde (gövde içinde, boyuna; 26 mm kenar düşey), tabanı tıkaç cebinin
+    tavanının üstünde — tamamı sökülebilir burun modülü ekinin (s 0,40) arkasında (P5); G10 plaka; gövde ucundan pime
+    inen iki yanak, çelik pim ve somunlar. Yerel: orijin pivot, dünya eksenleri."""
     g = lg.leg
     bw, bl, bh = ER150_BODY
+    h, wd = min(bw, bh), max(bw, bh)                     # düşey 26, yanal 32
     s1 = float(P.SPEC["landing_gear"]["nose"]["well"]["s_m"][0]) - 0.0015
     s0 = s1 - bl
-    zc = g.pivot[2] - 0.0020
+    pk = P.nose_plug_pocket()
+    z_floor = (pk["z_top"] if pk else g.pivot[2] + 0.012) + 0.0035
+    zc = z_floor + 0.5 * h
     parts = []
 
     def B(c_spec, half, mat, r=0.0020):
@@ -765,22 +767,24 @@ def nose_unit(lg: LegGeom) -> S.MeshData:
         md.verts = md.verts + np.asarray(c_spec)
         return _spec_part(md, lg, mirror=False)
 
-    parts.append(B((0.5 * (s0 + s1), 0.0, zc), (0.5 * bl, 0.5 * bw, 0.5 * bh), M_DARK, 0.0025))
-    parts.append(B((s0 + 0.012, 0.0, zc), (0.010, 0.5 * bw + 0.0004, 0.5 * bh + 0.0004), M_GEAR, 0.0025))
-    parts.append(B((0.5 * (s0 + s1), 0.0, zc + 0.5 * bh + 0.0015), (0.5 * bl + 0.006, 0.5 * bw + 0.006, 0.0015), M_PLATE, 0.002))
-    for sd in (-1.0, 1.0):                                    # yanaklar: gövde ucundan pime
-        poly = stadium((s1 - 0.004, zc), (g.pivot[0], g.pivot[2]), 0.0085, 0.0070, 8)
-        md = prism("cheek", poly, (0, 0, 0), (1, 0, 0), (0, 0, 1), min(sd * 0.0095, sd * 0.0125),
-                   max(sd * 0.0095, sd * 0.0125), M_GEAR, 40.0)
+    parts.append(B((0.5 * (s0 + s1), 0.0, zc), (0.5 * bl, 0.5 * wd, 0.5 * h), M_DARK, 0.0025))
+    parts.append(B((s0 + 0.012, 0.0, zc), (0.010, 0.5 * wd + 0.0004, 0.5 * h + 0.0004), M_GEAR, 0.0025))
+    parts.append(B((0.5 * (s0 + s1), 0.0, zc + 0.5 * h + 0.0015), (0.5 * bl + 0.006, 0.5 * wd + 0.004, 0.0015), M_PLATE, 0.002))
+    y_in, y_out = NOSE_CHEEK_Y
+    for sd in (-1.0, 1.0):                                    # yanaklar: gövde arka-alt köşesinden pime
+        poly = stadium((s1 - 0.005, z_floor + 0.0045), (g.pivot[0], g.pivot[2]), 0.0060, 0.0068, 8)
+        md = prism("cheek", poly, (0, 0, 0), (1, 0, 0), (0, 0, 1), min(sd * y_in, sd * y_out),
+                   max(sd * y_in, sd * y_out), M_GEAR, 40.0)
         # prism düzlemi (u=x→s, v=z) ve w = u×v = −y → y'yi düzelt
         md.verts[:, 1] *= -1.0
         parts.append(_spec_part(md, lg, mirror=False))
-    pa = np.asarray(P.to_blender(g.pivot[0], -0.0135, g.pivot[2])) - lg.pivot_b
-    pb = np.asarray(P.to_blender(g.pivot[0], 0.0135, g.pivot[2])) - lg.pivot_b
+    yp = y_out + 0.001
+    pa = np.asarray(P.to_blender(g.pivot[0], -yp, g.pivot[2])) - lg.pivot_b
+    pb = np.asarray(P.to_blender(g.pivot[0], yp, g.pivot[2])) - lg.pivot_b
     parts.append(cyl("pin", pa, pb, 0.5 * PIN_D, M_STEEL, 16))
     for sd in (-1.0, 1.0):
-        c = np.asarray(P.to_blender(g.pivot[0], sd * 0.0126, g.pivot[2])) - lg.pivot_b
-        parts.append(cyl("nut", c, c + np.array([0, sd * 0.0012, 0]), 0.0030, M_STEEL, 6))
+        cc = np.asarray(P.to_blender(g.pivot[0], sd * (y_out + 0.0001), g.pivot[2])) - lg.pivot_b
+        parts.append(cyl("nut", cc, cc + np.array([0, sd * 0.0012, 0]), 0.0030, M_STEEL, 6))
     return merge("unit", parts, 35.0)
 
 
@@ -899,7 +903,7 @@ def build(scene: bpy.types.Scene | None = None, *, verbose: bool = False) -> dic
         sl["gear_static_compression_m"] = float(lg.leg.static_compression)
         objs[sl.name] = sl
         wh = _mesh_obj(wheel(f"U_GearWheel_{X}", lg, 0.0 if lg.is_nose else lg.inboard_y), f"U_GearWheel_{X}", col)
-        _attach_local(wh, sl, np.array([0.0, -lg.y_e, -lg.L - z0]))
+        _attach_local(wh, sl, np.array([-lg.trail, -lg.y_e, -lg.L - z0]))
         wh["ucav_role"] = "gear_wheel"
         wh["gear_wheel_r_m"] = float(lg.R_w)
         objs[wh.name] = wh
@@ -918,21 +922,27 @@ def build(scene: bpy.types.Scene | None = None, *, verbose: bool = False) -> dic
             ob["gear_link_d0_m"] = float(lk["D0"])
             ob["gear_link_alpha0_rad"] = float(lk["alpha0"])
             objs[ob.name] = ob
-        # ---------------------------------------------------------------- bacak kapağı
-        if not lg.is_nose:
-            door = bpy.data.objects.get(f"U_Door_{X}_2")
-            if door is not None:
-                Wd = door_down_matrix(door.name)
-                Ws = Matrix.Translation(Vector(lg.pivot_b)) @ Matrix(lg.F_leg.tolist()).to_4x4()
-                rel = Ws.inverted() @ Wd
-                door.parent = strut
-                door.matrix_parent_inverse = Matrix.Identity(4)
-                door.location = rel.to_translation()
-                door.rotation_euler = (0.0, 0.0, 0.0)
-                door.delta_location = (0.0, 0.0, 0.0)
-                door.delta_rotation_euler = rel.to_3x3().to_euler("XYZ")
-                door["ucav_gear_rigged"] = True
-                objs[door.name] = door
+        # ---------------------------------------------------------------- bacağa bağlı kapaklar
+        # ana: U_Door_<X>_2 → U_GearStrut_<X>; burun: çentik tıkacı U_Door_N_3 → U_GearKnuckle_N (yönlendirmeyle
+        # dönmez, yalnız toplama ile döner). Airframe'de toplu pozda kurulmuştur; burada açık poza çevrilir.
+        for dd in P.gear_doors():
+            if dd.leg != X or dd.attach != "strut":
+                continue
+            door = bpy.data.objects.get(dd.name)
+            if door is None:
+                continue
+            host = objs.get(f"U_GearKnuckle_{X}") if lg.is_nose else strut
+            Wd = door_down_matrix(door.name)
+            Ws = Matrix.Translation(Vector(lg.pivot_b)) @ Matrix(lg.F_leg.tolist()).to_4x4()
+            rel = Ws.inverted() @ Wd
+            door.parent = host
+            door.matrix_parent_inverse = Matrix.Identity(4)
+            door.location = rel.to_translation()
+            door.rotation_euler = (0.0, 0.0, 0.0)
+            door.delta_location = (0.0, 0.0, 0.0)
+            door.delta_rotation_euler = rel.to_3x3().to_euler("XYZ")
+            door["ucav_gear_rigged"] = True
+            objs[door.name] = door
         if verbose:
             print(f"[gear {time.time() - t0:5.1f} s] {X}")
     bpy.context.view_layer.update()
@@ -991,10 +1001,13 @@ def clearance_report(gear_values=(1.0, 0.9, 0.75, 0.5, 0.25, 0.15, 0.0), lift: f
         V = [mw @ v.co for v in me.vertices]
         F = [tuple(p.vertices) for p in me.polygons]
         ev.to_mesh_clear()
-        return BVHTree.FromPolygons(V, F), V
+        C = [sum((V[i] for i in f), Vector()) / len(f) for f in F]     # yüz merkezleri (çakışma konumu için)
+        return BVHTree.FromPolygons(V, F), C
 
     moving = [o.name for o in bpy.data.objects if o.type == "MESH" and o.name.startswith(MOVING_PREFIX)]
-    moving += [n for n in ("U_Door_L_2", "U_Door_R_2") if n in bpy.data.objects]
+    moving += [d.name for d in P.gear_doors() if d.attach == "strut" and d.name in bpy.data.objects]
+    moving += [o.name for o in bpy.data.objects if o.type == "MESH" and o.name.startswith("U_DoorHw_")
+               and o.parent is not None and o.parent.name in moving]
     others = [o.name for o in bpy.data.objects if o.type == "MESH" and o.name.startswith("U_") and o.name not in moving
               and not o.name.startswith("U_Stand")]
     excl = {("U_GearStrut_L", "U_GearUnit_L"), ("U_GearStrut_R", "U_GearUnit_R"), ("U_GearKnuckle_N", "U_GearUnit_N")}

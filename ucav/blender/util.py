@@ -11,7 +11,8 @@
 * **Ebeveyn**: ``parent_keep_world`` — ebeveyn ters matrisi ``parent.matrix_world⁻¹`` (Ctrl+P "Object"
   davranışı); çocuğun dünya dönüşümü değişmez, ``location`` dünya konumunu gösterir.
 * **Koleksiyonlar**: ``UCAV`` → ``UCAV_Airframe``, ``UCAV_Surfaces``, ``UCAV_Gear``, ``UCAV_Propulsion``,
-  ``UCAV_Payload``, ``UCAV_Details``; ``UCAV_Print`` (render dışı), ``UCAV_Studio``.
+  ``UCAV_Payload``, ``UCAV_Details``; ``UCAV_Print`` (render dışı), ``UCAV_Studio``, ``UCAV_Envelopes`` (render ve
+  GLB dışı paketleme zarfları, tel kafes).
 * **Boolean**: ``boolean_difference`` (EXACT çözücü, malzeme aktarımı, değiştirici uygulanır).
 """
 from __future__ import annotations
@@ -37,8 +38,9 @@ COLLECTIONS: dict[str, str | None] = {
     "UCAV_Details": "UCAV",
     "UCAV_Print": None,
     "UCAV_Studio": None,
+    "UCAV_Envelopes": None,      # paketleme zarfları (motor, susturucu, depo, akü): render ve GLB dışı, tel kafes
 }
-RENDER_EXCLUDED = ("UCAV_Print",)
+RENDER_EXCLUDED = ("UCAV_Print", "UCAV_Envelopes")
 
 
 # =====================================================================================================
@@ -255,6 +257,37 @@ def boolean_difference(target: bpy.types.Object, cutter: bpy.types.Object, apply
     return None
 
 
+BOOL_JITTER = ((0.0, 0.0, 0.0), (0.0, 0.0, 2.1e-5), (1.3e-5, 0.0, -1.7e-5), (-1.1e-5, 0.9e-5, 2.9e-5),
+               (2.3e-5, -1.2e-5, -3.1e-5))                  # sayısal çakışmada kesiciye uygulanan küçük kaydırmalar (m)
+
+
+def boolean_difference_safe(target: bpy.types.Object, cutter: bpy.types.Object) -> int:
+    """``boolean_difference`` + doğrulama: sonuç kapalı (sınır/manifold dışı kenar yok) değilse eski ağ geri yüklenir ve
+    kesici mikrometre ölçeğinde kaydırılarak (``BOOL_JITTER``) yeniden denenir — EXACT çözücünün eş düzlemli /
+    çakışık yüzlerde nadiren ürettiği bozuk sonuçlara karşı. Dönüş: kullanılan deneme indisi (bozuk kalırsa −1)."""
+    base = cutter.location.copy()
+    keep = target.data.copy()
+    try:
+        for k, d in enumerate(BOOL_JITTER):
+            cutter.location = base + Vector(d)
+            bpy.context.view_layer.update()
+            boolean_difference(target, cutter)
+            r = mesh_report(target)
+            if not (r["boundary"] or r["nonmanifold"]):
+                return k
+            bad = target.data
+            target.data = keep.copy()
+            target.data.name = target.name
+            if bad.users == 0:
+                bpy.data.meshes.remove(bad)
+        print(f"[util] uyarı: {target.name} ← {cutter.name} boolean sonucu kapalı değil")
+        return -1
+    finally:
+        cutter.location = base
+        if keep.users == 0:
+            bpy.data.meshes.remove(keep)
+
+
 def clean_degenerate(me: bpy.types.Mesh, dist: float = 1e-7) -> dict:
     """EXACT boolean artıklarını temizler: çakışık köşeler (``dist`` ≤ 0,1 µm) birleştirilir (bu köşelerle sıfır
     alanlı kalan yüzler çöker), aynı köşeleri paylaşan yüz çiftleri (sıfır hacimli "yastık") ve kopuk köşeler silinir.
@@ -305,3 +338,163 @@ def mesh_report(ob: bpy.types.Object) -> dict:
     return {"name": ob.name, "verts": len(me.vertices), "faces": len(me.polygons),
             "boundary": int((cnt == 1).sum()), "nonmanifold": int((cnt > 2).sum()),
             "materials": [m.name if m else None for m in me.materials]}
+
+
+# =====================================================================================================
+# Şablon yazılar ve boya işaretleri (ince kapalı katılar, ev sahibi yüzeye BVH izdüşümü)
+# =====================================================================================================
+FONT_CANDIDATES = (
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+    "C:/Windows/Fonts/arialbd.ttf",
+    "/Library/Fonts/Arial Bold.ttf",
+)
+STENCIL_CONDENSE = 0.86                   # şablon yazı yatay daraltma
+STENCIL_LIFT = 0.00035                    # üst yüzün deriden yüksekliği (m)
+STENCIL_THICK = 0.00015                   # ince katı kalınlığı (m)
+STENCIL_MAX_EDGE = 0.004                  # izdüşümden önce üçgen kenarı üst sınırı (m)
+
+
+def _font():
+    import os
+    for p in FONT_CANDIDATES:
+        if os.path.isfile(p):
+            f = bpy.data.fonts.get(os.path.basename(p))
+            if f is None:
+                try:
+                    f = bpy.data.fonts.load(p, check_existing=True)
+                except RuntimeError:
+                    continue
+            return f
+    return bpy.data.fonts.load("<builtin>", check_existing=True)
+
+
+def text_mesh_2d(text: str, height: float) -> tuple[np.ndarray, list]:
+    """Metin → 2B üçgen ağ (m): büyük harf yüksekliği ``height``, merkez (0, 0), x okuma yönü."""
+    import bmesh
+    cu = bpy.data.curves.new("UCAV_tmp_stencil", "FONT")
+    cu.body = text
+    cu.font = _font()
+    cu.size = 1.0
+    cu.resolution_u = 4
+    cu.fill_mode = "BOTH"
+    cu.align_x = "CENTER"
+    cu.align_y = "CENTER"
+    cu.space_character = 1.06
+    tmp = bpy.data.objects.new("UCAV_tmp_stencil", cu)
+    bpy.context.scene.collection.objects.link(tmp)
+    try:
+        dg = bpy.context.evaluated_depsgraph_get()
+        dg.update()
+        me = bpy.data.meshes.new_from_object(tmp.evaluated_get(dg), depsgraph=dg)
+    finally:
+        bpy.data.objects.remove(tmp, do_unlink=True)
+        bpy.data.curves.remove(cu)
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bpy.data.meshes.remove(me)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
+    co = np.array([v.co[:2] for v in bm.verts])
+    caps = [c for c in text if c.isalpha() or c.isdigit()]
+    lo, hi = co.min(0), co.max(0)
+    h_ref = (hi[1] - lo[1]) if caps else 1.0
+    c = 0.5 * (lo + hi)
+    for v in bm.verts:
+        v.co.x = (v.co.x - c[0]) / h_ref * STENCIL_CONDENSE * height
+        v.co.y = (v.co.y - c[1]) / h_ref * height
+        v.co.z = 0.0
+    bmesh.ops.dissolve_degenerate(bm, dist=1e-7, edges=bm.edges[:])
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    for _ in range(4):
+        long_edges = [e for e in bm.edges if e.calc_length() > STENCIL_MAX_EDGE]
+        if not long_edges:
+            break
+        bmesh.ops.subdivide_edges(bm, edges=long_edges, cuts=1, use_grid_fill=False)
+        bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method="BEAUTY", ngon_method="BEAUTY")
+        bmesh.ops.dissolve_degenerate(bm, dist=1e-7, edges=bm.edges[:])
+        bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    bm.verts.index_update()
+    V = np.array([v.co[:2] for v in bm.verts])
+    F = [[v.index for v in f.verts] for f in bm.faces]
+    bm.free()
+    return V, F
+
+
+def _host_bvh_world(ob: bpy.types.Object):
+    from mathutils.bvhtree import BVHTree
+    dg = bpy.context.evaluated_depsgraph_get()
+    ev = ob.evaluated_get(dg)
+    me = ev.to_mesh()
+    try:
+        me.calc_loop_triangles()
+        M = ob.matrix_world
+        verts = [M @ v.co for v in me.vertices]
+        tris = [tuple(t.vertices) for t in me.loop_triangles]
+    finally:
+        ev.to_mesh_clear()
+    return BVHTree.FromPolygons(verts, tris)
+
+
+def stencil_object(name: str, host: bpy.types.Object, V2: np.ndarray, F: list, center_b, u_b, n_b, material: str,
+                   collection: bpy.types.Collection, bvh=None, lift: float = STENCIL_LIFT,
+                   thick: float = STENCIL_THICK) -> bpy.types.Object | None:
+    """2B işaret ağını (m; x = ``u_b``, y = ``n_b × u_b``) ``center_b`` çevresinde ev sahibi yüzeye ``−n_b`` yönünde
+    izdüşürür, ``lift`` kadar kaldırır, ``thick`` kalınlığında kapalı katıya çevirir ve ev sahibine dünya korunarak
+    bağlar. Yüzeyi ıskalayan nokta %2'yi aşarsa None (işaret kurulmaz)."""
+    n = Vector(tuple(map(float, n_b))).normalized()
+    u = Vector(tuple(map(float, u_b)))
+    u = (u - n * u.dot(n)).normalized()
+    v = n.cross(u)
+    c = Vector(tuple(map(float, center_b)))
+    bvh = bvh or _host_bvh_world(host)
+    hit = bvh.ray_cast(c + n * 0.05, -n, 0.2)
+    if hit[0] is None:
+        return None
+    c = hit[0]
+    pts, nrm, miss = [], [], 0
+    for x, y in np.asarray(V2, float):
+        p = c + u * float(x) + v * float(y)
+        h = bvh.ray_cast(p + n * 0.02, -n, 0.06)
+        if h[0] is None:
+            miss += 1
+            pts.append(p)
+            nrm.append(n)
+            continue
+        nn = h[1] if h[1].dot(n) >= 0 else -h[1]
+        pts.append(h[0] + nn * lift)
+        nrm.append(nn)
+    if miss > 0.02 * len(pts):
+        return None
+    P3 = np.array([tuple(p) for p in pts])
+    N3 = np.array([tuple(q) for q in nrm])
+    F = [list(f) for f in F]
+    if F:
+        a, b, cc = (P3[i] for i in F[0][:3])
+        if np.dot(np.cross(b - a, cc - a), np.asarray(n)) < 0:
+            F = [f[::-1] for f in F]
+    nv = len(P3)
+    Vb = P3 - N3 * thick
+    out_f = [tuple(f) for f in F] + [tuple(nv + i for i in f[::-1]) for f in F]
+    cnt: dict = {}
+    directed = []
+    for f in F:
+        for k in range(len(f)):
+            e0, e1 = f[k], f[(k + 1) % len(f)]
+            cnt[(min(e0, e1), max(e0, e1))] = cnt.get((min(e0, e1), max(e0, e1)), 0) + 1
+            directed.append((e0, e1))
+    for e0, e1 in directed:
+        if cnt[(min(e0, e1), max(e0, e1))] == 1:
+            out_f.append((e0, nv + e0, nv + e1, e1))
+    remove_object(name)
+    me = bpy.data.meshes.new(name)
+    me.from_pydata([tuple(p) for p in np.vstack([P3, Vb])], [], out_f)
+    me.validate()
+    me.materials.append(get_material(material))
+    me.shade_smooth()
+    ob = bpy.data.objects.new(name, me)
+    collection.objects.link(ob)
+    parent_keep_world(ob, host)
+    ob["ucav_closed"] = True
+    ob.visible_shadow = False
+    return ob

@@ -14,10 +14,10 @@ Eksenler: `s` burun ucundan geriye, `y` sol +, `z` FRL'den yukarı (m). Blender:
 |---|---:|---:|---:|---:|:---:|---|
 | Açıklık | 3,800 m | 3,800 | 0,000 | ± 0,003 | ✓ |  |
 | Toplam boy (dikey ucu firar kenarı) | 2,475 m | 2,475 | 0,000 | ± 0,003 | ✓ |  |
-| Spinner dahil gövde boyu | 2,285 m | 2,285 | 0,000 | ± 0,003 | ✓ |  |
+| Spinner dahil gövde boyu | 2,310 m | 2,310 | 0,000 | ± 0,003 | ✓ |  |
 | Yükseklik (takım açık) | 0,668 m | 0,668 | 0,000 | ± 0,003 | ✓ |  |
 | Teker izi | 0,660 m | 0,660 | 0,000 | ± 0,003 | ✓ |  |
-| Dingil açıklığı | 0,907 m | 0,908 | -0,001 | ± 0,003 | ✓ | statik temas noktaları arası (ana bacak 12° yatık; sıkışma aksı 1,7 mm öne alır) |
+| Dingil açıklığı | 0,785 m | 0,785 | 0,000 | ± 0,003 | ✓ | statik temas noktaları arası (ana bacak 12° yatık; sıkışma aksı 1,7 mm öne alır) |
 
 ## 2. Kanat
 
@@ -91,8 +91,8 @@ Eksenler: `s` burun ucundan geriye, `y` sol +, `z` FRL'den yukarı (m). Blender:
 | Kanatçık alanı (iki yan) | 0,0890 m² | 0,0890 | 0,0000 | ± 0,0009 | ✓ |  |
 | Kanatçık veteri iç uç | 0,0768 m | 0,0770 | -0,0002 | ± 0,0030 | ✓ |  |
 | Kanatçık veteri dış uç | 0,0450 m | 0,0450 | 0,0000 | ± 0,0030 | ✓ |  |
-| Flap alanı (iki yan) | 0,1402 m² | 0,1400 | +0,0002 | ± 0,0070 | ✓ |  |
-| Flaplı alan oranı | 0,513 | 0,513 | 0,000 | ± 0,005 | ✓ |  |
+| Flap alanı (iki yan) | 0,1443 m² | 0,1440 | +0,0003 | ± 0,0072 | ✓ |  |
+| Flaplı alan oranı | 0,528 | 0,528 | 0,000 | ± 0,005 | ✓ |  |
 | İrtifa dümeni alanı (iki yan) | 0,0444 m² | 0,0440 | +0,0004 | ± 0,0022 | ✓ |  |
 | İstikamet dümeni alanı (iki dümen) | 0,0386 m² | 0,0390 | -0,0004 | ± 0,0020 | ✓ |  |
 
@@ -101,7 +101,7 @@ Eksenler: `s` burun ucundan geriye, `y` sol +, `z` FRL'den yukarı (m). Blender:
 | Büyüklük | Hesap | Spec | Fark | Tolerans / sınır | Durum | Not |
 |---|---:|---:|---:|---:|:---:|---|
 | Yatay alan S_h | 0,1544 m² | 0,1544 | 0,0000 | ± 0,0015 | ✓ |  |
-| Açıkta yatay alan S_h,açık | 0,1339 m² | 0,1335 | +0,0004 | ± 0,0067 | ✓ | gövde yarı genişliği stabilize kökünde 0,0589 m |
+| Açıkta yatay alan S_h,açık | 0,1325 m² | 0,1335 | -0,0010 | ± 0,0067 | ✓ | gövde yarı genişliği stabilize kökünde 0,0629 m |
 | Dikey alan (gerçek, iki) | 0,1216 m² | 0,1216 | 0,0000 | ± 0,0012 | ✓ |  |
 | Dikey alan (izdüşüm) | 0,1189 m² | 0,1189 | 0,0000 | ± 0,0012 | ✓ |  |
 | Toplam kuyruk alanı | 0,2760 m² | 0,2760 | 0,0000 | ± 0,0028 | ✓ |  |
@@ -123,9 +123,9 @@ Eksenler: `s` burun ucundan geriye, `y` sol +, `z` FRL'den yukarı (m). Blender:
 | Dikey uç y | 0,5865 m | 0,5870 | -0,0005 | ± 0,0030 | ✓ |  |
 | Dikey uç z | 0,3780 m | 0,3780 | 0,0000 | ± 0,0030 | ✓ |  |
 | Dikey uçları arası | 1,173 m | 1,173 | 0,000 | ± 0,003 | ✓ |  |
-| Pervane – stabilize FK aralığı (pala ucunda) | 0,1034 m | 0,1030 | +0,0004 | ± 0,0030 | ✓ | disk yarı genişliği stabilize düzleminde 0,1925 m, 5° eğim dahil |
-| Pervane – stabilize FK aralığı (kökte) | 0,1927 m | 0,1930 | -0,0003 | ± 0,0030 | ✓ |  |
-| Aralık / pervane çapı | 0,254 | 0,250 | +0,004 | ± 0,013 | ✓ |  |
+| Pervane – stabilize FK aralığı (pala ucunda) | 0,1284 m | 0,1280 | +0,0004 | ± 0,0030 | ✓ | disk yarı genişliği stabilize düzleminde 0,1925 m, 5° eğim dahil |
+| Pervane – stabilize FK aralığı (kökte) | 0,2177 m | 0,2180 | -0,0003 | ± 0,0030 | ✓ |  |
+| Aralık / pervane çapı | 0,316 | 0,316 | 0,000 | ± 0,016 | ✓ |  |
 
 ## 6. Kararlılık
 
@@ -133,17 +133,17 @@ Eksenler: `s` burun ucundan geriye, `y` sol +, `z` FRL'den yukarı (m). Blender:
 |---|---:|---:|---:|---:|:---:|---|
 | Stabilize kaldırma eğimi a_h | 4,625 1/rad | 4,630 | -0,005 | ± 0,046 | ✓ | Helmbold, AR_etkin |
 | Sapma gradyanı dε/dα | 0,253 | 0,252 | +0,001 | ± 0,003 | ✓ | DATCOM, l_H 0,794 m, h_H 0,115 m |
-| Kuyruk terimi F_h | 0,427 | 0,426 | +0,001 | ± 0,004 | ✓ |  |
+| Kuyruk terimi F_h | 0,422 | 0,426 | -0,004 | ± 0,004 | ✓ |  |
 | Gövde Cmα_f | 0,691 1/rad | 0,690 | +0,001 | ± 0,007 | ✓ |  |
-| Nötr nokta s | 1,2584 m | 1,2580 | +0,0004 | ± 0,0030 | ✓ |  |
-| Nötr nokta (%MAC) | 34,1 % | 34,1 | 0,0 | ± 0,6 | ✓ |  |
+| Nötr nokta s | 1,2579 m | 1,2580 | -0,0001 | ± 0,0030 | ✓ |  |
+| Nötr nokta (%MAC) | 33,9 % | 34,1 | -0,2 | ± 0,6 | ✓ |  |
 | CG (%MAC) | 24,1 % | 24,1 | 0,0 | ± 0,6 | ✓ |  |
-| Statik marj (η_h 0,90) | 10,0 %MAC | 10,0 | 0,0 | ± 0,6 | ✓ |  |
-| Statik marj (η_h 0,85 / 1,00) | 8,9 %MAC | — | — | — | bilgi | η_h 1,00: 12,2 |
-| Ön CG sınırı (SM %15) | 1,2187 m | 1,2190 | -0,0003 | ± 0,0030 | ✓ |  |
-| Arka CG sınırı (SM %5) | 1,2452 m | 1,2450 | +0,0002 | ± 0,0030 | ✓ |  |
+| Statik marj (η_h 0,90) | 9,8 %MAC | 10,0 | -0,2 | ± 0,6 | ✓ |  |
+| Statik marj (η_h 0,85 / 1,00) | 8,7 %MAC | — | — | — | bilgi | η_h 1,00: 12,0 |
+| Ön CG sınırı (SM %15) | 1,2182 m | 1,2190 | -0,0008 | ± 0,0030 | ✓ |  |
+| Arka CG sınırı (SM %5) | 1,2447 m | 1,2450 | -0,0003 | ± 0,0030 | ✓ |  |
 
-Yöntem (`spec.yaml → stability.method`): x_np = [a_wb·x_ac,w + F_h·x_ac,h + F_g·x_g − Cmα_f·c̄] / (a_wb + F_h + F_g). a_wb = 5,67/rad (kaldırma çizgisi, gövde etkisiyle); a_h Helmbold ile AR_etkin = AR_h·(1 + 1,9·0,6·h_dikey/b_h); dε/dα DATCOM (K_A·K_λ·K_H); F_h = η_h·a_h·S_h,açık/S·(1 − dε/dα); Cmα_f = K_f·w_f²·L_f/(c̄·S)·180/π, K_f = 0,0336/°; glove terimi F_g = 0,061 (x_g = 1,12). Duyarlılık: η_h 0,85 → SM %8,9, η_h 1,00 → SM %12,2.
+Yöntem (`spec.yaml → stability.method`): x_np = [a_wb·x_ac,w + F_h·x_ac,h + F_g·x_g − Cmα_f·c̄] / (a_wb + F_h + F_g). a_wb = 5,67/rad (kaldırma çizgisi, gövde etkisiyle); a_h Helmbold ile AR_etkin = AR_h·(1 + 1,9·0,6·h_dikey/b_h); dε/dα DATCOM (K_A·K_λ·K_H); F_h = η_h·a_h·S_h,açık/S·(1 − dε/dα); Cmα_f = K_f·w_f²·L_f/(c̄·S)·180/π, K_f = 0,0336/°; glove terimi F_g = 0,061 (x_g = 1,12). Duyarlılık: η_h 0,85 → SM %8,7, η_h 1,00 → SM %12,0.
 
 ## 7. Performans ve itki hattı
 
@@ -154,8 +154,8 @@ Yöntem (`spec.yaml → stability.method`): x_np = [a_wb·x_ac,w + F_h·x_ac,h +
 | Stall hızı, 20° flap (MTOW) | 10,80 m/s | 10,80 | 0,00 | ± 0,15 | ✓ |  |
 | Stall hızı, 20° flap (iniş kütlesi) | 10,41 m/s | 10,41 | 0,00 | ± 0,15 | ✓ |  |
 | Stall hızı, 30° flap (MTOW) | 10,55 m/s | 10,55 | 0,00 | ± 0,15 | ✓ |  |
-| İtki hattı z (CG istasyonunda) | 0,0440 m | 0,0440 | 0,0000 | ± 0,0030 | ✓ |  |
-| İtki momenti (tam güç, burun aşağı) | 2,07 N·m | 2,10 | -0,03 | ± 0,11 | ✓ |  |
+| İtki hattı z (CG istasyonunda) | 0,0418 m | 0,0420 | -0,0002 | ± 0,0030 | ✓ |  |
+| İtki momenti (tam güç, burun aşağı) | 1,95 N·m | 1,95 | 0,00 | ± 0,10 | ✓ |  |
 | İtki/ağırlık | 0,476 | 0,480 | -0,004 | ± 0,005 | ✓ |  |
 
 ## 8. İniş takımı ve yer açıları
@@ -166,16 +166,16 @@ Yöntem (`spec.yaml → stability.method`): x_np = [a_wb·x_ac,w + F_h·x_ac,h +
 | CG yüksekliği (zeminden) | 0,2964 m | 0,2960 | +0,0004 | ± 0,0030 | ✓ |  |
 | Tip-back açısı (nominal CG) | 17,69 ° | 18,00 | -0,31 | ± 0,35 | ✓ |  |
 | Tip-back açısı (arka CG) | 15,38 ° | 15,70 | -0,32 | ± 0,35 | ✓ |  |
-| Devrilme açısı | 46,86 ° | 46,90 | -0,04 | ± 0,35 | ✓ |  |
-| Burun yükü | 10,4 % | 10,6 | -0,2 | ± 0,6 | ✓ |  |
-| Statik yük, ana teker başına | 51,4 N | 51,3 | +0,1 | ± 0,5 | ✓ |  |
-| Statik yük, burun | 12,0 N | 12,2 | -0,2 | ± 0,6 | ✓ |  |
+| Devrilme açısı | 47,93 ° | 47,90 | +0,03 | ± 0,35 | ✓ |  |
+| Burun yükü | 12,0 % | 12,0 | 0,0 | ± 0,6 | ✓ |  |
+| Statik yük, ana teker başına | 50,5 N | 50,5 | 0,0 | ± 0,5 | ✓ |  |
+| Statik yük, burun | 13,8 N | 13,8 | 0,0 | ± 0,7 | ✓ |  |
 | Pervane yer açıklığı | 218 mm | 218 | 0 | ± 4 | ✓ |  |
-| Pervane çarpma açısı | 13,53 ° | 13,60 | -0,07 | ± 0,35 | ✓ | ≥ 13° şartı |
-| Pervane açıklığı 6° burun yukarıda | 122 mm | 122 | 0 | ± 4 | ✓ |  |
-| Kaporta/gövde temas açısı | 22,18 ° | 22,50 | -0,32 | ± 0,35 | ✓ | kritik nokta s = 2,147 |
+| Pervane çarpma açısı | 13,17 ° | 13,20 | -0,03 | ± 0,35 | ✓ | ≥ 13° şartı |
+| Pervane açıklığı 6° burun yukarıda | 119 mm | 119 | 0 | ± 4 | ✓ |  |
+| Kaporta/gövde temas açısı | 19,62 ° | 19,60 | +0,02 | ± 0,35 | ✓ | kritik nokta s = 2,175 |
 | Stabilize ucu FK temas açısı | 20,66 ° | 20,40 | +0,26 | ± 0,35 | ✓ |  |
-| Stabilize ucu kesiti (en kritik nokta) | 20,68 ° | — | — | — | bilgi |  |
+| Stabilize ucu kesiti (en kritik nokta) | 20,67 ° | — | — | — | bilgi |  |
 | Dikey kökü FK temas açısı | 18,47 ° | — | — | — | bilgi | dikey kökü stabilize ucunun 0,12 m arkasına uzanır; pervane yine önce değer |
 | Kanat ucu yer açıklığı | 363 mm | 366 | -3 | ± 4 | ✓ |  |
 | Kanat ucuna yatış açısı | 13,01 ° | 13,10 | -0,09 | ± 0,35 | ✓ |  |
@@ -184,12 +184,12 @@ Yöntem (`spec.yaml → stability.method`): x_np = [a_wb·x_ac,w + F_h·x_ac,h +
 | Katlanmış ana teker s | 1,3282 m | 1,3280 | +0,0002 | ± 0,0030 | ✓ |  |
 | Katlanmış ana teker y | 0,1148 m | 0,1150 | -0,0002 | ± 0,0030 | ✓ |  |
 | Katlanmış ana teker z | -0,0420 m | -0,0420 | 0,0000 | ± 0,0030 | ✓ |  |
-| Katlanmış burun tekeri s | 0,628 m | 0,628 | 0,000 | ± 0,006 | ✓ | yüksüz bacak (uçuşta); statik boyla 0,620 |
+| Katlanmış burun tekeri s | 0,726 m | 0,726 | 0,000 | ± 0,007 | ✓ | yüksüz bacak (uçuşta); statik boyla 0,620 |
 | Ana bacak statik çökmesi (dikey) | 0,0080 m | 0,0080 | 0,0000 | ± 0,0030 | ✓ | zemin z'den türetilir |
 | Burun bacağı statik çökmesi (dikey) | 0,0086 m | — | — | — | bilgi |  |
-| Ana kuyu payı (en dar) | 3,6 mm | — | — | ≥ 2,0 mm | ✓ | ön 8,0, arka 4,5, iç 3,6, dış 3,9, ağız 5,0, tavan 5,0 |
-| Burun kuyusu payı (en dar) | 4,0 mm | — | — | ≥ 2,0 mm | ✓ | ön 193,0, arka 4,0, yan 15,0, tavan 9,0, karın 7,8 |
-| Ana pivot kanat altının altında | 6,1 mm | — | — | ≤ 7,4 mm | ✓ | ünite kabartması (unit_blister) bunu ve kabuk etini örtmeli |
+| Ana kuyu payı (en dar) | 3,9 mm | — | — | ≥ 2,0 mm | ✓ | ön 8,0, arka 4,5, iç 6,1, dış 3,9, ağız 5,0, tavan 8,0 |
+| Burun kuyusu payı (en dar) | 5,0 mm | — | — | ≥ 2,0 mm | ✓ | ön 181,0, arka 5,0, yan 15,0, tavan 9,0, karın 7,6 |
+| Ana pivot kanat altının altında | 6,1 mm | — | — | ≤ 8,9 mm | ✓ | ünite kabartması (unit_blister) bunu ve kabuk etini örtmeli |
 
 Temas noktaları gerçek bacak geometrisinden: ana bacak pivot (1,2825; ±0,33; −0,042), 0,22 m, 12° geriye yatık, statik sıkışma bacak boyunca; burun bacağı pivot (0,42; 0; −0,056), 0,208 m. Zemin z = -0,2904. Açılar ana teker temas çizgisi etrafında burun yukarı dönüşle hesaplanır; pervane diskinin en alçak noktası 5° eğim nedeniyle göbekten geridedir.
 
@@ -198,11 +198,11 @@ Temas noktaları gerçek bacak geometrisinden: ana bacak pivot (1,2825; ±0,33; 
 | Büyüklük | Hesap | Spec | Fark | Tolerans / sınır | Durum | Not |
 |---|---:|---:|---:|---:|:---:|---|
 | Azami genişlik | 0,2050 m | 0,2050 | 0,0000 | ± 0,0030 | ✓ |  |
-| Azami yükseklik | 0,2120 m | 0,2140 | -0,0020 | ± 0,0030 | ✓ | s = 1,95'de; istasyon tablosunun tepesi 0,212 (panel 0,214) |
-| Islak alan | 1,238 m² | 1,240 | -0,002 | ± 0,062 | ✓ | çevre integrali |
-| İncelik oranı L/((w+h)/2) | 10,58 | 10,60 | -0,02 | ± 0,53 | ✓ | eşdeğer çapla L/d_eş = 10,76 (A_max 0,0330 m², s = 0,85) |
-| Karın kalkışı s 1,10→1,95 | 6,64 ° | 6,60 | +0,04 | ± 0,35 | ✓ |  |
-| Karın kalkışı s 1,40→1,95 | 7,97 ° | 8,00 | -0,03 | ± 0,35 | ✓ |  |
+| Azami yükseklik | 0,2000 m | 0,2000 | 0,0000 | ± 0,0030 | ✓ | s = 0,85'de; istasyon tablosunun tepesi 0,212 (panel 0,214) |
+| Islak alan | 1,214 m² | 1,210 | +0,004 | ± 0,060 | ✓ | çevre integrali |
+| İncelik oranı L/((w+h)/2) | 10,89 | 10,90 | -0,01 | ± 0,55 | ✓ | eşdeğer çapla L/d_eş = 10,76 (A_max 0,0330 m², s = 0,85) |
+| Karın kalkışı s 1,10→1,95 | 5,84 ° | 5,84 | 0,00 | ± 0,35 | ✓ |  |
+| Karın kalkışı s 1,40→1,95 | 6,74 ° | 6,74 | 0,00 | ± 0,35 | ✓ |  |
 | Burun sarkması | 0,0140 m | 0,0140 | 0,0000 | ± 0,0030 | ✓ |  |
 
 ## 10. Kütle

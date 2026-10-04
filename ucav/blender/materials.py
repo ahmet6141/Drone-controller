@@ -1,42 +1,63 @@
-"""YELKOVAN YK-38 — malzemeler, boya şemaları ve işaretler (bpy 4.5): ``build(livery="standart")``.
+"""YELKOVAN YK-38 — malzemeler, boya şemaları, panel çizgileri ve işaretler (bpy 4.5): ``build(livery="standart")``.
 
 ``params.MATERIALS`` içindeki her ``UM_*`` adı için Cycles PBR düğüm ağacı kurulur. Gövde/takım modülleri
 yüzlere malzeme yuvalarını önceden atar (yoksa ``util.get_material`` basit Principled yer tutucu oluşturur);
-bu modül **aynı adlı veri bloğunu** bulur ve düğüm ağacını yeniden yazar — yuvalar değişmez, eksik (magenta)
-malzeme kalmaz. Bilinmeyen yeni bir ``UM_*`` adı spec'e eklenirse genel Principled tarifiyle kurulur.
+bu modül **aynı adlı veri bloğunu** bulur ve düğüm ağacını yeniden yazar — eksik (magenta) malzeme kalmaz.
+Bilinmeyen yeni bir ``UM_*`` adı spec'e eklenirse genel Principled tarifiyle kurulur.
 
-Malzeme tarifleri (renkler ``spec.yaml → materials``; aşağıdaki ince ayarlar "varsayım"dır)
-------------------------------------------------------------------------------------------
+Görünüm revizyonu R2 (``look_specs``)
+-------------------------------------
+Tasarım/mühendislik eleştirisinin (F3–F10, AERO-07/17/18) malzeme kararları. Spec'te karşılığı olmayan yeni
+malzemeler (``LOOK_NEW``: ``UM_Liner``, ``UM_Seal``, ``UM_Bezel``, ``UM_Exhaust``) ``params.MATERIALS``'a eklenir;
+spec'te hâlâ eski değeri duran malzemeler (``LOOK_REV``: eski hex ``was``) yeni değerle değiştirilir. Spec güncellenince
+(yeni ad eklenince ya da hex değişince) spec geçerli olur — bu tablo yalnız geçiş içindir. ``assign_look_slots``
+yuva eşlemesini uygular (rol tablosu ``params.MATERIAL_ROLES`` güncellenince işlemsiz kalır):
+
+* kuyu ve kapak iç yüzleri ``UM_Orange`` → ``UM_Liner`` (saten açık gri astar, ışımasız); kapak kenarları
+  (dış yüze dik yüzler) → ``UM_Seal`` (koyu conta: kapalı kapak çevresi koyu ince çizgi okunur);
+* taret pencere çerçeveleri ``UM_Turquoise`` → ``UM_Bezel`` (siyah eloksal); taret yakası ``UM_Accent`` →
+  ``UM_SkinBottom``; susturucu ``UM_Nozzle`` → ``UM_Exhaust`` (paslanmaz çelik, ısı tonu yalnız burada).
+
+Malzeme tarifleri (renkler ``spec.yaml → materials`` + revizyon; aşağıdaki ince ayarlar "varsayım"dır)
+------------------------------------------------------------------------------------------------------
 * **Boya** (``UM_SkinTop`` RAL 7035, ``UM_SkinBottom`` RAL 9003, ``UM_Accent`` RAL 7016, ``UM_Turquoise``
   RAL 5018, ``UM_Antenna``): saten boya — nesne koordinatında çok hafif ton (±%2,5) ve pürüzlülük (±0,04)
-  dalgalanması, ince vernik katmanı (coat 0,25), portakal kabuğu mikro tümseği (yalnız yakın yansımada görünür).
-  Doku nesne koordinatındadır: kumanda yüzeyi döndüğünde ya da uçak uçtuğunda boya "kaymaz".
-* ``UM_Orange`` RAL 2005 (parlak/fosforlu turuncu): boya + çok zayıf ışıma (gün ışığı floresansı taklidi) —
-  kuyu ve kapak içleri gölgede de turuncu okunur.
-* ``UM_SmokeHatch``: füme parlak PETG — iki arayüzlü geçirgenlik (toplam ≈ %10), cam gibi yansıma; kapağın
-  altındaki GNSS cebi ve antenler loş görünür.
-* ``UM_PACF``: boyasız PA-CF — mat, ince baskı dokusu (tümsek), hafif "sheen".
-* ``UM_Nozzle``: antrasit metal lüle halkası; iç kenardan dışa ısı tonu (mavi → bronz, spec ``heat_tint``),
-  pervane ekseninden radyal uzaklıkla ve gürültüyle karışır.
-* ``UM_Prop``: vernikli kayın — pala boyunca uzanan düz damar (dalga + gürültü), kalın vernik katmanı.
-* ``UM_Spinner``: parlatılmış alüminyum, torna izi — eksen etrafında radyal teğetli anizotropi.
+  dalgalanması, ince vernik (üst 0,25; alt yüzey 0,10 — düşük parlaklık), portakal kabuğu mikro tümseği. Doku
+  nesne koordinatındadır: kumanda yüzeyi döndüğünde ya da uçak uçtuğunda boya "kaymaz".
+* **Panel çizgileri** (``UCAV_PanelLines`` düğüm grubu; ``UM_SkinTop``/``UM_SkinBottom``/``UM_Accent``): baskı
+  segment eklerindeki V-oluklar (``params.print_cuts()``: gövde ``s``, kanat ``|y|``, stabilize ``|y|``, dikey
+  ``h``) 0,5 mm yarı genişlik + 0,4 mm geçişle koyulaşan oluk ve tümsek; gerçek servo yuvalarının (``printprep.
+  SERVO_STATIONS``) alt yüzde 46 × 30 mm R4 servis kapakları ve köşelerde Ø2 vida başları. Hangi düzlemin hangi
+  nesneye uygulandığı nesne özelliği ``ucav_panel``'dan okunur (1 gövde/kaporta, 2 kanat, 3 stabilize, 4 dikey;
+  ``build`` yazar). Hareketli yüzeyler, kapaklar ve aviyonik kapağı çizgisizdir.
+* ``UM_Orange`` (revizyon: RAL 2004 saf turuncu, floresan değil, ışımasız): yalnız pala uçları ve dikeylerdeki
+  pervane düzlemi bandı (uyarı rolü).
+* ``UM_Liner`` (kuyu/kapak iç astarı, #C9CCC6 saten, vernik 0,15), ``UM_Seal`` (kapak kenarı/conta #24272A).
+* ``UM_SmokeHatch``: füme parlak PETG — iki arayüzlü geçirgenlik (toplam ≈ %10), cam gibi yansıma.
+* ``UM_PACF`` ve ``UM_Nozzle`` (lüle halkası, soğutma havası çıkışı): boyasız PA-CF — mat, ince baskı dokusu,
+  hafif "sheen"; ısı tonu YOK (egzoz sol yanaktaki susturucudan çıkar).
+* ``UM_Exhaust``: susturucu — paslanmaz çelik, gürültüyle karışan bronz/mavi ısı tonu (spec ``heat_tint``).
+* ``UM_Prop``: kayın pala, mat siyah boyalı (kalın vernik, damar yok); uçlar ``UM_Orange``.
+* ``UM_Spinner``: boyalı alüminyum, saten antrasit (ayna yansıması yok).
 * ``UM_Gear`` (anodize Al), ``UM_Hub``, ``UM_Steel`` (oleo krom / pitot — pürüzlülük ≤ 0,14), ``UM_Engine``.
 * ``UM_Tire``: kauçuk — mat, tozlu "sheen", ince tümsek. ``UM_TPU``: mat siyah TPU.
-* ``UM_TurretBody``: mat siyah "soft-touch" boya. ``UM_SensorGlass``: pencere nesnesinin yerel +Y yarısı EO
-  (koyu lacivert cam, MgF₂ yansıma önleyici ince film → mavi-mor yansıma), −Y yarısı IR (germanyum: gri, yarı metalik,
-  DLC ince film). ``UM_Carbon``: 2×2 dimi örgü karbon + vernik.
+* ``UM_TurretBody``: saten koyu gri (#2A2D30) — top formu okunur, "delik" gibi görünmez. ``UM_Bezel``: siyah eloksal
+  pencere çerçevesi. ``UM_SensorGlass``: pencere nesnesinin yerel +Y yarısı EO (çok koyu cam, vernik 0,6, ince AR
+  filmi → soluk mor/yeşil yansıma), −Y yarısı IR (germanyum: koyu gri, yarı metalik, ince film → altın/mor ışıltı).
+  Kendi ışıması yoktur; yalnız yansır. ``UM_Carbon``: 2×2 dimi örgü karbon + vernik.
 * **Işıklar** (``UM_NavRed``, ``UM_NavGreen``, ``UM_Strobe``, ``UM_StatusLED``): parlak lens + ışıma.
   Işıma şiddeti = spec ``emission`` × nesne özelliği ``ucav_emission`` (Attribute düğümü, nesne türü). ``rig``
   her ışık nesnesinin ``ucav_emission`` değerini sürer (seyrüsefer: ``nav_lights``, çakarlar: ``strobe``);
-  böylece aynı malzemeyi paylaşan iniş ışığı çakmaz, seyrüsefer gibi davranır. Özellik yoksa ``build``
-  1,0 yazar (ışıklar açık). Not: Emission Strength soketi bağlı olduğundan ``rig.drive_light_materials``
-  malzeme düzeyinde sürücü kurmaz — tasarım gereği.
+  böylece aynı malzemeyi paylaşan iniş ışığı çakmaz. Özellik yoksa ``build`` 1,0 yazar. ``UM_StatusLED`` ayrıca
+  ``ucav_status_gate`` ile çarpılır: ``U_Root``'ta ayrı bir ``status_led`` özelliği yoksa (halka hâlâ
+  ``nav_lights``'a bağlıysa) 0 → taret halkası sönük koyu conta gibi görünür; gerçek EO/IR taretler ışımaz.
 
 Boya şemaları (``LIVERIES``)
 ----------------------------
 * ``"standart"`` (``"standard"`` da kabul edilir): spec renkleri — üst RAL 7035, alt RAL 9003.
-* ``"taktik"``: yalnız render için düşük görünürlüklü koyu gri (spec ``materials.liveries.taktik``: üst
-  RAL 7046, alt RAL 7035); turkuaz çizgi ve lens halkası koyu gri-petrole çekilir (varsayım). Uyarı: koyu boya
+* ``"taktik"``: yalnız render için koyu düşük görünürlüklü gri (``TAKTIK``: üst #4A5055 ≈ FS 36118, alt #6F777C,
+  vurgu/anten #2A2E32, ince çizgi #4E5B60, spinner #3A3F44); mat boya (pürüzlülük 0,62, vernik 0,08); işaretler
+  zeminden AÇIK (#8C9499). Spec ``materials.liveries.taktik`` güncellenmişse spec değeri geçerlidir. Uyarı: koyu boya
   güneşte LW-PLA'yı ısıtır (Tg ≈ 55 °C) — uçacak gövde için önerilmez.
 
 İşaretler (``build_decals``)
@@ -44,21 +65,28 @@ Boya şemaları (``LIVERIES``)
 Yazılar Blender metin eğrisinden ağa çevrilir (Liberation Sans Bold, %86 dar; yoksa DejaVu/FreeSans/yerleşik
 yazı tipi), ≤ 2,5 mm kenarlı üçgenlere bölünür ve BVH ışın izdüşümüyle ev sahibi yüzeye oturtulur (eğriliğe
 uyar). Her işaret 0,15 mm kalınlığında kapalı ince katıdır (üst yüzü deriden 0,35 mm yukarıda; manifold,
-gölge düşürmez). Malzeme ``UM_Accent`` (antrasit "şablon" yazı; nesne özelliği ``ucav_decal_mix`` ile üst
-yüzey rengine doğru açılır → spec'teki "düşük kontrastlı gri"; taktik şemada saf antrasit).
+gölge düşürmez). Yazı malzemesi ``UM_Accent`` (nesne özelliği ``ucav_decal_mix`` ile hedef renge açılır →
+standartta düşük kontrastlı gri, taktikte zeminden açık gri).
 
 * ``U_Decal_YK38_L/R``: dikeylerin dış yüzünde "YK-38" (yükseklik 26 mm), sabit dikey kısmında.
 * ``U_Decal_Name_L/R``: kuyruk konisi yanında, chine çizgisine paralel "YELKOVAN" (22 mm).
-* ``U_Decal_PropBand_L/R``: dikeylerin iç yüzünde pervane düzlemi uyarı bandı (RAL 2005, 12 mm), bant
+* ``U_Decal_PropBand_L/R``: dikeylerin iç yüzünde pervane düzlemi uyarı bandı (``UM_Orange``, 12 mm), bant
   ``PROP.plane_s_at_z`` ile 5° aşağı itki eğimini izler.
+* ``U_Decal_CG_L/R``: gövdenin iki yanında ``params.CG`` (s, z) noktasında Ø18 mm siyah/beyaz çeyrekli ağırlık
+  merkezi işareti (iki malzemeli: koyu çeyrekler ``UM_Accent``, açık çeyrekler ``UM_SkinBottom``).
+
+Yazılı işlevsel şablonlar (ADIM ATMA, YAKIT, PERVANE, STATİK PORT …) gövde modülünün ``U_Stencil_*`` nesneleridir
+(spec ``details.markings.stencils``); ``build`` yalnız ``UM_Accent`` kullananlara şema kontrastını (``ucav_decal_mix``)
+yazar. Tüm deri ince LW-PLA olduğundan yürüme yolu çizgisi yoktur.
 
 Hepsi ``UCAV_Details`` koleksiyonunda, ev sahibine dünya dönüşümü korunarak bağlıdır (``build`` tekrar
 çağrılabilir; eski işaretler silinip yeniden kurulur). Baskı modülü bu nesneleri kullanmaz.
 
-Sıra: ``airframe.build()`` → ``gear.build()`` → ``materials.build()`` → ``rig.setup()`` (sıra değişse de çalışır).
+Sıra: ``airframe.build()`` → ``gear.build()`` → ``rig.setup()`` → ``materials.build()`` (sıra değişse de çalışır).
 """
 from __future__ import annotations
 
+import dataclasses
 import math
 import os
 from dataclasses import dataclass
@@ -68,27 +96,84 @@ import bmesh
 import numpy as np
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
+from mathutils.kdtree import KDTree
 
 from .. import params as P
 from . import util as U
 
 LIGHT_MATERIALS = ("UM_NavRed", "UM_NavGreen", "UM_Strobe", "UM_StatusLED")
 EMISSION_PROP = "ucav_emission"           # ışık nesnesi çarpanı (rig sürer)
-DECAL_MIX_PROP = "ucav_decal_mix"         # yazı rengini yüzey rengine açma oranı (0 = saf antrasit)
+STATUS_GATE_PROP = "ucav_status_gate"     # taret durum LED'i kapısı (0 = sönük; bkz. modül belgesi)
+DECAL_MIX_PROP = "ucav_decal_mix"         # yazı rengini hedef renge açma oranı (0 = saf antrasit)
+PANEL_PROP = "ucav_panel"                 # panel çizgisi ailesi (1 gövde, 2 kanat, 3 stabilize, 4 dikey)
 
 # İnce ayarlar (varsayım) — boya katmanı
 PAINT_COAT = 0.25                         # vernik ağırlığı (saten)
+PAINT_COAT_BOTTOM = 0.10                  # alt yüzey: düşük parlaklık (gölgede gökyüzü yansıması az)
 PAINT_COAT_ROUGH = 0.22
 PAINT_TONE_VAR = 0.025                    # ± ton dalgalanması
 PAINT_ROUGH_VAR = 0.04                    # ± pürüzlülük dalgalanması
-ORANGE_GLOW = 0.10                        # RAL 2005 floresans taklidi (ışıma şiddeti)
+ORANGE_GLOW = 0.0                         # eski floresans taklidi kaldırıldı (gerçek boya ışımaz)
 SMOKE_TOTAL_T = 0.10                      # füme kapak toplam geçirgenliği (iki arayüz)
+TAKTIK_PAINT = {"roughness": 0.62, "coat": 0.08}   # taktik: mat düşük görünürlük
 
-# Taktik boya şemasında spec dışında kalan renkler (varsayım: düşük görünürlük)
-TAKTIK_EXTRA = {"UM_Turquoise": "#3F5A5E", "UM_StatusLED": "#2E8C93"}
-DECAL_MIX = {"standart": 0.42, "taktik": 0.0}      # yazı kontrastı (0 = antrasit)
-EO_BLUE = (0.004, 0.010, 0.040)          # EO penceresi koyu lacivert ton (doğrusal)
-EO_AR_NM = 135.0                         # MgF₂ yansıma önleyici ince film (≈ ¼λ) → mavi-mor yansıma
+# ---- Görünüm revizyonu R2: yeni malzemeler (spec'te yoksa eklenir) ----------------------------------
+LOOK_NEW: dict[str, dict] = {
+    "UM_Liner": {"ral": None, "name_tr": "kuyu ve kapak iç astarı (saten açık gri)", "hex": "#C9CCC6",
+                 "roughness": 0.55, "metallic": 0.0},
+    "UM_Seal": {"ral": None, "name_tr": "kapak kenarı ve conta (koyu mat)", "hex": "#24272A",
+                "roughness": 0.60, "metallic": 0.0},
+    "UM_Bezel": {"ral": None, "name_tr": "taret pencere çerçevesi (siyah eloksal)", "hex": "#1A1C1E",
+                 "roughness": 0.40, "metallic": 0.5},
+    "UM_Exhaust": {"ral": None, "name_tr": "susturucu (paslanmaz çelik, ısı tonu)", "hex": "#8A8D90",
+                   "roughness": 0.35, "metallic": 1.0, "heat_tint": ["#6A4A2E", "#3B4F7A"]},
+}
+# ---- Görünüm revizyonu R2: spec'te eski değer (``was``) duruyorsa yerine geçen değerler ------------------
+LOOK_REV: dict[str, dict] = {
+    "UM_Orange": {"was": "#FF2301", "ral": "RAL 2004", "hex": "#E75B12", "roughness": 0.50, "metallic": 0.0,
+                  "name_tr": "saf turuncu (floresan değil): pala uçları, pervane düzlemi uyarı bandı"},
+    "UM_Prop": {"was": "#B98B5E", "hex": "#151618", "roughness": 0.45, "metallic": 0.0,
+                "name_tr": "kayın pervane, mat siyah boyalı (uçlar turuncu)"},
+    "UM_Spinner": {"was": "#C9CCCF", "hex": "#3C4146", "roughness": 0.32, "metallic": 0.0,
+                   "name_tr": "boyalı alüminyum spinner (saten antrasit)"},
+    "UM_Nozzle": {"was": "#383E42", "ral": None, "hex": "#2C2E30", "roughness": 0.60, "metallic": 0.0,
+                  "name_tr": "lüle halkası, boyasız PA-CF (soğutma havası çıkışı, ısı tonu yok)"},
+    "UM_TurretBody": {"was": "#141516", "hex": "#2A2D30", "roughness": 0.45, "metallic": 0.0,
+                      "name_tr": "kamera topu ve yaw gövdesi (saten koyu gri)"},
+}
+# ---- Taktik boya şeması: (spec'teki eski değer ya da None, yeni değer) — spec güncellenmişse spec geçerli ----
+TAKTIK: dict[str, tuple[str | None, str]] = {
+    "UM_SkinTop": ("#82898E", "#4A5055"), "UM_SkinBottom": ("#CBD0CC", "#6F777C"),
+    "UM_Accent": (None, "#2A2E32"), "UM_Antenna": (None, "#2A2E32"), "UM_Turquoise": ("#3F5A5E", "#4E5B60"),
+    "UM_Spinner": (None, "#3A3F44"), "UM_StatusLED": ("#2E8C93", "#2E8C93"),
+}
+TAKTIK_DECAL = "#8C9499"                  # taktik işaret rengi: zeminden açık gri
+DECAL_MIX = {"standart": 0.42, "taktik": 1.0}      # yazı → hedef renk oranı
+EO_TINT = "#08090A"                      # EO penceresi: çok koyu, nötr cam (camgöbeği ton yok)
+EO_AR_NM = 105.0                         # MgF₂ AR filmi (λ₀ ≈ 580 nm) → soluk mor/yeşil artık yansıma
+IR_TINT = "#2A2C30"                      # germanyum penceresi
+IR_FILM_NM = 270.0                       # DLC/AR filmi → altın/mor ışıltı
+
+# Yuva eşlemesi (``assign_look_slots``): bu nesnelerde UM_Orange KALIR (uyarı rolü)
+WARNING_KEEP = ("U_Prop", "U_Decal_PropBand_", "U_Stand_")
+SLOT_SWAPS = {                            # nesne adı (ön ek) → {eski malzeme: yeni malzeme}
+    "U_Turret_Window": {"UM_Turquoise": "UM_Bezel"},
+    "U_Turret_Mount": {"UM_Accent": "UM_SkinBottom"},
+    "U_Exhaust_Muffler": {"UM_Nozzle": "UM_Exhaust"},
+}
+SEAL_DOT = 0.6                            # kapak yüzü: |n · n_dış| < bu → kenar (conta)
+
+# Panel çizgileri (varsayım; oluk spec ``print.joint_groove_mm`` 0,4 mm — render'da biraz geniş tutulur)
+PANEL_HALF_W = 0.0005                     # çizgi yarı genişliği (m)
+PANEL_FALLOFF = 0.0004                    # kenar geçişi (m)
+PANEL_DARK = 0.45                         # çizgi ortasında koyulaşma ağırlığı (MULTIPLY → ≈ %29 koyu)
+PANEL_DARK_COLOR = (0.355, 0.36, 0.37)
+PANEL_BUMP = (0.6, 0.0003)                # oluk tümseği (güç, mesafe)
+PANEL_OBJECTS = {"U_Fuselage": 1, "U_Cowl": 1, "U_WingCenter_L": 2, "U_WingCenter_R": 2, "U_WingOuter_L": 2,
+                 "U_WingOuter_R": 2, "U_Tip_L": 2, "U_Tip_R": 2, "U_Stab": 3, "U_Fin_L": 4, "U_Fin_R": 4}
+SERVO_HATCH = (0.046, 0.030, 0.004)       # servis kapağı (açıklık yönü, veter yönü, köşe yarıçapı) m
+SERVO_HATCH_X_C = 0.465                   # kapak merkezi veter oranı (ana kiriş %28 ile arka kiriş %65 arası)
+FASTENER = (0.004, 0.0010)                # vida başı: köşeden içeri, yarıçap (m)
 
 FONT_CANDIDATES = (
     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
@@ -212,23 +297,189 @@ class _Tree:
 
 
 # =====================================================================================================
+# Panel çizgileri (düğüm grubu)
+# =====================================================================================================
+PANEL_GROUP = "UCAV_PanelLines"
+
+
+def panel_stations() -> dict[str, list[float]]:
+    """Panel çizgisi düzlemleri ``params.print_cuts()``'tan (baskı segment ekleri = fiziksel V-oluklar): gövde ``s``
+    (burun ucu ve kuyruk ucu hariç), kanat ``|y|`` (kök bloğu iç ucu ve uç kapağının dış ucu hariç), stabilize
+    ``|y|`` (orta ek ve uç hariç), dikey ``h`` (kök ve uç hariç)."""
+    c = P.print_cuts()
+    fus = [float(v) for v in c["fuselage_s"][1:-1]]
+    wing = sorted({round(float(v), 6) for v in c["root_block_y"][1:] + c["wing_panel_y"][:-1]})
+    return {"fuselage_s": fus, "wing_y": wing, "stab_y": [float(v) for v in c["stab_y"][1:-1]],
+            "fin_h": [float(v) for v in c["fin_h"][1:-1]]}
+
+
+def _servo_stations() -> dict[str, float]:
+    try:
+        from .printprep import SERVO_STATIONS                 # gerçek servo yuvaları (baskı modülü)
+        return dict(SERVO_STATIONS)
+    except Exception:                                         # pragma: no cover — baskı modülü yoksa
+        return {"Aileron": 1.30, "FlapOut": 0.68, "Elevator": 0.17}
+
+
+def access_panels() -> list[dict]:
+    """Servis kapakları (plan koordinatı, Blender X ve |Y|): kanat altı (dış flap ve kanatçık servoları) ve
+    stabilize altı (irtifa servosu). Her biri: aile (2 kanat, 3 stabilize), merkez, yarı boyutlar, köşe yarıçapı."""
+    ss = _servo_stations()
+    hx, hy, r = SERVO_HATCH
+    out = []
+    for key in ("FlapOut", "Aileron"):
+        if key in ss:
+            y = float(ss[key])
+            st = P.wing_station(y)
+            s_c = st.le_s + SERVO_HATCH_X_C * (st.te_s - st.le_s)
+            out.append({"name": key, "panel": 2, "x": -s_c, "y": y, "hs": 0.5 * hy, "hy": 0.5 * hx, "r": r})
+    if "Elevator" in ss:
+        y = float(ss["Elevator"])
+        st = P.stab_station(y)
+        s_c = st.le_s + 0.36 * st.chord
+        hs = min(0.5 * hy, 0.16 * st.chord)
+        out.append({"name": "Elevator", "panel": 3, "x": -s_c, "y": y, "hs": hs, "hy": 0.5 * hx, "r": r})
+    return out
+
+
+def _dist_to_stations(T, coord, stations, x: float, y: float):
+    """min_k |coord − v_k| (düğümlerle)."""
+    out = None
+    for k, v in enumerate(stations):
+        d = T.math("ABSOLUTE", T.math("SUBTRACT", coord, float(v), x=x, y=y - 60 * k), x=x + 160, y=y - 60 * k)
+        out = d if out is None else T.math("MINIMUM", out, d, x=x + 320, y=y - 60 * k)
+    return out
+
+
+def _groove(T, d, x: float, y: float, half: float = PANEL_HALF_W):
+    """Uzaklık → oluk maskesi (çizgi ortasında 1, ``half`` + geçişten sonra 0)."""
+    return T.map_range(d, 1.0, 0.0, half, half + PANEL_FALLOFF, x=x, y=y)
+
+
+def _rounded_box(T, X, AY, hp: dict, x: float, y: float):
+    """Yuvarlatılmış dikdörtgen kenar çizgisi + köşelerde vida başları (plan koordinatında maske)."""
+    px = T.math("ABSOLUTE", T.math("SUBTRACT", X, hp["x"], x=x, y=y), x=x + 150, y=y)
+    py = T.math("ABSOLUTE", T.math("SUBTRACT", AY, hp["y"], x=x, y=y - 80), x=x + 150, y=y - 80)
+    r = hp["r"]
+    qx = T.math("SUBTRACT", px, hp["hs"] - r, x=x + 300, y=y)
+    qy = T.math("SUBTRACT", py, hp["hy"] - r, x=x + 300, y=y - 80)
+    v = T.node("ShaderNodeCombineXYZ", x + 450, y - 40)
+    T.link(T.math("MAXIMUM", qx, 0.0, x=x + 380, y=y + 60), v.inputs["X"])
+    T.link(T.math("MAXIMUM", qy, 0.0, x=x + 380, y=y - 140), v.inputs["Y"])
+    ln = T.node("ShaderNodeVectorMath", x + 600, y - 40, operation="LENGTH")
+    T.link(v.outputs[0], ln.inputs[0])
+    inside = T.math("MINIMUM", T.math("MAXIMUM", qx, qy, x=x + 450, y=y - 200), 0.0, x=x + 600, y=y - 200)
+    sd = T.math("SUBTRACT", T.math("ADD", ln.outputs["Value"], inside, x=x + 750, y=y - 100), r, x=x + 900, y=y - 100)
+    edge = _groove(T, T.math("ABSOLUTE", sd, None, x=x + 1050, y=y - 100), x + 1200, y - 100)
+    inset, fr = FASTENER
+    cv = T.node("ShaderNodeCombineXYZ", x + 450, y - 300)
+    T.link(T.math("SUBTRACT", px, hp["hs"] - inset, x=x + 300, y=y - 260), cv.inputs["X"])
+    T.link(T.math("SUBTRACT", py, hp["hy"] - inset, x=x + 300, y=y - 340), cv.inputs["Y"])
+    cl = T.node("ShaderNodeVectorMath", x + 600, y - 300, operation="LENGTH")
+    T.link(cv.outputs[0], cl.inputs[0])
+    dot = T.map_range(cl.outputs["Value"], 0.85, 0.0, fr * 0.7, fr, x=x + 1050, y=y - 300)
+    return T.math("MAXIMUM", edge, dot, x=x + 1350, y=y - 150)
+
+
+def panel_group(force: bool = False) -> bpy.types.NodeTree:
+    """``UCAV_PanelLines`` düğüm grubu → çıkış ``Mask`` (0…1). Nesne koordinatı = spec koordinatı (statik deri
+    parçaları ``U_Root`` altında birim dönüşümlüdür: Blender X = −s, Y = y, Z = z); aile nesne özelliği
+    ``ucav_panel``'dan seçilir (yoksa 0 → çizgi yok). Düzlemler değişmediyse var olan grup döner; yeniden kurulumda
+    arayüz soketi korunur (grubu kullanan malzemelerin bağlantıları kopmaz)."""
+    st = panel_stations()
+    hatches = access_panels()
+    sig = repr((st, hatches, PANEL_HALF_W, PANEL_FALLOFF, FASTENER))
+    ng = bpy.data.node_groups.get(PANEL_GROUP)
+    if ng is not None and not force and ng.get("ucav_sig") == sig and ng.nodes.get("UCAV_Out") is not None:
+        return ng
+    if ng is None:
+        ng = bpy.data.node_groups.new(PANEL_GROUP, "ShaderNodeTree")
+    if not any(it.item_type == "SOCKET" and it.in_out == "OUTPUT" and it.name == "Mask" for it in ng.interface.items_tree):
+        ng.interface.new_socket("Mask", in_out="OUTPUT", socket_type="NodeSocketFloat")
+    T = _Tree(ng)
+    tc = T.node("ShaderNodeTexCoord", -2600, 0)
+    sep = T.node("ShaderNodeSeparateXYZ", -2400, 0)
+    T.link(tc.outputs["Object"], sep.inputs[0])
+    nsep = T.node("ShaderNodeSeparateXYZ", -2400, -400)
+    T.link(tc.outputs["Normal"], nsep.inputs[0])
+    X, Y, Z = sep.outputs["X"], sep.outputs["Y"], sep.outputs["Z"]
+    s_c = T.math("MULTIPLY", X, -1.0, x=-2200, y=200)
+    ay = T.math("ABSOLUTE", Y, None, x=-2200, y=0)
+    att = T.node("ShaderNodeAttribute", -2400, 600, attribute_type="OBJECT", attribute_name=PANEL_PROP)
+
+    def sel(k: int, yy: float):
+        o = T.math("COMPARE", att.outputs["Fac"], float(k), x=-600, y=yy)
+        o.node.inputs[2].default_value = 0.25
+        return o
+
+    lower = T.math("LESS_THAN", nsep.outputs["Z"], -0.3, x=-2200, y=-400)
+    # gövde: istasyon düzlemleri (yakıt kapağı, statik portlar vb. gövde modülünün ``U_Stencil_*`` nesneleridir)
+    m1 = _groove(T, _dist_to_stations(T, s_c, st["fuselage_s"], -2000, 1600), -1200, 1600)
+    # kanat ve stabilize: |y| düzlemleri + alt yüzde servis kapakları
+    m2 = _groove(T, _dist_to_stations(T, ay, st["wing_y"], -2000, 1000), -1200, 1000)
+    m3 = _groove(T, _dist_to_stations(T, ay, st["stab_y"], -2000, 300), -1200, 300) if st["stab_y"] else None
+    yy = -1000
+    for hp in hatches:
+        hm = T.math("MULTIPLY", _rounded_box(T, X, ay, hp, -3000, yy), lower, x=-1100, y=yy)
+        if hp["panel"] == 2:
+            m2 = T.math("MAXIMUM", m2, hm, x=-900, y=yy)
+        elif m3 is not None:
+            m3 = T.math("MAXIMUM", m3, hm, x=-900, y=yy)
+        else:
+            m3 = hm
+        yy -= 500
+    # dikey: h = (|y| − y_kök)·sin(eğim) + (z − z_kök)·cos(eğim)
+    fn = P.SPEC["tail"]["fin"]
+    cant = math.radians(float(fn["cant_deg"]))
+    h = T.math("ADD", T.math("MULTIPLY", T.math("SUBTRACT", ay, float(fn["y_root_m"]), x=-2100, y=-200), math.sin(cant),
+                             x=-1950, y=-200),
+               T.math("MULTIPLY", T.math("SUBTRACT", Z, float(fn["z_root_m"]), x=-2100, y=-300), math.cos(cant),
+                      x=-1950, y=-300), x=-1800, y=-250)
+    m4 = _groove(T, _dist_to_stations(T, h, st["fin_h"], -1650, -250), -1200, -250) if st["fin_h"] else None
+    total = None
+    for k, m, yy in ((1, m1, 1600), (2, m2, 1000), (3, m3, 300), (4, m4, -250)):
+        if m is None:
+            continue
+        t = T.math("MULTIPLY", m, sel(k, yy), x=-400, y=yy)
+        total = t if total is None else T.math("MAXIMUM", total, t, x=-200, y=yy)
+    go = T.node("NodeGroupOutput", 100, 0)
+    go.name = "UCAV_Out"
+    T.link(total, go.inputs["Mask"])
+    ng["ucav_sig"] = sig
+    return ng
+
+
+# =====================================================================================================
 # Malzeme tarifleri
 # =====================================================================================================
 def _paint(T: _Tree, color, rough: float, *, coat: float = PAINT_COAT, coat_rough: float = PAINT_COAT_ROUGH,
-           glow: float = 0.0, decal_mix=None, metallic: float = 0.0):
-    """Saten boya: ton + pürüzlülük dalgalanması, ince vernik, portakal kabuğu tümseği."""
+           glow: float = 0.0, decal_mix=None, metallic: float = 0.0, panels: bool = False, tone: bool = True):
+    """Saten boya: ton + pürüzlülük dalgalanması, ince vernik, portakal kabuğu tümseği; ``panels`` → panel çizgileri."""
     tc = T.coords()
     obj = tc.outputs["Object"]
-    n_tone = T.noise(obj, 2.2, 3.0, 0.55, y=300)
-    base = T.mix_rgb(n_tone.outputs["Fac"], _scale(color, 1.0 - PAINT_TONE_VAR), _scale(color, 1.0 + PAINT_TONE_VAR),
-                     y=300)
-    if decal_mix is not None:                       # işaret nesneleri: yüzey rengine doğru aç (düşük kontrast)
+    if tone:
+        n_tone = T.noise(obj, 2.2, 3.0, 0.55, y=300)
+        base = T.mix_rgb(n_tone.outputs["Fac"], _scale(color, 1.0 - PAINT_TONE_VAR),
+                         _scale(color, 1.0 + PAINT_TONE_VAR), y=300)
+    else:
+        base = T.mix_rgb(0.0, color, color, y=300)
+    if decal_mix is not None:                       # işaret nesneleri: hedef renge doğru aç
         at = T.node("ShaderNodeAttribute", -800, 600, attribute_type="OBJECT", attribute_name=DECAL_MIX_PROP)
         base = T.mix_rgb(at.outputs["Fac"], base, decal_mix, x=-300, y=400)
     n_r = T.noise(obj, 7.0, 2.0, 0.5, y=0)
     rgh = T.map_range(n_r.outputs["Fac"], rough - PAINT_ROUGH_VAR, rough + PAINT_ROUGH_VAR, 0.3, 0.7, y=0)
     n_peel = T.noise(obj, 420.0, 1.0, 0.4, y=-500)
     nrm = T.bump(n_peel.outputs["Fac"], 0.035, 0.0002)
+    if panels:
+        g = T.node("ShaderNodeGroup", -900, 800, label="Panel çizgileri")
+        g.node_tree = panel_group()
+        mask = g.outputs["Mask"]
+        base = T.mix_rgb(T.math("MULTIPLY", mask, PANEL_DARK, x=-650, y=800), base, PANEL_DARK_COLOR, x=-200, y=600,
+                         blend="MULTIPLY")
+        b2 = T.node("ShaderNodeBump", -200, -700, ins={"Strength": PANEL_BUMP[0], "Distance": PANEL_BUMP[1]})
+        T.link(T.math("MULTIPLY", mask, -1.0, x=-650, y=-700), b2.inputs["Height"])
+        T.link(nrm, b2.inputs["Normal"])
+        nrm = b2.outputs["Normal"]
     ins = dict(Base_Color=base, Roughness=rgh, Metallic=metallic, Coat_Weight=coat, Coat_Roughness=coat_rough,
                Coat_IOR=1.5, Normal=nrm, Coat_Normal=nrm)
     if glow > 0:
@@ -258,6 +509,7 @@ def _smoke(T: _Tree, spec, color):
 
 
 def _pacf(T: _Tree, spec, color):
+    """Boyasız PA-CF: mat, ince baskı dokusu (tümsek), hafif "sheen"."""
     tc = T.coords()
     obj = tc.outputs["Object"]
     n1 = T.noise(obj, 900.0, 2.0, 0.6, y=-400)
@@ -269,73 +521,36 @@ def _pacf(T: _Tree, spec, color):
     T.output(bsdf.outputs[0])
 
 
-def _nozzle(T: _Tree, spec, color):
-    """Isı tonu: pervane ekseninden radyal uzaklık (iç kenar sıcak) + gürültü → antrasit / bronz / mavi."""
-    ring = P.SPEC["propulsion"]["exhaust_ring"]
-    r_in, r_out = 0.5 * float(ring["id_m"]), 0.5 * float(ring["od_m"])
-    hub = Vector(P.PROP.hub_b)
-    ax = Vector(P.PROP.axis_aft_b).normalized()
+def _exhaust(T: _Tree, spec, color):
+    """Paslanmaz çelik susturucu: düşük frekanslı gürültüyle bronz/mavi ısı tonu lekeleri (spec ``heat_tint``),
+    ince fırçalama pürüzlülüğü."""
     tc = T.coords()
-    obj = tc.outputs["Object"]                                      # lüle nesnelerinin orijini dünya (0,0,0)
-    d = T.node("ShaderNodeVectorMath", -1150, 200, operation="SUBTRACT")
-    T.link(obj, d.inputs[0])
-    d.inputs[1].default_value = hub
-    cr = T.node("ShaderNodeVectorMath", -950, 200, operation="CROSS_PRODUCT")
-    T.link(d.outputs[0], cr.inputs[0])
-    cr.inputs[1].default_value = ax
-    ln = T.node("ShaderNodeVectorMath", -750, 200, operation="LENGTH")
-    T.link(cr.outputs[0], ln.inputs[0])
-    radial = T.map_range(ln.outputs["Value"], 1.0, 0.0, r_in, r_out + 0.25 * (r_out - r_in), y=200)
-    nz = T.noise(obj, 160.0, 3.0, 0.6, y=-100)
-    f = T.math("MULTIPLY", radial, T.map_range(nz.outputs["Fac"], 0.55, 1.15, 0.3, 0.7, y=-100), x=-450, y=100,
-               clamp=True)
-    ramp = T.node("ShaderNodeValToRGB", -250, 100)
+    obj = tc.outputs["Object"]
+    nz = T.noise(obj, 38.0, 3.0, 0.6, y=200)
+    f = T.map_range(nz.outputs["Fac"], 0.0, 1.0, 0.42, 0.68, y=200)
+    ramp = T.node("ShaderNodeValToRGB", -500, 200)
     tints = [hex_to_linear(h) for h in spec.extra.get("heat_tint", ["#6A4A2E", "#3B4F7A"])]
     els = ramp.color_ramp.elements
     els[0].position, els[0].color = 0.0, _rgba(color)
-    els[1].position, els[1].color = 0.45, _rgba(tints[0])
-    e = els.new(0.85)
+    els[1].position, els[1].color = 0.55, _rgba(tuple(0.5 * (a + b) for a, b in zip(color, tints[0])))
+    e = els.new(0.82)
+    e.color = _rgba(tints[0])
+    e = els.new(1.0)
     e.color = _rgba(tints[1] if len(tints) > 1 else tints[0])
     T.link(f, ramp.inputs["Fac"])
-    bsdf = T.principled(Base_Color=ramp.outputs["Color"], Metallic=spec.metallic, Roughness=spec.roughness)
+    n2 = T.noise(obj, 160.0, 2.0, 0.5, y=-200)
+    rgh = T.map_range(n2.outputs["Fac"], spec.roughness - 0.05, spec.roughness + 0.08, 0.3, 0.7, y=-200)
+    bsdf = T.principled(Base_Color=ramp.outputs["Color"], Metallic=spec.metallic, Roughness=rgh, Anisotropic=0.3)
     T.output(bsdf.outputs[0])
 
 
-def _prop_wood(T: _Tree, spec, color):
-    """Vernikli kayın: pala (yerel Z) boyunca düz damar; damar şeritleri veter (Y) yönünde değişir."""
-    tc = T.coords()
-    obj = tc.outputs["Object"]
-    mp = T.node("ShaderNodeMapping", -1200, 0, ins={"Scale": (1.0, 1.0, 0.08)})
-    T.link(obj, mp.inputs["Vector"])
-    wave = T.node("ShaderNodeTexWave", -950, 0, wave_type="BANDS", bands_direction="Y", wave_profile="SIN",
-                  ins={"Scale": 160.0, "Distortion": 6.0, "Detail": 3.0, "Detail Scale": 1.5})
-    T.link(mp.outputs["Vector"], wave.inputs["Vector"])
-    nz = T.noise(obj, 60.0, 4.0, 0.6, y=-300)
-    f = T.math("MULTIPLY", wave.outputs["Fac"], T.map_range(nz.outputs["Fac"], 0.6, 1.2, 0.3, 0.7, y=-300),
-               x=-700, y=-100, clamp=True)
-    light = _scale(color, 1.08)
-    dark = tuple(np.asarray(color) * np.array([0.72, 0.62, 0.55]))
-    base = T.mix_rgb(f, light, dark, x=-450, y=0)
-    nrm = T.bump(wave.outputs["Fac"], 0.04, 0.0001)
-    bsdf = T.principled(Base_Color=base, Roughness=0.42, Coat_Weight=1.0, Coat_Roughness=max(0.04, spec.roughness / 4),
-                        Coat_IOR=1.52, Coat_Tint=(1.0, 0.93, 0.80), Normal=nrm)
-    T.output(bsdf.outputs[0])
-
-
-def _spun_metal(T: _Tree, spec, color, axis: str = "X"):
-    """Parlak alüminyum, torna izi: yerel eksen etrafında radyal teğetli anizotropi."""
-    tg = T.node("ShaderNodeTangent", -400, -300, direction_type="RADIAL", axis=axis)
-    bsdf = T.principled(Base_Color=color, Metallic=spec.metallic, Roughness=spec.roughness + 0.04, Anisotropic=0.75,
-                        Tangent=tg.outputs["Tangent"])
-    T.output(bsdf.outputs[0])
-
-
-def _metal(T: _Tree, spec, color, rough: float | None = None, var: float = 0.03, aniso: float = 0.0):
+def _metal(T: _Tree, spec, color, rough: float | None = None, var: float = 0.03, aniso: float = 0.0,
+           metallic: float | None = None):
     tc = T.coords()
     n = T.noise(tc.outputs["Object"], 40.0, 3.0, 0.55)
     r = spec.roughness if rough is None else rough
     rgh = T.map_range(n.outputs["Fac"], max(0.02, r - var), r + var, 0.3, 0.7)
-    ins = dict(Base_Color=color, Metallic=spec.metallic, Roughness=rgh)
+    ins = dict(Base_Color=color, Metallic=spec.metallic if metallic is None else metallic, Roughness=rgh)
     if aniso:
         ins["Anisotropic"] = aniso
     T.output(T.principled(**ins).outputs[0])
@@ -353,23 +568,25 @@ def _rubber(T: _Tree, spec, color):
     T.output(bsdf.outputs[0])
 
 
-def _soft_black(T: _Tree, spec, color):
-    bsdf = T.principled(Base_Color=color, Roughness=spec.roughness, Coat_Weight=0.12, Coat_Roughness=0.35,
-                        Sheen_Weight=0.15, Sheen_Roughness=0.5)
+def _turret(T: _Tree, spec, color):
+    """Taret gövdesi: saten koyu gri boya, ince vernik (form okunur), hafif "sheen"."""
+    bsdf = T.principled(Base_Color=color, Roughness=spec.roughness, Coat_Weight=0.10, Coat_Roughness=0.30,
+                        Sheen_Weight=0.10, Sheen_Roughness=0.5)
     T.output(bsdf.outputs[0])
 
 
 def _sensor_glass(T: _Tree, spec, color):
-    """EO (yerel +Y, iskele) ve IR (yerel −Y, sancak) pencereleri aynı malzemede; ayrım nesne koordinatıyla."""
+    """EO (yerel +Y, iskele) ve IR (yerel −Y, sancak) pencereleri aynı malzemede; ayrım nesne koordinatıyla.
+    İkisi de ışımasızdır: EO çok koyu, vernikli (AR filmi → soluk mor/yeşil), IR germanyum (yarı metalik,
+    ince film → altın/mor ışıltı)."""
     tc = T.coords()
     sep = T.node("ShaderNodeSeparateXYZ", -1100, 0)
     T.link(tc.outputs["Object"], sep.inputs[0])
     is_eo = T.math("GREATER_THAN", sep.outputs["Y"], 0.0, x=-900, y=0)
-    ir = T.principled(-300, -350, Base_Color=(0.20, 0.205, 0.215), Metallic=0.8, Roughness=0.035,
-                      Thin_Film_Thickness=270.0, Thin_Film_IOR=2.0)
-    eo_tint = tuple(0.5 * float(c) + 0.5 * b for c, b in zip(color, EO_BLUE))         # koyu lacivert cam
-    eo = T.principled(-300, 350, Base_Color=eo_tint, Roughness=max(0.015, spec.roughness), IOR=spec.ior,
-                      Specular_IOR_Level=0.6, Thin_Film_Thickness=EO_AR_NM, Thin_Film_IOR=1.38)
+    ir = T.principled(-300, -350, Base_Color=hex_to_linear(IR_TINT), Metallic=0.3, Roughness=0.08,
+                      Thin_Film_Thickness=IR_FILM_NM, Thin_Film_IOR=2.0)
+    eo = T.principled(-300, 350, Base_Color=hex_to_linear(EO_TINT), Roughness=max(0.02, spec.roughness), IOR=spec.ior,
+                      Coat_Weight=0.6, Coat_Roughness=0.02, Thin_Film_Thickness=EO_AR_NM, Thin_Film_IOR=1.38)
     mix = T.node("ShaderNodeMixShader", 100, 0)
     T.link(is_eo, mix.inputs["Fac"])
     T.link(ir.outputs[0], mix.inputs[1])
@@ -393,25 +610,136 @@ def _carbon(T: _Tree, spec, color):
 
 
 def _light_lens(T: _Tree, spec, color):
-    """Işık lensi: parlak kubbe + ışıma (spec şiddeti × nesne ``ucav_emission``)."""
+    """Işık lensi: parlak kubbe + ışıma (spec şiddeti × nesne ``ucav_emission``; durum LED'inde × kapı)."""
     at = T.node("ShaderNodeAttribute", -700, -300, attribute_type="OBJECT", attribute_name=EMISSION_PROP)
     strength = T.math("MULTIPLY", at.outputs["Fac"], float(spec.emission), x=-450, y=-300)
-    lens = tuple(0.35 + 0.45 * float(c) for c in color) if spec.name == "UM_Strobe" else _scale(color, 0.55)
+    if spec.name == "UM_StatusLED":
+        gate = T.node("ShaderNodeAttribute", -700, -500, attribute_type="OBJECT", attribute_name=STATUS_GATE_PROP)
+        strength = T.math("MULTIPLY", strength, gate.outputs["Fac"], x=-300, y=-400)
+        lens = hex_to_linear(LOOK_NEW["UM_Seal"]["hex"])              # sönükken koyu conta gibi
+    elif spec.name == "UM_Strobe":
+        lens = tuple(0.35 + 0.45 * float(c) for c in color)
+    else:
+        lens = _scale(color, 0.55)
     bsdf = T.principled(Base_Color=lens, Roughness=0.12, Coat_Weight=1.0, Coat_Roughness=0.03,
                         Emission_Color=color, Emission_Strength=strength)
     T.output(bsdf.outputs[0])
 
 
-def _recipe(name: str):
+RECIPES = {
+    "UM_SkinTop": "paint_panels", "UM_SkinBottom": "paint_panels", "UM_Accent": "paint_decal",
+    "UM_Turquoise": "gloss", "UM_Antenna": "paint", "UM_Orange": "warning", "UM_SmokeHatch": "smoke",
+    "UM_PACF": "pacf", "UM_Nozzle": "pacf", "UM_Prop": "prop", "UM_Spinner": "spinner", "UM_Gear": "anod",
+    "UM_Hub": "metal", "UM_Steel": "chrome", "UM_Engine": "metal", "UM_Tire": "rubber", "UM_TPU": "rubber",
+    "UM_TurretBody": "turret", "UM_SensorGlass": "glass", "UM_Carbon": "carbon", "UM_Liner": "liner",
+    "UM_Seal": "seal", "UM_Bezel": "bezel", "UM_Exhaust": "exhaust", "UM_Erosion": "erosion",
+    "UM_Hazard": "warning",
+    "UM_NavRed": "light", "UM_NavGreen": "light", "UM_Strobe": "light", "UM_StatusLED": "light",
+}
+
+
+def _recipe(name: str) -> str:
     """Ad → tarif. Bilinmeyen ad → genel Principled."""
-    return {
-        "UM_SkinTop": "paint", "UM_SkinBottom": "paint", "UM_Accent": "paint_decal", "UM_Turquoise": "gloss",
-        "UM_Antenna": "paint", "UM_Orange": "orange", "UM_SmokeHatch": "smoke", "UM_PACF": "pacf",
-        "UM_Nozzle": "nozzle", "UM_Prop": "wood", "UM_Spinner": "spun", "UM_Gear": "anod", "UM_Hub": "metal",
-        "UM_Steel": "chrome", "UM_Engine": "metal", "UM_Tire": "rubber", "UM_TPU": "rubber",
-        "UM_TurretBody": "soft_black", "UM_SensorGlass": "glass", "UM_Carbon": "carbon",
-        "UM_NavRed": "light", "UM_NavGreen": "light", "UM_Strobe": "light", "UM_StatusLED": "light",
-    }.get(name, "generic")
+    return RECIPES.get(name, "generic")
+
+
+# =====================================================================================================
+# Görünüm revizyonu: malzeme tanımları ve yuva eşlemesi
+# =====================================================================================================
+def _norm_hex(hx) -> str:
+    return str(hx or "").strip().upper()
+
+
+def _make_spec(name: str, d: dict) -> P.MaterialSpec:
+    extra = {k: v for k, v in d.items() if k not in ("ral", "name_tr", "hex", "roughness", "metallic", "transmission",
+                                                       "ior", "emission", "was")}
+    return P.MaterialSpec(name=name, label=str(d["name_tr"]), ral=d.get("ral"), hex=str(d["hex"]),
+                          rgb_srgb=P.hex_to_rgb(d["hex"]), rgb_linear=P.hex_to_linear(d["hex"]),
+                          roughness=float(d["roughness"]), metallic=float(d["metallic"]),
+                          transmission=float(d.get("transmission", 0.0)), ior=float(d.get("ior", 1.45)),
+                          emission=float(d.get("emission", 0.0)), extra=extra)
+
+
+def look_specs() -> dict[str, str]:
+    """Görünüm revizyonunu ``params.MATERIALS``'a uygular (idempotent): spec'te olmayan ``LOOK_NEW`` adlarını ekler,
+    spec'te hâlâ eski hex'i (``was``) taşıyan ``LOOK_REV`` adlarını yeni değerle değiştirir. Spec güncellenmişse
+    dokunmaz. Döndürür: {ad: "eklendi" | "revize" | "spec"}."""
+    out = {}
+    for name, d in LOOK_NEW.items():
+        if name in P.MATERIALS and not P.MATERIALS[name].extra.get("ucav_look"):
+            out[name] = "spec"
+            continue
+        P.MATERIALS[name] = dataclasses.replace(_make_spec(name, d), extra={**_make_spec(name, d).extra,
+                                                                            "ucav_look": "eklendi"})
+        out[name] = "eklendi"
+    for name, d in LOOK_REV.items():
+        cur = P.MATERIALS.get(name)
+        if cur is None:
+            continue
+        if cur.extra.get("ucav_look") or _norm_hex(cur.hex) == _norm_hex(d["was"]):
+            keep = {k: v for k, v in cur.extra.items() if k not in ("heat_tint",)}
+            sp = _make_spec(name, {"ral": cur.ral, **d})
+            P.MATERIALS[name] = dataclasses.replace(sp, extra={**keep, **sp.extra, "ucav_look": "revize"})
+            out[name] = "revize"
+        else:
+            out[name] = "spec"
+    return out
+
+
+def _door_edge_faces(me: bpy.types.Mesh, inner_idx: int, outer_idx: list[int]) -> list[int]:
+    """Kapak ağında ``inner_idx`` malzemeli yüzlerden kenar (conta) olanlar: en yakın dış yüz normaline dik."""
+    outer = [p for p in me.polygons if p.material_index in outer_idx]
+    if not outer:
+        return []
+    kd = KDTree(len(outer))
+    for i, p in enumerate(outer):
+        kd.insert(p.center, i)
+    kd.balance()
+    edges = []
+    for p in me.polygons:
+        if p.material_index != inner_idx:
+            continue
+        _, j, _ = kd.find(p.center)
+        if abs(p.normal.dot(outer[j].normal)) < SEAL_DOT:
+            edges.append(p.index)
+    return edges
+
+
+def assign_look_slots() -> dict[str, list[str]]:
+    """Yuva eşlemesi (bkz. modül belgesi): ``UM_Orange`` uyarı rolü dışındaki yuvalar → ``UM_Liner``, kapak
+    kenarları → ``UM_Seal``; taret ve susturucu yuvaları ``SLOT_SWAPS``. Rol tablosu zaten yeni adları atıyorsa
+    hiçbir şey değişmez (idempotent). Döndürür: {"liner": [...], "seal": [...], "swap": [...]}."""
+    look_specs()
+    done: dict[str, list[str]] = {"liner": [], "seal": [], "swap": []}
+    liner, seal = U.get_material("UM_Liner"), U.get_material("UM_Seal")
+    for ob in bpy.data.objects:
+        if ob.type != "MESH" or ob.data is None or not ob.name.startswith("U_"):
+            continue
+        me = ob.data
+        names = [m.name if m is not None else None for m in me.materials]
+        for pre, sw in SLOT_SWAPS.items():
+            if ob.name.startswith(pre):
+                for i, n in enumerate(names):
+                    if n in sw:
+                        me.materials[i] = U.get_material(sw[n])
+                        done["swap"].append(f"{ob.name}:{n}→{sw[n]}")
+        if ob.name.startswith(WARNING_KEEP) or "UM_Orange" not in names:
+            continue
+        oi = names.index("UM_Orange")
+        if ob.name.startswith("U_Door_"):
+            outer = [i for i, n in enumerate(names) if n in ("UM_SkinBottom", "UM_SkinTop")]
+            edges = _door_edge_faces(me, oi, outer)
+            if edges:
+                if "UM_Seal" not in names:
+                    me.materials.append(seal)
+                    names.append("UM_Seal")
+                si = names.index("UM_Seal")
+                for fi in edges:
+                    me.polygons[fi].material_index = si
+                done["seal"].append(ob.name)
+        me.materials[oi] = liner
+        done["liner"].append(ob.name)
+    return done
 
 
 # =====================================================================================================
@@ -426,13 +754,25 @@ def _livery_key(livery: str) -> str:
     raise KeyError(f"bilinmeyen boya şeması: {livery!r} (standart | taktik)")
 
 
+def taktik_hex() -> dict[str, str]:
+    """Taktik şema renkleri: spec ``materials.liveries.taktik`` değeri ``TAKTIK``'teki eski değerden farklıysa spec,
+    değilse revizyon değeri."""
+    tk = {k: v for k, v in (P.LIVERIES.get("taktik", {}) or {}).items() if str(k).startswith("UM_")}
+    out = dict(tk)
+    for name, (old, new) in TAKTIK.items():
+        cur = tk.get(name)
+        if cur is None or (old is not None and _norm_hex(cur) == _norm_hex(old)):
+            out[name] = new
+    return out
+
+
 def livery_colors(livery: str = "standart") -> dict[str, tuple[float, float, float]]:
-    """Boya şemasına göre her ``UM_*`` için doğrusal RGB."""
+    """Boya şemasına göre her ``UM_*`` için doğrusal RGB (görünüm revizyonu dahil)."""
+    look_specs()
     key = _livery_key(livery)
     out = {n: tuple(s.rgb_linear) for n, s in P.MATERIALS.items()}
     if key == "taktik":
-        tk = P.LIVERIES.get("taktik", {}) or {}
-        for n, hx in {**TAKTIK_EXTRA, **{k: v for k, v in tk.items() if k.startswith("UM_")}}.items():
+        for n, hx in taktik_hex().items():
             if n in out:
                 out[n] = hex_to_linear(hx)
     return out
@@ -444,53 +784,66 @@ LIVERIES = ("standart", "taktik")
 # =====================================================================================================
 # Kurulum
 # =====================================================================================================
-def decal_target_color(colors: dict) -> tuple[float, float, float]:
-    """Düşük kontrastlı yazı rengi hedefi: antrasitten üst yüzey rengine doğru %62 (orta gri)."""
+def decal_target_color(colors: dict, livery: str = "standart") -> tuple[float, float, float]:
+    """Yazı rengi hedefi. Standart: antrasitten üst yüzey rengine doğru %62 (orta gri; ``DECAL_MIX`` 0,42 ile
+    düşük kontrast). Taktik: zeminden açık gri ``TAKTIK_DECAL`` (düşük görünürlüklü açık işaret)."""
+    if _livery_key(livery) == "taktik":
+        return hex_to_linear(TAKTIK_DECAL)
     top = np.asarray(colors["UM_SkinTop"], float)
     acc = np.asarray(colors["UM_Accent"], float)
     return tuple(acc + 0.62 * (top - acc))
 
 
-def build_material(name: str, color=None, decal_target=None) -> bpy.types.Material:
+def build_material(name: str, color=None, decal_target=None, livery: str = "standart") -> bpy.types.Material:
     """Tek bir ``UM_*`` malzemesini (veri bloğu varsa onu) kurar ve döndürür. ``decal_target``: yalnız
     ``UM_Accent`` için işaret nesnelerinin açılacağı renk (None → standart boya şemasından)."""
+    look_specs()
     spec = P.MATERIALS[name]
     color = tuple(color if color is not None else spec.rgb_linear)
+    taktik = _livery_key(livery) == "taktik"
     mat = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     mat.use_nodes = True
     if mat.node_tree.animation_data is not None:      # eski düğümlere bağlı sürücüler (yer tutucudan kalma)
         mat.node_tree.animation_data_clear()
     T = _Tree(mat.node_tree)
     kind = _recipe(name)
-    if kind == "paint":
-        _paint(T, color, spec.roughness)
-    elif kind == "paint_decal":
-        _paint(T, color, spec.roughness,
-               decal_mix=decal_target or decal_target_color(livery_colors("standart")))
+    paint_r = TAKTIK_PAINT["roughness"] if taktik else spec.roughness
+    if kind in ("paint", "paint_panels", "paint_decal"):
+        coat = TAKTIK_PAINT["coat"] if taktik else (PAINT_COAT_BOTTOM if name == "UM_SkinBottom" else PAINT_COAT)
+        dm = (decal_target or decal_target_color(livery_colors("standart"))) if kind == "paint_decal" else None
+        _paint(T, color, paint_r, coat=coat, decal_mix=dm, panels=kind != "paint")
     elif kind == "gloss":
         _paint(T, color, min(spec.roughness, 0.32), coat=0.6, coat_rough=0.08)
-    elif kind == "orange":
+    elif kind == "warning":
         _paint(T, color, spec.roughness, glow=ORANGE_GLOW)
+    elif kind == "liner":
+        _paint(T, color, spec.roughness, coat=0.15, coat_rough=0.3)
+    elif kind == "erosion":                          # hücum kenarı aşınma şeridi: daha parlak, sert boya/film
+        _paint(T, color, spec.roughness, coat=0.5, coat_rough=0.15)
+    elif kind == "seal":
+        _paint(T, color, spec.roughness, coat=0.05, coat_rough=0.4, tone=False)
+    elif kind == "prop":
+        _paint(T, color, spec.roughness, coat=0.6, coat_rough=0.2, tone=False)
+    elif kind == "spinner":
+        _paint(T, color, spec.roughness, coat=0.6, coat_rough=0.12, metallic=spec.metallic)
     elif kind == "smoke":
         _smoke(T, spec, color)
     elif kind == "pacf":
         _pacf(T, spec, color)
-    elif kind == "nozzle":
-        _nozzle(T, spec, color)
-    elif kind == "wood":
-        _prop_wood(T, spec, color)
-    elif kind == "spun":
-        _spun_metal(T, spec, color)
+    elif kind == "exhaust":
+        _exhaust(T, spec, color)
     elif kind == "anod":
         _metal(T, spec, color, aniso=0.35)
     elif kind == "chrome":
         _metal(T, spec, color, rough=min(spec.roughness, 0.14), var=0.02)
     elif kind == "metal":
         _metal(T, spec, color)
+    elif kind == "bezel":
+        _metal(T, spec, color, var=0.05)
     elif kind == "rubber":
         _rubber(T, spec, color)
-    elif kind == "soft_black":
-        _soft_black(T, spec, color)
+    elif kind == "turret":
+        _turret(T, spec, color)
     elif kind == "glass":
         _sensor_glass(T, spec, color)
     elif kind == "carbon":
@@ -501,38 +854,76 @@ def build_material(name: str, color=None, decal_target=None) -> bpy.types.Materi
         _generic(T, spec, color)
     # görünüm penceresi (Solid) rengi
     mat.diffuse_color = _rgba(color if kind != "smoke" else _scale(color, 2.0))
-    mat.roughness = float(spec.roughness)
+    mat.roughness = float(paint_r if kind.startswith("paint") else spec.roughness)
     mat.metallic = float(spec.metallic)
     mat["ucav_recipe"] = kind
     return mat
 
 
 def ensure_light_props() -> list[str]:
-    """Işık malzemesi kullanan nesnelerde ``ucav_emission`` yoksa 1,0 yazar (rig sonradan sürer)."""
+    """Işık malzemesi kullanan nesnelerde ``ucav_emission`` yoksa 1,0 yazar (rig sonradan sürer). Durum LED'i
+    nesnelerine ``ucav_status_gate`` yazar: ``U_Root``'ta ``status_led`` özelliği varsa 1 (rig ayrı sürer), yoksa 0."""
+    root = bpy.data.objects.get("U_Root")
+    gate = 1.0 if root is not None and "status_led" in root.keys() else 0.0
     out = []
     for ob in bpy.data.objects:
         if ob.type != "MESH" or ob.data is None:
             continue
-        if any(m is not None and m.name in LIGHT_MATERIALS for m in ob.data.materials):
+        names = [m.name for m in ob.data.materials if m is not None]
+        if any(n in LIGHT_MATERIALS for n in names):
             if EMISSION_PROP not in ob.keys():
                 ob[EMISSION_PROP] = 1.0
                 ob.id_properties_ui(EMISSION_PROP).update(min=0.0, max=1.0,
                                                           description="Işık şiddeti çarpanı (rig sürer)")
+            if "UM_StatusLED" in names:
+                ob[STATUS_GATE_PROP] = gate
+                ob.id_properties_ui(STATUS_GATE_PROP).update(
+                    min=0.0, max=1.0, description="Taret durum LED'i kapısı: 0 = sönük (nav_lights'a bağlı değil)")
             out.append(ob.name)
+    return out
+
+
+def tag_stencils(livery: str = "standart") -> list[str]:
+    """Gövde modülünün ``U_Stencil_*`` şablonlarından ``UM_Accent`` kullananlara yazı kontrastı (``ucav_decal_mix``)
+    yazar: standartta düşük kontrastlı gri, taktikte zeminden açık gri."""
+    key = _livery_key(livery)
+    out = []
+    for ob in bpy.data.objects:
+        if ob.type == "MESH" and ob.name.startswith("U_Stencil_") and ob.data is not None and \
+                any(m is not None and m.name == "UM_Accent" for m in ob.data.materials):
+            ob[DECAL_MIX_PROP] = float(DECAL_MIX[key])
+            out.append(ob.name)
+    return out
+
+
+def tag_panels() -> list[str]:
+    """Panel çizgisi ailesini (``ucav_panel``) statik deri nesnelerine yazar (bkz. ``PANEL_OBJECTS``)."""
+    out = []
+    for name, k in PANEL_OBJECTS.items():
+        ob = bpy.data.objects.get(name)
+        if ob is not None:
+            ob[PANEL_PROP] = float(k)
+            out.append(name)
     return out
 
 
 def build(livery: str = "standart", *, decals: bool = True, scene: bpy.types.Scene | None = None) -> dict:
     """Bütün ``UM_*`` malzemelerini ``livery`` boya şemasıyla kurar; ``decals`` True ise işaretleri ekler.
     Tekrar çağrılabilir (ör. ``build("taktik")`` yalnız renkleri ve işaret kontrastını değiştirir).
-    Döndürür: {"livery", "materials", "lights", "decals", "missing"} — ``missing``: sahnede malzemesi olmayan
-    ya da ``UM_*`` dışı yuva taşıyan ağ nesneleri (boş olmalı)."""
+    Döndürür: {"livery", "materials", "lights", "decals", "missing", "look", "slots", "panels", "stencils"} —
+    ``missing``:
+    sahnede malzemesi olmayan ya da ``UM_*`` dışı yuva taşıyan ağ nesneleri (boş olmalı)."""
     scene = scene or bpy.context.scene
     key = _livery_key(livery)
+    look = look_specs()
+    slots = assign_look_slots()
     cols = livery_colors(key)
-    target = decal_target_color(cols)
-    built = [build_material(n, cols[n], target).name for n in P.MATERIALS]
+    target = decal_target_color(cols, key)
+    panel_group(force=True)                          # bir kez; malzemeler aynı grubu paylaşır
+    built = [build_material(n, cols[n], target, key).name for n in P.MATERIALS]
     lights = ensure_light_props()
+    panels = tag_panels()
+    stencils = tag_stencils(key)
     dec = build_decals(key, scene) if decals else []
     scene["ucav_livery"] = key
     missing = []
@@ -541,7 +932,8 @@ def build(livery: str = "standart", *, decals: bool = True, scene: bpy.types.Sce
             ms = list(ob.data.materials)
             if not ms or any(m is None or m.name not in P.MATERIALS for m in ms):
                 missing.append(ob.name)
-    return {"livery": key, "materials": built, "lights": lights, "decals": dec, "missing": missing}
+    return {"livery": key, "materials": built, "lights": lights, "decals": dec, "missing": missing, "look": look,
+            "slots": slots, "panels": panels, "stencils": stencils}
 
 
 # =====================================================================================================
@@ -552,13 +944,37 @@ class DecalSpec:
     """Bir işaretin yerleşimi (Blender dünya koordinatı)."""
     name: str
     host: str
-    text: str | None            # None → şerit (bant)
+    text: str | None            # None → şerit (bant) ya da 2B şekil (``shape``)
     material: str
-    height: float               # yazı büyük harf yüksekliği (m)
+    height: float               # yazı büyük harf yüksekliği / şekil ölçeği (m)
     center: tuple               # yaklaşık yüzey noktası
     u: tuple                    # okuma yönü (taban çizgisi)
     n: tuple                    # yüzey dışa normali (izdüşüm yönü −n)
     strip: np.ndarray | None = None     # bant için (k, m, 3) ızgara noktaları (satır: yükseklik, sütun: genişlik)
+    shape: tuple | None = None          # 2B şekil (V (birim: height), F, yüz başına malzeme indisi)
+    materials: tuple = ()               # ek malzeme yuvaları (``shape`` yüz indisleri 1, 2 … bunlara)
+    mix: float | None = None            # ``ucav_decal_mix`` (None → yazı: şema değeri, şerit/şekil: 0)
+
+
+def _disc_mesh(quartered: bool = True, ring: float = 0.10, n: int = 48) -> tuple[np.ndarray, list, list]:
+    """Birim çaplı (yarıçap 0,5) disk: dış halka (kalınlık ``ring``·çap) + iç çeyrekler. ``quartered``: karşılıklı
+    iki çeyrek koyu (indis 0), diğer ikisi açık (indis 1) — ağırlık merkezi işareti; değilse yalnız halka."""
+    r_out, r_in = 0.5, 0.5 - ring
+    th = np.linspace(0.0, 2 * np.pi, n, endpoint=False)
+    V = [(0.0, 0.0)] + [(r_in * math.cos(t), r_in * math.sin(t)) for t in th] + \
+        [(r_out * math.cos(t), r_out * math.sin(t)) for t in th]
+    F, M = [], []
+    for i in range(n):
+        j = (i + 1) % n
+        F.append([1 + i, 1 + n + i, 1 + n + j, 1 + j])                    # halka
+        M.append(0)
+        if quartered:
+            F.append([0, 1 + i, 1 + j])
+            M.append(0 if (i * 4 // n) % 2 == 0 else 1)
+    if not quartered:                                                   # yalnız halka: merkez noktası kullanılmaz
+        V = V[1:]
+        F = [[k - 1 for k in f] for f in F]
+    return np.asarray(V, float), F, M
 
 
 def _font():
@@ -737,10 +1153,31 @@ def decal_specs() -> list[DecalSpec]:
             strip = np.asarray(rows, float)
             out.append(DecalSpec(f"U_Decal_PropBand_{side}", f"U_Fin_{side}", None, "UM_Orange", w,
                                  tuple(strip.mean((0, 1))), (0.0, 0.0, 1.0), tuple(inner), strip))
+    return out + stencil_specs()
+
+
+# Ağırlık merkezi işareti (varsayım: çap). Yazılı şablonlar (ADIM ATMA, YAKIT, PERVANE, STATİK PORT …) gövde
+# modülünün ``U_Stencil_*`` nesneleridir (spec ``details.markings.stencils``); burada yinelenmez.
+CG_MARK_D = 0.018
+
+
+def stencil_specs() -> list[DecalSpec]:
+    """Ağırlık merkezi işareti: gövdenin iki yanında ``params.CG`` (s, z) noktasında Ø18 mm siyah/beyaz çeyrekli disk
+    (koyu çeyrekler + dış halka ``UM_Accent``, açık çeyrekler ``UM_SkinBottom``)."""
+    out: list[DecalSpec] = []
+    cg_s, cg_z = float(P.CG.s), float(P.CG.z)
+    disc = _disc_mesh(quartered=True, ring=0.09)
+    for side in ("L", "R"):
+        sgn = 1.0 if side == "L" else -1.0
+        aft_reading = (-1.0, 0.0, 0.0) if side == "L" else (1.0, 0.0, 0.0)
+        out.append(DecalSpec(f"U_Decal_CG_{side}", "U_Fuselage", None, "UM_Accent", CG_MARK_D,
+                             P.to_blender(cg_s, sgn * 0.2, cg_z), aft_reading, (0.0, sgn, 0.0), shape=disc,
+                             materials=("UM_SkinBottom",), mix=0.0))
     return out
 
 
-def _decal_mesh(ds: DecalSpec, bvh: BVHTree) -> tuple[np.ndarray, list, int]:
+def _decal_mesh(ds: DecalSpec, bvh: BVHTree) -> tuple[np.ndarray, list, int, list | None]:
+    """İşaret ağı → (köşeler, yüzler, ıskalanan nokta, yüz başına malzeme indisi ya da None)."""
     n = Vector(ds.n).normalized()
     if ds.strip is not None:
         k, m = ds.strip.shape[:2]
@@ -749,7 +1186,7 @@ def _decal_mesh(ds: DecalSpec, bvh: BVHTree) -> tuple[np.ndarray, list, int]:
         F = [[i * m + j, i * m + j + 1, (i + 1) * m + j + 1, (i + 1) * m + j]
              for i in range(k - 1) for j in range(m - 1)]
         V, F = _solidify(V, N, F, n)
-        return V, F, miss
+        return V, F, miss, None
     hit = _surface_point(bvh, ds.center, n)
     if hit is None:
         raise RuntimeError(f"{ds.name}: yüzey bulunamadı ({ds.host})")
@@ -758,11 +1195,19 @@ def _decal_mesh(ds: DecalSpec, bvh: BVHTree) -> tuple[np.ndarray, list, int]:
     u = Vector(ds.u)
     u = (u - n * u.dot(n)).normalized()
     v = n.cross(u)
-    V2, F = text_outline_mesh(ds.text, DECAL_MAX_EDGE / ds.height)
+    fm = None
+    if ds.shape is not None:
+        V2, F, fm = ds.shape
+        V2 = np.asarray(V2, float)
+    else:
+        V2, F = text_outline_mesh(ds.text, DECAL_MAX_EDGE / ds.height)
     pts = np.array([c + u * (x * ds.height) + v * (y * ds.height) for x, y in V2])
     V, N, miss = _project(bvh, pts, n)
+    nf = len(F)
     V, F = _solidify(V, N, F, n)
-    return V, F, miss
+    if fm is not None:
+        fm = list(fm) + list(fm) + [0] * (len(F) - 2 * nf)        # üst, alt, yan duvarlar
+    return V, F, miss, fm
 
 
 def build_decals(livery: str = "standart", scene: bpy.types.Scene | None = None) -> list[str]:
@@ -781,19 +1226,23 @@ def build_decals(livery: str = "standart", scene: bpy.types.Scene | None = None)
             continue
         if ds.host not in bvhs:
             bvhs[ds.host] = _host_bvh(host)
-        V, F, miss = _decal_mesh(ds, bvhs[ds.host])
+        V, F, miss, fm = _decal_mesh(ds, bvhs[ds.host])
         if miss > 0.02 * len(V):
             print(f"[materials] uyarı: {ds.name} için {miss}/{len(V)} nokta yüzeye düşmedi")
         me = bpy.data.meshes.new(ds.name)
         me.from_pydata([tuple(p) for p in V], [], F)
+        for mname in (ds.material, *ds.materials):
+            me.materials.append(U.get_material(mname))
+        if fm is not None:
+            me.polygons.foreach_set("material_index", [int(i) for i in fm])
         me.validate()
-        me.materials.append(U.get_material(ds.material))
         me.shade_smooth()
         ob = bpy.data.objects.new(ds.name, me)
         col.objects.link(ob)
         U.parent_keep_world(ob, host)                  # köşeler dünyada; nesne dönüşümü kimlik
-        ob[DECAL_MIX_PROP] = float(DECAL_MIX[key]) if ds.text else 0.0
-        ob["ucav_decal"] = ds.text or "prop_band"
+        mix = ds.mix if ds.mix is not None else (float(DECAL_MIX[key]) if ds.text else 0.0)
+        ob[DECAL_MIX_PROP] = float(mix)
+        ob["ucav_decal"] = ds.text or ("shape" if ds.shape is not None else "prop_band")
         ob["ucav_closed"] = True
         ob.visible_shadow = False
         made.append(ob.name)

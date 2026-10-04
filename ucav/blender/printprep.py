@@ -1428,8 +1428,9 @@ def support_class(V: np.ndarray, T: np.ndarray, M: np.ndarray) -> dict:
 # STL (ikili, mm)
 # =====================================================================================================
 def write_stl(path: Path, V: np.ndarray, T: np.ndarray, name: str = "") -> int:
-    """İkili STL yazar (V metre → mm). Dosya boyutunu (bayt) döndürür."""
-    Vm = np.asarray(V, np.float64) * 1000.0
+    """İkili STL yazar (V metre → mm). Normaller dosyaya yazılan float32 köşelerden hesaplanır (dilimleyicinin
+    yeniden hesabıyla aynı). Dosya boyutunu (bayt) döndürür."""
+    Vm = _mm32(V)
     a, b, c = Vm[T[:, 0]], Vm[T[:, 1]], Vm[T[:, 2]]
     n = np.cross(b - a, c - a)
     ln = np.linalg.norm(n, axis=1)
@@ -5446,13 +5447,18 @@ HEAT_SAFE_MATERIAL = "LW-ASA"                       # Tg 95 °C; LW-PLA (Tg 55 �
 # 50 mm'den yakın olamaz. Spec'te ``print.heat_rule.tg_min_c`` / ``tg_radius_m`` verilirse onlar kullanılır.
 HEAT_TG_RULE = {"tg_min_c": float(HEAT_RULE.get("tg_min_c", 120.0)),
                 "radius_m": float(HEAT_RULE.get("tg_radius_m", 0.050))}
+# Kural 3 (son inceleme): hiçbir basılı parça susturucu çıkış borusuna ``pipe_clear_m``'den (5 mm) yakın değil;
+# boru yanaktan ısıya dayanıklı geçiş halkasıyla geçer (BOM).
+HEAT_PIPE_CLEAR_M = float(HEAT_RULE.get("pipe_clear_m", 0.005))
 # spec ``print.zones[].parts``: adıyla listelenen parçalar o bölgenin filamentiyle basılır (ör. stab_root_heat →
 # stab_1, elevator_1 LW-ASA). Isı kuralı artık malzemeyi kendisi değiştirmez: ihlal = çalıştırma hatası.
 _PART_ZONES = {str(pk): str(z["zone"]) for z in _PR["zones"] for pk in (z.get("parts") or [])}
 
 
 def tg_c(material: str) -> float:
-    """Filament camsı geçiş sıcaklığı (°C; spec ``print.filaments.*.tg_c``)."""
+    """Filament ısıl sınırı (°C; spec ``print.filaments.*.tg_c``): amorf filamentlerde (LW-PLA, PETG, LW-ASA) camsı
+    geçiş Tg; yarı kristal PA-CF'de ısıl eğilme sıcaklığı HDT (0,45 MPa) — PA-CF'nin Tg'si ≈ 60 °C'dir ama karbon
+    elyaflı kristal yapı onu HDT'ye kadar taşır."""
     key = "PETG" if material.startswith("PETG") else material
     f = _PR["filaments"].get(key) or _EXTRA_FIL.get(key) or {}
     return float(f.get("tg_c", 0.0))
@@ -5551,11 +5557,14 @@ def heat_distance(V_world: np.ndarray, T: np.ndarray, mirror: bool, sources=None
 def heat_rule_eval(rows: Sequence[dict]) -> dict:
     """Isı kuralı kararı (AERO-09, R05) — saf fonksiyon (birim testli). ``rows``: ``{"key", "material", "min_m",
     "source", "zone"?, "by_source"?}``. Kural 1: kaynaklara ``radius_m`` (150 mm) içinde ``no_material`` (LW-PLA)
-    yok; kural 2: camsı geçişi ``tg_min_c``'nin (120 °C) altındaki filament ``tg_radius_m``'den (50 mm) yakın değil.
-    Malzeme kendiliğinden değiştirilmez: ihlal raporlanır, çalıştırma 1 ile biter."""
+    yok; kural 2: ısıl sınırı (``tg_c``: amorf filamentte Tg, PA-CF'de HDT) ``tg_min_c``'nin (120 °C) altındaki
+    filament ``tg_radius_m``'den (50 mm) yakın değil; kural 3: hiçbir parça susturucu çıkış borusuna
+    ``pipe_clear_m``'den (5 mm) yakın değil (``by_source``). Malzeme kendiliğinden değiştirilmez: ihlal raporlanır,
+    çalıştırma 1 ile biter."""
     heat = {"radius_mm": float(HEAT_RULE["radius_m"]) * 1000.0, "no_material": HEAT_RULE["no_material"],
             "around": list(HEAT_RULE.get("around", [])) + [HEAT_PIPE, HEAT_SHIELD],
             "tg_rule": {"tg_min_c": HEAT_TG_RULE["tg_min_c"], "radius_mm": HEAT_TG_RULE["radius_m"] * 1000.0},
+            "pipe_rule": {"clear_mm": HEAT_PIPE_CLEAR_M * 1000.0},
             "assigned": [], "violations": [], "near": []}
     for r in rows:
         hd, mat, key, src = float(r["min_m"]), str(r["material"]), str(r["key"]), str(r.get("source", ""))
@@ -5568,9 +5577,15 @@ def heat_rule_eval(rows: Sequence[dict]) -> dict:
                                        "fix": f"spec print.zones[].parts → {HEAT_SAFE_MATERIAL} ya da PA-CF"})
         elif hd < HEAT_TG_RULE["radius_m"] and tg_c(mat) < HEAT_TG_RULE["tg_min_c"]:
             heat["violations"].append({"key": key, "material": mat, "min_mm": mm, "source": src,
-                                       "rule": f"Tg {tg_c(mat):.0f} °C < {HEAT_TG_RULE['tg_min_c']:.0f} °C, "
+                                       "rule": f"ısıl sınır {tg_c(mat):.0f} °C < {HEAT_TG_RULE['tg_min_c']:.0f} °C, "
                                                f"≤ {HEAT_TG_RULE['radius_m'] * 1000:.0f} mm",
-                                       "fix": "PA-CF (Tg 150 °C) ya da parçayı uzaklaştırın"})
+                                       "fix": "PA-CF (HDT ≈ 150 °C) ya da parçayı uzaklaştırın"})
+        pipe = (r.get("by_source") or {}).get(HEAT_PIPE)
+        if pipe is not None and float(pipe) < HEAT_PIPE_CLEAR_M:
+            heat["violations"].append({"key": key, "material": mat, "min_mm": round(float(pipe) * 1000.0, 1),
+                                       "source": HEAT_PIPE,
+                                       "rule": f"çıkış borusuna ≤ {HEAT_PIPE_CLEAR_M * 1000:.0f} mm",
+                                       "fix": "deliği büyütün (spec outlet.hole_clear_m) ve geçiş halkası kullanın"})
         if hd < 0.25:
             row = {"key": key, "material": mat, "tg_c": tg_c(mat), "min_mm": mm, "source": src}
             if r.get("by_source"):
@@ -5712,6 +5727,90 @@ def _fix_pinches(b: "Built") -> None:
     bpy.data.meshes.remove(bad)
 
 
+ZERO_AREA_MM2 = 1e-9                                    # |AB × AC| bundan küçükse üçgen sıfır alanlı sayılır (mm²)
+SLIVER_H_MM = 1e-5      # uzun kenarına yüksekliği bundan küçük üçgen float32 mm'de doğrusaldır (250 mm'de float32 adımı 1,5e-5)
+
+
+def _mm32(V: np.ndarray) -> np.ndarray:
+    """STL'ye yazılacak köşeler: metre → mm, float32'ye yuvarlanmış (hesap float64)."""
+    return (np.asarray(V, np.float64) * 1000.0).astype(np.float32).astype(np.float64)
+
+
+def _tri_cross_len(W: np.ndarray, T: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Üçgen başına |AB × AC| (mm²) ve en uzun kenar (mm)."""
+    W = np.asarray(W, np.float64)
+    a, b, c = W[T[:, 0]], W[T[:, 1]], W[T[:, 2]]
+    cr = np.linalg.norm(np.cross(b - a, c - a), axis=1)
+    L = np.maximum(np.maximum(np.linalg.norm(b - a, axis=1), np.linalg.norm(c - b, axis=1)), np.linalg.norm(a - c, axis=1))
+    return cr, L
+
+
+def _zero_area(W: np.ndarray, T: np.ndarray, tol_mm2: float = ZERO_AREA_MM2) -> np.ndarray:
+    """Sıfır alanlı üçgenlerin indisleri (``W`` mm)."""
+    cr, _ = _tri_cross_len(W, T)
+    return np.nonzero(cr < tol_mm2)[0]
+
+
+def _slivers(W: np.ndarray, T: np.ndarray, h_mm: float = SLIVER_H_MM) -> np.ndarray:
+    """Sıfır alanlı ya da uzun kenarına yüksekliği ``h_mm``'den küçük (float32 mm çözünürlüğünde doğrusal) üçgenler."""
+    cr, L = _tri_cross_len(W, T)
+    return np.nonzero((cr < ZERO_AREA_MM2) | (cr < h_mm * L))[0]
+
+
+def _flip_degenerate(V: np.ndarray, T: np.ndarray, h_mm: float = SLIVER_H_MM) -> tuple[np.ndarray, int]:
+    """STL'ye sıfır alanlı ya da doğrusal (yüksekliği ``h_mm``'den küçük) üçgen yazılmasın: sınama, yazılacak float32
+    mm köşelerle yapılır. Orta köşe ``m`` uzun kenar ``p→q`` üzerindeyse o kenarı paylaşan komşu ``(q, p, x)``
+    ``m``'de bölünür: ``(q, m, x)`` + ``(m, p, x)``. Üçgen sayısı ve kenar eşleşmesi korunur, yüzey en çok ``h_mm``
+    kadar oynar; yeni üçgenler de ince ya da ters yönlü çıkacaksa veya ``m–x`` kenarı zaten varsa o üçgene dokunulmaz
+    (art arda doğrusal üçgenler kalabilir). Döndürür: (yeni T, giderilen sayısı)."""
+    W = _mm32(V)
+
+    def cross(tris: np.ndarray) -> np.ndarray:
+        a, b, c = W[tris[:, 0]], W[tris[:, 1]], W[tris[:, 2]]
+        return np.cross(b - a, c - a)
+
+    T = np.array(T, copy=True)
+    n = 0
+    for _ in range(6):                                  # bir bölme yeni ince üçgen bırakırsa birkaç tur
+        bad = _slivers(W, T, h_mm)
+        if not len(bad):
+            break
+        emap = {}
+        for i, (p0, p1, p2) in enumerate(T.tolist()):
+            emap[(p0, p1)] = i
+            emap[(p1, p2)] = i
+            emap[(p2, p0)] = i
+        n_round = 0
+        for i in bad.tolist():
+            if not len(_slivers(W, T[i:i + 1], h_mm)):  # bu turda komşu olarak zaten bölündü
+                continue
+            tri = T[i].tolist()
+            L = [float(np.linalg.norm(W[tri[(k + 1) % 3]] - W[tri[k]])) for k in range(3)]
+            if min(L) <= 0.0:                           # çakışık köşe (iğne): bu yöntemin konusu değil
+                continue
+            k = int(np.argmax(L))
+            p_, q_, m_ = tri[k], tri[(k + 1) % 3], tri[(k + 2) % 3]
+            j = emap.get((q_, p_))
+            if j is None or j == i:
+                continue
+            x = [v for v in T[j].tolist() if v not in (p_, q_)]
+            if len(x) != 1 or (m_, x[0]) in emap or (x[0], m_) in emap:
+                continue
+            x = x[0]
+            new = np.array([(q_, m_, x), (m_, p_, x)])
+            nn, nj = cross(new), cross(T[j:j + 1])[0]
+            if len(_slivers(W, new, h_mm)) or (nn @ nj <= 0.0).any():
+                continue
+            T[i], T[j] = new
+            del emap[(p_, q_)], emap[(q_, p_)]
+            emap.update({(q_, m_): i, (m_, x): i, (x, q_): i, (m_, p_): j, (p_, x): j, (x, m_): j})
+            n_round += 1
+        n += n_round
+        if not n_round:
+            break
+    return T, n
+
+
 def export_part(b: Built, ev: dict, stl_dir: Path) -> dict:
     """Baskı yönünde, tabla merkezli, mm STL (tabla teması düzeltmesi varsa onunla). Kendine değen köşeler µm
     ayrılır (``_separate_coincident``). Dönüş: dosya bilgisi (yazılan ağın hacmi dahil)."""
@@ -5729,12 +5828,20 @@ def export_part(b: Built, ev: dict, stl_dir: Path) -> dict:
         n_sep += n
     if n_sep:
         V = V - np.array([0.0, 0.0, V[:, 2].min()])     # itme tabla altına taşıdıysa z_min = 0
+    T2, n_flip = _flip_degenerate(V, T)
+    if n_flip and stl_edge_check(T2)["ok"]:             # kapalılık bozulursa eski üçgenlerle kalınır
+        T = T2
+    else:
+        n_flip = 0
+    W = _mm32(V)
+    n_zero, n_sliver = int(len(_zero_area(W, T))), int(len(_slivers(W, T)))
     path = stl_dir / f"{b.seg.key}.stl"
     size = write_stl(path, V, T, b.seg.key)
     a, bb, c = V[T[:, 0]], V[T[:, 1]], V[T[:, 2]]
     vol = float(np.einsum("ij,ij->i", a, np.cross(bb, c)).sum() / 6.0) * 1e6
     return {"file": f"{stl_dir.name}/{path.name}", "bytes": size, "triangles": int(len(T)),   # çıktı köküne göre
-            "volume_cm3": round(vol, 3), "separated_verts": n_sep}
+            "volume_cm3": round(vol, 3), "separated_verts": n_sep, "degenerate_split": n_flip, "zero_area": n_zero,
+            "slivers": n_sliver}
 
 
 def verify_stl(path: Path, expect_volume_cm3: float) -> dict:
@@ -5747,6 +5854,8 @@ def verify_stl(path: Path, expect_volume_cm3: float) -> dict:
     Tw = inv.reshape(-1)[T]
     ec["welded"] = stl_edge_check(Tw)
     ec["ok"] = ec["ok"] and ec["welded"]["ok"]
+    ec["zero_area"] = int(len(_zero_area(V, T)))
+    ec["slivers"] = int(len(_slivers(V, T)))
     a, b, c = V[T[:, 0]], V[T[:, 1]], V[T[:, 2]]
     vol = float(np.einsum("ij,ij->i", a, np.cross(b, c)).sum() / 6.0) / 1000.0
     out = {"edges": ec, "volume_cm3": vol, "volume_err_pct": 100.0 * (vol - expect_volume_cm3) /
@@ -5964,7 +6073,8 @@ def build_print_parts(bed=BED_DEFAULT, out_dir=None, *, scene: bpy.types.Scene |
             ctx.log(f"{bb.seg.key}: {'OK' if bb.check['ok'] else 'SORUN'} {ev['volume_cm3']:.1f} cm³ "
                     f"{ev['mass_g']:.0f} g {np.round(pl['size_mm'], 0)} mm ({time.time() - t0:.1f} s)")
     # ısı kuralı (AERO-09, R05): (1) susturucu/silindir zarfları ve susturucu çıkışının ``radius_m`` (150 mm)
-    # yakınında LW-PLA yok; (2) Tg < 120 °C olan parça bunlara 50 mm'den yakın değil. Malzeme kendiliğinden
+    # yakınında LW-PLA yok; (2) ısıl sınırı < 120 °C olan parça bunlara 50 mm'den yakın değil; (3) hiçbir parça
+    # çıkış borusuna 5 mm'den yakın değil. Malzeme kendiliğinden
     # değiştirilmez: ihlal raporlanır ve çalıştırma 1 ile biter (build.py --print, printprep CLI). Isı bölgesindeki
     # parçaların malzemesi spec'te adıyla atanır (``print.zones[].parts``).
     heat_src = heat_sources()
@@ -6121,6 +6231,9 @@ def bom(plans: dict, n_pin_joints: int) -> list[dict]:
          "spec": "30 × 10 × 5 mm kabarcık, ≈ 0,4 g: PETG (şablon U_Fairing_Servo_Rudder_L/R ağı, taban deriye "
                  "zımparalanır) ya da 0,5 mm ısıl biçimlendirilmiş levha; dikey rengiyle boyanır, arka ağız açık",
          "qty": 2},
+        {"group": "Bağlantı", "item": "Egzoz çıkış borusu geçiş halkası (sol yanak)",
+         "spec": str(P.SPEC["propulsion"]["muffler"]["outlet"].get("grommet", "ısıya dayanıklı silikon/seramik keçe")),
+         "qty": 1},
         {"group": "Bağlantı", "item": "M4 cıvata + kelebek somun (burun modülü)", "spec": "A2 paslanmaz", "qty": 4},
         {"group": "Bağlantı", "item": "M4 cıvata + somun (G10 köprü–soket–çerçeve, s = 1,55 flanşı)",
          "spec": "12.9; köprüde boru başına 2 adet", "qty": 12},
@@ -6202,6 +6315,9 @@ def summarize(results: list, bed, plans: dict, ctx: Ctx, verified: list, elapsed
                    "boolean_s": round(ctx.B.t_ops, 1), "elapsed_s": round(elapsed, 1)},
         "totals": {"unique_parts": len(results), "pieces": n_pieces, "mass_g": round(tot_mass, 0),
                    "print_h": round(tot_h, 1), "stl_mb": round(stl_bytes / 1e6, 2),
+                   "stl_zero_area": sum(r.get("stl", {}).get("zero_area", 0) for r in results_all),
+                   "stl_degenerate_split": sum(r.get("stl", {}).get("degenerate_split", 0) for r in results_all),
+                   "stl_slivers": sum(r.get("stl", {}).get("slivers", 0) for r in results_all),
                    "spec_estimate": {"print_mass_kg": est["print_mass_kg"], "print_hours": est["print_hours"],
                                      "segment_count": est["segment_count"], "panel": dict(est.get("panel", {}))}},
         "by_material": {k: {kk: round(vv, 1) for kk, vv in v.items()} for k, v in by_mat.items()},
@@ -6341,9 +6457,18 @@ def report_md(S: dict) -> str:
         ec = v["edges"]
         ew = ec.get("welded", {})
         L.append(f"| `{v['key']}.stl` | {ec['triangles']} üçgen, eşsiz {ec['unpaired']}, çift {ec['dup_directed']}; "
-                 f"0,1 µm kaynakla eşsiz {ew.get('unpaired', '?')}, çift {ew.get('dup_directed', '?')} "
+                 f"0,1 µm kaynakla eşsiz {ew.get('unpaired', '?')}, çift {ew.get('dup_directed', '?')}; "
+                 f"sıfır alanlı {ec.get('zero_area', '?')} "
                  f"{'✓' if ec['ok'] else '✗'} | {v['volume_err_pct']:+.3f} % | {bi_s} |")
     L.append("")
+    tt = S["totals"]
+    if "stl_zero_area" in tt:
+        L.append(f"Yazılan tüm STL'lerde sıfır alanlı üçgen (float32 mm, |AB×AC| < {ZERO_AREA_MM2:g} mm²): "
+                 f"{tt['stl_zero_area']}. Float32 çözünürlüğünde doğrusal ince üçgen (uzun kenarına yükseklik "
+                 f"< {SLIVER_H_MM * 1e6:.0f} nm): {tt.get('stl_slivers', '?')} kaldı; dışa aktarımda komşu üçgeni bölerek "
+                 f"giderilen: {tt['stl_degenerate_split']} (yüzey ≤ {SLIVER_H_MM * 1e6:.0f} nm oynar, hacim ve kapalılık "
+                 "korunur). Kalanlar art arda doğrusal üçgenlerdir; dilimleyici için etkisizdir.")
+        L.append("")
     bad = [r for r in S["parts"] if not r["check"]["ok"]]
     L.append(f"Manifold olmayan parça: {len(bad)}. " + ("" if not bad else ", ".join(r["key"] for r in bad)))
     L.append("")
@@ -6526,16 +6651,22 @@ def _report_sections(S: dict) -> list[str]:
     tr = hr.get("tg_rule", {"tg_min_c": 120, "radius_mm": 50})
     L += ["", "## Isı kuralı (AERO-09, R05)", ""]
     L.append(f"Kural 1: silindir (+ buji başlığı) ve susturucu zarflarının ve susturucu çıkış borusu/ısı kalkanının "
-             f"{_fmt(hr.get('radius_mm', 150), 0)} mm yakınında {hr.get('no_material', 'LW-PLA')} yok. Kural 2: camsı "
-             f"geçişi {_fmt(tr['tg_min_c'], 0)} °C'nin altındaki hiçbir filament (LW-ASA 95, PETG 80, LW-PLA 55 °C) "
+             f"{_fmt(hr.get('radius_mm', 150), 0)} mm yakınında {hr.get('no_material', 'LW-PLA')} yok. Kural 2: ısıl "
+             f"sınırı {_fmt(tr['tg_min_c'], 0)} °C'nin altındaki hiçbir filament (LW-ASA 95, PETG 80, LW-PLA 55 °C) "
              f"bu kaynaklara {_fmt(tr['radius_mm'], 0)} mm'den yakın değil (zarflar `params.engine_envelope`, çıkış "
-             "`U_Exhaust_Muffler`). Printprep malzemeyi kendiliğinden değiştirmez: ihlal varsa `build.py --print` ve "
+             "`U_Exhaust_Muffler`). Isıl sınır amorf filamentlerde camsı geçiş (Tg), yarı kristal PA-CF'de ısıl eğilme "
+             "sıcaklığıdır (HDT, 0,45 MPa; PA-CF'nin Tg'si ≈ 60 °C). Kural 3: hiçbir parça susturucu çıkış borusuna "
+             f"{_fmt(hr.get('pipe_rule', {}).get('clear_mm', 5), 0)} mm'den yakın değil. "
+             "Printprep malzemeyi kendiliğinden değiştirmez: ihlal varsa `build.py --print` ve "
              "`printprep` 1 ile çıkar. Isı bölgesindeki parçaların filamenti spec'te adıyla atanır "
              f"(`print.zones[].parts`). Sonuç: **{'uygun' if hr.get('ok', True) else 'İHLAL'}**.")
     L.append("")
+    outlet = P.muffler_outlet().params
     L.append("Kaynaklar ayrı adlandırılır: motor zarfı parçaları, susturucu çıkış borusu ve borunun çıktığı yerde sol "
              "yanak dış yüzüne (0,1–0,5 mm aralıkla) oturan 0,5 mm Al ısı kalkanı (kalkan yanağı borudan korur; yanak "
-             "PA-CF, Tg 150 °C). Boru yanaktaki deliğinden 1,5 mm boşlukla geçer. Boru ve kalkan uzaklıkları kaynak "
+             f"PA-CF, HDT ≈ 150 °C). Boru yanaktaki deliğinden {_fmt_g(float(outlet.get('hole_clear_m', 0.0015)) * 1000)} "
+             "mm radyal boşlukla geçer; delikteki geçiş halkası boruyu ortalar ve sıcak gazı yanağa değdirmez (BOM: "
+             f"{outlet.get('grommet') or 'ısıya dayanıklı silikon/seramik keçe halka'}). Boru ve kalkan uzaklıkları kaynak "
              "yüzeyinin yoğun örneklerinden parça yüzeyine, zarf uzaklıkları parça köşelerinden ölçülür; 10 mm'nin "
              "altındakiler 0,1 mm çözünürlükle verilir; son sütun parçanın en yakın üç kaynağıdır.")
     if hr.get("assigned"):
@@ -6551,7 +6682,7 @@ def _report_sections(S: dict) -> list[str]:
     if hr.get("near"):
         def _mm(v):
             return _fmt(v, 1 if float(v) < 10.0 else 0)
-        L += ["", "| Parça (250 mm içinde) | Malzeme | Tg (°C) | En yakın (mm) | Kaynak | Kaynaklara uzaklık (mm) |",
+        L += ["", "| Parça (250 mm içinde) | Malzeme | Isıl sınır (°C) | En yakın (mm) | Kaynak | Kaynaklara uzaklık (mm) |",
               "|---|---|---:|---:|---|---|"]
         for x in hr["near"][:16]:
             per = "; ".join(f"{HEAT_SRC_TR.get(k, k)} {_mm(v)}" for k, v in (x.get("by_source_mm") or {}).items())

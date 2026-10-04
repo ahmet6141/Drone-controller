@@ -14,7 +14,8 @@ gerçek et kalınlıklı, tablaya sığan **FDM baskı parçaları** (STL, Türk
 [baskı raporu (256 tabla)](out/print_report.md) · [baskı raporu (220 tabla)](out/print_220x220x250/print_report.md) ·
 [sabit görüntüler](out/render/) · [gösterim animasyonu](out/anim/showcase.mp4) ·
 [mekanizma döngüsü](out/anim/mechanisms.mp4) · [STL'ler](out/stl/) · [mevzuat özeti](../docs/08-guvenlik-ve-mevzuat.md).
-Blender sahnesi `out/yk38.blend` ve `out/yk38.glb` git'e girmez; tek komutla yeniden üretilir (§4).
+Hazır Blender sahnesi [`out/yk38.blend`](out/yk38.blend) ve görüntüleyiciler için [`out/yk38.glb`](out/yk38.glb) de
+depodadır; ikisi de tek komutla yeniden üretilir (§4).
 
 ![YK-38 — pistte, takım açık (Blender Cycles)](out/render/yk38_hero.jpg)
 
@@ -76,10 +77,12 @@ planıyla — `out/print_report.json` — karşılaştırılır).
   yanakta 6 açık panjur yarığı.
 * **Susturucu ve ısı (R05).** Susturucu silindir bloğunun yanında, krank ekseninin 44 mm altındadır (44 × 34 × 56 mm
   zarf, sol yanak kabartısının içinde). Gövdesi stabilize ve elevatöre 56,6 mm (elevatör ±25°'de 59,9 mm), çıkış
-  borusu ve ısı kalkanı 74,9 mm uzaktadır. Boru susturucu yüzünden başlar, sol yanaktaki delikten 1,5 mm boşlukla
-  geçer ve aşağı-dışa-geriye 20 mm taşar (45° eğik kesik uç); çıktığı yerde yanak yüzüne (0,1–0,5 mm aralıkla)
-  30 × 20 × 0,5 mm Al ısı kalkanı oturur. Stabilize 1 ve elevatör 1 spec atamasıyla LW-ASA basılır; baskı ısı
-  kuralı (§8) ihlalde çalıştırmayı durdurur.
+  borusu ve ısı kalkanı 74,9 mm uzaktadır. Boru (Ø12,4 mm) susturucu yüzünden başlar, sol yanaktaki Ø24,4 mm
+  delikten 6 mm radyal boşlukla geçer — delikte ısıya dayanıklı silikon/seramik keçe geçiş halkası boruyu ortalar,
+  boru yanağa değmez — ve aşağı-dışa-geriye 20 mm taşar (45° eğik kesik uç); çıktığı yerde yanak yüzüne (0,1–0,5 mm
+  aralıkla) 30 × 20 × 0,5 mm Al ısı kalkanı oturur. Stabilize 1 ve elevatör 1 spec atamasıyla LW-ASA basılır; baskı
+  ısı kuralı (§8; kural 3: hiçbir basılı parça boruya 5 mm'den yakın değil, sol yanak 6,0 mm) ihlalde çalıştırmayı
+  durdurur.
 * **Kuyruk çarpması.** Pervane 13,2°'de değer. Burun daha da kalkarsa sırayla dikey kökü firar kenarı (18,5°),
   kaporta altındaki değiştirilebilir 52 × 30 × 2 mm PA-CF sürtünme pabucu (19,26°) ve kaporta çene köşesi (19,38°)
   değer: pabuç kaportanın gerçek alt yüzünü (sol kabartı dahil) izler ve kaportadan önce değer.
@@ -101,7 +104,9 @@ planıyla — `out/print_report.json` — karşılaştırılır).
   parçadır. Bütün parçalar 256 mm tablaya sığar (220 mm tabla da desteklenir).
 * **İniş takımı.** Üç bacak da elektrikli ER-150'dir (8,4 V'ta 5 s). Ana ünite bacak yuvasının arkasında, 3 mm G10
   plakaya bağlıdır (CF borulara 5,7–52,8 mm pay). Ana teker tam 26 mm endedir: aks 3 mm dışa kaçık (tek kollu
-  konsol aks), teker 3 mm alçakta toplanır (kuyu derinliği 42 mm, toplu teker–kapak arası 3,2 mm). Burun bacağı
+  konsol aks), teker 3 mm alçakta toplanır (kuyu derinliği 42 mm). Toplu teker kapağa en az 2,6 mm yaklaşır (≥ 2,5 mm
+  kuralı; sahnede BVH ile ölçülür): lastik omzu kapak iç yüzündeki 1,6 mm'lik boyuna boncuğun üstündedir, tavaya
+  3,2 mm; jant göbeği lastik yüzünden 0,95 mm taştığı için göbeğin altında tavada Ø17 mm sığ boşluk vardır. Burun bacağı
   s 0,53'te, sökülebilir burun modülünün arkasındadır (12 mm iz). Kapaklar deri paneli + nervürlü çerçeve, menteşe
   bilekleri, horn, conta dudağı, serbest kenarlarda 2,5 mm dönüş dudağı ve 8 mm adımlı (2,9 mm derin) testere dişli
   kenardan oluşur; burun bacağı tapa kapağı (`U_Door_N_3`) takım topluyken çentiği deriyle aynı hizada kapatır. Ana
@@ -130,7 +135,7 @@ iyileştirildi. Panelin kararları ve kaynakları `spec.yaml → meta.sources`'t
 | [`blender/render.py`](blender/render.py) | Sabit görüntü (JPG) ve animasyon (MP4/H.264, Blender'ın kendi FFMPEG'i) |
 | [`blender/printprep.py`](blender/printprep.py) | Baskı segmentleri, kabuk/iç yapı, yük yolu parçaları, menteşe pimleri, ısı kuralı (`heat_rule_eval`, ihlalde çıkış 1), STL, baskı raporu |
 | [`blender/build.py`](blender/build.py) | **Tek komutla kurulum ve bütün çıktılar** (bu belgenin §4'ü) |
-| `out/` | `render/*.jpg`, `anim/*.mp4`, `stl/*.stl`, `print_report.md/.json`, `sizing.md`; `yk38.blend` ve `yk38.glb` git'e girmez (yeniden üretilir) |
+| `out/` | `render/*.jpg`, `anim/*.mp4`, `stl/*.stl`, `print_report.md/.json`, `sizing.md`, hazır sahne `yk38.blend` ve `yk38.glb` (hepsi yeniden üretilebilir) |
 
 Sahnedeki koleksiyonlar: `UCAV` (uçak: `UCAV_Airframe`, `UCAV_Surfaces`, `UCAV_Gear`, `UCAV_Propulsion`,
 `UCAV_Payload`, `UCAV_Details`; varlık olarak işaretli), `UCAV_Envelopes` (paketleme zarfları, render dışı),
@@ -141,7 +146,8 @@ Sahnedeki koleksiyonlar: `UCAV` (uçak: `UCAV_Airframe`, `UCAV_Surfaces`, `UCAV_
 
 Gerekenler: Python 3.11, `pip install bpy==4.5.3 numpy pyyaml` (bpy modülü Blender 4.5 LTS'tir; render Cycles ile
 varsayılan olarak CPU'da, `--gpu` ile ekran kartında yapılır). Ya da Blender 4.5 uygulaması (aşağıya bakın).
-Hazır sahne depodadır: `out/yk38.blend` (Blender 4.5 LTS ya da üstüyle açın) ve görüntüleyiciler için `out/yk38.glb`.
+Hazır sahne depodadır: `out/yk38.blend` (Blender 4.5 LTS ya da üstüyle açın; gömülü betikler Blender 5'in katmanlı
+aksiyon API'siyle de çalışır) ve görüntüleyiciler için `out/yk38.glb`.
 
 ```bash
 python3 ucav/sizing.py --check                         # boyutlandırma: 163 kontrol → out/sizing.md (bpy gerekmez)
@@ -169,7 +175,10 @@ python3 ucav/blender/build.py --anim all --res 960x540 --samples 16
 ```
 
 `anim/mechanisms.mp4` bu son komutun yarıda kesilmiş hâlidir: 384 karenin ilk 300'ü (16 s döngünün ilk 12,5 s'si;
-takımın yeniden açılması eksik). Tamamını ve tam kalite sürümleri kendi bilgisayarınızda üretin (§7).
+takımın yeniden açılması eksik). Tamamını ve tam kalite sürümleri kendi bilgisayarınızda üretin (§7). Son inceleme
+turundaki düzeltmelerden sonra `yk38.blend`, `yk38.glb`, STL'ler ve iki baskı raporu ilk iki komutun `--stills`'siz
+hâliyle yeniden üretildi; görüntüler ve videolar ondan önceki sahnedendir (fark, kuyu kapaklarının iç yüzünde
+0,6 mm alçalan boncuk ve göbek boşluğudur — render'da seçilmez).
 
 Sıra her zaman aynıdır: `airframe → gear → rig → materials → studio → animation → çıktılar`. Çıktı bayrağı
 verilmezse `--blend` varsayılır. Sonda çıktılar boyutlarıyla listelenir; bir sorun varsa (eksik sürücü, malzemesiz ağ,
@@ -187,7 +196,11 @@ dosyanın başındaki `SCRIPTING_ARGS` satırını düzenleyin (ör. `"--blend -
 gösterir, kamerasızdır). Sabit kameralar `U_Cam_hero … U_Cam_gearbay` adlıdır. Dosyada iki metin bloğu vardır:
 `YK38_klip_sec.py` (`KLIP` satırına `showcase`, `mechanisms` ya da `yok` yazıp *Run Script*; `yok` animasyonu
 kaldırır ve dinlenme pozuna döner — kendi animasyonunuz için) ve `YK38_pervane_pisir.py` (§5). İkisi de depoya
-ihtiyaç duymaz. Baskı parçaları `UCAV_Print` koleksiyonundadır; görünüm katmanından çıkarılmıştır (Outliner'da onay
+ihtiyaç duymaz. Klip seçici klibin ortamını da kurar: `showcase` ve `yok` → pist (`UCAV_Env`, `SW_Pist` dünyası,
+−0,4 EV, yer dolgusu), `mechanisms` → stüdyo (`UCAV_Env_Studyo` koleksiyonu, `SW_Studyo` dünyası, 0 EV, bakım
+sehpası görünür); kare aralığını ve render çıktı önekini (`//anim/yk38_<klip>_`) de ayarlar. Dosya arayüzden
+render'a hazırdır: hareket bulanıklığı açık (pervane 64, tekerler 8 alt adım), 1280×720 %100, 24 örnek, H.264 MP4 —
+komut satırındaki `--anim` ile aynı ayarlar (§7). Baskı parçaları `UCAV_Print` koleksiyonundadır; görünüm katmanından çıkarılmıştır (Outliner'da onay
 kutusuyla açılır) ve render'a girmez. `UCAV` koleksiyonu başka bir dosyaya eklenebilir (*Append*/*Link* + *Library
 Override*): yalnız uçak gelir, stüdyo ve baskı parçaları gelmez; uçağı kendi zemininize koyunca `ground_z`'yi o
 zeminin Z'sine eşitleyin.
@@ -290,9 +303,9 @@ mat boya, açık gri işaretler). **Taktik şema yalnız render içindir:** koyu
 | İş | Ayar | Süre |
 |---|---|---:|
 | Sahne kurulumu (her komutun başında) | gövde 21 s (EXACT boolean kuyular dahil), takım 1,4 s, rig + malzemeler + stüdyo + animasyon 1,4 s | ≈ 25 s |
-| `--print` | 256 tabla: 65 parça, 68 STL (yeniden okunup doğrulanır) + rapor | 90 s |
-| `--print --bed 220 --no-stl` | 66 parça, yalnız rapor | 87 s |
-| `--glb` / `--blend` | `mechanisms` pişirme (9,0 MB) / zstd sıkıştırma (22,2 MB) | 3 s / < 1 s |
+| `--print` | 256 tabla: 65 parça, 68 STL (yeniden okunup doğrulanır) + rapor | ≈ 105 s |
+| `--print --bed 220 --no-stl` | 66 parça, yalnız rapor | ≈ 105 s |
+| `--glb` / `--blend` | `mechanisms` pişirme (9,8 MB) / zstd sıkıştırma, arayüz render ayarları (24,9 MB) | 2,5 s / < 1 s |
 | `--stills` (9 görünüm) | 1600×1000, 128 örnek, pist | **33 dk** — görünüm başına: under 80 s, front 184, hero 196, nose 202, rear34 207, side 235, top 235, tail 267, gearbay 370 s |
 | `--stills hero rear34 side --livery taktik` | 1600×1000, 128 örnek | 178 + 197 + 233 s |
 | `--stills hero side --env studyo` | 1600×1000, 128 örnek | 137 + 149 s |
@@ -317,9 +330,11 @@ python3 ucav/blender/build.py --anim mechanisms --gpu --res 1920x1080        # t
 `--gpu` arka uçları sırayla dener: OptiX (NVIDIA RTX) → CUDA (NVIDIA) → HIP (AMD) → Metal (Apple) → oneAPI (Intel).
 Bulamazsa CPU'da sürer ve bunu günlüğe yazar. **Blender arayüzünde:** `out/yk38.blend`'i açın → *Edit → Preferences →
 System → Cycles Render Devices*'ta kartınızın arka ucunu seçin → *Render Properties → Device: GPU Compute* →
-`YK38_klip_sec.py` metin bloğunda `KLIP`'i seçip *Run Script* → *Render → Render Animation* (Ctrl+F12). Kareler
-`//anim/yk38_` önekiyle `out/anim/`'e yazılır. MP4 için komut satırı yolu daha pratiktir: kodlamayı kendisi yapar ve
-yarıda kalırsa kaldığı yerden sürer.
+`YK38_klip_sec.py` metin bloğunda `KLIP`'i seçip *Run Script* (klibin ortamı, kare aralığı ve çıktı öneki kurulur) →
+*Render → Render Animation* (Ctrl+F12). Dosya komut satırıyla aynı ayarlardadır (hareket bulanıklığı, 1280×720,
+24 örnek) ve doğrudan H.264 MP4 yazar: `out/anim/yk38_<klip>_0001-0384.mp4` gibi. Arayüzde render yarıda kalırsa
+baştan başlar; uzun işlerde komut satırı yolu daha güvenlidir (kareleri tek tek yazar, kaldığı yerden sürer, sonda
+kodlar).
 
 ## 8. 3B baskı
 
@@ -355,11 +370,14 @@ Gövde sahnesi (dinlenme pozu, booleanlar uygulanmış), spec `print` segment pl
 7. **Denetim:** her parça kapalı ve tek parçadır (STL'ler tam float32 kenar eşleme, 0,1 µm kaynak ve Blender'a
    yeniden okumayla doğrulanır), tabla teması ≥ 3 cm² (gerekirse 0,4 mm düzleme ya da 1 mm kırılabilir ayak),
    tablaya bakan 45° sarkma varsa "tabla desteği" diye işaretlenir, et kalınlığı ışınla ölçülür, sığmayan parça
-   otomatik bölünür. **Isı kuralı** (`printprep.heat_rule_eval`): kural 1 — silindir, buji başlığı, susturucu
-   zarfı, çıkış borusu ve ısı kalkanına 150 mm içinde LW-PLA yok; kural 2 — camsı geçişi 120 °C'nin altındaki
-   filament (LW-ASA 95, PETG 80, LW-PLA 55 °C) bunlara 50 mm'den yakın değil. Malzeme kendiliğinden değişmez: ısı
-   bölgesindeki parçaların filamenti spec'te adıyla atanır (`print.zones[].parts`: stabilize 1 ve elevatör 1 →
-   LW-ASA, kaynağa 61 / 57 mm) ve ihlal `build.py --print`'i 1 ile bitirir.
+   otomatik bölünür; STL'lerde sıfır alanlı üçgen kalmaz (dışa aktarımda komşu üçgen bölünür, hacim ve kapalılık
+   korunur). **Isı kuralı** (`printprep.heat_rule_eval`): kural 1 — silindir, buji başlığı, susturucu zarfı, çıkış
+   borusu ve ısı kalkanına 150 mm içinde LW-PLA yok; kural 2 — ısıl sınırı 120 °C'nin altındaki filament bunlara
+   50 mm'den yakın değil (ısıl sınır amorf filamentte camsı geçiş Tg'dir: LW-ASA 95, PETG 80, LW-PLA 55 °C; yarı
+   kristal PA-CF'de ısıl eğilme sıcaklığı HDT (0,45 MPa) ≈ 150 °C, Tg'si ≈ 60 °C); kural 3 — hiçbir parça susturucu
+   çıkış borusuna 5 mm'den yakın değil (sol yanaktaki boru deliği 6 mm radyal boşlukla açılır, geçiş halkası BOM'da).
+   Malzeme kendiliğinden değişmez: ısı bölgesindeki parçaların filamenti spec'te adıyla atanır (`print.zones[].parts`:
+   stabilize 1 ve elevatör 1 → LW-ASA, kaynağa 61 / 57 mm) ve ihlal `build.py --print`'i 1 ile bitirir.
 8. **Kaporta (R01):** kaynak `shapes.cowl(print_solid=True)` kapalı dış katısıdır (fincan yok); printprep kabuğu
    oyar, arka Ø92 açıklığı (akış silindiri flanşın 26 mm önüne uzanır, ek flanşları da kırpar), boydan boya çene
    yarığını ve sol yanakta boru deliğini keser, motor yasak bölgelerini (`shapes.engine_keepouts`: zarf + 5 mm,
@@ -371,7 +389,7 @@ gerekirse `TUBE_CLEAR`'ı ayarlayın.
 
 **Sonuç, 256 × 256 × 256 mm tabla:** **65 benzersiz STL, 104 basılı parça** (sağ eşler aynadır), **3,46 kg** filament
 (R04 hedefi ≤ 3,5 kg; önceki rapor 4,06 kg; kalın PA-CF/PETG parçalar dilimleyicideki gibi kabuk + %40 gyroid dolguyla
-hesaplanır, dolu basılırsa ≈ +56 g), ≈ **257 h** baskı (kaba model), 30,8 MB STL; ayrıca 3 alet parçası (2 kapak
+hesaplanır, dolu basılırsa ≈ +56 g), ≈ **256 h** baskı (kaba model), 30,9 MB STL; ayrıca 3 alet parçası (2 kapak
 kalıbı + tolerans kuponu: 0,29 kg, ≈ 9 h). Bütün parçalar kapalı, tek parça ve tablaya en az 20 mm payla sığar; ısı
 kuralı ihlali yoktur. Spec kütle bütçesinin "Basılı:" kalemleri bu raporun grup kütleleridir; `sizing.py --check`
 ikisini karşılaştırır.
@@ -379,7 +397,7 @@ ikisini karşılaştırır.
 | Malzeme | Parça | Kütle | Süre |
 |---|---:|---:|---:|
 | LW-PLA (kanat, gövde halkaları 1–6 ve burun, kumanda yüzeyleri, stabilize/dikey dış parçaları) | 64 | 2,30 kg | 180 h |
-| PA-CF (kaporta, yanaklar, lüle, NACA dudağı, sürtünme pabucu, kök kaportası, ER-150 kabartması, kanat kutusu çerçeveleri, takım yatakları, motor halkası) | 16 | 0,66 kg | 43 h |
+| PA-CF (kaporta, yanaklar, lüle, NACA dudağı, sürtünme pabucu, kök kaportası, ER-150 kabartması, kanat kutusu çerçeveleri, takım yatakları, motor halkası) | 16 | 0,66 kg | 42 h |
 | LW-ASA (kuyruk konisi halkaları 7–9; ısı bölgesinde stabilize 1 ve elevatör 1) | 7 | 0,31 kg | 23 h |
 | PETG (burun flanşı, taret yakası, takım kapakları, aviyonik kapağı çerçevesi, longeron soketleri, panel tutma dili) | 17 | 0,19 kg | 11 h |
 
@@ -437,7 +455,10 @@ python3 -m unittest tests.test_ucav_blender -v           # sahne: nesneler, sür
                                                          # kaporta ↔ motor zarfları (BVH), soğutma çıkışı (ışın), pervane
                                                          # açısı ve diski, döngü dikişi, append, ölçüler %1, kadrajlar,
                                                          # GLB, render; baskı: kaporta alt kümesi (zarf + açıklık), ısı
-                                                         # kuralı mantığı, STL'ler ve rapor
+                                                         # kuralı mantığı (3 kural), STL'ler (sıfır alanlı üçgen yok,
+                                                         # normaller) ve rapor; depodaki yk38.blend: arayüz render
+                                                         # ayarları, klip seçici (3 kip), pervane pişirme (Blender 4/5
+                                                         # yolları), toplu teker–kapak payı
 ```
 
 Fiziksel doğrulama (prototipte, uçuştan önce):
@@ -450,7 +471,7 @@ Fiziksel doğrulama (prototipte, uçuştan önce):
 3. **Motor tezgâhı.** Ters DLE-20 + 16×8 itici: statik itki (hedef 5,57 kgf), yakıt tüketimi (havada kalış modeli
    belirsizdir), ters çalışmada buji kirlenmesi ve rölanti, titreşim spektrumu (baskı parçalar ve aviyonik), silindir
    kafası, kaporta, yanak (özellikle sol yanakta boru deliği kenarı ve ısı kalkanı) ve **stabilize kökü / elevatör 1**
-   sıcaklığı (termokupl; PA-CF Tg ≈ 150 °C, LW-ASA Tg ≈ 95 °C), soğutma havası debisi (NACA girişi → halka lüle +
+   sıcaklığı (termokupl; PA-CF HDT ≈ 150 °C, LW-ASA Tg ≈ 95 °C), soğutma havası debisi (NACA girişi → halka lüle +
    çene yarığı), egzozun pervane diskine etkisi.
 4. **Titreşim ve çırpınma.** Kanat ve U-kuyruk için yer titreşim testi; kumanda yüzeyi ve itme çubuğu boşlukları.
 5. **Takım ve yer testleri.** ER-150 sırası (kapak–bacak–kapak), fren, burun yönlendirme ve shimmy (12 mm iz), düz
@@ -470,10 +491,11 @@ Fiziksel doğrulama (prototipte, uçuştan önce):
 * **Isı (R05):** susturucu gövdesi stabilize ve elevatör 1'e 56,6 mm'dir (elevatör ±25°'de 59,9 mm); 60 mm hedefini
   yalnız çıkış borusu ve ısı kalkanı (74,9 mm) karşılar. 60 mm gövde payı, 145 mm'lik kaportada 15,5 mm hava boşluğu
   ve gerçekçi bir susturucu kutusuyla sığmaz (çene kapanışı ve kabartının arka rampası bağlar). Stabilize 1 ve
-  elevatör 1 LW-ASA'dır (Tg 95 °C; Tg kuralının 50 mm sınırının dışında). Sol yanak, borunun geçtiği delikte boruya
-  1,5 mm yaklaşır (PA-CF, Tg 150 °C; dışta yanağa oturan Al kalkan): motor tezgâhında termokuplla ölçülmeden
-  uçulmamalıdır, gerekirse delik büyütülüp seramik keçe kovan konur. Susturucu konumu ve kutu boyu spec
-  varsayımıdır.
+  elevatör 1 LW-ASA'dır (Tg 95 °C; ısıl sınır kuralının 50 mm sınırının dışında). Sol yanak (PA-CF, HDT ≈ 150 °C)
+  boruya 6,0 mm'den yaklaşmaz: delik Ø24,4 mm, araya ısıya dayanıklı geçiş halkası girer, dışta yanağa Al kalkan
+  oturur. Yine de motor tezgâhında termokuplla ölçülmeden uçulmamalıdır; stabilize kökü sıcak çıkarsa kök alt
+  yüzüne 3–5 mm aralayıcılı 0,5 mm Al kalkan konur ya da stabilize 1 / elevatör 1 PA-CF basılır. Susturucu konumu
+  ve kutu boyu spec varsayımıdır.
 * **Kuyruk çarpması:** sürtünme pabucu kaportanın ilk değen noktasıdır, uçağın değil. Pervane 13,2°'de, dikey kökü
   firar kenarı 18,5°'de (dikey kökü stabilize ucunun 0,12 m arkasına uzanır) pabuçtan (19,26°) önce değer.
 * **İnce et ve kıymıklar:** kafes üyeleri 0,6 mm (tek LW-PLA çizgisi; dilimleyicide Arachne/ince duvar algılama
@@ -481,7 +503,7 @@ Fiziksel doğrulama (prototipte, uçuştan önce):
   iki parçada %0,5 sınırındadır: `gear_mount_N` (plaka altı ile longeron bileziklerinin teğet kaması, keskin kenar) ve
   `cowl_top` (arka flanşta üst parça–yanak ek çizgisi ile çene yanındaki ek flanşında kısa kesim kenarları; et p05
   1,49 mm); diğer bütün parçalarda ≤ %0,45. 68 STL'nin hepsi kapalı (eşlenmemiş ya da yinelenen kenar yok),
-  tablada ve tek pozitif kabukludur. Kaplama–deri birleşimlerinde 0,8 mm'nin altına inen tüy
+  tablada ve tek pozitif kabukludur; sıfır alanlı (dejenere) üçgen yoktur. Kaplama–deri birleşimlerinde 0,8 mm'nin altına inen tüy
   kenarlar kırpılır ve epoksi + mikrobalonla sıfırlanır (önerilen 1,2 mm basamaklı bindirme yapılmadı).
 * **Destek gereken parçalar:** 27 parça tablaya bakan 45° sarkma nedeniyle "tabla desteği", 6 parça "model üstü
   destek" ister (raporun parça tablosu). En büyükleri `cowl_cheek_L` (≈ 64 cm², susturucu kabartısı), `fus_ring_1`
@@ -496,6 +518,9 @@ Fiziksel doğrulama (prototipte, uçuştan önce):
 * **Kapak menteşeleri** dış deri çizgisindedir; AERO-05'in "derinin ≥ 3 mm içinde" şartı karşılanmadı (kaz boynu
   menteşe toplu tekere çarpardı). Burun tapa kapağının ön kenarında ≈ 4,8 mm aralık kalır. Kapaklar 0,3 / 0,6 / 1,0
   açıklıkta gövde, kanat ve kaplamalarla çakışmaz (test).
+* **Bacak kapakları** (`U_Door_L_2/R_2`, ana bacağa bağlı) `gearbay` görünüşünde ince, Z-kırıklı bir şerit gibi
+  okunur: deri kapaklarındaki 2,5 mm dönüş dudağı ve tek eğrilikli profil bunlara verilmedi. Düzeltme geometri işidir
+  ve `gearbay` görüntüsüyle `mechanisms` klibinin takım planlarının yeniden render'ını gerektirir (sonraki tur).
 * **Dümen bağlantısı (R11):** inceleme bağlantının dikeyin dış yüzünde olduğunu söylüyordu; ölçüm iç yüzde (pervane
   tarafı) olduğunu gösterdi — `tail` ve `rear34` kameraları sancaktan bakar ve iskele dikeyinin İÇ yüzünü görür. Bu
   yüzden taşınmadı; servo kolu 30 × 10 × 5 mm kaportayla örtüldü. Kaporta yüksekliği önerilen 4 yerine 5 mm'dir:

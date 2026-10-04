@@ -575,7 +575,8 @@ class TestGeometryFixes(unittest.TestCase):
 
     def test_main_tyre_full_width(self):
         """R14: spec lastik eni (26 mm) toplu konumda kuyuya sığar — tavana (kanat üst derisiyle sınırlı) ≥ 2,5 mm ve
-        kapalı kapak tavasına ≥ 2,5 mm (teker 3 mm dışa kaçık aksla 3 mm alçak, kanoe tabanı 3 mm derin)."""
+        kapalı kapağın iç yüzüne (tava, boyuna boncuk, göbek boşluğu; taşan jant göbeği dahil) ≥ 2,5 mm (teker 3 mm
+        dışa kaçık aksla 3 mm alçak, kanoe tabanı 3 mm derin)."""
         S = self.S
         for side in ("L", "R"):
             g = P.gear_leg(side)

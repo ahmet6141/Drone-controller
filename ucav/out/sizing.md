@@ -159,7 +159,7 @@ Yöntem (`spec.yaml → stability.method`): x_np = [a_wb·x_ac,w + F_h·x_ac,h +
 | İtki hattı z (CG istasyonunda) | 0,0418 m | 0,0420 | -0,0002 | ± 0,0030 | ✓ |  |
 | İtki momenti (tam güç, burun aşağı) | 1,95 N·m | 1,95 | 0,00 | ± 0,10 | ✓ |  |
 | İtki/ağırlık | 0,476 | 0,476 | 0,000 | ± 0,005 | ✓ |  |
-| Lüle akış alanı (halka iç çapı – spinner) | 34,3 cm² | 34,3 | 0,0 | ± 0,3 | ✓ | soğutma havası çıkışı; NACA karın girişi ≈ 22 cm² → çıkış/giriş ≈ 1,8 (+ çene yarığı ≈ 6 cm²) |
+| Lüle akış alanı (halka iç çapı – spinner) | 34,3 cm² | 34,3 | 0,0 | ± 0,3 | ✓ | soğutma havası çıkışı; NACA karın girişi ≈ 21,7 cm² → yalnız halka 1,58; çene yarığıyla (≈ 6 cm²) çıkış 40,3 cm² → 1,86 |
 | Lüle halka ön yüzü (dış – iç çap) | 32,0 cm² | 32,0 | 0,0 | ± 0,3 | ✓ | halka yüzü; akış alanı DEĞİL |
 
 ## 8. İniş takımı ve yer açıları
@@ -219,8 +219,8 @@ Temas noktaları gerçek bacak geometrisinden: ana bacak pivot (1,2825; ±0,33; 
 | Yakıt kütlesi (1,40 L × 0,745) | 1,043 kg | 1,043 | 0,000 | ± 0,005 | ✓ |  |
 | Yapı kütlesi (basılı gövde → boya) | 5,635 kg | 5,635 | 0,000 | ± 0,005 | ✓ |  |
 | Basılı kalemler toplamı ("Basılı:") | 3,457 kg | 3,457 | 0,000 | ± 0,005 | ✓ | 9 baskı grubu |
-| Basılı gövde, baskı planı (out/print_report.json) | 3,457 kg | 3,457 | 0,000 | ± 0,005 | ✓ | printprep: parça hacmi × etkin yoğunluk; kalın PA-CF/PETG dilimleyici dolgusuyla |
-| Baskı grubu sapması (spec ↔ print_report, en büyük) | 0,0 g | — | — | ≤ 5,0 g | ✓ | grup: Yük yolları |
+| Basılı gövde, baskı planı (out/print_report.json) | 3,455 kg | 3,457 | -0,002 | ± 0,005 | ✓ | printprep: parça hacmi × etkin yoğunluk; kalın PA-CF/PETG dilimleyici dolgusuyla |
+| Baskı grubu sapması (spec ↔ print_report, en büyük) | 0,8 g | — | — | ≤ 5,0 g | ✓ | grup: Takım kapakları |
 | Kütle artış rezervi | 0,441 kg | 0,441 | 0,000 | ± 0,005 | ✓ |  |
 | Rezerv / MTOW | 3,8 % | — | — | ≥ 3,0 % | ✓ | prototip tartımına kadar en az %3 |
 

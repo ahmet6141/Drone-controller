@@ -20,8 +20,8 @@ Kütle, filament etkin yoğunluğuyla (LW-PLA köpürmüş 0,65 g/cm³) parça h
 |---|---:|---:|---:|---:|
 | LW-ASA | 7 | 413 | 310 | 22,8 |
 | LW-PLA | 65 | 3 542 | 2 302 | 180,7 |
-| PA-CF | 16 | 575 | 663 | 42,5 |
-| PETG | 17 | 171 | 188 | 11,2 |
+| PA-CF | 16 | 575 | 662 | 42,4 |
+| PETG | 17 | 170 | 187 | 11,2 |
 
 ## Kütle tablosu (R04: hedef ≤ 3,5 kg)
 
@@ -34,11 +34,11 @@ Basılı gövde kütlesi **3,46 kg** (hedefin altında; önceki rapor 4,06 kg). 
 | Kumanda yüzeyleri | 365 | 309 | -56 | orta düzlem levhası yerine 0,5 mm dikey menteşe ağı; menteşe dili R 4,5 mm, çentik yalnız ön yarıda |
 | Gövde | 911 | 772 | -139 | halka/modül derisi 0,8 → 0,7 mm + 4 iç stringer (0,8 × 5 mm); çerçeve 8 → 6 mm, flanş 2,4 → 2,0 mm; longeron kovanı → bilezik; keepout içindeki iç yapı artık gerçekten çıkarılıyor (halka 5); halka 9 arka flanşı motor halkası bindirmesinde yalnız deri; modülde PETG flanş cebi |
 | Yük yolları | 356 | 312 | -43 | kanat kutusu çerçevesinde depo üstü hafifletme deliği; kalın PA-CF/PETG parçalar dilimleyici dolgusuyla (kabuk + %40 gyroid) hesaplanır; motor halkası NACA çerçevesinden, ana takım beşiği iç flap menteşe dilinden arındırıldı |
-| İtki | 277 | 234 | -43 | kaporta print_solid kaynaktan (Ø92 arka açıklık, çene yarığı, motor zarfı boşlukları, panjur dudakları); lüle halkası kaportaya alın alına (geçme dili yok); pabuç PA-CF 2 mm, kaporta yüzünü izler |
+| İtki | 277 | 233 | -44 | kaporta print_solid kaynaktan (Ø92 arka açıklık, çene yarığı, motor zarfı boşlukları, panjur dudakları); lüle halkası kaportaya alın alına (geçme dili yok); pabuç PA-CF 2 mm, kaporta yüzünü izler |
 | Kaplamalar | 247 | 192 | -55 | kök kaportası ve ER-150 kabartması 1,6 → 1,2 mm; tüy kenar ve iç ince kuşaklar kırpılır |
 | Faydalı yük | 80 | 18 | -61 | taret yakası gövde dış yüzünde kesilir: fileto tabanı karın derisine bindirmeli yapışır, tüy kenar 0,8 mm'de kırpılır (gömülü üst kutu ve iç dudak basılmaz; modül derisiyle çakışıyordu) |
-| Takım kapakları | 75 | 78 | 3 | burun kapağı çentik köşesi kıymığı kesildi (fark geometri turundaki kapak değişikliğinden) |
-| **Toplam** | **4 059** | **3 463** | **-596** | |
+| Takım kapakları | 75 | 77 | 2 | burun kapağı çentik köşesi kıymığı kesildi (fark geometri turundaki kapak değişikliğinden) |
+| **Toplam** | **4 059** | **3 461** | **-597** | |
 
 ## Parça tablosu
 
@@ -125,7 +125,7 @@ Basılı gövde kütlesi **3,46 kg** (hedefin altında; önceki rapor 4,06 kg). 
 | STL | Parça | Malz. | Et (mm) | Adet | Ölçü (mm) | Yön / Z açısı | Pay (mm) | Kütle (g) | Süre (h) | Destek | Not |
 |---|---|---|---:|---:|---|---|---:|---:|---:|---|---|
 | `cowl_top.stl` | Motor kaportası (PA-CF; yanak açıklıkları flanşlı, arka Ø92 açık) | PA-CF | 1,6 | 1 | 161×160×142 | −x (kuyruk) / 45°; tablada: yangın perdesi | 30 | 76 | 4,8 | tabla desteği |  |
-| `cowl_cheek_L.stl` | Kaporta sol yanak (susturucu tarafı) | PA-CF | 1,6 | 1 | 142×142×130 | −x (kuyruk) / 33° | 39 | 81 | 5,1 | tabla desteği | eğik ekler deriye dik (deri normali 52°) |
+| `cowl_cheek_L.stl` | Kaporta sol yanak (susturucu tarafı) | PA-CF | 1,6 | 1 | 142×142×130 | −x (kuyruk) / 33° | 39 | 81 | 5,0 | tabla desteği | eğik ekler deriye dik (deri normali 52°) |
 | `cowl_cheek_R.stl` | Kaporta sağ yanak (panjurlu) | PA-CF | 1,6 | 1 | 90×89×116 | −x (kuyruk) / 131° | 65 | 41 | 2,8 | yok | eğik ekler deriye dik (deri normali 37°, -29°) |
 | `exhaust_ring.stl` | Lüle halkası (PA-CF) | PA-CF | 1,6 | 1 | 112×112×15 | −x (kuyruk) / 3° | 54 | 25 | 1,5 | model üstü destek |  |
 | `scuff_pad.stl` | Kaporta altı sürtünme pabucu (PA-CF; kuyruk çarpmasında ilk değen kenar) | PA-CF | 2,0 | 1 | 49×49×8 | +z (yukarı) / 45° | 85 | 4 | 0,3 | tabla desteği | kaporta dış yüzünü izleyen 2 mm katman (yapışma yüzü + 0,2 mm); aşınma yüzü tablada; yüksek sıcaklık epoksisiyle yapıştırılır, aşınınca sökülüp yenilenir |
@@ -135,7 +135,7 @@ Basılı gövde kütlesi **3,46 kg** (hedefin altında; önceki rapor 4,06 kg). 
 
 | STL | Parça | Malz. | Et (mm) | Adet | Ölçü (mm) | Yön / Z açısı | Pay (mm) | Kütle (g) | Süre (h) | Destek | Not |
 |---|---|---|---:|---:|---|---|---:|---:|---:|---|---|
-| `root_fairing.stl` | Kök kaportası — kano (PA-CF) | PA-CF | 1,2 | 2 | 201×202×155 | +y (sol/iskele) (13° eğik) / 34° | 9 | 49 | 3,4 | tabla desteği | sağ = ayna; 1,6 mm kabuk, et < 3,6 mm olan kenar/dudaklar dolu; tüy kenar ≥ 0,8 mm'de kırpılır, kalan kama epoksi + mikrobalon ile sıfırlanır |
+| `root_fairing.stl` | Kök kaportası — kano (PA-CF) | PA-CF | 1,2 | 2 | 202×201×155 | +y (sol/iskele) (13° eğik) / 124° | 9 | 49 | 3,4 | tabla desteği | sağ = ayna; 1,6 mm kabuk, et < 3,6 mm olan kenar/dudaklar dolu; tüy kenar ≥ 0,8 mm'de kırpılır, kalan kama epoksi + mikrobalon ile sıfırlanır |
 | `gear_blister.stl` | ER-150 ünite kabartması (PA-CF) | PA-CF | 1,2 | 2 | 78×77×141 | −y (sağ/sancak) / 136° | 71 | 19 | 1,6 | yok | sağ = ayna; kano kaportasına ve kanat altına yapıştırılır; ince kenarlar dolu, tüy kenar kırpılır |
 | `hatch_frame_a.stl` | Aviyonik kapağı çerçevesi A (PETG; 3 mıknatıs cebi) | PETG | 1,6 | 1 | 176×176×13 | +z (yukarı) (2° eğik) / 45° | 22 | 26 | 1,3 | yok | levha altına yapıştırılır; düz alt yüz gövde basamağına oturur |
 | `hatch_frame_b.stl` | Aviyonik kapağı çerçevesi B (PETG; 3 mıknatıs cebi) | PETG | 1,6 | 1 | 180×108×15 | +z (yukarı) (2° eğik) / 0° | 20 | 30 | 1,4 | yok | levha altına yapıştırılır; düz alt yüz gövde basamağına oturur |
@@ -165,7 +165,7 @@ Basılı gövde kütlesi **3,46 kg** (hedefin altında; önceki rapor 4,06 kg). 
 |---|---|---|---:|---:|---|---|---:|---:|---:|---|---|
 | `door_N_1.stl` | Burun takımı kapağı (menteşe dili + horn dahil) (PETG 1,2 mm) | PETG | 1,2 | 2 | 182×183×25 | +y (sol/iskele) / 45° | 19 | 12 | 0,7 | tabla desteği | sağ = ayna |
 | `door_N_3.stl` | Burun takımı bacak tapa kapağı (bacağa bağlı) (PETG 1,2 mm) | PETG | 1,2 | 1 | 24×18×29 | −z (aşağı) / 0° | 98 | 2 | 0,3 | yok |  |
-| `door_L_1.stl` | Ana takım kuyu kapağı (menteşe dili + horn dahil) (PETG 1,2 mm) | PETG | 1,2 | 2 | 94×92×8 | +z (yukarı) / 0° | 63 | 20 | 1,0 | yok | sağ = ayna |
+| `door_L_1.stl` | Ana takım kuyu kapağı (menteşe dili + horn dahil) (PETG 1,2 mm) | PETG | 1,2 | 2 | 94×92×8 | +z (yukarı) / 0° | 63 | 19 | 1,0 | yok | sağ = ayna |
 | `door_L_2.stl` | Ana takım bacak kapağı (PETG 1,2 mm) | PETG | 1,2 | 2 | 134×134×23 | −y (sağ/sancak) / 149° | 43 | 6 | 0,5 | tabla desteği | sağ = ayna |
 
 ## Doğrulama
@@ -175,6 +175,8 @@ Her parça bmesh ile denetlenir: sınır kenar = 0, manifold olmayan kenar = 0, 
 | STL | Kenar denetimi (yeniden okuma) | Hacim farkı | Blender içe aktarma |
 |---|---|---:|---|
 
+Yazılan tüm STL'lerde sıfır alanlı üçgen (float32 mm, |AB×AC| < 1e-09 mm²): 0. Float32 çözünürlüğünde doğrusal ince üçgen (uzun kenarına yükseklik < 10 nm): 0 kaldı; dışa aktarımda komşu üçgeni bölerek giderilen: 0 (yüzey ≤ 10 nm oynar, hacim ve kapalılık korunur). Kalanlar art arda doğrusal üçgenlerdir; dilimleyici için etkisizdir.
+
 Manifold olmayan parça: 0. 
 
 | Parça | Et %5 (mm) | Et medyan (mm) | Çıkıntı (cm²) |
@@ -182,7 +184,7 @@ Manifold olmayan parça: 0.
 | wing_panel_1 | 0,60 | 0,80 | 21,6 |
 | wing_panel_2 | 0,60 | 0,80 | 20,3 |
 | wing_panel_3 | 0,60 | 0,80 | 5,9 |
-| wing_panel_4 | 0,60 | 0,62 | 24,9 |
+| wing_panel_4 | 0,60 | 0,61 | 24,9 |
 | wing_panel_5 | 0,60 | 0,80 | 14,6 |
 | wing_panel_6 | 0,60 | 0,80 | 3,4 |
 | wing_panel_7 | 0,60 | 0,80 | 7,2 |
@@ -231,7 +233,7 @@ Manifold olmayan parça: 0.
 | longeron_joint_shoulder | 2,16 | 2,18 | 1,0 |
 | fus_nose_flange | 3,00 | 3,00 | 0,0 |
 | cowl_top | 1,50 | 1,60 | 79,2 |
-| cowl_cheek_L | 1,60 | 1,60 | 113,9 |
+| cowl_cheek_L | 1,59 | 1,60 | 113,1 |
 | cowl_cheek_R | 1,60 | 1,60 | 16,3 |
 | exhaust_ring | 1,58 | 1,60 | 22,4 |
 | scuff_pad | 2,00 | 2,00 | 14,6 |
@@ -240,7 +242,7 @@ Manifold olmayan parça: 0.
 | gear_blister | 1,18 | 1,20 | 1,3 |
 | turret_collar | 1,51 | 1,60 | 26,8 |
 | hatch_buck_a | 19,08 | 29,34 | 0,6 |
-| hatch_frame_a | 2,31 | 7,80 | 1,3 |
+| hatch_frame_a | 2,41 | 7,80 | 1,3 |
 | hatch_buck_b | 17,67 | 30,03 | 0,6 |
 | hatch_frame_b | 2,32 | 7,80 | 0,6 |
 | tolerance_coupon | 5,29 | 20,00 | 0,0 |
@@ -264,15 +266,15 @@ Manifold olmayan parça: 0.
 
 ## Isı kuralı (AERO-09, R05)
 
-Kural 1: silindir (+ buji başlığı) ve susturucu zarflarının ve susturucu çıkış borusu/ısı kalkanının 150 mm yakınında LW-PLA yok. Kural 2: camsı geçişi 120 °C'nin altındaki hiçbir filament (LW-ASA 95, PETG 80, LW-PLA 55 °C) bu kaynaklara 50 mm'den yakın değil (zarflar `params.engine_envelope`, çıkış `U_Exhaust_Muffler`). Printprep malzemeyi kendiliğinden değiştirmez: ihlal varsa `build.py --print` ve `printprep` 1 ile çıkar. Isı bölgesindeki parçaların filamenti spec'te adıyla atanır (`print.zones[].parts`). Sonuç: **uygun**.
+Kural 1: silindir (+ buji başlığı) ve susturucu zarflarının ve susturucu çıkış borusu/ısı kalkanının 150 mm yakınında LW-PLA yok. Kural 2: ısıl sınırı 120 °C'nin altındaki hiçbir filament (LW-ASA 95, PETG 80, LW-PLA 55 °C) bu kaynaklara 50 mm'den yakın değil (zarflar `params.engine_envelope`, çıkış `U_Exhaust_Muffler`). Isıl sınır amorf filamentlerde camsı geçiş (Tg), yarı kristal PA-CF'de ısıl eğilme sıcaklığıdır (HDT, 0,45 MPa; PA-CF'nin Tg'si ≈ 60 °C). Kural 3: hiçbir parça susturucu çıkış borusuna 5 mm'den yakın değil. Printprep malzemeyi kendiliğinden değiştirmez: ihlal varsa `build.py --print` ve `printprep` 1 ile çıkar. Isı bölgesindeki parçaların filamenti spec'te adıyla atanır (`print.zones[].parts`). Sonuç: **uygun**.
 
-Kaynaklar ayrı adlandırılır: motor zarfı parçaları, susturucu çıkış borusu ve borunun çıktığı yerde sol yanak dış yüzüne (0,1–0,5 mm aralıkla) oturan 0,5 mm Al ısı kalkanı (kalkan yanağı borudan korur; yanak PA-CF, Tg 150 °C). Boru yanaktaki deliğinden 1,5 mm boşlukla geçer. Boru ve kalkan uzaklıkları kaynak yüzeyinin yoğun örneklerinden parça yüzeyine, zarf uzaklıkları parça köşelerinden ölçülür; 10 mm'nin altındakiler 0,1 mm çözünürlükle verilir; son sütun parçanın en yakın üç kaynağıdır.
+Kaynaklar ayrı adlandırılır: motor zarfı parçaları, susturucu çıkış borusu ve borunun çıktığı yerde sol yanak dış yüzüne (0,1–0,5 mm aralıkla) oturan 0,5 mm Al ısı kalkanı (kalkan yanağı borudan korur; yanak PA-CF, HDT ≈ 150 °C). Boru yanaktaki deliğinden 6 mm radyal boşlukla geçer; delikteki geçiş halkası boruyu ortalar ve sıcak gazı yanağa değdirmez (BOM: Isıya dayanıklı geçiş halkası (silikon/seramik keçe), iç Ø12,4 / dış Ø24,4 mm). Boru ve kalkan uzaklıkları kaynak yüzeyinin yoğun örneklerinden parça yüzeyine, zarf uzaklıkları parça köşelerinden ölçülür; 10 mm'nin altındakiler 0,1 mm çözünürlükle verilir; son sütun parçanın en yakın üç kaynağıdır.
 
 Spec ataması: `stab_1` → LW-ASA (stab_root_heat; kaynağa 61 mm); `elevator_1` → LW-ASA (stab_root_heat; kaynağa 57 mm)
 
-| Parça (250 mm içinde) | Malzeme | Tg (°C) | En yakın (mm) | Kaynak | Kaynaklara uzaklık (mm) |
+| Parça (250 mm içinde) | Malzeme | Isıl sınır (°C) | En yakın (mm) | Kaynak | Kaynaklara uzaklık (mm) |
 |---|---|---:|---:|---|---|
-| cowl_cheek_L | PA-CF | 150 | 0,1 | ısı kalkanı | ısı kalkanı 0,1; susturucu çıkış borusu 1,5; silindir 7,0 |
+| cowl_cheek_L | PA-CF | 150 | 0,1 | ısı kalkanı | ısı kalkanı 0,1; susturucu çıkış borusu 6,0; silindir 7,0 |
 | cowl_top | PA-CF | 150 | 5,1 | silindir | silindir 5,1; buji başlığı 7,0; susturucu 35 |
 | scuff_pad | PA-CF | 150 | 8,8 | buji başlığı | buji başlığı 8,8; silindir 19; susturucu 42 |
 | cowl_cheek_R | PA-CF | 150 | 10 | silindir | silindir 10; buji başlığı 36; susturucu 65 |
@@ -365,6 +367,7 @@ Uçak toplamına girmez: `hatch_buck_a.stl`, `hatch_buck_b.stl`, `tolerance_coup
 | Dolgu | Dikey kök mermisi (basılmaz: dikey + stabilizeye teğet, yandan kırpmalı tarif yok) | epoksi + mikrobalon ya da 0,5 mm ısıl biçimlendirilmiş levha; dışarıda ≈ 2 × 10 cm³; şablon: U_Fairing_FinRoot_L/R | 2 |
 | Dolgu | Kaplama kenarları (kök kaportası, ER-150 kabartması, taret yakası: ≥ 0,8 mm'de kırpılmış) | epoksi + mikrobalon ile deriye sıfırlanır | 3 |
 | Dolgu | Dümen servo kaportası (dikeyin iç yüzü; segment planında değil) | 30 × 10 × 5 mm kabarcık, ≈ 0,4 g: PETG (şablon U_Fairing_Servo_Rudder_L/R ağı, taban deriye zımparalanır) ya da 0,5 mm ısıl biçimlendirilmiş levha; dikey rengiyle boyanır, arka ağız açık | 2 |
+| Bağlantı | Egzoz çıkış borusu geçiş halkası (sol yanak) | Isıya dayanıklı geçiş halkası (silikon/seramik keçe), iç Ø12,4 / dış Ø24,4 mm | 1 |
 | Bağlantı | M4 cıvata + kelebek somun (burun modülü) | A2 paslanmaz | 4 |
 | Bağlantı | M4 cıvata + somun (G10 köprü–soket–çerçeve, s = 1,55 flanşı) | 12.9; köprüde boru başına 2 adet | 12 |
 | Bağlantı | Motor bağlantısı: M4 × 30 + titreşim takozu (kauçuk, Ø10 × 8, 40 Shore A) | motor halkasındaki 4 × M4 ısıl gömme dişliye, kare 60 mm | 4 |

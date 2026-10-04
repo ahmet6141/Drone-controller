@@ -86,6 +86,98 @@ print("APPEND_OK")
 '''
 
 
+# Depodaki hazır sahne (``out/yk38.blend``): arayüzden render ayarları, klip seçicinin üç kipi (ortam, dünya, pozlama,
+# kare aralığı, çıktı öneki, bakım sehpası), pervane pişirme betiğinin iki F-eğrisi yolu (4.x ``act.fcurves`` ve 5.x
+# katmanlı aksiyon kanal çantası) ve toplu ana teker ↔ kuyu kapağı payı. Ayrı Python sürecinde (argüman: .blend yolu).
+_BLEND_GUI_CHECK = r"""
+import re, sys, bpy
+from mathutils.bvhtree import BVHTree
+bpy.ops.wm.open_mainfile(filepath=sys.argv[-1])
+sc = bpy.context.scene
+r = sc.render
+assert r.image_settings.file_format == "FFMPEG" and r.ffmpeg.codec == "H264", (r.image_settings.file_format, r.ffmpeg.codec)
+assert (r.resolution_x, r.resolution_y, r.resolution_percentage) == (1280, 720, 100), (r.resolution_x, r.resolution_y)
+assert r.use_motion_blur and sc.cycles.samples == 24, (r.use_motion_blur, sc.cycles.samples)
+info = sc["ucav_clips"].to_dict()
+envs = info["envs"]
+
+def layer_col(lc, name):
+    if lc.name == name:
+        return lc
+    for ch in lc.children:
+        found = layer_col(ch, name)
+        if found is not None:
+            return found
+    return None
+
+for e in envs.values():
+    w = bpy.data.worlds.get(e["world"])
+    assert w is not None and w.use_fake_user, e["world"]
+    assert layer_col(bpy.context.view_layer.layer_collection, e["collection"]) is not None, e["collection"]
+src = bpy.data.texts["YK38_klip_sec.py"].as_string()
+
+def run_clip(klip):
+    code = re.sub(r'^KLIP = ".*"$', 'KLIP = "%s"' % klip, src, count=1, flags=re.M)
+    exec(compile(code, "YK38_klip_sec.py", "exec"), {"__name__": "__main__"})
+
+for klip in ("mechanisms", "showcase", "yok"):
+    run_clip(klip)
+    env = info[klip]["env"] if klip != "yok" else "pist"
+    nfr = int(info[klip]["frames"]) if klip != "yok" else 250
+    assert sc.world.name == envs[env]["world"], (klip, sc.world.name)
+    assert (sc.frame_start, sc.frame_end) == (1, nfr), (klip, sc.frame_start, sc.frame_end)
+    for key, e in envs.items():
+        assert layer_col(bpy.context.view_layer.layer_collection, e["collection"]).exclude == (key != env), (klip, key)
+    assert abs(sc.view_settings.exposure - float(envs[env]["exposure"])) < 1e-6, (klip, sc.view_settings.exposure)
+    assert r.filepath == ("//anim/yk38_" if klip == "yok" else "//anim/yk38_%s_" % klip), (klip, r.filepath)
+    stands = [o for o in bpy.data.objects if o.name.startswith("U_Stand_")]
+    assert stands and all(o.hide_render == (klip != "mechanisms") for o in stands), klip
+    fill = bpy.data.objects.get(envs[env]["fill"])
+    if fill is not None:
+        assert abs(float(fill[envs[env]["fill_prop"]]) - float(envs[env]["fill_w"])) < 1e-6, klip
+
+bake = bpy.data.texts["YK38_pervane_pisir.py"].as_string()
+legacy = 'return hasattr(act, "fcurves")'
+assert legacy in bake
+root, prop = bpy.data.objects["U_Root"], bpy.data.objects["U_Prop"]
+for slots in (False, True):
+    run_clip("showcase")
+    code = bake.replace(legacy, "return False") if slots else bake
+    exec(compile(code, "YK38_pervane_pisir.py", "exec"), {"__name__": "__main__"})
+    ad = prop.animation_data
+    bag = ad.action.layers[0].strips[0].channelbag(ad.action_slot)
+    fc = bag.fcurves.find('["ucav_turns"]')
+    assert fc is not None and len(fc.keyframe_points) == sc.frame_end - sc.frame_start + 2, slots
+    v = [k.co[1] for k in fc.keyframe_points]
+    assert all(b >= a for a, b in zip(v, v[1:])) and v[-1] > 10.0, (slots, v[-1])
+    assert float(root["prop_auto"]) == 0.0
+
+run_clip("yok")
+root["gear"] = 0.0
+root["gear_doors"] = 0.0
+root.update_tag()
+bpy.context.view_layer.update()
+dg = bpy.context.evaluated_depsgraph_get()
+
+def world_mesh(ob):
+    ev = ob.evaluated_get(dg)
+    me = ev.to_mesh()
+    V = [ev.matrix_world @ v.co for v in me.vertices]
+    F = [tuple(p.vertices) for p in me.polygons]
+    ev.to_mesh_clear()
+    return V, F
+
+gaps = []
+for side in "LR":
+    VA, FA = world_mesh(bpy.data.objects["U_GearWheel_" + side])
+    VB, FB = world_mesh(bpy.data.objects["U_Door_%s_1" % side])
+    ta, tb = BVHTree.FromPolygons(VA, FA), BVHTree.FromPolygons(VB, FB)
+    d = min([tb.find_nearest(v)[3] for v in VA] + [ta.find_nearest(v)[3] for v in VB])
+    gaps.append(round(d * 1000, 2))
+assert min(gaps) >= float(sys.argv[-2]) * 1000 - 0.05, gaps
+print("BLEND_GUI_OK", gaps)
+"""
+
 def _read_stl(path: Path):
     data = path.read_bytes()
     n = struct.unpack("<I", data[80:84])[0]
@@ -1018,6 +1110,46 @@ class TestHeatRuleLogic(unittest.TestCase):
         self.assertGreaterEqual(PP.HEAT_TG_RULE["tg_min_c"], 120.0)
         self.assertLessEqual(PP.HEAT_TG_RULE["radius_m"], 0.050 + 1e-9)
 
+    @unittest.skipUnless(HAVE_BPY, "bpy kurulu değil")
+    def test_pipe_clearance_rule(self):
+        """Kural 3: hiçbir parça susturucu çıkış borusuna ``pipe_clear_m``'den (5 mm) yakın değil — PA-CF yanak da
+        olsa; boru deliği spec ``outlet.hole_clear_m`` ile bu sınırdan geniş açılır."""
+        from ucav import params as P
+        from ucav.blender import printprep as PP
+        self.assertGreaterEqual(PP.HEAT_PIPE_CLEAR_M, 0.005 - 1e-9)
+        self.assertGreater(float(P.muffler_outlet().params["hole_clear_m"]), PP.HEAT_PIPE_CLEAR_M)
+        row = {"key": "cowl_cheek_L", "material": "PA-CF", "min_m": 0.0002, "source": "ısı kalkanı"}
+        h = PP.heat_rule_eval([dict(row, by_source={PP.HEAT_PIPE: 0.006, PP.HEAT_SHIELD: 0.0002})])
+        self.assertTrue(h["ok"], h["violations"])
+        self.assertAlmostEqual(h["pipe_rule"]["clear_mm"], PP.HEAT_PIPE_CLEAR_M * 1000.0)
+        h = PP.heat_rule_eval([dict(row, by_source={PP.HEAT_PIPE: 0.002, PP.HEAT_SHIELD: 0.0002})])
+        self.assertFalse(h["ok"])
+        self.assertEqual([(v["key"], v["source"]) for v in h["violations"]], [("cowl_cheek_L", PP.HEAT_PIPE)])
+
+
+class TestDegenerateSplit(unittest.TestCase):
+    """STL dışa aktarımı sıfır alanlı (doğrusal) üçgeni, uzun kenarını paylaşan komşuyu orta köşede bölerek giderir:
+    üçgen sayısı, kapalılık ve hacim korunur (``printprep._flip_degenerate``)."""
+
+    @unittest.skipUnless(HAVE_BPY, "bpy kurulu değil")
+    def test_cap_removed_mesh_stays_closed(self):
+        from ucav.blender import printprep as PP
+        # dörtyüzlü ABCD; M, AB'nin ortası: ön yüz AMD + MBD, taban ABC; AMB sıfır alanlı "şapka"
+        V = np.array([(0, 0, 0), (2, 0, 0), (1, 2, 0), (1, 1, 2), (1, 0, 0)], float) * 0.01
+        T = np.array([(0, 2, 1), (0, 1, 4), (0, 4, 3), (4, 1, 3), (1, 2, 3), (2, 0, 3)])
+        self.assertTrue(_closed(T))
+        self.assertEqual(len(PP._zero_area(PP._mm32(V), T)), 1)
+        T2, n = PP._flip_degenerate(V, T)
+        self.assertEqual(n, 1)
+        self.assertEqual(len(T2), len(T))
+        self.assertTrue(_closed(T2))
+        self.assertEqual(len(PP._zero_area(PP._mm32(V), T2)), 0)
+        self.assertAlmostEqual(_volume(V, T2), _volume(V, T), places=15)
+        self.assertAlmostEqual(_volume(V, T2), 4.0 / 3.0 * 1e-6, places=15)
+        T3, n3 = PP._flip_degenerate(V, T2)                 # temiz ağa dokunmaz
+        self.assertEqual(n3, 0)
+        self.assertTrue(np.array_equal(T3, T2))
+
 
 class TestRenderDevice(unittest.TestCase):
     """Render aygıtı: ``studio.enable_gpu`` GPU arka ucu bulursa sahneyi GPU'ya işaretler, bulamazsa CPU'da kalır;
@@ -1047,6 +1179,23 @@ class TestRenderDevice(unittest.TestCase):
         from ucav.blender import build
         self.assertTrue(build.parser().parse_args(["--gpu", "--anim", "mechanisms"]).gpu)
         self.assertFalse(build.parser().parse_args([]).gpu)
+
+
+class TestYK38BlendOutput(unittest.TestCase):
+    """Depodaki hazır sahne ``out/yk38.blend`` (depo kodu olmadan, ayrı süreçte): arayüzden render komut satırıyla
+    aynı ayarlarda (hareket bulanıklığı, 1280×720 %100, 24 örnek, H.264); klip seçici her kipte doğru ortamı, dünyayı,
+    pozlamayı, kare aralığını, çıktı önekini ve bakım sehpasını kurar; pervane pişirme betiği Blender 4.x ve 5.x F-eğrisi
+    yollarında çalışır; toplu ana teker kuyu kapağına ``TYRE_CLEAR``'dan yaklaşmaz (BVH)."""
+
+    @unittest.skipUnless(HAVE_BPY, "bpy kurulu değil")
+    def test_saved_blend_gui_render_and_scripts(self):
+        from ucav import shapes as S
+        blend = OUT / "yk38.blend"
+        if not blend.exists():
+            self.skipTest("ucav/out/yk38.blend yok (python3 ucav/blender/build.py --blend)")
+        r = subprocess.run([sys.executable, "-c", _BLEND_GUI_CHECK, repr(S.TYRE_CLEAR), str(blend)],
+                           capture_output=True, text=True, timeout=900)
+        self.assertIn("BLEND_GUI_OK", r.stdout, r.stdout[-2000:] + r.stderr[-2000:])
 
 
 class TestYK38PrintOutputs(unittest.TestCase):
@@ -1088,6 +1237,40 @@ class TestYK38PrintOutputs(unittest.TestCase):
         if S["bed_mm"] == [256, 256, 256] or tuple(S["bed_mm"]) == (256.0, 256.0, 256.0):
             on_disk = {p.name for p in (OUT / "stl").glob("*.stl")}
             self.assertEqual(on_disk, {Path(f).name for f in files})
+
+    def test_stl_no_zero_area_triangles(self):
+        """Yazılan STL'lerde sıfır alanlı üçgen yok (float32 mm köşelerle |AB × AC| ≥ 1e-9 mm²); float32 çözünürlüğünde
+        doğrusal ince üçgenler (uzun kenarına yükseklik < 10 nm) üçgenlerin %0,05'inden az ve raporla aynı; saklanan
+        normaller dosyadaki köşelerden hesaplananla aynı (dilimleyici normal düzeltmez)."""
+        S = json.loads(self.report.read_text(encoding="utf-8"))
+        bad, n_sliver, n_tri, n_normal = {}, 0, 0, 0
+        for p in S["parts"]:
+            if not p.get("stl"):
+                continue
+            path = OUT / p["stl"]["file"]
+            V, T = _read_stl(path)
+            a, b, c = V[T[:, 0]], V[T[:, 1]], V[T[:, 2]]
+            cr = np.cross(b - a, c - a)
+            crn = np.linalg.norm(cr, axis=1)
+            L = np.maximum(np.maximum(np.linalg.norm(b - a, axis=1), np.linalg.norm(c - b, axis=1)),
+                           np.linalg.norm(a - c, axis=1))
+            n = int((crn < 1e-9).sum())
+            if n:
+                bad[p["key"]] = n
+            n_sliver += int(((crn < 1e-9) | (crn < 1e-5 * L)).sum())
+            n_tri += len(T)
+            data = path.read_bytes()
+            rec = np.frombuffer(data[84:84 + 50 * len(T)], dtype=[("n", "<f4", 3), ("v", "<f4", (3, 3)), ("a", "<u2")])
+            P3 = rec["v"].astype(float)
+            nn = np.cross(P3[:, 1] - P3[:, 0], P3[:, 2] - P3[:, 0])
+            nn /= np.maximum(np.linalg.norm(nn, axis=1), 1e-300)[:, None]
+            n_normal += int((np.abs(nn - rec["n"]).max(axis=1) > 1e-3).sum())
+        self.assertEqual(bad, {})
+        self.assertEqual(n_normal, 0)
+        self.assertLess(n_sliver, 5e-4 * n_tri)
+        if "stl_zero_area" in S["totals"]:
+            self.assertEqual(S["totals"]["stl_zero_area"], 0)
+            self.assertEqual(S["totals"]["stl_slivers"], n_sliver)
 
     def test_report_supports_heat_and_assembly(self):
         """Destek sınıfı (tablaya bakan 45° sarkma > 2 cm² → "tabla desteği"), ısı kuralı (150 mm içinde LW-PLA

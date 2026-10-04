@@ -11,15 +11,18 @@
   "segment_cut": "EXACT",
   "shell_features": "MANIFOLD",
   "boolean_ops": 556,
-  "boolean_s": 25.9,
-  "elapsed_s": 105.4
+  "boolean_s": 25.4,
+  "elapsed_s": 106.2
  },
  "totals": {
   "unique_parts": 65,
   "pieces": 104,
-  "mass_g": 3457.0,
-  "print_h": 256.6,
-  "stl_mb": 30.82,
+  "mass_g": 3455.0,
+  "print_h": 256.5,
+  "stl_mb": 30.91,
+  "stl_zero_area": 0,
+  "stl_degenerate_split": 1193,
+  "stl_slivers": 69,
   "spec_estimate": {
    "print_mass_kg": 3.457,
    "print_hours": 257,
@@ -46,15 +49,15 @@
   },
   "PA-CF": {
    "pieces": 16,
-   "mass_g": 662.7,
-   "hours": 42.5,
-   "volume_cm3": 575.1
+   "mass_g": 662.0,
+   "hours": 42.4,
+   "volume_cm3": 574.6
   },
   "PETG": {
    "pieces": 17,
-   "mass_g": 188.0,
+   "mass_g": 187.2,
    "hours": 11.2,
-   "volume_cm3": 171.1
+   "volume_cm3": 170.3
   }
  },
  "by_group": {
@@ -85,8 +88,8 @@
   },
   "İtki": {
    "pieces": 6,
-   "mass_g": 233.9,
-   "hours": 15.1
+   "mass_g": 233.2,
+   "hours": 15.0
   },
   "Kaplamalar": {
    "pieces": 6,
@@ -100,8 +103,8 @@
   },
   "Takım kapakları": {
    "pieces": 7,
-   "mass_g": 77.5,
-   "hours": 4.6
+   "mass_g": 76.7,
+   "hours": 4.5
   }
  },
  "all_manifold": true,
@@ -129,6 +132,9 @@
    "tg_min_c": 120.0,
    "radius_mm": 50.0
   },
+  "pipe_rule": {
+   "clear_mm": 5.0
+  },
   "assigned": [
    {
     "key": "stab_1",
@@ -153,7 +159,7 @@
     "source": "ısı kalkanı",
     "by_source_mm": {
      "ısı kalkanı": 0.1,
-     "susturucu çıkış borusu": 1.5,
+     "susturucu çıkış borusu": 6.0,
      "cylinder": 7.0
     }
    },
@@ -351,7 +357,7 @@
     "min_mm": 0.012,
     "p05_mm": 0.599,
     "median_mm": 0.799,
-    "frac_lt_0p4": 0.003
+    "frac_lt_0p4": 0.004
    },
    "note": "",
    "pin_holes": 1,
@@ -372,7 +378,10 @@
     "bytes": 966584,
     "triangles": 19330,
     "volume_cm3": 128.591,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -452,7 +461,10 @@
     "bytes": 922384,
     "triangles": 18446,
     "volume_cm3": 122.014,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 2,
+    "zero_area": 0,
+    "slivers": 1
    }
   },
   {
@@ -531,7 +543,10 @@
     "bytes": 930684,
     "triangles": 18612,
     "volume_cm3": 111.813,
-    "separated_verts": 46
+    "separated_verts": 46,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -610,7 +625,10 @@
     "bytes": 1085284,
     "triangles": 21704,
     "volume_cm3": 114.077,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 3,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -690,7 +708,10 @@
     "bytes": 788584,
     "triangles": 15770,
     "volume_cm3": 93.137,
-    "separated_verts": 44
+    "separated_verts": 44,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -769,7 +790,10 @@
     "bytes": 770284,
     "triangles": 15404,
     "volume_cm3": 73.464,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 1,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -849,7 +873,10 @@
     "bytes": 635384,
     "triangles": 12706,
     "volume_cm3": 63.055,
-    "separated_verts": 101
+    "separated_verts": 101,
+    "degenerate_split": 10,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -927,7 +954,10 @@
     "bytes": 401384,
     "triangles": 8026,
     "volume_cm3": 21.293,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 5,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -1010,7 +1040,10 @@
     "bytes": 944884,
     "triangles": 18896,
     "volume_cm3": 81.987,
-    "separated_verts": 182
+    "separated_verts": 182,
+    "degenerate_split": 39,
+    "zero_area": 0,
+    "slivers": 3
    }
   },
   {
@@ -1092,7 +1125,10 @@
     "bytes": 1121284,
     "triangles": 22424,
     "volume_cm3": 127.029,
-    "separated_verts": 53
+    "separated_verts": 53,
+    "degenerate_split": 2,
+    "zero_area": 0,
+    "slivers": 1
    }
   },
   {
@@ -1170,7 +1206,10 @@
     "bytes": 312884,
     "triangles": 6256,
     "volume_cm3": 39.382,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -1250,7 +1289,10 @@
     "bytes": 515684,
     "triangles": 10312,
     "volume_cm3": 45.658,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 2,
+    "zero_area": 0,
+    "slivers": 1
    }
   },
   {
@@ -1329,7 +1371,10 @@
     "bytes": 314884,
     "triangles": 6296,
     "volume_cm3": 31.408,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -1408,7 +1453,10 @@
     "bytes": 306284,
     "triangles": 6124,
     "volume_cm3": 21.418,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 1,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -1488,7 +1536,10 @@
     "bytes": 488884,
     "triangles": 9776,
     "volume_cm3": 72.807,
-    "separated_verts": 47
+    "separated_verts": 47,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -1566,7 +1617,10 @@
     "bytes": 429984,
     "triangles": 8598,
     "volume_cm3": 36.988,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -1644,7 +1698,10 @@
     "bytes": 174084,
     "triangles": 3480,
     "volume_cm3": 19.105,
-    "separated_verts": 16
+    "separated_verts": 16,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -1657,8 +1714,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 1954,
-    "faces": 3668,
+    "verts": 1955,
+    "faces": 3670,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1702,7 +1759,7 @@
    "bed_fix": "",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.111,
+    "min_mm": 0.376,
     "p05_mm": 0.499,
     "median_mm": 0.499,
     "frac_lt_0p4": 0.001
@@ -1720,10 +1777,13 @@
    ],
    "stl": {
     "file": "stl/aileron_2.stl",
-    "bytes": 196484,
-    "triangles": 3928,
+    "bytes": 196584,
+    "triangles": 3930,
     "volume_cm3": 17.393,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 1,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -1801,7 +1861,10 @@
     "bytes": 171884,
     "triangles": 3436,
     "volume_cm3": 15.245,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -1879,7 +1942,10 @@
     "bytes": 186984,
     "triangles": 3738,
     "volume_cm3": 13.181,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 13,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -1957,7 +2023,10 @@
     "bytes": 251484,
     "triangles": 5028,
     "volume_cm3": 21.002,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 6,
+    "zero_area": 0,
+    "slivers": 2
    }
   },
   {
@@ -2036,7 +2105,10 @@
     "bytes": 179084,
     "triangles": 3580,
     "volume_cm3": 20.992,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -2115,7 +2187,10 @@
     "bytes": 201784,
     "triangles": 4034,
     "volume_cm3": 21.901,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 2,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -2173,7 +2248,7 @@
    "bed_fix": "",
    "support": "model üstü destek",
    "min_wall": {
-    "min_mm": 0.317,
+    "min_mm": 0.307,
     "p05_mm": 0.499,
     "median_mm": 0.499,
     "frac_lt_0p4": 0.001
@@ -2193,7 +2268,10 @@
     "bytes": 186284,
     "triangles": 3724,
     "volume_cm3": 23.363,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -2271,7 +2349,10 @@
     "bytes": 180984,
     "triangles": 3618,
     "volume_cm3": 21.473,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -2332,7 +2413,7 @@
     "min_mm": 0.277,
     "p05_mm": 0.499,
     "median_mm": 0.499,
-    "frac_lt_0p4": 0.003
+    "frac_lt_0p4": 0.002
    },
    "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
@@ -2350,7 +2431,10 @@
     "bytes": 205884,
     "triangles": 4116,
     "volume_cm3": 16.778,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -2428,7 +2512,10 @@
     "bytes": 126684,
     "triangles": 2532,
     "volume_cm3": 8.968,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -2506,7 +2593,10 @@
     "bytes": 120384,
     "triangles": 2406,
     "volume_cm3": 8.24,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 2,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -2585,7 +2675,10 @@
     "bytes": 155584,
     "triangles": 3110,
     "volume_cm3": 15.383,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -2664,7 +2757,10 @@
     "bytes": 166484,
     "triangles": 3328,
     "volume_cm3": 12.648,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -2742,7 +2838,10 @@
     "bytes": 607384,
     "triangles": 12146,
     "volume_cm3": 30.931,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -2823,7 +2922,10 @@
     "bytes": 776284,
     "triangles": 15524,
     "volume_cm3": 112.543,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -2904,7 +3006,10 @@
     "bytes": 1534084,
     "triangles": 30680,
     "volume_cm3": 126.687,
-    "separated_verts": 295
+    "separated_verts": 295,
+    "degenerate_split": 484,
+    "zero_area": 0,
+    "slivers": 30
    }
   },
   {
@@ -2984,7 +3089,10 @@
     "bytes": 1417784,
     "triangles": 28354,
     "volume_cm3": 130.168,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 241,
+    "zero_area": 0,
+    "slivers": 12
    }
   },
   {
@@ -3064,7 +3172,10 @@
     "bytes": 1236784,
     "triangles": 24734,
     "volume_cm3": 115.192,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 191,
+    "zero_area": 0,
+    "slivers": 19
    }
   },
   {
@@ -3144,7 +3255,10 @@
     "bytes": 874784,
     "triangles": 17494,
     "volume_cm3": 106.921,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -3225,7 +3339,10 @@
     "bytes": 1020284,
     "triangles": 20404,
     "volume_cm3": 109.597,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 1,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -3304,7 +3421,10 @@
     "bytes": 911384,
     "triangles": 18226,
     "volume_cm3": 87.582,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 20,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -3383,7 +3503,10 @@
     "bytes": 890484,
     "triangles": 17808,
     "volume_cm3": 101.99,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -3461,7 +3584,10 @@
     "bytes": 731884,
     "triangles": 14636,
     "volume_cm3": 77.27,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -3540,7 +3666,10 @@
     "bytes": 1014484,
     "triangles": 20288,
     "volume_cm3": 108.894,
-    "separated_verts": 369
+    "separated_verts": 369,
+    "degenerate_split": 22,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -3616,7 +3745,10 @@
     "bytes": 121784,
     "triangles": 2434,
     "volume_cm3": 43.343,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -3692,7 +3824,10 @@
     "bytes": 122484,
     "triangles": 2448,
     "volume_cm3": 41.427,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 10,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -3768,7 +3903,10 @@
     "bytes": 61784,
     "triangles": 1234,
     "volume_cm3": 38.685,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -3844,7 +3982,10 @@
     "bytes": 50184,
     "triangles": 1002,
     "volume_cm3": 49.671,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -3922,7 +4063,10 @@
     "bytes": 356184,
     "triangles": 7122,
     "volume_cm3": 54.578,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 27,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -3998,7 +4142,10 @@
     "bytes": 6684,
     "triangles": 132,
     "volume_cm3": 3.258,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -4074,7 +4221,10 @@
     "bytes": 49784,
     "triangles": 994,
     "volume_cm3": 2.928,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -4150,7 +4300,10 @@
     "bytes": 55184,
     "triangles": 1102,
     "volume_cm3": 3.136,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -4225,7 +4378,10 @@
     "bytes": 94684,
     "triangles": 1892,
     "volume_cm3": 14.508,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 8,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -4305,7 +4461,10 @@
     "bytes": 695284,
     "triangles": 13904,
     "volume_cm3": 63.786,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -4318,8 +4477,8 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 4229,
-    "faces": 8462,
+    "verts": 4226,
+    "faces": 8456,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -4328,13 +4487,13 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 67.82,
-   "mass_g": 81.4,
+   "volume_cm3": 67.25,
+   "mass_g": 80.7,
    "fill": 1.0,
-   "mass_solid_g": 81.4,
-   "mass_total_g": 81.4,
-   "print_h": 5.07,
-   "print_h_total": 5.07,
+   "mass_solid_g": 80.7,
+   "mass_total_g": 80.7,
+   "print_h": 5.03,
+   "print_h_total": 5.03,
    "size_mm": [
     142.4,
     142.4,
@@ -4353,20 +4512,20 @@
    "bed_margin_mm": 56.8,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 113.9,
+   "overhang_cm2": 113.1,
    "bed_contact_cm2": 14.27,
    "contact_need_cm2": 3.54,
    "contact_ok": true,
    "oh45_to_bed_cm2": 63.88,
-   "oh45_over_model_cm2": 49.98,
-   "oh45_over_model_gt5mm_cm2": 49.83,
+   "oh45_over_model_cm2": 49.2,
+   "oh45_over_model_gt5mm_cm2": 49.06,
    "bed_fix": "",
    "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.142,
-    "p05_mm": 1.596,
+    "min_mm": 0.095,
+    "p05_mm": 1.595,
     "median_mm": 1.599,
-    "frac_lt_0p4": 0.002
+    "frac_lt_0p4": 0.003
    },
    "note": "eğik ekler deriye dik (deri normali 52°)",
    "pin_holes": 0,
@@ -4382,10 +4541,13 @@
    ],
    "stl": {
     "file": "stl/cowl_cheek_L.stl",
-    "bytes": 423184,
-    "triangles": 8462,
-    "volume_cm3": 67.817,
-    "separated_verts": 0
+    "bytes": 422884,
+    "triangles": 8456,
+    "volume_cm3": 67.252,
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -4466,7 +4628,10 @@
     "bytes": 320584,
     "triangles": 6410,
     "volume_cm3": 35.13,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -4542,7 +4707,10 @@
     "bytes": 257684,
     "triangles": 5152,
     "volume_cm3": 20.602,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -4620,7 +4788,10 @@
     "bytes": 61984,
     "triangles": 1238,
     "volume_cm3": 4.09,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 1,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -4696,7 +4867,10 @@
     "bytes": 19884,
     "triangles": 396,
     "volume_cm3": 5.45,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -4774,7 +4948,10 @@
     "bytes": 618284,
     "triangles": 12364,
     "volume_cm3": 41.563,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -4833,9 +5010,9 @@
    "support": "yok",
    "min_wall": {
     "min_mm": 0.003,
-    "p05_mm": 1.174,
+    "p05_mm": 1.176,
     "median_mm": 1.199,
-    "frac_lt_0p4": 0.012
+    "frac_lt_0p4": 0.011
    },
    "note": "kano kaportasına ve kanat altına yapıştırılır; ince kenarlar dolu, tüy kenar kırpılır",
    "pin_holes": 0,
@@ -4850,7 +5027,10 @@
     "bytes": 396184,
     "triangles": 7922,
     "volume_cm3": 16.69,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 23,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -4926,7 +5106,10 @@
     "bytes": 286384,
     "triangles": 5726,
     "volume_cm3": 15.39,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 6,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -5002,7 +5185,10 @@
     "bytes": 171584,
     "triangles": 3430,
     "volume_cm3": 558.85,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 17,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -5060,10 +5246,10 @@
    "bed_fix": "",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.046,
-    "p05_mm": 2.367,
+    "min_mm": 0.093,
+    "p05_mm": 2.421,
     "median_mm": 7.799,
-    "frac_lt_0p4": 0.006
+    "frac_lt_0p4": 0.005
    },
    "note": "levha altına yapıştırılır; düz alt yüz gövde basamağına oturur",
    "pin_holes": 0,
@@ -5078,7 +5264,10 @@
     "bytes": 212984,
     "triangles": 4258,
     "volume_cm3": 29.662,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -5154,7 +5343,10 @@
     "bytes": 186484,
     "triangles": 3728,
     "volume_cm3": 594.721,
-    "separated_verts": 4
+    "separated_verts": 4,
+    "degenerate_split": 37,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -5230,7 +5422,10 @@
     "bytes": 226484,
     "triangles": 4528,
     "volume_cm3": 33.339,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 4,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -5306,7 +5501,10 @@
     "bytes": 64484,
     "triangles": 1288,
     "volume_cm3": 56.717,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -5382,7 +5580,10 @@
     "bytes": 461384,
     "triangles": 9226,
     "volume_cm3": 9.018,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 3,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -5458,7 +5659,10 @@
     "bytes": 52684,
     "triangles": 1052,
     "volume_cm3": 2.314,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 7,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -5471,8 +5675,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 6396,
-    "faces": 12788,
+    "verts": 7294,
+    "faces": 14584,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -5481,13 +5685,13 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 15.93,
-   "mass_g": 19.9,
-   "fill": 0.982,
-   "mass_solid_g": 20.2,
-   "mass_total_g": 39.7,
-   "print_h": 1.0,
-   "print_h_total": 2.0,
+   "volume_cm3": 15.54,
+   "mass_g": 19.4,
+   "fill": 0.985,
+   "mass_solid_g": 19.7,
+   "mass_total_g": 38.9,
+   "print_h": 0.98,
+   "print_h_total": 1.96,
    "size_mm": [
     94.0,
     91.5,
@@ -5516,10 +5720,10 @@
    "bed_fix": "",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.101,
+    "min_mm": 0.323,
     "p05_mm": 0.799,
     "median_mm": 1.799,
-    "frac_lt_0p4": 0.002
+    "frac_lt_0p4": 0.001
    },
    "note": "",
    "pin_holes": 0,
@@ -5531,10 +5735,13 @@
    "features": [],
    "stl": {
     "file": "stl/door_L_1.stl",
-    "bytes": 639484,
-    "triangles": 12788,
-    "volume_cm3": 15.931,
-    "separated_verts": 0
+    "bytes": 729284,
+    "triangles": 14584,
+    "volume_cm3": 15.545,
+    "separated_verts": 0,
+    "degenerate_split": 2,
+    "zero_area": 0,
+    "slivers": 0
    }
   },
   {
@@ -5610,7 +5817,10 @@
     "bytes": 348684,
     "triangles": 6972,
     "volume_cm3": 5.052,
-    "separated_verts": 0
+    "separated_verts": 0,
+    "degenerate_split": 0,
+    "zero_area": 0,
+    "slivers": 0
    }
   }
  ],
@@ -5627,15 +5837,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 594.7206966375177,
-   "volume_err_pct": -5.100920975170365e-05,
+   "volume_cm3": 594.7206967291647,
+   "volume_err_pct": -5.0993799659809545e-05,
    "blender_import": {
     "verts": 1866,
     "faces": 3728,
     "nonmanifold": 0,
-    "volume_cm3": 594.7206966375192
+    "volume_cm3": 594.7206967291667
    }
   },
   {
@@ -5650,15 +5862,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 558.8503517615843,
-   "volume_err_pct": 6.294382826945504e-05,
+   "volume_cm3": 558.8503518776046,
+   "volume_err_pct": 6.29645888062835e-05,
    "blender_import": {
     "verts": 1717,
     "faces": 3430,
     "nonmanifold": 0,
-    "volume_cm3": 558.8503517615835
+    "volume_cm3": 558.8503518776035
    }
   },
   {
@@ -5673,15 +5887,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 12
    },
-   "volume_cm3": 130.1683403496468,
-   "volume_err_pct": 0.000261469521534542,
+   "volume_cm3": 130.16834061739348,
+   "volume_err_pct": 0.0002616752147043437,
    "blender_import": {
     "verts": 14118,
     "faces": 28354,
     "nonmanifold": 0,
-    "volume_cm3": 130.16834034964307
+    "volume_cm3": 130.16834061738902
    }
   },
   {
@@ -5696,15 +5912,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 128.59076158373065,
-   "volume_err_pct": -0.00018540665315185527,
+   "volume_cm3": 128.5907424303271,
+   "volume_err_pct": -0.0002003014774726123,
    "blender_import": {
     "verts": 9618,
     "faces": 19330,
     "nonmanifold": 0,
-    "volume_cm3": 128.5907615837302
+    "volume_cm3": 128.59074243032677
    }
   },
   {
@@ -5719,15 +5937,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 1
    },
-   "volume_cm3": 127.0287727530627,
-   "volume_err_pct": -0.00017889374654582544,
+   "volume_cm3": 127.02877275503329,
+   "volume_err_pct": -0.00017889219525375698,
    "blender_import": {
     "verts": 11114,
     "faces": 22424,
     "nonmanifold": 0,
-    "volume_cm3": 127.02877275306408
+    "volume_cm3": 127.02877275503464
    }
   },
   {
@@ -5742,15 +5962,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 30
    },
-   "volume_cm3": 126.68661268906166,
-   "volume_err_pct": -0.0003057227168820219,
+   "volume_cm3": 126.6866120160675,
+   "volume_err_pct": -0.0003062539427865996,
    "blender_import": {
     "verts": 15270,
     "faces": 30680,
     "nonmanifold": 0,
-    "volume_cm3": 126.6866126890639
+    "volume_cm3": 126.68661201606892
    }
   },
   {
@@ -5765,15 +5987,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 1
    },
-   "volume_cm3": 122.01429193250159,
-   "volume_err_pct": 0.00023926147949960484,
+   "volume_cm3": 122.01429192660389,
+   "volume_err_pct": 0.00023925664587095668,
    "blender_import": {
     "verts": 9157,
     "faces": 18446,
     "nonmanifold": 0,
-    "volume_cm3": 122.01429193249976
+    "volume_cm3": 122.01429192660204
    }
   },
   {
@@ -5788,15 +6012,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 19
    },
-   "volume_cm3": 115.19200551499463,
-   "volume_err_pct": 4.787654212550224e-06,
+   "volume_cm3": 115.1920052642259,
+   "volume_err_pct": 4.569957900692951e-06,
    "blender_import": {
     "verts": 12330,
     "faces": 24734,
     "nonmanifold": 0,
-    "volume_cm3": 115.19200551500454
+    "volume_cm3": 115.19200526423572
    }
   },
   {
@@ -5811,15 +6037,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 114.07699922916906,
-   "volume_err_pct": -6.757110871237381e-07,
+   "volume_cm3": 114.07699923101883,
+   "volume_err_pct": -6.740895769903554e-07,
    "blender_import": {
     "verts": 10772,
     "faces": 21704,
     "nonmanifold": 0,
-    "volume_cm3": 114.07699922917003
+    "volume_cm3": 114.07699923101976
    }
   },
   {
@@ -5834,7 +6062,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 112.5431892257221,
    "volume_err_pct": 0.00016813637640359521,
@@ -5857,7 +6087,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 111.81258951023287,
    "volume_err_pct": -0.00036712168275064734,
@@ -5880,7 +6112,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 109.59674002586364,
    "volume_err_pct": -0.00023720917210814859,
@@ -5903,15 +6137,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 108.89382353257724,
-   "volume_err_pct": -0.0001620543122316762,
+   "volume_cm3": 108.89382348810248,
+   "volume_err_pct": -0.00016209515448182302,
    "blender_import": {
     "verts": 10078,
     "faces": 20288,
     "nonmanifold": 0,
-    "volume_cm3": 108.89382353258101
+    "volume_cm3": 108.89382348810605
    }
   },
   {
@@ -5926,7 +6162,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 106.9206471336193,
    "volume_err_pct": -0.00033002532777364645,
@@ -5949,7 +6187,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 101.98974433818675,
    "volume_err_pct": -0.0002506734123361691,
@@ -5972,7 +6212,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 93.13736406290612,
    "volume_err_pct": 0.0003908896637375444,
@@ -5995,15 +6237,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 87.58173153852036,
-   "volume_err_pct": -0.0003065258610617559,
+   "volume_cm3": 87.5817312625309,
+   "volume_err_pct": -0.00030684098227863984,
    "blender_import": {
     "verts": 9081,
     "faces": 18226,
     "nonmanifold": 0,
-    "volume_cm3": 87.58173153852294
+    "volume_cm3": 87.58173126253358
    }
   },
   {
@@ -6018,15 +6262,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 3
    },
-   "volume_cm3": 81.98689846227232,
-   "volume_err_pct": -0.00012384613130491702,
+   "volume_cm3": 81.98689852377471,
+   "volume_err_pct": -0.00012377111649679407,
    "blender_import": {
     "verts": 9418,
     "faces": 18896,
     "nonmanifold": 0,
-    "volume_cm3": 81.98689846227175
+    "volume_cm3": 81.9868985237742
    }
   },
   {
@@ -6041,7 +6287,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 77.27042917572251,
    "volume_err_pct": 0.0005554234793789393,
@@ -6064,15 +6312,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 73.46405295247686,
-   "volume_err_pct": 7.207949044942516e-05,
+   "volume_cm3": 73.46405294883067,
+   "volume_err_pct": 7.20745272120829e-05,
    "blender_import": {
     "verts": 7660,
     "faces": 15404,
     "nonmanifold": 0,
-    "volume_cm3": 73.4640529524769
+    "volume_cm3": 73.4640529488307
    }
   },
   {
@@ -6087,38 +6337,42 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 72.80739363000224,
-   "volume_err_pct": 0.0005406485670828668,
+   "volume_cm3": 72.80739363000228,
+   "volume_err_pct": 0.0005406485671414224,
    "blender_import": {
     "verts": 4860,
     "faces": 9776,
     "nonmanifold": 0,
-    "volume_cm3": 72.80739363000228
+    "volume_cm3": 72.80739363000222
    }
   },
   {
    "key": "cowl_cheek_L",
    "edges": {
-    "triangles": 8462,
+    "triangles": 8456,
     "dup_directed": 0,
     "unpaired": 0,
     "ok": true,
     "welded": {
-     "triangles": 8462,
+     "triangles": 8456,
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 67.81668145636807,
-   "volume_err_pct": -0.0004697105916215186,
+   "volume_cm3": 67.25208636857298,
+   "volume_err_pct": 0.0001284252854632168,
    "blender_import": {
-    "verts": 4229,
-    "faces": 8462,
+    "verts": 4226,
+    "faces": 8456,
     "nonmanifold": 0,
-    "volume_cm3": 67.8166814563693
+    "volume_cm3": 67.25208636857442
    }
   },
   {
@@ -6133,7 +6387,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 63.7861817078715,
    "volume_err_pct": 0.0002848710869122523,
@@ -6156,15 +6412,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 63.05468140532962,
-   "volume_err_pct": -0.0005052647218813902,
+   "volume_cm3": 63.054681365375,
+   "volume_err_pct": -0.0005053280865962345,
    "blender_import": {
     "verts": 6311,
     "faces": 12706,
     "nonmanifold": 0,
-    "volume_cm3": 63.05468140532957
+    "volume_cm3": 63.05468136537498
    }
   },
   {
@@ -6179,7 +6437,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 56.71658681623293,
    "volume_err_pct": -0.0007285007441605893,
@@ -6202,15 +6462,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 54.577915327698,
-   "volume_err_pct": -0.00015513998681120653,
+   "volume_cm3": 54.57791540501061,
+   "volume_err_pct": -0.00015499833155433582,
    "blender_import": {
     "verts": 3555,
     "faces": 7122,
     "nonmanifold": 0,
-    "volume_cm3": 54.57791532769795
+    "volume_cm3": 54.57791540501059
    }
   },
   {
@@ -6225,7 +6487,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 49.67135659989633,
    "volume_err_pct": 0.0007179237308050801,
@@ -6248,15 +6512,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 1
    },
-   "volume_cm3": 45.65776741766142,
-   "volume_err_pct": -0.0005094010657127836,
+   "volume_cm3": 45.657766868400856,
+   "volume_err_pct": -0.0005106040543727463,
    "blender_import": {
     "verts": 5139,
     "faces": 10312,
     "nonmanifold": 0,
-    "volume_cm3": 45.65776741766163
+    "volume_cm3": 45.65776686840109
    }
   },
   {
@@ -6271,7 +6537,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 43.34348192778685,
    "volume_err_pct": 0.0011118930088907732,
@@ -6294,15 +6562,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 41.4274499869252,
-   "volume_err_pct": 0.0010862165380000131,
+   "volume_cm3": 41.42744998360435,
+   "volume_err_pct": 0.0010862085218526377,
    "blender_import": {
     "verts": 1204,
     "faces": 2448,
     "nonmanifold": 0,
-    "volume_cm3": 41.42744998692519
+    "volume_cm3": 41.42744998360435
    }
   },
   {
@@ -6317,15 +6587,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 41.562807018954636,
-   "volume_err_pct": -0.00046430971144052454,
+   "volume_cm3": 41.56280641083099,
+   "volume_err_pct": -0.0004657728484836038,
    "blender_import": {
     "verts": 6182,
     "faces": 12364,
     "nonmanifold": 0,
-    "volume_cm3": 41.56280701895393
+    "volume_cm3": 41.562806410830305
    }
   },
   {
@@ -6340,7 +6612,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 39.38226618602645,
    "volume_err_pct": 0.0006759078422909189,
@@ -6363,7 +6637,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 38.68500108392095,
    "volume_err_pct": 2.8019153404178705e-06,
@@ -6386,7 +6662,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 36.98839376484554,
    "volume_err_pct": 0.0010645745797029987,
@@ -6409,15 +6687,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 35.13036815007037,
-   "volume_err_pct": 0.0010479649028321879,
+   "volume_cm3": 35.13036865904747,
+   "volume_err_pct": 0.0010494137417227164,
    "blender_import": {
     "verts": 3195,
     "faces": 6410,
     "nonmanifold": 0,
-    "volume_cm3": 35.13036815007038
+    "volume_cm3": 35.130368659047456
    }
   },
   {
@@ -6432,15 +6712,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 33.33888041381862,
-   "volume_err_pct": -0.000358697565544779,
+   "volume_cm3": 33.33888040777915,
+   "volume_err_pct": -0.00035871568087860844,
    "blender_import": {
     "verts": 2266,
     "faces": 4528,
     "nonmanifold": 0,
-    "volume_cm3": 33.33888041381875
+    "volume_cm3": 33.33888040777931
    }
   },
   {
@@ -6455,7 +6737,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 31.408281215616782,
    "volume_err_pct": 0.0008953630182775977,
@@ -6478,7 +6762,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 30.931224753956002,
    "volume_err_pct": 0.0007266300992563029,
@@ -6501,7 +6787,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 29.661859727356216,
    "volume_err_pct": -0.0004729035256662894,
@@ -6524,15 +6812,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 23.362764659968747,
-   "volume_err_pct": -0.0010073193992762807,
+   "volume_cm3": 23.36276467433662,
+   "volume_err_pct": -0.0010072579008642546,
    "blender_import": {
     "verts": 1852,
     "faces": 3724,
     "nonmanifold": 0,
-    "volume_cm3": 23.36276465996867
+    "volume_cm3": 23.36276467433655
    }
   },
   {
@@ -6547,15 +6837,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 21.901427183721275,
-   "volume_err_pct": 0.0019505215345181283,
+   "volume_cm3": 21.90142714416645,
+   "volume_err_pct": 0.0019503409271330013,
    "blender_import": {
     "verts": 2001,
     "faces": 4034,
     "nonmanifold": 0,
-    "volume_cm3": 21.901427183721136
+    "volume_cm3": 21.901427144166316
    }
   },
   {
@@ -6570,7 +6862,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 21.47344386617623,
    "volume_err_pct": 0.0020670897230477604,
@@ -6593,15 +6887,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 21.41792320244676,
-   "volume_err_pct": -0.00035856547407619625,
+   "volume_cm3": 21.417921869356746,
+   "volume_err_pct": -0.0003647896313983798,
    "blender_import": {
     "verts": 3052,
     "faces": 6124,
     "nonmanifold": 0,
-    "volume_cm3": 21.417923202446858
+    "volume_cm3": 21.41792186935683
    }
   },
   {
@@ -6616,15 +6912,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 21.292799373160072,
-   "volume_err_pct": -0.000942219696271328,
+   "volume_cm3": 21.292799413848247,
+   "volume_err_pct": -0.0009420286091788219,
    "blender_import": {
     "verts": 3999,
     "faces": 8026,
     "nonmanifold": 0,
-    "volume_cm3": 21.292799373159994
+    "volume_cm3": 21.292799413848133
    }
   },
   {
@@ -6639,15 +6937,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 2
    },
-   "volume_cm3": 21.00153944419899,
-   "volume_err_pct": -0.002192914012994579,
+   "volume_cm3": 21.001539430298322,
+   "volume_err_pct": -0.002192980200344755,
    "blender_import": {
     "verts": 2510,
     "faces": 5028,
     "nonmanifold": 0,
-    "volume_cm3": 21.001539444199008
+    "volume_cm3": 21.00153943029834
    }
   },
   {
@@ -6662,7 +6962,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 20.99232899164434,
    "volume_err_pct": 0.0015672239154814287,
@@ -6685,7 +6987,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 20.60182144764809,
    "volume_err_pct": -0.0008666748466739927,
@@ -6708,7 +7012,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 19.104983037467626,
    "volume_err_pct": -8.87858276590685e-05,
@@ -6722,24 +7028,26 @@
   {
    "key": "aileron_2",
    "edges": {
-    "triangles": 3928,
+    "triangles": 3930,
     "dup_directed": 0,
     "unpaired": 0,
     "ok": true,
     "welded": {
-     "triangles": 3928,
+     "triangles": 3930,
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 17.393062876522475,
-   "volume_err_pct": 0.00036150475751131194,
+   "volume_cm3": 17.393064648457553,
+   "volume_err_pct": 0.0003716923909193779,
    "blender_import": {
-    "verts": 1954,
-    "faces": 3928,
+    "verts": 1955,
+    "faces": 3930,
     "nonmanifold": 0,
-    "volume_cm3": 17.39306287652259
+    "volume_cm3": 17.393064648457674
    }
   },
   {
@@ -6754,38 +7062,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 16.777965073748174,
-   "volume_err_pct": -0.00020816695568533173,
+   "volume_cm3": 16.77796408452884,
+   "volume_err_pct": -0.0002140628868690378,
    "blender_import": {
     "verts": 2048,
     "faces": 4116,
     "nonmanifold": 0,
-    "volume_cm3": 16.777965073748213
-   }
-  },
-  {
-   "key": "door_L_1",
-   "edges": {
-    "triangles": 12788,
-    "dup_directed": 0,
-    "unpaired": 0,
-    "ok": true,
-    "welded": {
-     "triangles": 12788,
-     "dup_directed": 0,
-     "unpaired": 0,
-     "ok": true
-    }
-   },
-   "volume_cm3": 15.930633227069318,
-   "volume_err_pct": -0.00230225931003001,
-   "blender_import": {
-    "verts": 6396,
-    "faces": 12788,
-    "nonmanifold": 0,
-    "volume_cm3": 15.930633227069338
+    "volume_cm3": 16.777964084528886
    }
   },
   {
@@ -6800,15 +7087,42 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 16.690407656278946,
-   "volume_err_pct": 0.0024425181482625054,
+   "volume_cm3": 16.69040764561967,
+   "volume_err_pct": 0.0024424542820078335,
    "blender_import": {
     "verts": 3963,
     "faces": 7922,
     "nonmanifold": 0,
-    "volume_cm3": 16.69040765627905
+    "volume_cm3": 16.69040764561977
+   }
+  },
+  {
+   "key": "door_L_1",
+   "edges": {
+    "triangles": 14584,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 14584,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    },
+    "zero_area": 0,
+    "slivers": 0
+   },
+   "volume_cm3": 15.544747892338886,
+   "volume_err_pct": -0.0016217926092859357,
+   "blender_import": {
+    "verts": 7294,
+    "faces": 14584,
+    "nonmanifold": 0,
+    "volume_cm3": 15.54474789233893
    }
   },
   {
@@ -6823,7 +7137,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 15.383244217353488,
    "volume_err_pct": 0.0015875794935217562,
@@ -6846,15 +7162,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 15.244505743744334,
-   "volume_err_pct": -0.0032420876068569924,
+   "volume_cm3": 15.24451081285235,
+   "volume_err_pct": -0.003208836652334871,
    "blender_import": {
     "verts": 1710,
     "faces": 3436,
     "nonmanifold": 0,
-    "volume_cm3": 15.244505743744327
+    "volume_cm3": 15.244510812852347
    }
   },
   {
@@ -6869,7 +7187,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 15.390030674524839,
    "volume_err_pct": 0.00019931465132165869,
@@ -6877,7 +7197,7 @@
     "verts": 2863,
     "faces": 5726,
     "nonmanifold": 0,
-    "volume_cm3": 15.390030674524864
+    "volume_cm3": 15.39003067452486
    }
   },
   {
@@ -6892,7 +7212,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 14.50777469117486,
    "volume_err_pct": -0.0015529971404623013,
@@ -6900,7 +7222,7 @@
     "verts": 934,
     "faces": 1892,
     "nonmanifold": 0,
-    "volume_cm3": 14.507774691174905
+    "volume_cm3": 14.507774691174884
    }
   },
   {
@@ -6915,15 +7237,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 13.181067807239868,
-   "volume_err_pct": 0.0005144316809742121,
+   "volume_cm3": 13.18106869569367,
+   "volume_err_pct": 0.000521172093698554,
    "blender_import": {
     "verts": 1861,
     "faces": 3738,
     "nonmanifold": 0,
-    "volume_cm3": 13.181067807239907
+    "volume_cm3": 13.181068695693712
    }
   },
   {
@@ -6938,15 +7262,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 12.64834947204892,
-   "volume_err_pct": 0.002763061740360323,
+   "volume_cm3": 12.648349465187762,
+   "volume_err_pct": 0.002763007493374616,
    "blender_import": {
     "verts": 1662,
     "faces": 3328,
     "nonmanifold": 0,
-    "volume_cm3": 12.648349472048872
+    "volume_cm3": 12.648349465187714
    }
   },
   {
@@ -6961,15 +7287,17 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
-   "volume_cm3": 9.017638686432454,
-   "volume_err_pct": -0.004006582030903444,
+   "volume_cm3": 9.017638686434324,
+   "volume_err_pct": -0.004006582010161553,
    "blender_import": {
     "verts": 4615,
     "faces": 9226,
     "nonmanifold": 0,
-    "volume_cm3": 9.017638686432447
+    "volume_cm3": 9.017638686434317
    }
   },
   {
@@ -6984,7 +7312,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 8.967544538275638,
    "volume_err_pct": -0.0050787435812042125,
@@ -7007,7 +7337,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 8.239873418419224,
    "volume_err_pct": -0.0015361842327217827,
@@ -7030,7 +7362,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 5.4495177584712335,
    "volume_err_pct": -0.00884846841773644,
@@ -7053,7 +7387,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 5.052413544769904,
    "volume_err_pct": 0.008185763458130225,
@@ -7076,7 +7412,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 3.2581729445073755,
    "volume_err_pct": 0.00530830286603693,
@@ -7099,7 +7437,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 4.09005365821963,
    "volume_err_pct": 0.0013119369102742027,
@@ -7122,7 +7462,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 3.1356533893903324,
    "volume_err_pct": -0.01105263423685187,
@@ -7145,7 +7487,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 2.927559258560401,
    "volume_err_pct": -0.015052644795041805,
@@ -7168,7 +7512,9 @@
      "dup_directed": 0,
      "unpaired": 0,
      "ok": true
-    }
+    },
+    "zero_area": 0,
+    "slivers": 0
    },
    "volume_cm3": 2.3137872254709952,
    "volume_err_pct": -0.009195096326914913,
@@ -7639,6 +7985,12 @@
    "item": "Dümen servo kaportası (dikeyin iç yüzü; segment planında değil)",
    "spec": "30 × 10 × 5 mm kabarcık, ≈ 0,4 g: PETG (şablon U_Fairing_Servo_Rudder_L/R ağı, taban deriye zımparalanır) ya da 0,5 mm ısıl biçimlendirilmiş levha; dikey rengiyle boyanır, arka ağız açık",
    "qty": 2
+  },
+  {
+   "group": "Bağlantı",
+   "item": "Egzoz çıkış borusu geçiş halkası (sol yanak)",
+   "spec": "Isıya dayanıklı geçiş halkası (silikon/seramik keçe), iç Ø12,4 / dış Ø24,4 mm",
+   "qty": 1
   },
   {
    "group": "Bağlantı",

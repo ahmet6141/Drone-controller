@@ -9,8 +9,8 @@
 | Benzersiz STL | 65 | — | — |
 | Basılacak parça (ayna dahil) | 104 | 104 | 125 |
 | Basılı kütle | 3,46 kg | 3,46 kg | 3,33 kg |
-| Baskı süresi (kaba) | 257 h | 257 h | 316 h |
-| STL toplamı | 30,8 MB | ≤ 40 MB hedef | |
+| Baskı süresi (kaba) | 256 h | 257 h | 316 h |
+| STL toplamı | 30,9 MB | ≤ 40 MB hedef | |
 | Manifold / kapalı | evet, hepsi | | |
 | Tablaya sığma | hepsi | | |
 
@@ -20,8 +20,8 @@ Kütle, filament etkin yoğunluğuyla (LW-PLA köpürmüş 0,65 g/cm³) parça h
 |---|---:|---:|---:|---:|
 | LW-ASA | 7 | 413 | 310 | 22,8 |
 | LW-PLA | 64 | 3 533 | 2 296 | 180,2 |
-| PA-CF | 16 | 575 | 663 | 42,5 |
-| PETG | 17 | 171 | 188 | 11,2 |
+| PA-CF | 16 | 575 | 662 | 42,4 |
+| PETG | 17 | 170 | 187 | 11,2 |
 
 ## Kütle tablosu (R04: hedef ≤ 3,5 kg)
 
@@ -34,11 +34,11 @@ Basılı gövde kütlesi **3,46 kg** (hedefin altında; önceki rapor 4,06 kg). 
 | Kumanda yüzeyleri | 365 | 309 | -56 | orta düzlem levhası yerine 0,5 mm dikey menteşe ağı; menteşe dili R 4,5 mm, çentik yalnız ön yarıda |
 | Gövde | 911 | 766 | -146 | halka/modül derisi 0,8 → 0,7 mm + 4 iç stringer (0,8 × 5 mm); çerçeve 8 → 6 mm, flanş 2,4 → 2,0 mm; longeron kovanı → bilezik; keepout içindeki iç yapı artık gerçekten çıkarılıyor (halka 5); halka 9 arka flanşı motor halkası bindirmesinde yalnız deri; modülde PETG flanş cebi |
 | Yük yolları | 356 | 312 | -43 | kanat kutusu çerçevesinde depo üstü hafifletme deliği; kalın PA-CF/PETG parçalar dilimleyici dolgusuyla (kabuk + %40 gyroid) hesaplanır; motor halkası NACA çerçevesinden, ana takım beşiği iç flap menteşe dilinden arındırıldı |
-| İtki | 277 | 234 | -43 | kaporta print_solid kaynaktan (Ø92 arka açıklık, çene yarığı, motor zarfı boşlukları, panjur dudakları); lüle halkası kaportaya alın alına (geçme dili yok); pabuç PA-CF 2 mm, kaporta yüzünü izler |
+| İtki | 277 | 233 | -44 | kaporta print_solid kaynaktan (Ø92 arka açıklık, çene yarığı, motor zarfı boşlukları, panjur dudakları); lüle halkası kaportaya alın alına (geçme dili yok); pabuç PA-CF 2 mm, kaporta yüzünü izler |
 | Kaplamalar | 247 | 192 | -55 | kök kaportası ve ER-150 kabartması 1,6 → 1,2 mm; tüy kenar ve iç ince kuşaklar kırpılır |
 | Faydalı yük | 80 | 18 | -61 | taret yakası gövde dış yüzünde kesilir: fileto tabanı karın derisine bindirmeli yapışır, tüy kenar 0,8 mm'de kırpılır (gömülü üst kutu ve iç dudak basılmaz; modül derisiyle çakışıyordu) |
-| Takım kapakları | 75 | 78 | 3 | burun kapağı çentik köşesi kıymığı kesildi (fark geometri turundaki kapak değişikliğinden) |
-| **Toplam** | **4 059** | **3 457** | **-602** | |
+| Takım kapakları | 75 | 77 | 2 | burun kapağı çentik köşesi kıymığı kesildi (fark geometri turundaki kapak değişikliğinden) |
+| **Toplam** | **4 059** | **3 455** | **-603** | |
 
 ## Parça tablosu
 
@@ -124,7 +124,7 @@ Basılı gövde kütlesi **3,46 kg** (hedefin altında; önceki rapor 4,06 kg). 
 | STL | Parça | Malz. | Et (mm) | Adet | Ölçü (mm) | Yön / Z açısı | Pay (mm) | Kütle (g) | Süre (h) | Destek | Not |
 |---|---|---|---:|---:|---|---|---:|---:|---:|---|---|
 | `cowl_top.stl` | Motor kaportası (PA-CF; yanak açıklıkları flanşlı, arka Ø92 açık) | PA-CF | 1,6 | 1 | 161×160×142 | −x (kuyruk) / 45°; tablada: yangın perdesi | 48 | 76 | 4,8 | tabla desteği |  |
-| `cowl_cheek_L.stl` | Kaporta sol yanak (susturucu tarafı) | PA-CF | 1,6 | 1 | 142×142×130 | −x (kuyruk) / 33° | 57 | 81 | 5,1 | tabla desteği | eğik ekler deriye dik (deri normali 52°) |
+| `cowl_cheek_L.stl` | Kaporta sol yanak (susturucu tarafı) | PA-CF | 1,6 | 1 | 142×142×130 | −x (kuyruk) / 33° | 57 | 81 | 5,0 | tabla desteği | eğik ekler deriye dik (deri normali 52°) |
 | `cowl_cheek_R.stl` | Kaporta sağ yanak (panjurlu) | PA-CF | 1,6 | 1 | 90×89×116 | −x (kuyruk) / 131° | 83 | 41 | 2,8 | yok | eğik ekler deriye dik (deri normali 37°, -29°) |
 | `exhaust_ring.stl` | Lüle halkası (PA-CF) | PA-CF | 1,6 | 1 | 112×112×15 | −x (kuyruk) / 3° | 72 | 25 | 1,5 | model üstü destek |  |
 | `scuff_pad.stl` | Kaporta altı sürtünme pabucu (PA-CF; kuyruk çarpmasında ilk değen kenar) | PA-CF | 2,0 | 1 | 49×49×8 | +z (yukarı) / 45° | 103 | 4 | 0,3 | tabla desteği | kaporta dış yüzünü izleyen 2 mm katman (yapışma yüzü + 0,2 mm); aşınma yüzü tablada; yüksek sıcaklık epoksisiyle yapıştırılır, aşınınca sökülüp yenilenir |
@@ -164,7 +164,7 @@ Basılı gövde kütlesi **3,46 kg** (hedefin altında; önceki rapor 4,06 kg). 
 |---|---|---|---:|---:|---|---|---:|---:|---:|---|---|
 | `door_N_1.stl` | Burun takımı kapağı (menteşe dili + horn dahil) (PETG 1,2 mm) | PETG | 1,2 | 2 | 182×183×25 | +y (sol/iskele) / 45° | 37 | 12 | 0,7 | tabla desteği | sağ = ayna |
 | `door_N_3.stl` | Burun takımı bacak tapa kapağı (bacağa bağlı) (PETG 1,2 mm) | PETG | 1,2 | 1 | 24×18×29 | −z (aşağı) / 0° | 116 | 2 | 0,3 | yok |  |
-| `door_L_1.stl` | Ana takım kuyu kapağı (menteşe dili + horn dahil) (PETG 1,2 mm) | PETG | 1,2 | 2 | 94×92×8 | +z (yukarı) / 0° | 81 | 20 | 1,0 | yok | sağ = ayna |
+| `door_L_1.stl` | Ana takım kuyu kapağı (menteşe dili + horn dahil) (PETG 1,2 mm) | PETG | 1,2 | 2 | 94×92×8 | +z (yukarı) / 0° | 81 | 19 | 1,0 | yok | sağ = ayna |
 | `door_L_2.stl` | Ana takım bacak kapağı (PETG 1,2 mm) | PETG | 1,2 | 2 | 134×134×23 | −y (sağ/sancak) / 149° | 61 | 6 | 0,5 | tabla desteği | sağ = ayna |
 
 ## Doğrulama
@@ -173,74 +173,76 @@ Her parça bmesh ile denetlenir: sınır kenar = 0, manifold olmayan kenar = 0, 
 
 | STL | Kenar denetimi (yeniden okuma) | Hacim farkı | Blender içe aktarma |
 |---|---|---:|---|
-| `hatch_buck_b.stl` | 3728 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 3728 yüz, manifold olmayan 0 |
-| `hatch_buck_a.stl` | 3430 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.000 % | 3430 yüz, manifold olmayan 0 |
-| `fus_ring_2.stl` | 28354 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.000 % | 28354 yüz, manifold olmayan 0 |
-| `wing_panel_1.stl` | 19330 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 19330 yüz, manifold olmayan 0 |
-| `root_block_1.stl` | 22424 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 22424 yüz, manifold olmayan 0 |
-| `fus_ring_1.stl` | 30680 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 30680 yüz, manifold olmayan 0 |
-| `wing_panel_2.stl` | 18446 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.000 % | 18446 yüz, manifold olmayan 0 |
-| `fus_ring_3.stl` | 24734 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.000 % | 24734 yüz, manifold olmayan 0 |
-| `wing_panel_4.stl` | 21704 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 21704 yüz, manifold olmayan 0 |
-| `fus_nose_module.stl` | 15524 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.000 % | 15524 yüz, manifold olmayan 0 |
-| `wing_panel_3.stl` | 18612 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 18612 yüz, manifold olmayan 0 |
-| `fus_ring_5.stl` | 20404 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 20404 yüz, manifold olmayan 0 |
-| `fus_ring_9.stl` | 20288 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 20288 yüz, manifold olmayan 0 |
-| `fus_ring_4.stl` | 17494 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 17494 yüz, manifold olmayan 0 |
-| `fus_ring_7.stl` | 17808 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 17808 yüz, manifold olmayan 0 |
-| `wing_panel_5.stl` | 15770 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.000 % | 15770 yüz, manifold olmayan 0 |
-| `fus_ring_6.stl` | 18226 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 18226 yüz, manifold olmayan 0 |
-| `root_block_2.stl` | 18896 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 18896 yüz, manifold olmayan 0 |
-| `fus_ring_8.stl` | 14636 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.001 % | 14636 yüz, manifold olmayan 0 |
-| `wing_panel_6.stl` | 15404 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.000 % | 15404 yüz, manifold olmayan 0 |
-| `fin_1.stl` | 9776 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.001 % | 9776 yüz, manifold olmayan 0 |
-| `cowl_cheek_L.stl` | 8462 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 8462 yüz, manifold olmayan 0 |
-| `cowl_top.stl` | 13904 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.000 % | 13904 yüz, manifold olmayan 0 |
-| `wing_panel_7.stl` | 12706 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.001 % | 12706 yüz, manifold olmayan 0 |
-| `tolerance_coupon.stl` | 1288 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.001 % | 1288 yüz, manifold olmayan 0 |
-| `engine_ring.stl` | 7122 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 7122 yüz, manifold olmayan 0 |
-| `gear_mount_N.stl` | 1002 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.001 % | 1002 yüz, manifold olmayan 0 |
-| `stab_1.stl` | 10312 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.001 % | 10312 yüz, manifold olmayan 0 |
-| `wing_frame_fwd.stl` | 2434 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.001 % | 2434 yüz, manifold olmayan 0 |
-| `wing_frame_aft.stl` | 2448 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.001 % | 2448 yüz, manifold olmayan 0 |
-| `root_fairing.stl` | 12364 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 12364 yüz, manifold olmayan 0 |
-| `glove_strake.stl` | 6256 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.001 % | 6256 yüz, manifold olmayan 0 |
-| `gear_mount_L.stl` | 1234 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.000 % | 1234 yüz, manifold olmayan 0 |
-| `fin_2.stl` | 8598 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.001 % | 8598 yüz, manifold olmayan 0 |
-| `cowl_cheek_R.stl` | 6410 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.001 % | 6410 yüz, manifold olmayan 0 |
-| `hatch_frame_b.stl` | 4528 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 4528 yüz, manifold olmayan 0 |
-| `stab_2a.stl` | 6296 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.001 % | 6296 yüz, manifold olmayan 0 |
-| `fus_nose_cone.stl` | 12146 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.001 % | 12146 yüz, manifold olmayan 0 |
-| `hatch_frame_a.stl` | 4258 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 4258 yüz, manifold olmayan 0 |
-| `flapout_3.stl` | 3724 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.001 % | 3724 yüz, manifold olmayan 0 |
-| `flapout_2.stl` | 4034 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.002 % | 4034 yüz, manifold olmayan 0 |
-| `flapout_4.stl` | 3618 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.002 % | 3618 yüz, manifold olmayan 0 |
-| `stab_2b.stl` | 6124 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 6124 yüz, manifold olmayan 0 |
-| `wing_tip.stl` | 8026 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.001 % | 8026 yüz, manifold olmayan 0 |
-| `flapin.stl` | 5028 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.002 % | 5028 yüz, manifold olmayan 0 |
-| `flapout_1.stl` | 3580 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.002 % | 3580 yüz, manifold olmayan 0 |
-| `exhaust_ring.stl` | 5152 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.001 % | 5152 yüz, manifold olmayan 0 |
-| `aileron_1.stl` | 3480 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 3480 yüz, manifold olmayan 0 |
-| `aileron_2.stl` | 3928 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.000 % | 3928 yüz, manifold olmayan 0 |
-| `elevator_1.stl` | 4116 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.000 % | 4116 yüz, manifold olmayan 0 |
-| `door_L_1.stl` | 12788 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.002 % | 12788 yüz, manifold olmayan 0 |
-| `gear_blister.stl` | 7922 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.002 % | 7922 yüz, manifold olmayan 0 |
-| `rudder_a.stl` | 3110 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.002 % | 3110 yüz, manifold olmayan 0 |
-| `aileron_3.stl` | 3436 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.003 % | 3436 yüz, manifold olmayan 0 |
-| `turret_collar.stl` | 5726 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.000 % | 5726 yüz, manifold olmayan 0 |
-| `fus_nose_flange.stl` | 1892 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.002 % | 1892 yüz, manifold olmayan 0 |
-| `aileron_4.stl` | 3738 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.001 % | 3738 yüz, manifold olmayan 0 |
-| `rudder_b.stl` | 3328 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.003 % | 3328 yüz, manifold olmayan 0 |
-| `door_N_1.stl` | 9226 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.004 % | 9226 yüz, manifold olmayan 0 |
-| `elevator_2a.stl` | 2532 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.005 % | 2532 yüz, manifold olmayan 0 |
-| `elevator_2b.stl` | 2406 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.002 % | 2406 yüz, manifold olmayan 0 |
-| `intake.stl` | 396 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.009 % | 396 yüz, manifold olmayan 0 |
-| `door_L_2.stl` | 6972 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.008 % | 6972 yüz, manifold olmayan 0 |
-| `panel_lock_tab.stl` | 132 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.005 % | 132 yüz, manifold olmayan 0 |
-| `scuff_pad.stl` | 1238 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | +0.001 % | 1238 yüz, manifold olmayan 0 |
-| `longeron_joint_shoulder.stl` | 1102 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.011 % | 1102 yüz, manifold olmayan 0 |
-| `longeron_joint_chine.stl` | 994 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.015 % | 994 yüz, manifold olmayan 0 |
-| `door_N_3.stl` | 1052 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0 ✓ | -0.009 % | 1052 yüz, manifold olmayan 0 |
+| `hatch_buck_b.stl` | 3728 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 3728 yüz, manifold olmayan 0 |
+| `hatch_buck_a.stl` | 3430 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.000 % | 3430 yüz, manifold olmayan 0 |
+| `fus_ring_2.stl` | 28354 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.000 % | 28354 yüz, manifold olmayan 0 |
+| `wing_panel_1.stl` | 19330 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 19330 yüz, manifold olmayan 0 |
+| `root_block_1.stl` | 22424 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 22424 yüz, manifold olmayan 0 |
+| `fus_ring_1.stl` | 30680 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 30680 yüz, manifold olmayan 0 |
+| `wing_panel_2.stl` | 18446 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.000 % | 18446 yüz, manifold olmayan 0 |
+| `fus_ring_3.stl` | 24734 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.000 % | 24734 yüz, manifold olmayan 0 |
+| `wing_panel_4.stl` | 21704 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 21704 yüz, manifold olmayan 0 |
+| `fus_nose_module.stl` | 15524 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.000 % | 15524 yüz, manifold olmayan 0 |
+| `wing_panel_3.stl` | 18612 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 18612 yüz, manifold olmayan 0 |
+| `fus_ring_5.stl` | 20404 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 20404 yüz, manifold olmayan 0 |
+| `fus_ring_9.stl` | 20288 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 20288 yüz, manifold olmayan 0 |
+| `fus_ring_4.stl` | 17494 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 17494 yüz, manifold olmayan 0 |
+| `fus_ring_7.stl` | 17808 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 17808 yüz, manifold olmayan 0 |
+| `wing_panel_5.stl` | 15770 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.000 % | 15770 yüz, manifold olmayan 0 |
+| `fus_ring_6.stl` | 18226 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 18226 yüz, manifold olmayan 0 |
+| `root_block_2.stl` | 18896 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 18896 yüz, manifold olmayan 0 |
+| `fus_ring_8.stl` | 14636 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.001 % | 14636 yüz, manifold olmayan 0 |
+| `wing_panel_6.stl` | 15404 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.000 % | 15404 yüz, manifold olmayan 0 |
+| `fin_1.stl` | 9776 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.001 % | 9776 yüz, manifold olmayan 0 |
+| `cowl_cheek_L.stl` | 8456 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.000 % | 8456 yüz, manifold olmayan 0 |
+| `cowl_top.stl` | 13904 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.000 % | 13904 yüz, manifold olmayan 0 |
+| `wing_panel_7.stl` | 12706 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.001 % | 12706 yüz, manifold olmayan 0 |
+| `tolerance_coupon.stl` | 1288 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.001 % | 1288 yüz, manifold olmayan 0 |
+| `engine_ring.stl` | 7122 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 7122 yüz, manifold olmayan 0 |
+| `gear_mount_N.stl` | 1002 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.001 % | 1002 yüz, manifold olmayan 0 |
+| `stab_1.stl` | 10312 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.001 % | 10312 yüz, manifold olmayan 0 |
+| `wing_frame_fwd.stl` | 2434 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.001 % | 2434 yüz, manifold olmayan 0 |
+| `wing_frame_aft.stl` | 2448 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.001 % | 2448 yüz, manifold olmayan 0 |
+| `root_fairing.stl` | 12364 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 12364 yüz, manifold olmayan 0 |
+| `glove_strake.stl` | 6256 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.001 % | 6256 yüz, manifold olmayan 0 |
+| `gear_mount_L.stl` | 1234 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.000 % | 1234 yüz, manifold olmayan 0 |
+| `fin_2.stl` | 8598 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.001 % | 8598 yüz, manifold olmayan 0 |
+| `cowl_cheek_R.stl` | 6410 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.001 % | 6410 yüz, manifold olmayan 0 |
+| `hatch_frame_b.stl` | 4528 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 4528 yüz, manifold olmayan 0 |
+| `stab_2a.stl` | 6296 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.001 % | 6296 yüz, manifold olmayan 0 |
+| `fus_nose_cone.stl` | 12146 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.001 % | 12146 yüz, manifold olmayan 0 |
+| `hatch_frame_a.stl` | 4258 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 4258 yüz, manifold olmayan 0 |
+| `flapout_3.stl` | 3724 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.001 % | 3724 yüz, manifold olmayan 0 |
+| `flapout_2.stl` | 4034 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.002 % | 4034 yüz, manifold olmayan 0 |
+| `flapout_4.stl` | 3618 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.002 % | 3618 yüz, manifold olmayan 0 |
+| `stab_2b.stl` | 6124 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 6124 yüz, manifold olmayan 0 |
+| `wing_tip.stl` | 8026 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.001 % | 8026 yüz, manifold olmayan 0 |
+| `flapin.stl` | 5028 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.002 % | 5028 yüz, manifold olmayan 0 |
+| `flapout_1.stl` | 3580 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.002 % | 3580 yüz, manifold olmayan 0 |
+| `exhaust_ring.stl` | 5152 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.001 % | 5152 yüz, manifold olmayan 0 |
+| `aileron_1.stl` | 3480 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 3480 yüz, manifold olmayan 0 |
+| `aileron_2.stl` | 3930 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.000 % | 3930 yüz, manifold olmayan 0 |
+| `elevator_1.stl` | 4116 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.000 % | 4116 yüz, manifold olmayan 0 |
+| `gear_blister.stl` | 7922 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.002 % | 7922 yüz, manifold olmayan 0 |
+| `door_L_1.stl` | 14584 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.002 % | 14584 yüz, manifold olmayan 0 |
+| `rudder_a.stl` | 3110 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.002 % | 3110 yüz, manifold olmayan 0 |
+| `aileron_3.stl` | 3436 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.003 % | 3436 yüz, manifold olmayan 0 |
+| `turret_collar.stl` | 5726 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.000 % | 5726 yüz, manifold olmayan 0 |
+| `fus_nose_flange.stl` | 1892 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.002 % | 1892 yüz, manifold olmayan 0 |
+| `aileron_4.stl` | 3738 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.001 % | 3738 yüz, manifold olmayan 0 |
+| `rudder_b.stl` | 3328 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.003 % | 3328 yüz, manifold olmayan 0 |
+| `door_N_1.stl` | 9226 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.004 % | 9226 yüz, manifold olmayan 0 |
+| `elevator_2a.stl` | 2532 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.005 % | 2532 yüz, manifold olmayan 0 |
+| `elevator_2b.stl` | 2406 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.002 % | 2406 yüz, manifold olmayan 0 |
+| `intake.stl` | 396 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.009 % | 396 yüz, manifold olmayan 0 |
+| `door_L_2.stl` | 6972 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.008 % | 6972 yüz, manifold olmayan 0 |
+| `panel_lock_tab.stl` | 132 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.005 % | 132 yüz, manifold olmayan 0 |
+| `scuff_pad.stl` | 1238 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | +0.001 % | 1238 yüz, manifold olmayan 0 |
+| `longeron_joint_shoulder.stl` | 1102 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.011 % | 1102 yüz, manifold olmayan 0 |
+| `longeron_joint_chine.stl` | 994 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.015 % | 994 yüz, manifold olmayan 0 |
+| `door_N_3.stl` | 1052 üçgen, eşsiz 0, çift 0; 0,1 µm kaynakla eşsiz 0, çift 0; sıfır alanlı 0 ✓ | -0.009 % | 1052 yüz, manifold olmayan 0 |
+
+Yazılan tüm STL'lerde sıfır alanlı üçgen (float32 mm, |AB×AC| < 1e-09 mm²): 0. Float32 çözünürlüğünde doğrusal ince üçgen (uzun kenarına yükseklik < 10 nm): 69 kaldı; dışa aktarımda komşu üçgeni bölerek giderilen: 1193 (yüzey ≤ 10 nm oynar, hacim ve kapalılık korunur). Kalanlar art arda doğrusal üçgenlerdir; dilimleyici için etkisizdir.
 
 Manifold olmayan parça: 0. 
 
@@ -297,16 +299,16 @@ Manifold olmayan parça: 0.
 | longeron_joint_shoulder | 2,16 | 2,18 | 1,0 |
 | fus_nose_flange | 3,00 | 3,00 | 0,0 |
 | cowl_top | 1,50 | 1,60 | 79,2 |
-| cowl_cheek_L | 1,60 | 1,60 | 113,9 |
+| cowl_cheek_L | 1,59 | 1,60 | 113,1 |
 | cowl_cheek_R | 1,60 | 1,60 | 16,3 |
 | exhaust_ring | 1,58 | 1,60 | 22,4 |
 | scuff_pad | 2,00 | 2,00 | 14,6 |
 | intake | 2,07 | 2,50 | 0,0 |
 | root_fairing | 1,17 | 1,20 | 35,9 |
-| gear_blister | 1,17 | 1,20 | 1,3 |
+| gear_blister | 1,18 | 1,20 | 1,3 |
 | turret_collar | 1,51 | 1,60 | 26,8 |
 | hatch_buck_a | 19,08 | 29,34 | 0,6 |
-| hatch_frame_a | 2,37 | 7,80 | 1,3 |
+| hatch_frame_a | 2,42 | 7,80 | 1,3 |
 | hatch_buck_b | 17,67 | 30,03 | 0,6 |
 | hatch_frame_b | 2,32 | 7,80 | 0,6 |
 | tolerance_coupon | 5,29 | 20,00 | 0,0 |
@@ -330,15 +332,15 @@ Manifold olmayan parça: 0.
 
 ## Isı kuralı (AERO-09, R05)
 
-Kural 1: silindir (+ buji başlığı) ve susturucu zarflarının ve susturucu çıkış borusu/ısı kalkanının 150 mm yakınında LW-PLA yok. Kural 2: camsı geçişi 120 °C'nin altındaki hiçbir filament (LW-ASA 95, PETG 80, LW-PLA 55 °C) bu kaynaklara 50 mm'den yakın değil (zarflar `params.engine_envelope`, çıkış `U_Exhaust_Muffler`). Printprep malzemeyi kendiliğinden değiştirmez: ihlal varsa `build.py --print` ve `printprep` 1 ile çıkar. Isı bölgesindeki parçaların filamenti spec'te adıyla atanır (`print.zones[].parts`). Sonuç: **uygun**.
+Kural 1: silindir (+ buji başlığı) ve susturucu zarflarının ve susturucu çıkış borusu/ısı kalkanının 150 mm yakınında LW-PLA yok. Kural 2: ısıl sınırı 120 °C'nin altındaki hiçbir filament (LW-ASA 95, PETG 80, LW-PLA 55 °C) bu kaynaklara 50 mm'den yakın değil (zarflar `params.engine_envelope`, çıkış `U_Exhaust_Muffler`). Isıl sınır amorf filamentlerde camsı geçiş (Tg), yarı kristal PA-CF'de ısıl eğilme sıcaklığıdır (HDT, 0,45 MPa; PA-CF'nin Tg'si ≈ 60 °C). Kural 3: hiçbir parça susturucu çıkış borusuna 5 mm'den yakın değil. Printprep malzemeyi kendiliğinden değiştirmez: ihlal varsa `build.py --print` ve `printprep` 1 ile çıkar. Isı bölgesindeki parçaların filamenti spec'te adıyla atanır (`print.zones[].parts`). Sonuç: **uygun**.
 
-Kaynaklar ayrı adlandırılır: motor zarfı parçaları, susturucu çıkış borusu ve borunun çıktığı yerde sol yanak dış yüzüne (0,1–0,5 mm aralıkla) oturan 0,5 mm Al ısı kalkanı (kalkan yanağı borudan korur; yanak PA-CF, Tg 150 °C). Boru yanaktaki deliğinden 1,5 mm boşlukla geçer. Boru ve kalkan uzaklıkları kaynak yüzeyinin yoğun örneklerinden parça yüzeyine, zarf uzaklıkları parça köşelerinden ölçülür; 10 mm'nin altındakiler 0,1 mm çözünürlükle verilir; son sütun parçanın en yakın üç kaynağıdır.
+Kaynaklar ayrı adlandırılır: motor zarfı parçaları, susturucu çıkış borusu ve borunun çıktığı yerde sol yanak dış yüzüne (0,1–0,5 mm aralıkla) oturan 0,5 mm Al ısı kalkanı (kalkan yanağı borudan korur; yanak PA-CF, HDT ≈ 150 °C). Boru yanaktaki deliğinden 6 mm radyal boşlukla geçer; delikteki geçiş halkası boruyu ortalar ve sıcak gazı yanağa değdirmez (BOM: Isıya dayanıklı geçiş halkası (silikon/seramik keçe), iç Ø12,4 / dış Ø24,4 mm). Boru ve kalkan uzaklıkları kaynak yüzeyinin yoğun örneklerinden parça yüzeyine, zarf uzaklıkları parça köşelerinden ölçülür; 10 mm'nin altındakiler 0,1 mm çözünürlükle verilir; son sütun parçanın en yakın üç kaynağıdır.
 
 Spec ataması: `stab_1` → LW-ASA (stab_root_heat; kaynağa 61 mm); `elevator_1` → LW-ASA (stab_root_heat; kaynağa 57 mm)
 
-| Parça (250 mm içinde) | Malzeme | Tg (°C) | En yakın (mm) | Kaynak | Kaynaklara uzaklık (mm) |
+| Parça (250 mm içinde) | Malzeme | Isıl sınır (°C) | En yakın (mm) | Kaynak | Kaynaklara uzaklık (mm) |
 |---|---|---:|---:|---|---|
-| cowl_cheek_L | PA-CF | 150 | 0,1 | ısı kalkanı | ısı kalkanı 0,1; susturucu çıkış borusu 1,5; silindir 7,0 |
+| cowl_cheek_L | PA-CF | 150 | 0,1 | ısı kalkanı | ısı kalkanı 0,1; susturucu çıkış borusu 6,0; silindir 7,0 |
 | cowl_top | PA-CF | 150 | 5,1 | silindir | silindir 5,1; buji başlığı 7,0; susturucu 35 |
 | scuff_pad | PA-CF | 150 | 8,8 | buji başlığı | buji başlığı 8,8; silindir 19; susturucu 42 |
 | cowl_cheek_R | PA-CF | 150 | 10 | silindir | silindir 10; buji başlığı 36; susturucu 65 |
@@ -431,6 +433,7 @@ Uçak toplamına girmez: `hatch_buck_a.stl`, `hatch_buck_b.stl`, `tolerance_coup
 | Dolgu | Dikey kök mermisi (basılmaz: dikey + stabilizeye teğet, yandan kırpmalı tarif yok) | epoksi + mikrobalon ya da 0,5 mm ısıl biçimlendirilmiş levha; dışarıda ≈ 2 × 10 cm³; şablon: U_Fairing_FinRoot_L/R | 2 |
 | Dolgu | Kaplama kenarları (kök kaportası, ER-150 kabartması, taret yakası: ≥ 0,8 mm'de kırpılmış) | epoksi + mikrobalon ile deriye sıfırlanır | 3 |
 | Dolgu | Dümen servo kaportası (dikeyin iç yüzü; segment planında değil) | 30 × 10 × 5 mm kabarcık, ≈ 0,4 g: PETG (şablon U_Fairing_Servo_Rudder_L/R ağı, taban deriye zımparalanır) ya da 0,5 mm ısıl biçimlendirilmiş levha; dikey rengiyle boyanır, arka ağız açık | 2 |
+| Bağlantı | Egzoz çıkış borusu geçiş halkası (sol yanak) | Isıya dayanıklı geçiş halkası (silikon/seramik keçe), iç Ø12,4 / dış Ø24,4 mm | 1 |
 | Bağlantı | M4 cıvata + kelebek somun (burun modülü) | A2 paslanmaz | 4 |
 | Bağlantı | M4 cıvata + somun (G10 köprü–soket–çerçeve, s = 1,55 flanşı) | 12.9; köprüde boru başına 2 adet | 12 |
 | Bağlantı | Motor bağlantısı: M4 × 30 + titreşim takozu (kauçuk, Ø10 × 8, 40 Shore A) | motor halkasındaki 4 × M4 ısıl gömme dişliye, kare 60 mm | 4 |

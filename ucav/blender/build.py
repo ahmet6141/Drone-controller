@@ -307,6 +307,11 @@ _CLIP_SWITCHER = '''# YELKOVAN YK-38 — klip seçici ve kontrol paneli notu (de
 #   eşitleyin), wheel_auto 0/1 (tekerler U_Root'un yer ilerlemesiyle döner), wheel_roll_m (ek yuvarlanma, m).
 # Bütün hareketli parçalar bu özelliklere "basit ifade" sürücüleriyle bağlıdır (Python betiği izni gerekmez).
 # Devri değişen kendi animasyonunuzda pervane açısı için YK38_pervane_pisir.py metin bloğunu çalıştırın.
+#
+# Render (Ctrl+F12): betik klibin ortamını da seçer (showcase → pist, mechanisms → stüdyo: koleksiyon, dünya,
+# pozlama, yer dolgusu) ve çıktıyı //anim/yk38_<klip>_ önekine yönlendirir (H.264 MP4). Dosyada hareket
+# bulanıklığı, 1280×720 %100 ve 24 örnek hazırdır (komut satırındaki --anim ile aynı). GPU için:
+# Edit → Preferences → System → Cycles Render Devices, sonra Render Properties → Device: GPU Compute.
 import bpy
 
 KLIP = "mechanisms"
@@ -325,6 +330,35 @@ def assign(ob, act):
     ob.animation_data.action = act
 
 
+def layer_col(lc, name):
+    if lc.name == name:
+        return lc
+    for ch in lc.children:
+        found = layer_col(ch, name)
+        if found is not None:
+            return found
+    return None
+
+
+def set_env(name):
+    envs = info.get("envs", {})
+    if name not in envs:
+        return
+    for key, e in envs.items():
+        lc = layer_col(bpy.context.view_layer.layer_collection, e["collection"])
+        if lc is not None:
+            lc.exclude = key != name
+    e = envs[name]
+    w = bpy.data.worlds.get(e["world"])
+    if w is not None:
+        sc.world = w
+    sc.view_settings.exposure = float(e["exposure"])
+    fill = bpy.data.objects.get(e.get("fill", ""))
+    if fill is not None:
+        fill[e["fill_prop"]] = float(e["fill_w"])
+        fill.hide_render = float(e["fill_w"]) <= 0.0
+
+
 for m in list(sc.timeline_markers):
     if m.name.startswith("YK38_"):
         sc.timeline_markers.remove(m)
@@ -338,6 +372,9 @@ if KLIP == "yok":
     if prop is not None:
         prop["ucav_turns"] = 0.0
     sc.camera = bpy.data.objects.get("U_Cam_hero") or sc.camera
+    sc.frame_start, sc.frame_end = 1, 250
+    set_env("pist")
+    sc.render.filepath = "//anim/yk38_"
 else:
     c = info[KLIP]
     assign(root, bpy.data.actions.get("YK38_%s_Root" % KLIP))
@@ -349,6 +386,8 @@ else:
     for e in c.get("events", []):                       # kamerasız olay işaretleri (kamera geçişini etkilemez)
         sc.timeline_markers.new("YK38_" + e["name"], frame=int(e["frame"]))
     sc.camera = bpy.data.objects.get(c["markers"][0]["camera"])
+    set_env(c.get("env", "pist"))
+    sc.render.filepath = "//anim/yk38_%s_" % KLIP
 for ob in bpy.data.objects:
     if ob.name.startswith("U_Stand_"):
         ob.hide_render = ob.hide_viewport = KLIP != "mechanisms"
@@ -364,12 +403,18 @@ def embed_clip_switcher(scene) -> None:
     import bpy
     from ucav import params as P
     from ucav.blender import animation, rig
+    from ucav.blender import render as R
+    from ucav.blender import studio as S
     clips = {}
     for name, plan in (("showcase", animation.showcase_plan), ("mechanisms", animation.mechanisms_plan)):
         pl = plan()
-        clips[name] = {"frames": animation.nframes(name),
+        clips[name] = {"frames": animation.nframes(name), "env": R.CLIP_ENV.get(name, "pist"),
                        "markers": [{"frame": int(f), "camera": str(c)} for f, c in pl["markers"]],
                        "events": [{"frame": int(f), "name": str(n)} for f, n in pl["events"]]}
+    clips["envs"] = {env: {"collection": S.ENV_COL if env == "pist" else GUI_STUDIO_COL,
+                           "world": "SW_Pist" if env == "pist" else "SW_Studyo",
+                           "exposure": float(S.EXPOSURE[env]), "fill": S.UNDER_FILL, "fill_prop": S.FILL_PROP,
+                           "fill_w": float(S.ENV_FILL_W[env])} for env in S.ENVS}
     clips["rest_location"] = list(P.U_ROOT_B)
     clips["defaults"] = {p[0]: float(p[1]) for p in rig.PROPS}
     scene["ucav_clips"] = clips
@@ -582,12 +627,61 @@ def export_glb(path: Path, livery: str, with_anim: bool = False) -> dict:
     return {"file": str(path), "mb": round(path.stat().st_size / 1e6, 2), "objects": len(objs), "seconds": sec}
 
 
+GUI_STUDIO_COL = "UCAV_Env_Studyo"
+
+
+def prepare_gui_render(scene) -> dict:
+    """Arayüzden render (Ctrl+F12) komut satırındaki ``--anim`` ile aynı sonucu versin: stüdyo ortamı (zemin,
+    ışık düzeneği, ``SW_Studyo`` dünyası) pist ortamının yanına ayrı, görünüm katmanından çıkarılmış bir
+    koleksiyona (``UCAV_Env_Studyo``) kurulur — klip seçici ``mechanisms``'te onu açar, pisti kapatır; hareket
+    bulanıklığı (pervane 64, tekerler 8 alt adım), 1280×720 %100, 24 örnek ve H.264 MP4 çıktısı ayarlanır.
+    Sonraki ``--stills``/``--anim`` adımları kendi ayarlarını yeniden kurduğundan etkilenmez."""
+    import bpy
+    from ucav.blender import render as R
+    from ucav.blender import studio as S
+    w_pist = scene.world
+    old = {o.name for o in bpy.data.objects}
+    if bpy.data.objects.get("S_StudioFloor") is None:
+        S.build_ground_studio(scene)
+        S.build_lights_studio(scene)
+    col = S._studio_col(scene, GUI_STUDIO_COL)
+    for ob in [o for o in bpy.data.objects if o.name not in old]:
+        for c in list(ob.users_collection):
+            if c is not col:
+                c.objects.unlink(ob)
+        if ob.name not in col.objects:
+            col.objects.link(ob)
+    w_studio = S.build_world_studio(scene)
+    scene.world = w_pist if w_pist is not None else bpy.data.worlds.get("SW_Pist")
+    for w in (w_pist, w_studio):
+        if w is not None:
+            w.use_fake_user = True                      # klip seçici dünyayı değiştirince kaybolmasın
+    lc = _layer_collection(bpy.context.view_layer.layer_collection, GUI_STUDIO_COL)
+    if lc is not None:
+        lc.exclude = True                               # varsayılan klip showcase → pist
+    R.setup_motion_blur(scene, True)
+    r = scene.render
+    r.resolution_x, r.resolution_y = ANIM_DEFAULT["res"]
+    r.resolution_percentage = 100
+    scene.cycles.samples = ANIM_DEFAULT["samples"]
+    im = r.image_settings
+    im.file_format = "FFMPEG"
+    r.ffmpeg.format = "MPEG4"
+    r.ffmpeg.codec = "H264"
+    r.ffmpeg.constant_rate_factor = "HIGH"
+    r.ffmpeg.ffmpeg_preset = "GOOD"
+    r.filepath = "//anim/yk38_showcase_"
+    return {"studio_objects": len(col.objects), "worlds": [w.name for w in (w_pist, w_studio) if w is not None]}
+
+
 def save_blend(path: Path) -> dict:
     """Sıkıştırılmış .blend. ``UCAV_Print`` (varsa) görünüm katmanından çıkarılır (dosyada durur; Outliner'da
-    işaretlenince görünür) — görünüm penceresi yalnız uçak ve stüdyoyla açılır."""
+    işaretlenince görünür) — görünüm penceresi yalnız uçak ve stüdyoyla açılır. Önce ``prepare_gui_render``:
+    dosyadan arayüzle alınan render komut satırıyla aynı ayarlarda olur."""
     import bpy
     t0 = time.time()
     path.parent.mkdir(parents=True, exist_ok=True)
+    prepare_gui_render(bpy.context.scene)
     lc = _layer_collection(bpy.context.view_layer.layer_collection, "UCAV_Print")
     if lc is not None:
         lc.exclude = True

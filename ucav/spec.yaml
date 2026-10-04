@@ -454,7 +454,9 @@ propulsion:
     outlet_down_deg: 50           # çıkış borusu aşağı (yataydan)
     outlet_out_deg: 40            # dışa (iskele)
     shield: "0,5 mm Al kalkan, seramik keçe, 15 mm hava boşluğu; 150 mm içinde LW-PLA yok"
-    outlet: {scarf_deg: 45, shield_m: [0.030, 0.020, 0.0005], stick_out_m: 0.020, d_m: [0.0124, 0.009]}
+    outlet: {scarf_deg: 45, shield_m: [0.030, 0.020, 0.0005], stick_out_m: 0.020, d_m: [0.0124, 0.009],
+             hole_clear_m: 0.006,           # sol yanaktaki boru deliği: boru dış yarıçapı + 6 mm (Ø24,4)
+             grommet: "Isıya dayanıklı geçiş halkası (silikon/seramik keçe), iç Ø12,4 / dış Ø24,4 mm"}
                                   # 45° eğik kesik uç, yanaktan 20 mm dışarı, Ø12,4/9 boru + kaporta derisinde ısı kalkanı
     stab_clearance_m: {body_min: 0.055, outlet_min: 0.060}   # susturucu zarfı / çıkış borusu ↔ stabilize + elevatör (±25°)
   fuel:
@@ -828,11 +830,11 @@ print:
   bed_margin_root_block_220_mm: 5 # 220 tablada %15,5 kök bloğu için
   te_min_mm: {wing: 1.5, tail: 1.0, control_surface: 1.0}   # tail ve control_surface varsayım
   joint_groove_mm: [0.4, 0.3]     # segment eklerinde V-oluk (genişlik, derinlik) = panel çizgisi
-  filaments:
+  filaments:                      # tg_c = ısıl sınır: amorf filamentte camsı geçiş (Tg), PA-CF'de HDT (0,45 MPa)
     LW-PLA: {density_g_cm3: 0.65, solid_density_g_cm3: 1.25, tg_c: 55, note: "colorFabb aktif köpüren PLA; 230–245 °C, akış %55–60"}
     LW-ASA: {density_g_cm3: 0.75, tg_c: 95, note: "kuyruk konisi (ısı bölgesi). yoğunluk varsayım"}
     PETG:   {density_g_cm3: 1.27, tg_c: 80}
-    PA-CF:  {density_g_cm3: 1.20, tg_c: 150}
+    PA-CF:  {density_g_cm3: 1.20, tg_c: 150, note: "tg_c burada HDT (0,45 MPa): yarı kristal PA-CF'nin Tg'si ≈ 60 °C"}
     TPU:    {density_g_cm3: 1.21, tg_c: -30}
   walls_mm:
     wing_skin: 0.6
@@ -863,7 +865,7 @@ print:
     - {zone: "stab_root_fillet", material: "PA-CF", wall_mm: 1.6}
     # Isı kuralı (heat_rule): susturucu zarfına 150 mm içindeki stabilize kök segmenti (stab_1) ve iç elevatör
     # (elevator_1) LW-PLA olamaz → printprep bu parçaları parts listesiyle LW-ASA basar; ısı kuralı ihlali çalıştırmayı
-    # 1 ile bitirir. R05 sonrası en dar aralık elevator_1 ↔ susturucu 56,6 mm (Tg kuralı ≥ 50 mm); prototipte termokupl.
+    # 1 ile bitirir. R05 sonrası en dar aralık elevator_1 ↔ susturucu 56,6 mm (ısıl sınır kuralı ≥ 50 mm); prototipte termokupl.
     - {zone: "stab_root_heat",  material: "LW-ASA", wall_mm: 0.5, parts: ["stab_1", "elevator_1"]}
     - {zone: "fin",             material: "LW-PLA", wall_mm: 0.5}
     - {zone: "hatch",           material: "PETG", wall_mm: 1.6}
@@ -872,9 +874,11 @@ print:
     - {zone: "gear_doors",      material: "PETG", wall_mm: 1.2}
     - {zone: "turret_collar",   material: "PETG", wall_mm: 1.6}
     - {zone: "tip_cap",         material: "LW-PLA", wall_mm: 0.6}
-  # Kural 1: silindir/buji başlığı, susturucu ve çıkış borusuna radius_m içinde no_material yok. Kural 2: Tg < tg_min_c
-  # olan hiçbir filament bunlara tg_radius_m'den yakın değil (R05). İhlal → build.py --print çıkış 1.
-  heat_rule: {radius_m: 0.150, no_material: "LW-PLA", around: ["cylinder", "muffler"], tg_min_c: 120, tg_radius_m: 0.050}
+  # Kural 1: silindir/buji başlığı, susturucu ve çıkış borusuna radius_m içinde no_material yok. Kural 2: ısıl sınırı
+  # (filaments.*.tg_c: amorfta Tg, PA-CF'de HDT) tg_min_c'nin altındaki hiçbir filament bunlara tg_radius_m'den yakın
+  # değil (R05). Kural 3: pipe_clear_m. İhlal → build.py --print çıkış 1.
+  heat_rule: {radius_m: 0.150, no_material: "LW-PLA", around: ["cylinder", "muffler"], tg_min_c: 120, tg_radius_m: 0.050,
+              pipe_clear_m: 0.005}   # kural 3: hiçbir basılı parça çıkış borusuna 5 mm'den yakın değil (geçiş halkası)
   segments:
     wing_outer_panel: {y_from_m: 0.36, count: 7, length_m: 0.210, tip_cap_m: 0.07, orientation: "dik (açıklık Z'de, profil tabla köşegeninde)"}
     root_block: {y_from_m: 0.1025, count: 2, length_m: 0.130, note: "glove strake ve kök kaportası ayrı parça"}

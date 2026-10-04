@@ -1191,10 +1191,41 @@ prop = bpy.data.objects["U_Prop"]
 fps = sc.render.fps / sc.render.fps_base
 
 
-def fcurve(ob, path):
+def legacy_api(act):
+    return hasattr(act, "fcurves")                 # Blender 4.x; 5.x'te yalnız katmanlı aksiyon API'si var
+
+
+def fcurves_of(ob, create=False):
+    """Nesnenin aksiyonundaki F-eğrisi koleksiyonu (find/new/remove): 4.x'te act.fcurves, 5.x'te nesnenin
+    yuvasının kanal çantası (gerekirse yuva, katman ve şerit oluşturulur)."""
     ad = ob.animation_data
     act = ad.action if ad is not None else None
-    return act.fcurves.find(path) if act is not None else None
+    if act is None:
+        return None
+    if legacy_api(act):
+        return act.fcurves
+    slot = ad.action_slot
+    if slot is None:
+        if not create:
+            return None
+        slot = act.slots.new(id_type="OBJECT", name=ob.name)
+        ad.action_slot = slot
+    if not len(act.layers):
+        if not create:
+            return None
+        act.layers.new("Layer")
+    layer = act.layers[0]
+    if not len(layer.strips):
+        if not create:
+            return None
+        layer.strips.new(type="KEYFRAME")
+    bag = layer.strips[0].channelbag(slot, ensure=create)
+    return bag.fcurves if bag is not None else None
+
+
+def fcurve(ob, path):
+    fcs = fcurves_of(ob)
+    return fcs.find(path) if fcs is not None else None
 
 
 fc_rpm = fcurve(root, '["prop_rpm"]')
@@ -1221,10 +1252,11 @@ if act is None:
     act = bpy.data.actions.new("YK38_el_Prop")
     act.use_fake_user = True
     prop.animation_data.action = act
-old = act.fcurves.find('["ucav_turns"]')
+fcs = fcurves_of(prop, create=True)
+old = fcs.find('["ucav_turns"]')
 if old is not None:
-    act.fcurves.remove(old)
-fc = act.fcurves.new('["ucav_turns"]')
+    fcs.remove(old)
+fc = fcs.new('["ucav_turns"]')
 fc.keyframe_points.add(len(frames))
 co = []
 for f, v in zip(frames, turns):
@@ -1237,10 +1269,10 @@ ad = prop.animation_data
 if getattr(ad, "action_slot", True) is None:      # Blender 4.4+: yeni aksiyonun yuvası atanınca etkin olur
     ad.action = None
     ad.action = act
-ra = root.animation_data.action if root.animation_data is not None else None
-old = ra.fcurves.find('["prop_auto"]') if ra is not None else None
+rfcs = fcurves_of(root)
+old = rfcs.find('["prop_auto"]') if rfcs is not None else None
 if old is not None:
-    ra.fcurves.remove(old)
+    rfcs.remove(old)
 root["prop_auto"] = 0.0
 root.update_tag()
 sc.frame_set(sc.frame_current)

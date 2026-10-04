@@ -1712,7 +1712,8 @@ def muffler_outlet() -> Feature:
     """Susturucu çıkış borusu (R05): zarfın dış (iskele) yüzünde, ``outlet_at`` oranlarıyla arka-alt köşeye yakın
     başlar; yön aşağı (``outlet_down_deg``), dışa (``outlet_out_deg``) ve geriye — gaz stabilize kökünden ve
     elevatörden uzağa atılır. ``pos`` = borunun susturucudaki başlangıcı (spec), ``direction`` birim yön. ``params``:
-    ``scarf_deg``, ``shield_m``, ``stick_out_m`` (kaporta yüzünden dışarı taşma), ``d_m`` (dış/iç çap)."""
+    ``scarf_deg``, ``shield_m``, ``stick_out_m`` (kaporta yüzünden dışarı taşma), ``d_m`` (dış/iç çap),
+    ``hole_clear_m`` (sol yanaktaki geçiş deliğinin radyal boşluğu), ``grommet`` (geçiş halkası tanımı)."""
     m = _P["muffler"]
     mf = next(p for p in engine_envelope() if p.name == "muffler")
     A = np.asarray(mf.axes, float)                       # satırlar: itki ekseni, y, silindir ekseni
@@ -1727,7 +1728,8 @@ def muffler_outlet() -> Feature:
     dd = tuple(float(v) for v in o.get("d_m", (0.0124, 0.009)))
     return Feature("Muffler", "U_Exhaust_Muffler", "exhaust", tuple(map(float, pos)), d,
                    {"scarf_deg": float(o.get("scarf_deg", 0.0)), "shield_m": tuple(o.get("shield_m", (0.03, 0.02, 0.0005))),
-                    "stick_out_m": float(o.get("stick_out_m", 0.020)), "d_m": dd})
+                    "stick_out_m": float(o.get("stick_out_m", 0.020)), "d_m": dd,
+                    "hole_clear_m": float(o.get("hole_clear_m", 0.0015)), "grommet": str(o.get("grommet", ""))})
 
 
 # =====================================================================================================

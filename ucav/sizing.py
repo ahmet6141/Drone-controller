@@ -584,7 +584,8 @@ def build_checks(R: dict) -> list[Check]:
     er = S["propulsion"]["exhaust_ring"]
     add(G, "Lüle akış alanı (halka iç çapı – spinner)",
         math.pi / 4 * (float(er["id_m"]) ** 2 - P.PROP.spinner_d ** 2) * 1e4, er["area_cm2"], "cm²", "rel", ".1f",
-        "soğutma havası çıkışı; NACA karın girişi ≈ 22 cm² → çıkış/giriş ≈ 1,8 (+ çene yarığı ≈ 6 cm²)")
+        "soğutma havası çıkışı; NACA karın girişi ≈ 21,7 cm² → yalnız halka 1,58; çene yarığıyla (≈ 6 cm²) çıkış "
+        "40,3 cm² → 1,86")
     add(G, "Lüle halka ön yüzü (dış – iç çap)", math.pi / 4 * (float(er["od_m"]) ** 2 - float(er["id_m"]) ** 2) * 1e4,
         er["annulus_cm2"], "cm²", "rel", ".1f", "halka yüzü; akış alanı DEĞİL")
 

@@ -2571,10 +2571,13 @@ def muffler_shield() -> MeshData:
     return mb.build(40.0)
 
 
-def muffler_pipe_hole(clear: float = 0.0015) -> MeshData:
-    """Baskı: sol yanakta çıkış borusunun geçtiği delik katısı (boru dış yarıçapı + ``clear``), kaporta etini
-    boydan boya keser (printprep ``cowl_cheek_L`` deliği)."""
+def muffler_pipe_hole(clear: float | None = None) -> MeshData:
+    """Baskı: sol yanakta çıkış borusunun geçtiği delik katısı (boru dış yarıçapı + ``clear``; varsayılan spec
+    ``propulsion.muffler.outlet.hole_clear_m``), kaporta etini boydan boya keser (printprep ``cowl_cheek_L``
+    deliği). Aradaki halka boşluğu ısıya dayanıklı geçiş halkasıyla doldurulur (BOM)."""
     f = P.muffler_outlet()
+    if clear is None:
+        clear = float(f.params.get("hole_clear_m", 0.0015))
     p0, d, t_exit, _ = muffler_pipe_axis()
     r = 0.5 * float(f.params.get("d_m", (0.0124, 0.009))[0]) + clear
     a0, a1 = max(t_exit - 0.012, 0.0), t_exit + 0.006
@@ -2966,6 +2969,9 @@ TYRE_PROFILE = {"bead": 0.70, "rm": 0.32, "p_out": 1.85, "groove_a": 0.30, "groo
                                          # lastik kesiti: topuk eni oranı, en geniş yerin kesit yüksekliğindeki yeri, sırt
                                          # süperelips üssü, oluk konumu (yarı ene oran)/eni/derinliği. varsayım
 TYRE_CLEAR = 0.0025                      # toplu teker ↔ kuyu tavanı / kapak iç yüzü en az payı (AERO-06). varsayım
+WHEEL_BOSS = {"r": 0.0052, "proud": 0.00095}   # jant rulman göbeği + kapağı: yarıçap, lastik yan yüzünden taşma
+                                         # (gear.hub: göbek A + FORK_GAP − 0,2 mm, kapak +0,15 mm)
+HUB_RELIEF_R = 0.0085                    # ana kapak tavasında toplu göbeğin altındaki sığ boşluk (yalnız deri) yarıçapı
 
 
 def tyre_half_width_factor(r, R: float, r_rim: float) -> np.ndarray:
@@ -3000,20 +3006,28 @@ def tyre_fit_width(name: str) -> float:
 
 
 def stowed_tyre_door_gap(name: str, width: float | None = None) -> float:
-    """Toplu ana tekerin alt yüzü ile kapalı kuyu kapağının iç tavası arası en küçük pay (m): kapak dış yüzü (kaporta
-    tabanı) + deri + tava; lastik alt yüzü ``hw(r)`` ile (R14 kontrolü)."""
+    """Toplu ana tekerin alt yüzü ile kapalı kuyu kapağının iç yüzü arası en küçük pay (m). Kapak iç yüzü sahnedeki
+    kapakla aynıdır: deri + iç yapı (``_door_struct``: tava, çevre kaburgası, boyuna boncuk, göbek boşluğu); lastik
+    alt yüzü ``hw(r)`` ile, jant göbeği ``WHEEL_BOSS`` kadar taşar (R14 kontrolü; sahnede BVH ile de ölçülür)."""
     g = P.gear_leg(name)
     c = np.asarray(g.axle_retracted, float)
     W = g.wheel_w if width is None else width
-    pan = DOOR_STRUCT["main"][3]
+    d = next(x for x in P.gear_doors() if x.leg == name and x.attach == "skin")
+    zf = _skin_z_for_leg(name)
+    _, t_fn, _, _ = _door_struct(d)
     best = 1.0
-    th = np.linspace(0.0, 2 * math.pi, 72, endpoint=False)
-    for r in np.linspace(0.5 * g.hub_d, g.wheel_r, 16):
+    th = np.linspace(0.0, 2 * math.pi, 144, endpoint=False)
+    for r in np.linspace(0.5 * g.hub_d, g.wheel_r, 24):
         f = float(tyre_half_width_factor(r, g.wheel_r, 0.5 * g.hub_d))
         for t in th:
             s, y = c[0] + r * math.cos(t), c[1] + r * math.sin(t)
-            z_door = belly_z(s, y) + DOOR_SKIN + pan
+            z_door = zf(s, y) + t_fn(s, y)
             best = min(best, (c[2] - 0.5 * W * f) - z_door)
+    z_boss = c[2] - 0.5 * W - WHEEL_BOSS["proud"]
+    for r in np.linspace(0.0, WHEEL_BOSS["r"], 6):
+        for t in th[::4]:
+            s, y = c[0] + r * math.cos(t), c[1] + r * math.sin(t)
+            best = min(best, z_boss - (zf(s, y) + t_fn(s, y)))
     return best
 
 
@@ -3083,7 +3097,8 @@ DOOR_SKIN = 0.0008                      # kapak dış deri katmanı (testere di�
 DOOR_LIP = {"w": 0.0012, "t": 0.0025}   # dış deri çevresinde içe dönük dönüş dudağı: kenar 2,5 mm kalın okunur (R06). varsayım
 # İç yapı (kapak iç yüzü): düz kenarlı iç tava + çevre çerçeve kaburgası + boyuna boncuk. (inset, kaburga eni,
 # kaburga yüksekliği, tava yüksekliği, boncuk eni, boncuk yüksekliği) — yükseklikler deri üstünden. varsayım
-DOOR_STRUCT = {"main": (0.006, 0.004, 0.0025, 0.0010, 0.004, 0.0022),
+# Ana kapak boncuğu 1,6 mm: toplu lastik omzu boncuğun üstünden geçer, TYRE_CLEAR (2,5 mm) korunur (2,2 mm'de 2,0 mm).
+DOOR_STRUCT = {"main": (0.006, 0.004, 0.0025, 0.0010, 0.004, 0.0016),
                "nose": (0.004, 0.003, 0.0020, 0.0006, 0.0, 0.0),
                "leg": (0.0015, 0.002, 0.0012, 0.0, 0.0, 0.0),
                "plug": (0.0015, 0.0025, 0.0010, 0.0, 0.0, 0.0)}
@@ -3218,10 +3233,16 @@ def _door_struct(d: P.GearDoor) -> tuple[str, Callable, list, list]:
         y_lo, y_hi = float(ay.min()) + ins, float(ay.max()) - ins
     sg = 1.0 if float(np.mean(o[:, 1])) >= 0 else -1.0
     ym = y_bead if kind == "main" else 0.5 * (y_lo + y_hi)
+    hub = None
+    if kind == "main":                                         # toplu göbek altında tava yok (yalnız deri)
+        ax = P.gear_leg(d.leg).axle_retracted
+        hub = (float(ax[0]), abs(float(ax[1])))
 
     def t_fn(s, y):
         u = abs(y)
         if not (s_lo <= s <= s_hi and y_lo <= u <= y_hi):
+            return DOOR_SKIN
+        if hub is not None and math.hypot(s - hub[0], u - hub[1]) < HUB_RELIEF_R:
             return DOOR_SKIN
         if s < s_lo + fw or s > s_hi - fw or u < y_lo + fw or u > y_hi - fw:
             return DOOR_SKIN + fh
@@ -3233,6 +3254,9 @@ def _door_struct(d: P.GearDoor) -> tuple[str, Callable, list, list]:
     y_fix = [sg * v for v in (y_lo, y_lo + fw, y_hi - fw, y_hi)]
     if bw > 0:
         y_fix += [sg * (ym - 0.5 * bw), sg * (ym + 0.5 * bw)]
+    if hub is not None:
+        s_fix += [hub[0] - HUB_RELIEF_R, hub[0] + HUB_RELIEF_R]
+        y_fix += [sg * (hub[1] - HUB_RELIEF_R), sg * (hub[1] + HUB_RELIEF_R)]
     return kind, t_fn, s_fix, y_fix
 
 

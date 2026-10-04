@@ -11,15 +11,18 @@
   "segment_cut": "EXACT",
   "shell_features": "MANIFOLD",
   "boolean_ops": 568,
-  "boolean_s": 26.8,
-  "elapsed_s": 103.4
+  "boolean_s": 27.4,
+  "elapsed_s": 105.1
  },
  "totals": {
   "unique_parts": 66,
   "pieces": 105,
-  "mass_g": 3463.0,
-  "print_h": 257.1,
+  "mass_g": 3462.0,
+  "print_h": 257.0,
   "stl_mb": 0.0,
+  "stl_zero_area": 0,
+  "stl_degenerate_split": 0,
+  "stl_slivers": 0,
   "spec_estimate": {
    "print_mass_kg": 3.457,
    "print_hours": 257,
@@ -46,15 +49,15 @@
   },
   "PA-CF": {
    "pieces": 16,
-   "mass_g": 662.7,
-   "hours": 42.5,
-   "volume_cm3": 575.1
+   "mass_g": 662.0,
+   "hours": 42.4,
+   "volume_cm3": 574.6
   },
   "PETG": {
    "pieces": 17,
-   "mass_g": 188.0,
+   "mass_g": 187.2,
    "hours": 11.2,
-   "volume_cm3": 171.1
+   "volume_cm3": 170.3
   }
  },
  "by_group": {
@@ -85,8 +88,8 @@
   },
   "İtki": {
    "pieces": 6,
-   "mass_g": 233.9,
-   "hours": 15.1
+   "mass_g": 233.2,
+   "hours": 15.0
   },
   "Kaplamalar": {
    "pieces": 6,
@@ -100,8 +103,8 @@
   },
   "Takım kapakları": {
    "pieces": 7,
-   "mass_g": 77.5,
-   "hours": 4.6
+   "mass_g": 76.7,
+   "hours": 4.5
   }
  },
  "all_manifold": true,
@@ -129,6 +132,9 @@
    "tg_min_c": 120.0,
    "radius_mm": 50.0
   },
+  "pipe_rule": {
+   "clear_mm": 5.0
+  },
   "assigned": [
    {
     "key": "stab_1",
@@ -153,7 +159,7 @@
     "source": "ısı kalkanı",
     "by_source_mm": {
      "ısı kalkanı": 0.1,
-     "susturucu çıkış borusu": 1.5,
+     "susturucu çıkış borusu": 6.0,
      "cylinder": 7.0
     }
    },
@@ -348,10 +354,10 @@
    "bed_fix": "",
    "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.012,
+    "min_mm": 0.09,
     "p05_mm": 0.599,
     "median_mm": 0.799,
-    "frac_lt_0p4": 0.004
+    "frac_lt_0p4": 0.003
    },
    "note": "",
    "pin_holes": 1,
@@ -498,7 +504,7 @@
    "min_wall": {
     "min_mm": 0.015,
     "p05_mm": 0.599,
-    "median_mm": 0.795,
+    "median_mm": 0.799,
     "frac_lt_0p4": 0.003
    },
    "note": "",
@@ -570,7 +576,7 @@
    "min_wall": {
     "min_mm": 0.001,
     "p05_mm": 0.598,
-    "median_mm": 0.618,
+    "median_mm": 0.607,
     "frac_lt_0p4": 0.006
    },
    "note": "",
@@ -1538,8 +1544,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 1954,
-    "faces": 3668,
+    "verts": 1955,
+    "faces": 3670,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1583,7 +1589,7 @@
    "bed_fix": "",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.469,
+    "min_mm": 0.444,
     "p05_mm": 0.499,
     "median_mm": 0.499,
     "frac_lt_0p4": 0.0
@@ -1655,10 +1661,10 @@
    "bed_fix": "",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.338,
+    "min_mm": 0.495,
     "p05_mm": 0.499,
     "median_mm": 0.499,
-    "frac_lt_0p4": 0.001
+    "frac_lt_0p4": 0.0
    },
    "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
@@ -1726,10 +1732,10 @@
    "bed_fix": "tabla teması için alt yüz 0.2 mm düzlendi",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.109,
+    "min_mm": 0.493,
     "p05_mm": 0.497,
     "median_mm": 0.499,
-    "frac_lt_0p4": 0.001
+    "frac_lt_0p4": 0.0
    },
    "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
@@ -2083,10 +2089,10 @@
    "bed_fix": "",
    "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.114,
+    "min_mm": 0.313,
     "p05_mm": 0.497,
     "median_mm": 0.499,
-    "frac_lt_0p4": 0.002
+    "frac_lt_0p4": 0.001
    },
    "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
@@ -3313,10 +3319,10 @@
    "bed_fix": "",
    "support": "model üstü destek",
    "min_wall": {
-    "min_mm": 0.005,
+    "min_mm": 0.006,
     "p05_mm": 0.799,
     "median_mm": 0.999,
-    "frac_lt_0p4": 0.007
+    "frac_lt_0p4": 0.005
    },
    "note": "NACA dudak çerçevesi cebi + yangın perdesine kanal geçişi",
    "pin_holes": 0,
@@ -4035,8 +4041,8 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 4229,
-    "faces": 8462,
+    "verts": 4226,
+    "faces": 8456,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -4045,13 +4051,13 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 67.82,
-   "mass_g": 81.4,
+   "volume_cm3": 67.25,
+   "mass_g": 80.7,
    "fill": 1.0,
-   "mass_solid_g": 81.4,
-   "mass_total_g": 81.4,
-   "print_h": 5.07,
-   "print_h_total": 5.07,
+   "mass_solid_g": 80.7,
+   "mass_total_g": 80.7,
+   "print_h": 5.03,
+   "print_h_total": 5.03,
    "size_mm": [
     142.4,
     142.4,
@@ -4070,20 +4076,20 @@
    "bed_margin_mm": 38.8,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 113.9,
+   "overhang_cm2": 113.1,
    "bed_contact_cm2": 14.27,
    "contact_need_cm2": 3.54,
    "contact_ok": true,
    "oh45_to_bed_cm2": 63.88,
-   "oh45_over_model_cm2": 49.98,
-   "oh45_over_model_gt5mm_cm2": 49.83,
+   "oh45_over_model_cm2": 49.2,
+   "oh45_over_model_gt5mm_cm2": 49.06,
    "bed_fix": "",
    "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.142,
-    "p05_mm": 1.596,
+    "min_mm": 0.095,
+    "p05_mm": 1.595,
     "median_mm": 1.599,
-    "frac_lt_0p4": 0.002
+    "frac_lt_0p4": 0.003
    },
    "note": "eğik ekler deriye dik (deri normali 52°)",
    "pin_holes": 0,
@@ -4391,8 +4397,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 6145,
-    "faces": 12290,
+    "verts": 6143,
+    "faces": 12286,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -4409,8 +4415,8 @@
    "print_h": 3.36,
    "print_h_total": 6.72,
    "size_mm": [
-    201.0,
     202.3,
+    201.0,
     154.6
    ],
    "orientation": {
@@ -4420,7 +4426,7 @@
      0.066
     ],
     "up_words": "+y (sol/iskele) (13° eğik)",
-    "z_rot_deg": 34.0,
+    "z_rot_deg": 124.0,
     "bed_end": ""
    },
    "bed_margin_mm": 8.9,
@@ -4437,9 +4443,9 @@
    "support": "tabla desteği",
    "min_wall": {
     "min_mm": 0.0,
-    "p05_mm": 1.165,
+    "p05_mm": 1.169,
     "median_mm": 1.199,
-    "frac_lt_0p4": 0.014
+    "frac_lt_0p4": 0.011
    },
    "note": "1,6 mm kabuk, et < 3,6 mm olan kenar/dudaklar dolu; tüy kenar ≥ 0,8 mm'de kırpılır, kalan kama epoksi + mikrobalon ile sıfırlanır",
    "pin_holes": 0,
@@ -4507,10 +4513,10 @@
    "bed_fix": "1 mm kırılabilir baskı ayağı (baskıdan sonra kesilir)",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.002,
-    "p05_mm": 1.177,
+    "min_mm": 0.003,
+    "p05_mm": 1.175,
     "median_mm": 1.199,
-    "frac_lt_0p4": 0.012
+    "frac_lt_0p4": 0.01
    },
    "note": "kano kaportasına ve kanat altına yapıştırılır; ince kenarlar dolu, tüy kenar kırpılır",
    "pin_holes": 0,
@@ -4714,10 +4720,10 @@
    "bed_fix": "",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.013,
-    "p05_mm": 2.314,
+    "min_mm": 0.093,
+    "p05_mm": 2.408,
     "median_mm": 7.799,
-    "frac_lt_0p4": 0.006
+    "frac_lt_0p4": 0.005
    },
    "note": "levha altına yapıştırılır; düz alt yüz gövde basamağına oturur",
    "pin_holes": 0,
@@ -5083,8 +5089,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 6396,
-    "faces": 12788,
+    "verts": 7294,
+    "faces": 14584,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -5093,13 +5099,13 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 15.93,
-   "mass_g": 19.9,
-   "fill": 0.982,
-   "mass_solid_g": 20.2,
-   "mass_total_g": 39.7,
-   "print_h": 1.0,
-   "print_h_total": 2.0,
+   "volume_cm3": 15.54,
+   "mass_g": 19.4,
+   "fill": 0.985,
+   "mass_solid_g": 19.7,
+   "mass_total_g": 38.9,
+   "print_h": 0.98,
+   "print_h_total": 1.96,
    "size_mm": [
     94.0,
     91.5,
@@ -5128,10 +5134,10 @@
    "bed_fix": "",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.101,
+    "min_mm": 0.323,
     "p05_mm": 0.799,
     "median_mm": 1.799,
-    "frac_lt_0p4": 0.002
+    "frac_lt_0p4": 0.001
    },
    "note": "",
    "pin_holes": 0,
@@ -5672,6 +5678,12 @@
    "item": "Dümen servo kaportası (dikeyin iç yüzü; segment planında değil)",
    "spec": "30 × 10 × 5 mm kabarcık, ≈ 0,4 g: PETG (şablon U_Fairing_Servo_Rudder_L/R ağı, taban deriye zımparalanır) ya da 0,5 mm ısıl biçimlendirilmiş levha; dikey rengiyle boyanır, arka ağız açık",
    "qty": 2
+  },
+  {
+   "group": "Bağlantı",
+   "item": "Egzoz çıkış borusu geçiş halkası (sol yanak)",
+   "spec": "Isıya dayanıklı geçiş halkası (silikon/seramik keçe), iç Ø12,4 / dış Ø24,4 mm",
+   "qty": 1
   },
   {
    "group": "Bağlantı",

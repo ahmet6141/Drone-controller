@@ -46,6 +46,17 @@ yeteneğine sahip, orta boy (7 inç, 6S) bir quadcopter'ın yazılım ve donanı
 
 ![DC7 v2 bütünleşik gövde (cad/v2/build_v2.py + Blender)](cad/v2/out/render/hero.jpg)
 
+## Ayrı proje: YELKOVAN YK-38 (`ucav/`)
+
+[`ucav/`](ucav/README.md) bu depodaki ikinci, bağımsız projedir: MALE görünümlü, benzinli ve itici motorlu
+**sivil EO/IR gözetleme ve araştırma İHA'sı** YELKOVAN YK-38 (açıklık 3,80 m, MTOW 11,71 kg, SHT-İHA M1 sınıfı).
+Tek doğruluk kaynağı [`ucav/spec.yaml`](ucav/spec.yaml)'dır; aynı kaynaktan rig'li ve animasyonlu bir Blender modeli
+(Cycles sabit görüntüler, iki animasyon klibi, GLB) ve FDM baskı parçaları (STL'ler ve Türkçe baskı raporu) üretilir.
+Silah, mühimmat, askı noktası ve bırakma mekanizması yoktur. Kurulum, komutlar, tasarım kararları ve bilinen sınırlar:
+[`ucav/README.md`](ucav/README.md).
+
+![YELKOVAN YK-38 (ucav/, Blender Cycles)](ucav/out/render/yk38_hero.jpg)
+
 ## Dizin yapısı
 
 ```
@@ -78,6 +89,8 @@ cad/
   build.py             STL/STEP/GLB, kütle–bütçe raporu, önizlemeler → out/
   render_blender.py    Blender/Cycles fotogerçekçi render (--model v1 | v2)
   v2/                  Bütünleşik gövde: yerleşim, titreşim, kabuklar, kol–kanal modülü, akıllı batarya
+ucav/                  YELKOVAN YK-38 sivil gözetleme İHA'sı (ayrı proje): spec.yaml, geometri, boyutlandırma,
+                       Blender hattı (blender/build.py), çıktılar (out/) — bkz. ucav/README.md
 tools/
   budget_calc.py       AUW, T/W, hover gücü/süresi, MPC_THR_HOVER, THR_MDL_FAC, maliyet
   scenarios.py         Bütçe kesinti senaryoları: maliyet, kütle, hover ve limit etkisi
@@ -94,6 +107,8 @@ tests/
   test_cad.py          Yerleşim kuralları (her zaman) + CAD parçaları (CadQuery kuruluysa)
   test_v2.py           v2 yerleşimi ve kol titreşimi (her zaman) + v2 CAD parçaları (CadQuery kuruluysa)
   test_tof8x8.py       8×8 ToF avuç analizi testleri
+  test_ucav_core.py    YK-38: spec, geometri, boyutlandırma, README tutarlılığı (bpy gerekmez)
+  test_ucav_blender.py YK-38: Blender sahnesi, rig, render, GLB, baskı parçaları ve raporu (bpy yoksa atlanır)
 ```
 
 ## Hızlı başlangıç
@@ -108,6 +123,7 @@ python3 tools/scenarios.py --markdown      # bütçe kesinti senaryoları ve pak
 python3 cad/layout.py                      # ağırlık merkezi, batarya konumu, görüş alanları
 python3 cad/v2/layout_v2.py                # v2 bütünleşik gövde: yerleşim ve ağırlık merkezi
 python3 cad/v2/analysis_v2.py              # v2 kol–kanal modülü titreşimi ve dayanımı
+python3 ucav/sizing.py --check             # YK-38 boyutlandırma ve geometri kontrolü (ucav/README.md)
 python3 -m unittest discover -s tests -v   # tüm tutarlılık testleri
 # 3B modeller (isteğe bağlı): pip install cadquery matplotlib && python3 cad/build.py && python3 cad/v2/build_v2.py
 # Render (isteğe bağlı, Python 3.11): pip install bpy==4.5.3 && python cad/render_blender.py --model v2

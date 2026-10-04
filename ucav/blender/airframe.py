@@ -16,9 +16,11 @@ Nesneler (ebeveyn → koleksiyon; orijin; yerel eksen)
   ``U_WingCenter_*``; ``U_Elevator_*`` → ``U_Stab``; ``U_Rudder_*`` → ``U_Fin_*``. Orijin menteşe hattı ortası
   (``HingeLine.mid_b``), yerel eksenler ``HingeLine.frame_b()``: yerel X = ``axis_positive_b`` → + dönüş iki yanda
   da firar kenarı AŞAĞI (dümende sancağa). Eksenler ``delta_rotation_euler``'dedir; ``rotation_euler.x`` sürülür.
-* İtki (UCAV_Propulsion): ``U_Cowl``, ``U_ExhaustRing``, ``U_Intake``, ``U_Cowl_Louvers``, ``U_Exhaust_Muffler``,
-  ``U_ScuffPad`` (dünya orijinli); ``U_Prop`` (orijin göbek ``PROP.hub_b``, yerel X = ``PROP.axis_aft_b``, pala 1
-  yerel +Z) ve çocuğu ``U_Spinner``.
+* İtki (UCAV_Propulsion): ``U_Cowl`` (gerçek 1,6 mm kabuk; motor zarfları kabuğun iç boşluğunda, arka flanş Ø92
+  açık, çene yarığı ve 6 panjur kabuğu deler), ``U_ExhaustRing``, ``U_Intake``, ``U_Cowl_Louvers``, ``U_Exhaust_Muffler``,
+  ``U_ScuffPad`` (dünya orijinli); ``U_Cowl_Cavity`` (→ ``U_Cowl``; YALNIZ RENDER: lüle deliğinden görünen koyu boşluk
+  diski, ``ucav_render_only`` — baskı, GLB ve çakışma denetimlerine girmez); ``U_Prop`` (orijin göbek ``PROP.hub_b``,
+  yerel X = ``PROP.axis_aft_b``, pala 1 yerel +Z) ve çocuğu ``U_Spinner``.
 * Taret (UCAV_Payload): ``U_Turret_Mount`` (orijin (−0,215, 0, gövde altı), dünya eksenleri) → ``U_Turret_Pan``
   (orijin top merkezi, yerel Z = pan) → ``U_Turret_Tilt`` (orijin top merkezi, yerel Y = tilt; + dönüş aşağı) →
   ``U_Turret_Window``; ``U_Light_Turret_Ring`` → ``U_Turret_Mount``.
@@ -85,7 +87,9 @@ def build(scene: bpy.types.Scene | None = None, *, cut_wells: bool = True, verbo
 
     # ------------------------------------------------------------------ gövde ve itki kabukları
     add(S.fuselage(), "UCAV_Airframe")
-    add(S.cowl(), "UCAV_Propulsion")
+    add(S.cowl(), "UCAV_Propulsion")                  # gerçek 1,6 mm kabuk, arkası Ø92 açık (R01)
+    cav = add(S.cowl_cavity(), "UCAV_Propulsion", "U_Cowl", ucav_role="render_only", ucav_render_only=True)
+    cav.visible_shadow = False                        # yalnız render: lüle deliğinden görünen koyu boşluk
     add(S.exhaust_ring(), "UCAV_Propulsion")
     add(S.intake(), "UCAV_Propulsion", "U_Fuselage")
     add(S.cowl_louvers(), "UCAV_Propulsion", "U_Cowl")

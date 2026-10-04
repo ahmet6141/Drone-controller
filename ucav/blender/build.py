@@ -487,7 +487,9 @@ def _gltf_materials(livery: str):
 
 
 GLB_PROP_TURNS = 64          # pişirilen döngüde pervane turu: mechanisms 240 dev/dk (384 kare → 60°/kare, ileri yönde)
-GLB_EXCLUDE = ("U_PropDisc",)   # glTF'e girmeyenler: pervane diski (karışım malzemesi düz PBR'de opak disk olur)
+GLB_EXCLUDE = ("U_PropDisc", "U_Cowl_Cavity")   # glTF'e girmeyenler: pervane diski (karışım malzemesi düz PBR'de
+                                                 # opak disk olur) ve yalnız render kaporta boşluğu (R01). Ayrıca
+                                                 # ``ucav_render_only`` işaretli her nesne (``_glb_objects``)
 
 
 @contextlib.contextmanager
@@ -531,6 +533,15 @@ def _gltf_prop_spin(active: bool):
         prop.rotation_euler[0] = 0.0
 
 
+def _glb_objects(view_layer) -> list:
+    """GLB'ye giden nesneler: ``UCAV`` ağacında görünüm katmanındakiler; ``GLB_EXCLUDE`` ve ``ucav_render_only``
+    işaretliler (yalnız render yardımcıları: kaporta boşluğu) hariç."""
+    import bpy
+    return [o for o in bpy.data.collections["UCAV"].all_objects
+            if view_layer.objects.get(o.name) is not None and o.name not in GLB_EXCLUDE
+            and not o.get("ucav_render_only")]
+
+
 def export_glb(path: Path, livery: str, with_anim: bool = False) -> dict:
     """Uçağı (``UCAV`` koleksiyon ağacı; stüdyo, kameralar ve baskı parçaları hariç) GLB olarak yazar. Dinlenme
     pozu (takım açık, kumandalar nötr). ``with_anim``: ``mechanisms`` döngüsü kare kare pişirilir."""
@@ -545,8 +556,7 @@ def export_glb(path: Path, livery: str, with_anim: bool = False) -> dict:
     vl = bpy.context.view_layer
     for ob in vl.objects:
         ob.select_set(False)
-    objs = [o for o in bpy.data.collections["UCAV"].all_objects
-            if vl.objects.get(o.name) is not None and o.name not in GLB_EXCLUDE]
+    objs = _glb_objects(vl)
     for o in objs:
         o.select_set(True)
     path.parent.mkdir(parents=True, exist_ok=True)

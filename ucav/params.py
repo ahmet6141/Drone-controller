@@ -1073,6 +1073,8 @@ class GearLeg:
     * ``axle_retracted`` — yüksüz bacak ``retract_deg`` kadar katlanınca aks merkezi.
     * ``trail`` — çatal ofseti (m): aks, bacak (yönlendirme) ekseninin bu kadar gerisinde, bacağa dik; temas noktası
       yönlendirme ekseninin zeminle kesiştiği noktanın ≈ ``trail`` gerisindedir (burun tekeri shimmy'ye karşı).
+    * ``axle_out`` — ana takımda teker orta düzleminin pivot (toplama) hattından dışa kaçıklığı (m): içe 90° toplamada
+      dışa kaçıklık AŞAĞI döner → toplu teker kuyuda bu kadar alçalır (R14: kanat üst derisiyle sınırlı tavana pay).
     * ``retract_axis_b`` — Blender'da birim eksen: + ``retract_deg`` dönüş bacağı TOPLAR (açık → kapalı).
     * ``wheel_axis_b`` — açık konumda tekerlek dönme ekseni (sözleşme: teker yerel Y etrafında döner).
     """
@@ -1097,6 +1099,7 @@ class GearLeg:
     retract_axis_b: tuple[float, float, float]
     wheel_axis_b: tuple[float, float, float]
     trail: float = 0.0
+    axle_out: float = 0.0          # aks (teker orta düzlemi) pivot hattının bu kadar DIŞINDA (ana: toplu tekeri alçaltır)
 
     @property
     def wheel_r(self) -> float:
@@ -1124,11 +1127,13 @@ def _make_leg(name: str, d: dict, sg: float) -> GearLeg:
     leg_dir = (math.sin(rake), 0.0, -math.cos(rake))
     aft_dir = (math.cos(rake), 0.0, math.sin(rake))           # bacağa dik, geriye (çatal ofseti yönü)
     trail = float(d.get("trail_m", 0.0))
+    a_out = float(d.get("axle_offset_out_m", 0.0))
+    out_dir = (0.0, sg, 0.0)                                  # dışa (açıklık boyunca)
     r = 0.5 * float(d["wheel_d_m"])
-    axle_u = tuple(p + L * u + trail * a for p, u, a in zip(pivot, leg_dir, aft_dir))
+    axle_u = tuple(p + L * u + trail * a + a_out * o for p, u, a, o in zip(pivot, leg_dir, aft_dir, out_dir))
     # statik: bacak boyunca sıkışma, teker zemine değsin
     comp = (GROUND_Z - (axle_u[2] - r)) / math.cos(rake)
-    axle_s = tuple(p + (L - comp) * u + trail * a for p, u, a in zip(pivot, leg_dir, aft_dir))
+    axle_s = tuple(p + (L - comp) * u + trail * a + a_out * o for p, u, a, o in zip(pivot, leg_dir, aft_dir, out_dir))
     # toplama ekseni ve hedef yön
     pivot_b = np.asarray(to_blender(*pivot))
     axle_b = np.asarray(to_blender(*axle_u))
@@ -1148,7 +1153,7 @@ def _make_leg(name: str, d: dict, sg: float) -> GearLeg:
                    retract_direction=d["retract_direction"], leg_dir=leg_dir, axle_unloaded=axle_u,
                    axle_static=axle_s, axle_retracted=from_blender(*axle_r_b),
                    static_sag=GROUND_Z - (axle_u[2] - r), static_compression=comp,
-                   retract_axis_b=tuple(map(float, axis)), wheel_axis_b=(0.0, 1.0, 0.0), trail=trail)
+                   retract_axis_b=tuple(map(float, axis)), wheel_axis_b=(0.0, 1.0, 0.0), trail=trail, axle_out=a_out)
 
 
 @functools.lru_cache(maxsize=None)
@@ -1704,19 +1709,25 @@ def battery_envelope() -> EnvPart:
 
 
 def muffler_outlet() -> Feature:
-    """Susturucu çıkışı (sol alt yanak, susturucu zarfının arka ucu): konum (kaporta yüzeyi) ve yön (35° aşağı,
-    35° dışa, geriye). ``params``: ``scarf_deg``, ``shield_m``."""
+    """Susturucu çıkış borusu (R05): zarfın dış (iskele) yüzünde, ``outlet_at`` oranlarıyla arka-alt köşeye yakın
+    başlar; yön aşağı (``outlet_down_deg``), dışa (``outlet_out_deg``) ve geriye — gaz stabilize kökünden ve
+    elevatörden uzağa atılır. ``pos`` = borunun susturucudaki başlangıcı (spec), ``direction`` birim yön. ``params``:
+    ``scarf_deg``, ``shield_m``, ``stick_out_m`` (kaporta yüzünden dışarı taşma), ``d_m`` (dış/iç çap)."""
     m = _P["muffler"]
-    s = float(m["outlet_s_m"])
     mf = next(p for p in engine_envelope() if p.name == "muffler")
-    z = float(mf.center[2])
-    cl = _P["cowl"]["cheek_left"]
-    y = fuselage_half_width_at(s, z) + float(cl["bulge_m"]) * 0.75
+    A = np.asarray(mf.axes, float)                       # satırlar: itki ekseni, y, silindir ekseni
+    c = np.asarray(mf.center, float)
+    hx, hy, hz = mf.half
+    sg = _side_sign(m.get("side", "L"))
+    fa, fd = (float(v) for v in m.get("outlet_at", (0.55, 0.62)))
+    pos = c + A[0] * fa * hx + A[1] * sg * hy + A[2] * fd * hz
     dn, ou = _rad(float(m["outlet_down_deg"])), _rad(float(m["outlet_out_deg"]))
-    d = (math.cos(dn) * math.cos(ou), math.cos(dn) * math.sin(ou), -math.sin(dn))
+    d = (math.cos(dn) * math.cos(ou), sg * math.cos(dn) * math.sin(ou), -math.sin(dn))
     o = m.get("outlet", {}) or {}
-    return Feature("Muffler", "U_Exhaust_Muffler", "exhaust", (s, y, z), d,
-                   {"scarf_deg": float(o.get("scarf_deg", 0.0)), "shield_m": tuple(o.get("shield_m", (0.03, 0.02, 0.0005)))})
+    dd = tuple(float(v) for v in o.get("d_m", (0.0124, 0.009)))
+    return Feature("Muffler", "U_Exhaust_Muffler", "exhaust", tuple(map(float, pos)), d,
+                   {"scarf_deg": float(o.get("scarf_deg", 0.0)), "shield_m": tuple(o.get("shield_m", (0.03, 0.02, 0.0005))),
+                    "stick_out_m": float(o.get("stick_out_m", 0.020)), "d_m": dd})
 
 
 # =====================================================================================================

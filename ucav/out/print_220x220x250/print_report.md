@@ -1,28 +1,44 @@
 # YELKOVAN YK-38 — 3B baskı raporu
 
-Üretim: `ucav/blender/printprep.py` · tarih 2026-10-04 · tabla 220×220×250 mm (kenar payı 6 mm) · boolean: segment kesimi EXACT, kabuk/özellikler MANIFOLD (534 işlem).
+Üretim: `ucav/blender/printprep.py` · tarih 2026-10-04 · tabla 220×220×250 mm (kenar payı 6 mm) · boolean: segment kesimi EXACT, kabuk/özellikler MANIFOLD (568 işlem).
 
 ## Özet
 
-| | Bu model | Spec tahmini |
-|---|---:|---:|
-| Benzersiz STL | 66 | — |
-| Basılacak parça (ayna dahil) | 105 | 125 |
-| Basılı kütle | 4,07 kg | 3,33 kg |
-| Baskı süresi (kaba) | 293 h | 316 h |
-| STL toplamı | yazılmadı (--no-stl) | ≤ 40 MB hedef |
-| Manifold / kapalı | evet, hepsi | |
-| Tablaya sığma | hepsi (3 benzersiz parça dar payla, ≥ 2 mm) | |
+| | Bu model | Spec planı (kütle bütçesi) | Panel tahmini |
+|---|---:|---:|---:|
+| Benzersiz STL | 66 | — | — |
+| Basılacak parça (ayna dahil) | 105 | 104 | 125 |
+| Basılı kütle | 3,46 kg | 3,46 kg | 3,33 kg |
+| Baskı süresi (kaba) | 257 h | 257 h | 316 h |
+| STL toplamı | yazılmadı (--no-stl) | ≤ 40 MB hedef | |
+| Manifold / kapalı | evet, hepsi | | |
+| Tablaya sığma | hepsi (3 benzersiz parça dar payla, ≥ 2 mm) | | |
 
 Kütle, filament etkin yoğunluğuyla (LW-PLA köpürmüş 0,65 g/cm³) parça hacminden hesaplanır; boya, yapıştırıcı ve basılmayan parçalar dahil değildir. Süre: hacimsel hız + katman başına 2,5 s + tabla başına 6 dk (kaba tahmin).
 
 | Malzeme | Parça | Hacim (cm³) | Kütle (g) | Süre (h) |
 |---|---:|---:|---:|---:|
-| LW-ASA | 7 | 462 | 347 | 25,0 |
-| LW-PLA | 65 | 4 104 | 2 667 | 204,1 |
-| PA-CF | 15 | 645 | 774 | 48,6 |
-| PETG | 17 | 216 | 274 | 14,9 |
-| TPU | 1 | 3 | 3 | 0,5 |
+| LW-ASA | 7 | 413 | 310 | 22,8 |
+| LW-PLA | 65 | 3 542 | 2 302 | 180,7 |
+| PA-CF | 16 | 575 | 663 | 42,5 |
+| PETG | 17 | 171 | 188 | 11,2 |
+
+## Kütle tablosu (R04: hedef ≤ 3,5 kg)
+
+Basılı gövde kütlesi **3,46 kg** (hedefin altında; önceki rapor 4,06 kg). Kalın PA-CF/PETG parçalar (ortalama et > kabuk) dilimleyicideki gibi kabuk + %40 gyroid dolgu ile hesaplanır (PA-CF 1,6 mm, PETG 1,2 mm kabuk); dolu basılsalardı +56 g. Kanat, gövde ve kuyruk dayanımı: kiriş/longeron yükü bilezik ve kaburgalarla deriye geçer, ince deriler stringer ve kafesle bölünür; kök blokları, yük yolu çerçeveleri ve menteşe hatları inceltilmedi. Spec kütle bütçesinin "Basılı:" kalemleri (`mass.breakdown`) bu tablodaki grup kütleleridir; `sizing.py --check` toplamı ve her grubu bu raporla karşılaştırır (≤ 5 g).
+
+| Grup | Önceki rapor (g) | Bu model (g) | Fark (g) | Ne değişti |
+|---|---:|---:|---:|---|
+| Kanat | 1 444 | 1 269 | -175 | kafes yalnız panel 1–4 (y < 1,19 m), 0,6 mm üye × 90 mm aralık; ana/arka kiriş kovanı yerine 16 mm bilezikler (≤ 55 mm aralık; boru yükü bileziklerden ve kaburgalardan deriye) |
+| Kuyruk | 305 | 280 | -25 | dikey kiriş kesme ağı dikey normaline döndürüldü (orta düzlem zarı kalktı); kiriş kovanı → bilezik |
+| Kumanda yüzeyleri | 365 | 309 | -56 | orta düzlem levhası yerine 0,5 mm dikey menteşe ağı; menteşe dili R 4,5 mm, çentik yalnız ön yarıda |
+| Gövde | 911 | 772 | -139 | halka/modül derisi 0,8 → 0,7 mm + 4 iç stringer (0,8 × 5 mm); çerçeve 8 → 6 mm, flanş 2,4 → 2,0 mm; longeron kovanı → bilezik; keepout içindeki iç yapı artık gerçekten çıkarılıyor (halka 5); halka 9 arka flanşı motor halkası bindirmesinde yalnız deri; modülde PETG flanş cebi |
+| Yük yolları | 356 | 312 | -43 | kanat kutusu çerçevesinde depo üstü hafifletme deliği; kalın PA-CF/PETG parçalar dilimleyici dolgusuyla (kabuk + %40 gyroid) hesaplanır; motor halkası NACA çerçevesinden, ana takım beşiği iç flap menteşe dilinden arındırıldı |
+| İtki | 277 | 234 | -43 | kaporta print_solid kaynaktan (Ø92 arka açıklık, çene yarığı, motor zarfı boşlukları, panjur dudakları); lüle halkası kaportaya alın alına (geçme dili yok); pabuç PA-CF 2 mm, kaporta yüzünü izler |
+| Kaplamalar | 247 | 192 | -55 | kök kaportası ve ER-150 kabartması 1,6 → 1,2 mm; tüy kenar ve iç ince kuşaklar kırpılır |
+| Faydalı yük | 80 | 18 | -61 | taret yakası gövde dış yüzünde kesilir: fileto tabanı karın derisine bindirmeli yapışır, tüy kenar 0,8 mm'de kırpılır (gömülü üst kutu ve iç dudak basılmaz; modül derisiyle çakışıyordu) |
+| Takım kapakları | 75 | 78 | 3 | burun kapağı çentik köşesi kıymığı kesildi (fark geometri turundaki kapak değişikliğinden) |
+| **Toplam** | **4 059** | **3 463** | **-596** | |
 
 ## Parça tablosu
 
@@ -32,75 +48,75 @@ Kütle, filament etkin yoğunluğuyla (LW-PLA köpürmüş 0,65 g/cm³) parça h
 
 | STL | Parça | Malz. | Et (mm) | Adet | Ölçü (mm) | Yön / Z açısı | Pay (mm) | Kütle (g) | Süre (h) | Destek | Not |
 |---|---|---|---:|---:|---|---|---:|---:|---:|---|---|
-| `wing_panel_1.stl` | Kanat dış paneli 1/7 (y 0.36–0.57) | LW-PLA | 0,6 | 2 | 215×212×210 | +y (sol/iskele) / 49°; tablada: y=0.360 | 2 | 94 | 6,6 | tabla desteği | sağ = ayna; dar pay |
-| `wing_panel_2.stl` | Kanat dış paneli 2/7 (y 0.57–0.78) | LW-PLA | 0,6 | 2 | 165×167×210 | +y (sol/iskele) / 47°; tablada: y=0.570 | 26 | 93 | 6,5 | model üstü destek | sağ = ayna |
-| `wing_panel_3.stl` | Kanat dış paneli 3/7 (y 0.78–0.99) | LW-PLA | 0,6 | 2 | 165×164×210 | +y (sol/iskele) / 45°; tablada: y=0.780 | 27 | 86 | 6,1 | yok | sağ = ayna |
-| `wing_panel_4.stl` | Kanat dış paneli 4/7 (y 0.99–1.20) | LW-PLA | 0,6 | 2 | 202×204×210 | +y (sol/iskele) / 47°; tablada: y=0.990 | 8 | 84 | 6,0 | tabla desteği | sağ = ayna |
-| `wing_panel_5.stl` | Kanat dış paneli 5/7 (y 1.20–1.41) | LW-PLA | 0,6 | 2 | 141×142×210 | +y (sol/iskele) / 45°; tablada: y=1.200 | 39 | 73 | 5,3 | model üstü destek | sağ = ayna |
-| `wing_panel_6.stl` | Kanat dış paneli 6/7 (y 1.41–1.62) | LW-PLA | 0,6 | 2 | 125×123×210 | +y (sol/iskele) / 44°; tablada: y=1.410 | 48 | 59 | 4,4 | yok | sağ = ayna |
-| `wing_panel_7.stl` | Kanat dış paneli 7/7 (y 1.62–1.83) | LW-PLA | 0,6 | 2 | 122×124×215 | +y (sol/iskele) / 41°; tablada: y=1.620 | 48 | 46 | 3,5 | tabla desteği | sağ = ayna |
-| `wing_tip.stl` | Kanat uç kapağı (eğik uç, seyrüsefer LED yuvası) | LW-PLA | 0,6 | 2 | 114×116×72 | +y (sol/iskele) (6° eğik) / 49°; tablada: uç düzlemi | 52 | 14 | 1,1 | tabla desteği | sağ = ayna |
-| `root_block_2.stl` | Kök bloğu 2 (y 0.231–0.36) | LW-PLA | 0,8 | 2 | 212×214×129 | −y (sağ/sancak) / 44°; tablada: y=0.360 (sökülebilir) | 3 | 62 | 4,3 | tabla desteği | sağ = ayna; dar pay |
-| `root_block_1.stl` | Kök bloğu 1 (gövde yanı–y 0.231) | LW-PLA | 0,8 | 2 | 214×213×189 | −y (sağ/sancak) / 40°; tablada: y=0.231 | 3 | 86 | 6,0 | tabla desteği | sağ = ayna; gövdeye oturan kök yüzü gövde konturunu izler (0,3 mm boşluk); dar pay |
+| `wing_panel_1.stl` | Kanat dış paneli 1/7 (y 0.36–0.57) | LW-PLA | 0,6 | 2 | 215×212×210 | +y (sol/iskele) / 49°; tablada: y=0.360 | 2 | 84 | 5,9 | tabla desteği | sağ = ayna; dar pay |
+| `wing_panel_2.stl` | Kanat dış paneli 2/7 (y 0.57–0.78) | LW-PLA | 0,6 | 2 | 162×164×210 | +y (sol/iskele) / 46°; tablada: y=0.570 | 28 | 79 | 5,7 | model üstü destek | sağ = ayna |
+| `wing_panel_3.stl` | Kanat dış paneli 3/7 (y 0.78–0.99) | LW-PLA | 0,6 | 2 | 163×161×210 | +y (sol/iskele) / 45°; tablada: y=0.780 | 28 | 73 | 5,2 | yok | sağ = ayna |
+| `wing_panel_4.stl` | Kanat dış paneli 4/7 (y 0.99–1.20) | LW-PLA | 0,6 | 2 | 202×204×210 | +y (sol/iskele) / 47°; tablada: y=0.990 | 8 | 74 | 5,3 | tabla desteği | sağ = ayna |
+| `wing_panel_5.stl` | Kanat dış paneli 5/7 (y 1.20–1.41) | LW-PLA | 0,6 | 2 | 139×139×210 | +y (sol/iskele) / 45°; tablada: y=1.200 | 40 | 60 | 4,5 | tabla desteği | sağ = ayna |
+| `wing_panel_6.stl` | Kanat dış paneli 6/7 (y 1.41–1.62) | LW-PLA | 0,6 | 2 | 122×123×210 | +y (sol/iskele) / 134°; tablada: y=1.410 | 49 | 48 | 3,6 | yok | sağ = ayna |
+| `wing_panel_7.stl` | Kanat dış paneli 7/7 (y 1.62–1.83) | LW-PLA | 0,6 | 2 | 122×124×215 | +y (sol/iskele) / 41°; tablada: y=1.620 | 48 | 41 | 3,2 | tabla desteği | sağ = ayna |
+| `wing_tip.stl` | Kanat uç kapağı (eğik uç, seyrüsefer LED yuvası) | LW-PLA | 0,6 | 2 | 114×116×72 | +y (sol/iskele) (6° eğik) / 49°; tablada: uç düzlemi | 52 | 14 | 1,1 | yok | sağ = ayna |
+| `root_block_2.stl` | Kök bloğu 2 (y 0.231–0.36) | LW-PLA | 0,8 | 2 | 212×214×129 | −y (sağ/sancak) / 44°; tablada: y=0.360 (sökülebilir) | 3 | 53 | 3,8 | tabla desteği | sağ = ayna; dar pay |
+| `root_block_1.stl` | Kök bloğu 1 (gövde yanı–y 0.231) | LW-PLA | 0,8 | 2 | 214×213×189 | −y (sağ/sancak) / 40°; tablada: y=0.231 | 3 | 83 | 5,8 | tabla desteği | sağ = ayna; gövdeye oturan kök yüzü gövde konturunu izler (0,3 mm boşluk); dar pay |
 | `glove_strake.stl` | Glove strake (36° kök hücum kenarı) | LW-PLA | 0,8 | 2 | 124×124×123 | +x (burun) / 38°; tablada: strake ayrımı | 48 | 26 | 2,0 | model üstü destek | sağ = ayna |
 
 ### Kuyruk
 
 | STL | Parça | Malz. | Et (mm) | Adet | Ölçü (mm) | Yön / Z açısı | Pay (mm) | Kütle (g) | Süre (h) | Destek | Not |
 |---|---|---|---:|---:|---|---|---:|---:|---:|---|---|
-| `stab_1.stl` | Stabilize yarısı 1/2 (%25 ok eksenine dik ek) | LW-ASA | 0,5 | 2 | 104×104×245 | −y (sağ/sancak) (29° eğik) / 17°; tablada: stabilize eki | 58 | 34 | 2,8 | tabla desteği | sağ = ayna; kök yüzü kuyruk konisi konturunu izler; borular koni içindeki eyerde birleşir |
-| `stab_2a.stl` | Stabilize yarısı 2/2 (%25 ok eksenine dik ek) — parça A (tablaya sığması için bölündü) | LW-PLA | 0,5 | 2 | 63×64×172 | +y (sol/iskele) (29° eğik) / 16°; tablada: stabilize eki | 78 | 20 | 1,8 | yok | sağ = ayna; uç dikey içine 5 mm gömülür |
+| `stab_1.stl` | Stabilize yarısı 1/2 (%25 ok eksenine dik ek) | LW-ASA | 0,5 | 2 | 107×107×245 | −y (sağ/sancak) (29° eğik) / 107°; tablada: stabilize eki | 56 | 34 | 2,7 | tabla desteği | sağ = ayna; kök yüzü kuyruk konisi konturunu izler; borular koni içindeki eyerde birleşir |
+| `stab_2a.stl` | Stabilize yarısı 2/2 (%25 ok eksenine dik ek) — parça A (tablaya sığması için bölündü) | LW-PLA | 0,5 | 2 | 64×63×172 | +y (sol/iskele) (29° eğik) / 106°; tablada: stabilize eki | 78 | 20 | 1,8 | yok | sağ = ayna; uç dikey içine 5 mm gömülür |
 | `stab_2b.stl` | Stabilize yarısı 2/2 (%25 ok eksenine dik ek) — parça B (tablaya sığması için bölündü) | LW-PLA | 0,5 | 2 | 78×77×172 | +y (sol/iskele) (29° eğik) / 106°; tablada: stabilize eki | 71 | 14 | 1,4 | tabla desteği | sağ = ayna; uç dikey içine 5 mm gömülür |
-| `fin_1.stl` | Dikey 1/2 (%25 ok eksenine dik ek) | LW-PLA | 0,5 | 2 | 153×153×220 | −z (aşağı) (29° eğik) / 3°; tablada: dikey eki | 33 | 54 | 4,1 | tabla desteği | sağ = ayna; iç yüzde stabilize ucu yuvası (0,3 mm boşluk) |
-| `fin_2.stl` | Dikey 2/2 (%25 ok eksenine dik ek) | LW-PLA | 0,5 | 2 | 99×99×226 | +z (yukarı) (29° eğik) / 42°; tablada: dikey eki | 60 | 30 | 2,5 | model üstü destek | sağ = ayna |
+| `fin_1.stl` | Dikey 1/2 (%25 ok eksenine dik ek) | LW-PLA | 0,5 | 2 | 153×153×220 | −z (aşağı) (29° eğik) / 3°; tablada: dikey eki | 33 | 47 | 3,6 | tabla desteği | sağ = ayna; iç yüzde stabilize ucu yuvası (0,3 mm boşluk) |
+| `fin_2.stl` | Dikey 2/2 (%25 ok eksenine dik ek) | LW-PLA | 0,5 | 2 | 99×99×226 | +z (yukarı) (29° eğik) / 42°; tablada: dikey eki | 60 | 24 | 2,2 | tabla desteği | sağ = ayna |
 
 ### Kumanda yüzeyleri
 
 | STL | Parça | Malz. | Et (mm) | Adet | Ölçü (mm) | Yön / Z açısı | Pay (mm) | Kütle (g) | Süre (h) | Destek | Not |
 |---|---|---|---:|---:|---|---|---:|---:|---:|---|---|
-| `aileron_1.stl` | Kanatçık 1/4 | LW-PLA | 0,5 | 2 | 64×64×182 | +y (sol/iskele) (6° eğik) / 57° | 78 | 14 | 1,4 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
-| `aileron_2.stl` | Kanatçık 2/4 | LW-PLA | 0,5 | 2 | 56×57×183 | +y (sol/iskele) (6° eğik) / 56°; tablada: yüzey eki | 82 | 14 | 1,4 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
-| `aileron_3.stl` | Kanatçık 3/4 | LW-PLA | 0,5 | 2 | 50×50×183 | +y (sol/iskele) (6° eğik) / 55°; tablada: yüzey eki | 85 | 12 | 1,3 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
-| `aileron_4.stl` | Kanatçık 4/4 | LW-PLA | 0,5 | 2 | 43×43×182 | +y (sol/iskele) (6° eğik) / 55°; tablada: yüzey eki | 88 | 11 | 1,2 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
-| `flapin.stl` | İç flap | LW-PLA | 0,5 | 2 | 68×68×173 | +y (sol/iskele) (4° eğik) / 143° | 76 | 16 | 1,5 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
-| `flapout_1.stl` | Dış flap 1/4 | LW-PLA | 0,5 | 2 | 69×68×178 | +y (sol/iskele) (4° eğik) / 53° | 75 | 16 | 1,5 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
-| `flapout_2.stl` | Dış flap 2/4 | LW-PLA | 0,5 | 2 | 70×70×179 | +y (sol/iskele) (4° eğik) / 143°; tablada: yüzey eki | 75 | 16 | 1,6 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
-| `flapout_3.stl` | Dış flap 3/4 | LW-PLA | 0,5 | 2 | 71×71×179 | +y (sol/iskele) (4° eğik) / 53°; tablada: yüzey eki | 74 | 17 | 1,6 | model üstü destek | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
-| `flapout_4.stl` | Dış flap 4/4 | LW-PLA | 0,5 | 2 | 72×71×178 | +y (sol/iskele) (4° eğik) / 53°; tablada: yüzey eki | 74 | 16 | 1,6 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
-| `elevator_1.stl` | Elevatör 1/2 | LW-ASA | 0,5 | 2 | 112×112×217 | +y (sol/iskele) / 45° | 54 | 15 | 1,5 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
-| `elevator_2a.stl` | Elevatör 2/2 — parça A (tablaya sığması için bölündü) | LW-PLA | 0,5 | 2 | 38×38×129 | +y (sol/iskele) (27° eğik) / 18°; tablada: yüzey eki | 91 | 7 | 0,9 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
-| `elevator_2b.stl` | Elevatör 2/2 — parça B (tablaya sığması için bölündü) | LW-PLA | 0,5 | 2 | 35×35×130 | +y (sol/iskele) (27° eğik) / 18°; tablada: yüzey eki | 92 | 6 | 0,8 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
-| `rudder_a.stl` | Dümen — parça A (tablaya sığması için bölündü) | LW-PLA | 0,5 | 2 | 90×90×151 | +z (yukarı) (12° eğik) / 45° | 65 | 12 | 1,2 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
-| `rudder_b.stl` | Dümen — parça B (tablaya sığması için bölündü) | LW-PLA | 0,5 | 2 | 52×52×162 | +z (yukarı) (24° eğik) / 43° | 84 | 10 | 1,1 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
+| `aileron_1.stl` | Kanatçık 1/4 | LW-PLA | 0,5 | 2 | 64×64×182 | +y (sol/iskele) (6° eğik) / 57° | 78 | 12 | 1,3 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
+| `aileron_2.stl` | Kanatçık 2/4 | LW-PLA | 0,5 | 2 | 56×57×183 | +y (sol/iskele) (6° eğik) / 56°; tablada: yüzey eki | 82 | 11 | 1,2 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
+| `aileron_3.stl` | Kanatçık 3/4 | LW-PLA | 0,5 | 2 | 50×50×183 | +y (sol/iskele) (6° eğik) / 55°; tablada: yüzey eki | 85 | 10 | 1,2 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
+| `aileron_4.stl` | Kanatçık 4/4 | LW-PLA | 0,5 | 2 | 43×43×182 | +y (sol/iskele) (6° eğik) / 55°; tablada: yüzey eki | 88 | 9 | 1,1 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
+| `flapin.stl` | İç flap | LW-PLA | 0,5 | 2 | 68×68×173 | +y (sol/iskele) (4° eğik) / 143° | 76 | 14 | 1,4 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
+| `flapout_1.stl` | Dış flap 1/4 | LW-PLA | 0,5 | 2 | 69×68×178 | +y (sol/iskele) (4° eğik) / 53° | 75 | 14 | 1,4 | model üstü destek | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
+| `flapout_2.stl` | Dış flap 2/4 | LW-PLA | 0,5 | 2 | 70×70×179 | +y (sol/iskele) (4° eğik) / 143°; tablada: yüzey eki | 75 | 14 | 1,4 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
+| `flapout_3.stl` | Dış flap 3/4 | LW-PLA | 0,5 | 2 | 71×71×179 | +y (sol/iskele) (4° eğik) / 53°; tablada: yüzey eki | 74 | 15 | 1,5 | model üstü destek | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
+| `flapout_4.stl` | Dış flap 4/4 | LW-PLA | 0,5 | 2 | 72×71×178 | +y (sol/iskele) (4° eğik) / 53°; tablada: yüzey eki | 74 | 14 | 1,4 | tabla desteği | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
+| `elevator_1.stl` | Elevatör 1/2 | LW-ASA | 0,5 | 2 | 112×112×217 | +y (sol/iskele) / 45° | 54 | 13 | 1,4 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
+| `elevator_2a.stl` | Elevatör 2/2 — parça A (tablaya sığması için bölündü) | LW-PLA | 0,5 | 2 | 38×38×129 | +y (sol/iskele) (27° eğik) / 18°; tablada: yüzey eki | 91 | 6 | 0,8 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
+| `elevator_2b.stl` | Elevatör 2/2 — parça B (tablaya sığması için bölündü) | LW-PLA | 0,5 | 2 | 35×35×130 | +y (sol/iskele) (27° eğik) / 18°; tablada: yüzey eki | 92 | 5 | 0,7 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
+| `rudder_a.stl` | Dümen — parça A (tablaya sığması için bölündü) | LW-PLA | 0,5 | 2 | 90×90×151 | +z (yukarı) (12° eğik) / 45° | 65 | 10 | 1,1 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
+| `rudder_b.stl` | Dümen — parça B (tablaya sığması için bölündü) | LW-PLA | 0,5 | 2 | 52×52×162 | +z (yukarı) (24° eğik) / 43° | 84 | 8 | 1,0 | yok | sağ = ayna; menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri |
 
 ### Gövde
 
 | STL | Parça | Malz. | Et (mm) | Adet | Ölçü (mm) | Yön / Z açısı | Pay (mm) | Kütle (g) | Süre (h) | Destek | Not |
 |---|---|---|---:|---:|---|---|---:|---:|---:|---|---|
-| `fus_nose_cone.stl` | Burun konisi (s 0–0.148) | LW-PLA | 0,8 | 1 | 135×128×148 | +x (burun) / 71°; tablada: s=0.148 | 43 | 23 | 1,9 | tabla desteği |  |
-| `fus_nose_module_a.stl` | Burun görev modülü halkası (s 0.148–0.400, taret yuvası) — parça A (tablaya sığması için bölündü) | LW-PLA | 0,8 | 1 | 195×194×126 | +x (burun) / 78°; tablada: s=0.400 (sökülebilir) | 12 | 48 | 3,4 | yok |  |
-| `fus_nose_module_b.stl` | Burun görev modülü halkası (s 0.148–0.400, taret yuvası) — parça B (tablaya sığması için bölündü) | LW-PLA | 0,8 | 1 | 177×174×126 | +x (burun) / 71°; tablada: tabla bölmesi | 21 | 44 | 3,2 | tabla desteği |  |
-| `fus_ring_1.stl` | Gövde halkası 1 (s 0.400–0.592) | LW-PLA | 0,8 | 1 | 201×201×192 | −x (kuyruk) / 10°; tablada: s=0.400 | 9 | 99 | 6,9 | tabla desteği |  |
-| `fus_ring_2.stl` | Gövde halkası 2 (s 0.592–0.783) | LW-PLA | 0,8 | 1 | 201×201×192 | −x (kuyruk) / 11°; tablada: s=0.592 | 10 | 104 | 7,2 | tabla desteği |  |
-| `fus_ring_3.stl` | Gövde halkası 3 (s 0.783–0.975) | LW-PLA | 0,8 | 1 | 203×203×192 | −x (kuyruk) / 8°; tablada: s=0.783 | 9 | 91 | 6,4 | tabla desteği |  |
-| `fus_ring_4.stl` | Gövde halkası 4 (s 0.975–1.167) | LW-PLA | 0,8 | 1 | 202×202×192 | −x (kuyruk) / 6°; tablada: s=0.975 | 9 | 85 | 6,0 | yok |  |
-| `fus_ring_5.stl` | Gövde halkası 5 (s 1.167–1.379) | LW-PLA | 0,8 | 1 | 206×196×212 | −x (kuyruk) / 0°; tablada: s=1.167 | 7 | 89 | 6,3 | tabla desteği |  |
-| `fus_ring_6.stl` | Gövde halkası 6 (s 1.379–1.550) | LW-PLA | 0,8 | 1 | 194×194×171 | −x (kuyruk) / 45°; tablada: s=1.379 | 13 | 70 | 5,0 | yok |  |
-| `fus_ring_7.stl` | Kuyruk konisi halkası (s 1.550–1.715, LW-ASA) | LW-ASA | 1,0 | 1 | 184×184×165 | −x (kuyruk) / 45°; tablada: s=1.550 | 18 | 87 | 5,7 | yok |  |
-| `fus_ring_8.stl` | Kuyruk konisi halkası (s 1.715–1.845, LW-ASA) | LW-ASA | 1,0 | 1 | 173×173×130 | −x (kuyruk) / 45°; tablada: s=1.715 | 24 | 67 | 4,4 | yok |  |
-| `fus_ring_9.stl` | Kuyruk konisi halkası (s 1.845–2.042, LW-ASA) | LW-ASA | 1,0 | 1 | 171×171×198 | −x (kuyruk) / 45°; tablada: s=1.845 | 25 | 94 | 6,3 | yok | NACA dudak çerçevesi cebi + yangın perdesine kanal geçişi |
-| `fus_nose_flange.stl` | Burun modülü PETG bağlantı flanşı (4×M4, 2 pim) | PETG | 3,0 | 1 | 188×190×3 | −x (kuyruk) / 11° | 15 | 18 | 0,9 | tabla desteği |  |
+| `fus_nose_cone.stl` | Burun konisi (s 0–0.148) | LW-PLA | 0,7 | 1 | 135×128×148 | +x (burun) / 71°; tablada: s=0.148 | 43 | 20 | 1,7 | tabla desteği |  |
+| `fus_nose_module_a.stl` | Burun görev modülü halkası (s 0.148–0.400, taret yuvası) — parça A (tablaya sığması için bölündü) | LW-PLA | 0,7 | 1 | 193×195×126 | +x (burun) / 11°; tablada: s=0.400 (sökülebilir) | 12 | 40 | 2,9 | yok |  |
+| `fus_nose_module_b.stl` | Burun görev modülü halkası (s 0.148–0.400, taret yuvası) — parça B (tablaya sığması için bölündü) | LW-PLA | 0,7 | 1 | 174×177×126 | +x (burun) / 18°; tablada: tabla bölmesi | 21 | 40 | 2,9 | tabla desteği |  |
+| `fus_ring_1.stl` | Gövde halkası 1 (s 0.400–0.592) | LW-PLA | 0,7 | 1 | 201×201×192 | −x (kuyruk) / 10°; tablada: s=0.400 | 9 | 82 | 5,8 | tabla desteği |  |
+| `fus_ring_2.stl` | Gövde halkası 2 (s 0.592–0.783) | LW-PLA | 0,7 | 1 | 201×201×192 | −x (kuyruk) / 11°; tablada: s=0.592 | 10 | 85 | 6,0 | tabla desteği |  |
+| `fus_ring_3.stl` | Gövde halkası 3 (s 0.783–0.975) | LW-PLA | 0,7 | 1 | 203×203×192 | −x (kuyruk) / 8°; tablada: s=0.783 | 9 | 75 | 5,3 | tabla desteği |  |
+| `fus_ring_4.stl` | Gövde halkası 4 (s 0.975–1.167) | LW-PLA | 0,7 | 1 | 202×202×192 | −x (kuyruk) / 6°; tablada: s=0.975 | 9 | 70 | 5,0 | yok |  |
+| `fus_ring_5.stl` | Gövde halkası 5 (s 1.167–1.379) | LW-PLA | 0,7 | 1 | 206×196×212 | −x (kuyruk) / 0°; tablada: s=1.167 | 7 | 71 | 5,2 | tabla desteği |  |
+| `fus_ring_6.stl` | Gövde halkası 6 (s 1.379–1.550) | LW-PLA | 0,7 | 1 | 194×194×171 | −x (kuyruk) / 45°; tablada: s=1.379 | 13 | 57 | 4,2 | yok |  |
+| `fus_ring_7.stl` | Kuyruk konisi halkası (s 1.550–1.715, LW-ASA) | LW-ASA | 1,0 | 1 | 184×184×165 | −x (kuyruk) / 45°; tablada: s=1.550 | 18 | 76 | 5,1 | yok |  |
+| `fus_ring_8.stl` | Kuyruk konisi halkası (s 1.715–1.845, LW-ASA) | LW-ASA | 1,0 | 1 | 173×173×130 | −x (kuyruk) / 45°; tablada: s=1.715 | 24 | 58 | 3,9 | yok |  |
+| `fus_ring_9.stl` | Kuyruk konisi halkası (s 1.845–2.042, LW-ASA) | LW-ASA | 1,0 | 1 | 171×171×198 | −x (kuyruk) / 45°; tablada: s=1.845 | 24 | 82 | 5,5 | model üstü destek | NACA dudak çerçevesi cebi + yangın perdesine kanal geçişi |
+| `fus_nose_flange.stl` | Burun modülü PETG bağlantı flanşı (4×M4, 2 pim) | PETG | 3,0 | 1 | 189×191×3 | −x (kuyruk) / 11° | 15 | 17 | 0,8 | yok |  |
 
 ### Yük yolları
 
 | STL | Parça | Malz. | Et (mm) | Adet | Ölçü (mm) | Yön / Z açısı | Pay (mm) | Kütle (g) | Süre (h) | Destek | Not |
 |---|---|---|---:|---:|---|---|---:|---:|---:|---|---|
-| `wing_frame_fwd.stl` | Kanat kutusu ön çerçevesi (PA-CF 3 mm; G10 köprüye yaslanır) | PA-CF | 1,6 | 1 | 191×189×13 | +x (burun) / 0° | 14 | 58 | 3,4 | yok | köprü plakasına epoksi + 2 × M4; 4 longeron soketi; depo zarfı çevresinde halka |
-| `wing_frame_aft.stl` | Kanat kutusu arka çerçevesi (PA-CF 3 mm; G10 köprüye yaslanır) | PA-CF | 1,6 | 1 | 190×184×13 | −x (kuyruk) / 0° | 15 | 56 | 3,3 | yok | köprü plakasına epoksi + 2 × M4; 4 longeron soketi |
-| `gear_mount_L.stl` | Ana takım yatağı (PA-CF; ER-150 beşiği + sokete eyerli kol) | PA-CF | 1,6 | 2 | 114×85×44 | +z (yukarı) (4° eğik) / 0° | 53 | 46 | 2,8 | tabla desteği | sağ = ayna; kök bloğu 2'nin açık iç ucundan kaydırılır; ünite ön duvara 2 × M3 ısıl gömme dişli |
-| `gear_mount_N.stl` | Burun takım yatağı (PA-CF; chine longeronlarına eyer, akü kızağı tabanı) | PA-CF | 1,6 | 1 | 195×195×10 | +z (yukarı) / 45° | 12 | 60 | 3,4 | tabla desteği | halka 1'in ön çerçevesinden kaydırılır; G10 plaka 4 × M3 ısıl gömme dişli (M3×3) |
-| `engine_ring.stl` | Motor halkası (PA-CF; yangın perdesi önü, 4 × M4 motor + 6 × M3 kaporta dişlisi) | PA-CF | 1,6 | 1 | 154×154×31 | +x (burun) / 45° | 33 | 67 | 4,0 | tabla desteği | halka 9'a 30 mm bindirerek yapıştırılır; 4 longeron ucu soketlere girer |
-| `panel_lock_tab.stl` | Dış panel tutma dili (PETG; alttan M4 naylon cıvata, ısıl gömme dişli) | PETG | 1,6 | 2 | 34×34×8 | +z (yukarı) / 45° | 93 | 4 | 0,3 | yok | sağ = ayna; dış panel 1 kök kaburgasına yapıştırılır; kök bloğu 2 cebine girer |
+| `wing_frame_fwd.stl` | Kanat kutusu ön çerçevesi (PA-CF 3 mm; G10 köprüye yaslanır) | PA-CF | 1,6 | 1 | 191×189×13 | +x (burun) / 0° | 14 | 52 | 3,0 | yok | köprü plakasına epoksi + 2 × M4; 4 longeron soketi; depo zarfı çevresinde halka |
+| `wing_frame_aft.stl` | Kanat kutusu arka çerçevesi (PA-CF 3 mm; G10 köprüye yaslanır) | PA-CF | 1,6 | 1 | 190×184×13 | −x (kuyruk) / 0° | 15 | 50 | 2,9 | yok | köprü plakasına epoksi + 2 × M4; 4 longeron soketi |
+| `gear_mount_L.stl` | Ana takım yatağı (PA-CF; ER-150 beşiği + sokete eyerli kol) | PA-CF | 1,6 | 2 | 114×85×44 | +z (yukarı) (4° eğik) / 0° | 53 | 37 | 2,3 | tabla desteği | sağ = ayna; kök bloğu 2'nin açık iç ucundan kaydırılır; ünite ön duvara 2 × M3 ısıl gömme dişli |
+| `gear_mount_N.stl` | Burun takım yatağı (PA-CF; chine longeronlarına eyer, akü kızağı tabanı) | PA-CF | 1,6 | 1 | 195×195×10 | +z (yukarı) / 45° | 12 | 53 | 3,1 | tabla desteği | halka 1'in ön çerçevesinden kaydırılır; G10 plaka 4 × M3 ısıl gömme dişli (M3×3) |
+| `engine_ring.stl` | Motor halkası (PA-CF; yangın perdesi önü, 4 × M4 motor + 6 × M3 kaporta dişlisi) | PA-CF | 1,6 | 1 | 154×154×31 | +x (burun) / 45° | 33 | 64 | 3,8 | tabla desteği | halka 9'a 30 mm bindirerek yapıştırılır; 4 longeron ucu soketlere girer |
+| `panel_lock_tab.stl` | Dış panel tutma dili (PETG; alttan M4 naylon cıvata, ısıl gömme dişli) | PETG | 1,6 | 2 | 34×34×8 | +z (yukarı) / 45° | 93 | 3 | 0,3 | yok | sağ = ayna; dış panel 1 kök kaburgasına yapıştırılır; kök bloğu 2 cebine girer |
 | `longeron_joint_chine.stl` | Longeron kırık soketi — chine (PETG; s = 1.167) | PETG | 1,6 | 2 | 14×14×37 | −x (kuyruk) / 69° | 103 | 3 | 0,4 | yok | sağ = ayna; iki düz longeron parçası kırık açısıyla buluşur (halka 4–5 eki) |
 | `longeron_joint_shoulder.stl` | Longeron kırık soketi — omuz (PETG; s = 1.167) | PETG | 1,6 | 2 | 14×14×37 | −x (kuyruk) / 163° | 103 | 4 | 0,4 | yok | sağ = ayna; iki düz longeron parçası kırık açısıyla buluşur (halka 4–5 eki) |
 
@@ -108,27 +124,27 @@ Kütle, filament etkin yoğunluğuyla (LW-PLA köpürmüş 0,65 g/cm³) parça h
 
 | STL | Parça | Malz. | Et (mm) | Adet | Ölçü (mm) | Yön / Z açısı | Pay (mm) | Kütle (g) | Süre (h) | Destek | Not |
 |---|---|---|---:|---:|---|---|---:|---:|---:|---|---|
-| `cowl_top.stl` | Motor kaportası (PA-CF; yanak açıklıkları flanşlı) | PA-CF | 1,6 | 1 | 154×154×142 | −x (kuyruk) / 38°; tablada: yangın perdesi | 33 | 97 | 6,0 | tabla desteği |  |
-| `cowl_cheek_L.stl` | Kaporta sol yanak (susturucu tarafı) | PA-CF | 1,6 | 1 | 145×145×140 | −x (kuyruk) / 46° | 38 | 98 | 6,0 | tabla desteği |  |
-| `cowl_cheek_R.stl` | Kaporta sağ yanak (panjurlu) | PA-CF | 1,6 | 1 | 108×108×120 | −x (kuyruk) / 141° | 56 | 45 | 3,0 | tabla desteği |  |
-| `exhaust_ring.stl` | Lüle halkası (PA-CF) | PA-CF | 1,6 | 1 | 112×112×17 | −x (kuyruk) / 3° | 54 | 27 | 1,7 | model üstü destek |  |
-| `scuff_pad.stl` | Kaporta altı sürtünme pabucu (TPU) | TPU | 2,0 | 1 | 39×39×7 | +z (yukarı) / 45° | 90 | 3 | 0,5 | tabla desteği | aşınma yüzü tablada (düz, pürüzsüz); kavisli → kırılabilir ayak |
+| `cowl_top.stl` | Motor kaportası (PA-CF; yanak açıklıkları flanşlı, arka Ø92 açık) | PA-CF | 1,6 | 1 | 161×160×142 | −x (kuyruk) / 45°; tablada: yangın perdesi | 30 | 76 | 4,8 | tabla desteği |  |
+| `cowl_cheek_L.stl` | Kaporta sol yanak (susturucu tarafı) | PA-CF | 1,6 | 1 | 142×142×130 | −x (kuyruk) / 33° | 39 | 81 | 5,1 | tabla desteği | eğik ekler deriye dik (deri normali 52°) |
+| `cowl_cheek_R.stl` | Kaporta sağ yanak (panjurlu) | PA-CF | 1,6 | 1 | 90×89×116 | −x (kuyruk) / 131° | 65 | 41 | 2,8 | yok | eğik ekler deriye dik (deri normali 37°, -29°) |
+| `exhaust_ring.stl` | Lüle halkası (PA-CF) | PA-CF | 1,6 | 1 | 112×112×15 | −x (kuyruk) / 3° | 54 | 25 | 1,5 | model üstü destek |  |
+| `scuff_pad.stl` | Kaporta altı sürtünme pabucu (PA-CF; kuyruk çarpmasında ilk değen kenar) | PA-CF | 2,0 | 1 | 49×49×8 | +z (yukarı) / 45° | 85 | 4 | 0,3 | tabla desteği | kaporta dış yüzünü izleyen 2 mm katman (yapışma yüzü + 0,2 mm); aşınma yüzü tablada; yüksek sıcaklık epoksisiyle yapıştırılır, aşınınca sökülüp yenilenir |
 | `intake.stl` | NACA hava alığı dudak çerçevesi (PA-CF, karın) | PA-CF | 1,6 | 1 | 70×70×10 | +x (burun) / 45° | 75 | 6 | 0,5 | yok | gövde halkası 9'daki cebe yapıştırılır; kanal yangın perdesindeki açıklıktan kaportaya geçer |
 
 ### Kaplamalar
 
 | STL | Parça | Malz. | Et (mm) | Adet | Ölçü (mm) | Yön / Z açısı | Pay (mm) | Kütle (g) | Süre (h) | Destek | Not |
 |---|---|---|---:|---:|---|---|---:|---:|---:|---|---|
-| `root_fairing.stl` | Kök kaportası — kano (PA-CF) | PA-CF | 1,6 | 2 | 200×203×154 | +y (sol/iskele) (13° eğik) / 123° | 9 | 59 | 3,9 | tabla desteği | sağ = ayna; 1,6 mm kabuk, et < 3,6 mm olan kenar/dudaklar dolu; tüy kenar ≥ 0,8 mm'de kırpılır, kalan kama epoksi + mikrobalon ile sıfırlanır |
-| `gear_blister.stl` | ER-150 ünite kabartması (PA-CF) | PA-CF | 1,6 | 2 | 78×78×141 | −y (sağ/sancak) / 45° | 71 | 24 | 1,9 | yok | sağ = ayna; kano kaportasına ve kanat altına yapıştırılır; ince kenarlar dolu, tüy kenar kırpılır |
-| `hatch_frame_a.stl` | Aviyonik kapağı çerçevesi A (PETG; 3 mıknatıs cebi) | PETG | 1,6 | 1 | 176×176×13 | +z (yukarı) (2° eğik) / 45° | 22 | 38 | 1,8 | yok | levha altına yapıştırılır; düz alt yüz gövde basamağına oturur |
-| `hatch_frame_b.stl` | Aviyonik kapağı çerçevesi B (PETG; 3 mıknatıs cebi) | PETG | 1,6 | 1 | 180×108×15 | +z (yukarı) (2° eğik) / 0° | 20 | 42 | 2,0 | yok | levha altına yapıştırılır; düz alt yüz gövde basamağına oturur |
+| `root_fairing.stl` | Kök kaportası — kano (PA-CF) | PA-CF | 1,2 | 2 | 201×202×155 | +y (sol/iskele) (13° eğik) / 34° | 9 | 49 | 3,4 | tabla desteği | sağ = ayna; 1,6 mm kabuk, et < 3,6 mm olan kenar/dudaklar dolu; tüy kenar ≥ 0,8 mm'de kırpılır, kalan kama epoksi + mikrobalon ile sıfırlanır |
+| `gear_blister.stl` | ER-150 ünite kabartması (PA-CF) | PA-CF | 1,2 | 2 | 78×77×141 | −y (sağ/sancak) / 136° | 71 | 19 | 1,6 | yok | sağ = ayna; kano kaportasına ve kanat altına yapıştırılır; ince kenarlar dolu, tüy kenar kırpılır |
+| `hatch_frame_a.stl` | Aviyonik kapağı çerçevesi A (PETG; 3 mıknatıs cebi) | PETG | 1,6 | 1 | 176×176×13 | +z (yukarı) (2° eğik) / 45° | 22 | 26 | 1,3 | yok | levha altına yapıştırılır; düz alt yüz gövde basamağına oturur |
+| `hatch_frame_b.stl` | Aviyonik kapağı çerçevesi B (PETG; 3 mıknatıs cebi) | PETG | 1,6 | 1 | 180×108×15 | +z (yukarı) (2° eğik) / 0° | 20 | 30 | 1,4 | yok | levha altına yapıştırılır; düz alt yüz gövde basamağına oturur |
 
 ### Faydalı yük
 
 | STL | Parça | Malz. | Et (mm) | Adet | Ölçü (mm) | Yön / Z açısı | Pay (mm) | Kütle (g) | Süre (h) | Destek | Not |
 |---|---|---|---:|---:|---|---|---:|---:|---:|---|---|
-| `turret_collar.stl` | Taret yakası (8 faset, PETG) | PETG | 1,6 | 1 | 123×124×52 | −z (aşağı) (11° eğik) / 67° | 48 | 80 | 3,8 | model üstü destek |  |
+| `turret_collar.stl` | Taret yakası (24 faset + karın filetosu, PETG) | PETG | 1,6 | 1 | 105×100×31 | +z (yukarı) / 6° | 58 | 18 | 1,0 | tabla desteği | gövde dış yüzünde kesilir (montaj denetimi: modül derisiyle 2,4 cm³ çakışıyordu): fileto tabanı karın derisine bindirmeli yapışır; tüy kenar ≥ 0,8 mm'de kırpılır, kalan kama epoksi + mikrobalonla sıfırlanır (R04: sahnedeki gömülü üst kutu basılmaz) |
 
 ### Kalıp (alet)
 
@@ -147,14 +163,14 @@ Kütle, filament etkin yoğunluğuyla (LW-PLA köpürmüş 0,65 g/cm³) parça h
 
 | STL | Parça | Malz. | Et (mm) | Adet | Ölçü (mm) | Yön / Z açısı | Pay (mm) | Kütle (g) | Süre (h) | Destek | Not |
 |---|---|---|---:|---:|---|---|---:|---:|---:|---|---|
-| `door_N_1.stl` | Burun takımı kapağı (menteşe dili + horn dahil) (PETG 1,2 mm) | PETG | 1,2 | 2 | 195×194×4 | +z (yukarı) (3° eğik) / 134° | 13 | 11 | 0,6 | tabla desteği | sağ = ayna |
-| `door_N_3.stl` | Burun takımı bacak tapa kapağı (bacağa bağlı) (PETG 1,2 mm) | PETG | 1,2 | 1 | 24×18×30 | −z (aşağı) / 0° | 98 | 3 | 0,3 | yok |  |
-| `door_L_1.stl` | Ana takım kuyu kapağı (menteşe dili + horn dahil) (PETG 1,2 mm) | PETG | 1,2 | 2 | 94×92×8 | +z (yukarı) / 0° | 63 | 19 | 1,0 | yok | sağ = ayna |
-| `door_L_2.stl` | Ana takım bacak kapağı (PETG 1,2 mm) | PETG | 1,2 | 2 | 134×134×20 | −y (sağ/sancak) / 59° | 43 | 6 | 0,5 | tabla desteği | sağ = ayna |
+| `door_N_1.stl` | Burun takımı kapağı (menteşe dili + horn dahil) (PETG 1,2 mm) | PETG | 1,2 | 2 | 182×183×25 | +y (sol/iskele) / 45° | 19 | 12 | 0,7 | tabla desteği | sağ = ayna |
+| `door_N_3.stl` | Burun takımı bacak tapa kapağı (bacağa bağlı) (PETG 1,2 mm) | PETG | 1,2 | 1 | 24×18×29 | −z (aşağı) / 0° | 98 | 2 | 0,3 | yok |  |
+| `door_L_1.stl` | Ana takım kuyu kapağı (menteşe dili + horn dahil) (PETG 1,2 mm) | PETG | 1,2 | 2 | 94×92×8 | +z (yukarı) / 0° | 63 | 20 | 1,0 | yok | sağ = ayna |
+| `door_L_2.stl` | Ana takım bacak kapağı (PETG 1,2 mm) | PETG | 1,2 | 2 | 134×134×23 | −y (sağ/sancak) / 149° | 43 | 6 | 0,5 | tabla desteği | sağ = ayna |
 
 ## Doğrulama
 
-Her parça bmesh ile denetlenir: sınır kenar = 0, manifold olmayan kenar = 0, tel kenar = 0, yönü tutarsız kenar = 0, işaretli hacim > 0. Et ölçümü: yüzeyden içe ışın (alan ağırlıklı 1200 örnek); %5'lik değer nominal et ya da en ince iç yapıdır (kanat panellerinde 0,45 mm geodezik kafes); en küçük değer köşe/pah örneklerini ve kaplamaların sıfıra incelen yapışma kenarlarını içerir.
+Her parça bmesh ile denetlenir: sınır kenar = 0, manifold olmayan kenar = 0, tel kenar = 0, yönü tutarsız kenar = 0, işaretli hacim > 0. Et ölçümü: yüzeyden içe ışın (alan ağırlıklı 1200 örnek); %5'lik değer nominal et ya da en ince iç yapıdır (kanat panellerinde 0,6 mm geodezik kafes, gövde halkalarında 0,7 mm deri); en küçük değer köşe/pah örneklerini ve kaplamaların sıfıra incelen yapışma kenarlarını içerir.
 
 | STL | Kenar denetimi (yeniden okuma) | Hacim farkı | Blender içe aktarma |
 |---|---|---:|---|
@@ -163,75 +179,75 @@ Manifold olmayan parça: 0.
 
 | Parça | Et %5 (mm) | Et medyan (mm) | Çıkıntı (cm²) |
 |---|---:|---:|---:|
-| wing_panel_1 | 0,45 | 0,80 | 16,6 |
-| wing_panel_2 | 0,45 | 0,80 | 22,4 |
-| wing_panel_3 | 0,45 | 0,80 | 6,3 |
-| wing_panel_4 | 0,45 | 0,80 | 21,2 |
-| wing_panel_5 | 0,45 | 0,80 | 14,0 |
-| wing_panel_6 | 0,45 | 0,80 | 4,1 |
-| wing_panel_7 | 0,45 | 0,80 | 7,9 |
-| wing_tip | 0,60 | 0,64 | 17,9 |
-| root_block_2 | 0,79 | 0,80 | 20,1 |
-| root_block_1 | 0,79 | 0,80 | 79,5 |
+| wing_panel_1 | 0,60 | 0,80 | 21,6 |
+| wing_panel_2 | 0,60 | 0,80 | 20,3 |
+| wing_panel_3 | 0,60 | 0,80 | 5,9 |
+| wing_panel_4 | 0,60 | 0,62 | 24,9 |
+| wing_panel_5 | 0,60 | 0,80 | 14,6 |
+| wing_panel_6 | 0,60 | 0,80 | 3,4 |
+| wing_panel_7 | 0,60 | 0,80 | 7,2 |
+| wing_tip | 0,60 | 0,60 | 5,5 |
+| root_block_2 | 0,79 | 0,83 | 20,8 |
+| root_block_1 | 0,78 | 0,80 | 82,5 |
 | glove_strake | 0,80 | 1,20 | 34,9 |
-| stab_1 | 0,50 | 0,50 | 26,5 |
+| stab_1 | 0,50 | 0,50 | 26,2 |
 | stab_2a | 0,50 | 0,50 | 6,0 |
 | stab_2b | 0,49 | 0,50 | 16,1 |
 | fin_1 | 0,49 | 0,50 | 72,3 |
 | fin_2 | 0,50 | 0,50 | 16,7 |
-| aileron_1 | 0,49 | 0,50 | 4,7 |
-| aileron_2 | 0,50 | 0,50 | 3,4 |
-| aileron_3 | 0,50 | 0,50 | 2,2 |
-| aileron_4 | 0,50 | 0,50 | 1,4 |
-| flapin | 0,49 | 0,50 | 7,4 |
-| flapout_1 | 0,50 | 0,50 | 7,6 |
-| flapout_2 | 0,50 | 0,50 | 8,1 |
-| flapout_3 | 0,50 | 0,50 | 8,3 |
-| flapout_4 | 0,49 | 0,50 | 6,7 |
-| elevator_1 | 0,50 | 0,50 | 2,9 |
-| elevator_2a | 0,50 | 0,50 | 2,2 |
-| elevator_2b | 0,50 | 0,50 | 1,9 |
-| rudder_a | 0,50 | 0,50 | 5,4 |
-| rudder_b | 0,50 | 0,50 | 2,3 |
-| fus_nose_cone | 0,80 | 0,80 | 5,6 |
-| fus_nose_module_a | 0,80 | 0,80 | 0,2 |
-| fus_nose_module_b | 0,79 | 0,80 | 58,8 |
-| fus_ring_1 | 0,79 | 0,80 | 79,4 |
-| fus_ring_2 | 0,79 | 0,80 | 46,9 |
-| fus_ring_3 | 0,80 | 0,80 | 26,0 |
-| fus_ring_4 | 0,80 | 0,80 | 0,2 |
-| fus_ring_5 | 0,80 | 0,80 | 13,1 |
-| fus_ring_6 | 0,80 | 0,80 | 0,1 |
-| fus_ring_7 | 0,80 | 1,00 | 1,6 |
-| fus_ring_8 | 0,80 | 1,00 | 1,3 |
-| fus_ring_9 | 0,80 | 1,00 | 8,6 |
+| aileron_1 | 0,49 | 0,50 | 6,1 |
+| aileron_2 | 0,50 | 0,50 | 5,3 |
+| aileron_3 | 0,50 | 0,50 | 3,0 |
+| aileron_4 | 0,50 | 0,50 | 2,7 |
+| flapin | 0,49 | 0,50 | 7,7 |
+| flapout_1 | 0,49 | 0,50 | 9,0 |
+| flapout_2 | 0,50 | 0,50 | 7,6 |
+| flapout_3 | 0,50 | 0,50 | 9,0 |
+| flapout_4 | 0,50 | 0,50 | 8,5 |
+| elevator_1 | 0,50 | 0,50 | 3,4 |
+| elevator_2a | 0,50 | 0,50 | 4,6 |
+| elevator_2b | 0,50 | 0,50 | 2,9 |
+| rudder_a | 0,50 | 0,50 | 6,0 |
+| rudder_b | 0,50 | 0,50 | 5,3 |
+| fus_nose_cone | 0,70 | 0,70 | 5,6 |
+| fus_nose_module_a | 0,70 | 0,70 | 0,3 |
+| fus_nose_module_b | 0,69 | 0,70 | 53,5 |
+| fus_ring_1 | 0,69 | 0,70 | 76,0 |
+| fus_ring_2 | 0,69 | 0,70 | 49,4 |
+| fus_ring_3 | 0,70 | 0,70 | 28,6 |
+| fus_ring_4 | 0,70 | 0,70 | 1,9 |
+| fus_ring_5 | 0,70 | 0,70 | 15,2 |
+| fus_ring_6 | 0,70 | 0,70 | 2,8 |
+| fus_ring_7 | 0,80 | 1,00 | 3,0 |
+| fus_ring_8 | 0,80 | 1,00 | 2,0 |
+| fus_ring_9 | 0,80 | 1,00 | 10,9 |
 | wing_frame_fwd | 1,98 | 3,00 | 0,0 |
 | wing_frame_aft | 1,98 | 3,00 | 0,0 |
-| gear_mount_L | 2,20 | 2,20 | 22,3 |
-| gear_mount_N | 1,79 | 4,30 | 10,8 |
-| engine_ring | 1,77 | 3,00 | 7,3 |
+| gear_mount_L | 2,20 | 2,20 | 21,7 |
+| gear_mount_N | 1,95 | 4,30 | 10,8 |
+| engine_ring | 2,17 | 3,00 | 6,7 |
 | panel_lock_tab | 4,07 | 8,00 | 0,0 |
-| longeron_joint_chine | 1,33 | 2,17 | 0,9 |
+| longeron_joint_chine | 1,42 | 2,17 | 0,9 |
 | longeron_joint_shoulder | 2,16 | 2,18 | 1,0 |
-| fus_nose_flange | 2,58 | 3,00 | 4,7 |
-| cowl_top | 0,44 | 1,60 | 108,8 |
-| cowl_cheek_L | 1,58 | 1,60 | 130,0 |
-| cowl_cheek_R | 1,53 | 1,60 | 18,4 |
-| exhaust_ring | 1,58 | 1,60 | 23,7 |
-| scuff_pad | 2,53 | 2,59 | 10,6 |
+| fus_nose_flange | 3,00 | 3,00 | 0,0 |
+| cowl_top | 1,50 | 1,60 | 79,2 |
+| cowl_cheek_L | 1,60 | 1,60 | 113,9 |
+| cowl_cheek_R | 1,60 | 1,60 | 16,3 |
+| exhaust_ring | 1,58 | 1,60 | 22,4 |
+| scuff_pad | 2,00 | 2,00 | 14,6 |
 | intake | 2,07 | 2,50 | 0,0 |
-| root_fairing | 0,77 | 1,60 | 26,2 |
-| gear_blister | 1,01 | 1,60 | 1,1 |
-| turret_collar | 1,56 | 1,58 | 12,8 |
+| root_fairing | 1,17 | 1,20 | 35,9 |
+| gear_blister | 1,18 | 1,20 | 1,3 |
+| turret_collar | 1,51 | 1,60 | 26,8 |
 | hatch_buck_a | 19,08 | 29,34 | 0,6 |
 | hatch_frame_a | 2,31 | 7,80 | 1,3 |
 | hatch_buck_b | 17,67 | 30,03 | 0,6 |
 | hatch_frame_b | 2,32 | 7,80 | 0,6 |
 | tolerance_coupon | 5,29 | 20,00 | 0,0 |
-| door_N_1 | 0,79 | 0,80 | 46,2 |
+| door_N_1 | 0,79 | 1,39 | 7,7 |
 | door_N_3 | 1,20 | 5,00 | 1,1 |
 | door_L_1 | 0,80 | 1,80 | 0,4 |
-| door_L_2 | 0,86 | 1,20 | 39,2 |
+| door_L_2 | 0,80 | 1,20 | 38,6 |
 
 ## Yük yolları (P4)
 
@@ -246,27 +262,28 @@ Manifold olmayan parça: 0.
 | Kuyruk (stabilize + dikey yükleri) | Ø12 stabilize kirişi + Ø6 arka çubuk → koni içi G10 eyer → kuyruk konisi (LW-ASA) → s = 1,55 G10 flanşı (4 × M4) → longeronlar | stab_1/2, fin_1/2, fus_ring_7–9 |
 | Longeron sürekliliği | düz CF parçalar s = 1,167 ve 1,55 kırıklarında PETG soket bloklarına 18 mm girer (epoksi) | longeron_joint_chine, longeron_joint_shoulder, fus_ring_4/5 |
 
-## Isı kuralı (AERO-09)
+## Isı kuralı (AERO-09, R05)
 
-Kural: susturucu ve silindir zarflarının 150 mm yakınında LW-PLA yok (zarflar `params.engine_envelope`, susturucu `U_Exhaust_Muffler`). Sonuç: **uygun**.
+Kural 1: silindir (+ buji başlığı) ve susturucu zarflarının ve susturucu çıkış borusu/ısı kalkanının 150 mm yakınında LW-PLA yok. Kural 2: camsı geçişi 120 °C'nin altındaki hiçbir filament (LW-ASA 95, PETG 80, LW-PLA 55 °C) bu kaynaklara 50 mm'den yakın değil (zarflar `params.engine_envelope`, çıkış `U_Exhaust_Muffler`). Printprep malzemeyi kendiliğinden değiştirmez: ihlal varsa `build.py --print` ve `printprep` 1 ile çıkar. Isı bölgesindeki parçaların filamenti spec'te adıyla atanır (`print.zones[].parts`). Sonuç: **uygun**.
 
-Otomatik malzeme değişimi: `stab_1` muffler'e 21 mm → LW-ASA; `elevator_1` muffler'e 16 mm → LW-ASA
+Kaynaklar ayrı adlandırılır: motor zarfı parçaları, susturucu çıkış borusu ve borunun çıktığı yerde sol yanak dış yüzüne (0,1–0,5 mm aralıkla) oturan 0,5 mm Al ısı kalkanı (kalkan yanağı borudan korur; yanak PA-CF, Tg 150 °C). Boru yanaktaki deliğinden 1,5 mm boşlukla geçer. Boru ve kalkan uzaklıkları kaynak yüzeyinin yoğun örneklerinden parça yüzeyine, zarf uzaklıkları parça köşelerinden ölçülür; 10 mm'nin altındakiler 0,1 mm çözünürlükle verilir; son sütun parçanın en yakın üç kaynağıdır.
 
-| Parça (250 mm içinde) | Malzeme | En yakın (mm) | Kaynak |
-|---|---|---:|---|
-| cowl_top | PA-CF | 0 | cylinder |
-| cowl_cheek_L | PA-CF | 0 | cylinder |
-| cowl_cheek_R | PA-CF | 0 | cylinder |
-| scuff_pad | TPU | 8 | spark_cap |
-| exhaust_ring | PA-CF | 15 | cylinder |
-| elevator_1 | LW-ASA | 16 | muffler |
-| stab_1 | LW-ASA | 21 | muffler |
-| fus_ring_9 | LW-ASA | 30 | muffler |
-| engine_ring | PA-CF | 30 | muffler |
-| intake | PA-CF | 47 | muffler |
-| stab_2a | LW-PLA | 153 | susturucu çıkışı |
-| elevator_2a | LW-PLA | 158 | susturucu çıkışı |
-| fus_ring_8 | LW-ASA | 228 | muffler |
+Spec ataması: `stab_1` → LW-ASA (stab_root_heat; kaynağa 61 mm); `elevator_1` → LW-ASA (stab_root_heat; kaynağa 57 mm)
+
+| Parça (250 mm içinde) | Malzeme | Tg (°C) | En yakın (mm) | Kaynak | Kaynaklara uzaklık (mm) |
+|---|---|---:|---:|---|---|
+| cowl_cheek_L | PA-CF | 150 | 0,1 | ısı kalkanı | ısı kalkanı 0,1; susturucu çıkış borusu 1,5; silindir 7,0 |
+| cowl_top | PA-CF | 150 | 5,1 | silindir | silindir 5,1; buji başlığı 7,0; susturucu 35 |
+| scuff_pad | PA-CF | 150 | 8,8 | buji başlığı | buji başlığı 8,8; silindir 19; susturucu 42 |
+| cowl_cheek_R | PA-CF | 150 | 10 | silindir | silindir 10; buji başlığı 36; susturucu 65 |
+| exhaust_ring | PA-CF | 150 | 20 | silindir | silindir 20; susturucu 28; susturucu çıkış borusu 45 |
+| elevator_1 | LW-ASA | 95 | 57 | susturucu | susturucu 57; ısı kalkanı 75; silindir 78 |
+| stab_1 | LW-ASA | 95 | 61 | susturucu | susturucu 61; silindir 77; susturucu çıkış borusu 90 |
+| fus_ring_9 | LW-ASA | 95 | 74 | susturucu | susturucu 74; silindir 86; buji başlığı 104 |
+| engine_ring | PA-CF | 150 | 74 | susturucu | susturucu 74; silindir 80; susturucu çıkış borusu 106 |
+| intake | PA-CF | 150 | 92 | susturucu | susturucu 92; silindir 97; buji başlığı 115 |
+| stab_2a | LW-PLA | 55 | 164 | ısı kalkanı | ısı kalkanı 164; susturucu 177; susturucu çıkış borusu 178 |
+| elevator_2a | LW-PLA | 55 | 176 | ısı kalkanı | ısı kalkanı 176; susturucu çıkış borusu 179; susturucu 199 |
 
 ## Menteşe pimleri (P1)
 
@@ -344,8 +361,10 @@ Uçak toplamına girmez: `hatch_buck_a.stl`, `hatch_buck_b.stl`, `tolerance_coup
 | G10 / kontrplak | Kumanda hornu | G10 1,6 mm, yarığa yapıştırma | 8 |
 | G10 / kontrplak | Kuyruk eyeri (stabilize boruları V birleşimi) | G10 2 mm + epoksi, koni içinde | 1 |
 | Dolgu | Kanat üstü fileto (basılmaz: sıfıra inen kama) | epoksi + mikrobalon, kanat kökü–chine arası, ≈ 2 × 17 cm³; şablon: U_Fairing_Fillet_L/R | 2 |
-| Dolgu | Stabilize kök filetosu + dikey kök mermisi (basılmaz: ≤ 3 mm kama) | epoksi + mikrobalon (ısı bölgesi; LW-PLA yok), ≈ 2 × 4 cm³ + 2 × 1 cm³ | 2 |
-| Dolgu | Kaplama kenarları (kök kaportası, ER-150 kabartması: ≥ 0,8 mm'de kırpılmış) | epoksi + mikrobalon ile deriye sıfırlanır | 2 |
+| Dolgu | Stabilize kök filetosu (basılmaz: ≤ 3 mm kama) | epoksi + mikrobalon (ısı bölgesi; LW-PLA yok), ≈ 2 × 4 cm³ | 2 |
+| Dolgu | Dikey kök mermisi (basılmaz: dikey + stabilizeye teğet, yandan kırpmalı tarif yok) | epoksi + mikrobalon ya da 0,5 mm ısıl biçimlendirilmiş levha; dışarıda ≈ 2 × 10 cm³; şablon: U_Fairing_FinRoot_L/R | 2 |
+| Dolgu | Kaplama kenarları (kök kaportası, ER-150 kabartması, taret yakası: ≥ 0,8 mm'de kırpılmış) | epoksi + mikrobalon ile deriye sıfırlanır | 3 |
+| Dolgu | Dümen servo kaportası (dikeyin iç yüzü; segment planında değil) | 30 × 10 × 5 mm kabarcık, ≈ 0,4 g: PETG (şablon U_Fairing_Servo_Rudder_L/R ağı, taban deriye zımparalanır) ya da 0,5 mm ısıl biçimlendirilmiş levha; dikey rengiyle boyanır, arka ağız açık | 2 |
 | Bağlantı | M4 cıvata + kelebek somun (burun modülü) | A2 paslanmaz | 4 |
 | Bağlantı | M4 cıvata + somun (G10 köprü–soket–çerçeve, s = 1,55 flanşı) | 12.9; köprüde boru başına 2 adet | 12 |
 | Bağlantı | Motor bağlantısı: M4 × 30 + titreşim takozu (kauçuk, Ø10 × 8, 40 Shore A) | motor halkasındaki 4 × M4 ısıl gömme dişliye, kare 60 mm | 4 |
@@ -414,7 +433,8 @@ Uçak toplamına girmez: `hatch_buck_a.stl`, `hatch_buck_b.stl`, `tolerance_coup
 8. **Motor bölümü**: motor halkasını (engine_ring) halka 9 içine 30 mm bindirerek yapıştırın (4 longeron ucu
    soketlere girer); G10 yangın perdesini halkaya yaslayın. DLE-20'yi 4 × M4 + kauçuk takozla halkadaki ısıl gömme
    dişlilere bağlayın, ısı kalkanını takın; PA-CF kaportayı 6 × M3 ile, yanakları flanşlarından vidalayın; lüle
-   halkasını kaporta önüne, NACA dudak çerçevesini halka 9'daki cebe, TPU pabucu kaporta altına yapıştırın.
+   halkasını kaporta önüne, NACA dudak çerçevesini halka 9'daki cebe, PA-CF sürtünme pabucunu kaporta altına
+   yüksek sıcaklık epoksisiyle yapıştırın (aşınınca sökülüp yenilenir).
 9. **Kapaklar**: takım kapaklarını (PETG; menteşe dilleri ve horn baskıda dahil) menteşelerine takın, burun tapa
    kapağını (door_N_3) bacak dirseğine bağlayın. Aviyonik kapağını (ısıl biçimlendirilmiş levha + PETG çerçeve)
    mıknatıslarla oturtun.
@@ -427,26 +447,25 @@ Uçak toplamına girmez: `hatch_buck_a.stl`, `hatch_buck_b.stl`, `tolerance_coup
 
 | Grup | Parçalar | Malzeme | Nozul (mm) | Çizgi (mm) | Katman (mm) | Çevre | Dolgu | Arachne duvar genişliği |
 |---|---|---|---:|---|---|---|---|---|
-| Kanat panelleri, uç kapağı | wing_panel_*, wing_tip | LW-PLA | 0,4 | 0,45 (kafes 1 × 0,45; deri 0,6 = 1 × 0,6; D-kutu 1,2 = 2 × 0,6) | 0,20 (kafes)–0,25 | 1 (D-kutu 2) | %0 | min 0,40 / maks 0,65 |
-| Kök blokları, strake, gövde halkaları | root_block_*, glove_strake, fus_* | LW-PLA | 0,6 | 0,8 (deri 0,8 = 1 çizgi; flanş 2,4 = 3 × 0,8) | 0,25–0,30 | 1 | %0 | min 0,55 / maks 0,95 |
-| Kuyruk konisi | fus_ring_7–9 (+ ısı kuralıyla LW-ASA'ya geçenler) | LW-ASA | 0,4 | 0,5 (1,0 = 2 × 0,5) | 0,20–0,25 | 2 | %0 | min 0,40 / maks 0,60 |
-| Kuyruk yüzeyleri, kumanda yüzeyleri | stab_*, fin_*, aileron_*, flap*, elevator_*, rudder_* | LW-PLA | 0,4 | 0,5 (deri 0,5 = 1 çizgi) | 0,20 | 1 | %0 | min 0,40 / maks 0,60 |
-| PA-CF kaplama ve yük yolu parçaları | cowl_*, exhaust_ring, intake, root_fairing, gear_blister, wing_frame_*, gear_mount_*, engine_ring | PA-CF | 0,4 | 0,53 (1,6 = 3 × 0,53; 3 mm çerçeve 6 çizgi) | 0,20 | 3 | %100 (≤ 3,2 mm), %40 gyroid (daha kalın) | min 0,40 / maks 0,65 |
-| PETG parçalar | door_*, hatch_frame_*, fus_nose_flange, turret_collar, panel_lock_tab, longeron_joint_* | PETG | 0,4 | 0,40 (1,2 = 3 × 0,4; 1,6 = 4 × 0,4) | 0,20 | 3–4 | %100 (ince), %40 (blok) | min 0,34 / maks 0,50 |
-| TPU pabuç | scuff_pad | TPU | 0,4 | 0,45 | 0,20 | 3 | %100 | — |
+| Kanat panelleri, uç kapağı | wing_panel_*, wing_tip | LW-PLA | 0,4 | 0,6 (kafes 1 × 0,6 — yalnız panel 1–4; deri 0,6 = 1 × 0,6; D-kutu 1,2 = 2 × 0,6) | 0,20 (kafes)–0,25 | 1 (D-kutu 2) | %0 | min 0,50 / maks 0,70 |
+| Kök blokları, strake, gövde halkaları | root_block_*, glove_strake, fus_* | LW-PLA | 0,6 | 0,7 (gövde derisi 0,7 = 1 çizgi + 0,8 × 5 mm stringer; kök bloğu 0,8; flanş 2,0 = 3 × 0,67) | 0,25–0,30 | 1 | %0 | min 0,55 / maks 0,95 |
+| Kuyruk konisi ve ısı bölgesi | fus_ring_7–9, stab_1, elevator_1 (spec print.zones.stab_root_heat.parts) | LW-ASA | 0,4 | 0,5 (1,0 = 2 × 0,5; stabilize/elevatör derisi 0,5 = 1 çizgi) | 0,20–0,25 | 2 | %0 | min 0,40 / maks 0,60 |
+| Kuyruk yüzeyleri, kumanda yüzeyleri | stab_*, fin_*, aileron_*, flap*, elevator_*, rudder_* | LW-PLA | 0,4 | 0,5 (deri 0,5 = 1 çizgi; menteşe ağı 0,5) | 0,20 | 1 | %0 | min 0,40 / maks 0,60 |
+| PA-CF kaplama ve yük yolu parçaları | cowl_* (panjur dudakları sağ yanakta), exhaust_ring, scuff_pad, intake, root_fairing, gear_blister, wing_frame_*, gear_mount_*, engine_ring | PA-CF | 0,4 | 0,53 (1,6 = 3 × 0,53; kök kaportası 1,2 = 2 × 0,6; 3 mm çerçeve 6 çizgi) | 0,20 | 3 | %100 (≤ 3,2 mm), %40 gyroid (daha kalın; kütle modeli buna göre) | min 0,40 / maks 0,65 |
+| PETG parçalar | door_*, hatch_frame_*, fus_nose_flange, turret_collar, panel_lock_tab, longeron_joint_* | PETG | 0,4 | 0,40 (1,2 = 3 × 0,4; 1,6 = 4 × 0,4) | 0,20 | 3–4 | %100 (ince), %40 gyroid (blok) | min 0,34 / maks 0,50 |
 | Alet: kalıp + kupon | hatch_buck_*, tolerance_coupon | PLA / LW-PLA | 0,6 | 0,65 | 0,30 | 3 | %15 | — |
 
 **LW-PLA** (colorFabb, köpüren): 230–245 °C, akış %55–60, 40–60 mm/s, fan %30–50, tabla 50–60 °C, geri çekme 0,5–1 mm ("geri çekmede sil" açık), seyir "çevreleri geçme", dikiş firar kenarında hizalı. İnce duvar algılama (Arachne / "Print Thin Walls") açık, boşluk dolgusu kapalı; kaburga 1,2 mm ve çerçeveler dolu basılır. Segmentler dik (açıklık / gövde ekseni Z'de) basılır: kaburga ya da çerçeve tablada, flanş üstte.
 **LW-ASA**: 250–265 °C, akış %55–65, kapalı kabin, tabla 95–105 °C, fan %0–20.
 **PA-CF**: sertleştirilmiş nozul, 270–290 °C, kurutulmuş filament (80 °C 6 h), kapalı kabin, fan %0–20.
-**PETG**: 235–245 °C, fan %30–50, tabla 70–80 °C. **TPU 95A**: 220–230 °C, 20 mm/s, geri çekme kapalı.
+**PETG**: 235–245 °C, fan %30–50, tabla 70–80 °C.
 **PLA kalıp**: 0,6 mm nozul, 0,3 mm katman, 3 çevre, %15 dolgu; üst yüz zımpara + astar (ısıl biçimlendirme bölümü).
 
 **Destek** (P6): parça tablosundaki "Destek" sütunu bağlayıcıdır — "tabla desteği": seçilen yönde 45°'den dik, altında model olmayan çıkıntı > 2 cm²; "model üstü destek": 5 mm'den yüksekten modele inen çıkıntı > 8 cm²; "yok". Ağaç (tree) destek, arayüz boşluğu 0,2 mm önerilir. Tabla teması 3 cm²'den ya da izin %3'ünden azsa STL'ye 1 mm kırılabilir baskı ayağı eklenmiştir (Not sütunu); baskıdan sonra kesilir. Kanat ve gövde segmentlerindeki çıkıntılar: menteşe dili kamaları, kuyu tavanları, kapak/kuyu açıklığı kenarları ve kapalı uç kapakları.
 
 **Isı / boya kuralı** (P14): LW-PLA Tg ≈ 55 °C; güneşte koyu üst deri 65–75 °C'ye ısınır. Üst yüz boyasının güneş yansıtması ≥ 0,5 olmalı (açık gri ya da IR-yansıtıcı "cool" pigmentli gri). **"taktik" (koyu) livery yalnız render içindir**: gerçek uçakta koyu üst yüz kullanılacaksa üst deriler (kanat, gövde üstü, kuyruk) LW-ASA'ya (Tg 95 °C) geçirilmelidir. Isı kuralı bölgesindeki parçalar zaten LW-ASA / PA-CF.
 
-**Montaj payları** (P7): boru deliği Ø + 0,7 mm (LW-PLA/LW-ASA; PETG/PA-CF + 0,6 mm), pim deliği Ø + 0,4 mm, M4 Ø4,5, M3 Ø3,4, ısıl gömme dişli M3 Ø4 / M4 Ø5,6 mm; bütün delikler çevrel çokgen (iç yarıçap = delik yarıçapı, kenar ≈ 0,6 mm). Kovan eti 0,8 mm, kesme ağı 0,8 mm, geodezik kafes 0,45 mm (±40°, 70 mm aralık; dik baskıda yatayla 50°), hizalama pimi Ø3 mm, menteşe pimi Ø1,75 mm, çerçeve 1,6 × 8 mm, flanş 2,4 × 6 mm.
+**Montaj payları** (P7): boru deliği Ø + 0,7 mm (LW-PLA/LW-ASA; PETG/PA-CF + 0,6 mm), pim deliği Ø + 0,4 mm, M4 Ø4,5, M3 Ø3,4, ısıl gömme dişli M3 Ø4 / M4 Ø5,6 mm; bütün delikler çevrel çokgen (iç yarıçap = delik yarıçapı, kenar ≈ 0,6 mm). Kovan eti 0,8 mm, kesme ağı 0,8 mm, geodezik kafes 0,6 mm (±40°, 90 mm aralık, yalnız iç dört panelde; dik baskıda yatayla 50°), hizalama pimi Ø3 mm, menteşe pimi Ø1,75 mm, çerçeve 1,6 × 6 mm, flanş 2,0 × 6 mm.
 
 ## Kapsam
 

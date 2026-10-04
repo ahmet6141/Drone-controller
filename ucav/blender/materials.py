@@ -26,10 +26,13 @@ Malzeme tarifleri (renkler ``spec.yaml → materials``; aşağıdaki ince ayarla
 * ``UM_Orange`` (RAL 2004 saf turuncu, floresan değil, ışımasız): yalnız pala uçları, dikeylerdeki pervane
   düzlemi bandı ve bakım sehpası (uyarı rolü).
 * ``UM_Liner`` (kuyu/kapak iç astarı, ipek mat, vernik 0,15), ``UM_Seal`` (kapak kenarı/conta, mat koyu).
-* ``UM_PropDisc``: dönen pervanenin zaman ortalamalı diski (``U_PropDisc``, rig kurar): Transparent + koyu
-  Principled karışımı; örtme = nesne özelliği ``ucav_disc`` (rig devirle sürer, 0…0,35) × yarıçap profili (pala
-  bölgesi soluk, uçtaki ``UM_Orange`` bandı daha belirgin halka). Dururken nesne render dışıdır.
-* ``UM_SmokeHatch``: füme parlak PETG — iki arayüzlü geçirgenlik (toplam ≈ %10), cam gibi yansıma.
+* ``UM_PropDisc``: dönen pervanenin zaman ortalamalı diski (``U_PropDisc``, rig kurar): Transparent + açık "pus"
+  Principled karışımı (spec rengi #9A9FA3); örtme = nesne özelliği ``ucav_disc`` (rig devirle sürer, 0…0,35) ×
+  yarıçap profili (``DISC_PROFILE``: pala bölgesi 0,50, uç bandı 0,58, kenarlarda 12 mm yumuşak geçiş). Uç halkası
+  rengi ``UM_Orange`` ile disk renginin yarı yarıya karışımıdır (soluk turuncu): asfalt üstünde koyu kırmızı bir
+  çember değil, açık bir pus okunur. Dururken nesne render dışıdır.
+* ``UM_SmokeHatch``: füme parlak PETG — iki arayüzlü geçirgenlik (toplam ≈ %22: cebin içi ve iç yüzdeki siyah frit
+  bandı seçilir), üstte sert parlak vernik (vernik 1,0, pürüzlülük 0,03 → üstten gökyüzü yansıması).
 * ``UM_PACF`` ve ``UM_Nozzle`` (lüle halkası, soğutma havası çıkışı): boyasız PA-CF — mat, ince baskı dokusu,
   hafif "sheen"; ısı tonu YOK (egzoz sol yanaktaki susturucudan çıkar).
 * ``UM_Exhaust``: susturucu — paslanmaz çelik, gürültüyle karışan bronz/mavi ısı tonu (spec ``heat_tint``).
@@ -38,9 +41,12 @@ Malzeme tarifleri (renkler ``spec.yaml → materials``; aşağıdaki ince ayarla
 * ``UM_Gear`` (anodize Al), ``UM_Hub``, ``UM_Steel`` (oleo krom / pitot — pürüzlülük ≤ 0,14), ``UM_Engine``.
 * ``UM_Tire``: kauçuk — mat, tozlu "sheen", ince tümsek. ``UM_TPU``: mat siyah TPU.
 * ``UM_TurretBody``: saten koyu gri (#2A2D30) — top formu okunur, "delik" gibi görünmez. ``UM_Bezel``: siyah eloksal
-  pencere çerçevesi. ``UM_SensorGlass``: pencere nesnesinin yerel +Y yarısı EO (çok koyu cam, vernik 0,6, ince AR
-  filmi → soluk mor/yeşil yansıma), −Y yarısı IR (germanyum: koyu gri, yarı metalik, ince film → altın/mor ışıltı).
-  Kendi ışıması yoktur; yalnız yansır. ``UM_Carbon``: 2×2 dimi örgü karbon + vernik.
+  pencere çerçevesi. ``UM_SensorGlass``: pencere nesnesinin yerel +Y yarısı EO (çok koyu cam, pürüzlülük 0,03,
+  ince AR filmi → soluk mor/yeşil yansıma), −Y yarısı IR (germanyum #2A2C30: koyu gri, yarı metalik 0,3,
+  pürüzlülük 0,06, ince film → altın/mor ışıltı); ikisinde de tam, sert parlak dış kaplama (vernik 1,0; EO'da
+  n 1,65 sert kaplama) → pencereler delik gibi değil, ufku ve gökyüzünü yansıtan cam gibi okunur (``nose``
+  görünümünde taret 2° aşağı bakar: pencereler ufku yansıtır). Kendi ışıması yoktur; yalnız yansır.
+  ``UM_Carbon``: 2×2 dimi örgü karbon + vernik.
 * **Işıklar** (``UM_NavRed``, ``UM_NavGreen``, ``UM_Strobe``, ``UM_StatusLED``): parlak lens + ışıma.
   Işıma şiddeti = spec ``emission`` × nesne özelliği ``ucav_emission`` (Attribute düğümü, nesne türü). ``rig``
   her ışık nesnesinin ``ucav_emission`` değerini sürer (seyrüsefer: ``nav_lights``, çakarlar: ``strobe``);
@@ -50,11 +56,13 @@ Malzeme tarifleri (renkler ``spec.yaml → materials``; aşağıdaki ince ayarla
 
 Boya şemaları (``LIVERIES``)
 ----------------------------
-* ``"standart"`` (``"standard"`` da kabul edilir): spec renkleri — üst RAL 7035, alt RAL 9003.
-* ``"taktik"``: yalnız render için koyu düşük görünürlüklü gri (spec ``materials.liveries.taktik``: üst #4A5055
-  ≈ RAL 7015, alt #6F777C, vurgu/anten #2A2E32, ince çizgi #4E5B60, spinner #3A3F44 …); mat boya (pürüzlülük 0,62,
-  vernik 0,08); işaretler zeminden AÇIK (#8C9499). Spec'te eksik ad varsa ``TAKTIK_DEFAULT`` kullanılır. Uyarı: koyu
-  boya güneşte LW-PLA'yı ısıtır (Tg ≈ 55 °C) — uçacak gövde için önerilmez (baskı raporundaki ısı/boya kuralı).
+* ``"standart"`` (``"standard"`` da kabul edilir): spec renkleri — üst RAL 7035 (ekran değeri #BDC1BE, sık kullanılan
+  #CBD0CC'den ≈ %7 koyu: yan görünüşte karşı gölge okunur), alt RAL 9003.
+* ``"taktik"``: yalnız render için koyu düşük görünürlüklü gri (spec ``materials.liveries.taktik``: üst #383E43
+  ≈ RAL 7016 antrasit — güneşli gövde yanı ≤ 110 sRGB, alt #6F777C, vurgu/anten #2A2E32, ince çizgi #4E5B60, spinner
+  #3A3F44 …); mat boya (pürüzlülük 0,62, vernik 0,08); işaretler zeminden AÇIK (#8C9499). Spec'te eksik ad varsa
+  ``TAKTIK_DEFAULT`` kullanılır. Uyarı: koyu boya güneşte LW-PLA'yı ısıtır (Tg ≈ 55 °C) — uçacak gövde için
+  önerilmez (baskı raporundaki ısı/boya kuralı).
 
 İşaretler (``build_decals``)
 ----------------------------
@@ -108,22 +116,28 @@ PAINT_COAT_ROUGH = 0.22
 PAINT_TONE_VAR = 0.025                    # ± ton dalgalanması
 PAINT_ROUGH_VAR = 0.04                    # ± pürüzlülük dalgalanması
 ORANGE_GLOW = 0.0                         # eski floresans taklidi kaldırıldı (gerçek boya ışımaz)
-SMOKE_TOTAL_T = 0.10                      # füme kapak toplam geçirgenliği (iki arayüz)
+SMOKE_TOTAL_T = 0.22                      # füme kapak toplam geçirgenliği (iki arayüz; R12: 0,10 → içi ve frit seçilir)
+SMOKE_COAT = {"weight": 1.0, "rough": 0.03}   # füme kapak: sert parlak vernik (R12)
 TAKTIK_PAINT = {"roughness": 0.62, "coat": 0.08}   # taktik: mat düşük görünürlük
 
 # ---- Taktik boya şeması: spec ``materials.liveries.taktik`` geçerlidir; spec'te eksik ad için yedek değerler ----
 TAKTIK_DEFAULT: dict[str, str] = {
-    "UM_SkinTop": "#4A5055", "UM_SkinBottom": "#6F777C", "UM_Accent": "#2A2E32", "UM_Antenna": "#2A2E32",
+    "UM_SkinTop": "#383E43", "UM_SkinBottom": "#6F777C", "UM_Accent": "#2A2E32", "UM_Antenna": "#2A2E32",
     "UM_Turquoise": "#4E5B60", "UM_Spinner": "#3A3F44", "UM_StatusLED": "#2E8C93",
 }
 TAKTIK_DECAL = "#8C9499"                  # taktik işaret rengi: zeminden açık gri
-# Pervane diski (``UM_PropDisc``; varsayım): pala bölgesi ve uç bandı örtme çarpanları (× ``ucav_disc`` ≤ 0,35), kenar geçişi
-DISC_PROFILE = {"blade": 0.38, "tip": 0.65, "fade_m": 0.004}
+# Pervane diski (``UM_PropDisc``; varsayım): pala bölgesi ve uç bandı örtme çarpanları (× ``ucav_disc`` ≤ 0,35), kenar
+# geçişi. Uç bandı pala bölgesinden yalnız biraz belirgin, geniş yumuşak kenarlı: disk açık bir "pus" olarak okunur,
+# zeminde çizilmiş koyu bir halka gibi değil (R03)
+DISC_PROFILE = {"blade": 0.50, "tip": 0.58, "fade_m": 0.012}
+DISC_TIP_MIX = 0.5                        # uç halkası rengi: UM_Orange'dan disk rengine (açık pus) doğru bu oranda
 DECAL_MIX = {"standart": 0.42, "taktik": 1.0}      # yazı → hedef renk oranı
 EO_TINT = "#08090A"                      # EO penceresi: çok koyu, nötr cam (camgöbeği ton yok)
 EO_AR_NM = 105.0                         # MgF₂ AR filmi (λ₀ ≈ 580 nm) → soluk mor/yeşil artık yansıma
 IR_TINT = "#2A2C30"                      # germanyum penceresi
 IR_FILM_NM = 270.0                       # DLC/AR filmi → altın/mor ışıltı
+# Pencerelerde sert, parlak dış kaplama (R08): EO'da yüksek indisli sert kaplama (n 1,65) → gökyüzü yansıması okunur
+WINDOW_COAT = {"weight": 1.0, "rough_eo": 0.03, "rough_ir": 0.06, "ior_eo": 1.65, "ior_ir": 1.5}
 
 # Panel çizgileri (varsayım; oluk spec ``print.joint_groove_mm`` 0,4 mm — render'da biraz geniş tutulur)
 PANEL_HALF_W = 0.0005                     # çizgi yarı genişliği (m)
@@ -466,12 +480,15 @@ def _generic(T: _Tree, spec: P.MaterialSpec, color):
 
 
 def _smoke(T: _Tree, spec, color):
-    """Füme PETG: arayüz başına renk = √(toplam geçirgenlik) ölçekli spec tonu."""
+    """Füme PETG: arayüz başına renk = √(toplam geçirgenlik) ölçekli spec tonu; üstte sert, parlak vernik (gökyüzü
+    yansıması üstten de okunur). Toplam geçirgenlik ``SMOKE_TOTAL_T``: cebin içi (GNSS antenleri) ve iç yüzdeki
+    siyah frit bandı kapaktan seçilir."""
     c = np.asarray(color, float)
     per_iface = math.sqrt(SMOKE_TOTAL_T)
     tint = tuple(c / max(c.max(), 1e-6) * per_iface)
-    bsdf = T.principled(Base_Color=tint, Roughness=min(spec.roughness, 0.05), IOR=spec.ior,
-                        Transmission_Weight=1.0, Coat_Weight=0.0)
+    bsdf = T.principled(Base_Color=tint, Roughness=min(spec.roughness, SMOKE_COAT["rough"]), IOR=spec.ior,
+                        Transmission_Weight=1.0, Coat_Weight=SMOKE_COAT["weight"], Coat_Roughness=SMOKE_COAT["rough"],
+                        Coat_IOR=1.5)
     T.output(bsdf.outputs[0])
 
 
@@ -550,10 +567,13 @@ def _sensor_glass(T: _Tree, spec, color):
     sep = T.node("ShaderNodeSeparateXYZ", -1100, 0)
     T.link(tc.outputs["Object"], sep.inputs[0])
     is_eo = T.math("GREATER_THAN", sep.outputs["Y"], 0.0, x=-900, y=0)
-    ir = T.principled(-300, -350, Base_Color=hex_to_linear(IR_TINT), Metallic=0.3, Roughness=0.08,
+    wc = WINDOW_COAT
+    ir = T.principled(-300, -350, Base_Color=hex_to_linear(IR_TINT), Metallic=0.3, Roughness=wc["rough_ir"],
+                      Coat_Weight=wc["weight"], Coat_Roughness=0.02, Coat_IOR=wc["ior_ir"],
                       Thin_Film_Thickness=IR_FILM_NM, Thin_Film_IOR=2.0)
-    eo = T.principled(-300, 350, Base_Color=hex_to_linear(EO_TINT), Roughness=max(0.02, spec.roughness), IOR=spec.ior,
-                      Coat_Weight=0.6, Coat_Roughness=0.02, Thin_Film_Thickness=EO_AR_NM, Thin_Film_IOR=1.38)
+    eo = T.principled(-300, 350, Base_Color=hex_to_linear(EO_TINT), Roughness=wc["rough_eo"], IOR=spec.ior,
+                      Coat_Weight=wc["weight"], Coat_Roughness=0.02, Coat_IOR=wc["ior_eo"],
+                      Thin_Film_Thickness=EO_AR_NM, Thin_Film_IOR=1.38)
     mix = T.node("ShaderNodeMixShader", 100, 0)
     T.link(is_eo, mix.inputs["Fac"])
     T.link(ir.outputs[0], mix.inputs[1])
@@ -597,8 +617,9 @@ def _light_lens(T: _Tree, spec, color):
 def _prop_disc(T: _Tree, spec, color):
     """Dönen pervane diski: Transparent ↔ Principled karışımı. Örtme = nesne ``ucav_disc`` (rig) × yarıçap profili
     r = √(y² + z²) (nesne koordinatı; orijin göbekte, yerel X = mil): pala bölgesi ``DISC_PROFILE["blade"]``, uçtaki
-    turuncu bant (``P.PROP``: yarıçap − ``tip_band_m`` … yarıçap) tam; iki kenarda ``fade_m`` yumuşak geçiş. Renk:
-    pala bölgesi koyu duman (spec rengi), uç halkası ``UM_Orange``."""
+    bant (``P.PROP``: yarıçap − ``tip_band_m`` … yarıçap) ``DISC_PROFILE["tip"]``; iki kenarda ve bant geçişinde
+    ``fade_m`` yumuşak geçiş. Renk: pala bölgesi açık pus (spec rengi), uç halkası ``UM_Orange`` ile pus rengi
+    arasında ``DISC_TIP_MIX`` (soluk turuncu)."""
     pr = P.PROP
     r1 = float(pr.radius)
     band = float(P.SPEC["propulsion"]["prop"].get("tip_band_m", 0.02))
@@ -624,6 +645,7 @@ def _prop_disc(T: _Tree, spec, color):
     fac = T.math("MULTIPLY", prof, at.outputs["Fac"], x=-100, y=200, clamp=True)
     orange = P.MATERIALS.get("UM_Orange")
     tip_col = tuple(orange.rgb_linear) if orange is not None else (0.8, 0.1, 0.01)
+    tip_col = tuple((1.0 - DISC_TIP_MIX) * float(o) + DISC_TIP_MIX * float(c) for o, c in zip(tip_col, color))
     col = T.mix_rgb(tip, color, tip_col, x=-250, y=-350)
     bsdf = T.principled(-50, -300, Base_Color=col, Roughness=spec.roughness, Metallic=0.0)
     tr = T.node("ShaderNodeBsdfTransparent", -50, -50)

@@ -23,7 +23,9 @@ hedef). Kameralar ``UCAV_Studio/UCAV_Cameras_Anim``, sehpa ``UCAV_Studio/UCAV_St
 * A1F (2,95–3,95 s): flap yakın planı (70 mm, arka-üst 3/4): iç + dış flap 0 → 20° (kalkış flabı). Kesmeyle.
 * A2 (3,95–5,4 s): kuyruk yakın planı (80 mm): irtifa −25/+20, istikamet ±22 (burun tekeri birlikte döner).
 * B (5,4–10,6 s): pist kenarı araç kamerası (öncü boşluk, hafif sarsıntı, kadrajın ~%60'ı): düz kalkış koşusu
-  8600 dev/dk, 9,5 s'de 25,7 m'de teker keser (spec 25,5 m @ 13,2 m/s); amortisörler kendiliğinden uzar.
+  8600 dev/dk, 9,5 s'de 25,7 m'de teker keser (spec 25,5 m @ 13,2 m/s); amortisörler kendiliğinden uzar. Kamera
+  teker kesmeden sonra uçağın tırmanışıyla (gecikmeli) yükselir: uçağın 0,1–0,25 m üstünde kalır, ufuk kadrajda
+  (y 0,52–0,57), gölge tekerden ayrılırken kalkış okunur.
 * C (10,6–17,6 s): takip düzeneği (``U_CamRig_Follow`` uçağın konum + baş açısını izler; kamera uçakla aynı
   yükseklikte → arkada zemin ve ufuk). Takım 12 s'de (≈ 2,8 m AGL, pozitif tırmanışta) gerçek sırayla toplanır
   (kapak 1 s + bacak 5 s + kapak 1 s, ER-150 8,4 V'ta 5 s); 12,6 s'den sonra 26° yatışlı tırmanan sol dönüş.
@@ -45,9 +47,11 @@ yakın planlar:
 * 0,6–2,0 s kanatçık (+20/−20, sol kanatçık yakın planı, 85 mm); 2,0–4,0 s flap 0 → 30 → 0 (flap yakın planı).
 * 4,0–5,8 s irtifa (−25/+20) ve istikamet (±22) (kuyruk yakın planı, 70 mm).
 * 5,8–8,6 s istikamet → burun tekeri yönlendirme ±30°, sonra taret ±100° tarama + eğilme (burun yakın planı).
-* 8,6–12,4 s takım toplama (sol ana takım yakın planı): kapak 0,54 s + bacak 2,52 s + kapak 0,54 s (gerçek sürenin
-  yarısı, doğrusal anahtar).
-* 12,4–16,0 s takım açılır, geniş yörünge; son kare ilk kareyle aynı poz.
+* 8,6–12,7 s takım toplama (sol ana takım yakın planı; dışarıdan, hafif önden — arka kriko kadrajın sağ üçte
+  birinde, tekerin arkasında değil): kapak 0,54 s + bacak 2,52 s + kapak 0,54 s (gerçek sürenin yarısı, doğrusal
+  anahtar).
+* 12,4–12,7 s takım toplu ve kapaklar kapalı bekler (yakın planda okunur), 12,7–16,0 s takım açılır (kapak 0,50 s +
+  bacak 2,31 s + kapak 0,50 s), geniş yörünge; son kare ilk kareyle aynı poz.
 """
 from __future__ import annotations
 
@@ -430,7 +434,11 @@ def showcase_plan(hull: np.ndarray | None = None) -> dict:
     cam_b = np.column_stack([_lag(loc[:, 0] + B_AHEAD, 0.55), np.full(n, B_Y), np.full(n, P.GROUND_Z + 0.50)])
     i_roll = int(round(t_roll * FPS))
     cam_b[:i_roll, 0] = cam_b[i_roll, 0]
-    cam_b[:, 2] += _ease(t, [(_T(7.0), 0.0), (_T(8.6), 1.4)])             # kalkışta hafif yükselir
+    # kalkışta uçağın tırmanışıyla (gecikmeli) hafif yükselir: kamera uçağın biraz üstünde kalır, ufuk kadrajda,
+    # teker kesme yer çizgisinin üstünde okunur (eski sabit +1,4 m rampa uçağın 1,3 m üstüne çıkıp ufku kadrajın
+    # tepesine itiyordu)
+    climb = np.maximum(loc[:, 2] - loc[i_roll, 2], 0.0)
+    cam_b[:, 2] += 0.8 * _lag(climb, 0.35) + _ease(t, [(_T(7.4), 0.0), (_T(8.6), 0.15)])
     x, _, _ = _project(cam_b, loc, W)                                     # kameraman zum'u: kadrajın ~%60'ı
     lens_b = np.clip(_smooth(B_FILL * SENSOR / (x.max(1) - x.min(1)), 0.3), *B_LENS)
     tgt_b = _visual_center(cam_b, _lead_target(loc, cam_b, lens_b, LEAD["B"]), loc, W)
@@ -478,8 +486,9 @@ def framing_report(plan: dict | None = None) -> dict:
 
 # ----------------------------------------------------------------------------------------------- mekanizmalar
 CONTROL_KEYS_MECH: dict[str, list[tuple[float, float]]] = {
-    # takım: gerçek sürenin yarısı, DOĞRUSAL (kapak 0,54 s + bacak 2,52 s + kapak 0,54 s; sürücü bacağı zaten yumuşatır)
-    "gear": [(0.0, 1.0), (8.8, 1.0), (12.4, 0.0), (16.0, 1.0)],
+    # takım: gerçek sürenin yarısı, DOĞRUSAL (kapak 0,54 s + bacak 2,52 s + kapak 0,54 s; sürücü bacağı zaten
+    # yumuşatır); toplu hâl 0,3 s tutulur (kapaklar kapandıktan sonra kesme), açılış 3,3 s
+    "gear": [(0.0, 1.0), (8.8, 1.0), (12.4, 0.0), (12.7, 0.0), (16.0, 1.0)],
     "gear_doors": [(0.0, 0.0)],
     "prop_rpm": [(0.0, MECH_RPM), (16.0, MECH_RPM)],
     "aileron_deg": [(0.0, 0.0), (0.75, 0.0), (1.1, 20.0), (1.55, -20.0), (1.9, 0.0), (16.0, 0.0)],
@@ -496,7 +505,7 @@ CONTROL_KEYS_MECH: dict[str, list[tuple[float, float]]] = {
     "wheel_auto": [(0.0, 0.0)],
     "wheel_roll_m": [(0.0, 0.0)],
 }
-SHOT_TIMES_MECH = {"": 0.0, "Aileron": 0.6, "Flap": 2.0, "Tail": 4.0, "Nose": 5.8, "Gear": 8.6, "_wide": 12.4}
+SHOT_TIMES_MECH = {"": 0.0, "Aileron": 0.6, "Flap": 2.0, "Tail": 4.0, "Nose": 5.8, "Gear": 8.6, "_wide": 12.7}
 
 
 def mechanisms_plan() -> dict:
@@ -509,7 +518,7 @@ def mechanisms_plan() -> dict:
     root_m = root0 + lift
     loc = np.tile(root_m, (n + 1, 1))
     eul = np.zeros((n + 1, 3))
-    # geniş yörünge: dikişin çevresinde (12,4 → 16 → 0,6 s) yavaş, sürekli pan; periyodik → kesintisiz döngü
+    # geniş yörünge: dikişin çevresinde (12,7 → 16 → 0,6 s) yavaş, sürekli pan; periyodik → kesintisiz döngü
     ph = 2 * math.pi * (t - 14.5) / T
     orbit_z = np.radians(34.0 + 14.0 * np.sin(ph))
     orbit_h = np.full(n + 1, 0.42)                                      # kamera hedefin 0,42 m üstünde
@@ -537,7 +546,9 @@ def mechanisms_plan() -> dict:
                      (0.0, -0.04, 0.02)),
         "Nose": shot(0.5 * (ball + nose_ax) + np.array([0.0, 0.0, 0.01]), (1.0, 0.62, -0.03), 1.30, 85.0, 5.6,
                      (0.0, 0.03, 0.0)),
-        "Gear": shot(0.5 * (main_ext + main_ret) + np.array([0.0, 0.02, -0.01]), (1.0, 0.85, -0.12), 1.0, 45.0, 5.6,
+        # ana takım: dışarıdan, hafif önden (az ≈ 78°, el −6°) — arka kriko (s 1,62) tekerin tam arkasında kadraj
+        # ortasında kalmasın (eski (1, 0,85) yönünde x = 0,50'deydi; şimdi ≈ 0,72, ön kriko kadraj dışında)
+        "Gear": shot(0.5 * (main_ext + main_ret) + np.array([0.0, 0.02, -0.01]), (0.207, 0.973, -0.105), 1.0, 45.0, 5.6,
                      (0.0, 0.0, 0.01)),
     }
     segs = sorted((tt, k) for k, tt in SHOT_TIMES_MECH.items())
@@ -548,7 +559,7 @@ def mechanisms_plan() -> dict:
                for tt, k in segs]
     return {"n": n, "t": t, "loc": loc, "euler": eul, "orbit_z": orbit_z, "orbit_h": orbit_h, "center": center,
             "radius": 4.2, "orbit_lens": 35.0, "orbit_fstop": 4.0, "cams": cams, "markers": markers,
-            "events": [(_fr(8.8), "ev_takim_yukari"), (_fr(12.4), "ev_takim_asagi")],
+            "events": [(_fr(8.8), "ev_takim_yukari"), (_fr(12.7), "ev_takim_asagi")],
             "controls": CONTROL_KEYS_MECH, "linear": {"gear", "prop_rpm"},
             "constant": {"prop_auto", "status_led", "wheel_auto", "wheel_roll_m"}, "prop_rpm_const": MECH_RPM}
 

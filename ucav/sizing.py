@@ -267,10 +267,20 @@ def gear_results(wing: dict) -> dict:
     pb = pr.disk_point(0.0)
     th = RAD(6.0)
     dx, dz = pb[0] - sm, pb[2] - P.GROUND_Z
-    # kaporta / gövde alt hattı: ana tekerin arkasındaki en kritik nokta
-    ss = np.linspace(1.45, P.FUSELAGE_LENGTH, 300)
+    # kaporta / gövde alt hattı: ana tekerin arkasındaki en kritik nokta. Kaportada GERÇEK dış yüz (yanak kabartıları
+    # dahil; ``shapes.cowl()`` ağı — gövde kesiti kabartıyı görmez, açıyı ≈ 0,2° iyimser verirdi); sürtünme pabucu ayrı
+    from ucav import shapes as SH
+    s_cowl = float(S["propulsion"]["cowl"]["s_from_m"])
+    ss = np.linspace(1.45, s_cowl, 240)
     ang = [(_pitch_angle((s, 0.0, P.fuselage_section(s).z_bottom), sm), s) for s in ss]
+    for md in (SH.cowl(), SH.exhaust_ring()):
+        Vc = np.asarray(md.verts, float)
+        a_c = np.degrees(np.arctan2(Vc[:, 2] - P.GROUND_Z, Vc[:, 0] - sm))
+        i = int(np.argmin(a_c))
+        ang.append((float(a_c[i]), float(Vc[i, 0])))
     cowl_ang, cowl_s = min(ang)
+    Vp = np.asarray(SH.scuff_pad().verts, float)
+    pad_ang = float(np.degrees(np.arctan2(Vp[:, 2] - P.GROUND_Z, Vp[:, 0] - sm)).min())
     # stabilize ucu (uç kesitinin en alçak noktaları) ve dikey kökü firar kenarı
     tip_sec = P.stab_section(P.STAB_HALF_SPAN)
     stab_ang = min(_pitch_angle(tuple(p), sm) for p in tip_sec)
@@ -303,7 +313,8 @@ def gear_results(wing: dict) -> dict:
             "overturn": overturn, "nose_load_pct": 100 * nose_frac, "load_main_each": W * (1 - nose_frac) / 2,
             "load_nose": W * nose_frac, "prop_clear_mm": 1000 * dz, "prop_strike": _pitch_angle(pb, sm),
             "prop_clear_6deg_mm": 1000 * (dz * math.cos(th) - dx * math.sin(th)), "cowl_contact": cowl_ang,
-            "cowl_contact_s": cowl_s, "stab_tip_contact": stab_ang, "stab_tip_te_contact": stab_te_ang,
+            "cowl_contact_s": cowl_s, "pad_contact": pad_ang, "stab_tip_contact": stab_ang,
+            "stab_tip_te_contact": stab_te_ang,
             "fin_root_contact": fin_ang, "wingtip_clear_mm": 1000 * wingtip_clear, "bank_to_tip": bank,
             "turret_clear_mm": 1000 * P.TURRET.ground_clearance, "belly_clear_mm": 1000 * belly,
             "main_retracted": a, "nose_retracted": an, "main_well_margins": main_margins,
@@ -409,12 +420,32 @@ def structure_results() -> dict:
     return out
 
 
+PRINT_REPORT = P.OUT_DIR / "print_report.json"
+PRINTED_PREFIX = "Basılı:"                  # spec kütle kalemi öneki: baskı planı grubu (print_report.json → by_group)
+
+
 def mass_results() -> dict:
-    """Kütle kalemleri toplamı ve boş kütle."""
+    """Kütle kalemleri toplamı, boş kütle, yapı kütlesi (``Boya`` dahil ilk kalemler), basılı kalemler ve rezerv;
+    varsa ``out/print_report.json``'daki gerçek baskı planı kütlesi (toplam ve grup başına) ile karşılaştırma."""
     M = P.SPEC["mass"]
-    total = sum(float(v) for _, v in M["breakdown"])
-    return {"sum": total, "empty": float(M["mtow_kg"]) - float(M["fuel_kg"]) - float(M["payload_kg"]),
-            "fuel_from_volume": float(P.SPEC["propulsion"]["fuel"]["tank_l"]) * float(P.SPEC["propulsion"]["fuel"]["density_kg_l"])}
+    items = [(str(k), float(v)) for k, v in M["breakdown"]]
+    total = sum(v for _, v in items)
+    i_paint = next((i for i, (k, _) in enumerate(items) if k.startswith("Boya")), len(items) - 1)
+    printed = {k[len(PRINTED_PREFIX):].split("—")[0].strip(): v for k, v in items if k.startswith(PRINTED_PREFIX)}
+    out = {"sum": total, "empty": float(M["mtow_kg"]) - float(M["fuel_kg"]) - float(M["payload_kg"]),
+           "fuel_from_volume": float(P.SPEC["propulsion"]["fuel"]["tank_l"]) * float(P.SPEC["propulsion"]["fuel"]["density_kg_l"]),
+           "structure": sum(v for _, v in items[:i_paint + 1]), "printed": sum(printed.values()),
+           "printed_groups": printed,
+           "reserve": next((v for k, v in items if k.startswith("Kütle artış rezervi")), 0.0),
+           "report_kg": None, "report_groups": {}, "group_dev_max": None}
+    if PRINT_REPORT.exists():
+        import json
+        rep = json.loads(PRINT_REPORT.read_text(encoding="utf-8"))
+        out["report_kg"] = float(rep["totals"]["mass_g"]) / 1000.0
+        out["report_groups"] = {g: float(v["mass_g"]) / 1000.0 for g, v in rep.get("by_group", {}).items()}
+        keys = set(printed) | set(out["report_groups"])
+        out["group_dev_max"] = max((abs(printed.get(g, 0.0) - out["report_groups"].get(g, 0.0)), g) for g in keys)
+    return out
 
 
 def compute() -> dict:
@@ -571,7 +602,9 @@ def build_checks(R: dict) -> list[Check]:
     add(G, "Pervane açıklığı 6° burun yukarıda", g["prop_clear_6deg_mm"], gr["prop_clearance_at_6deg_mm"], "mm",
         "clearance", ".0f")
     add(G, "Kaporta/gövde temas açısı", g["cowl_contact"], gr["cowl_contact_deg"], "°", "angle", ".2f",
-        f"kritik nokta s = {_fmt(g['cowl_contact_s'], '.3f')}")
+        f"kritik nokta s = {_fmt(g['cowl_contact_s'], '.3f')} (kaporta ağı, yanak kabartısı dahil; pabuçsuz)")
+    add(G, "Sürtünme pabucu temas açısı (ilk temas)", g["pad_contact"], None, "°", "max", ".2f",
+        "PA-CF pabuç kaporta çene köşesinden önce değer (≥ 0,05° önde)", limit=g["cowl_contact"] - 0.05)
     add(G, "Stabilize ucu FK temas açısı", g["stab_tip_te_contact"], gr["stab_tip_contact_deg"], "°", "angle", ".2f")
     add(G, "Stabilize ucu kesiti (en kritik nokta)", g["stab_tip_contact"], None, "°", "info", ".2f")
     add(G, "Dikey kökü FK temas açısı", g["fin_root_contact"], None, "°", "info", ".2f",
@@ -616,6 +649,21 @@ def build_checks(R: dict) -> list[Check]:
     add(G, "Kalemler toplamı", ms["sum"], M["mtow_kg"], "kg", "mass", ".3f")
     add(G, "Boş kütle (MTOW − yakıt − faydalı yük)", ms["empty"], M["empty_kg"], "kg", "mass", ".3f")
     add(G, "Yakıt kütlesi (1,40 L × 0,745)", ms["fuel_from_volume"], M["fuel_kg"], "kg", "mass", ".3f")
+    add(G, "Yapı kütlesi (basılı gövde → boya)", ms["structure"], M["structure_kg"], "kg", "mass", ".3f")
+    add(G, "Basılı kalemler toplamı (\"Basılı:\")", ms["printed"], M["printed_kg"], "kg", "mass", ".3f",
+        f"{len(ms['printed_groups'])} baskı grubu")
+    if ms["report_kg"] is not None:
+        add(G, "Basılı gövde, baskı planı (out/print_report.json)", ms["report_kg"], M["printed_kg"], "kg", "mass",
+            ".3f", "printprep: parça hacmi × etkin yoğunluk; kalın PA-CF/PETG dilimleyici dolgusuyla")
+        dev, g = ms["group_dev_max"]
+        add(G, "Baskı grubu sapması (spec ↔ print_report, en büyük)", dev * 1000.0, None, "g", "max", ".1f",
+            f"grup: {g}", limit=1000.0 * float(S["checks"]["abs"]["mass_kg"]))
+    else:
+        add(G, "Basılı gövde, baskı planı", float("nan"), None, "kg", "info", ".3f",
+            "out/print_report.json yok (python3 ucav/blender/build.py --print)")
+    add(G, "Kütle artış rezervi", ms["reserve"], M["reserve_kg"], "kg", "mass", ".3f")
+    add(G, "Rezerv / MTOW", 100.0 * ms["reserve"] / float(M["mtow_kg"]), None, "%", "min", ".1f",
+        "prototip tartımına kadar en az %3", limit=3.0)
 
     G = "Yapı ve baskı sığma"
     add(G, "Merkez soket 30/27, y 0,40'ta kalınlık payı", sr["fit_centre_socket"], None, "mm", "min", ".1f",

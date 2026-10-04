@@ -13,7 +13,8 @@
 * **Koleksiyonlar**: ``UCAV`` → ``UCAV_Airframe``, ``UCAV_Surfaces``, ``UCAV_Gear``, ``UCAV_Propulsion``,
   ``UCAV_Payload``, ``UCAV_Details``; ``UCAV_Print`` (render dışı), ``UCAV_Studio``, ``UCAV_Envelopes`` (render ve
   GLB dışı paketleme zarfları, tel kafes).
-* **Boolean**: ``boolean_difference`` (EXACT çözücü, malzeme aktarımı, değiştirici uygulanır).
+* **Boolean**: ``boolean_difference`` (EXACT çözücü, malzeme aktarımı, değiştirici uygulanır);
+  ``boolean_difference_safe`` sonucu kapalılık ve çıkarılan hacim (= hedef ∩ kesici, MANIFOLD ile) ile doğrular.
 """
 from __future__ import annotations
 
@@ -232,14 +233,15 @@ def parent_keep_world(child: bpy.types.Object, parent: bpy.types.Object) -> None
 # Boolean
 # =====================================================================================================
 def boolean_difference(target: bpy.types.Object, cutter: bpy.types.Object, apply: bool = True,
-                       name: str = "UCAV_Cut") -> bpy.types.Modifier | None:
-    """EXACT boolean farkı; kesicinin malzemesi yeni yüzlere aktarılır (kuyu duvarları turuncu). ``apply``
-    True ise değiştirici değerlendirilip ağa yazılır (render hızlı, ağ kapalı kalır)."""
+                       name: str = "UCAV_Cut", solver: str = "EXACT") -> bpy.types.Modifier | None:
+    """Boolean farkı (varsayılan EXACT çözücü); kesicinin malzemesi yeni yüzlere aktarılır (kuyu duvarları astar
+    rengi). ``apply`` True ise değiştirici değerlendirilip ağa yazılır (render hızlı, ağ kapalı kalır)."""
     mod = target.modifiers.new(name, "BOOLEAN")
     mod.operation = "DIFFERENCE"
-    mod.solver = "EXACT"
+    mod.solver = solver
     mod.object = cutter
-    mod.material_mode = "TRANSFER"
+    if solver == "EXACT":
+        mod.material_mode = "TRANSFER"
     if not apply:
         return mod
     dg = bpy.context.evaluated_depsgraph_get()
@@ -258,29 +260,73 @@ def boolean_difference(target: bpy.types.Object, cutter: bpy.types.Object, apply
 
 
 BOOL_JITTER = ((0.0, 0.0, 0.0), (0.0, 0.0, 2.1e-5), (1.3e-5, 0.0, -1.7e-5), (-1.1e-5, 0.9e-5, 2.9e-5),
-               (2.3e-5, -1.2e-5, -3.1e-5))                  # sayısal çakışmada kesiciye uygulanan küçük kaydırmalar (m)
+               (2.3e-5, -1.2e-5, -3.1e-5), (-3.7e-5, 2.6e-5, 1.1e-5), (4.1e-5, 3.3e-5, -2.2e-5))   # kesici kaydırmaları (m)
 
 
-def boolean_difference_safe(target: bpy.types.Object, cutter: bpy.types.Object) -> int:
-    """``boolean_difference`` + doğrulama: sonuç kapalı (sınır/manifold dışı kenar yok) değilse eski ağ geri yüklenir ve
-    kesici mikrometre ölçeğinde kaydırılarak (``BOOL_JITTER``) yeniden denenir — EXACT çözücünün eş düzlemli /
-    çakışık yüzlerde nadiren ürettiği bozuk sonuçlara karşı. Dönüş: kullanılan deneme indisi (bozuk kalırsa −1)."""
+def mesh_volume(me: bpy.types.Mesh) -> float:
+    """Ağın işaretli hacmi (m³, nesne yerel ekseni)."""
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    v = float(bm.calc_volume(signed=True))
+    bm.free()
+    return v
+
+
+def _intersect_volume(target: bpy.types.Object, cutter: bpy.types.Object) -> float | None:
+    """Hedef ∩ kesici hacmi (m³), MANIFOLD çözücüyle (hızlı, bağımsız bir kontrol). Hesaplanamazsa None."""
+    tmp = bpy.data.objects.new("UCAV_tmp_isect", target.data.copy())
+    bpy.context.scene.collection.objects.link(tmp)
+    tmp.matrix_world = world_matrix(target)
+    try:
+        mod = tmp.modifiers.new("isect", "BOOLEAN")
+        mod.operation = "INTERSECT"
+        mod.solver = "MANIFOLD"
+        mod.object = cutter
+        dg = bpy.context.evaluated_depsgraph_get()
+        dg.update()
+        me = bpy.data.meshes.new_from_object(tmp.evaluated_get(dg), depsgraph=dg)
+        v = mesh_volume(me)
+        bpy.data.meshes.remove(me)
+        return v
+    except (RuntimeError, TypeError, AttributeError):
+        return None
+    finally:
+        data = tmp.data
+        bpy.data.objects.remove(tmp, do_unlink=True)
+        if data.users == 0:
+            bpy.data.meshes.remove(data)
+
+
+def boolean_difference_safe(target: bpy.types.Object, cutter: bpy.types.Object, check_volume: bool = True) -> int:
+    """``boolean_difference`` + doğrulama: sonuç kapalı (sınır/manifold dışı kenar yok) olmalı VE (``check_volume``)
+    çıkarılan hacim, hedef ∩ kesici hacmine (MANIFOLD çözücüyle bağımsız ölçülür) %2 içinde eşit olmalı — EXACT
+    çözücü eş düzlemli / çakışık yüzlerde nadiren kapalı ama YANLIŞ sonuç verir (ör. farkın yerine kesişimi bırakır).
+    Bozuksa eski ağ geri yüklenir ve kesici mikrometre ölçeğinde kaydırılarak (``BOOL_JITTER``) yeniden denenir; hepsi
+    bozuksa son çare MANIFOLD çözücüsü. Dönüş: kullanılan deneme indisi (MANIFOLD → len(BOOL_JITTER); bozuk kalırsa −1)."""
     base = cutter.location.copy()
     keep = target.data.copy()
+    v0 = mesh_volume(target.data)
+    tries = [(k, d, "EXACT") for k, d in enumerate(BOOL_JITTER)] + [(len(BOOL_JITTER), (0.0, 0.0, 0.0), "MANIFOLD")]
     try:
-        for k, d in enumerate(BOOL_JITTER):
+        for k, d, solver in tries:
             cutter.location = base + Vector(d)
             bpy.context.view_layer.update()
-            boolean_difference(target, cutter)
+            vi = _intersect_volume(target, cutter) if check_volume else None
+            boolean_difference(target, cutter, solver=solver)
             r = mesh_report(target)
-            if not (r["boundary"] or r["nonmanifold"]):
+            ok = not (r["boundary"] or r["nonmanifold"])
+            if ok and vi is not None:
+                removed = v0 - mesh_volume(target.data)
+                ok = abs(removed - vi) <= max(2e-8, 0.02 * abs(vi))
+            if ok:
                 return k
             bad = target.data
             target.data = keep.copy()
             target.data.name = target.name
             if bad.users == 0:
                 bpy.data.meshes.remove(bad)
-        print(f"[util] uyarı: {target.name} ← {cutter.name} boolean sonucu kapalı değil")
+        print(f"[util] uyarı: {target.name} ← {cutter.name} boolean sonucu kapalı/tutarlı değil")
         return -1
     finally:
         cutter.location = base

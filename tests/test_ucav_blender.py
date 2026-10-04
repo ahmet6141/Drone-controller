@@ -4,12 +4,13 @@ Sahne bir kez kurulur (``ucav.blender.build.build_scene``: gövde → takım →
 animasyon, ≈ 25 s). Denetlenenler: sözleşmedeki nesneler ve koleksiyonlar, kontrol paneli özellikleri, bütün
 sürücülerin geçerli ve "basit ifade" olması, her ağın UM_* malzemeli ve kapalı (manifold) olması, takım açıkken
 tekerlerin zemine değmesi, takım çevriminde çakışma olmaması, kumanda yüzeyi işaret kuralı, ana ölçülerin
-spec'e %1 içinde uyması, şablon yazılar, görünüm kuralları (yan görünüş ortografik, panel çizgileri = baskı
-ekleri, kuyu/kapaklarda turuncu yok, CG işareti, dolgu ışığı sürücüsü, pozlama), pervane diski, kumanda
-bağlantıları, pervane açısı = ∫rpm·dt, döngü dikişi, taret LED'i, ebeveyn kuralı, takım/teker zamanlaması,
-başka dosyaya ekleme (append), animasyon klipleri, GLB ve küçük bir render. Baskı: küçük bir segment alt kümesi
-geçici dizine kurulur (manifold + tablaya sığma) ve depodaki STL'ler/rapor numpy ile yeniden denetlenir (tek
-kabuk, tabla teması, destek sınıfı, ısı kuralı, yük yolları, menteşe pimleri, tolerans kuponu, kalıp parçaları).
+spec'e %1 içinde uyması, şablon yazılar, görünüm kuralları (yan görünüş göz hizasında perspektif, kadrajlar,
+malzeme değerleri, panel çizgileri = baskı ekleri, kuyu/kapaklarda turuncu yok, CG işareti, dolgu ışığı sürücüsü,
+pozlama), pervane diski, kumanda bağlantıları, pervane açısı = ∫rpm·dt, döngü dikişi, taret LED'i, ebeveyn kuralı,
+takım/teker zamanlaması, başka dosyaya ekleme (append), animasyon klipleri, GLB ve küçük bir render. Baskı: küçük
+bir segment alt kümesi geçici dizine kurulur (manifold + tablaya sığma) ve depodaki STL'ler/rapor numpy ile yeniden
+denetlenir (tek kabuk, tabla teması, destek sınıfı, ısı kuralı, yük yolları, menteşe pimleri, tolerans kuponu, kalıp
+parçaları).
 
 Çalıştırma: ``python3 -m unittest tests.test_ucav_blender -v`` (≈ 2 dk).
 """
@@ -41,7 +42,8 @@ CONTRACT_OBJECTS = [
     "U_Bay_N", "U_Bay_L", "U_Bay_R", "U_Door_N_1", "U_Door_N_2", "U_Door_L_1", "U_Door_R_1", "U_Door_L_2", "U_Door_R_2",
     "U_Pitot", "U_Light_Nav_L", "U_Light_Nav_R", "U_Light_Strobe_L", "U_Light_Strobe_R", "U_Light_Landing",
     "U_Light_Turret_Ring", "U_Door_N_3", "U_Cowl_Louvers", "U_Exhaust_Muffler", "U_Fairing_FinRoot_L",
-    "U_Fairing_FinRoot_R", "U_Hatch_Frame", "U_PropDisc",
+    "U_Fairing_FinRoot_R", "U_Hatch_Frame", "U_PropDisc", "U_Fairing_Servo_Rudder_L", "U_Fairing_Servo_Rudder_R",
+    "U_Cowl_Cavity", "U_ScuffPad",
 ] + [f"U_{k}_{leg}" for leg in ("N", "L", "R") for k in ("GearPivot", "GearStrut", "GearWheel", "GearSlider", "GearUnit")] \
   + ["U_GearSteer_N"] \
   + [f"U_{k}_{s}_{side}" for k in ("Horn", "ServoArm", "Pushrod") for s in ("Aileron", "FlapOut", "Elevator", "Rudder")
@@ -315,6 +317,152 @@ class TestYK38Scene(unittest.TestCase):
         self.assertEqual(rep["new"], [])
         self.assertEqual(rep["known"], [])
 
+    @staticmethod
+    def _bvh(ob):
+        """Değerlendirilmiş ağın dünya uzayı BVH ağacı ve köşeleri."""
+        import bpy
+        from mathutils.bvhtree import BVHTree
+        dg = bpy.context.evaluated_depsgraph_get()
+        ev = ob.evaluated_get(dg)
+        me = ev.to_mesh()
+        mw = ev.matrix_world
+        V = [mw @ v.co for v in me.vertices]
+        F = [tuple(p.vertices) for p in me.polygons]
+        ev.to_mesh_clear()
+        return BVHTree.FromPolygons(V, F), np.array([tuple(v) for v in V])
+
+    def test_cowl_parts_clear_engine_envelopes(self):
+        """R01: kaporta kabuğu, lüle halkası, panjur dudakları, sürtünme pabucu ve NACA dudağı motor ve susturucu
+        zarflarına (``U_Env_Engine``, ``U_Env_Muffler``) GİRMEZ: BVH üçgen çakışması 0 (eski kaporta fincanı 166 çift
+        veriyordu). ``U_Exhaust_Muffler`` borusu tasarım gereği susturucu kutusuna 2 mm gömülüdür (hariç). Koyu boşluk
+        diski yalnız render içindir (``ucav_render_only``; GLB/baskı/çakışma dışı)."""
+        import bpy
+        envs = {n: self._bvh(bpy.data.objects[n])[0] for n in ("U_Env_Engine", "U_Env_Muffler")}
+        hits = {}
+        for n in ("U_Cowl", "U_ExhaustRing", "U_Cowl_Louvers", "U_ScuffPad", "U_Intake"):
+            t = self._bvh(bpy.data.objects[n])[0]
+            for en, et in envs.items():
+                k = len(t.overlap(et))
+                if k:
+                    hits[f"{n}~{en}"] = k
+        self.assertEqual(hits, {})
+        cav = bpy.data.objects["U_Cowl_Cavity"]
+        self.assertTrue(cav.get("ucav_render_only"))
+        self.assertEqual(cav.parent.name, "U_Cowl")
+
+    def test_cooling_exit_open_in_scene(self):
+        """R01: sahnedeki kaportada soğutma çıkışı gerçekten AÇIK — kaporta boşluğundan geriye (s ekseni) atılan
+        ışınlar lüle halkası halkasından (spinner ile halka iç çapı arası) ve çene yarığından kaporta parçalarına
+        (kabuk, lüle, panjur, pabuç, susturucu borusu) çarpmadan çıkar. Açık alan = isabetsiz ışın oranı × geometrik
+        alan; çıkış (halka + çene) ≥ 1,3 × NACA giriş alanı (≥ 28 cm²)."""
+        import bpy
+        from mathutils import Vector
+
+        from ucav import params as P
+        from ucav import shapes as S
+        trees = [self._bvh(bpy.data.objects[n])[0] for n in
+                 ("U_Cowl", "U_ExhaustRing", "U_Cowl_Louvers", "U_ScuffPad", "U_Exhaust_Muffler")]
+        d = Vector(P.vec_to_blender((1.0, 0.0, 0.0)))
+
+        def open_frac(pts_spec, length):
+            free = 0
+            for p in pts_spec:
+                o = Vector(P.to_blender(*p))
+                if all(t.ray_cast(o, d, length)[0] is None for t in trees):
+                    free += 1
+            return free / len(pts_spec)
+        er = P.SPEC["propulsion"]["exhaust_ring"]
+        r0, r1 = 0.5 * P.PROP.spinner_d + 0.001, 0.5 * float(er["id_m"]) - 0.001
+        zc = P.PROP.hub[2]
+        ring_pts = [(2.172, r * math.cos(a), zc + r * math.sin(a))
+                    for r in np.sqrt(np.linspace(r0 ** 2, r1 ** 2, 6)) for a in np.radians(np.arange(0, 360, 12))]
+        f_ring = open_frac(ring_pts, 0.05)
+        a_ring = f_ring * math.pi * ((0.5 * float(er["id_m"])) ** 2 - (0.5 * P.PROP.spinner_d) ** 2)
+        V = np.asarray(S.cooling_exit_cutter().verts)
+        w = float(np.abs(V[:, 1]).max()) - 0.004
+        z0, z1 = float(V[:, 2].min()), float(V[:, 2].max())
+        chin_pts = [(2.170, y, z) for y in np.linspace(-0.9 * w, 0.9 * w, 9) for z in np.linspace(z0 + 0.001, z1 - 0.001, 4)]
+        f_chin = open_frac(chin_pts, 0.035)
+        a_chin = f_chin * 2 * w * (z1 - z0)
+        inlet = S.cooling_flow_areas()["inlet"]
+        self.assertGreater(f_ring, 0.95, f_ring)
+        self.assertGreater(f_chin, 0.95, f_chin)
+        self.assertGreaterEqual(a_ring + a_chin, 1.3 * inlet, (a_ring * 1e4, a_chin * 1e4, inlet * 1e4))
+
+    def test_gear_doors_sweep_no_collisions(self):
+        """Deri kapakları (``gear_doors`` 0,3 / 0,6 / 1,0, takım açık) gövde, kanat, kaplamalar ve takımla çakışmaz
+        (BVH; kapak donanımı ``U_DoorHw_*`` kapağa bağlıdır, hariç). R06 dudağı menteşe kenarından 6 mm uzak."""
+        import bpy
+        from mathutils import Vector
+        doors = ["U_Door_N_1", "U_Door_N_2", "U_Door_L_1", "U_Door_R_1"]
+        skip = ("U_DoorHw_", "U_Env_", "U_Stand", "UP_")
+        others = [o for o in bpy.data.objects if o.type == "MESH" and o.name.startswith("U_")
+                  and not o.name.startswith(skip) and o.name not in doors and not o.hide_render]
+        hits = {}
+        try:
+            for gd in (0.3, 0.6, 1.0):
+                self._set(gear=1.0, gear_doors=gd)
+                for dn in doors:
+                    td, Vd = self._bvh(bpy.data.objects[dn])
+                    lo, hi = Vd.min(0) - 0.01, Vd.max(0) + 0.01
+                    for ob in others:
+                        bb = np.array([tuple(ob.matrix_world @ Vector(c)) for c in ob.bound_box])
+                        if (bb.max(0) < lo).any() or (bb.min(0) > hi).any():
+                            continue
+                        k = len(td.overlap(self._bvh(ob)[0]))
+                        if k:
+                            hits[f"{dn}~{ob.name}@{gd}"] = k
+        finally:
+            self._set(gear=1.0, gear_doors=0.0)
+        self.assertEqual(hits, {})
+
+    def test_linkage_sweep_no_collisions(self):
+        """Kumanda bağlantıları tam aralıkta çarpışmasız: yalnız açık izin listesindeki (``rig.LINK_ALLOW``) tasarım
+        gereği gömülü temaslar; en küçük açıklık ≥ 0,3 mm; dümen bağlantısı dikeyin iç yüzünde, kaporta altında."""
+        import bpy
+
+        from ucav.blender import rig
+        rep = rig.linkage_clearance_report()
+        self.assertEqual(rep["new"], [], rep["new_detail"][:6])
+        self.assertTrue(rep["known"])                                   # tarama gerçekten temas buldu (izinli)
+        self.assertEqual(len(rep["faces"]), 2 * len(rig.LINKAGES))
+        self.assertGreaterEqual(rep["min_gap_m"], 0.0003, rep["gaps"])
+        for side in ("L", "R"):
+            self.assertEqual(rep["faces"][f"Rudder_{side}"], "inboard")
+            self.assertEqual(rep["faces"][f"Aileron_{side}"], "lower")
+            fair = bpy.data.objects[rig.fairing_name("Rudder", side)]
+            self.assertEqual([m.name for m in fair.data.materials], list(rig.FAIRING_MATS))
+        for ctl, vals in rep["values"].items():                        # tam kontrol paneli aralığı tarandı
+            lo, hi = next((p[2], p[3]) for p in rig.PROPS if p[0] == ctl)
+            self.assertEqual((min(vals), max(vals)), (lo, hi), ctl)
+
+    def test_rudder_fairing_covers_servo_arm(self):
+        """Dümen servo kolu kaportanın altında: kol ucu (± kumanda) kaporta tepesinin altında, kaporta 30 × 10 mm
+        ve deriden ≤ 5,5 mm kabarık; boynuz ve çubuk dikeyin iç yüzünde (dışa normal boyunca < 0)."""
+        import bpy
+        from mathutils import Vector
+
+        from ucav import params as P
+        from ucav.blender import rig
+        for side in ("L", "R"):
+            g = rig.linkage_geometry("Rudder", side)
+            fr = g["fairing"]
+            self.assertIsNotNone(fr)
+            fair = bpy.data.objects[fr["name"]]
+            Mi = g["M_f"].inverted()
+            V = np.array([tuple(Mi @ (fair.matrix_world @ v.co)) for v in fair.data.vertices])
+            self.assertAlmostEqual(V[:, 1].max() - V[:, 1].min(), 0.030, delta=0.001)
+            self.assertAlmostEqual(V[:, 0].max() - V[:, 0].min(), 0.010, delta=0.001)
+            top = float((g["s"] * V[:, 2]).max())
+            self.assertLessEqual(top - g["w_servo"], 0.0055)
+            self.assertGreaterEqual(top, g["d"] + rig.ARM_TIP_R)       # kol ucu kaporta tepesinin altında
+            fs = P.fin_station(0.1, side)
+            nrm, le = np.asarray(P.vec_to_blender(fs.normal), float), np.asarray(P.to_blender(*fs.le), float)
+            for n in (rig.linkage_names("Rudder", side)[0], rig.linkage_names("Rudder", side)[2], fr["name"]):
+                ob = bpy.data.objects[n]
+                W = np.array([tuple(ob.matrix_world @ Vector(v.co)) for v in ob.data.vertices])
+                self.assertLess(float(((W - le) @ nrm).max()), 0.0, n)
+
     def test_control_surface_sign_convention(self):
         """+ derece: kanat/stabilize firar kenarı aşağı (iki yanda), dümen firar kenarı sancağa (−Y)."""
         import bpy
@@ -376,8 +524,8 @@ class TestYK38Scene(unittest.TestCase):
             self.assertEqual((r["boundary"], r["nonmanifold"]), (0, 0), ob.name)
 
     def test_look_rules(self):
-        """Yan görünüş ortografik ve kanat dihedralinde (yakın kanat kenardan); pist pozlaması −0,4 EV; panel
-        çizgileri baskı ekleriyle aynı; kuyu ve kapaklarda UM_Orange yok; CG işareti CG istasyonunda ve kök
+        """Yan görünüş göz hizasında perspektif (≤ 1° yukarıdan, seyrüsefer ışıkları kapalı); pist pozlaması −0,4 EV;
+        panel çizgileri baskı ekleriyle aynı; kuyu ve kapaklarda UM_Orange yok; CG işareti CG istasyonunda ve kök
         filetosunun üstünde; yer dolgu ışığının sürücüsü basit ifade."""
         import bpy
 
@@ -385,9 +533,12 @@ class TestYK38Scene(unittest.TestCase):
         from ucav.blender import animation, studio
         from ucav.blender import materials as M
         animation.clear()                                       # ölçümler dinlenme pozunda
-        self.assertAlmostEqual(studio.VIEWS["side"].el, P.WING_DIHEDRAL)
-        self.assertTrue(studio.VIEWS["side"].ortho)
-        self.assertEqual(bpy.data.objects["U_Cam_side"].data.type, "ORTHO")
+        side = studio.VIEWS["side"]
+        self.assertLessEqual(side.el, 1.0)
+        self.assertGreater(side.el, 0.0)
+        self.assertFalse(side.ortho)
+        self.assertEqual(bpy.data.objects["U_Cam_side"].data.type, "PERSP")
+        self.assertEqual(side.controls.get("nav_lights"), 0.0)
         self.assertAlmostEqual(studio.EXPOSURE["pist"], -0.4)
         self.assertAlmostEqual(bpy.context.scene.view_settings.exposure, -0.4, places=3)
         st = M.panel_stations()
@@ -417,6 +568,93 @@ class TestYK38Scene(unittest.TestCase):
         self.assertTrue(len(drv))
         for fc in drv:
             self.assertTrue(fc.is_valid and fc.driver.is_valid and fc.driver.is_simple_expression, fc.data_path)
+
+    def _project(self, cam_name: str, pts: np.ndarray, res=(1600, 1000)) -> np.ndarray:
+        """Dünya noktaları → piksel (x sağa, y aşağı) ``cam_name`` kamerasında (objektif kaydırması dahil)."""
+        import bpy
+        from bpy_extras.object_utils import world_to_camera_view
+        from mathutils import Vector
+        sc = bpy.context.scene
+        old = (sc.render.resolution_x, sc.render.resolution_y, sc.render.resolution_percentage)
+        sc.render.resolution_x, sc.render.resolution_y, sc.render.resolution_percentage = res[0], res[1], 100
+        try:
+            cam = bpy.data.objects[cam_name]
+            q = np.array([tuple(world_to_camera_view(sc, cam, Vector(p))) for p in pts])
+        finally:
+            sc.render.resolution_x, sc.render.resolution_y, sc.render.resolution_percentage = old
+        return np.column_stack([q[:, 0] * res[0], (1.0 - q[:, 1]) * res[1], q[:, 2]])
+
+    def test_still_framing(self):
+        """R02/R09: kahraman ve arka-sağ 3/4 görünüşlerinde iki kanat ucu da kadrajın ≥ %3 içinde; yan görünüşte uzak
+        (sancak) kanat sırt çizgisinin üstüne çıkmaz (≤ 3 px @ 1600 px) ve ufuk kadrajın üst %25'inin altında
+        (gökyüzü ≥ %25)."""
+        import bpy
+        from mathutils import Vector
+
+        from ucav.blender import animation, studio
+        animation.clear()
+        bpy.context.view_layer.update()
+        pts = studio.aircraft_points(bpy.context.scene, per_object=800)
+        for view in ("hero", "rear34"):
+            self.assertTrue(studio.VIEWS[view].center, view)
+            q = self._project(f"U_Cam_{view}", pts)
+            self.assertGreaterEqual(q[:, 0].min() / 1600.0, 0.025, view)
+            self.assertLessEqual(q[:, 0].max() / 1600.0, 0.975, view)
+            self.assertGreaterEqual(q[:, 1].min() / 1000.0, 0.0, view)
+            self.assertLessEqual(q[:, 1].max() / 1000.0, 1.0, view)
+        # yan: sütun başına uzak kanadın tepesi gövde tepesinin altında
+        far = np.vstack([self._world_verts(bpy.data.objects[n]) for n in
+                         ("U_WingCenter_R", "U_WingOuter_R", "U_Tip_R", "U_FlapIn_R", "U_FlapOut_R", "U_Aileron_R")])
+        fus = self._world_verts(bpy.data.objects["U_Fuselage"])
+        qf, qw = self._project("U_Cam_side", fus), self._project("U_Cam_side", far)
+        cols = np.floor(qf[:, 0] / 8.0).astype(int)
+        top = {}
+        for c, y in zip(cols, qf[:, 1]):
+            top[c] = min(top.get(c, 1e9), y)
+        above = [top[c] - y for c, y in zip(np.floor(qw[:, 0] / 8.0).astype(int), qw[:, 1]) if c in top]
+        self.assertTrue(above)
+        self.assertLessEqual(max(above), 3.0)
+        cam = bpy.data.objects["U_Cam_side"]
+        fwd = cam.matrix_world.to_3x3() @ Vector((0.0, 0.0, -1.0))
+        h = Vector((fwd.x, fwd.y, 0.0)).normalized() * 3000.0 + cam.matrix_world.translation
+        h.z = cam.matrix_world.translation.z
+        y_hor = self._project("U_Cam_side", np.array([tuple(h)]))[0, 1] / 1000.0
+        self.assertGreater(y_hor, 0.25)
+        self.assertLess(y_hor, 0.6)
+
+    def test_material_look_values(self):
+        """R03/R08/R10/R12: pervane diski açık pus (yumuşak, soluk uç halkası); taret pencerelerinde tam parlak
+        kaplama ve ``nose`` görünümünde ufku yansıtan taret açısı; füme kapakta sert vernik; standart şemada üst/alt
+        parlaklık oranı ≥ 1,5 (karşı gölge), taktik üst boya koyu (L* < 30); çim şeritleri düşük genlikli."""
+        import bpy
+
+        from ucav import params as P
+        from ucav.blender import studio
+        from ucav.blender import materials as M
+
+        def lum(rgb):
+            return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+        prof = M.DISC_PROFILE
+        self.assertLessEqual(prof["tip"] / prof["blade"], 1.25)
+        self.assertGreaterEqual(prof["fade_m"], 0.010)
+        self.assertGreaterEqual(M.DISC_TIP_MIX, 0.5)
+        self.assertGreater(lum(P.MATERIALS["UM_PropDisc"].rgb_linear), 0.25)          # açık pus, koyu duman değil
+        glass = bpy.data.materials["UM_SensorGlass"].node_tree.nodes
+        coats = [n.inputs["Coat Weight"].default_value for n in glass if n.type == "BSDF_PRINCIPLED"]
+        self.assertEqual(len(coats), 2)
+        self.assertTrue(all(c >= 0.99 for c in coats))
+        self.assertGreaterEqual(studio.VIEWS["nose"].controls["turret_tilt_deg"], -5.0)
+        hatch = [n for n in bpy.data.materials["UM_SmokeHatch"].node_tree.nodes if n.type == "BSDF_PRINCIPLED"]
+        self.assertEqual(len(hatch), 1)
+        self.assertGreaterEqual(hatch[0].inputs["Coat Weight"].default_value, 0.99)
+        self.assertLessEqual(hatch[0].inputs["Coat Roughness"].default_value, 0.04)
+        self.assertGreater(M.SMOKE_TOTAL_T, 0.10)
+        cols = M.livery_colors("standart")
+        self.assertGreaterEqual(lum(cols["UM_SkinBottom"]) / lum(cols["UM_SkinTop"]), 1.5)
+        tk = M.livery_colors("taktik")["UM_SkinTop"]
+        y = lum(tk)
+        self.assertLess(116.0 * y ** (1.0 / 3.0) - 16.0, 30.0)
+        self.assertLessEqual(studio.GRASS_STRIPE, 0.08)
 
     def test_turret_led_independent_of_nav_lights(self):
         """Taret durum halkası ``status_led``'e bağlı: seyrüsefer ışıkları açıkken bile sönük (gerçek EO/IR taretler
@@ -658,6 +896,7 @@ class TestYK38Scene(unittest.TestCase):
             self.assertGreater(r["objects"], 80)
             nodes = [n.get("name", "") for n in J["nodes"]]
             self.assertNotIn("U_PropDisc", nodes)               # karışım malzemeli disk glTF'te opak olurdu
+            self.assertNotIn("U_Cowl_Cavity", nodes)            # yalnız render boşluk diski (R01)
             self.assertFalse([n for n in nodes if n.startswith(("U_Env_", "UP_", "S_"))])
             led = mats.get("UM_StatusLED", {})
             self.assertFalse(any(led.get("emissiveFactor", [0.0])))   # taret LED'i dinlenmede sönük
@@ -697,6 +936,87 @@ class TestYK38PrintSubset(unittest.TestCase):
                 self.assertGreater(_volume(V, T), 0.0, part["key"])
                 ext = V.max(0) - V.min(0)
                 self.assertTrue((ext <= np.array(bed) + 1e-6).all(), part["key"])
+
+
+    def test_cowl_print_parts_clear_engine_and_open(self):
+        """R01, baskı: kaporta parçaları (``print_solid`` kaynağı, motor yasak bölgeleri, Ø92 arka açıklık, çene
+        yarığı) motor ve susturucu zarflarına girmez (BVH çakışması 0, köşe uzaklığı ≥ 4,5 mm), arka açıklık ve çene
+        yarığı boydan boya açık (ışınlar hiçbir UP_ kaporta parçasına çarpmaz)."""
+        import bpy
+        from mathutils import Vector
+        from mathutils.bvhtree import BVHTree
+
+        from ucav import params as P
+        from ucav import shapes as S
+        from ucav.blender import printprep
+        if "U_Fuselage" not in bpy.data.objects:
+            from ucav.blender import airframe
+            airframe.build()
+        keys = ["cowl_top", "cowl_cheek_L", "cowl_cheek_R", "exhaust_ring", "scuff_pad"]
+        with tempfile.TemporaryDirectory() as td:                # "cowl" tarifi beş itki parçasını birlikte kurar
+            R = printprep.build_print_parts(bed=(256, 256, 256), out_dir=td, only=["cowl"], verify=0)
+        self.assertTrue(R["all_manifold"])
+        self.assertTrue(set(keys) <= {p["key"] for p in R["parts"]}, [p["key"] for p in R["parts"]])
+
+        def tree(ob):
+            dg = bpy.context.evaluated_depsgraph_get()
+            ev = ob.evaluated_get(dg)
+            me = ev.to_mesh()
+            V = [ev.matrix_world @ v.co for v in me.vertices]
+            F = [tuple(p.vertices) for p in me.polygons]
+            ev.to_mesh_clear()
+            return BVHTree.FromPolygons(V, F), np.array([tuple(v) for v in V])
+        envs = {n: tree(bpy.data.objects[n])[0] for n in ("U_Env_Engine", "U_Env_Muffler")}
+        parts = {k: tree(bpy.data.objects[f"UP_{k}"]) for k in keys}
+        hits = {f"{k}~{n}": len(t.overlap(et)) for k, (t, _) in parts.items() for n, et in envs.items()
+                if len(t.overlap(et))}
+        self.assertEqual(hits, {})
+        for k, (_, V) in parts.items():
+            Q = np.column_stack([-V[:, 0], V[:, 1], V[:, 2]])
+            for e in P.engine_envelope():
+                lim = 0.015 if e.name == "muffler" else 0.0045
+                self.assertGreaterEqual(float(printprep._env_distance(e, Q).min()), lim, f"{k}↔{e.name}")
+        d = Vector(P.vec_to_blender((1.0, 0.0, 0.0)))
+        er = P.SPEC["propulsion"]["exhaust_ring"]
+        zc = P.PROP.hub[2]
+        r0, r1 = 0.5 * P.PROP.spinner_d + 0.001, 0.5 * float(er["id_m"]) - 0.001
+        rays = [(2.172, r * math.cos(a), zc + r * math.sin(a)) for r in (r0, 0.5 * (r0 + r1), r1)
+                for a in np.radians(np.arange(0, 360, 15))]
+        V = np.asarray(S.cooling_exit_cutter().verts)
+        w = float(np.abs(V[:, 1]).max()) - 0.004
+        zz = 0.5 * (float(V[:, 2].min()) + float(V[:, 2].max()))
+        rays += [(2.170, y, zz) for y in np.linspace(-0.85 * w, 0.85 * w, 7)]
+        blocked = [p for p in rays if any(t.ray_cast(Vector(P.to_blender(*p)), d, 0.05)[0] is not None
+                                          for t, _ in parts.values())]
+        self.assertEqual(blocked, [])
+
+
+class TestHeatRuleLogic(unittest.TestCase):
+    """Isı kuralı kararı (``printprep.heat_rule_eval``): kural 1 (150 mm içinde LW-PLA yok) ve kural 2 (50 mm içinde
+    Tg < 120 °C yok) ihlali raporlar ve ``ok`` False olur; malzeme kendiliğinden değişmez; spec ataması listelenir."""
+
+    @unittest.skipUnless(HAVE_BPY, "bpy kurulu değil")
+    def test_rules_and_failure(self):
+        from ucav.blender import printprep as PP
+        ok_rows = [{"key": "cowl_cheek_L", "material": "PA-CF", "min_m": 0.0002, "source": "ısı kalkanı"},
+                   {"key": "elevator_1", "material": "LW-ASA", "min_m": 0.0566, "source": "muffler",
+                    "zone": "stab_root_heat"},
+                   {"key": "stab_2a", "material": "LW-PLA", "min_m": 0.164, "source": "susturucu çıkış borusu"}]
+        h = PP.heat_rule_eval(ok_rows)
+        self.assertTrue(h["ok"])
+        self.assertEqual(h["violations"], [])
+        self.assertEqual([a["key"] for a in h["assigned"]], ["elevator_1"])
+        self.assertEqual([x["key"] for x in h["near"]], ["cowl_cheek_L", "elevator_1", "stab_2a"])
+        bad = [{"key": "stab_2a", "material": "LW-PLA", "min_m": 0.120, "source": "muffler"},       # kural 1
+               {"key": "elevator_1", "material": "LW-ASA", "min_m": 0.040, "source": "muffler"},    # kural 2 (95 °C)
+               {"key": "door_L_1", "material": "PETG", "min_m": 0.049, "source": "cylinder"},       # kural 2 (80 °C)
+               {"key": "cowl_top", "material": "PA-CF", "min_m": 0.003, "source": "cylinder"}]      # PA-CF 150 °C: uygun
+        h = PP.heat_rule_eval(bad)
+        self.assertFalse(h["ok"])
+        self.assertEqual(sorted(v["key"] for v in h["violations"]), ["door_L_1", "elevator_1", "stab_2a"])
+        self.assertEqual(next(v for v in h["violations"] if v["key"] == "stab_2a")["material"], "LW-PLA")
+        self.assertGreaterEqual(PP.HEAT_TG_RULE["tg_min_c"], 120.0)
+        self.assertLessEqual(PP.HEAT_TG_RULE["radius_m"], 0.050 + 1e-9)
 
 
 class TestYK38PrintOutputs(unittest.TestCase):
@@ -751,6 +1071,20 @@ class TestYK38PrintOutputs(unittest.TestCase):
                 self.assertGreaterEqual(float(part["heat"]["min_mm"]), 150.0, part["key"])
         self.assertTrue(S["heat_rule"]["ok"])
         self.assertEqual(S["heat_rule"].get("violations", []), [])
+        hr = S["heat_rule"]                                     # R05: Tg kuralı — 50 mm içinde Tg ≥ 120 °C
+        for x in hr["near"]:
+            if float(x["min_mm"]) < float(hr["tg_rule"]["radius_mm"]):
+                self.assertGreaterEqual(float(x["tg_c"]), float(hr["tg_rule"]["tg_min_c"]), x["key"])
+        self.assertTrue({"stab_1", "elevator_1"} <= {a["key"] for a in hr["assigned"]})
+        near = {x["key"]: x for x in hr["near"]}                # R01: kaporta parçaları motora/susturucuya değmez
+        for k in ("cowl_top", "cowl_cheek_L", "cowl_cheek_R", "exhaust_ring", "scuff_pad"):
+            self.assertIn(k, near)
+            self.assertGreater(float(near[k]["min_mm"]), 0.0, k)
+            for src, mm in (near[k].get("by_source_mm") or {}).items():
+                if src in ("cylinder", "spark_cap", "crankcase", "carb", "front_bearing"):
+                    self.assertGreaterEqual(float(mm), 4.5, f"{k}↔{src}")
+                if src == "muffler":
+                    self.assertGreaterEqual(float(mm), 15.0, f"{k}↔{src}")
         self.assertTrue(S.get("load_paths"))
         self.assertTrue(S.get("hinges"))
         for name, h in S["hinges"].items():

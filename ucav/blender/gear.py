@@ -93,10 +93,8 @@ LINK_ANGLE_MAIN = 32.0            # ana tork bağlantısı: ileriden içe doğru
 LINK_T = 0.0030                   # bağlantı plakası kalınlığı (pim ekseni boyunca). varsayım
 LINK_MAIN = {"ell": 0.032, "r_lug": 0.0080, "knee_off": 0.0018, "w_pin": 0.0022, "w_knee": 0.0020}   # varsayım
 LINK_NOSE = {"ell": 0.037, "r_lug": 0.0080, "z_u": -0.082, "w_pin": 0.0030, "w_knee": 0.0024}        # varsayım (bacak 0,196)
-TYRE = {"bead": 0.70, "rm": 0.32, "p_out": 1.85, "groove_a": 0.30, "groove_w": 0.0012, "groove_d": 0.0009}
-                                  # lastik kesiti: topuk eni oranı, en geniş yerin kesit yüksekliğindeki yeri, sırt
-                                  # süperelips üssü, oluk konumu (yarı ene oran)/eni/derinliği. varsayım
-TYRE_CLEAR = 0.0025               # toplu tekerin kuyu tavanına en az payı (AERO-06: ≥ 2,5 mm; lastik eni buna göre). varsayım
+TYRE = S.TYRE_PROFILE             # lastik kesiti (shapes'te: numpy testleri de aynı eğriyi kullanır). varsayım
+TYRE_CLEAR = S.TYRE_CLEAR         # toplu tekerin kuyu tavanına en az payı (AERO-06: ≥ 2,5 mm; lastik eni buna göre). varsayım
 DOOR_BRACKET_Z = (0.035, 0.085)   # bacak kapağı braketleri (pivottan bacak boyunca). varsayım
 
 
@@ -258,39 +256,24 @@ class LegGeom:
         return (W + self.pivot_b).reshape(q0.shape)
 
     @property
+    def y_w(self) -> float:
+        """Teker orta düzleminin bacak çerçevesindeki Y'si: ana takımda pivot hattından dışa ``axle_out`` (R14)."""
+        return self.sg * float(getattr(self.leg, "axle_out", 0.0))
+
+    @property
     def axle_l(self) -> np.ndarray:
-        return np.array([-self.trail, 0.0, -self.L])
+        return np.array([-self.trail, self.y_w, -self.L])
 
 
 def tyre_half_width_factor(r, R: float, r_rim: float) -> np.ndarray:
-    """Lastik kesitinin ``r`` yarıçapındaki yarı eninin en büyük yarı ene oranı (``tyre_profile`` ile aynı eğri)."""
-    r = np.asarray(r, float)
-    Ab = TYRE["bead"]
-    r_m = r_rim + TYRE["rm"] * (R - r_rim)
-    B, p = R - r_m, TYRE["p_out"]
-    lo = Ab + (1 - Ab) * np.sqrt(np.clip(1 - ((r_m - r) / (r_m - r_rim)) ** 2, 0, 1))
-    hi = np.clip(1 - np.clip((r - r_m) / B, 0, 1) ** p, 0, 1) ** (1 / p)
-    return np.where(r < r_m, lo, hi)
+    """Lastik kesitinin ``r`` yarıçapındaki yarı eninin en büyük yarı ene oranı (``shapes.tyre_half_width_factor``)."""
+    return S.tyre_half_width_factor(r, R, r_rim)
 
 
-@__import__("functools").lru_cache(maxsize=None)
 def tyre_fit_width(name: str) -> float:
-    """Ana tekerin toplu konumda kuyuya sığan en büyük lastik eni (m): kuyu tavanı (``shapes.well_roof_z`` − astar)
-    tekerin orta düzleminden ``r`` yarıçapında her yönde ``hw(r) + TYRE_CLEAR``'dan yüksek olmalı. Tavan kanat üst
-    derisiyle sınırlandığı arka-iç köşede eni daraltır; airframe tavanı yükseltirse params değerine döner."""
-    g = P.gear_leg(name)
-    c = np.asarray(g.axle_retracted, float)
-    roof = S.well_roof_z(name)
-    liner = S.BAY_INSET + S.BAY_WALL
-    rr = np.linspace(0.5 * g.hub_d, g.wheel_r, 24)
-    th = np.linspace(0.0, 2 * math.pi, 96, endpoint=False)
-    best = g.wheel_w
-    for r in rr:
-        avail = min(roof(c[0] + r * math.cos(t), c[1] + r * math.sin(t)) - liner - c[2] for t in th)
-        f = float(tyre_half_width_factor(r, g.wheel_r, 0.5 * g.hub_d))
-        if f > 1e-6:
-            best = min(best, 2.0 * (avail - TYRE_CLEAR) / f)
-    return float(math.floor(best * 2000.0) / 2000.0)          # 0,5 mm'ye aşağı yuvarla
+    """Ana tekerin toplu konumda kuyuya sığan en büyük lastik eni (m) — ``shapes.tyre_fit_width`` (numpy; tavan
+    kanat üst derisiyle sınırlı arka-iç köşede; R14 ile spec 26 mm sığar)."""
+    return S.tyre_fit_width(name)
 
 
 def leg_geom(name: str) -> LegGeom:
@@ -456,39 +439,56 @@ def wheel(name: str, lg: LegGeom, brake_side: float = 0.0) -> S.MeshData:
 # Bacak parçaları (bacak çerçevesinde)
 # =====================================================================================================
 def _fork_arm(lg: LegGeom, side: float, origin_z: float) -> S.MeshData:
-    """Çatal kolu: taçtan aksa daralan levha (bacak XZ düzleminde), ``side`` (±1) tarafta."""
+    """Çatal kolu: taçtan aksa daralan levha (bacak XZ düzleminde), ``side`` (±1) tarafta (teker orta düzlemi
+    ``lg.y_w`` etrafında)."""
     zc, za = lg.z["crown_top"] - 0.0010, lg.z["axle"]
     poly = stadium((0.0, zc), (-lg.trail, za), 0.0062, 0.0048, 8)      # çatal ofsetinde geriye eğik
-    y0 = side * (0.5 * lg.W_w + FORK_GAP)
+    y0 = lg.y_w + side * (0.5 * lg.W_w + FORK_GAP)
     y1 = y0 + side * FORK_T
     md = prism("arm", poly, (0, 0, -origin_z), (1, 0, 0), (0, 0, 1), min(-y0, -y1), max(-y0, -y1), M_GEAR, 40.0)
     return md
 
 
 def slider_parts(lg: LegGeom) -> S.MeshData:
-    """``U_GearSlider``: krom kayar boru, çatal tacı, kollar, aks, alt tork bağlantısı kulağı (+ fren tablası).
-    Yerel: orijin = kayar boru ekseninde ``z["slider_top"]`` (bacak çerçevesi yönleri)."""
+    """``U_GearSlider``: krom kayar boru, çatal tacı, kol(lar), aks, alt tork bağlantısı kulağı (+ fren tablası).
+    Burunda iki kollu çatal; ana takımda TEK kollu (konsol) aks — kol ve taç amortisör tarafında (içte), teker dışta
+    (R14: toplu konumda tekerin altında kol kalmaz → kapağa pay; 26 mm lastik). Yerel: orijin = kayar boru ekseninde
+    ``z["slider_top"]`` (bacak çerçevesi yönleri)."""
     o = np.array([0.0, lg.y_e, lg.z["slider_top"]])
+    yw = lg.y_w                                         # teker orta düzlemi (ana: pivot hattının dışında, R14)
     zt, zb = lg.z["crown_top"], lg.z["crown_bot"]
     hw = 0.5 * lg.W_w + FORK_GAP + FORK_T
     parts = [cyl("slider", np.array([0, lg.y_e, lg.z["slider_top"]]) - o, np.array([0, lg.y_e, zt + 0.0005]) - o,
                  lg.slider_r, M_STEEL, 28, chamfer=0.0005)]
-    # taç: kollar arası köprü (yuvarlatılmış), kayar boru tabanı (manşon)
-    parts.append(prism("crown", rrect(0.0065, hw, 0.0030), np.array([0, 0, 0]) - o, (1, 0, 0), (0, 1, 0), zb, zt, M_GEAR))
+    # taç: kollar arası köprü (yuvarlatılmış), kayar boru tabanı (manşon). Ana: kol ile amortisör arası blok
+    if lg.is_nose:
+        c_y, h_y, arm_sides = yw, hw, (-1.0, 1.0)
+    else:
+        ib = lg.inboard_y
+        ya_out = yw + ib * hw                               # kolun dış yüzü (içte)
+        yb = lg.y_e - ib * (lg.slider_r + 0.0028)           # amortisör manşonunun karşı yüzü
+        c_y, h_y, arm_sides = 0.5 * (ya_out + yb), 0.5 * abs(ya_out - yb), (ib,)
+    parts.append(prism("crown", rrect(0.0065, h_y, 0.0030), np.array([0, c_y, 0]) - o, (1, 0, 0), (0, 1, 0), zb, zt,
+                       M_GEAR))
     parts.append(cyl("collar", np.array([0, lg.y_e, zt - 0.0010]) - o, np.array([0, lg.y_e, zt + 0.0045]) - o,
                      lg.slider_r + 0.0018, M_GEAR, 28, chamfer=0.0005))
-    for sd in (-1.0, 1.0):
+    for sd in arm_sides:
         md = _fork_arm(lg, sd, 0.0)
         parts.append(_xf(md, None, -o))
-    # aks (gömme uçlu)
+    # aks (gömme uçlu): burunda iki kol arası; anada kol → göbeğin dış yüzü (konsol), dışta somun
     ya = 0.5 * lg.W_w + FORK_GAP + FORK_T
     ax_r = 0.0025 if not lg.is_nose else 0.0020
     xa = -lg.trail
-    parts.append(cyl("axle", np.array([xa, -ya + 0.0002, lg.z["axle"]]) - o, np.array([xa, ya - 0.0002, lg.z["axle"]]) - o,
-                     ax_r, M_STEEL, 16))
-    for sd in (-1.0, 1.0):
-        parts.append(cyl("axcap", np.array([xa, sd * (ya - 0.0001), lg.z["axle"]]) - o,
-                         np.array([xa, sd * (ya + 0.00015), lg.z["axle"]]) - o, ax_r + 0.0008, M_STEEL, 16))
+    if lg.is_nose:
+        ends = [(-1.0, ya), (1.0, ya)]
+    else:                                               # dış uç göbek yüzünde gömme kapakla biter (toplu: kapağa pay)
+        ends = [(lg.inboard_y, ya), (-lg.inboard_y, 0.5 * lg.W_w + FORK_GAP - 0.0002)]
+    (s0_, e0), (s1_, e1) = ends
+    parts.append(cyl("axle", np.array([xa, yw + s0_ * (e0 - 0.0002), lg.z["axle"]]) - o,
+                     np.array([xa, yw + s1_ * (e1 - 0.0002), lg.z["axle"]]) - o, ax_r, M_STEEL, 16))
+    for sd, e in ends:
+        parts.append(cyl("axcap", np.array([xa, yw + sd * (e - 0.0001), lg.z["axle"]]) - o,
+                         np.array([xa, yw + sd * (e + 0.00015), lg.z["axle"]]) - o, ax_r + 0.0008, M_STEEL, 16))
     # alt tork bağlantısı kulağı (tacın üstünde, n yönünde)
     lk = lg.link
     n = lk["n"]
@@ -504,16 +504,16 @@ def slider_parts(lg: LegGeom) -> S.MeshData:
         bs = lg.inboard_y
         A = 0.5 * lg.W_w
         Ab = TYRE["bead"] * A
-        a0, a1 = bs * (Ab - 0.0006), bs * (Ab + 0.0006)
+        a0, a1 = yw + bs * (Ab - 0.0006), yw + bs * (Ab + 0.0006)
         parts.append(cyl("bplate", np.array([0, min(a0, a1), lg.z["axle"]]) - o, np.array([0, max(a0, a1), lg.z["axle"]]) - o,
                          0.0125, M_GEAR, 36, chamfer=0.0003))
-        arm_c = np.array([-0.0065, bs * (Ab + 0.0002), lg.z["axle"] + 0.0080])
+        arm_c = np.array([-0.0065, yw + bs * (Ab + 0.0002), lg.z["axle"] + 0.0080])
         parts.append(_xf(box("barm", np.zeros(3), (0.0020, 0.0006, 0.0085), None, M_GEAR, r=0.0015),
                          np.column_stack([[math.cos(0.6), 0, math.sin(0.6)], [0, 1, 0], [-math.sin(0.6), 0, math.cos(0.6)]]),
                          arm_c - o))
         # fren kablosu (taca kadar)
-        c0 = np.array([-0.0035, bs * (Ab + 0.0002), lg.z["axle"] + 0.0115])
-        c1 = np.array([-0.0050, bs * (hw - 0.0030), zb - 0.0005])
+        c0 = np.array([-0.0035, yw + bs * (Ab + 0.0002), lg.z["axle"] + 0.0115])
+        c1 = np.array([-0.0050, yw + bs * (hw - 0.0030), zb - 0.0005])
         parts.append(cyl("bcable", c0 - o, c1 - o, 0.0006, M_DARK, 8))
     return merge("slider", parts)
 
@@ -903,7 +903,7 @@ def build(scene: bpy.types.Scene | None = None, *, verbose: bool = False) -> dic
         sl["gear_static_compression_m"] = float(lg.leg.static_compression)
         objs[sl.name] = sl
         wh = _mesh_obj(wheel(f"U_GearWheel_{X}", lg, 0.0 if lg.is_nose else lg.inboard_y), f"U_GearWheel_{X}", col)
-        _attach_local(wh, sl, np.array([-lg.trail, -lg.y_e, -lg.L - z0]))
+        _attach_local(wh, sl, np.array([-lg.trail, lg.y_w - lg.y_e, -lg.L - z0]))
         wh["ucav_role"] = "gear_wheel"
         wh["gear_wheel_r_m"] = float(lg.R_w)
         objs[wh.name] = wh

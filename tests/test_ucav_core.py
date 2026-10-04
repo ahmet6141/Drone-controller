@@ -359,7 +359,8 @@ class TestGearPropTurret(unittest.TestCase):
         self.assertGreater(n.axle_retracted[0], n.pivot[0] + 0.18)                 # burun geriye
         self.assertAlmostEqual(l.axle_retracted[1], 0.115, delta=0.001)          # ana içe
         self.assertAlmostEqual(r.axle_retracted[1], -0.115, delta=0.001)
-        self.assertAlmostEqual(l.axle_retracted[2], -0.042, delta=1e-9)
+        ref = P.SPEC["landing_gear"]["reference"]["retracted_main_wheel"]
+        self.assertAlmostEqual(l.axle_retracted[2], float(ref[2]), delta=1e-9)      # R14: aks 3 mm dışa → 3 mm alçak
 
     def test_wheels_fit_wells(self):
         res = sizing.gear_results(sizing.wing_results())
@@ -427,13 +428,197 @@ class TestGeometryFixes(unittest.TestCase):
         cls.S = S
 
     def test_engine_envelopes_inside_cowl(self):
+        """Motor zarflarının kaporta KABUĞUNA 3B payı (R01: dik çene kapanışı, ön dudak ve arka flanş dahil; eski
+        kesit-içi 2B ölçüm arka fincanı ve çeneyi görmüyordu): her motor parçası ≥ 5 mm, susturucu ≥ 15,5 mm."""
         cl = P.SPEC["propulsion"]["engine"]["clearance_m"]
         r = self.S.engine_bay_clearance()
         for part in ("front_bearing", "crankcase", "carb", "cylinder", "spark_cap"):
             self.assertGreaterEqual(r[part], float(cl["cowl"]) - 1e-4, part)
+        self.assertGreaterEqual(r["min_value"], float(cl["cowl"]) - 1e-4)
         self.assertGreaterEqual(r["muffler"], float(cl["muffler_air_gap"]) - 1e-4)
         self.assertGreaterEqual(r["carb_to_firewall"], float(cl["carb_to_firewall"]) - 1e-4)
         self.assertGreaterEqual(r["spinner_to_ring"], 0.005 - 1e-4)
+
+    def test_cowl_shell_no_envelope_overlap(self):
+        """R01: sahne kaportası gerçek kabuktur (kapalı, manifold); hiçbir kabuk üçgeni (köşe + kenar ortası + ağırlık
+        merkezi örnekleri) motor/susturucu zarfının içine girmez (Blender BVH çakışmasının numpy karşılığı); baskı
+        katısı düz kapaklı kapalı katıdır (fincan/taban YOK); koyu boşluk diski yalnız render içindir ve s ≥ 2,19."""
+        S = self.S
+        shell = S.cowl()
+        chk = shell.check()
+        self.assertEqual((chk["boundary"], chk["nonmanifold"], chk["flipped"]), (0, 0, 0))
+        tris = S._tri_array(shell)
+        samples = np.vstack([tris.reshape(-1, 3), tris.mean(1), 0.5 * (tris[:, 0] + tris[:, 1]),
+                             0.5 * (tris[:, 1] + tris[:, 2]), 0.5 * (tris[:, 2] + tris[:, 0])])
+        for part in P.engine_envelope():
+            self.assertFalse(S._inside_env(part, samples).any(), f"kaporta kabuğu {part.name} zarfına giriyor")
+        solid = S.cowl(print_solid=True)
+        self.assertEqual(solid.check()["boundary"], 0)
+        ss, O = S._cowl_grid()
+        self.assertEqual(len(solid.verts), O.shape[0] * O.shape[1])          # yalnız dış yüz halkaları: iç fincan yok
+        s0, s_end = S._cowl_s_range()
+        self.assertAlmostEqual(float(np.asarray(solid.verts)[:, 0].max()), s_end, places=9)
+        cav = np.asarray(S.cowl_cavity().verts)
+        self.assertGreaterEqual(float(cav[:, 0].min()), s_end)
+        for part in P.engine_envelope():
+            self.assertFalse(S._inside_env(part, cav).any(), part.name)
+
+    def test_engine_keepouts_for_print(self):
+        """R01 (baskı): yuvarlak motor yasak bölgeleri kapalı; yüzleri zarfa ≥ pay (5 mm; susturucu 15,5 mm), sahne
+        kabuğuna değmez → printprep bunları UP_cowl_* parçalarından çıkarınca çakışma 0, kabuk kesilmez."""
+        S = self.S
+        cl = P.SPEC["propulsion"]["engine"]["clearance_m"]
+        tris = S._tri_array(S.cowl())
+        shell = np.vstack([tris.reshape(-1, 3), tris.mean(1)])
+        for md, part in zip(S.engine_keepouts(), P.engine_envelope()):
+            c = md.check()
+            self.assertEqual((c["boundary"], c["nonmanifold"], c["flipped"]), (0, 0, 0), md.name)
+            A, h = np.asarray(part.axes, float), np.asarray(part.half, float)
+
+            def dist(Q):
+                q = (Q - np.asarray(part.center)) @ A.T
+                if part.kind == "cyl":
+                    return np.hypot(np.maximum(np.abs(q[:, 0]) - h[0], 0.0),
+                                    np.maximum(np.hypot(q[:, 1], q[:, 2]) - h[1], 0.0))
+                return np.linalg.norm(np.maximum(np.abs(q) - h, 0.0), axis=1)
+            kt = S._tri_array(md)
+            dk = dist(np.vstack([kt.reshape(-1, 3), kt.mean(1)]))
+            need = float(cl["muffler_air_gap"] if part.name == "muffler" else cl["cowl"])
+            self.assertGreaterEqual(float(dk.min()), need, md.name)
+            self.assertGreater(float(dist(shell).min()), float(dk.max()), md.name)
+
+    def test_cooling_exit_open_and_sized(self):
+        """R01: soğutma çıkışı gerçekten açık — arka flanş Ø92 açık, çene yarığı kabuğu boydan boya keser; çıkış alanı
+        (min(lüle, flanş açıklığı) + çene) NACA ağzının ≥ 1,5 katı; ağız ≈ 22 cm² (spec)."""
+        S = self.S
+        ex = S.cooling_exit_check()
+        self.assertTrue(ex["through"], ex)
+        self.assertGreater(ex["min_overlap_m"], 0.002)
+        a = S.cooling_flow_areas()
+        self.assertAlmostEqual(a["inlet"] * 1e4, float(P.SPEC["propulsion"]["intake"]["area_cm2"]), delta=1.5)
+        self.assertGreaterEqual(a["exit"], 1.5 * a["inlet"])
+        self.assertGreaterEqual(a["aft_opening"], a["ring"])                   # dar kesit lüle halkasıdır, motor değil
+        self.assertAlmostEqual(S.cowl_open_r(), 0.5 * float(P.SPEC["propulsion"]["exhaust_ring"]["id_m"]), places=9)
+        # baskı açıklık katısı flanşı boydan boya keser
+        s_end = S._cowl_s_range()[1]
+        op = np.asarray(S.cowl_aft_opening().verts)
+        self.assertLess(float(op[:, 0].min()), s_end - S.COWL_WALL)
+        self.assertGreater(float(op[:, 0].max()), s_end)
+
+    def test_muffler_clear_of_stab(self):
+        """R05: susturucu zarfı stabilize + elevatöre (±25° sapma dahil) ≥ spec ``body_min``; çıkış borusu ve ısı
+        kalkanı ≥ ``outlet_min`` (60 mm); boru kaporta yanağından dışarı çıkar ve aşağı-dışa-geriye bakar."""
+        S = self.S
+        lim = P.SPEC["propulsion"]["muffler"]["stab_clearance_m"]
+        mf = next(p for p in P.engine_envelope() if p.name == "muffler")
+        stab = S.stab_parts()
+        h = P.hinge_line("Elevator", "L")
+        p0, ax = np.asarray(h.p_in), np.asarray(h.p_out) - np.asarray(h.p_in)
+        ax = ax / np.linalg.norm(ax)
+
+        def rot(V, ang):
+            a, r = math.radians(ang), V - p0
+            return p0 + r * math.cos(a) + np.cross(ax, r) * math.sin(a) + np.outer(r @ ax, ax) * (1 - math.cos(a))
+
+        EV = np.asarray(stab["U_Elevator_L"].verts)
+        VS = np.asarray(stab["U_Stab"].verts)
+        V = np.vstack([VS[VS[:, 1] > 0], EV, rot(EV, 25.0), rot(EV, -25.0)])
+        A = np.asarray(mf.axes, float)
+        q = (V - np.asarray(mf.center)) @ A.T
+        d_body = float(np.linalg.norm(np.maximum(np.abs(q) - np.asarray(mf.half), 0.0), axis=1).min())
+        self.assertGreaterEqual(d_body, float(lim["body_min"]) - 1e-4)
+        d_out = float(S.points_tris_distance(V, S._tri_array(S.muffler_pipe())).min())
+        self.assertGreaterEqual(d_out, float(lim["outlet_min"]))
+        p_start, d, t_exit, L = S.muffler_pipe_axis()
+        self.assertGreater(t_exit, 0.005)
+        self.assertGreater(L, t_exit + 0.010)                                 # boru yanaktan ≥ 10 mm dışarı taşar
+        self.assertLess(d[2], -0.5)
+        self.assertGreater(d[0], 0.2)
+        self.assertGreater(d[1], 0.2)
+
+    def test_gear_doors_lip_and_fine_teeth(self):
+        """R06: testere dişi derinliği ≤ 3 mm (36° yanlar); ana ve burun kapaklarının menteşe dışı kenarlarında 2,5 mm
+        dönüş dudağı (kenar kalınlığı okunur)."""
+        S = self.S
+        self.assertLessEqual(P.SAWTOOTH["depth_m"], 0.003 + 1e-9)
+        for name in ("U_Door_L_1", "U_Door_N_1"):
+            d = next(x for x in P.gear_doors() if x.name == name)
+            md = S.gear_door(name).mesh
+            self.assertEqual(md.check()["boundary"], 0, name)
+            V = np.asarray(md.verts)
+            zf = S._skin_z_for_leg(d.leg)
+            t = np.array([z - zf(s, y) for s, y, z in V])
+            self.assertGreater(float(np.sum(np.abs(t - S.DOOR_LIP["t"]) < 2e-4)), 40, name)
+
+    def test_turret_collar_round_with_fillet(self):
+        """R07: yaka ≥ 24 faset; karına iç bükey fileto ile bağlanır (yaka yüzü karın derisine yaklaşırken yarıçap
+        açılır, kenar basamağı yok)."""
+        S = self.S
+        t = P.TURRET
+        self.assertGreaterEqual(int(t.collar_facets), 24)
+        md = S.turret_mount()
+        self.assertEqual(md.check()["boundary"], 0)
+        V = np.asarray(md.verts)
+        r = np.hypot(V[:, 0], V[:, 1])
+        Rb = 0.5 * t.collar_d
+        for a in np.linspace(0, 2 * math.pi, 12, endpoint=False):
+            c, s_ = math.cos(a), math.sin(a)
+            sel = (np.abs(np.arctan2(V[:, 1], V[:, 0]) - math.atan2(s_, c) + math.pi) % (2 * math.pi) - math.pi) < 0.02
+            zb = S._belly_local(t, c, s_, Rb + 0.004)
+            near = sel & (V[:, 2] < zb + 0.0005) & (V[:, 2] > zb - 0.0015)
+            if near.any():
+                self.assertGreater(float(r[near].max()), Rb + 0.002)
+
+    def test_hatch_frame_width(self):
+        """R12: aviyonik kapağı çerçeve bandı 6 mm."""
+        self.assertGreaterEqual(self.S.HATCH_FRAME["w"], 0.006 - 1e-9)
+
+    def test_main_tyre_full_width(self):
+        """R14: spec lastik eni (26 mm) toplu konumda kuyuya sığar — tavana (kanat üst derisiyle sınırlı) ≥ 2,5 mm ve
+        kapalı kapak tavasına ≥ 2,5 mm (teker 3 mm dışa kaçık aksla 3 mm alçak, kanoe tabanı 3 mm derin)."""
+        S = self.S
+        for side in ("L", "R"):
+            g = P.gear_leg(side)
+            self.assertGreaterEqual(S.tyre_fit_width(side), g.wheel_w - 1e-9, side)
+            self.assertGreaterEqual(S.stowed_tyre_door_gap(side), S.TYRE_CLEAR - 1e-4, side)
+            self.assertAlmostEqual(abs(g.contact_static[1]), float(P.SPEC["overall"]["wheel_track_m"]) / 2, delta=1e-6)
+
+    def test_fin_root_bullet_proud(self):
+        """Dikey kökü mermisi dikey kök kesiti ve stabilize uç kesitinden her istasyonda ≥ 1,5 mm taşar (basılabilir)."""
+        S = self.S
+        md = S.fin_root_fairing("L")
+        self.assertEqual(md.check()["boundary"], 0)
+        V = np.asarray(md.verts)
+        y0, z0 = float(P.SPEC["tail"]["fin"]["y_root_m"]), float(P.SPEC["tail"]["fin"]["z_root_m"])
+        fin, stab = P.fin_section(0.0, "L"), P.stab_section(y0)
+        ss = np.linspace(2.16, float(fin[:, 0].max()) - 0.01, 25)
+        need = np.maximum(S._section_half_thickness(fin, ss), S._section_half_thickness(stab, ss))
+        for s, n in zip(ss, need):
+            ring = V[np.abs(V[:, 0] - s) < 0.003]
+            if len(ring):
+                self.assertGreaterEqual(float(np.hypot(ring[:, 1] - y0, ring[:, 2] - z0).max()), n + 0.0015 - 2e-4, s)
+
+    def test_scuff_pad_first_contact(self):
+        """Kaporta altı pabucu (PA-CF, ısıya dayanıklı) kuyruk çarpmasında GERÇEK kaporta ağından (yanak kabartısı
+        dahil), lüle halkası, susturucu borusu ve gövde/NACA dudağından önce değer; dış yüzü kaporta alt yüzünden
+        ``t_m`` kabarık (eski pabuç gövde kesitine göre konduğu için kabartılı kaporta yüzünün içinde kalıyordu)."""
+        S = self.S
+        sp = P.SPEC["propulsion"]["cowl"]["scuff_pad"]
+        self.assertNotEqual(str(sp["material"]).upper(), "TPU")
+        sm = P.gear_leg("L").contact_static[0]
+
+        def ang(md):
+            V = np.asarray(md.verts, float)
+            return float(np.degrees(np.arctan2(V[:, 2] - P.GROUND_Z, V[:, 0] - sm)).min())
+        pad = ang(S.scuff_pad())
+        for nm, md in (("kaporta", S.cowl()), ("lüle", S.exhaust_ring()), ("susturucu borusu", S.muffler_pipe()),
+                       ("gövde", S.fuselage()), ("NACA", S.intake()), ("panjur", S.cowl_louvers())):
+            self.assertLess(pad, ang(md) - 0.05, nm)
+        V = np.asarray(S.scuff_pad().verts, float)
+        t = float(sp["t_m"])
+        low = [z - S.cowl_bottom_z(s, y) for s, y, z in V[::7] if S.cowl_bottom_z(s, y) is not None]
+        self.assertAlmostEqual(min(low), -t, delta=2e-4)                  # aşınma yüzü kaporta yüzünden t aşağıda
+        self.assertTrue(S.scuff_pad().check()["boundary"] == 0)
 
     def test_spine_taut_no_hump(self):
         """Kanattan lüle halkasına sırt çizgisi tek yönlü yükselir (eski 'deve hörgücü' yok), eğim ≤ 8°."""

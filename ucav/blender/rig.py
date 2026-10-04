@@ -59,7 +59,14 @@ Sürülen kanallar (``driver_table()`` tam listeyi verir)
 * Kumanda bağlantıları (``ensure_linkages``; kanatçık, dış flap, irtifa, istikamet × 2): ``U_Horn_*`` boynuz
   (yüzeye bağlı, deliği menteşe hattının dik altında), ``U_ServoArm_*`` servo kolu (servis kapağından çıkar,
   ``rotation_euler.x`` = yüzeyle aynı ifade), ``U_Pushrod_*`` Ø1,6 çelik itme çubuğu + çatallar (servo koluna bağlı,
-  ``rotation_euler.x`` = −aynı ifade → dönmeden öteler). Paralelkenar bağlantı: kol = boynuz vektörü.
+  ``rotation_euler.x`` = −aynı ifade → dönmeden öteler). Paralelkenar bağlantı: kol = boynuz vektörü. Kanat ve
+  stabilizede alt yüzde, dümende dikeyin İÇ yüzündedir (pervane tarafı; ``linkage_face``). Dümende servo kolu
+  30 × 10 × 5 mm boyalı PETG kaportanın (``U_Fairing_Servo_Rudder_L/R``, sabit) altındadır; çubuk kaportanın koyu
+  arka ağzından çıkar (``FAIRED``).
+* Çarpışma taraması ``linkage_clearance_report()``: her bağlantı kendi kumandasının tam aralığında taranır; parçalar
+  birbirine ve yakındaki ağlara BVH ile bakılır, tasarım gereği gömülü parçalar AÇIK izin listesindedir
+  (``LINK_ALLOW``: boynuz tabanı yüzeyde, servo kolu ev sahibi deride/kaporta tabanında, çatal pimleri, kaporta
+  tabanı ve arka ağzı). ``new`` boş olmalıdır; en küçük açıklık ``min_gap_m``'dir.
 
 Ebeveyn kuralı (``normalize_parenting``): ``UCAV`` ağacındaki bütün çocukların ebeveyn ters matrisi birimdir;
 konum ebeveyne göre yereldir, yerel eksenler ``delta_rotation_euler``'dedir (dünya dönüşümü korunur; "Clear Parent
@@ -489,15 +496,31 @@ def ensure_prop_disc() -> bpy.types.Object | None:
 # =====================================================================================================
 # Kumanda bağlantıları: boynuz, servo kolu, itme çubuğu (GEO-01)
 # =====================================================================================================
-LINKAGES = ("Aileron", "FlapOut", "Elevator", "Rudder")    # iç flap: servo yeri baskı planında (P9) açık
+LINKAGES = ("Aileron", "FlapOut", "Elevator", "Rudder")    # iç flap: dış flaba Ø2 bağlayıcı telle bağlı (P9)
 LINK_COL = "UCAV_Surfaces"
 LINK_T = 0.0016                     # boynuz ve servo kolu plaka kalınlığı (G10 / naylon). varsayım
 HORN_OUT = {"wing": 0.011, "stab": 0.009, "fin": 0.009}     # boynuz deliği, yüzey derisinin dışında (m). varsayım
 ARM_OUT = 0.009                     # servo kolu ucu, servo kapağının (ev sahibi deri) en az bu kadar dışında. varsayım
+ARM_TIP_R = 0.0021                  # servo kolu uç yarıçapı (m)
 ROD_R = 0.0008                      # Ø1,6 mm çelik itme çubuğu
 SERVO_X_C = {"wing": 0.465, "stab": 0.36, "fin": 0.40}      # servo (servis kapağı) merkezi, veter oranı. varsayım
 _SERVO_Y_DEFAULT = {"Aileron": 1.30, "FlapOut": 0.68, "Elevator": 0.17, "Rudder": 0.10, "FlapIn": 0.20}
 _KIND = {"Aileron": "wing", "FlapOut": "wing", "FlapIn": "wing", "Elevator": "stab", "Rudder": "fin"}
+# Servo kolu kaportası (R11): dümende servo kolu dikeyin İÇ yüzünde (pervane tarafı) boyalı PETG bir kabarcığın
+# altındadır; çubuk kaportanın arka ağzından çıkar. Kaportalı bağlantıda kol ve boynuz kısalır (kol ucu kaporta
+# tepesinin altında kalır), çubuk deriye yakın gider; servo ucunda çatal yerine Z-büküm (kaporta altında), boynuz
+# tabanı menteşenin 4,5 mm arkasından başlar. (boy veter yönünde, en menteşe yönünde, yükseklik deri üstü), m.
+# Yükseklik 5 mm: 4 mm'de 1:1 paralelkenarın kolu/boynuzu 11,4 mm'ye iner ve ±22°'de boynuz dikeyin firar kenarı
+# dudağına, çubuk servo yarığında deriye değer (linkage_clearance_report ile ölçüldü); 5 mm'de ikisi de açıkta kalır.
+FAIRED = {"Rudder": (0.030, 0.010, 0.005)}
+FAIRING_FWD = 0.010                 # kaporta servo milinin bu kadar önünden başlar (m); kol ±25°'de içeride kalır
+FAIRING_SINK = 0.0006               # kaporta tabanı deriye gömülü (yapıştırma payı, m)
+FAIRING_WALL = 0.0006               # kol ucu ile kaporta tepesi arası en az (m)
+HORN_OUT_FAIRED = 0.0035            # kaportalı bağlantıda boynuz deliği deri üstünde en az (m)
+HORN_BASE_U = (0.0025, 0.011, 0.020)          # boynuz tabanı noktaları, menteşeden geriye (m)
+HORN_BASE_U_FAIRED = (0.0045, 0.012, 0.020)   # kısa boynuzda taban geride: ±22°'de dikey dudağından uzak
+HORN_PAD_R = {False: 0.0026, True: 0.0024}    # boynuz delik çevresi yarıçapı (kaportasız / kaportalı)
+FAIRING_MATS = ("UM_SkinTop", "UM_Seal")                    # gövde (dikeyle aynı boya), arka ağız (koyu yarık)
 
 
 def _servo_stations() -> dict[str, float]:
@@ -583,10 +606,38 @@ def linkage_names(name: str, side: str) -> tuple[str, str, str]:
     return f"U_Horn_{name}_{side}", f"U_ServoArm_{name}_{side}", f"U_Pushrod_{name}_{side}"
 
 
+def fairing_name(name: str, side: str) -> str:
+    """Servo kolu kaportasının nesne adı (yalnız ``FAIRED`` yüzeylerde kurulur)."""
+    return f"U_Fairing_Servo_{name}_{side}"
+
+
+def _fairing_stations():
+    """Kaporta boyuna (t, 0 = burun … 1 = arka ağız) ve enine (v, −1 … 1) örnek noktaları: burun bölgesinde
+    kosinüs sıklaştırması."""
+    import numpy as np
+    tn = 0.32
+    t = np.unique(np.r_[tn * (1.0 - np.cos(np.linspace(0.0, 0.5 * math.pi, 9))), np.linspace(tn, 1.0, 13)])
+    return t, np.linspace(-1.0, 1.0, 15)
+
+
+def _fairing_profile(t: float) -> tuple[float, float]:
+    """(en oranı, yükseklik oranı): yuvarlak burun (t < 0,32), düz orta, arkada hafif daralan ağız."""
+    tn, ta = 0.32, 0.80
+    f = math.sqrt(max(0.0, 1.0 - (1.0 - t / tn) ** 2)) if t < tn else 1.0
+    pw = ph = max(f, 0.10)
+    if t > ta:
+        q = (t - ta) / (1.0 - ta)
+        pw *= 1.0 - 0.08 * q * q
+        ph *= 1.0 - 0.10 * q * q
+    return pw, ph
+
+
 def linkage_geometry(name: str, side: str) -> dict | None:
     """Paralelkenar bağlantı ölçüleri (kumanda yüzeyi çerçevesinde, orijin menteşe ortası, X menteşe, Y geriye):
     boynuz deliği H = (x, 0, s·d), servo mili S = (x, −L, 0), servo kolu = boynuz vektörü (0, 0, s·d) → çubuk
-    dönmeden öteler (kol ve yüzey aynı açıyla döner). ``s`` = dışa yön (+1 kanat/stabilize altı, dikeyde içe)."""
+    dönmeden öteler (kol ve yüzey aynı açıyla döner). ``s`` = dışa yön (+1 kanat/stabilize altı, dikeyde içe).
+    ``FAIRED`` yüzeyde ``d`` kısalır (kol ucu kaporta tepesinin altında) ve ``fairing`` kaporta ölçülerini, deri
+    yüksekliği ızgarasını taşır; değilse ``fairing`` = None."""
     import numpy as np
     from mathutils import Matrix, Vector
     from mathutils.bvhtree import BVHTree
@@ -617,11 +668,28 @@ def linkage_geometry(name: str, side: str) -> dict | None:
     w_servo = _skin_w(tg_h, M_f, x, -L, s_z)
     if w_hinge is None or w_servo is None:
         return None
-    d = max(w_hinge + HORN_OUT[kind], w_servo + ARM_OUT)
-    base = [(u, (_skin_w(tg_s, M_f, x, u, s_z) or w_hinge) - 0.0012) for u in (0.0025, 0.011, 0.020)]
-    return {"name": name, "side": side, "kind": kind, "x": x, "L": L, "d": d, "s": s_z, "frame": F, "origin": O,
-            "M_f": M_f, "host": host.name, "surface": surf.name, "w_hinge": w_hinge, "w_servo": w_servo,
-            "horn_base": base}
+    fair = FAIRED.get(name)
+    if fair is None:
+        d = max(w_hinge + HORN_OUT[kind], w_servo + ARM_OUT)
+    else:                                                    # kol ucu kaporta tepesinin altında, boynuz deri dışında
+        d = max(w_hinge + HORN_OUT_FAIRED, w_servo + fair[2] - FAIRING_WALL - ARM_TIP_R)
+    base = [(u, (_skin_w(tg_s, M_f, x, u, s_z) or w_hinge) - 0.0012)
+            for u in (HORN_BASE_U if fair is None else HORN_BASE_U_FAIRED)]
+    g = {"name": name, "side": side, "kind": kind, "x": x, "L": L, "d": d, "s": s_z, "frame": F, "origin": O,
+         "M_f": M_f, "host": host.name, "surface": surf.name, "w_hinge": w_hinge, "w_servo": w_servo,
+         "horn_base": base, "fairing": None}
+    if fair is not None:
+        # kaporta: servo milinin FAIRING_FWD önünden başlar, boyu fair[0]; deri yüksekliği (w) ızgarada örneklenir.
+        # Yükseklik, kol ucunu (d + uç yarıçapı) en az FAIRING_WALL payla örtecek kadar (gerekirse fair[2]'den büyük)
+        Lf, Wf, Hf = fair
+        Hf = max(Hf, d + ARM_TIP_R + FAIRING_WALL - w_servo)
+        ts, vs = _fairing_stations()
+        u0 = -L - FAIRING_FWD
+        grid = np.array([[_skin_w(tg_h, M_f, x + v * 0.5 * Wf * _fairing_profile(t)[0], u0 + t * Lf, s_z) or w_servo
+                          for v in vs] for t in ts])
+        g["fairing"] = {"length": Lf, "width": Wf, "height": Hf, "u0": u0, "u1": u0 + Lf, "t": ts, "v": vs,
+                        "w": grid, "name": fairing_name(name, side)}
+    return g
 
 
 def _link_mesh_parts(g: dict):
@@ -629,25 +697,60 @@ def _link_mesh_parts(g: dict):
     import numpy as np
     from . import gear as GR
     d, L, s = g["d"], g["L"], g["s"]
+    faired = g.get("fairing") is not None
     ey, ez = np.array([0.0, 1.0, 0.0]), np.array([0.0, 0.0, s])
     t2 = 0.5 * LINK_T
-    # boynuz: deri tabanı (1,2 mm gömülü) + delik çevresinde Ø5,2 mm uç → dışbükey levha; orijin delik
+    # boynuz: deri tabanı (1,2 mm gömülü) + delik çevresinde Ø5,2 (kaportalıda Ø4,8) mm uç → dışbükey levha;
+    # orijin delik
+    rp = HORN_PAD_R[faired]
     pts = [(u, w - d) for u, w in g["horn_base"]]
-    pts += [(0.0026 * math.cos(a), 0.0026 * math.sin(a)) for a in np.linspace(0.0, 2 * math.pi, 16, endpoint=False)]
+    pts += [(rp * math.cos(a), rp * math.sin(a)) for a in np.linspace(0.0, 2 * math.pi, 16, endpoint=False)]
     horn = GR.prism("horn", _convex_hull(pts), np.zeros(3), ey, ez, -t2, t2, "UM_Accent", 40.0)
     # servo kolu: mil göbeği (r 3 mm) → uç (r 2,1 mm), orijin mil
-    arm = GR.merge("arm", [GR.prism("arm", GR.stadium((0.0, 0.0), (0.0, d), 0.0030, 0.0021, 8), np.zeros(3), ey,
+    arm = GR.merge("arm", [GR.prism("arm", GR.stadium((0.0, 0.0), (0.0, d), 0.0030, ARM_TIP_R, 8), np.zeros(3), ey,
                                     ez, -t2 - 0.0002, t2 + 0.0002, "UM_Carbon", 40.0),
                            GR.cyl("spline", (-0.0030, 0.0, 0.0), (0.0030, 0.0, 0.0), 0.0019, "UM_Steel", 16)], 40.0)
-    # çubuk: Ø1,6 çelik + iki uçta çatal (klevis); orijin servo kolu ucu, çubuk +Y (geriye) boyunca L
-    rod = GR.merge("rod", [GR.cyl("rod", (0.0, 0.0028, 0.0), (0.0, L - 0.0028, 0.0), ROD_R, "UM_Steel", 10),
-                           GR.box("clevis_a", (0.0, 0.0, 0.0), (0.0018, 0.0030, 0.0019), None, "UM_Accent", 0.0006),
-                           GR.box("clevis_b", (0.0, L, 0.0), (0.0018, 0.0030, 0.0019), None, "UM_Accent", 0.0006)],
-                   40.0)
+    # çubuk: Ø1,6 çelik + boynuz ucunda çatal (klevis); servo ucunda çatal ya da (kaportalı) kol deliğinden geçen
+    # Z-büküm. Orijin servo kolu ucu, çubuk +Y (geriye) boyunca L
+    if faired:
+        end_a = [GR.cyl("rod", (0.0, 0.0004, 0.0), (0.0, L - 0.0028, 0.0), ROD_R, "UM_Steel", 10),
+                 GR.cyl("zbend", (-0.0022, 0.0, 0.0), (0.0022, 0.0, 0.0), ROD_R, "UM_Steel", 10)]
+    else:
+        end_a = [GR.cyl("rod", (0.0, 0.0028, 0.0), (0.0, L - 0.0028, 0.0), ROD_R, "UM_Steel", 10),
+                 GR.box("clevis_a", (0.0, 0.0, 0.0), (0.0018, 0.0030, 0.0019), None, "UM_Accent", 0.0006)]
+    rod = GR.merge("rod", end_a + [GR.box("clevis_b", (0.0, L, 0.0), (0.0018, 0.0030, 0.0019), None, "UM_Accent",
+                                          0.0006)], 40.0)
     return horn, arm, rod
 
 
-def _link_object(name: str, md, col, parent, location, delta_euler=(0.0, 0.0, 0.0)):
+def _fairing_mesh(g: dict):
+    """Servo kolu kaportası (kapalı katı): orijin servo mili (servo kolu ile aynı çerçeve: X menteşe yönü, Y geriye,
+    Z ``s`` ile dışa). Taban deriyi ``FAIRING_SINK`` gömülü izler; kesit süperelips (en × yükseklik), burun yuvarlak,
+    arka uç koyu ağız (``UM_Seal``) — çubuk buradan çıkar."""
+    import numpy as np
+    from .. import shapes as S
+    fr = g["fairing"]
+    L, s = g["L"], g["s"]
+    mb = S.MeshBuilder(fr["name"], "local")
+    rings = []
+    for i, t in enumerate(fr["t"]):
+        pw, ph = _fairing_profile(float(t))
+        hw = 0.5 * fr["width"] * pw
+        u = fr["u0"] + float(t) * fr["length"]
+        top, base = [], []
+        for j, v in enumerate(fr["v"]):
+            w = float(fr["w"][i, j])
+            bump = fr["height"] * ph * max(0.0, 1.0 - abs(float(v)) ** 2.4) ** (1.0 / 2.4)
+            top.append((float(v) * hw, u + L, s * (w + bump)))
+            base.append((float(v) * hw, u + L, s * (w - FAIRING_SINK)))
+        rings.append(mb.add(np.asarray(top + base[::-1], float)))
+    mb.loft(rings, FAIRING_MATS[0])
+    mb.cap(rings[0], FAIRING_MATS[0], start=True)
+    mb.cap(rings[-1], FAIRING_MATS[1], start=False)
+    return mb.build(40.0)
+
+
+def _link_object(name: str, md, col, parent, location, delta_euler=(0.0, 0.0, 0.0), role: str = "linkage"):
     from mathutils import Matrix, Vector
     from . import util as U
     U.remove_object(name)
@@ -661,15 +764,27 @@ def _link_object(name: str, md, col, parent, location, delta_euler=(0.0, 0.0, 0.
     ob.rotation_mode = "XYZ"
     ob.rotation_euler = (0.0, 0.0, 0.0)
     ob.delta_rotation_euler = tuple(map(float, delta_euler))
-    ob["ucav_role"] = "linkage"
+    ob["ucav_role"] = role
     return ob
+
+
+def linkage_face(g: dict) -> str:
+    """Bağlantının bulunduğu yüz: kanat/stabilizede ``lower``/``upper``, dikeyde ``inboard`` (pervane tarafı) ya
+    da ``outboard`` — ``linkage_geometry`` ölçülerinden (dışa yön = ``s``·çerçeve Z)."""
+    import numpy as np
+    out = g["s"] * np.asarray(g["frame"], float)[:, 2]
+    if g["kind"] != "fin":
+        return "lower" if out[2] < 0 else "upper"
+    fin_y = float(np.asarray(P.to_blender(*P.fin_station(0.1, g["side"]).le), float)[1])
+    return "inboard" if float(out[1]) * fin_y < 0 else "outboard"
 
 
 def ensure_linkages() -> list[dict]:
     """Her kumanda yüzeyi (``LINKAGES``, iki yan) için boynuz (yüzeye bağlı), servo kolu (ev sahibi deriye bağlı,
-    yüzeyle aynı ifadeyle döner) ve itme çubuğu (servo koluna bağlı, ters dönüşle öteler) kurar. Tekrar
-    çağrılabilir. Ölçüleri döndürür."""
+    yüzeyle aynı ifadeyle döner), itme çubuğu (servo koluna bağlı, ters dönüşle öteler) ve ``FAIRED`` yüzeylerde
+    servo kolu kaportası (ev sahibine bağlı, sabit) kurar. Tekrar çağrılabilir. Ölçüleri döndürür."""
     from mathutils import Matrix, Vector
+    from . import util as U
     col = bpy.data.collections.get(LINK_COL) or bpy.data.collections.get("UCAV")
     out = []
     for name in LINKAGES:
@@ -684,8 +799,284 @@ def ensure_linkages() -> list[dict]:
             Mb = _rest_matrix(host).inverted() @ g["M_f"] @ Matrix.Translation(Vector((g["x"], -g["L"], 0.0)))
             arm = _link_object(n_arm, arm_md, col, host, Mb.to_translation(), Mb.to_3x3().to_euler("XYZ"))
             _link_object(n_rod, rod_md, col, arm, (0.0, 0.0, g["s"] * g["d"]))
-            out.append({k: (round(v, 4) if isinstance(v, float) else v) for k, v in g.items()
-                        if k in ("name", "side", "x", "L", "d", "w_hinge", "w_servo", "host")})
+            if g["fairing"] is not None:                     # kol ile aynı yer/çerçeve, sabit (sürücüsüz)
+                _link_object(g["fairing"]["name"], _fairing_mesh(g), col, host, Mb.to_translation(),
+                             Mb.to_3x3().to_euler("XYZ"), role="linkage_fairing")
+            else:
+                U.remove_object(fairing_name(name, side))
+            row = {k: (round(v, 4) if isinstance(v, float) else v) for k, v in g.items()
+                   if k in ("name", "side", "x", "L", "d", "w_hinge", "w_servo", "host")}
+            row["face"] = linkage_face(g)
+            if g["fairing"] is not None:
+                fr = g["fairing"]
+                row["fairing"] = {"name": fr["name"], "size_m": [round(fr["length"], 4), round(fr["width"], 4),
+                                                                 round(fr["height"], 4)]}
+            out.append(row)
+    return out
+
+
+# =====================================================================================================
+# Bağlantı çarpışma taraması (test ve rapor): kumanda yüzeyleri tam aralıkta, açık izin listesiyle
+# =====================================================================================================
+LINK_CONTROL = {"Aileron": "aileron_deg", "FlapIn": "flap_deg", "FlapOut": "flap_deg", "Elevator": "elevator_deg",
+                "Rudder": "rudder_deg"}
+# Tasarım gereği gömülü ya da temaslı parça çiftleri — AÇIK izin listesi: (parça, diğer, bölge, gerekçe).
+# {surface}, {host}, {horn}, {arm}, {rod}, {fairing}: bağlantının kendi nesneleri; {wing}: kanat bağlantısında
+# servo kolunun çıktığı komşu kanat derisi (U_WingCenter/U_WingOuter/U_Tip, aynı yan). Bölge (üçgen çiftlerinin
+# gerçek kesişim noktaları, menteşe çerçevesinde; HEPSİ uymalı): None = her yerde; "fairing" = kaporta taban
+# izdüşümünde (servo yarığı kaportanın
+# altındadır); "fairing_base" = izdüşümde ve deriden en çok 1,5 mm yukarıda (kaporta tabanı); "fairing_mouth" =
+# izdüşümde, kaportanın arka 3,5 mm'sinde (çubuğun çıktığı koyu ağız). Bunların dışındaki her çakışma ``new``'dur.
+LINK_ALLOW: tuple[tuple[str, str, str | None, str], ...] = (
+    ("horn", "{surface}", None, "boynuz tabanı yüzey derisine 1,2 mm gömülü (yapıştırma)"),
+    ("arm", "{host}", None, "servo mili kalınlık ortasında; kol servis kapağı ya da kaporta yarığından çıkar"),
+    ("arm", "{wing}", None, "kanat servo kolu komşu kanat derisindeki aynı yarıktan çıkar"),
+    ("arm", "{rod}", None, "çatal servo kolu ucunda (pim)"),
+    ("arm", "{fairing}", "fairing_base", "kol kaporta tabanındaki yarıktan geçer"),
+    ("rod", "{horn}", None, "çatal boynuz deliğinde (pim)"),
+    ("rod", "{fairing}", "fairing_mouth", "çubuk kaportanın arka ağzından çıkar"),
+    ("rod", "{host}", "fairing", "çubuğun kol ucundaki ilk milimetreleri kaporta altındaki servo yarığında"),
+    ("fairing", "{host}", "fairing_base", "kaporta tabanı deriye 0,6 mm gömülü (yapıştırma)"),
+)
+_SWEEP_SKIP = ("U_Env_", "U_Stand", "UP_", "U_PropDisc")
+
+
+def _world_bvh(ob):
+    """Değerlendirilmiş ağın dünya uzayı BVH'si, köşeleri ve yüzleri."""
+    from mathutils.bvhtree import BVHTree
+    dg = bpy.context.evaluated_depsgraph_get()
+    ev = ob.evaluated_get(dg)
+    me = ev.to_mesh()
+    mw = ev.matrix_world.copy()
+    V = [mw @ v.co for v in me.vertices]
+    F = [tuple(p.vertices) for p in me.polygons]
+    ev.to_mesh_clear()
+    return BVHTree.FromPolygons(V, F), V, F
+
+
+def _overlap_points(A, B, hits, limit: int = 256) -> list:
+    """Kesişen yüz çiftlerinin gerçek kesişim noktaları (dünya): her yüzün kenarlarının öbür yüzü deldiği
+    noktalar (çokgenler yelpaze üçgenlenir). Uzun yüzlerde (ör. çubuk silindiri) yüz merkezi yanıltır; bu
+    noktalar çakışmanın yerini tam verir."""
+    from mathutils import geometry as Gm
+    (_, Va, Fa), (_, Vb, Fb) = A, B
+    pts = []
+    for i, j in hits[:limit]:
+        Pa, Pb = [Va[k] for k in Fa[i]], [Vb[k] for k in Fb[j]]
+        for E, Q in ((Pa, Pb), (Pb, Pa)):
+            tris = [(Q[0], Q[t], Q[t + 1]) for t in range(1, len(Q) - 1)]
+            for e in range(len(E)):
+                p0, p1 = E[e], E[(e + 1) % len(E)]
+                seg = p1 - p0
+                ln = seg.length
+                if ln < 1e-12:
+                    continue
+                for a, b, c in tris:
+                    h = Gm.intersect_ray_tri(a, b, c, seg, p0, True)
+                    if h is not None and (h - p0).length <= ln * (1.0 + 1e-9):
+                        pts.append(h)
+    return pts
+
+
+def _world_aabb(ob, pad: float = 0.0):
+    import numpy as np
+    from mathutils import Vector
+    B = np.array([tuple(ob.matrix_world @ Vector(c)) for c in ob.bound_box])
+    return B.min(0) - pad, B.max(0) + pad
+
+
+def _sweep_values(control: str, steps: int) -> list[float]:
+    lim = {p[0]: (p[2], p[3]) for p in PROPS}[control]
+    import numpy as np
+    vals = sorted(set([round(float(v), 4) for v in np.linspace(lim[0], lim[1], max(2, steps))] + [0.0]))
+    return vals
+
+
+def _edge_samples(V, F, step: float = 0.0005) -> list:
+    """Ağ kenarları boyunca en çok ``step`` aralıklı noktalar (dünya) — uzun kenarlı parçaların açıklığı için."""
+    seen, out = set(), []
+    for f in F:
+        for k in range(len(f)):
+            a, b = f[k], f[(k + 1) % len(f)]
+            e = (min(a, b), max(a, b))
+            if e in seen:
+                continue
+            seen.add(e)
+            pa, pb = V[a], V[b]
+            n = max(1, int((pb - pa).length / step))
+            out += [pa.lerp(pb, i / n) for i in range(n + 1)]
+    return out
+
+
+def linkage_clearance_report(steps: int = 7, names=None) -> dict:
+    """Kumanda bağlantısı çarpışma taraması (``rig.setup`` sonrası; satırlar ``gear.clearance_report`` biçiminde).
+
+    Her bağlantı (``LINKAGES`` × L/R; ``names`` ile daraltılabilir) için kumanda özelliği (``LINK_CONTROL``) kontrol
+    paneli aralığında ``steps`` eşit değerde (+ 0) taranır; sürücü mekanik sınırda keser (ör. dümen ±25 → ±22°).
+    Her değerde bağlantının parçaları (boynuz, servo kolu, çubuk, varsa kaporta) birbirleriyle ve yakındaki bütün
+    ``U_*`` ağlarıyla (zarflar ``U_Env_*``, sehpa, baskı parçaları ve pervane diski hariç) dünya uzayında BVH üçgen
+    kesişimine bakılır. Kesişimin yeri gerçek kesişim noktalarından bulunur; çift ``LINK_ALLOW``'daki bir kurala ve
+    bölgesine uyuyorsa ``known``, uymuyorsa ``new``'dur. Açıklık: boynuz kenarlarının ev sahibi deriye ve çubuk
+    ekseninin (kaporta izdüşümü dışında) ev sahibi ile yüzey derisine en küçük uzaklığı (çubukta − yarıçap).
+
+    Dönüş::
+
+        {"new": [(kontrol, değer, parça, diğer, üçgen_çifti, None), …],      # boş olmalı
+         "known": [(kontrol, değer, parça, diğer, üçgen_çifti, gerekçe), …],
+         "new_detail": [{"pair": …, "value": …, "frame_mm": (x, u, z)}, …],  # menteşe çerçevesinde ortalama nokta
+         "faces": {"Rudder_L": "inboard", "Aileron_L": "lower", …},
+         "gaps": {"Rudder_L": {"m": …, "part": …, "other": …, "value": …}, …}, "min_gap_m": …,
+         "values": {kontrol: [...]}, "rules": LINK_ALLOW}
+
+    ``U_Root`` aksiyonu tarama boyunca ayrılır; kontrol değerleri ve aksiyon sonra geri yüklenir."""
+    import numpy as np
+    from mathutils import Matrix, Vector
+    root = bpy.data.objects[ROOT]
+    ctrls = sorted(set(LINK_CONTROL[n] for n in LINKAGES))
+    saved = {c: float(root.get(c, 0.0)) for c in ctrls}
+    anim = root.animation_data.action if root.animation_data else None
+    links = []
+    for name in tuple(names or LINKAGES):
+        for side in ("L", "R"):
+            g = linkage_geometry(name, side)
+            if g is None:
+                continue
+            own = dict(zip(("horn", "arm", "rod"), linkage_names(name, side)))
+            if g["fairing"] is not None and bpy.data.objects.get(g["fairing"]["name"]) is not None:
+                own["fairing"] = g["fairing"]["name"]
+            if any(bpy.data.objects.get(n) is None for n in own.values()):
+                continue
+            wing = [n.format(s=side) for n in ("U_WingCenter_{s}", "U_WingOuter_{s}", "U_Tip_{s}")] \
+                if g["kind"] == "wing" else []
+            links.append((name, side, g, own, wing))
+    meshes = [o for o in bpy.data.objects if o.type == "MESH" and o.name.startswith("U_")
+              and not o.name.startswith(_SWEEP_SKIP)]
+    out = {"new": [], "known": [], "new_detail": [], "faces": {}, "gaps": {}, "min_gap_m": None, "values": {},
+           "rules": LINK_ALLOW}
+    cache: dict = {}
+
+    def bvh(n: str):
+        """Dünya BVH'si; nesnenin dünya matrisi değişmediyse önceki adımdan (sabit deriler bir kez kurulur)."""
+        ob = bpy.data.objects[n]
+        key = tuple(round(float(x), 9) for row in ob.matrix_world for x in row)
+        if n not in cache or cache[n][0] != key:
+            cache[n] = (key, _world_bvh(ob))
+        return cache[n][1]
+
+    def frame_inv(g):
+        """Dünya → menteşe çerçevesi (dinlenme pozu; ``U_Root`` nerede olursa olsun)."""
+        return g["M_f"].inverted() @ Matrix.Translation(Vector(P.U_ROOT_B)) @ root.matrix_world.inverted()
+
+    def in_footprint(g, q, pad: float = 0.001) -> bool:
+        fr = g["fairing"]
+        return fr is not None and fr["u0"] - pad <= q.y <= fr["u1"] + pad and \
+            abs(q.x - g["x"]) <= 0.5 * fr["width"] + pad
+
+    def region_ok(region, g, pts_f) -> bool:
+        if region is None:
+            return True
+        fr = g["fairing"]
+        if fr is None or not pts_f:
+            return False
+        top = float(np.max(fr["w"])) + 0.0015
+        for q in pts_f:
+            if not in_footprint(g, q):
+                return False
+            if region == "fairing_base" and g["s"] * q.z > top:
+                return False
+            if region == "fairing_mouth" and q.y < fr["u1"] - 0.0035:
+                return False
+        return True
+
+    def rule_for(kind_a, kind_b, name_b, g, own, wing):
+        sub = {"{surface}": [g["surface"]], "{host}": [g["host"]], "{wing}": wing,
+               **{"{%s}" % k: [v] for k, v in own.items()}}
+        for k_part, other, region, why in LINK_ALLOW:
+            if k_part == kind_a and name_b in sub.get(other, []):
+                return region, why
+        if kind_b is not None:                                        # iç çift: ters yönde de ara
+            for k_part, other, region, why in LINK_ALLOW:
+                if k_part == kind_b and own.get(kind_a) in sub.get(other, []):
+                    return region, why
+        return None
+
+    try:
+        if anim is not None:                                          # klip anahtarları denetimi bozmasın
+            root.animation_data.action = None
+        root.update_tag()
+        bpy.context.view_layer.update()
+        for name, side, g, own, wing in links:
+            key = f"{name}_{side}"
+            out["faces"][key] = linkage_face(g)
+            ctl = LINK_CONTROL[name]
+            vals = _sweep_values(ctl, steps)
+            out["values"][ctl] = vals
+            # yakın nesneler: dinlenmede bağlantı kutusunun 4 cm çevresi (kol/boynuz süpürmesi < 1 cm)
+            lo = np.min([_world_aabb(bpy.data.objects[n])[0] for n in own.values()], axis=0) - 0.04
+            hi = np.max([_world_aabb(bpy.data.objects[n])[1] for n in own.values()], axis=0) + 0.04
+            near = [o.name for o in meshes if o.name not in own.values()
+                    and np.all(_world_aabb(o)[0] <= hi) and np.all(_world_aabb(o)[1] >= lo)]
+            inv = {v_: k_ for k_, v_ in own.items()}
+            best = None
+            for v in vals:
+                for c in ctrls:
+                    root[c] = 0.0
+                root[ctl] = float(v)
+                root.update_tag()
+                bpy.context.view_layer.update()
+                # kinematik denetimi: sürücüsüz (dönmeyen) bağlantı sessizce "temiz" görünmesin
+                s_rot = bpy.data.objects[g["surface"]].rotation_euler.x
+                a_rot = bpy.data.objects[own["arm"]].rotation_euler.x
+                if abs(v) > 1e-6 and abs(s_rot) < 1e-9:
+                    raise RuntimeError(f"{g['surface']} {ctl} = {v} ile dönmüyor: sürücü yok (önce rig.setup())")
+                if abs(a_rot - s_rot) > 1e-6:
+                    out["new"].append((ctl, v, own["arm"], g["surface"], 0, None))
+                    out["new_detail"].append({"pair": (own["arm"], g["surface"]), "control": ctl, "value": v,
+                                              "n": 0, "kinematics": f"kol {a_rot:.6f} ≠ yüzey {s_rot:.6f} rad"})
+                T = {n: bvh(n) for n in list(own.values()) + near}
+                Mi = frame_inv(g)
+                kinds = list(own.items())
+                pairs = [(ka, na, nb) for i, (ka, na) in enumerate(kinds) for _, nb in kinds[i + 1:]]
+                pairs += [(ka, na, nb) for ka, na in kinds for nb in near]
+                for ka, na, nb in pairs:
+                    hits = T[na][0].overlap(T[nb][0])
+                    if not hits:
+                        continue
+                    pts_f = [Mi @ p for p in _overlap_points(T[na], T[nb], hits)]
+                    r = rule_for(ka, inv.get(nb), nb, g, own, wing)
+                    tag = r[1] if (r is not None and region_ok(r[0], g, pts_f)) else None
+                    out["known" if tag else "new"].append((ctl, v, na, nb, len(hits), tag))
+                    if tag is None:
+                        m = np.mean([tuple(q) for q in pts_f], axis=0) if pts_f else (float("nan"),) * 3
+                        out["new_detail"].append({"pair": (na, nb), "control": ctl, "value": v, "n": len(hits),
+                                                  "frame_mm": tuple(round(1000 * float(c), 2) for c in
+                                                                    (m[0] - g["x"], m[1], g["s"] * m[2]))})
+                # açıklık: boynuz kenarları ↔ ev sahibi; çubuk ekseni (kaporta izdüşümü dışı) ↔ ev sahibi ve yüzey
+                rod = bpy.data.objects[own["rod"]]
+                axis = [rod.matrix_world @ Vector((0.0, y, 0.0)) for y in np.linspace(0.0028, g["L"] - 0.0028, 48)]
+                axis = [p for p in axis if not in_footprint(g, Mi @ p)]
+                for part, samples, others, r0 in (
+                        ("horn", _edge_samples(*T[own["horn"]][1:]), (g["host"],), 0.0),
+                        ("rod", axis, (g["host"], g["surface"]), ROD_R)):
+                    for o in others:
+                        if o not in T:
+                            continue
+                        for p in samples:
+                            hit = T[o][0].find_nearest(p)
+                            if hit[0] is not None and (best is None or hit[3] - r0 < best["m"]):
+                                best = {"m": float(hit[3] - r0), "part": part, "other": o, "value": v}
+            if best is not None:
+                best["m"] = round(best["m"], 5)
+            out["gaps"][key] = best
+        gl = [b["m"] for b in out["gaps"].values() if b is not None]
+        out["min_gap_m"] = min(gl) if gl else None
+    finally:
+        for c, v in saved.items():
+            root[c] = v
+        if anim is not None:
+            root.animation_data.action = anim
+        root.update_tag()
+        bpy.context.view_layer.update()
     return out
 
 
@@ -905,7 +1296,8 @@ def setup(scene: bpy.types.Scene | None = None, *, reset: bool = False) -> dict:
         driven.add(row["obj"])
         n_ok += 1
     mats = drive_light_materials(scene)
-    viewport_setup(driven | {linkage_names(g["name"], g["side"])[0] for g in links})
+    viewport_setup(driven | {linkage_names(g["name"], g["side"])[0] for g in links}
+                   | {g["fairing"]["name"] for g in links if g.get("fairing")})
     mark_asset()
     embed_bake_text()
     refresh()

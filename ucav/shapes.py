@@ -16,9 +16,14 @@ Kurallar
 
 Ana fonksiyonlar (sol/iskele için ``side="L"``, sağ için ``"R"``):
 
-* Gövde: ``fuselage()``, ``cowl()``, ``exhaust_ring()``, ``intake()``, ``hatch()``, ``stripe(side)``,
-  ``chevron()``, ``cowl_louvers()``, ``muffler_pipe()``, ``scuff_pad()``; halka düzeni ``FUS_RING`` /
+* Gövde: ``fuselage()``, ``cowl()`` (gerçek 1,6 mm kabuk, arkası Ø92 açık; ``cowl(print_solid=True)`` baskı için
+  kapalı katı), ``cowl_cavity()`` (yalnız render koyu boşluk diski), ``exhaust_ring()``, ``intake()``, ``hatch()``,
+  ``stripe(side)``, ``chevron()``, ``cowl_louvers()``, ``muffler_pipe()``, ``scuff_pad()``; halka düzeni ``FUS_RING`` /
   ``fuselage_ring_yz(s)`` (chine pahı ve bant kenarları sabit indislerde).
+* Motor bölmesi (R01/R05): ``engine_bay_clearance()`` (zarfların kabuğa 3B payı), ``cooling_flow_areas()`` (NACA ağzı,
+  lüle, flanş açıklığı, çene yarığı), ``cooling_exit_check()`` (çene yarığı kabuğu boydan boya keser mi),
+  ``cowl_aft_opening()`` / ``cooling_exit_cutter()`` / ``muffler_pipe_hole()`` (baskı delikleri), ``muffler_pipe_axis()``,
+  ``engine_keepouts()`` (baskı kaporta parçalarından çıkarılacak yuvarlak 5 mm / 15,5 mm motor yasak bölgeleri).
 * Taşıyıcı yüzeyler: ``wing_parts(side)`` → ``{"U_WingCenter_L": MeshData, …, "U_FlapIn_L": MeshData, …}``,
   ``stab_parts()``, ``fin_parts(side)``. Kumanda yüzeyleri yuvarlak burunlu, sabit tarafta eş eksenli oyuk ve
   ``params`` menteşe aralığı (1 mm) ile ayrı ağlardır. Kanatta yüzey uç kaburgaları ve boşluk duvarları menteşe
@@ -228,10 +233,12 @@ def _smoothstep(t):
     return P.smoothstep(t)
 
 
-def _window(t, edge: float = 0.3):
-    """[0, 1] aralığında 0 → 1 → 0 yumuşak pencere (kenarlarda ``edge`` genişliğinde smoothstep)."""
+def _window(t, edge: float = 0.3, edge_end: float | None = None):
+    """[0, 1] aralığında 0 → 1 → 0 yumuşak pencere (kenarlarda ``edge`` genişliğinde smoothstep; ``edge_end`` verilirse
+    bitiş kenarı ayrı genişlikte)."""
     t = np.asarray(t, float)
-    return _smoothstep(t / edge) * _smoothstep((1.0 - t) / edge) * ((t >= 0) & (t <= 1))
+    e1 = edge if edge_end is None else edge_end
+    return _smoothstep(t / edge) * _smoothstep((1.0 - t) / e1) * ((t >= 0) & (t <= 1))
 
 
 def _arc(curve: np.ndarray) -> np.ndarray:
@@ -592,8 +599,14 @@ def _ring_normals_yz(yz: np.ndarray) -> np.ndarray:
     return _unit(n)
 
 
+KEEL_BLEND_M = 0.012                     # yanak kabartısı omurga çizgisine (y = 0) bu genişlikte yumuşakça söner: eski sert
+                                        # yan maskesi (y·işaret > 0) sol kabartı karına indiği için kaporta altında,
+                                        # omurgada ≈ 3 mm basamak bırakıyordu (s 2,06–2,19). varsayım
+
+
 def _cheek_offset(s: float, yz: np.ndarray) -> np.ndarray:
-    """Kaporta yanakları: sol susturucu kabartısı, sağ panjurlu yanak (dış normal boyunca yumuşak tümsek)."""
+    """Kaporta yanakları: sol susturucu kabartısı, sağ panjurlu yanak (dış normal boyunca yumuşak tümsek). Kabartı
+    karında omurga çizgisine ``KEEL_BLEND_M`` genişliğinde smoothstep ile söner (basamaksız alt yüz)."""
     cw = _PR["cowl"]
     out = yz.copy()
     nrm = _ring_normals_yz(yz)
@@ -603,10 +616,25 @@ def _cheek_offset(s: float, yz: np.ndarray) -> np.ndarray:
         if not (0.0 < ts < 1.0):
             continue
         tz = (yz[:, 1] - float(c["z_from_m"])) / (float(c["z_to_m"]) - float(c["z_from_m"]))
-        w = float(_window(ts, float(c.get("edge_s", 0.35)))) * _window(tz, float(c.get("edge_z", 0.40))) \
-            * (yz[:, 0] * sg > 0)
+        es = float(c.get("edge_s", 0.35))
+        ez = float(c.get("edge_z", 0.40))
+        keel = _smoothstep(yz[:, 0] * sg / KEEL_BLEND_M)
+        w = float(_window(ts, float(c.get("edge_s_front", es)), float(c.get("edge_s_aft", es)))) \
+            * _window(tz, float(c.get("edge_z_low", ez)), float(c.get("edge_z_high", ez))) * keel
         out += nrm * (w * float(c["bulge_m"]))[:, None]
     return out
+
+
+def cowl_bottom_z(s: float, y: float) -> float | None:
+    """Kaporta DIŞ alt yüzü yüksekliği (yanak kabartıları dahil) ``(s, y)``'de: ``cowl_section_yz`` çokgeninin
+    düşey ``y`` çizgisiyle en alçak kesişimi; kaporta dışında gövde halkası. Kesişim yoksa None."""
+    yz = cowl_section_yz(float(s))
+    a, b = yz, np.roll(yz, -1, axis=0)
+    zs = []
+    for (y0, z0), (y1, z1) in zip(a, b):
+        if (y0 - y) * (y1 - y) <= 0.0 and y0 != y1:
+            zs.append(z0 + (y - y0) / (y1 - y0) * (z1 - z0))
+    return float(min(zs)) if zs else None
 
 
 def cowl_section_yz(s: float) -> np.ndarray:
@@ -635,104 +663,344 @@ def _poly_signed_dist(poly: np.ndarray, pts: np.ndarray) -> np.ndarray:
     return np.asarray(out)
 
 
+# -----------------------------------------------------------------------------------------------------
+# Kaporta (R01): sahnede GERÇEK 1,6 mm kabuk — dış yüz, 3B normal boyunca içe ötelenmiş iç yüz, yangın perdesi
+# düzleminde ön dudak ve arkada lüle halkasının iç çapı kadar AÇIK flanş (soğutma havası çıkışı; motor rulman burnu
+# buradan geçer). Baskı için aynı dış yüzün kapalı katısı (``cowl(print_solid=True)``; printprep kabuğu kendisi
+# oyar, arka açıklığı ``cowl_aft_opening`` ve çene yarığını ``cooling_exit_cutter`` ile delip açar). Koyu "boşluk"
+# görünümü ayrı, yalnız render ağıdır (``cowl_cavity`` → ``U_Cowl_Cavity``; baskı, GLB ve çakışma denetimi dışı).
+# -----------------------------------------------------------------------------------------------------
+COWL_WALL = float(_PR["cowl"]["wall_m"])
+COWL_CAVITY_GAP = 0.0004                 # koyu boşluk diski flanş arka yüzünün bu kadar gerisinde. varsayım
+COWL_CAVITY_R_IN = 0.0230                # koyu disk iç yarıçapı: rulman burnu (Ø32; itki ekseni 5° eğik → halka merkezinden
+                                        # 4,4 mm aşağıda) + 2,5 mm; iç delik spinnerin (Ø64) arkasında kalır. varsayım
+
+
+def cowl_open_r() -> float:
+    """Kaporta arka açıklığının yarıçapı = lüle halkası iç yarıçapı (s_end'de, itki göbeği yüksekliği merkezli)."""
+    return 0.5 * float(_PR["exhaust_ring"]["id_m"])
+
+
+def _cowl_s_range() -> tuple[float, float]:
+    return float(_PR["cowl"]["s_from_m"]), float(_PR["exhaust_ring"]["s_from_m"])
+
+
+@functools.lru_cache(maxsize=1)
+def _cowl_grid() -> tuple[np.ndarray, np.ndarray]:
+    """Kaporta dış yüzü: istasyonlar ``ss`` (K,) ve halkalar ``O`` (K, m, 3) — spec takımı, ``FUS_RING`` düzeni."""
+    s0, s_end = _cowl_s_range()
+    ss = fuselage_s_stations(s0, s_end)
+    O = np.stack([_ring3(float(s), _cheek_offset(float(s), fuselage_ring_yz(float(s)))) for s in ss])
+    return ss, O
+
+
+@functools.lru_cache(maxsize=1)
+def _cowl_inner() -> tuple[np.ndarray, np.ndarray]:
+    """Kaporta iç yüzü: dış yüzün köşe normalleri (3B) boyunca ``COWL_WALL`` içe ötelenmiş noktaları her halka
+    konumunda (j) s boyunca yeniden örneklenir → ``(s_in, I)``; ``I`` (K', m, 3). İlk halka yangın perdesi düzleminde
+    (s0), son halka flanşın iç yüzünde (s_end − et). Dik çene kapanışında (s 2,178–2,186) et normal boyunca 1,6 mm
+    kalır (düzlem içi ötelemede ≈ 0,4 mm'ye inerdi)."""
+    ss, O = _cowl_grid()
+    s0, s_end = _cowl_s_range()
+    t = COWL_WALL
+    K, m, _ = O.shape
+    Ts = np.gradient(O, ss, axis=0)
+    Tr = np.roll(O, -1, axis=1) - np.roll(O, 1, axis=1)
+    n = _unit(np.cross(Ts, Tr))
+    c = O.mean(axis=1, keepdims=True)
+    if float(np.sum(n * (O - c))) < 0.0:                   # dışa bakan normal
+        n = -n
+    Q = O - t * n
+    s_in = np.r_[ss[ss < s_end - t - 1e-6], s_end - t]
+    s_in[0] = s0
+    I = np.empty((len(s_in), m, 3))
+    I[:, :, 0] = s_in[:, None]
+    for j in range(m):
+        qs = np.maximum.accumulate(Q[:, j, 0]) + np.arange(K) * 1e-12
+        I[:, j, 1] = np.interp(s_in, qs, Q[:, j, 1])
+        I[:, j, 2] = np.interp(s_in, qs, Q[:, j, 2])
+    return s_in, I
+
+
+def cowl(print_solid: bool = False) -> MeshData:
+    """``U_Cowl``: PA-CF motor kaportası, yangın perdesi (s 2,045) → lüle halkası önü (2,19), yanak kabartıları.
+
+    * ``print_solid=False`` (sahne/render): gerçek kabuk — dış yüz (gövde boyası), 1,6 mm iç yüz, yangın perdesinde ön
+      dudak ve arkada lüle halkası iç çapı (Ø92) kadar açık flanş. Motor zarfları kabuğun İÇ boşluğundadır (hiçbir
+      zarf kabuk etine girmez; ``engine_bay_clearance``). Panjur ve çene çıkış yarığı booleanları kabuğu deler.
+    * ``print_solid=True`` (baskı kaynağı): aynı dış yüzün düz kapaklı kapalı katısı (iç boşluk/fincan YOK). printprep
+      bunu içe öteleyerek oyar; arka açıklık ``cowl_aft_opening()``, çene yarığı ``cooling_exit_cutter()`` ile delinir."""
+    ss, O = _cowl_grid()
+    s0, s_end = _cowl_s_range()
+    mb = MeshBuilder("U_Cowl")
+    rings = [mb.add(o) for o in O]
+    for k in range(len(rings) - 1):
+        s_a, s_b = ss[k], ss[k + 1]
+        mb.strip(rings[k], rings[k + 1], lambda j, a=s_a, b=s_b: fuselage_mat(a, b, j, band=False))
+    _mark_chine(mb, rings, ss)
+    if print_solid:
+        mb.cap(rings[0], M["pacf"], start=True)
+        mb.cap(rings[-1], M["pacf"], start=False)
+        return mb.build(28.0)
+    t = COWL_WALL
+    zc = P.PROP.hub[2]
+    rh = cowl_open_r()
+    m = O.shape[1]
+    ang = np.arctan2(O[-1][:, 2] - zc, O[-1][:, 1])
+    circ = lambda s: np.column_stack([np.full(m, s), rh * np.cos(ang), zc + rh * np.sin(ang)])
+    h_aft = mb.add(circ(s_end))
+    h_fwd = mb.add(circ(s_end - t))
+    _, I = _cowl_inner()
+    irings = [mb.add(r) for r in I]
+    # kapalı döngü: dış yüz → arka flanş yüzü → açıklık dudağı → flanş iç yüzü → iç yüz (geriye) → ön dudak
+    mb.strip(rings[-1], h_aft, M["pacf"])
+    mb.strip(h_aft, h_fwd, M["pacf"])
+    mb.strip(h_fwd, irings[-1], M["pacf"])
+    for k in range(len(irings) - 1, 0, -1):
+        mb.strip(irings[k], irings[k - 1], M["pacf"])
+    mb.strip(irings[0], rings[0], M["pacf"])
+    for ring in (rings[-1], h_aft, h_fwd, rings[0]):           # flanş ve dudak kenarları keskin
+        for j in range(m):
+            mb.sharp.append((int(ring[j]), int(ring[(j + 1) % m])))
+    return mb.build(28.0)
+
+
+def cowl_aft_opening(fwd: float = 0.004, aft: float = 0.004) -> MeshData:
+    """Baskı kaportasının arka flanşını açan delik katısı (``print_solid`` kabuğundan çıkarılır): itki göbeği
+    yüksekliğinde, s ekseni boyunca Ø92 (lüle halkası iç çapı) silindir, ``s_end − et − fwd`` → ``s_end + aft``."""
+    s0, s_end = _cowl_s_range()
+    zc = P.PROP.hub[2]
+    rh = cowl_open_r()
+    md = lathe(np.array([[s_end - COWL_WALL - fwd, 0.0], [s_end - COWL_WALL - fwd, rh], [s_end + aft, rh],
+                         [s_end + aft, 0.0]]), 72, "U_Cutter_CowlOpening", M["pacf"], "x", space="spec")
+    md.verts = md.verts + np.array([0.0, 0.0, zc])
+    return md.oriented()
+
+
+def cowl_cavity() -> MeshData:
+    """``U_Cowl_Cavity`` — YALNIZ RENDER: lüle halkası deliğinden (spinner çevresi) görünen koyu boşluk. Flanşın
+    ``COWL_CAVITY_GAP`` gerisinde (s ≥ 2,19), Ø46–Ø91 ince mat koyu halka disk; motor zarflarına, baskıya, GLB'ye ve
+    çakışma denetimlerine girmez (sahnede ``ucav_render_only``)."""
+    s0, s_end = _cowl_s_range()
+    zc = P.PROP.hub[2]
+    ro = cowl_open_r() - 0.0004
+    a0 = s_end + COWL_CAVITY_GAP
+    md = lathe(np.array([[a0, COWL_CAVITY_R_IN], [a0, ro], [a0 + 0.0008, ro], [a0 + 0.0008, COWL_CAVITY_R_IN]]), 64,
+               "U_Cowl_Cavity", M["seal"], "x", closed_profile=True, space="spec", smooth_angle=None)
+    md.verts = md.verts + np.array([0.0, 0.0, zc])
+    return md.oriented()
+
+
+# ------------------------------------------------------------------ 3B uzaklık yardımcıları (numpy)
+def _tri_array(md: MeshData) -> np.ndarray:
+    """Ağın üçgenleri (t, 3, 3), spec takımı (n-genler yelpaze ile)."""
+    V = np.asarray(md.verts, float)
+    tris = []
+    for f in md.faces:
+        for i in range(1, len(f) - 1):
+            tris.append((f[0], f[i], f[i + 1]))
+    T = np.asarray(tris, int)
+    return V[T]
+
+
+def points_tris_distance(pts: np.ndarray, tris: np.ndarray, chunk: int = 48, window: float | None = None) -> np.ndarray:
+    """Her noktanın üçgen kümesine en kısa 3B uzaklığı (Ericson, en yakın nokta; vektörel). ``window`` verilirse
+    yalnız s'si nokta öbeğinin ±``window`` aralığına değen üçgenler denenir (hız)."""
+    P3 = np.atleast_2d(np.asarray(pts, float))
+    A, B, C = tris[:, 0], tris[:, 1], tris[:, 2]
+    smin, smax = tris[:, :, 0].min(1), tris[:, :, 0].max(1)
+    order = np.argsort(P3[:, 0])
+    out = np.full(len(P3), np.inf)
+    for i in range(0, len(P3), chunk):
+        idx = order[i:i + chunk]
+        p = P3[idx]
+        if window is not None:
+            sel = (smax >= p[:, 0].min() - window) & (smin <= p[:, 0].max() + window)
+            if not sel.any():
+                continue
+            a, b, c = A[sel], B[sel], C[sel]
+        else:
+            a, b, c = A, B, C
+        ab, ac = b - a, c - a
+        pp = p[:, None, :]
+        ap, bp, cp = pp - a, pp - b, pp - c
+        d1, d2 = (ab * ap).sum(-1), (ac * ap).sum(-1)
+        d3, d4 = (ab * bp).sum(-1), (ac * bp).sum(-1)
+        d5, d6 = (ab * cp).sum(-1), (ac * cp).sum(-1)
+        va, vb, vc = d3 * d6 - d5 * d4, d5 * d2 - d1 * d6, d1 * d4 - d3 * d2
+        with np.errstate(divide="ignore", invalid="ignore"):
+            den = va + vb + vc
+            v = np.where(np.abs(den) > 1e-300, vb / den, 0.0)
+            w = np.where(np.abs(den) > 1e-300, vc / den, 0.0)
+            q = a + ab * v[..., None] + ac * w[..., None]                                    # yüz içi
+            t6 = (d4 - d3) / np.where(np.abs((d4 - d3) + (d5 - d6)) > 1e-300, (d4 - d3) + (d5 - d6), 1.0)
+            m6 = (va <= 0) & ((d4 - d3) >= 0) & ((d5 - d6) >= 0)
+            q = np.where(m6[..., None], b + (c - b) * t6[..., None], q)                      # BC kenarı
+            t5 = d2 / np.where(np.abs(d2 - d6) > 1e-300, d2 - d6, 1.0)
+            m5 = (vb <= 0) & (d2 >= 0) & (d6 <= 0)
+            q = np.where(m5[..., None], a + ac * t5[..., None], q)                          # AC kenarı
+            m4 = (d6 >= 0) & (d5 <= d6)
+            q = np.where(m4[..., None], np.broadcast_to(c, q.shape), q)                     # C köşesi
+            t3 = d1 / np.where(np.abs(d1 - d3) > 1e-300, d1 - d3, 1.0)
+            m3 = (vc <= 0) & (d1 >= 0) & (d3 <= 0)
+            q = np.where(m3[..., None], a + ab * t3[..., None], q)                          # AB kenarı
+            m2 = (d3 >= 0) & (d4 <= d3)
+            q = np.where(m2[..., None], np.broadcast_to(b, q.shape), q)                     # B köşesi
+            m1 = (d1 <= 0) & (d2 <= 0)
+            q = np.where(m1[..., None], np.broadcast_to(a, q.shape), q)                     # A köşesi
+        d = np.sqrt(((pp - q) ** 2).sum(-1)).min(axis=1)
+        out[idx] = np.minimum(out[idx], d)
+    return out
+
+
+def _point_in_poly(poly: np.ndarray, pts: np.ndarray) -> np.ndarray:
+    """2B nokta-çokgen içi testi (ışın sayımı), vektörel."""
+    a = np.asarray(poly, float)
+    b = np.roll(a, -1, axis=0)
+    p = np.atleast_2d(pts)
+    y0, y1 = a[:, 1][None, :], b[:, 1][None, :]
+    cross = (y0 > p[:, 1:2]) != (y1 > p[:, 1:2])
+    with np.errstate(divide="ignore", invalid="ignore"):
+        xs = a[:, 0][None, :] + (p[:, 1:2] - y0) / np.where(cross, y1 - y0, 1.0) * (b[:, 0] - a[:, 0])[None, :]
+    return (np.sum(cross & (xs > p[:, 0:1]), axis=1) % 2) == 1
+
+
+def _ring_at(ss: np.ndarray, R: np.ndarray, s: float) -> np.ndarray:
+    """Halka dizisinden (K, m, 3) ``s``'deki (y, z) halkası (komşu iki halka arasında doğrusal)."""
+    k = int(np.clip(np.searchsorted(ss, s) - 1, 0, len(ss) - 2))
+    f = float(np.clip((s - ss[k]) / max(ss[k + 1] - ss[k], 1e-12), 0.0, 1.0))
+    return (R[k] + f * (R[k + 1] - R[k]))[:, 1:]
+
+
+@functools.lru_cache(maxsize=1)
+def _cowl_tris() -> np.ndarray:
+    return _tri_array(cowl())
+
+
+def cowl_clearance_points(pts: np.ndarray) -> np.ndarray:
+    """Noktaların kaporta kabuğuna 3B payı (m): boşluktaki nokta → en yakın kabuk yüzüne (iç yüz, flanş, dudak)
+    uzaklık (+); kabuk etinin içinde ya da kaportanın dışında → −uzaklık. Flanş/lüle bölgesinde (s ≥ s_end − et) pay
+    = açıklık yarıçapı − eksene uzaklık (nokta açıklıktan geçmeli)."""
+    P3 = np.atleast_2d(np.asarray(pts, float))
+    ss, O = _cowl_grid()
+    s_in, I = _cowl_inner()
+    s0, s_end = _cowl_s_range()
+    zc = P.PROP.hub[2]
+    rh = cowl_open_r()
+    dist = points_tris_distance(P3, _cowl_tris(), window=0.03)
+    out = np.empty(len(P3))
+    for i, p in enumerate(P3):
+        s = float(p[0])
+        if s >= s_end - COWL_WALL:
+            out[i] = rh - math.hypot(p[1], p[2] - zc)
+            continue
+        if s < s0:
+            out[i] = -dist[i]
+            continue
+        in_cavity = bool(_point_in_poly(_ring_at(s_in, I, s), p[1:][None])[0])
+        out[i] = dist[i] if in_cavity else -dist[i]
+    return out
+
+
 def engine_bay_clearance(n: int = 10) -> dict[str, float]:
-    """Motor bölmesi zarf payları (AERO-08): her zarf parçasının kaporta İÇ yüzüne (dış − et) en küçük uzaklığı (m),
-    susturucu için hava boşluğu, karbüratör girişi ile yangın perdesi arka yüzü arası ve dönen parçaların (pervane
-    göbeği/spinner tabanı) lüle halkası arka yüzüne eksenel payı. Lüle halkası bölgesinde (s ≥ halka önü) iç
-    sınır halka iç çapıdır."""
-    cw, er = _PR["cowl"], _PR["exhaust_ring"]
-    wall = float(cw["wall_m"])
-    s_ring = float(er["s_from_m"])
-    hub_z = P.PROP.hub[2]
+    """Motor bölmesi zarf payları (AERO-08, R01): her zarf parçasının (ters DLE-20: rulman burnu, karter, karbüratör,
+    silindir, buji başlığı; susturucu) kaporta KABUĞUNA 3B en küçük payı (m) — iç yüz, dik çene kapanışı, ön dudak ve
+    arka flanş dahil (``cowl_clearance_points``; eski kesit-içi 2B ölçüm dik yüzleri ve arka fincanı görmüyordu).
+    Flanş bölgesinde pay = açıklık (Ø92) yarıçapı − eksene uzaklık. Ayrıca: ``carb_to_firewall``, ``spinner_to_ring``,
+    ``washer_s`` ve ``min_part``/``min_value`` (susturucu hariç en dar zarf)."""
+    er = _PR["exhaust_ring"]
     out: dict[str, float] = {}
-    cache: dict[float, np.ndarray] = {}
     for part in P.engine_envelope():
-        pts = part.surface_points(n)
-        best = 1.0
-        for p in pts:
-            s = round(float(p[0]), 4)
-            if s >= s_ring:
-                d = 0.5 * float(er["id_m"]) - math.hypot(p[1], p[2] - hub_z)
-            else:
-                if s not in cache:
-                    cache[s] = cowl_section_yz(s)
-                d = float(_poly_signed_dist(cache[s], p[1:][None])[0]) - wall
-            best = min(best, d)
-        out[part.name] = best
+        out[part.name] = float(cowl_clearance_points(part.surface_points(n)).min())
     s_fw = float(_F["modules"]["firewall_s_m"]) + float(_F["modules"]["firewall_t_m"])
     carb = next(p for p in P.engine_envelope() if p.name == "carb")
     out["carb_to_firewall"] = float(carb.surface_points(4)[:, 0].min()) - s_fw
     pr = P.PROP
     out["spinner_to_ring"] = (pr.spinner_base_s - SPINNER_BACKPLATE) - float(er["s_to_m"])
     out["washer_s"] = float(P.engine_washer()[0])
+    eng = {k: v for k, v in out.items() if k in ("front_bearing", "crankcase", "carb", "cylinder", "spark_cap")}
+    out["min_part"] = min(eng, key=eng.get)
+    out["min_value"] = eng[out["min_part"]]
     return out
 
 
-COWL_CAVITY = {"r": 0.0455, "s_floor": 2.150, "s_boss": 2.168}   # lüle iç boşluğu (koyu). varsayım
+def _inside_env(part: "P.EnvPart", Q: np.ndarray) -> np.ndarray:
+    """Noktalar (spec, (n, 3)) paketleme zarfının (kutu/silindir) içinde mi."""
+    A = np.asarray(part.axes, float)
+    q = (Q - np.asarray(part.center, float)) @ A.T
+    h = np.asarray(part.half, float)
+    if part.kind == "cyl":
+        return (np.abs(q[:, 0]) <= h[0]) & (np.hypot(q[:, 1], q[:, 2]) <= h[1])
+    return np.all(np.abs(q) <= h, axis=1)
 
 
-def cowl() -> MeshData:
-    """``U_Cowl``: yangın perdesi (2,06) → lüle halkası önü (2,19); yanak kabartıları ve arkada koyu halka
-    çıkış boşluğu (spinner çevresi)."""
-    s0 = float(_PR["cowl"]["s_from_m"])
-    s_end = float(_PR["exhaust_ring"]["s_from_m"])
-    ss = fuselage_s_stations(s0, s_end)
-    mb = MeshBuilder("U_Cowl")
-    rings, yzs = [], []
-    for s in ss:
-        yz = _cheek_offset(s, fuselage_ring_yz(s))
-        yzs.append(yz)
-        rings.append(mb.add(_ring3(s, yz)))
-    for k in range(len(rings) - 1):
-        s_a, s_b = ss[k], ss[k + 1]
-        mb.strip(rings[k], rings[k + 1], lambda j, a=s_a, b=s_b: fuselage_mat(a, b, j, band=False))
-    mb.cap(rings[0], M["skin_bottom"], start=True)
-    # arka: halka boşluğu (iç yarıçap COWL_CAVITY.r) → taban → göbek çıkıntısı
+def cooling_flow_areas(n: int = 161) -> dict[str, float]:
+    """Soğutma havası alanları (m², R01): ``inlet`` = NACA ağzı (boğazda düz tavan − karın eğrisini izleyen dudak, deri +
+    3 mm); ``ring`` = lüle akış alanı (halka iç çapı − spinner tabanı); ``aft_opening`` = kaporta arka açıklığından
+    (Ø92, flanş → halka arka yüzü) geçen en dar SERBEST kesit — açıklık dairesi eksi o düzlemdeki motor zarfları
+    (karter, rulman burnu), ızgara ile; ``chin`` = çene çıkış yarığı akış kesiti (en × yükseklik); ``exit`` =
+    min(ring, aft_opening) + chin; ``ratio`` = exit / inlet."""
+    I = P.intake_spec()
+    s_t = float(I["throat_s"])
+    w, h = 0.5 * float(I["mouth_w_m"]), float(I["mouth_h_m"])
+    zb = _skin_bottom(s_t, 0.0)
+    ys = np.linspace(-w, w, 241)
+    lip = np.array([_skin_bottom(s_t, float(y)) + INTAKE_LIP_T for y in ys])
+    gap = np.clip(zb + h - lip, 0.0, None)
+    inlet = float(np.sum(0.5 * (gap[1:] + gap[:-1]) * np.diff(ys)))
+    er = _PR["exhaust_ring"]
+    ring = math.pi / 4 * (float(er["id_m"]) ** 2 - P.PROP.spinner_d ** 2)
+    s0, s_end = _cowl_s_range()
+    rh = cowl_open_r()
     zc = P.PROP.hub[2]
-    yz = yzs[-1]
-    ang = np.arctan2(yz[:, 1] - zc, yz[:, 0])
-    rc = COWL_CAVITY["r"]
-    circ = lambda s, r: np.column_stack([np.full(len(ang), s), r * np.cos(ang), zc + r * np.sin(ang)])
-    c0 = mb.add(circ(s_end, rc))
-    c1 = mb.add(circ(COWL_CAVITY["s_floor"], rc))
-    c2 = mb.add(circ(COWL_CAVITY["s_floor"], 0.4 * rc))
-    pole = int(mb.add(np.array([[COWL_CAVITY["s_boss"], 0.0, zc]]))[0])
-    mb.strip(rings[-1], c0, M["pacf"])
-    mb.strip(c0, c1, M["pacf"])
-    mb.strip(c1, c2, M["pacf"])
-    mb.fan(pole, c2, M["pacf"], start=False)
-    _mark_chine(mb, rings, ss)
-    return mb.build(28.0)
+    g = np.linspace(-rh, rh, n)
+    Y, Z = np.meshgrid(g, g)
+    disc = (Y ** 2 + Z ** 2) <= rh ** 2
+    cell = (g[1] - g[0]) ** 2
+    parts = P.engine_envelope()
+    free = []
+    for s in np.linspace(s_end - COWL_WALL, float(er["s_to_m"]), 9):
+        Q = np.column_stack([np.full(int(disc.sum()), s), Y[disc], zc + Z[disc]])
+        blk = np.zeros(len(Q), bool)
+        for part in parts:
+            blk |= _inside_env(part, Q)
+        free.append(float((~blk).sum()) * cell)
+    aft_opening = min(free)
+    ce = _PR["cowl"]["cooling_exit"]
+    chin = float(ce["w_m"]) * float(ce["h_m"])
+    ex = min(ring, aft_opening) + chin
+    return {"inlet": inlet, "ring": ring, "aft_opening": aft_opening, "chin": chin, "exit": ex, "ratio": ex / inlet}
+
+
+EXHAUST_RING_GAP_M = 0.0002              # lüle halkası ön yüzü kaporta arka flanşına alın alına (yapıştırma aralığı): eski
+                                        # 2 mm geçme dili flanşla 4,3 cm³ çakışıyordu (baskı montaj denetimi)
 
 
 def exhaust_ring() -> MeshData:
-    """``U_ExhaustRing``: lüle halkası (s 2,19–2,205; dış Ø0,112, iç Ø0,092), arka dudağı yuvarlatılmış."""
+    """``U_ExhaustRing``: lüle halkası (s 2,19–2,205; dış Ø0,112, iç Ø0,092). Ön yüzü kaporta arka flanşına alın alına
+    oturur (``EXHAUST_RING_GAP_M``; çakışma yok), önde 0,4 mm V-oluk (panel çizgisi). Arka dudak her açıda KENDİ dış
+    yarıçapından iç yarıçapa yarım elipsle iner (printprep baskı katısıyla aynı; eski ortalama yarıçaplı daire 45°
+    konumlarında 1–2 mm sivri sırt bırakıyordu)."""
     er = _PR["exhaust_ring"]
     s0, s1 = float(er["s_from_m"]), float(er["s_to_m"])
+    sf = s0 + EXHAUST_RING_GAP_M
     ri = 0.5 * float(er["id_m"])
     zc = P.PROP.hub[2]
     mb = MeshBuilder("U_ExhaustRing")
-    outer_s = [s0 - 0.002, s0 + 0.0012, s0 + 0.004, s1 - 0.006, s1 - 0.0025]
-    shrink = [0.985, 0.992, 1.0, 1.0, 1.0]               # kaportanın içinden başlar; 0,4 mm V-oluk = panel çizgisi
-    yz_end = fuselage_ring_yz(s1)
-    ang = np.arctan2(yz_end[:, 1] - zc, yz_end[:, 0])
-    ro = float(np.mean(np.hypot(yz_end[:, 0], yz_end[:, 1] - zc)))
-    rings = []
+    outer_s = [sf, s0 + 0.0012, s0 + 0.004, s1 - 0.006, s1 - 0.0025]
+    shrink = [0.985, 0.992, 1.0, 1.0, 1.0]               # 0,4 mm V-oluk = panel çizgisi
+    rings, pts = [], None
     for s, f in zip(outer_s, shrink):                   # dış yüz: kaporta ile aynı halka (basamaksız birleşim)
         yz = fuselage_ring_yz(min(max(s, s0), s1))
-        yz = np.column_stack([yz[:, 0] * f, zc + (yz[:, 1] - zc) * f])
-        rings.append(mb.add(np.column_stack([np.full(len(yz), s), yz[:, 0], yz[:, 1]])))
-    yz_last = fuselage_ring_yz(outer_s[-1])
-    ang = np.arctan2(yz_last[:, 1] - zc, yz_last[:, 0])
-    ro = float(np.mean(np.hypot(yz_last[:, 0], yz_last[:, 1] - zc)))
-    # yuvarlak dudak: dış → iç yarım elips (geriye 2,5 mm)
-    lip_c = 0.5 * (ro + ri)
-    lip_r = 0.5 * (ro - ri)
-    for a in np.linspace(0.0, math.pi, 9)[1:]:
+        pts = np.column_stack([np.full(len(yz), s), yz[:, 0] * f, zc + (yz[:, 1] - zc) * f])
+        rings.append(mb.add(pts))
+    ang = np.arctan2(pts[:, 2] - zc, pts[:, 1])
+    ro = np.hypot(pts[:, 1], pts[:, 2] - zc)
+    for a in np.linspace(0.0, math.pi, 9)[1:]:          # yuvarlak dudak: her açıda dış → iç yarım elips (geriye 2,5 mm)
         s = s1 - 0.0025 + 0.0025 * math.sin(a)
-        r = lip_c + lip_r * math.cos(a)
+        r = 0.5 * (ro + ri) + 0.5 * (ro - ri) * math.cos(a)
         rings.append(mb.add(np.column_stack([np.full(len(ang), s), r * np.cos(ang), zc + r * np.sin(ang)])))
-    rings.append(mb.add(np.column_stack([np.full(len(ang), s0 - 0.002), ri * np.cos(ang), zc + ri * np.sin(ang)])))
+    rings.append(mb.add(np.column_stack([np.full(len(ang), sf), ri * np.cos(ang), zc + ri * np.sin(ang)])))
     mb.loft(rings, M["nozzle"])
     mb.strip(rings[-1], rings[0], M["nozzle"])
     return mb.build(40.0)
@@ -1911,7 +2179,7 @@ def _hatch_geom():
 
 HATCH_FACET = {"v_top": 0.46, "d_end": 0.045, "rim": 0.0006}   # üst faset genişliği, uç rampaları, kenar basamağı. varsayım
 HATCH_FRIT = 0.006                       # iç yüzde 6 mm opak siyah "frit" kenar bandı (cep duvarlarını gizler). varsayım
-HATCH_FRAME = {"w": 0.004, "lift": 0.00025, "gap": 0.0004, "n_fast": 12, "d_fast": 0.0022}   # antrasit çerçeve. varsayım
+HATCH_FRAME = {"w": 0.006, "lift": 0.00025, "gap": 0.0004, "n_fast": 12, "d_fast": 0.0022}   # antrasit çerçeve (R12: 4 → 6 mm, üstten okunur). varsayım
 
 
 def hatch() -> MeshData:
@@ -1960,7 +2228,7 @@ def hatch() -> MeshData:
 
 
 def hatch_frame() -> MeshData:
-    """``U_Hatch_Frame``: kapak çevresinde 4 mm antrasit çerçeve bandı (deriye izdüşürülmüş boya kalınlığında ince katı,
+    """``U_Hatch_Frame``: kapak çevresinde 6 mm antrasit çerçeve bandı (deriye izdüşürülmüş boya kalınlığında ince katı,
     kapakla arasında 0,4 mm koyu ayrım çizgisi) ve üzerinde ≈ 60 mm aralıklı 12 adet Ø2,2 mm gömme vida başı."""
     F = HATCH_FRAME
     inner = poly_resample(poly_offset(P.hatch_outline(), -F["gap"]), 0.006)
@@ -2146,9 +2414,10 @@ def cowl_louvers() -> MeshData:
 
 
 def louver_cutters() -> list[MeshData]:
-    """Panjur yarıkları için kaporta kesicileri (deriden 2 mm derin cep + dışarıda pay); kesilen yüzler koyu PA-CF."""
+    """Panjur yarıkları için kaporta kesicileri: 1,6 mm kabuğu boydan boya delen açık yarık (R01; soğutma havası
+    çıkışı — baskıdaki ``louver_slot_holes`` ile aynı) + dışarıda pay; kesilen yüzler koyu PA-CF."""
     c = _PR["cowl"]["cheek_right"]
-    dep = float(c.get("louver_recess_m", 0.002))
+    dep = max(float(c.get("louver_recess_m", 0.002)), COWL_WALL + 0.0035)
     out = []
     for k, (pts, nrm, _) in enumerate(_louver_slots()):
         mb = MeshBuilder(f"U_Cutter_Louver_{k}")
@@ -2162,8 +2431,9 @@ def louver_cutters() -> list[MeshData]:
 
 
 def cooling_exit_cutter() -> MeshData:
-    """Kaporta çenesindeki arkaya bakan soğutma çıkış yarığı (60 × 10 mm) için kesici: çene yüzünden öne doğru
-    ≈ 12 mm derin koyu cep (``seal``)."""
+    """Kaporta çenesindeki arkaya bakan soğutma çıkış yarığı (60 × 10 mm) kesicisi: dik çene duvarını (s ≈ 2,180–2,185)
+    boydan boya geçip kaporta boşluğuna açılan prizma (R01: eski 12 mm kör cep yerine gerçek açıklık). Sahnede
+    ``U_Cowl`` kabuğundan, baskıda kaporta kabuğundan çıkarılır; kesilen yüzler koyu (``seal``)."""
     ce = _PR["cowl"]["cooling_exit"]
     w, h = 0.5 * float(ce["w_m"]), float(ce["h_m"])
     s_back = float(_PR["exhaust_ring"]["s_from_m"])
@@ -2171,6 +2441,46 @@ def cooling_exit_cutter() -> MeshData:
     z0 = z_b + 0.011
     poly = np.array([(s_back - 0.026, -w + 0.004), (s_back - 0.026, w - 0.004), (s_back + 0.004, w), (s_back + 0.004, -w)])
     return prism("U_Cutter_CoolingExit", poly, z0, z0 + h, M["seal"])
+
+
+def cooling_exit_check(n: int = 9) -> dict:
+    """Çene yarığının gerçekten AÇIK olduğunu kesitlerle doğrular (R01): yarık kesitindeki her (y, z) doğrusu boyunca
+    (s ekseni) kaporta eti tek bir aralıktır (dik çene duvarı) ve kesici prizma bu aralığı iki yandan aşar (önde boşluğa,
+    arkada dışarıya açılır); prizma alt/üst yüzü çene duvarı dışında ete girmez (karın delinmez). Dönüş: ``through``
+    (bool), ``wall_s`` (etin s aralığı), ``prism_s``, ``min_overlap_m`` (prizmanın duvarı aşma payı, iki yanda en az)."""
+    ss, O = _cowl_grid()
+    s_in, I = _cowl_inner()
+    s0, s_end = _cowl_s_range()
+    md = cooling_exit_cutter()
+    V = np.asarray(md.verts, float)
+    ps0, ps1 = float(V[:, 0].min()), float(V[:, 0].max())
+    z0, z1 = float(V[:, 2].min()), float(V[:, 2].max())
+    w = float(np.abs(V[:, 1]).max()) - 0.004
+    sl = np.linspace(ps0, min(ps1, s_end - 1e-6), 400)
+    ok, lo, hi, ov = True, math.inf, -math.inf, 1.0
+    for y in np.linspace(-0.92 * w, 0.92 * w, n):
+        for z in np.linspace(z0 + 0.0005, z1 - 0.0005, max(3, n // 2)):
+            mat = []
+            for s in sl:
+                if s >= s_end - COWL_WALL:
+                    inside_o = bool(_point_in_poly(_ring_at(ss, O, float(s)), np.array([[y, z]]))[0])
+                    mat.append(inside_o and math.hypot(y, z - P.PROP.hub[2]) > cowl_open_r())
+                    continue
+                inside_o = bool(_point_in_poly(_ring_at(ss, O, float(s)), np.array([[y, z]]))[0])
+                inside_i = bool(_point_in_poly(_ring_at(s_in, I, float(s)), np.array([[y, z]]))[0])
+                mat.append(inside_o and not inside_i)
+            mat = np.asarray(mat)
+            if not mat.any():
+                continue
+            idx = np.flatnonzero(mat)
+            if np.any(np.diff(idx) > 1):                      # birden çok et aralığı → karın/yan duvar da kesiliyor
+                ok = False
+            a, b = float(sl[idx[0]]), float(sl[idx[-1]])
+            lo, hi = min(lo, a), max(hi, b)
+            ov = min(ov, a - ps0, ps1 - b)
+            if not (ps0 < a and b < ps1) or mat[0]:           # prizma önde boşlukta başlamalı
+                ok = False
+    return {"through": bool(ok and ov > 0.002), "wall_s": (lo, hi), "prism_s": (ps0, ps1), "min_overlap_m": ov}
 
 
 def _tube_along(name: str, base: np.ndarray, direction: np.ndarray, length: float, ro: float, ri: float,
@@ -2192,25 +2502,58 @@ def _tube_along(name: str, base: np.ndarray, direction: np.ndarray, length: floa
     return md.oriented()
 
 
-def muffler_pipe() -> MeshData:
-    """``U_Exhaust_Muffler``: sol alt yanaktan (susturucu kabartısı) aşağı-dışa-geriye bakan çıkış borusu, 45° eğik
-    kesik uç ve arkasında kaporta derisine oturan 30 × 20 × 0,5 mm ısı kalkanı plakası (``exhaust``)."""
+def muffler_pipe_axis() -> tuple[np.ndarray, np.ndarray, float, float]:
+    """Susturucu çıkış borusu ekseni (R05): ``(başlangıç, birim yön, kaporta dış yüzüne kadar boy, toplam boy)`` (spec).
+    Boru susturucunun dış yüzünden başlar, kaporta yanağını deler ve ``stick_out_m`` kadar dışarı taşar."""
     f = P.muffler_outlet()
-    s, _, z = f.pos
-    y, nrm = _cowl_y_at(s, z, "L")
-    base = np.array([s, y, z])
-    pipe = _tube_along("pipe", base, np.asarray(f.direction), 0.022, 0.0062, 0.0045, 0.014, M["exhaust"],
-                       scarf_deg=float(f.params.get("scarf_deg", 0.0)))
-    L, H, T = (float(v) for v in f.params.get("shield_m", (0.030, 0.020, 0.0005)))
-    s0, s1 = s - 0.004, s - 0.004 + L
-    z0, z1 = z - 0.65 * H, z + 0.35 * H
-    poly = np.array([(s0, z0), (s1, z0 + 0.003), (s1, z1 - 0.003), (s0, z1)])
+    p0 = np.asarray(f.pos, float)
+    d = _unit(np.asarray(f.direction, float))
+    ss, O = _cowl_grid()
+    s0, s_end = _cowl_s_range()
+    t_exit = None
+    for t in np.arange(0.0, 0.12, 0.0005):
+        q = p0 + t * d
+        if q[0] >= s_end or q[0] <= s0 or not bool(_point_in_poly(_ring_at(ss, O, float(q[0])), q[1:][None])[0]):
+            t_exit = float(t)
+            break
+    t_exit = 0.03 if t_exit is None else t_exit
+    return p0, d, t_exit, t_exit + float(f.params.get("stick_out_m", 0.020))
 
-    def y_out(ss, zz):
-        return _cowl_y_at(float(ss), float(zz), "L")[0] + 0.0010
+
+def muffler_pipe_tube() -> MeshData:
+    """Susturucu çıkış borusu (R05): susturucu dış yüzünden başlar, yanağı deler, 20 mm dışarı taşar; 45° eğik kesik
+    uç (``exhaust``). ``muffler_pipe`` bunu ısı kalkanıyla birleştirir; printprep ısı kuralı ikisini ayrı adlandırır."""
+    f = P.muffler_outlet()
+    p0, d, t_exit, L_tot = muffler_pipe_axis()
+    ro, ri = (0.5 * float(v) for v in f.params.get("d_m", (0.0124, 0.009)))
+    return _tube_along("pipe", p0, d, L_tot, ro, ri, 0.002, M["exhaust"], scarf_deg=float(f.params.get("scarf_deg", 0.0)))
+
+
+def muffler_pipe() -> MeshData:
+    """``U_Exhaust_Muffler``: sol susturucu kabartısının arka-alt bölgesinden aşağı-dışa-geriye bakan çıkış borusu
+    (``muffler_pipe_tube``) ve borunun çıktığı yerde kaporta derisinden 0,5 mm aralıkla oturan 30 × 20 × 0,5 mm ısı
+    kalkanı plakası (``muffler_shield``)."""
+    return merge("U_Exhaust_Muffler", [muffler_pipe_tube(), muffler_shield()], 30.0)
+
+
+def muffler_shield() -> MeshData:
+    """Isı kalkanı plakası (0,5 mm Al): borunun kaporta derisinden çıktığı yerde, yanak dış yüzünden 0,5 mm aralıkla
+    (yanak yan yüzünde kalır, dik arka yüze sarılmaz)."""
+    f = P.muffler_outlet()
+    p0, d, t_exit, L_tot = muffler_pipe_axis()
+    q = p0 + t_exit * d                                   # borunun kaporta derisinden çıktığı nokta
+    s_x, z_x = float(q[0]), float(q[2])
+    L, H, T = (float(v) for v in f.params.get("shield_m", (0.030, 0.020, 0.0005)))
+    s1 = min(s_x + 0.25 * L, _cowl_s_range()[1] - 0.013)   # plaka yanak yan yüzünde kalır (dik arka yüze sarılmaz)
+    s0 = s1 - L
+    z0, z1 = z_x - 0.5 * H, z_x + 0.5 * H
+    poly = np.array([(s0, z0), (s1, z0 + 0.002), (s1, z1 - 0.002), (s0, z1)])
+
+    def y_out(ss_, zz):
+        return _cowl_y_at(float(ss_), float(zz), "L")[0] + 0.0010
 
     mb = MeshBuilder("shield")
-    nu, nv = 10, 8
+    nu, nv = 12, 8
     U = np.linspace(0, 1, nu)
     Vv = np.linspace(0, 1, nv)
     grid = np.array([[poly[0] + (poly[1] - poly[0]) * u + (poly[3] - poly[0]) * v + (poly[2] - poly[1] - poly[3] + poly[0]) * u * v
@@ -2222,25 +2565,56 @@ def muffler_pipe() -> MeshData:
         for j in range(nv - 1):
             mb.face((io[i, j], io[i + 1, j], io[i + 1, j + 1], io[i, j + 1]), M["exhaust"])
             mb.face((ii[i, j], ii[i, j + 1], ii[i + 1, j + 1], ii[i + 1, j]), M["exhaust"])
-    ro = list(io[0, :]) + list(io[1:, -1]) + list(io[-1, -2::-1]) + list(io[-2:0:-1, 0])
-    ri = list(ii[0, :]) + list(ii[1:, -1]) + list(ii[-1, -2::-1]) + list(ii[-2:0:-1, 0])
-    mb.strip(ro, ri, M["exhaust"])
-    shield = mb.build(40.0)
-    return merge("U_Exhaust_Muffler", [pipe, shield], 30.0)
+    rgo = list(io[0, :]) + list(io[1:, -1]) + list(io[-1, -2::-1]) + list(io[-2:0:-1, 0])
+    rgi = list(ii[0, :]) + list(ii[1:, -1]) + list(ii[-1, -2::-1]) + list(ii[-2:0:-1, 0])
+    mb.strip(rgo, rgi, M["exhaust"])
+    return mb.build(40.0)
+
+
+def muffler_pipe_hole(clear: float = 0.0015) -> MeshData:
+    """Baskı: sol yanakta çıkış borusunun geçtiği delik katısı (boru dış yarıçapı + ``clear``), kaporta etini
+    boydan boya keser (printprep ``cowl_cheek_L`` deliği)."""
+    f = P.muffler_outlet()
+    p0, d, t_exit, _ = muffler_pipe_axis()
+    r = 0.5 * float(f.params.get("d_m", (0.0124, 0.009))[0]) + clear
+    a0, a1 = max(t_exit - 0.012, 0.0), t_exit + 0.006
+    loc = lathe(np.array([[a0, 0.0], [a0, r], [a1, r], [a1, 0.0]]), 32, "U_Cutter_MufflerPipe", M["exhaust"], "x")
+    e1 = _unit(np.cross(d, [0.0, 0.0, 1.0]))
+    e2 = np.cross(d, e1)
+    V = p0 + np.outer(loc.verts[:, 0], d) + np.outer(loc.verts[:, 1], e1) + np.outer(loc.verts[:, 2], e2)
+    return MeshData("U_Cutter_MufflerPipe", V, loc.faces, loc.face_mat, loc.mats, "spec", None).oriented()
+
+
+SCUFF_EMBED_M = 0.0006                   # pabuç üst yüzü kaporta etine bu kadar gömülü (yapışma yüzü; 1,6 mm etin içinde)
+
+
+def scuff_pad_plan() -> np.ndarray:
+    """Pabuç plan izi ``(n, 2)`` ``(s, y)``: yuvarlatılmış dikdörtgen (süperelips, n = 4), spec ``scuff_pad`` merkezi
+    ``s_m``/``y_m`` ve ``size_m`` (boy × en). Arka ucu kaporta alt yüzünün çene köşesine (s ≈ 2,178) kadar uzanır."""
+    sp = _PR["cowl"]["scuff_pad"]
+    sc, yc = float(sp["s_m"]), float(sp.get("y_m", 0.0))
+    a, b = (0.5 * float(v) for v in sp.get("size_m", (0.048, 0.028)))
+    th = np.linspace(0.0, 2.0 * math.pi, 48, endpoint=False)
+    c, sn = np.cos(th), np.sin(th)
+    return np.column_stack([sc + a * np.sign(c) * np.abs(c) ** 0.5, yc + b * np.sign(sn) * np.abs(sn) ** 0.5])
 
 
 def scuff_pad() -> MeshData:
-    """``U_ScuffPad``: kaporta altında değiştirilebilir siyah TPU sürtünme pabucu (kuyruk çarpmasına)."""
+    """``U_ScuffPad``: kaporta altında değiştirilebilir koyu PA-CF sürtünme pabucu (kuyruk çarpmasında ilk değen
+    nokta: kaporta alt yüzünün çene köşesini örter; ısıya dayanıklı — spec ``scuff_pad.material``). Dış (aşınma) yüzü
+    GERÇEK kaporta dış alt yüzünden (``cowl_bottom_z``: yanak kabartıları dahil) ``t_m`` aşağıda; üst yüzü kaporta
+    etine ``SCUFF_EMBED_M`` gömülü. Eski pabuç gövde kesitine göre konduğu için kabartılı kaporta yüzünün ≈ 1 mm
+    İÇİNDE kalıyordu (görünmez ve ilk temas değil)."""
     sp = _PR["cowl"]["scuff_pad"]
-    sc, t = float(sp["s_m"]), float(sp["t_m"])
-    th = np.linspace(0, 2 * math.pi, 40, endpoint=False)
-    poly = np.column_stack([sc + 0.024 * np.cos(th), 0.014 * np.sin(th)])
+    t = float(sp["t_m"])
 
     def zb(s, y):
-        z = P.fuselage_z_at(s, y, "bottom")
+        z = cowl_bottom_z(s, y)
         return (z if z is not None else P.fuselage_section(s).z_bottom) - t
 
-    return heightfield_panel("U_ScuffPad", poly, zb, t + 0.0006, M["tpu"], M["tpu"], n_rows=10, col_step=0.003)
+    mat = M["tpu"] if str(sp.get("material", "PA-CF")).upper() == "TPU" else M["pacf"]
+    return heightfield_panel("U_ScuffPad", scuff_pad_plan(), zb, t + SCUFF_EMBED_M, mat, mat, n_rows=14,
+                             col_step=0.002)
 
 
 # =====================================================================================================
@@ -2368,22 +2742,60 @@ def _collar_bottom() -> tuple[float, float]:
     return 0.5 * (z_back + z_front), (z_front - z_back) / (2 * Rb)
 
 
+TURRET_COLLAR_FILLET = 0.010            # yaka ile karın arası iç bükey geçiş yarıçapı (R07; dar yerde kısalır). varsayım
+TURRET_COLLAR_EMBED = 0.004             # filetonun karın derisinin içine uzaması (görünmez birleşim). varsayım
+
+
+def _belly_local(t: "P.TurretSpec", c: float, s_: float, r: float) -> float:
+    """Yaka yerel ekseninde (orijin: taret s'si, gövde altı) θ yönünde ``r`` yarıçapında karın derisi z'si."""
+    z = P.fuselage_z_at(t.s - r * c, r * s_, "bottom")
+    return float((z if z is not None else t.belly_z) - t.belly_z)
+
+
 def turret_mount() -> MeshData:
-    """``U_Turret_Mount``: 8 fasetli yaka (yarı gömülü göz; gövde alt rengi ``skin_bottom`` — taret topu koyu, yaka
-    gövdeye ait okunur), üstte gövdeye doğru genişler; tabanı önde yukarı eğik (ileri görüş açık). Yerel orijin
+    """``U_Turret_Mount``: 24 fasetli (spec ``collar_facets``) yaka, gövde alt rengi (``skin_bottom``). Tabanı önde
+    yukarı eğik (ileri görüş açık), alt kenarında 2,8 mm pah. Üstte karına ``TURRET_COLLAR_FILLET`` yarıçaplı iç bükey
+    fileto ile teğete yakın bağlanır (R07: eski 8 faset + sert basamak yerine); fileto her açıda karın derisinin
+    gerçek yüksekliğine (yanlarda yükselen yuvarlak karın) göre kurulur, dar yerde (ön) kısalır. Yerel orijin
     (s, 0, gövde altı), Blender eksenleri (+X ileri)."""
     t = P.TURRET
     zc, k = _collar_bottom()
-    z_top = turret_mount_top_z() - t.belly_z + 0.012
-    Rt, Rb = 0.5 * t.collar_d + TURRET_COLLAR_FLARE, 0.5 * t.collar_d
+    z_top = turret_mount_top_z() - t.belly_z + 0.006
+    Rb = 0.5 * t.collar_d
     rb = 0.5 * t.ball_d + TURRET_BORE_GAP
     ch = 0.0028
-    prof = np.array([[z_top, Rt], [zc + ch, Rb], [zc, Rb - ch], [zc, rb], [z_top, rb]])
-    fac = _octagon_factor(t.collar_facets)
-    md = lathe(prof, 8 * t.collar_facets, "U_Turret_Mount", M["skin_bottom"], "z", closed_profile=True,
-               radius_fn=lambda th, kk: fac(th, kk) if kk <= 2 else 1.0, smooth_angle=20.0)
-    md.verts[:, 2] += k * md.verts[:, 0]
-    return md
+    F, E = TURRET_COLLAR_FILLET, TURRET_COLLAR_EMBED
+    n_fac = int(t.collar_facets)
+    n_th = 4 * n_fac
+    fac = _octagon_factor(n_fac)
+    th = np.linspace(0.0, 2 * math.pi, n_th, endpoint=False)
+    psi = np.linspace(0.0, 0.5 * math.pi, 10)
+    R_top = Rb + F + E
+    rows: list = []                                    # profil noktası başına (n_th, 3) halka
+    prof_th = []
+    for a in th:
+        c, s_ = math.cos(a), math.sin(a)
+        f = float(fac(np.array([a]), 0)[0])
+        z_lip = zc + k * Rb * c
+        zb_f = _belly_local(t, c, s_, Rb + F)
+        Fe = float(np.clip(zb_f - (z_lip + ch) - 0.0012, 0.002, F))       # dar yerde fileto kısalır
+        zb_f = _belly_local(t, c, s_, Rb + Fe)
+        z_w = zb_f - Fe
+        pr = [(rb, zc + k * rb * c), ((Rb - ch) * f, zc + k * (Rb - ch) * c), (Rb * f, z_lip + ch)]
+        for ps in psi:                                 # iç bükey fileto: duvar teğetinden karın teğetine
+            pr.append(((Rb + Fe - Fe * math.cos(ps)) * f, z_w + Fe * math.sin(ps)))
+        pr.append((Rb + Fe + E, _belly_local(t, c, s_, Rb + Fe + E) + 0.003))
+        pr.append((R_top, z_top))
+        pr.append((rb, z_top))
+        prof_th.append((c, s_, pr))
+    n_p = len(prof_th[0][2])
+    mb = MeshBuilder("U_Turret_Mount", space="local")
+    for kk in range(n_p):
+        pts = np.array([(r * c, r * s_, z) for c, s_, pr in prof_th for (r, z) in [pr[kk]]])
+        rows.append(mb.add(pts))
+    for kk in range(n_p):
+        mb.strip(rows[(kk + 1) % n_p], rows[kk], M["skin_bottom"])
+    return mb.build(14.0)
 
 
 def turret_ring() -> MeshData:
@@ -2520,7 +2932,7 @@ def well_roof_z(leg: str) -> Callable[[float, float], float]:
     return f
 
 
-WELL_LIP = DOOR_T + 0.0015               # dişli deri dudağı: kapak eti + 1,5 mm (kaporta yanağı eğiminde pay). varsayım
+WELL_LIP = DOOR_T + 0.0018               # dişli deri dudağı: kapak eti + 1,8 mm (2,5 mm kapak dönüş dudağına 0,5 mm pay). varsayım
 
 
 def gear_well_outline(leg: str) -> np.ndarray:
@@ -2548,6 +2960,61 @@ def _well_parts(leg: str) -> list[tuple[np.ndarray, Callable[[float, float], flo
     pocket = np.array([(pk["s0"], -pk["hw"]), (s0 + 0.002, -pk["hw"]), (s0 + 0.002, pk["hw"]), (pk["s0"], pk["hw"])])
     w = _well(leg)
     return [(main, lambda s, y: w.roof_z), (pocket, lambda s, y: pk["z_top"])]
+
+
+TYRE_PROFILE = {"bead": 0.70, "rm": 0.32, "p_out": 1.85, "groove_a": 0.30, "groove_w": 0.0012, "groove_d": 0.0009}
+                                         # lastik kesiti: topuk eni oranı, en geniş yerin kesit yüksekliğindeki yeri, sırt
+                                         # süperelips üssü, oluk konumu (yarı ene oran)/eni/derinliği. varsayım
+TYRE_CLEAR = 0.0025                      # toplu teker ↔ kuyu tavanı / kapak iç yüzü en az payı (AERO-06). varsayım
+
+
+def tyre_half_width_factor(r, R: float, r_rim: float) -> np.ndarray:
+    """Lastik kesitinin ``r`` yarıçapındaki yarı eninin en büyük yarı ene oranı (``gear.tyre_profile`` ile aynı eğri)."""
+    r = np.asarray(r, float)
+    Ab = TYRE_PROFILE["bead"]
+    r_m = r_rim + TYRE_PROFILE["rm"] * (R - r_rim)
+    B, p = R - r_m, TYRE_PROFILE["p_out"]
+    lo = Ab + (1 - Ab) * np.sqrt(np.clip(1 - ((r_m - r) / (r_m - r_rim)) ** 2, 0, 1))
+    hi = np.clip(1 - np.clip((r - r_m) / B, 0, 1) ** p, 0, 1) ** (1 / p)
+    return np.where(r < r_m, lo, hi)
+
+
+@functools.lru_cache(maxsize=None)
+def tyre_fit_width(name: str) -> float:
+    """Ana tekerin toplu konumda kuyuya sığan en büyük lastik eni (m, 0,5 mm'ye aşağı yuvarlı, en çok spec eni): kuyu
+    tavanı (``well_roof_z`` − astar) tekerin orta düzleminden ``r`` yarıçapında her yönde ``hw(r) + TYRE_CLEAR``'dan
+    yüksek olmalı. Tavan arka-iç köşede kanat üst derisiyle sınırlıdır (R14: toplu teker ``axle_offset_out_m`` kadar
+    alçak → spec 26 mm sığar)."""
+    g = P.gear_leg(name)
+    c = np.asarray(g.axle_retracted, float)
+    roof = well_roof_z(name)
+    liner = BAY_INSET + BAY_WALL
+    best = g.wheel_w
+    th = np.linspace(0.0, 2 * math.pi, 96, endpoint=False)
+    for r in np.linspace(0.5 * g.hub_d, g.wheel_r, 24):
+        avail = min(roof(c[0] + r * math.cos(t), c[1] + r * math.sin(t)) - liner - c[2] for t in th)
+        f = float(tyre_half_width_factor(r, g.wheel_r, 0.5 * g.hub_d))
+        if f > 1e-6:
+            best = min(best, 2.0 * (avail - TYRE_CLEAR) / f)
+    return float(math.floor(best * 2000.0) / 2000.0)
+
+
+def stowed_tyre_door_gap(name: str, width: float | None = None) -> float:
+    """Toplu ana tekerin alt yüzü ile kapalı kuyu kapağının iç tavası arası en küçük pay (m): kapak dış yüzü (kaporta
+    tabanı) + deri + tava; lastik alt yüzü ``hw(r)`` ile (R14 kontrolü)."""
+    g = P.gear_leg(name)
+    c = np.asarray(g.axle_retracted, float)
+    W = g.wheel_w if width is None else width
+    pan = DOOR_STRUCT["main"][3]
+    best = 1.0
+    th = np.linspace(0.0, 2 * math.pi, 72, endpoint=False)
+    for r in np.linspace(0.5 * g.hub_d, g.wheel_r, 16):
+        f = float(tyre_half_width_factor(r, g.wheel_r, 0.5 * g.hub_d))
+        for t in th:
+            s, y = c[0] + r * math.cos(t), c[1] + r * math.sin(t)
+            z_door = belly_z(s, y) + DOOR_SKIN + pan
+            best = min(best, (c[2] - 0.5 * W * f) - z_door)
+    return best
 
 
 def gear_cutters(leg: str) -> list[MeshData]:
@@ -2613,6 +3080,7 @@ class DoorGeom:
 
 
 DOOR_SKIN = 0.0008                      # kapak dış deri katmanı (testere dişli kenarlar yalnız bu katmanda). varsayım
+DOOR_LIP = {"w": 0.0012, "t": 0.0025}   # dış deri çevresinde içe dönük dönüş dudağı: kenar 2,5 mm kalın okunur (R06). varsayım
 # İç yapı (kapak iç yüzü): düz kenarlı iç tava + çevre çerçeve kaburgası + boyuna boncuk. (inset, kaburga eni,
 # kaburga yüksekliği, tava yüksekliği, boncuk eni, boncuk yüksekliği) — yükseklikler deri üstünden. varsayım
 DOOR_STRUCT = {"main": (0.006, 0.004, 0.0025, 0.0010, 0.004, 0.0022),
@@ -2624,20 +3092,34 @@ NOSE_DOOR_CLEAR_Y = 0.010               # burun kapağı iç yapısı serbest ke
 
 def _door_grid_panel(name: str, poly: np.ndarray, z_out: Callable, t_fn: Callable, s_fixed: Sequence[float],
                      y_fixed: Sequence[float], mat_out: str, mat_in: str, mat_side: str, inset: float,
-                     col_step: float = 0.002, row_step: float = 0.005) -> MeshData:
+                     col_step: float = 0.002, row_step: float = 0.005, lip: dict | None = None,
+                     lip_y: tuple[bool, bool] = (True, True), lip_hinge_clear: float = 0.006) -> MeshData:
     """Değişken kalınlıklı kapak katısı (tek kapalı gövde): plan çokgeni (her y sütununda tek s aralığı), dış yüz
     ``z_out(s, y)``, iç yüz ``z_out + t_fn(s, y)`` (yukarı = içe). ``s_fixed``/``y_fixed``: kalınlık basamağı
     sınırları — ızgara bu çizgilerin ±0,1 mm'sine sıkıştırılır, basamaklar keskin (dik) kalır. Satırlar: kenar
     a(y) → ilk sabit çizgiye eşit aralık → sabit çizgiler → son sabit çizgiden b(y)'ye eşit aralık (her sütunda aynı
-    sayı). Dış yüz ``mat_out``, iç yüz ``mat_in``, çevre duvarı ``mat_side`` (koyu ayrım çizgisi)."""
+    sayı). Dış yüz ``mat_out``, iç yüz ``mat_in``, çevre duvarı ``mat_side`` (koyu ayrım çizgisi).
+
+    ``lip`` = {"w": en, "t": toplam kalınlık}: dış deri çevresinde (dişli s kenarları dişleri izleyerek, ``lip_y``
+    ile seçilen y kenarları — menteşe kenarı hariç) içe dönük dönüş dudağı (R06): kenar kalınlığı ``t`` okunur,
+    dudak iç kenarı 0,1 mm'lik dik basamakla deriye iner. Dişli kenarlardaki dudak menteşe kenarından
+    ``lip_hinge_clear`` önce biter: menteşe çevresinde dönerken dudağın yanal kayması (h·sin θ) 0,5 mm kapak aralığında
+    kalır, deri dişlerine sürtmez."""
     p = np.asarray(poly, float)
     ys_v = np.unique(np.round(p[:, 1], 9))
     y0, y1 = ys_v.min() + inset, ys_v.max() - inset
+    lw = float(lip["w"]) if lip else 0.0
+    dl = 1e-4
     cols = set(np.linspace(y0, y1, max(2, int(math.ceil((y1 - y0) / col_step)) + 1)).tolist())
     for v in list(ys_v) + list(y_fixed):
         for dv in (-1e-4, 1e-4):
             if y0 + 2e-5 < v + dv < y1 - 2e-5:
                 cols.add(float(v + dv))
+    if lip:
+        if lip_y[0]:
+            cols.update((y0 + lw, y0 + lw + dl))
+        if lip_y[1]:
+            cols.update((y1 - lw, y1 - lw - dl))
     cols = np.array(sorted(cols))
     ivs = []
     for yv in cols:
@@ -2646,10 +3128,11 @@ def _door_grid_panel(name: str, poly: np.ndarray, z_out: Callable, t_fn: Callabl
         ivs.append((a + inset, b - inset))
     ivs = np.asarray(ivs)
     amax, bmin = float(ivs[:, 0].max()), float(ivs[:, 1].min())
+    pad = lw + 2 * dl if lip else 0.0
     fx = []
     for v in sorted(s_fixed):
         for dv in (-1e-4, 1e-4):
-            if amax + 4e-4 < v + dv < bmin - 4e-4:
+            if amax + pad + 4e-4 < v + dv < bmin - pad - 4e-4:
                 fx.append(v + dv)
     fx = sorted(set(np.round(fx, 9)))
     if not fx:
@@ -2659,17 +3142,38 @@ def _door_grid_panel(name: str, poly: np.ndarray, z_out: Callable, t_fn: Callabl
         n = max(1, int(math.ceil((v - dense[-1]) / row_step)))
         dense += list(np.linspace(dense[-1], v, n + 1)[1:])
     fx = np.asarray(dense)
-    n_head = max(1, int(math.ceil((fx[0] - float(ivs[:, 0].min())) / row_step)))
-    n_tail = max(1, int(math.ceil((float(ivs[:, 1].max()) - fx[-1]) / row_step)))
+    n_head = max(1, int(math.ceil((fx[0] - float(ivs[:, 0].min()) - pad) / row_step)))
+    n_tail = max(1, int(math.ceil((float(ivs[:, 1].max()) - pad - fx[-1]) / row_step)))
     G = []
     for (a, b), yv in zip(ivs, cols):
-        head = list(np.linspace(a, fx[0], n_head + 1)[:-1])
-        tail = list(np.linspace(fx[-1], b, n_tail + 1)[1:])
+        if lip:                                         # dudak: kenar → +en → +en+0,1 mm (dik iç basamak)
+            head = [a, a + lw] + list(np.linspace(a + lw + dl, fx[0], n_head + 1)[:-1])
+            tail = list(np.linspace(fx[-1], b - lw - dl, n_tail + 1)[1:]) + [b - lw, b]
+        else:
+            head = list(np.linspace(a, fx[0], n_head + 1)[:-1])
+            tail = list(np.linspace(fx[-1], b, n_tail + 1)[1:])
         rows = np.r_[head, fx, tail]
         G.append(np.column_stack([rows, np.full(len(rows), yv)]))
     G = np.asarray(G)
     zo = np.array([[z_out(s, y) for s, y in row] for row in G])
-    zi = zo + np.array([[t_fn(s, y) for s, y in row] for row in G])
+    T = np.array([[t_fn(s, y) for s, y in row] for row in G])
+    if lip:
+        nr = G.shape[1]
+        yy = G[:, :, 1]
+        on = np.zeros(G.shape[:2], bool)
+        far = np.ones(G.shape[:2], bool)                # dişli kenar dudağı menteşe kenarından uzakta
+        if not lip_y[0]:
+            far &= yy >= y0 + lip_hinge_clear
+        if not lip_y[1]:
+            far &= yy <= y1 - lip_hinge_clear
+        on[:, :2] = far[:, :2]
+        on[:, nr - 2:] = far[:, nr - 2:]
+        if lip_y[0]:
+            on |= yy <= y0 + lw + 1e-9
+        if lip_y[1]:
+            on |= yy >= y1 - lw - 1e-9
+        T = np.where(on, np.maximum(T, float(lip["t"])), T)
+    zi = zo + T
     mb = MeshBuilder(name)
     io = mb.add(np.dstack([G, zo]))
     ii = mb.add(np.dstack([G, zi]))
@@ -2749,8 +3253,11 @@ def gear_door(name: str) -> DoorGeom:
         poly = poly.copy()
         poly[:, 0] = np.maximum(poly[:, 0], _plug_front_s())
     if kind in ("main", "nose"):
+        ys = np.asarray(poly, float)[:, 1]
+        hy = float(d.hinge_p0[1])                        # menteşe kenarında dudak yok (bilekler orada)
+        hinge_low = abs(hy - ys.min()) < abs(hy - ys.max())
         md = _door_grid_panel(name, poly, zf, t_fn, s_fix, y_fix, M["skin_bottom"], M["door_inner"], M["seal"],
-                              inset=DOOR_GAP, col_step=0.002)
+                              inset=DOOR_GAP, col_step=0.002, lip=DOOR_LIP, lip_y=(not hinge_low, hinge_low))
     else:                                                # dar/eğik bacak kapakları ve tıkaç: sabit kalınlık (deri + iç levha)
         md = heightfield_panel(name, poly, zf, DOOR_T, M["skin_bottom"], M["door_inner"], inset=LEG_DOOR_GAP, n_rows=16,
                                col_step=0.0015)
@@ -2953,23 +3460,55 @@ def landing_light() -> MeshData:
     return ellipsoid("U_Light_Landing", pos + np.array([0.0012, 0.0, 0.0]), ax, (0.0028, 0.010, 0.0062), M["strobe"])
 
 
-FIN_ROOT_FAIRING = {"s0": 2.140, "s1": 2.412, "r": 0.0085, "x_max": 0.33}   # dikey kökü kaportası. varsayım
+FIN_ROOT_FAIRING = {"s0": 2.136, "s1": 2.414, "proud": 0.0018}   # dikey kökü mermisi: uçlar, yüzeylerden taşma (≥ 1,5 mm). varsayım
+
+
+def _section_half_thickness(sec: np.ndarray, s: np.ndarray) -> np.ndarray:
+    """Kesitin (üst FK→HK, alt HK→FK) ``s`` istasyonlarında iki yüzey arası yarı kalınlığı (3B uzaklığın yarısı)."""
+    m = (len(sec) + 1) // 2
+    up, lo = sec[:m][::-1], sec[m - 1:]
+    out = np.zeros(len(s))
+    for k in range(3):
+        a = np.interp(s, np.maximum.accumulate(up[:, 0]), up[:, k])
+        b = np.interp(s, np.maximum.accumulate(lo[:, 0]), lo[:, k])
+        out += (a - b) ** 2
+    inside = (s >= sec[:, 0].min()) & (s <= sec[:, 0].max())
+    return np.where(inside, 0.5 * np.sqrt(out), 0.0)
 
 
 def fin_root_fairing(side: str = "L") -> MeshData:
-    """``U_Fairing_FinRoot_<s>``: stabilize ucu–dikey kökü birleşiminde ince mermi kaporta (Ø17, s 2,14–2,41; PA-CF,
-    boyalı). Dikey kökünün stabilize ucunun arkasında kalan 0,12 m'lik serbest alt kenarını taşır (dikey kirişi
-    birleşimi, dümen alt yatağı, çakar/servo kablosu); arka ucu dikey firar kenarını 2 cm geçer. Kuyruk çarpma sırası
-    değişmez (pervane önce)."""
+    """``U_Fairing_FinRoot_<s>``: stabilize ucu–dikey kökü birleşiminde mermi kaporta (s 2,136–2,414; boyalı). Yarıçapı
+    her istasyonda dikey kök kesiti ve stabilize uç kesitinin yarı kalınlığından ``proud`` (1,8 mm) büyüktür → iki
+    yüzeyden de ≥ 1,5 mm taşar ve ayrı basılabilir kabuk olur (eski Ø17 mermi %98 yüzeylerin içindeydi). Önde
+    eliptik burun, en kalın yerden sonra tek tepeli (monoton) profil, dikey firar kenarının 2 cm gerisinde sivri uç.
+    Dikey kirişi birleşimi, dümen alt yatağı, çakar/servo kablosunu taşır; kuyruk çarpma sırası değişmez."""
     F = FIN_ROOT_FAIRING
-    sg = 1.0 if side.upper() == "L" else -1.0
-    L = F["s1"] - F["s0"]
-    u = np.r_[0.0, (1 - np.cos(np.linspace(0, 0.5 * math.pi, 9)[1:])) * F["x_max"], np.linspace(F["x_max"], 1.0, 18)[1:]]
-    r = np.where(u <= F["x_max"], np.sqrt(np.clip(1 - ((F["x_max"] - u) / F["x_max"]) ** 2, 0, 1)),
-                 np.clip(1 - (np.maximum(u - F["x_max"], 0.0) / (1 - F["x_max"])) ** 1.8, 0, 1) ** 0.85) * F["r"]
+    sd = "L" if side.upper() == "L" else "R"
+    sg = 1.0 if sd == "L" else -1.0
+    y_root, z_root = float(_T["fin"]["y_root_m"]), float(_T["fin"]["z_root_m"])
+    fin = P.fin_section(0.0, sd)
+    stab = P.stab_section(sg * y_root)
+    s_le = float(min(fin[:, 0].min(), stab[:, 0].min()))
+    ss = np.linspace(s_le, F["s1"], 300)
+    req = np.maximum(_section_half_thickness(fin, ss), _section_half_thickness(stab, ss)) + F["proud"]
+    req = np.convolve(np.r_[np.full(4, req[0]), req, np.full(4, req[-1])], np.ones(9) / 9.0, mode="valid")
+    k = int(np.argmax(req))
+    r = np.r_[np.maximum.accumulate(req[:k + 1]), np.maximum.accumulate(req[k:][::-1])[::-1][1:]]
+    s_te = float(fin[:, 0].max())
+    tail = ss > s_te
+    r[tail] = r[~tail][-1] * np.clip(1.0 - ((ss[tail] - s_te) / (F["s1"] - s_te)) ** 1.6, 0.0, 1.0) ** 0.8
     r[-1] = 0.0
-    md = lathe(np.column_stack([u * L, r]), 28, f"U_Fairing_FinRoot_{side.upper()}", M["skin_top"], "x", space="spec")
-    md.verts = md.verts + np.array([F["s0"], sg * float(_T["fin"]["y_root_m"]), float(_T["fin"]["z_root_m"])])
+    r_le = float(r[0])
+    a = np.linspace(0.0, 0.5 * math.pi, 9)[:-1]                     # eliptik burun: s0 → HK
+    s_nose = s_le - (s_le - F["s0"]) * np.cos(a)
+    r_nose = r_le * np.sin(a)
+    dense = np.flatnonzero(ss < s_le + 0.045)                            # hücum kenarında kalınlık hızlı artar: sık
+    keep = np.unique(np.r_[dense, np.arange(0, len(ss), 5), k, len(ss) - 1])
+    prof = np.column_stack([np.r_[s_nose, ss[keep]], np.r_[r_nose, r[keep]]])
+    prof[0, 1] = 0.0
+    prof[:, 0] -= F["s0"]
+    md = lathe(prof, 32, f"U_Fairing_FinRoot_{sd}", M["skin_top"], "x", space="spec")
+    md.verts = md.verts + np.array([F["s0"], sg * y_root, z_root])
     return md.oriented()
 
 
@@ -3176,6 +3715,83 @@ def env_mesh(part: P.EnvPart, name: str | None = None, mat: str = M["engine"]) -
     return md.oriented()
 
 
+def _cube_grid(ts: Sequence[np.ndarray]) -> tuple[np.ndarray, list]:
+    """Birim küp ([−1, 1]³) yüzeyinde eksen başına verilen düğümlerle (``ts[i]``, ±1 dahil) paylaşılan köşeli ızgara
+    (kapalı, dışa dönük dörtgenler)."""
+    keyed: dict = {}
+    V: list = []
+
+    def vid(p):
+        k = tuple(np.round(p, 9))
+        if k not in keyed:
+            keyed[k] = len(V)
+            V.append(p)
+        return keyed[k]
+
+    F = []
+    for ax in range(3):
+        o1, o2 = [k for k in range(3) if k != ax]
+        ta, tb = ts[o1], ts[o2]
+        for sg in (-1.0, 1.0):
+            for i in range(len(ta) - 1):
+                for j in range(len(tb) - 1):
+                    quad, pts = [], []
+                    for a, b in ((ta[i], tb[j]), (ta[i + 1], tb[j]), (ta[i + 1], tb[j + 1]), (ta[i], tb[j + 1])):
+                        q = np.zeros(3)
+                        q[ax], q[o1], q[o2] = sg, a, b
+                        quad.append(vid(q))
+                        pts.append(q)
+                    nrm = np.cross(pts[1] - pts[0], pts[2] - pts[0])
+                    if nrm[ax] * sg < 0:                       # dışa dönük sıra
+                        quad = quad[::-1]
+                    F.append(tuple(quad))
+    return np.asarray(V, float), F
+
+
+def envelope_keepout(part: "P.EnvPart", r: float, n: int = 6, name: str | None = None) -> MeshData:
+    """Zarfın ``r`` kadar YUVARLAK genişletilmiş hâli (Minkowski toplamı: zarf ⊕ küre) — kapalı ağ, spec takımı. Kutu:
+    küp-küre ızgarası (yüzler düz, kenarlar silindir, köşeler küre); silindir: yarıçap + r, uçları torus kenarlı.
+    Baskıda kaporta parçalarının çerçeve/flanşlarından çıkarılır: her motor zarfına ≥ r pay (R01). Gerçek uzaklık
+    ölçüsü (köşegende de r), eksen boyunca büyütülmüş kutu gibi kabuğu gereksiz kesmez."""
+    A = np.asarray(part.axes, float).T                    # sütunlar: eksenler
+    c = np.asarray(part.center, float)
+    h = np.asarray(part.half, float)
+    nm = name or f"U_Keepout_{part.name}"
+    if part.kind == "cyl":
+        L, R = h[0], h[1]
+        a = np.linspace(0.0, 0.5 * math.pi, max(3, n))
+        prof = [(-L - r, 0.0)] + [(-L - r * math.cos(t), R + r * math.sin(t)) for t in a] \
+            + [(L + r * math.sin(t), R + r * math.cos(t)) for t in a] + [(L + r, 0.0)]
+        md = lathe(np.asarray(prof), 64, nm, M["engine"], "x", space="spec", smooth_angle=None)
+        md.verts = c + np.asarray(md.verts, float) @ A.T
+        return md.oriented()
+    ts = []
+    for hi in h:                                           # düz bölge seyrek, yuvarlak kenar bandı (h → h + r) sık
+        e = hi / (hi + r)
+        ts.append(np.unique(np.round(np.r_[np.linspace(-1.0, -e, n), np.linspace(-e, e, 5), np.linspace(e, 1.0, n)], 12)))
+    G, F = _cube_grid(ts)
+    big = G * (h + r)
+    q = np.clip(big, -h, h)
+    d = big - q
+    nrm = np.linalg.norm(d, axis=1, keepdims=True)
+    Vloc = q + r * d / np.where(nrm > 0, nrm, 1.0)
+    V = c + Vloc @ A.T
+    md = MeshData(nm, V, F, np.zeros(len(F), int), [M["engine"]], "spec", None)
+    return md.oriented()
+
+
+def engine_keepouts() -> list[MeshData]:
+    """Baskı kaporta parçaları için motor yasak bölgeleri (R01): DLE-20 zarfları ``clearance_m.cowl`` (5 mm), susturucu
+    ``clearance_m.muffler_air_gap`` (15,5 mm) yuvarlak genişletilmiş. Sahne kabuğu bunlara değmez (``engine_bay_clearance``
+    ≥ bu paylar); printprep flanş/çerçeve ve iç yapıyı bunlarla kırpar → UP_cowl_* ↔ U_Env_* çakışması 0."""
+    cl = _PR["engine"]["clearance_m"]
+    out = []
+    for part in P.engine_envelope():
+        r = float(cl["muffler_air_gap"]) if part.name == "muffler" else float(cl["cowl"])
+        out.append(envelope_keepout(part, r + 0.00015))    # çokgen yüz kirişleri ≥ pay kalsın (+0,15 mm)
+    return out
+
+
 def envelopes() -> dict[str, MeshData]:
     """Render dışı paketleme zarfları: ``U_Env_Engine`` (ters DLE-20: rulman burnu, karter, karbüratör, silindir,
     buji başlığı), ``U_Env_Muffler``, ``U_Env_Tank_L/R``, ``U_Env_Battery``."""
@@ -3195,8 +3811,8 @@ def envelopes() -> dict[str, MeshData]:
 # =====================================================================================================
 def all_static() -> list[MeshData]:
     """Bütün spec-uzayı statik ağlar (rapor/test için; Blender kurucusu parçaları tek tek çağırır)."""
-    out = [fuselage(), cowl(), exhaust_ring(), intake(), hatch(), cowl_louvers(), muffler_pipe(), scuff_pad(),
-           stab_fillet(), chevron()]
+    out = [fuselage(), cowl(), cowl(print_solid=True), cowl_cavity(), exhaust_ring(), intake(), hatch(), cowl_louvers(),
+           muffler_pipe(), scuff_pad(), stab_fillet(), chevron()]
     for sd in ("L", "R"):
         out += list(wing_parts(sd).values()) + list(fin_parts(sd).values())
         out += [wing_fillet(sd), root_fairing(sd), unit_blister(sd), stripe(sd)]

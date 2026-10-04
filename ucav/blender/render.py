@@ -10,7 +10,8 @@
   verir; video kare hızı ``fps / frame_step`` olur (süre korunur).
 * Hareket bulanıklığı (animasyonda açık): obtüratör 0,5 kare (180°). Pervane ``U_Prop`` için Cycles hareket
   adımı 2⁶ = 64 → 8600 dev/dk'da obtüratör içindeki ≈ 3 tur doğru yaylanır; tekerler 2³. Palaların izi bu hızda
-  çok soluk kaldığından 900 dev/dk üstünde ``U_PropDisc`` (yarı saydam disk, uçta turuncu halka; rig sürer) görünür.
+  çok soluk kaldığından 900 dev/dk üstünde ``U_PropDisc`` (yarı saydam açık "pus" diski, uçta yumuşak kenarlı soluk
+  turuncu halka; rig sürer) görünür.
 * Gürültü giderme: OpenImageDenoise (albedo + normal). Görünüm dönüşümü: AgX, "Medium High Contrast"; pozlama
   ortama göre (``studio.EXPOSURE``: pist −0,4 EV, stüdyo 0) — her render çağrısında ``studio.configure_cycles``
   yeniden uygular. Yer yansıması dolgusu (``S_UnderFill``) animasyonda uçağı izler ve kalkıştan sonra söner.

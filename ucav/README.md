@@ -20,7 +20,7 @@ Blender sahnesi `out/yk38.blend` ve `out/yk38.glb` git'e girmez; tek komutla yen
 
 | | |
 |---|---|
-| ![Arka-sağ 3/4](out/render/yk38_rear34.jpg) | ![Yan (ortografik)](out/render/yk38_side.jpg) |
+| ![Arka-sağ 3/4](out/render/yk38_rear34.jpg) | ![Yan (göz hizası, 135 mm)](out/render/yk38_side.jpg) |
 | ![EO/IR taret](out/render/yk38_nose.jpg) | ![U-kuyruk ve itici pervane](out/render/yk38_tail.jpg) |
 | ![Alttan, takım toplu](out/render/yk38_under.jpg) | ![Sol ana takım ve açık kuyu](out/render/yk38_gearbay.jpg) |
 | ![Önden](out/render/yk38_front.jpg) | ![Üstten](out/render/yk38_top.jpg) |
@@ -32,23 +32,24 @@ Diğer görüntüler: [taktik arka 3/4](out/render/yk38_rear34_taktik.jpg),
 ## 1. Ana değerler
 
 Bütün sayılar [`spec.yaml`](spec.yaml)'dandır. [`sizing.py`](sizing.py) bunları geometriden yeniden hesaplar
-([`out/sizing.md`](out/sizing.md): **156/156 kontrol tolerans içinde**).
+([`out/sizing.md`](out/sizing.md): **163/163 kontrol tolerans içinde**; kütle bütçesinin basılı kalemleri baskı
+planıyla — `out/print_report.json` — karşılaştırılır).
 
 | Büyüklük | Değer |
 |---|---|
 | Sınıf | SHT-İHA **M1 (4–25 kg)**, sivil gözetleme/araştırma, VLOS, izinli saha |
 | Açıklık / toplam boy / yükseklik | **3,80 m** / **2,475 m** (gövde 2,205 m, spinner dahil 2,310 m) / **0,668 m** (takım açık; strobe lensiyle 0,6725 m) |
 | Kanat | S 0,976 m², AR 14,8, MAC 0,265 m, λ 0,52; SD7062 → SD7032, 4° dihedral, 3° washout, 36° kök glove, 70 mm raked uç |
-| Kütle | MTOW **11,71 kg** (boş 10,07 kg; yakıt 1,40 L = 1,04 kg; görev modülü 0,60 kg); kanat yüklemesi 12,0 kg/m² |
-| Motor ve pervane | DLE-20 (20 cc, 2 zamanlı benzinli, 1,86 kW) **ters** (silindir aşağıda), Xoar 16×8 **itici**, 25 mm uzatma mili; statik itki 5,57 kgf, T/W 0,48; itki ekseni 5° aşağı |
+| Kütle | MTOW **11,71 kg** (boş 10,07 kg; yakıt 1,40 L = 1,04 kg; görev modülü 0,60 kg); kanat yüklemesi 12,0 kg/m²; basılı gövde **3,46 kg** (baskı planı), kütle artış rezervi **0,44 kg** (MTOW'un %3,8'i) |
+| Motor ve pervane | DLE-20 (20 cc, 2 zamanlı benzinli, 1,86 kW) **ters** (silindir aşağıda), Xoar 16×8 **itici**, 25 mm uzatma mili; statik itki 5,57 kgf, T/W 0,476; itki ekseni 5° aşağı |
 | Hızlar | Stall 12,0 m/s (temiz) / 10,8 m/s (20° flap); bekleme 15,6; seyir 20; Vne 28 m/s; (L/D)maks 18,4 @ 14,5 m/s |
 | Havada kalış | 4,16 h (elektrik sınırı; yakıtla 3,6–4,25 h), menzil 233 km — **kâğıt değer**; operasyon VLOS'tur |
 | Kalkış | Düz kalkış, 20° flap: V_LOF 13,2 m/s, koşu 25,5 m (asfalt) / 28 m (çim) |
 | Kararlılık | Statik marj %10 MAC (η_h'ye göre %8,7–12,0); V_h 0,47, V_v 0,034; CG s = 1,232 m (aralık 1,219–1,245) |
 | Kuyruk | Oklu U-kuyruk: stabilize 1,04 m, NACA 0010 → uçta %12, HK oku 30°; iki dikey 0,32 m, 12° dışa eğik; FK–pervane aralığı pala ucunda 0,128 m (0,32 D), pala süpürme hacmine en az 0,114 m (≥ 0,25 D) |
-| İniş takımı | JP Hobby ER-150 ×3, elektrikli: ana bacaklar içe, burun bacağı geriye (12 mm çatal ofseti); iz 0,66 m, dingil açıklığı 0,785 m; pervane çarpma açısı 13,2°, devrilme 47,9° |
-| Faydalı yük | **Yalnız EO/IR taret** (SIYI ZT6 sınıfı: 4K optik + 640×512 termal, 197 g); top Ø74 mm, zemine 156 mm |
-| Renkler | Üst RAL 7035, alt RAL 9003, vurgu RAL 7016, ince çizgi RAL 5018; kuyu/kapak içleri açık gri astar (`UM_Liner`), kapak kenarları koyu conta; uyarı turuncusu RAL 2004 **yalnız** pala uçları ve dikeylerdeki pervane bandında; uyarı yazıları RAL 3020; füme PETG kapak; mat siyah pervane, saten antrasit spinner |
+| İniş takımı | JP Hobby ER-150 ×3, elektrikli: ana bacaklar içe, burun bacağı geriye (12 mm çatal ofseti); ana teker 82,5 × 26 mm (tam en; aks 3 mm dışa kaçık); iz 0,666 m, dingil açıklığı 0,785 m; pervane çarpma açısı 13,2°, devrilme 47,7° |
+| Faydalı yük | **Yalnız EO/IR taret** (SIYI ZT6 sınıfı: 4K optik + 640×512 termal, 197 g); top Ø74 mm, zemine 156 mm; 24 fasetli yaka |
+| Renkler | Üst RAL 7035 (ekran değeri #BDC1BE), alt RAL 9003, vurgu RAL 7016, ince çizgi RAL 5018; kuyu/kapak içleri açık gri astar (`UM_Liner`), kapak kenarları koyu conta; uyarı turuncusu RAL 2004 **yalnız** pala uçları ve dikeylerdeki pervane bandında; uyarı yazıları RAL 3020; sert vernikli füme PETG kapak; mat siyah pervane, saten antrasit spinner |
 
 ## 2. Konfigürasyon ve neden
 
@@ -59,12 +60,29 @@ Bütün sayılar [`spec.yaml`](spec.yaml)'dandır. [`sizing.py`](sizing.py) bunl
 * **Ters motor, kambursuz sırt.** DLE-20 ters bağlanır (silindir aşağıda; DLE her konumda çalışır). Kaporta tepesi
   silindir başını değil krank karterini örter: sırt çizgisi kanattan lüle halkasına kadar tek, gergin bir rampayla
   (≤ 8°) yükselir, "deve hörgücü" yoktur. Motor, susturucu, depo ve akü zarfları sahnede `U_Env_*` tel kafesleriyle
-  durur (`UCAV_Envelopes`, render ve GLB dışı); kaporta iç yüzüne paylar: silindir 9,9 mm, buji başlığı 5,3 mm
-  (≥ 5), susturucu hava boşluğu 17,1 mm (≥ 15,5), karbüratör–yangın perdesi 17,3 mm (≥ 15), spinner–lüle 5,5 mm.
-* **Gömme NACA girişi, halka lüle.** Soğutma havası karın altındaki gömme NACA ağzından (≈ 22 cm², boğaz s = 2,02,
+  durur (`UCAV_Envelopes`, render ve GLB dışı). Kaporta sahnede de gerçek 1,6 mm PA-CF kabuktur, arka flanşı Ø92
+  açıktır; lüle deliğinden görünen koyu boşluk ayrı, yalnız render ağıdır (`U_Cowl_Cavity`; baskı, GLB ve çakışma
+  denetimi dışı). Kabuk iç yüzüne 3B paylar (`shapes.engine_bay_clearance`): silindir 6,0 mm, buji başlığı 5,3 mm
+  (≥ 5), karter 9,5 mm, karbüratör 37,9 mm, rulman burnu 26,1 mm; susturucu hava boşluğu 16,4 mm (≥ 15,5),
+  karbüratör–yangın perdesi 17,3 mm (≥ 15), spinner–lüle 5,5 mm. Basılı kaporta parçaları motor yasak bölgeleriyle
+  (zarf + 5 mm, susturucu + 15,5 mm) kırpılır: `UP_cowl_*` ile `U_Env_*` arasında üçgen çakışması yoktur; en yakın
+  uzaklıklar (yoğun yüzey örneklemesiyle) üst parça–silindir 5,1 mm, sol yanak–silindir 7,0 mm ve –susturucu 16,4 mm,
+  sağ yanak–silindir 10,1 mm, lüle halkası–karter 13,5 mm, pabuç–buji başlığı 8,6 mm.
+* **Gömme NACA girişi, halka lüle.** Soğutma havası karın altındaki gömme NACA ağzından (21,7 cm², boğaz s = 2,02,
   7° rampa, 40 → 75 mm ıraksak planform; dudak karın eğrisini izler) girer; spinner çevresindeki halka lüleden
-  (akış alanı 34,3 cm²) ve çene altındaki soğutma yarığından çıkar (çıkış/giriş ≈ 1,8). Sırt temizdir. Susturucu
-  sol alt yanaktaki kabartıdadır; çıkışı 45° eğik kesikli, 0,5 mm ısı kalkanlıdır. Sağ yanakta 6 panjur yarığı.
+  (34,3 cm²; kaportanın arka flanşı Ø92 açık) ve çene kapanışındaki 60 × 10 mm soğutma yarığından (6,0 cm², kabuğu
+  boydan boya keser) çıkar: çıkış 40,3 cm², çıkış/giriş 1,86. Açıklıklar sahnede ve basılı kaportada ışın testiyle
+  doğrulanır (basılı kaportanın ek flanşları Ø92 akış silindirine girmeyecek biçimde kırpılır). Sırt temizdir. Sağ
+  yanakta 6 açık panjur yarığı.
+* **Susturucu ve ısı (R05).** Susturucu silindir bloğunun yanında, krank ekseninin 44 mm altındadır (44 × 34 × 56 mm
+  zarf, sol yanak kabartısının içinde). Gövdesi stabilize ve elevatöre 56,6 mm (elevatör ±25°'de 59,9 mm), çıkış
+  borusu ve ısı kalkanı 74,9 mm uzaktadır. Boru susturucu yüzünden başlar, sol yanaktaki delikten 1,5 mm boşlukla
+  geçer ve aşağı-dışa-geriye 20 mm taşar (45° eğik kesik uç); çıktığı yerde yanak yüzüne (0,1–0,5 mm aralıkla)
+  30 × 20 × 0,5 mm Al ısı kalkanı oturur. Stabilize 1 ve elevatör 1 spec atamasıyla LW-ASA basılır; baskı ısı
+  kuralı (§8) ihlalde çalıştırmayı durdurur.
+* **Kuyruk çarpması.** Pervane 13,2°'de değer. Burun daha da kalkarsa sırayla dikey kökü firar kenarı (18,5°),
+  kaporta altındaki değiştirilebilir 52 × 30 × 2 mm PA-CF sürtünme pabucu (19,26°) ve kaporta çene köşesi (19,38°)
+  değer: pabuç kaportanın gerçek alt yüzünü (sol kabartı dahil) izler ve kaportadan önce değer.
 * **Oklu U-kuyruk.** İki dikey, pervaneyi lir gibi çerçeveler. Stabilize firar kenarı pala ucundan 0,32 D,
   pala süpürme hacminden 0,114 m (≥ 0,25 D) uzaktadır. Stabilize kalınlığı uca doğru %10'dan %12'ye çıkar; Ø12
   kiriş boyunun tamamında profil içinde kalır. Ventral fin yoktur; pervane çarpma açısı 13,2°'dir.
@@ -74,14 +92,18 @@ Bütün sayılar [`spec.yaml`](spec.yaml)'dandır. [`sizing.py`](sizing.py) bunl
   22 mm erozyon bandı ve kökte kano biçimli kaporta (arkada 12° rampa) vardır.
 * **Gövde.** Chine çizgili, iki süperelips yarısından oluşan kesit, aşağı sarkık burun, yukarı kalkık kuyruk konisi.
   Burun modülü (s 0–0,40) ve kuyruk–motor modülü (s 1,55'te flanş) ayrılır; iki 0,70 L depo tam CG'dedir. Sırttaki
-  füme aviyonik kapağı neredeyse gömmedir (en çok 1,6 mm kabarık); siyah iç bandı ve antrasit çerçevesi vardır.
+  füme aviyonik kapağı neredeyse gömmedir (en çok 1,6 mm kabarık); siyah iç (frit) bandı, 6 mm antrasit çerçevesi
+  ve sert parlak verniği vardır (üstten gökyüzünü yansıtır). Taret yakası 24 fasetli, karına 10 mm konkav filetoyla
+  bağlanır.
 * **Yapı ve baskı.** Dış paneller 2 × 1,54 m ve sökülebilirdir. Merkezde cıvatalı G10 dihedral köprüsü (2 × 3 × 40 mm)
   kanat kutusu çerçevelerine (PA-CF) oturur; ana takım yatakları, motor halkası ve longeron kırık soketleri basılı yük
   yolu parçalarıdır. Dört CF longeronun her biri üç düz parçadır (kırıklar halka sınırlarında). Sahada kurulum 7
   parçadır. Bütün parçalar 256 mm tablaya sığar (220 mm tabla da desteklenir).
 * **İniş takımı.** Üç bacak da elektrikli ER-150'dir (8,4 V'ta 5 s). Ana ünite bacak yuvasının arkasında, 3 mm G10
-  plakaya bağlıdır (CF borulara 5,7–52,8 mm pay). Burun bacağı s 0,53'te, sökülebilir burun modülünün arkasındadır
-  (12 mm iz). Kapaklar deri paneli + nervürlü çerçeve, menteşe bilekleri, horn, conta dudağı ve 12 mm testere dişli
+  plakaya bağlıdır (CF borulara 5,7–52,8 mm pay). Ana teker tam 26 mm endedir: aks 3 mm dışa kaçık (tek kollu
+  konsol aks), teker 3 mm alçakta toplanır (kuyu derinliği 42 mm, toplu teker–kapak arası 3,2 mm). Burun bacağı
+  s 0,53'te, sökülebilir burun modülünün arkasındadır (12 mm iz). Kapaklar deri paneli + nervürlü çerçeve, menteşe
+  bilekleri, horn, conta dudağı, serbest kenarlarda 2,5 mm dönüş dudağı ve 8 mm adımlı (2,9 mm derin) testere dişli
   kenardan oluşur; burun bacağı tapa kapağı (`U_Door_N_3`) takım topluyken çentiği deriyle aynı hizada kapatır. Ana
   tekerlerde fren, burunda servo yönlendirme vardır. Kapak sırası (kapak 1 s – bacak 5 s – kapak 1 s) ArduPilot Lua
   ile yürür.
@@ -98,15 +120,15 @@ iyileştirildi. Panelin kararları ve kaynakları `spec.yaml → meta.sources`'t
 | [`params.py`](params.py) | Saf Python: spec'i okur; gövde kesitleri, kanat/kuyruk kesitleri, menteşe hatları, takım geometrisi, kuyular, kapaklar, motor zarfları, CG (`python3 ucav/params.py`) |
 | [`airfoils.py`](airfoils.py), [`data/airfoils/`](data/airfoils/) | UIUC SD7062/SD7032 verisi, NACA 4 haneli üretici, profil işlemleri |
 | [`sizing.py`](sizing.py) | Boyutlandırma ve geometri kontrolü → [`out/sizing.md`](out/sizing.md) (`--check`: tolerans dışı varsa çıkış 1) |
-| [`shapes.py`](shapes.py) | Saf numpy: kapalı, dışa dönük ağlar (gövde, kanat, kuyruk, kumanda yüzeyleri, kuyular, kapaklar, taret, NACA girişi, susturucu, ayrıntılar, 29 şablon yazı) |
+| [`shapes.py`](shapes.py) | Saf numpy: kapalı, dışa dönük ağlar (gövde, kanat, kuyruk, kumanda yüzeyleri, kuyular, kapaklar, taret, NACA girişi, susturucu, ayrıntılar, 29 şablon yazı); kaporta kabuğu ve baskı katısı, motor bölmesi 3B payları, soğutma akış alanları, motor yasak bölgeleri |
 | [`blender/airframe.py`](blender/airframe.py) | Gövde sahnesi: adlar, koleksiyonlar, pivotlar, yerel eksenler, EXACT boolean kuyular, `U_Stencil_*` yazıları, `U_Env_*` zarfları |
 | [`blender/gear.py`](blender/gear.py) | ER-150 üniteleri, oleo bacaklar, tork bağlantıları, frenli tekerler, burun yönlendirme, kapak donanımı, çakışma raporu |
-| [`blender/rig.py`](blender/rig.py) | `U_Root` kontrol paneli, 57 basit ifade sürücüsü, kumanda bağlantıları (boynuz / servo kolu / itme çubuğu), pervane diski, pervane pişirme metin bloğu |
+| [`blender/rig.py`](blender/rig.py) | `U_Root` kontrol paneli, 57 basit ifade sürücüsü, kumanda bağlantıları (boynuz / servo kolu / itme çubuğu; dümende 30 × 10 × 5 mm servo kaportası), bağlantı çarpışma taraması (`linkage_clearance_report`), pervane diski, pervane pişirme metin bloğu |
 | [`blender/materials.py`](blender/materials.py) | 31 `UM_*` malzemesi (boya + panel çizgileri ve servis kapakları, astar, conta, PA-CF, füme PETG, ısı tonlu susturucu, mat siyah pervane, pervane diski, EO/IR camları, ışıklar), "taktik" boya şeması, CG ve kuyruk işaretleri |
 | [`blender/studio.py`](blender/studio.py) | Cycles ayarları, "pist" (gökyüzü, pist, çim, yer yansıması dolgusu) ve "studyo" ortamları, 9 sabit kamera |
 | [`blender/animation.py`](blender/animation.py) | `showcase` (21 s) ve `mechanisms` (16 s döngü) klipleri, kameralar, bakım sehpası |
 | [`blender/render.py`](blender/render.py) | Sabit görüntü (JPG) ve animasyon (MP4/H.264, Blender'ın kendi FFMPEG'i) |
-| [`blender/printprep.py`](blender/printprep.py) | Baskı segmentleri, kabuk/iç yapı, yük yolu parçaları, menteşe pimleri, ısı kuralı, STL, baskı raporu |
+| [`blender/printprep.py`](blender/printprep.py) | Baskı segmentleri, kabuk/iç yapı, yük yolu parçaları, menteşe pimleri, ısı kuralı (`heat_rule_eval`, ihlalde çıkış 1), STL, baskı raporu |
 | [`blender/build.py`](blender/build.py) | **Tek komutla kurulum ve bütün çıktılar** (bu belgenin §4'ü) |
 | `out/` | `render/*.jpg`, `anim/*.mp4`, `stl/*.stl`, `print_report.md/.json`, `sizing.md`; `yk38.blend` ve `yk38.glb` git'e girmez (yeniden üretilir) |
 
@@ -121,8 +143,8 @@ Gerekenler: Python 3.11, `pip install bpy==4.5.3 numpy pyyaml` (bpy modülü Ble
 ile yapılır). Ya da Blender 4.5 uygulaması (aşağıya bakın).
 
 ```bash
-python3 ucav/sizing.py --check                         # boyutlandırma: 156 kontrol → out/sizing.md (bpy gerekmez)
-python3 ucav/blender/build.py --blend                  # ≈ 25 s → out/yk38.blend (sıkıştırılmış, rig hazır)
+python3 ucav/sizing.py --check                         # boyutlandırma: 163 kontrol → out/sizing.md (bpy gerekmez)
+python3 ucav/blender/build.py --blend                  # ≈ 35 s → out/yk38.blend (sıkıştırılmış, rig hazır)
 python3 ucav/blender/build.py --blend --glb --print --stills    # sahne + GLB + STL/rapor + 9 sabit görüntü
 python3 ucav/blender/build.py --stills hero side --samples 32 --res 960x600     # hızlı deneme
 python3 ucav/blender/build.py --stills hero rear34 side --livery taktik        # → yk38_hero_taktik.jpg …
@@ -206,7 +228,12 @@ ailesi). Aralıklar `spec.yaml → rig.ranges_deg`'dedir.
 **Kumanda bağlantıları.** Kanatçık, dış flap, elevatör ve dümende (iki yan) servis kapağından çıkan servo kolu
 (`U_ServoArm_*`), Ø1,6 itme çubuğu + çatallar (`U_Pushrod_*`) ve G10 boynuz (`U_Horn_*`) vardır. Paralelkenar
 bağlantıdır: servo kolu yüzeyle aynı ifadeyle döner, çubuk dönmeden öteler, ucu boynuz deliğinde kalır. İç flap ayrı
-servo kullanmaz; dış flaba Ø2 bağlayıcı telle bağlıdır (toplam 8 kumanda servosu).
+servo kullanmaz; dış flaba Ø2 bağlayıcı telle bağlıdır (toplam 8 kumanda servosu). Bağlantılar kanat ve stabilizede
+alt yüzde, dümende dikeyin iç yüzündedir (pervane tarafı). Dümen servo kolu boyalı PETG kaportanın altındadır
+(`U_Fairing_Servo_Rudder_L/R`, 30 × 10 × 5 mm); çubuk kaportanın koyu arka ağzından çıkar, servo ucunda Z-büküm
+vardır. `rig.linkage_clearance_report()` her bağlantıyı kendi kumandasının tam aralığında BVH ile tarar: tasarım
+gereği gömülü temaslar (boynuz tabanı, servo kolu–deri, çatal pimleri, kaporta tabanı ve ağzı) açık izin listesindedir
+(`rig.LINK_ALLOW`); başka çakışma yoktur, en küçük açıklık 0,54 mm (dış flap boynuzu, 30°).
 
 **Eksen kuralı.** Kumanda yüzeylerinin orijini menteşe hattının ortasındadır. Yerel X ekseni
 `params.HingeLine.axis_positive_b`'dir: `rotation_euler.x` iki yanda da + = firar kenarı aşağı, dümende + = firar
@@ -220,35 +247,36 @@ geriye doğru. Taret: pan yerel Z, tilt yerel Y (`turret_tilt_deg` → −Y).
 
 | Klip | Süre | İçerik | Kameralar |
 |---|---|---|---|
-| `showcase` | 21 s, 504 kare, 24 fps, pist | 0–2 s kuruluş planı (vinç alçalması + yaklaşma), motor çalışır (0 → 3600 → 3000 dev/dk). Kumanda kontrolü yakın planlarda: kanatçık ±20, flap 0 → 20°, irtifa −25/+20 ve istikamet ±22 (burun tekeri birlikte). Düz kalkış: 8600 dev/dk, 9,5 s'de 25,7 m'de teker keser (spec 25,5 m @ 13,2 m/s); amortisörler uzar, tekerler yavaşlar. Takım 12 s'de ≈ 2,8 m AGL'de gerçek sırayla toplanır (kapak 1 s + bacak 5 s + kapak 1 s), 26° yatışlı tırmanan sol dönüş, flap 0. Taret yer kamerasını izler | A kuruluş, A1 kanatçık, A1F flap, A2 kuyruk, B pist kenarı araç, C takip düzeneği (uçakla aynı yükseklikte), D yer kamerası + zum (zaman çizelgesi işaretleri) |
-| `mechanisms` | 16 s, 384 kare, kesintisiz döngü, stüdyo | Bakım sehpasında: kanatçık, flap 0 → 30 → 0, irtifa + istikamet, burun tekeri yönlendirme ±30°, taret ±100° tarama, takım topla/aç (kapak 0,54 s / bacak 2,52 s / kapak 0,54 s, gerçek sürenin yarısı), pervane 240 dev/dk (döngüde tam 64 tur). Son kare ilk kareyle aynı | Geniş yörünge + işaretlerle kesilen yakın planlar |
+| `showcase` | 21 s, 504 kare, 24 fps, pist | 0–2 s kuruluş planı (vinç alçalması + yaklaşma), motor çalışır (0 → 3600 → 3000 dev/dk). Kumanda kontrolü yakın planlarda: kanatçık ±20, flap 0 → 20°, irtifa −25/+20 ve istikamet ±22 (burun tekeri birlikte). Düz kalkış: 8600 dev/dk, 9,5 s'de 25,7 m'de teker keser (spec 25,5 m @ 13,2 m/s); amortisörler uzar, tekerler yavaşlar. Takım 12 s'de ≈ 2,8 m AGL'de gerçek sırayla toplanır (kapak 1 s + bacak 5 s + kapak 1 s), 26° yatışlı tırmanan sol dönüş, flap 0. Taret yer kamerasını izler | A kuruluş, A1 kanatçık, A1F flap, A2 kuyruk, B pist kenarı araç (teker kesince uçakla birlikte yükselir, ufuk kadraj ortasında kalır), C takip düzeneği (uçakla aynı yükseklikte), D yer kamerası + zum (zaman çizelgesi işaretleri) |
+| `mechanisms` | 16 s, 384 kare, kesintisiz döngü, stüdyo | Bakım sehpasında: kanatçık, flap 0 → 30 → 0, irtifa + istikamet, burun tekeri yönlendirme ±30°, taret ±100° tarama, takım topla (kapak 0,54 s / bacak 2,52 s / kapak 0,54 s, gerçek sürenin yarısı), 0,3 s toplu bekleme, aç (3,3 s), pervane 240 dev/dk (döngüde tam 64 tur). Son kare ilk kareyle aynı | Geniş yörünge + işaretlerle kesilen yakın planlar |
 
 Aksiyonlar adlandırılmıştır (`YK38_<klip>_Root`, `_Prop`, kamera aksiyonları) ve *fake user*'lıdır; uçuş yolu ve
 kameralar seyrek BEZIER anahtarlarıyla yazılır (planın kare kare hâli `YK38_showcase_Root_pisirilmis`'tedir).
 `animation.set_scene_range(ad)` klibi etkinleştirir, `animation.clear()` dinlenme pozuna döner (`.blend` içinde:
 `YK38_klip_sec.py`). GLB (`out/yk38.glb`) `mechanisms` döngüsünü kare kare pişirilmiş tek animasyon olarak taşır:
 takım, kapaklar, yüzeyler, bağlantılar, taret ve pervane (64 tur). Boya renkleri GLB'de basit PBR'ye çevrilir;
-pervane diski ve paketleme zarfları GLB'ye girmez, taret LED'i sönüktür.
+pervane diski, paketleme zarfları ve yalnız render kaporta boşluğu (`U_Cowl_Cavity`, `ucav_render_only`) GLB'ye
+girmez, taret LED'i sönüktür.
 
 ## 7. Render
 
 Cycles CPU, uyarlamalı örnekleme, OpenImageDenoise, AgX (Medium High Contrast). Pozlama pistte −0,4 EV, stüdyoda 0.
 Pistte uçağın altına, kameraya ve yansımalara görünmez bir yer yansıması dolgusu (`S_UnderFill`) konur; uçağı izler
 ve kalkıştan sonra söner. Animasyonda hareket bulanıklığı açıktır (obtüratör 0,5 kare; pervanede 64 alt adım) ve
-900 dev/dk üstünde yarı saydam pervane diski (uçta turuncu halka) görünür.
+900 dev/dk üstünde yarı saydam açık "pus" diski (uçta yumuşak kenarlı, soluk turuncu halka) görünür.
 
 | Görünüm | İçerik |
 |---|---|
-| `hero` | Ön-sol 3/4, alçak, 70 mm, f/5.6 alan derinliği, güneş 24° |
-| `rear34` | Arka-sağ 3/4 |
-| `side` | Yan, **ortografik**, kanat dihedrali (4°) yüksekliğinden: yakın kanat kenardan, uzak kanadın üst yüzü gövdenin üstünde görünür |
+| `hero` | Ön-sol 3/4, alçak, 70 mm, f/5.6 alan derinliği, güneş 24°; iki kanat ucu kadrajın ≥ %3 içinde (izdüşüm kutusu objektif kaydırmasıyla ortalanır, uçak biraz aşağıda) |
+| `rear34` | Arka-sağ 3/4, 50 mm, 15° yukarıdan; kahramanla aynı kadraj kuralı (iki kanat ucu ≥ %3 içeride) |
+| `side` | Yan, 135 mm perspektif, göz hizasına yakın (0,8° yukarıdan, kamera zeminden ≈ 0,46 m): uzak kanat sırtın altında kalır, ufuk ve gökyüzü kadrajda, yakın kanadın alt yüzü ince açık bir şerit; seyrüsefer ışıkları kapalı |
 | `front`, `top` | Ortografiğe yakın (135 / 85 mm) |
 | `under` | Alttan, takım toplu |
-| `nose` | EO/IR taret yakın plan (pan 18°, tilt −12°), f/4 |
+| `nose` | EO/IR taret yakın plan (pan 18°, tilt −2°: pencereler ufku yansıtır), f/4 |
 | `tail` | U-kuyruk ve itici pervane, f/5.6 |
-| `gearbay` | Sol ana takım ve açık kuyu, 28 mm |
+| `gearbay` | Sol ana takım ve açık kuyu, 28 mm, kapaklar %60 açık |
 
-Boya şemaları: `standart` (spec renkleri) ve `taktik` (koyu düşük görünürlüklü gri: üst ≈ RAL 7015, alt ≈ RAL 7046,
+Boya şemaları: `standart` (spec renkleri) ve `taktik` (koyu düşük görünürlüklü gri: üst ≈ RAL 7016 (#383E43), alt ≈ RAL 7046,
 mat boya, açık gri işaretler). **Taktik şema yalnız render içindir:** koyu üst boya güneşte LW-PLA'yı ısıtır
 (Tg ≈ 55 °C; baskı raporundaki ısı/boya kuralı: üst yüzey güneş yansıtması ≥ 0,5).
 
@@ -287,12 +315,15 @@ Gövde sahnesi (dinlenme pozu, booleanlar uygulanmış), spec `print` segment pl
    glove; gövdede burun konisi (s 0–0,148), sökülebilir burun modülü (taret yuvası), 6 LW-PLA halka ve 3 LW-ASA kuyruk
    konisi halkası (ekler kuyu, eyer ve hava alığından kaydırılır); PA-CF kaporta, yanaklar ve lüle; stabilize/dikey
    ekleri %25 ok eksenine dik.
-2. **Kabuk:** dış yüzey içe ötelenir. Et kalınlıkları: kanat 0,6 mm (D-kutu 1,2), gövde 0,8, kuyruk 0,5, LW-ASA 1,0,
-   PA-CF kaporta 1,6 mm. Ek kenarlarında 0,4 × 0,3 mm pah (panel çizgisi; render'daki çizgiler aynı istasyonlardadır).
+2. **Kabuk:** dış yüzey içe ötelenir. Et kalınlıkları (spec `print.zones`): kanat 0,6 mm (D-kutu 1,2), burun ve
+   gövde halkaları 1–6 0,7 mm (+ 4 iç stringer, 0,8 × 5 mm), kuyruk konisi LW-ASA 1,0, kuyruk 0,5, PA-CF kaporta 1,6,
+   kök kaportası ve ER-150 kabartması 1,2 mm. Ek kenarlarında 0,4 × 0,3 mm pah (panel çizgisi; render'daki çizgiler
+   aynı istasyonlardadır).
 3. **Birleşimler:** tabla ucunda 1,2 mm kaburga (hafifletme delikleri, boru delikleri malzemeye göre paylı çevrel
-   çokgen), karşı uçta 2,4 × 6 mm yapıştırma flanşı ve Ø3 CF hizalama pimleri; gövdede 1,6 × 8 mm çerçeve.
-4. **İç yapı ve yük yolları:** CF boru ve longeron kovanları, kesme ağları, ±40° geodezik kafes (0,45 mm), servo
-   yuvaları, Ø8/Ø6 kablo kanalları ve MPX cepleri. PA-CF kanat kutusu çerçeveleri (G10 köprü yuvaları), ana takım
+   çokgen), karşı uçta 2,0 × 6 mm yapıştırma flanşı ve Ø3 CF hizalama pimleri; gövdede 1,6 × 6 mm çerçeve.
+4. **İç yapı ve yük yolları:** CF boru ve longeronlarda sürekli kovan yerine 16 mm bilezikler (≤ 55 mm aralık;
+   yük bilezik ve kaburgalarla deriye geçer), kesme ağları, ±40° geodezik kafes (0,6 mm üye, 90 mm aralık, yalnız
+   panel 1–4), servo yuvaları, Ø8/Ø6 kablo kanalları ve MPX cepleri. PA-CF kanat kutusu çerçeveleri (G10 köprü yuvaları), ana takım
    beşiği (ER-150, 2 × M3) ve burun takım yatağı, motor halkası (4 × M4, 60 mm kare), PETG longeron kırık soketleri.
 5. **Kumanda yüzeyleri:** ayrı parçalar, basılı menteşe dilleri; pim Ø1,75 PETG filament, Ø2,1 yatak. Her yüzeyin
    tek bir pim takma yönü vardır (kanatçık uç kapağından, dış flap panel ekinden, iç flap kök bloğundan, elevatör
@@ -302,33 +333,48 @@ Gövde sahnesi (dinlenme pozu, booleanlar uygulanmış), spec `print` segment pl
 7. **Denetim:** her parça kapalı ve tek parçadır (STL'ler tam float32 kenar eşleme, 0,1 µm kaynak ve Blender'a
    yeniden okumayla doğrulanır), tabla teması ≥ 3 cm² (gerekirse 0,4 mm düzleme ya da 1 mm kırılabilir ayak),
    tablaya bakan 45° sarkma varsa "tabla desteği" diye işaretlenir, et kalınlığı ışınla ölçülür, sığmayan parça
-   otomatik bölünür. **Isı kuralı:** silindir, buji başlığı ve susturucu zarfına 150 mm içinde LW-PLA olmaz; o
-   bölgedeki parçalar (stabilize 1, elevatör 1) kendiliğinden LW-ASA'ya geçer.
+   otomatik bölünür. **Isı kuralı** (`printprep.heat_rule_eval`): kural 1 — silindir, buji başlığı, susturucu
+   zarfı, çıkış borusu ve ısı kalkanına 150 mm içinde LW-PLA yok; kural 2 — camsı geçişi 120 °C'nin altındaki
+   filament (LW-ASA 95, PETG 80, LW-PLA 55 °C) bunlara 50 mm'den yakın değil. Malzeme kendiliğinden değişmez: ısı
+   bölgesindeki parçaların filamenti spec'te adıyla atanır (`print.zones[].parts`: stabilize 1 ve elevatör 1 →
+   LW-ASA, kaynağa 61 / 57 mm) ve ihlal `build.py --print`'i 1 ile bitirir.
+8. **Kaporta (R01):** kaynak `shapes.cowl(print_solid=True)` kapalı dış katısıdır (fincan yok); printprep kabuğu
+   oyar, arka Ø92 açıklığı (akış silindiri flanşın 26 mm önüne uzanır, ek flanşları da kırpar), boydan boya çene
+   yarığını ve sol yanakta boru deliğini keser, motor yasak bölgelerini (`shapes.engine_keepouts`: zarf + 5 mm,
+   susturucu + 15,5 mm) çıkarır. Sürtünme pabucu kaporta yüzünü izleyen 2 mm PA-CF katmandır, lüle halkası kaportaya
+   alın alına yapışır.
 
 **Önce tolerans kuponunu basın** (`tolerance_coupon.stl`: Ø27/16/8/6/3/1,75 delikler parçalardaki payla aynı);
 gerekirse `TUBE_CLEAR`'ı ayarlayın.
 
-**Sonuç, 256 × 256 × 256 mm tabla:** **65 benzersiz STL, 104 basılı parça** (sağ eşler aynadır), **4,06 kg** filament, ≈ **292 h** baskı (kaba model), 27,8 MB STL; ayrıca 3 alet parçası (2 kapak kalıbı + tolerans kuponu: 0,29 kg, ≈ 9 h). Bütün parçalar kapalı, tek parça ve tablaya en az 20 mm payla sığar; ısı kuralı ihlali yoktur.
+**Sonuç, 256 × 256 × 256 mm tabla:** **65 benzersiz STL, 104 basılı parça** (sağ eşler aynadır), **3,46 kg** filament
+(R04 hedefi ≤ 3,5 kg; önceki rapor 4,06 kg; kalın PA-CF/PETG parçalar dilimleyicideki gibi kabuk + %40 gyroid dolguyla
+hesaplanır, dolu basılırsa ≈ +56 g), ≈ **257 h** baskı (kaba model), 30,8 MB STL; ayrıca 3 alet parçası (2 kapak
+kalıbı + tolerans kuponu: 0,29 kg, ≈ 9 h). Bütün parçalar kapalı, tek parça ve tablaya en az 20 mm payla sığar; ısı
+kuralı ihlali yoktur. Spec kütle bütçesinin "Basılı:" kalemleri bu raporun grup kütleleridir; `sizing.py --check`
+ikisini karşılaştırır.
 
 | Malzeme | Parça | Kütle | Süre |
 |---|---:|---:|---:|
-| LW-PLA (kanat, gövde halkaları 1–6 ve burun, kumanda yüzeyleri, stabilize/dikey dış parçaları) | 64 | 2,66 kg | 204 h |
-| PA-CF (kaporta, yanaklar, lüle, NACA dudağı, kök kaportası, ER-150 kabartması, kanat kutusu çerçeveleri, takım yatakları, motor halkası) | 15 | 0,77 kg | 49 h |
-| LW-ASA (kuyruk konisi halkaları 7–9; ısı bölgesinde stabilize 1 ve elevatör 1) | 7 | 0,35 kg | 25 h |
-| PETG (burun flanşı, taret yakası, takım kapakları, aviyonik kapağı çerçevesi, longeron soketleri, panel tutma dili) | 17 | 0,27 kg | 15 h |
-| TPU (çene sürtünme pabucu) | 1 | 0,003 kg | 0,5 h |
+| LW-PLA (kanat, gövde halkaları 1–6 ve burun, kumanda yüzeyleri, stabilize/dikey dış parçaları) | 64 | 2,30 kg | 180 h |
+| PA-CF (kaporta, yanaklar, lüle, NACA dudağı, sürtünme pabucu, kök kaportası, ER-150 kabartması, kanat kutusu çerçeveleri, takım yatakları, motor halkası) | 16 | 0,66 kg | 43 h |
+| LW-ASA (kuyruk konisi halkaları 7–9; ısı bölgesinde stabilize 1 ve elevatör 1) | 7 | 0,31 kg | 23 h |
+| PETG (burun flanşı, taret yakası, takım kapakları, aviyonik kapağı çerçevesi, longeron soketleri, panel tutma dili) | 17 | 0,19 kg | 11 h |
 
-Gruplara göre: kanat 1,44 kg, gövde 0,91 kg, kumanda yüzeyleri 0,37 kg, yük yolları 0,36 kg, kuyruk 0,31 kg,
-itki 0,28 kg, kaplamalar 0,25 kg, taret yakası 0,08 kg, takım kapakları 0,07 kg.
+Gruplara göre: kanat 1,27 kg, gövde 0,77 kg, yük yolları 0,31 kg, kumanda yüzeyleri 0,31 kg, kuyruk 0,28 kg, itki
+0,23 kg, kaplamalar 0,19 kg, takım kapakları 0,08 kg, taret yakası 0,02 kg (önceki raporla grup grup karşılaştırma ve
+hafifletme kalemleri: raporun "Kütle tablosu").
 
-**220 × 220 × 250 mm tabla:** 66 benzersiz STL / 105 parça, 4,07 kg, ≈ 293 h (burun modülü ikiye bölünür). Kanat paneli 1 ve iki kök bloğu 2,5–2,9 mm dar payla sığar; rapor bunları "dar pay" diye işaretler
+**220 × 220 × 250 mm tabla:** 66 benzersiz STL / 105 parça, 3,46 kg, ≈ 257 h (burun modülü ikiye bölünür). Kanat paneli 1 ve iki kök bloğu 2,5–2,9 mm dar payla sığar; rapor bunları "dar pay" diye işaretler
 ([`out/print_220x220x250/print_report.md`](out/print_220x220x250/print_report.md)).
 
 Basılmayan parçalar (CF borular, G10 köprü/perde/flanş/plakalar, bağlantı elemanları, 8 kumanda servosu, ER-150,
 DLE-20, pervane, akü, taret), yük yolu tablosu, montaj sırası, dilimleyici ayarları (parça grubuna göre nozul,
 çizgi eni, katman, Arachne sınırları) ve ısı/boya kuralı [`out/print_report.md`](out/print_report.md)'dedir.
 Kanat üstü filetosu, stabilize kök filetosu ve dikey kök mermisi sıfıra inen kama olduğundan basılmaz; epoksi +
-mikrobalonla doldurulur.
+mikrobalonla doldurulur (dikey kök mermisi dikey ve stabilizeye teğet oturduğu için yandan kırpmalı bir baskı tarifi
+yoktur; 0,5 mm ısıl biçimlendirilmiş levha da olur). Dümen servo kaportaları (30 × 10 × 5 mm, ≈ 0,4 g) segment
+planında değildir: sahne ağından PETG basılır ya da levhadan biçimlendirilir (raporun BOM'u).
 
 ## 9. Boyutlandırma
 
@@ -338,9 +384,11 @@ python3 ucav/sizing.py --check    # tolerans dışı kontrol varsa çıkış kod
 ```
 
 [`out/sizing.md`](out/sizing.md) planform, kuyruk hacimleri, nötr nokta (%10 statik marj), stall hızları, itki hattı
-momenti, lüle akış alanı, yer geometrisi (tip-back 17,7°, devrilme 47,9°, pervane çarpma 13,2°), pervane–stabilize
-aralıkları (pala süpürme hacmi dahil), takım kuyusu payları, kütle dökümü ve CF boruların profile sığmasını (stabilize
-kirişi boyunca) spec referanslarıyla karşılaştırır.
+momenti, lüle akış alanı, yer geometrisi (tip-back 17,7°, devrilme 47,7°, pervane çarpma 13,2°; kaporta temas açısı
+kaporta ağından, sürtünme pabucu kaportadan önce), pervane–stabilize aralıkları (pala süpürme hacmi dahil), takım
+kuyusu payları, kütle dökümü ve CF boruların profile sığmasını (stabilize kirişi boyunca) spec referanslarıyla
+karşılaştırır. Kütle bütçesinde "Basılı:" kalemleri `out/print_report.json`'daki baskı planı grup kütleleriyle
+(toplam ve grup başına ≤ 5 g), rezerv MTOW'un en az %3'üyle denetlenir.
 
 ## 10. Mevzuat
 
@@ -363,21 +411,25 @@ Bu not mühendislik özetidir, hukuki görüş değildir. Uçuştan önce SHGM'n
 python3 -m unittest discover -s tests -q                 # bütün depo testleri
 python3 -m unittest tests.test_ucav_core -v              # spec/params/profil/boyutlandırma/geometri (bpy gerekmez)
 python3 -m unittest tests.test_ucav_blender -v           # sahne: nesneler, sürücüler, malzemeler, manifold, zemin teması,
-                                                         # takım çevrimi, bağlantılar, pervane açısı ve diski, döngü
-                                                         # dikişi, append, ölçüler %1, GLB, render, STL'ler ve rapor
+                                                         # takım çevrimi, kapak taraması, bağlantı çarpışma taraması,
+                                                         # kaporta ↔ motor zarfları (BVH), soğutma çıkışı (ışın), pervane
+                                                         # açısı ve diski, döngü dikişi, append, ölçüler %1, kadrajlar,
+                                                         # GLB, render; baskı: kaporta alt kümesi (zarf + açıklık), ısı
+                                                         # kuralı mantığı, STL'ler ve rapor
 ```
 
 Fiziksel doğrulama (prototipte, uçuştan önce):
 
-1. **Kütle tartımı.** Basılı parçalar plan tahmininin %22 üstündedir (§12). İlk iş, parçaları basıp tartmak ve CG'yi
-   ölçmektir; MTOW bütçesi buna göre güncellenir.
+1. **Kütle tartımı.** Basılı gövde planı 3,46 kg'dır; kütle bütçesinde 0,44 kg rezerv kalır (§12). İlk iş, parçaları
+   basıp tartmak ve CG'yi ölçmektir; spec'teki "Basılı:" kalemleri ve rezerv tartımla güncellenir.
 2. **Kum torbası testi, 6 g.** Bu ölçek, kanıtlanmış baskı RC pratiğinin çok üstündedir. Kanat, MTOW'un 6 katı yayılı
    yükle (açıklık boyunca eliptik dağılım) sınanır. Merkez G10 köprüsü, kanat kutusu çerçeveleri ve cıvatalı soket
    tek yük yoludur; ayrıca kırılma testi yapılır.
 3. **Motor tezgâhı.** Ters DLE-20 + 16×8 itici: statik itki (hedef 5,57 kgf), yakıt tüketimi (havada kalış modeli
    belirsizdir), ters çalışmada buji kirlenmesi ve rölanti, titreşim spektrumu (baskı parçalar ve aviyonik), silindir
-   kafası, kaporta, yanak ve **stabilize kökü / elevatör 1** sıcaklığı (termokupl; LW-ASA Tg ≈ 95 °C), egzozun
-   pervane diskine etkisi.
+   kafası, kaporta, yanak (özellikle sol yanakta boru deliği kenarı ve ısı kalkanı) ve **stabilize kökü / elevatör 1**
+   sıcaklığı (termokupl; PA-CF Tg ≈ 150 °C, LW-ASA Tg ≈ 95 °C), soğutma havası debisi (NACA girişi → halka lüle +
+   çene yarığı), egzozun pervane diskine etkisi.
 4. **Titreşim ve çırpınma.** Kanat ve U-kuyruk için yer titreşim testi; kumanda yüzeyi ve itme çubuğu boşlukları.
 5. **Takım ve yer testleri.** ER-150 sırası (kapak–bacak–kapak), fren, burun yönlendirme ve shimmy (12 mm iz), düz
    kalkış koşusu. Ön CG'de kuyruk payı yalnız 0,16 CL_h'dir: kalkış nominal ya da daha arka CG ile yapılır.
@@ -386,31 +438,55 @@ Fiziksel doğrulama (prototipte, uçuştan önce):
 
 ## 12. Bilinen sınırlar
 
-* **Basılı kütle tahminin %22 üstünde:** kurulan plan 4,06 kg, spec/panel tahmini 3,33 kg (+0,36 kg'ı yeni yük yolu
-  parçalarıdır). Fark (+0,73 kg), MTOW bütçesindeki kütle artış rezervinin (0,56 kg) tamamını tüketir ve ≈ 0,17 kg
-  aşar: hafifletilmezse MTOW ≈ 11,9 kg olur (stall hızı ≈ %0,7 artar) ve büyüme payı kalmaz. Spec'teki kütle dökümü
-  panel değerlerini korur; prototip tartımıyla güncellenmelidir.
-* **Ana teker eni ≈ 20,5 mm** (spec 26 mm). Kuyu tavanı arka-iç köşede kanat üst derisiyle sınırlıdır; toplu tekerde
-  tavana ≥ 2,5 mm pay bırakılır. `gear.tyre_fit_width()` eni tavana göre hesaplar; tavan yükseltilirse kendiliğinden
-  genişler.
-* **Isı:** elevatör 1'in iç ucu susturucu zarfına ≈ 16 mm, stabilize 1 ≈ 21 mm uzaktadır (arada PA-CF yanak duvarı ve
-  15 mm hava boşluğu). İkisi de LW-ASA basılır; motor tezgâhında ölçülmeden uçulmamalıdır. Daha kalıcı çözüm:
-  susturucu çıkışını ≥ 60 mm geriye almak ya da kalkanı stabilize köküne uzatmak.
-* **Kafes et kalınlığı 0,45 mm**, köpüklü LW-PLA çizgi genişliğinin altındadır; dilimleyicide ince duvar algılama
-  (Arachne) gerekir (raporun dilimleyici tablosu). 9 STL'de et örneklerinin %0,5–3,4'ü 0,4 mm'nin altındadır
-  (menteşe dili çentikleri, panjur ve testere dişi kenarlarında < 0,1 mm şeritler; dilimleyici atar). `cowl_top`
-  et p05 değeri 0,69 mm'dir (hedef 0,8).
-* **Destek gereken parçalar:** `cowl_cheek_L` (susturucu kabartısı, ≈ 96 cm² tabla desteği), `fus_ring_1`
-  (≈ 60 cm²) ve `fus_ring_2` (≈ 45 cm², burun kuyusu içi); raporda "tabla desteği" diye işaretlidir.
-* **Kaplama kenarları** (kök kaportası, ER-150 kabartması) 0,9 mm'nin altına incelen yerlerde kırpılır; montajda
-  epoksi + mikrobalonla deriye sıfırlanır. Dikey kök mermisi neredeyse tamamen dikey/stabilize içindedir, basılmaz.
-* **Kapak menteşeleri** dış deri çizgisindedir: kaz boynu menteşe toplu tekere çarpardı. Burun tapa kapağının ön
-  kenarında ≈ 4,8 mm aralık kalır. Susturucu çıkış borusu yanak yüzeyinin ≈ 8 mm içinden başlar (yalnız görsel).
+* **Kütle bütçesi bir modeldir.** Basılı gövde baskı planından 3,46 kg'dır (panel tahmini 3,33 kg; önceki plan
+  4,06 kg). Spec kütle bütçesi bu grup kütleleriyle yeniden kuruldu (panelin basılı kalemleri yerine; ayrıca kuyruk CF
+  boruları, ısıl biçimlendirilmiş kapak levhası ve epoksi dolgular ayrı kalem); fark (+0,12 kg) kütle artış
+  rezervinden karşılandı, MTOW 11,71 kg'da kaldı ve rezerv **0,44 kg**'dır (MTOW'un %3,8'i; panelde 0,56 kg).
+  Kütle hacim × etkin yoğunluktan gelir: LW-PLA köpürme oranı ±%10 değişirse basılı kütle ≈ ±0,23 kg oynar; kalın
+  PA-CF/PETG parçalar dilimleyici dolgusu yerine dolu basılırsa +56 g. Tartım rezervi aşarsa MTOW ve ondan türeyen
+  değerler (kanat yüklemesi, stall, T/W, kalkış koşusu) yeniden hesaplanmalıdır.
+* **Isı (R05):** susturucu gövdesi stabilize ve elevatör 1'e 56,6 mm'dir (elevatör ±25°'de 59,9 mm); 60 mm hedefini
+  yalnız çıkış borusu ve ısı kalkanı (74,9 mm) karşılar. 60 mm gövde payı, 145 mm'lik kaportada 15,5 mm hava boşluğu
+  ve gerçekçi bir susturucu kutusuyla sığmaz (çene kapanışı ve kabartının arka rampası bağlar). Stabilize 1 ve
+  elevatör 1 LW-ASA'dır (Tg 95 °C; Tg kuralının 50 mm sınırının dışında). Sol yanak, borunun geçtiği delikte boruya
+  1,5 mm yaklaşır (PA-CF, Tg 150 °C; dışta yanağa oturan Al kalkan): motor tezgâhında termokuplla ölçülmeden
+  uçulmamalıdır, gerekirse delik büyütülüp seramik keçe kovan konur. Susturucu konumu ve kutu boyu spec
+  varsayımıdır.
+* **Kuyruk çarpması:** sürtünme pabucu kaportanın ilk değen noktasıdır, uçağın değil. Pervane 13,2°'de, dikey kökü
+  firar kenarı 18,5°'de (dikey kökü stabilize ucunun 0,12 m arkasına uzanır) pabuçtan (19,26°) önce değer.
+* **İnce et ve kıymıklar:** kafes üyeleri 0,6 mm (tek LW-PLA çizgisi; dilimleyicide Arachne/ince duvar algılama
+  açık olmalı). Bağımsız STL denetiminde (parça başına 4000 alan ağırlıklı örnek) 0,4 mm'nin altında kalan et örneği
+  iki parçada %0,5 sınırındadır: `gear_mount_N` (plaka altı ile longeron bileziklerinin teğet kaması, keskin kenar) ve
+  `cowl_top` (arka flanşta üst parça–yanak ek çizgisi ile çene yanındaki ek flanşında kısa kesim kenarları; et p05
+  1,49 mm); diğer bütün parçalarda ≤ %0,45. 68 STL'nin hepsi kapalı (eşlenmemiş ya da yinelenen kenar yok),
+  tablada ve tek pozitif kabukludur. Kaplama–deri birleşimlerinde 0,8 mm'nin altına inen tüy
+  kenarlar kırpılır ve epoksi + mikrobalonla sıfırlanır (önerilen 1,2 mm basamaklı bindirme yapılmadı).
+* **Destek gereken parçalar:** 27 parça tablaya bakan 45° sarkma nedeniyle "tabla desteği", 6 parça "model üstü
+  destek" ister (raporun parça tablosu). En büyükleri `cowl_cheek_L` (≈ 64 cm², susturucu kabartısı), `fus_ring_1`
+  (≈ 57 cm²), `fus_ring_2` (≈ 46 cm², burun kuyusu içi), `door_L_2` (≈ 39 cm²) ve `cowl_top` (≈ 36 cm²).
+* **Basılmayan kaplamalar:** kanat üstü filetosu, stabilize kök filetosu ve dikey kök mermisi epoksi + mikrobalonla
+  doldurulur (mermi dikey ve stabilizeye teğet oturur; dışarıda ≈ 2 × 10 cm³, yandan kırpmalı baskı tarifi yok).
+  Dümen servo kaportaları segment planında değildir (BOM).
+* **Sahne ağında kalan küçük kusurlar (baskıda çözülür):** burun kapağı çentik köşesinde 7 µm'lik kıymık, taret
+  yakasının gömülü üst kutusunun modül derisiyle çakışması (baskıda yaka gövde dış yüzünde kesilir), panjur
+  dudaklarının yarık kenarına dik olmaması ve kumanda yüzeyi oyuk dudaklarının ≈ 6° bıçak ağzı (dilimleyici çizgi
+  eninin altını atar). Sahneye işlenmedi: bütün render ve animasyonları yeniden üretmeyi gerektirir, görsel etkisi yok.
+* **Kapak menteşeleri** dış deri çizgisindedir; AERO-05'in "derinin ≥ 3 mm içinde" şartı karşılanmadı (kaz boynu
+  menteşe toplu tekere çarpardı). Burun tapa kapağının ön kenarında ≈ 4,8 mm aralık kalır. Kapaklar 0,3 / 0,6 / 1,0
+  açıklıkta gövde, kanat ve kaplamalarla çakışmaz (test).
+* **Dümen bağlantısı (R11):** inceleme bağlantının dikeyin dış yüzünde olduğunu söylüyordu; ölçüm iç yüzde (pervane
+  tarafı) olduğunu gösterdi — `tail` ve `rear34` kameraları sancaktan bakar ve iskele dikeyinin İÇ yüzünü görür. Bu
+  yüzden taşınmadı; servo kolu 30 × 10 × 5 mm kaportayla örtüldü. Kaporta yüksekliği önerilen 4 yerine 5 mm'dir:
+  4 mm'de boynuz ile dikey firar dudağı arası ±22°'de 0,36 mm'ye iner, 5 mm'de 0,95 mm'dir.
 * **Kuyruk uç boşlukları** (elevatör ve dümen uçları) 2,5–3,2 mm'dir. Menteşe ok açısı yüzünden ±25°'de çarpmama payı
   bu kadardır. Menteşe (oyuk) aralığı her yüzeyde 1 mm'dir.
-* **Yan görünüşte iki ton zayıf:** RAL 7035 ile RAL 9003'ün parlaklık oranı yalnız 1,38'dir; belirgin karşı gölge için
-  spec'te daha koyu bir üst renk gerekir (taktik şema bunu gösterir).
+* **Standart üst boyanın ekran değeri** (#BDC1BE) RAL 7035'in sık kullanılan #CBD0CC yaklaşığından ≈ %7 koyudur (L* 78;
+  RAL 9003 L* 93): yan görünüşte alt yüz üstten 11,5 sRGB düzeyi açık okunur. Boya kodu RAL 7035'tir.
+* **Yan görünüş:** seyrüsefer ışıkları kapalıdır, ama yakın (iskele) kanat ucundaki kırmızı lens kanat kökü
+  kaportasının önüne ≈ 6 px'lik bir nokta olarak düşer (gerçek geometri; görünüme özel nesne gizleme yok).
 * **Pervane diski stilizedir:** gerçek kamerada pala izi çok soluktur (obtüratör içinde ≈ 3 tur); disk okunurluk için
-  eklenmiştir ve yalnız render'dadır.
+  eklenmiştir ve yalnız render'dadır. Disk açık bir pus (#9A9FA3) ve soluk turuncu uç halkasıdır; güneşe karşı arkadan
+  bakışta zeminden hafifçe koyu okunur.
 * **Sözleşme farkı:** kumanda yüzeylerinde yerel X, `HingeLine.axis_positive_b`'dir; sol yüzeylerde içe bakar (§5).
-* Tam kalite animasyonlar (1280×720, 24 örnek) depoya eklenmedi; depodakiler düşük maliyetli önizlemelerdir (§7).
+* Tam kalite animasyonlar (1280×720, 24 örnek; tahmini 7 h) depoya eklenmedi; depodakiler 960×540, 16 örnekli
+  önizlemelerdir (§7).

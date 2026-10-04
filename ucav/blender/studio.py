@@ -5,11 +5,11 @@
 * ``"pist"`` (varsayılan): Nishita fiziksel gökyüzü (güneş diski kapalı; yerine aynı yönde 0,8° açılı Güneş
   lambası → net ama yumuşak kenarlı gölge), 8 m × 230 m asfalt pist (eşik çizgisi, "piyano" tuşları, "09"/"27"
   numaraları, kesikli eksen çizgisi, kenar çizgileri, hedef noktası blokları; aşınmış boya, lastik izleri),
-  biçilmiş çim (6 m biçme şeritleri), 4,3 km'de alçak tepe/ağaç sırası silueti ve kamera ışınlarına uygulanan
-  hava perspektifi (zemin uzaklıkla ufkun ~3° üstündeki gök rengine karışır → ufukta dikiş yok). Gökyüzünün
-  ufuk altı da ufuk rengiyle doldurulur (alttan bakışta siyah yarım küre yok). Pist ``+X`` yönündedir; uçak
-  dinlenme konumunda eşiğin hemen ilerisinde, eksen çizgisi üzerindedir (``animation`` gösterim klibinin
-  kalkış koşusu ve tırmanışı bu pistte/alanda geçer).
+  biçilmiş çim (yer yer sönen, kıvrık biçme şeritleri; hafif ton lekeleri), 4,3 km'de alçak tepe/ağaç sırası
+  silueti ve kamera ışınlarına uygulanan hava perspektifi (zemin uzaklıkla ufkun ~3° üstündeki gök rengine karışır
+  → ufukta dikiş yok). Gökyüzünün ufuk altı da ufuk rengiyle doldurulur (alttan bakışta siyah yarım küre yok). Pist
+  ``+X`` yönündedir; uçak dinlenme konumunda eşiğin hemen ilerisinde, eksen çizgisi üzerindedir (``animation``
+  gösterim klibinin kalkış koşusu ve tırmanışı bu pistte/alanda geçer).
 * ``"studyo"``: ufuksuz koyu "sonsuz" stüdyo — antrasit fon (beyaz uçakla kontrast), uçağın altında ışık
   havuzu olan yarı parlak zemin (3 m → 12 m arasında fona karışır, her bakış açısında dikişsiz); ızgaralı
   büyük anahtar softbox, dolgu, iki kontur ışığı ve tepe şerit softbox (boyada uzun yansıma çizgisi).
@@ -30,13 +30,17 @@ Pozlama ve yer dolgusu
 
 Kameralar (``VIEWS``)
 ---------------------
-``U_Cam_<görünüm>``: hero (ön-sol 3/4, 70 mm, alçak, f/5.6, güneş 24° — uzun gölge), rear34 (arka-sağ 3/4),
-side (iskele yanı, ORTOGRAFİK, yükseklik = kanat dihedrali 4° → yakın kanat ince çizgi; alçak güneş), front
-(135 mm), top, under (alttan; takım toplu, zemin kamera ışınına görünmez, alttan dolgu ışığı), nose (taret yakın
-plan, 85 mm, f/4), tail (U-kuyruk ve itici pervane, f/5.6), gearbay (sol ana takım ve açık kuyu, 28 mm, f/4).
+``U_Cam_<görünüm>``: hero (ön-sol 3/4, 70 mm, alçak, f/5.6, güneş 24° — uzun gölge; iki kanat ucu kadrajın ≥ %3
+içinde), rear34 (arka-sağ 3/4), side (iskele yanı, 135 mm perspektif, 0,8° yukarıdan — göz hizası: uzak kanat
+sırtın altında kalır, ufuk ve gökyüzü kadrajda, yakın kanadın alt yüzü ince açık şerit; alçak güneş, seyrüsefer
+ışıkları kapalı), front (135 mm), top, under (alttan; takım toplu, zemin kamera ışınına görünmez, alttan dolgu
+ışığı), nose (taret yakın plan, 85 mm, f/4; taret 18° iskeleye, 2° aşağı → pencereler ufku yansıtır), tail
+(U-kuyruk ve itici pervane, f/5.6), gearbay (sol ana takım ve açık kuyu, 28 mm, f/4; kapaklar %60 açık).
 Uzaklık, uçağın gerçek köşe noktalarından kadraja sığdırılarak hesaplanır (``fit=None``, ``margin`` > 1 kanat
-uçlarını kırpar) ya da hedef çevresinde verilen yarıçapa göre (``fit``); ortografik görünümde (``ortho``) ölçek ve
-kadraj ortası aynı noktalardan bulunur. Uçak yoksa params zarfı kullanılır.
+uçlarını kırpar) ya da hedef çevresinde verilen yarıçapa göre (``fit``); ``center`` → eksen yerine izdüşüm kutusu
+``margin``'e sığar ve objektif kaydırmasıyla (shift) kadrajın ``place`` noktasına ortalanır (perspektif değişmez);
+ortografik görünümde (``ortho``) ölçek ve kadraj ortası aynı noktalardan bulunur. Uçak yoksa params zarfı
+kullanılır.
 Kameralar ``U_CamRig_Stills`` boşluğuna bağlıdır; bu boşluk ``U_Root`` konumunu ve baş açısını izler →
 animasyonun herhangi bir karesinde de sabit kameralar uçağı kadrajlar.
 
@@ -318,8 +322,14 @@ def _aerial(T, shader_socket, scene, az_deg, el_deg, x: float = 400.0):
     return mix.outputs[0]
 
 
+GRASS_STRIPE = 0.07                # biçme şeridi değer genliği (±; eski ±0,14 düzenli çizgiler gibi okunuyordu)
+GRASS_HUE_VAR = 0.022              # ton dalgalanması (± Hue; ≈ 20 m lekeler: saman sarısı ↔ mavimsi yeşil)
+
+
 def _grass_material(scene, az, el) -> bpy.types.Material:
-    """Biçilmiş çim: iki ölçekli yeşil/saman karışımı, Voronoi öbekleri, 6 m biçme şeritleri, tümsek."""
+    """Biçilmiş çim: iki ölçekli yeşil/saman karışımı, Voronoi öbekleri, biçme şeritleri, tümsek. Şeritler düzenli
+    çizgi gibi okunmasın diye: genlik ±``GRASS_STRIPE`` ve 3–5 m ölçekli ikinci bir gürültüyle yer yer söner
+    (bozuk biçme), şerit fazı gürültüyle kıvrılır; ≈ 20 m lekelerde hafif ton farkı."""
     mat, T = _new_material("SM_Grass")
     tc = T.coords(-1800, 0)
     obj = tc.outputs["Object"]
@@ -333,11 +343,17 @@ def _grass_material(scene, az, el) -> bpy.types.Material:
     T.link(obj, vor.inputs["Vector"])
     clump = T.map_range(vor.outputs["Distance"], 0.86, 1.10, 0.0, 1.0, x=-1200, y=-300)
     wave = T.node("ShaderNodeTexWave", -1500, 600, wave_type="BANDS", bands_direction="Y", wave_profile="SIN",
-                  ins={"Scale": 0.1047, "Distortion": 0.6, "Detail": 1.0})        # pist boyunca 6 m periyot
+                  ins={"Scale": 0.1047, "Distortion": 2.2, "Detail": 2.0, "Detail Scale": 0.6})   # pist boyunca şerit
     T.link(obj, wave.inputs["Vector"])
-    stripe = T.map_range(wave.outputs["Fac"], 0.86, 1.14, 0.35, 0.65, x=-1200, y=600)
+    n_brk = T.noise(obj, 0.25, 2.0, 0.5, x=-1500, y=900)                               # 3–5 m: şerit genliği
+    amp = T.map_range(n_brk.outputs["Fac"], 0.0, GRASS_STRIPE, 0.40, 0.62, x=-1200, y=900)
+    swing = T.map_range(wave.outputs["Fac"], -1.0, 1.0, 0.0, 1.0, x=-1200, y=600)
+    stripe = T.math("ADD", T.math("MULTIPLY", swing, amp, x=-1050, y=700), 1.0, x=-950, y=700)
     val = T.math("MULTIPLY", clump, stripe, x=-900, y=-100)
     hsv = T.node("ShaderNodeHueSaturation", -700, 100)
+    n_hue = T.noise(obj, 0.05, 2.0, 0.5, x=-1500, y=1200)                              # ≈ 20 m ton lekeleri
+    T.link(T.map_range(n_hue.outputs["Fac"], 0.5 - GRASS_HUE_VAR, 0.5 + GRASS_HUE_VAR, 0.35, 0.65, x=-1200, y=1200),
+           hsv.inputs["Hue"])
     T.link(c2, hsv.inputs["Color"])
     T.link(val, hsv.inputs["Value"])
     nb = T.noise(obj, 260.0, 3.0, 0.7, x=-900, y=-600)
@@ -708,29 +724,42 @@ class ViewSpec:
     under_fill: float = 0.0          # alttan dolgu ışığı gücü (W); 0 = kapalı
     ortho: bool = False              # ortografik kamera (ölçek ``margin`` ile uçağa sığdırılır)
     focus: float = 1.0               # alan derinliği odak uzaklığı = kamera uzaklığı × bu
+    center: bool = False             # ``fit`` None iken: uçağın izdüşüm kutusu (eksene göre değil) ``margin``'e sığar ve
+    place: tuple = (0.5, 0.5)        # objektif kaydırmayla (shift) kutu ortası bu kadraj noktasına (x, y; 0 = sol/üst) gelir
 
 
 GF = GROUND_FILL_W
+SIDE_EL_DEG = 0.8                  # yan görünüş yüksekliği: uzak kanat sırt çizgisinin altında kalır, ufuk kadrajda
 VIEWS: dict[str, ViewSpec] = {v.name: v for v in [
-    ViewSpec("hero", "Kahraman — ön-sol 3/4", 33.0, 6.0, (1.05, 0.0, 0.0), 70.0, margin=1.42, sun=(118.0, 24.0),
-             fstop=5.6, focus=0.92, under_fill=GF),
-    ViewSpec("rear34", "Arka-sağ 3/4", -138.0, 15.0, (1.25, 0.0, 0.03), 50.0, margin=1.12, sun=(-80.0, 34.0),
-             under_fill=GF),
-    # yan: ortografik, yükseklik = kanat dihedrali → yakın kanat ince bir çizgi (alt yüzü "koyu çokgen" olmaz);
-    # alçak, kamera tarafından güneş + biraz güçlü yer dolgusu → beyaz alt yüz (RAL 9003) üstten açık okunur
-    ViewSpec("side", "Yan (iskele, ortografik)", 90.0, P.WING_DIHEDRAL, (1.24, 0.0, 0.02), 135.0, margin=0.93,
-             sun=(70.0, 16.0), under_fill=42.0, ortho=True),
+    # kahraman: iki kanat ucu da kadrajın ≥ %3 içinde (izdüşüm kutusu ortalanır), uçak biraz aşağıda → önde boş
+    # asfalt azalır, ufuk üst çeyrekte
+    ViewSpec("hero", "Kahraman — ön-sol 3/4", 33.0, 6.0, (1.05, 0.0, 0.0), 70.0, margin=0.94, sun=(118.0, 24.0),
+             fstop=5.6, focus=0.92, under_fill=GF, center=True, place=(0.5, 0.56)),
+    # arka-sağ 3/4: kahramanla aynı kadraj kuralı — izdüşüm kutusu ortalanır, iki kanat ucu da kadrajın ≥ %3 içinde
+    # (eski margin 1,12 eksene göre sığdırıyordu, yakın sancak kanat ucu sağ kenardan taşıyordu)
+    ViewSpec("rear34", "Arka-sağ 3/4", -138.0, 15.0, (1.25, 0.0, 0.03), 50.0, margin=0.94, sun=(-80.0, 34.0),
+             under_fill=GF, center=True, place=(0.5, 0.52)),
+    # yan: 135 mm perspektif, göz hizasına yakın (0,8° yukarıdan; kamera zeminden ≈ 0,46 m): uzak kanat sırtın
+    # altında kalır (ortografik 4°'de sırtın üstünde "yelken" gibi görünüyordu), ufuk ve gökyüzü kadrajda; yakın
+    # kanadın alt yüzü ince açık bir şerit. Alçak, kamera tarafından güneş + biraz güçlü yer dolgusu → beyaz alt
+    # yüz (RAL 9003) üstten açık okunur. Seyrüsefer ışıkları kapalı (yakın uç ışığı kök kaportasının önüne düşer).
+    ViewSpec("side", "Yan (iskele, 135 mm)", 90.0, SIDE_EL_DEG, (1.24, 0.0, 0.02), 135.0, margin=0.93,
+             sun=(70.0, 16.0), under_fill=42.0, controls={"nav_lights": 0.0}),
     ViewSpec("front", "Ön", 0.0, 3.0, (1.20, 0.0, 0.0), 135.0, margin=0.93, sun=(40.0, 36.0), under_fill=GF),
     ViewSpec("top", "Üst", 0.0, 89.9, (1.24, 0.0, 0.0), 85.0, margin=0.92, aspect=1.6, up=(1.0, 0.0, 0.0),
              sun=(70.0, 55.0)),
     ViewSpec("under", "Alt (takım toplu)", 0.0, -89.9, (1.24, 0.0, 0.0), 85.0, margin=0.92, up=(1.0, 0.0, 0.0),
              hide_ground=True, controls={"gear": 0.0}, sun=(70.0, 55.0), under_fill=UNDER_FILL_W),
+    # burun: taret 18° iskeleye, 2° aşağı → pencereler (parlak kaplamalı) ufku ve gökyüzünü yansıtır; −12°'de hemen
+    # alttaki koyu asfaltı yansıtıp "delik" gibi okunuyordu (R08)
     ViewSpec("nose", "Burun ve EO/IR taret", 32.0, -4.0, (0.25, 0.0, -0.075), 85.0, fit=0.20, fstop=4.0,
-             controls={"turret_pan_deg": 18.0, "turret_tilt_deg": -12.0}, sun=(70.0, 24.0), under_fill=GF),
+             controls={"turret_pan_deg": 18.0, "turret_tilt_deg": -2.0}, sun=(70.0, 24.0), under_fill=GF),
     ViewSpec("tail", "U-kuyruk ve itici pervane", -152.0, 9.0, (2.21, 0.0, 0.12), 70.0, fit=0.42, fstop=5.6,
              sun=(-95.0, 30.0), under_fill=GF),
+    # takım kuyusu: kapaklar %60 açık → iki kapak da menteşeli panel olarak okunur (dış yüz, dudak ve iç tava açılı
+    # görünür; tam açıkta dış kapak sarkan düz bir levha gibi okunuyordu — R06)
     ViewSpec("gearbay", "Sol ana takım ve kuyu", 38.0, -10.0, (1.31, 0.20, -0.10), 28.0, fit=0.24, fstop=4.0,
-             controls={"gear_doors": 1.0}, sun=(80.0, 28.0), under_fill=GF),
+             controls={"gear_doors": 0.6}, sun=(80.0, 28.0), under_fill=GF),
 ]}
 
 
@@ -784,22 +813,33 @@ def _look_rotation(cam_pos: Vector, target: Vector, up: Vector | None):
     return R
 
 
+def _projected_extent(view: ViewSpec, target: Vector, pts: np.ndarray, dist: float):
+    """Kamera ``target``'tan ``dist`` uzakta iken noktaların izdüşüm (tan) sınırları (x0, x1, y0, y1); nokta kameranın
+    arkasındaysa None."""
+    cam = target + _view_dir(view) * dist
+    R = _look_rotation(cam, target, Vector(view.up) if view.up else None)
+    Q = (np.asarray(pts) - np.asarray(cam)) @ np.asarray(R)              # kamera eksenleri
+    z = -Q[:, 2]
+    if (z <= 0.05).any():
+        return None
+    x, y = Q[:, 0] / z, Q[:, 1] / z
+    return float(x.min()), float(x.max()), float(y.min()), float(y.max())
+
+
 def _fit_distance(view: ViewSpec, target: Vector, pts: np.ndarray, sensor: float = 36.0) -> float:
-    """Bütün noktalar kadrajın ``margin`` oranına sığacak en küçük uzaklık (ikiye bölme)."""
+    """Bütün noktalar kadrajın ``margin`` oranına sığacak en küçük uzaklık (ikiye bölme). ``center`` → eksene göre
+    değil, izdüşüm kutusunun eni/boyu ``margin``'e sığar (kutu sonra ``_center_shift`` ile kaydırılır)."""
     tan_h = (sensor / 2) / view.lens
     tan_v = tan_h / view.aspect
-    d = _view_dir(view)
-    R = None
 
     def ok(dist):
-        nonlocal R
-        cam = target + d * dist
-        R = _look_rotation(cam, target, Vector(view.up) if view.up else None)
-        Q = (np.asarray(pts) - np.asarray(cam)) @ np.asarray(R)          # kamera eksenleri
-        z = -Q[:, 2]
-        if (z <= 0.05).any():
+        e = _projected_extent(view, target, pts, dist)
+        if e is None:
             return False
-        return (np.abs(Q[:, 0] / z).max() <= tan_h * view.margin) and (np.abs(Q[:, 1] / z).max() <= tan_v * view.margin)
+        x0, x1, y0, y1 = e
+        if view.center:
+            return (x1 - x0) <= 2 * tan_h * view.margin and (y1 - y0) <= 2 * tan_v * view.margin
+        return max(-x0, x1) <= tan_h * view.margin and max(-y0, y1) <= tan_v * view.margin
     lo, hi = 0.3, 200.0
     for _ in range(60):
         mid = 0.5 * (lo + hi)
@@ -808,6 +848,20 @@ def _fit_distance(view: ViewSpec, target: Vector, pts: np.ndarray, sensor: float
         else:
             lo = mid
     return hi
+
+
+def _center_shift(view: ViewSpec, target: Vector, pts: np.ndarray, dist: float, sensor: float = 36.0) -> tuple:
+    """``center`` görünümü: izdüşüm kutusunun ortasını kadrajın ``place`` noktasına getiren objektif kaydırması
+    (Blender ``shift_x/y``: kadraj eni birimi; + = kadraj sağa/yukarı)."""
+    e = _projected_extent(view, target, pts, dist)
+    if e is None:
+        return (0.0, 0.0)
+    tan_h = (sensor / 2) / view.lens
+    tan_v = tan_h / view.aspect
+    x0, x1, y0, y1 = e
+    sx = 0.5 + 0.25 * (x0 + x1) / tan_h - float(view.place[0])
+    sy = (float(view.place[1]) - 0.5 + 0.25 * (y0 + y1) / tan_v) / view.aspect
+    return (sx, sy)
 
 
 def _fit_ortho(view: ViewSpec, target: Vector, pts: np.ndarray, dist: float = 30.0) -> tuple[Vector, float]:
@@ -891,8 +945,12 @@ def build_cameras(scene=None) -> list[str]:
             dist = (pos - tgt).length
             ob["ucav_ortho_scale"] = round(scale, 4)
         else:
+            cam.type = "PERSP"                                  # eski dosyadaki aynı adlı kamera verisi ORTHO olabilir
             if v.fit is None:
                 dist = _fit_distance(v, tgt, pts)
+                if v.center:                                    # kutu ortası → ``place`` (objektif kaydırması)
+                    sx, sy = _center_shift(v, tgt, pts, dist)
+                    cam.shift_x, cam.shift_y = sx + v.shift[0], sy + v.shift[1]
             else:                                               # yarıçap kısa kenara (düşey) sığar
                 dist = v.fit / ((36.0 / 2) / v.lens / v.aspect)
             pos = tgt + _view_dir(v) * dist

@@ -1,6 +1,6 @@
 {
  "model": "YELKOVAN YK-38",
- "date": "2026-10-03",
+ "date": "2026-10-04",
  "bed_mm": [
   256.0,
   256.0,
@@ -10,16 +10,16 @@
  "solver": {
   "segment_cut": "EXACT",
   "shell_features": "MANIFOLD",
-  "boolean_ops": 366,
-  "boolean_s": 13.2,
-  "elapsed_s": 85.0
+  "boolean_ops": 524,
+  "boolean_s": 21.3,
+  "elapsed_s": 88.1
  },
  "totals": {
-  "unique_parts": 55,
-  "pieces": 89,
-  "mass_g": 3615.0,
-  "print_h": 267.1,
-  "stl_mb": 20.4,
+  "unique_parts": 65,
+  "pieces": 104,
+  "mass_g": 4059.0,
+  "print_h": 292.5,
+  "stl_mb": 27.77,
   "spec_estimate": {
    "print_mass_kg": 3.33,
    "print_hours": 316,
@@ -28,72 +28,71 @@
  },
  "by_material": {
   "LW-PLA": {
-   "pieces": 68,
-   "mass_g": 2699.4,
-   "hours": 208.6,
-   "volume_cm3": 4152.9
+   "pieces": 64,
+   "mass_g": 2660.1,
+   "hours": 203.5,
+   "volume_cm3": 4092.3
   },
   "LW-ASA": {
-   "pieces": 3,
-   "mass_g": 270.5,
-   "hours": 17.9,
-   "volume_cm3": 360.7
-  },
-  "PETG": {
-   "pieces": 8,
-   "mass_g": 152.1,
-   "hours": 9.0,
-   "volume_cm3": 119.8
+   "pieces": 7,
+   "mass_g": 347.0,
+   "hours": 25.0,
+   "volume_cm3": 462.5
   },
   "PA-CF": {
-   "pieces": 7,
-   "mass_g": 393.8,
-   "hours": 25.7,
-   "volume_cm3": 328.2
+   "pieces": 15,
+   "mass_g": 774.4,
+   "hours": 48.6,
+   "volume_cm3": 645.4
+  },
+  "PETG": {
+   "pieces": 17,
+   "mass_g": 273.8,
+   "hours": 14.9,
+   "volume_cm3": 215.6
   },
   "TPU": {
    "pieces": 1,
    "mass_g": 3.3,
-   "hours": 0.7,
+   "hours": 0.5,
    "volume_cm3": 2.7
-  },
-  "PETG-füme": {
-   "pieces": 2,
-   "mass_g": 96.1,
-   "hours": 5.2,
-   "volume_cm3": 75.7
   }
  },
  "by_group": {
   "Kanat": {
    "pieces": 22,
-   "mass_g": 1408.3,
-   "hours": 101.7
+   "mass_g": 1443.6,
+   "hours": 103.9
   },
   "Kuyruk": {
    "pieces": 10,
-   "mass_g": 293.5,
-   "hours": 24.6
+   "mass_g": 305.1,
+   "hours": 25.1
   },
   "Kumanda yüzeyleri": {
    "pieces": 28,
-   "mass_g": 350.9,
-   "hours": 36.5
+   "mass_g": 365.0,
+   "hours": 37.3
   },
   "Gövde": {
    "pieces": 12,
-   "mass_g": 935.0,
-   "hours": 64.6
+   "mass_g": 911.2,
+   "hours": 63.1
+  },
+  "Yük yolları": {
+   "pieces": 12,
+   "mass_g": 355.5,
+   "hours": 21.8
   },
   "İtki": {
    "pieces": 6,
-   "mass_g": 293.9,
-   "hours": 18.8
+   "mass_g": 276.8,
+   "hours": 17.7
   },
   "Kaplamalar": {
-   "pieces": 4,
-   "mass_g": 199.3,
-   "hours": 12.7
+   "pieces": 6,
+   "mass_g": 246.9,
+   "hours": 15.5
   },
   "Faydalı yük": {
    "pieces": 1,
@@ -101,13 +100,127 @@
    "hours": 3.8
   },
   "Takım kapakları": {
-   "pieces": 6,
-   "mass_g": 54.7,
+   "pieces": 7,
+   "mass_g": 74.9,
    "hours": 4.3
   }
  },
  "all_manifold": true,
  "all_fit": true,
+ "tooling": {
+  "parts": [
+   "hatch_buck_a",
+   "hatch_buck_b",
+   "tolerance_coupon"
+  ],
+  "pieces": 3,
+  "mass_g": 294.0,
+  "print_h": 8.7
+ },
+ "heat_rule": {
+  "radius_mm": 150.0,
+  "no_material": "LW-PLA",
+  "around": [
+   "cylinder",
+   "muffler"
+  ],
+  "switched": [
+   {
+    "key": "stab_1",
+    "min_mm": 21.0,
+    "source": "muffler",
+    "to": "LW-ASA"
+   },
+   {
+    "key": "elevator_1",
+    "min_mm": 16.3,
+    "source": "muffler",
+    "to": "LW-ASA"
+   }
+  ],
+  "violations": [],
+  "near": [
+   {
+    "key": "cowl_top",
+    "material": "PA-CF",
+    "min_mm": 0.0,
+    "source": "cylinder"
+   },
+   {
+    "key": "cowl_cheek_L",
+    "material": "PA-CF",
+    "min_mm": 0.0,
+    "source": "cylinder"
+   },
+   {
+    "key": "cowl_cheek_R",
+    "material": "PA-CF",
+    "min_mm": 0.0,
+    "source": "cylinder"
+   },
+   {
+    "key": "scuff_pad",
+    "material": "TPU",
+    "min_mm": 8.5,
+    "source": "spark_cap"
+   },
+   {
+    "key": "exhaust_ring",
+    "material": "PA-CF",
+    "min_mm": 15.4,
+    "source": "cylinder"
+   },
+   {
+    "key": "elevator_1",
+    "material": "LW-ASA",
+    "min_mm": 16.3,
+    "source": "muffler"
+   },
+   {
+    "key": "stab_1",
+    "material": "LW-ASA",
+    "min_mm": 21.0,
+    "source": "muffler"
+   },
+   {
+    "key": "fus_ring_9",
+    "material": "LW-ASA",
+    "min_mm": 30.1,
+    "source": "muffler"
+   },
+   {
+    "key": "engine_ring",
+    "material": "PA-CF",
+    "min_mm": 30.1,
+    "source": "muffler"
+   },
+   {
+    "key": "intake",
+    "material": "PA-CF",
+    "min_mm": 46.7,
+    "source": "muffler"
+   },
+   {
+    "key": "stab_2a",
+    "material": "LW-PLA",
+    "min_mm": 153.0,
+    "source": "susturucu çıkışı"
+   },
+   {
+    "key": "elevator_2a",
+    "material": "LW-PLA",
+    "min_mm": 157.6,
+    "source": "susturucu çıkışı"
+   },
+   {
+    "key": "fus_ring_8",
+    "material": "LW-ASA",
+    "min_mm": 227.6,
+    "source": "muffler"
+   }
+  ],
+  "ok": true
+ },
  "parts": [
   {
    "key": "wing_panel_1",
@@ -119,24 +232,24 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 5025,
-    "faces": 10130,
+    "verts": 8432,
+    "faces": 15125,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
-    "shells": 1,
+    "shells": 4,
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 141.0,
-   "mass_g": 91.6,
-   "mass_total_g": 183.3,
-   "print_h": 6.46,
-   "print_h_total": 12.92,
+   "volume_cm3": 145.09,
+   "mass_g": 94.3,
+   "mass_total_g": 188.6,
+   "print_h": 6.63,
+   "print_h_total": 13.26,
    "size_mm": [
-    215.1,
-    213.1,
+    215.0,
+    212.4,
     210.0
    ],
    "orientation": {
@@ -152,20 +265,40 @@
    "bed_margin_mm": 20.5,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 13.7,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 16.6,
+   "bed_contact_cm2": 62.0,
+   "contact_need_cm2": 3.43,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 5.38,
+   "oh45_over_model_cm2": 11.25,
+   "oh45_over_model_gt5mm_cm2": 3.0,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.045,
+    "min_mm": 0.073,
     "p05_mm": 0.449,
-    "median_mm": 0.794
+    "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 1,
-   "features": [],
+   "heat": {
+    "min_mm": 696.0,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "MPX 6 pin cebi",
+    "dış panel tutma dili cebi (dil yapıştırılır)",
+    "ek pahı 0,4 × 0,3 mm",
+    "iç/dış flap bağlayıcı tel yay yarığı",
+    "kablo kanalı"
+   ],
    "stl": {
     "file": "stl/wing_panel_1.stl",
-    "bytes": 506584,
-    "triangles": 10130
+    "bytes": 845884,
+    "triangles": 16916,
+    "volume_cm3": 145.089,
+    "separated_verts": 0
    }
   },
   {
@@ -178,24 +311,24 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 4660,
-    "faces": 9384,
+    "verts": 7440,
+    "faces": 14972,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
-    "shells": 2,
+    "shells": 1,
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 141.03,
-   "mass_g": 91.7,
-   "mass_total_g": 183.3,
-   "print_h": 6.46,
-   "print_h_total": 12.92,
+   "volume_cm3": 142.66,
+   "mass_g": 92.7,
+   "mass_total_g": 185.5,
+   "print_h": 6.53,
+   "print_h_total": 13.06,
    "size_mm": [
-    165.0,
-    167.2,
+    164.9,
+    166.9,
     210.0
    ],
    "orientation": {
@@ -205,28 +338,44 @@
      -0.0
     ],
     "up_words": "+y (sol/iskele)",
-    "z_rot_deg": 136.0,
+    "z_rot_deg": 47.0,
     "bed_end": "y=0.570"
    },
-   "bed_margin_mm": 44.4,
+   "bed_margin_mm": 44.5,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 16.9,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 22.4,
+   "bed_contact_cm2": 36.99,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.55,
+   "oh45_over_model_cm2": 21.8,
+   "oh45_over_model_gt5mm_cm2": 20.2,
+   "bed_fix": "",
+   "support": "model üstü destek",
    "min_wall": {
-    "min_mm": 0.135,
+    "min_mm": 0.112,
     "p05_mm": 0.449,
-    "median_mm": 0.794
+    "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 2,
+   "heat": {
+    "min_mm": 872.6,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [
+    "ek pahı 0,4 × 0,3 mm",
+    "kablo kanalı",
     "servo yuvası 36×24 mm, derinlik 29.3 mm"
    ],
    "stl": {
     "file": "stl/wing_panel_2.stl",
-    "bytes": 469284,
-    "triangles": 9384
+    "bytes": 748684,
+    "triangles": 14972,
+    "volume_cm3": 142.663,
+    "separated_verts": 0
    }
   },
   {
@@ -239,8 +388,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 4795,
-    "faces": 9674,
+    "verts": 7864,
+    "faces": 13699,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -249,14 +398,14 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 134.12,
-   "mass_g": 87.2,
-   "mass_total_g": 174.4,
-   "print_h": 6.17,
-   "print_h_total": 12.35,
+   "volume_cm3": 131.51,
+   "mass_g": 85.5,
+   "mass_total_g": 171.0,
+   "print_h": 6.07,
+   "print_h_total": 12.13,
    "size_mm": [
-    165.8,
-    165.9,
+    165.4,
+    163.5,
     210.0
    ],
    "orientation": {
@@ -266,26 +415,43 @@
      -0.0
     ],
     "up_words": "+y (sol/iskele)",
-    "z_rot_deg": 46.0,
+    "z_rot_deg": 45.0,
     "bed_end": "y=0.780"
    },
-   "bed_margin_mm": 45.0,
+   "bed_margin_mm": 45.3,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 2.1,
+   "overhang_cm2": 6.3,
+   "bed_contact_cm2": 36.97,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.64,
+   "oh45_over_model_cm2": 5.62,
+   "oh45_over_model_gt5mm_cm2": 5.45,
+   "bed_fix": "",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.108,
+    "min_mm": 0.296,
     "p05_mm": 0.449,
-    "median_mm": 0.794
+    "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 2,
-   "features": [],
+   "heat": {
+    "min_mm": 1009.0,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm",
+    "kablo kanalı"
+   ],
    "stl": {
     "file": "stl/wing_panel_3.stl",
-    "bytes": 483784,
-    "triangles": 9674
+    "bytes": 791684,
+    "triangles": 15832,
+    "volume_cm3": 131.513,
+    "separated_verts": 26
    }
   },
   {
@@ -298,8 +464,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 5645,
-    "faces": 11374,
+    "verts": 8884,
+    "faces": 17892,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -308,11 +474,11 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 128.36,
-   "mass_g": 83.4,
-   "mass_total_g": 166.9,
-   "print_h": 5.93,
-   "print_h_total": 11.87,
+   "volume_cm3": 129.67,
+   "mass_g": 84.3,
+   "mass_total_g": 168.6,
+   "print_h": 5.99,
+   "print_h_total": 11.98,
    "size_mm": [
     202.4,
     203.9,
@@ -331,20 +497,37 @@
    "bed_margin_mm": 26.1,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 20.6,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 21.2,
+   "bed_contact_cm2": 37.34,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 8.74,
+   "oh45_over_model_cm2": 12.44,
+   "oh45_over_model_gt5mm_cm2": 12.22,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.102,
+    "min_mm": 0.197,
     "p05_mm": 0.449,
-    "median_mm": 0.794
+    "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 2,
-   "features": [],
+   "heat": {
+    "min_mm": 1167.4,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm",
+    "kablo kanalı"
+   ],
    "stl": {
     "file": "stl/wing_panel_4.stl",
-    "bytes": 568784,
-    "triangles": 11374
+    "bytes": 894684,
+    "triangles": 17892,
+    "volume_cm3": 129.669,
+    "separated_verts": 0
    }
   },
   {
@@ -357,8 +540,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 4770,
-    "faces": 9626,
+    "verts": 7306,
+    "faces": 14708,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -367,11 +550,11 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 111.52,
-   "mass_g": 72.5,
-   "mass_total_g": 145.0,
-   "print_h": 5.23,
-   "print_h_total": 10.47,
+   "volume_cm3": 112.77,
+   "mass_g": 73.3,
+   "mass_total_g": 146.6,
+   "print_h": 5.28,
+   "print_h_total": 10.57,
    "size_mm": [
     141.4,
     142.2,
@@ -390,22 +573,38 @@
    "bed_margin_mm": 56.9,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 15.2,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 14.0,
+   "bed_contact_cm2": 31.25,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.43,
+   "oh45_over_model_cm2": 13.57,
+   "oh45_over_model_gt5mm_cm2": 13.23,
+   "bed_fix": "",
+   "support": "model üstü destek",
    "min_wall": {
-    "min_mm": 0.344,
+    "min_mm": 0.011,
     "p05_mm": 0.449,
-    "median_mm": 0.794
+    "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 2,
+   "heat": {
+    "min_mm": 1344.2,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [
+    "ek pahı 0,4 × 0,3 mm",
+    "kablo kanalı",
     "servo yuvası 36×24 mm, derinlik 22.5 mm"
    ],
    "stl": {
     "file": "stl/wing_panel_5.stl",
-    "bytes": 481384,
-    "triangles": 9626
+    "bytes": 735484,
+    "triangles": 14708,
+    "volume_cm3": 112.768,
+    "separated_verts": 0
    }
   },
   {
@@ -418,8 +617,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 4782,
-    "faces": 9648,
+    "verts": 6882,
+    "faces": 13840,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -428,11 +627,11 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 89.5,
-   "mass_g": 58.2,
-   "mass_total_g": 116.4,
-   "print_h": 4.32,
-   "print_h_total": 8.63,
+   "volume_cm3": 90.46,
+   "mass_g": 58.8,
+   "mass_total_g": 117.6,
+   "print_h": 4.36,
+   "print_h_total": 8.71,
    "size_mm": [
     124.7,
     123.0,
@@ -451,20 +650,37 @@
    "bed_margin_mm": 65.7,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 5.7,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 4.1,
+   "bed_contact_cm2": 23.2,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.37,
+   "oh45_over_model_cm2": 3.77,
+   "oh45_over_model_gt5mm_cm2": 3.45,
+   "bed_fix": "",
+   "support": "yok",
    "min_wall": {
-    "min_mm": 0.175,
+    "min_mm": 0.014,
     "p05_mm": 0.449,
-    "median_mm": 0.794
+    "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 2,
-   "features": [],
+   "heat": {
+    "min_mm": 1532.2,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm",
+    "kablo kanalı"
+   ],
    "stl": {
     "file": "stl/wing_panel_6.stl",
-    "bytes": 482484,
-    "triangles": 9648
+    "bytes": 692084,
+    "triangles": 13840,
+    "volume_cm3": 90.461,
+    "separated_verts": 0
    }
   },
   {
@@ -477,21 +693,21 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 4502,
-    "faces": 9074,
+    "verts": 6820,
+    "faces": 12370,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
     "shells": 1,
     "ok": true,
-    "removed_islands": 1
+    "removed_islands": 3
    },
-   "volume_cm3": 69.6,
-   "mass_g": 45.2,
-   "mass_total_g": 90.5,
-   "print_h": 3.5,
-   "print_h_total": 7.0,
+   "volume_cm3": 70.21,
+   "mass_g": 45.6,
+   "mass_total_g": 91.3,
+   "print_h": 3.52,
+   "print_h_total": 7.05,
    "size_mm": [
     122.1,
     123.9,
@@ -510,20 +726,38 @@
    "bed_margin_mm": 66.1,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 6.3,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 7.9,
+   "bed_contact_cm2": 20.73,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 3.97,
+   "oh45_over_model_cm2": 3.97,
+   "oh45_over_model_gt5mm_cm2": 2.53,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.113,
+    "min_mm": 0.001,
     "p05_mm": 0.449,
-    "median_mm": 0.794
+    "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 2,
-   "features": [],
+   "heat": {
+    "min_mm": 1725.5,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "3 kopuk kıymık atıldı (0.02 cm³)",
+    "ek pahı 0,4 × 0,3 mm",
+    "kablo kanalı"
+   ],
    "stl": {
     "file": "stl/wing_panel_7.stl",
-    "bytes": 453784,
-    "triangles": 9074
+    "bytes": 687284,
+    "triangles": 13744,
+    "volume_cm3": 70.204,
+    "separated_verts": 85
    }
   },
   {
@@ -536,25 +770,25 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 24981,
-    "faces": 49994,
+    "verts": 4295,
+    "faces": 8110,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
     "shells": 1,
     "ok": true,
-    "removed_islands": 0
+    "removed_islands": 2
    },
-   "volume_cm3": 21.54,
-   "mass_g": 14.0,
-   "mass_total_g": 28.0,
-   "print_h": 1.16,
-   "print_h_total": 2.33,
+   "volume_cm3": 21.29,
+   "mass_g": 13.8,
+   "mass_total_g": 27.7,
+   "print_h": 1.15,
+   "print_h_total": 2.31,
    "size_mm": [
-    114.2,
-    115.8,
-    72.0
+    114.3,
+    115.9,
+    72.1
    ],
    "orientation": {
     "up_world": [
@@ -569,22 +803,37 @@
    "bed_margin_mm": 70.1,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 5.9,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 17.9,
+   "bed_contact_cm2": 14.56,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 2.45,
+   "oh45_over_model_cm2": 15.43,
+   "oh45_over_model_gt5mm_cm2": 5.29,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.345,
+    "min_mm": 0.013,
     "p05_mm": 0.599,
-    "median_mm": 0.6
+    "median_mm": 0.64
    },
    "note": "",
    "pin_holes": 1,
+   "heat": {
+    "min_mm": 1907.9,
+    "source": "susturucu çıkışı"
+   },
+   "tooling": false,
    "features": [
-    "voksel onarım"
+    "2 kopuk kıymık atıldı (-0.00 cm³)",
+    "ek pahı 0,4 × 0,3 mm"
    ],
    "stl": {
     "file": "stl/wing_tip.stl",
-    "bytes": 2499784,
-    "triangles": 49994
+    "bytes": 431984,
+    "triangles": 8638,
+    "volume_cm3": 21.284,
+    "separated_verts": 238
    }
   },
   {
@@ -597,8 +846,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 6526,
-    "faces": 13104,
+    "verts": 8232,
+    "faces": 16502,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -607,14 +856,14 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 94.86,
+   "volume_cm3": 94.92,
    "mass_g": 61.7,
-   "mass_total_g": 123.3,
+   "mass_total_g": 123.4,
    "print_h": 4.35,
-   "print_h_total": 8.7,
+   "print_h_total": 8.71,
    "size_mm": [
-    214.8,
-    212.2,
+    212.3,
+    214.4,
     128.7
    ],
    "orientation": {
@@ -624,26 +873,47 @@
      -0.0
     ],
     "up_words": "−y (sağ/sancak)",
-    "z_rot_deg": 134.0,
+    "z_rot_deg": 44.0,
     "bed_end": "y=0.360 (sökülebilir)"
    },
-   "bed_margin_mm": 20.6,
+   "bed_margin_mm": 20.8,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 13.5,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 20.1,
+   "bed_contact_cm2": 61.84,
+   "contact_need_cm2": 3.03,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 4.74,
+   "oh45_over_model_cm2": 15.35,
+   "oh45_over_model_gt5mm_cm2": 5.97,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.02,
+    "min_mm": 0.287,
     "p05_mm": 0.79,
     "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 1,
-   "features": [],
+   "heat": {
+    "min_mm": 694.3,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "MPX 6 pin cebi",
+    "ana takım yatağı yuvası + ER-150 alt açıklığı",
+    "dış panel tutma dili cebi + alttan M4 naylon cıvata",
+    "ek pahı 0,4 × 0,3 mm",
+    "iç/dış flap bağlayıcı tel yay yarığı",
+    "kablo kanalı"
+   ],
    "stl": {
     "file": "stl/root_block_2.stl",
-    "bytes": 655284,
-    "triangles": 13104
+    "bytes": 825184,
+    "triangles": 16502,
+    "volume_cm3": 94.919,
+    "separated_verts": 0
    }
   },
   {
@@ -656,8 +926,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 9036,
-    "faces": 18250,
+    "verts": 10069,
+    "faces": 19104,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -666,15 +936,15 @@
     "ok": true,
     "removed_islands": 1
    },
-   "volume_cm3": 112.52,
-   "mass_g": 73.1,
-   "mass_total_g": 146.3,
-   "print_h": 5.23,
-   "print_h_total": 10.45,
+   "volume_cm3": 132.4,
+   "mass_g": 86.1,
+   "mass_total_g": 172.1,
+   "print_h": 6.05,
+   "print_h_total": 12.11,
    "size_mm": [
     214.3,
     212.9,
-    188.8
+    189.0
    ],
    "orientation": {
     "up_world": [
@@ -689,20 +959,40 @@
    "bed_margin_mm": 20.9,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 73.5,
-   "support": "destek önerilir",
+   "overhang_cm2": 79.5,
+   "bed_contact_cm2": 35.02,
+   "contact_need_cm2": 3.37,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 27.99,
+   "oh45_over_model_cm2": 51.47,
+   "oh45_over_model_gt5mm_cm2": 48.95,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.056,
-    "p05_mm": 0.775,
-    "median_mm": 0.801
+    "min_mm": 0.001,
+    "p05_mm": 0.786,
+    "median_mm": 0.799
    },
    "note": "gövdeye oturan kök yüzü gövde konturunu izler (0,3 mm boşluk)",
    "pin_holes": 3,
-   "features": [],
+   "heat": {
+    "min_mm": 633.3,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "1 kopuk kıymık atıldı (-0.00 cm³)",
+    "G10 köprü yuvaları 2 × 3,3 × 40,4 mm",
+    "ana takım yatağı yuvası + ER-150 alt açıklığı",
+    "ek pahı 0,4 × 0,3 mm",
+    "kablo kanalı"
+   ],
    "stl": {
     "file": "stl/root_block_1.stl",
-    "bytes": 912584,
-    "triangles": 18250
+    "bytes": 1014384,
+    "triangles": 20286,
+    "volume_cm3": 132.401,
+    "separated_verts": 63
    }
   },
   {
@@ -715,24 +1005,24 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 2621,
-    "faces": 5234,
+    "verts": 3130,
+    "faces": 5898,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
-    "shells": 2,
+    "shells": 1,
     "ok": true,
-    "removed_islands": 0
+    "removed_islands": 1
    },
-   "volume_cm3": 39.16,
-   "mass_g": 25.5,
-   "mass_total_g": 50.9,
-   "print_h": 2.02,
-   "print_h_total": 4.03,
+   "volume_cm3": 39.38,
+   "mass_g": 25.6,
+   "mass_total_g": 51.2,
+   "print_h": 2.03,
+   "print_h_total": 4.05,
    "size_mm": [
-    124.4,
-    124.4,
+    124.5,
+    124.5,
     122.8
    ],
    "orientation": {
@@ -748,51 +1038,67 @@
    "bed_margin_mm": 65.8,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 30.3,
-   "support": "destek önerilir",
+   "overhang_cm2": 34.9,
+   "bed_contact_cm2": 49.78,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.18,
+   "oh45_over_model_cm2": 34.75,
+   "oh45_over_model_gt5mm_cm2": 33.67,
+   "bed_fix": "",
+   "support": "model üstü destek",
    "min_wall": {
-    "min_mm": 0.04,
+    "min_mm": 0.001,
     "p05_mm": 0.799,
     "median_mm": 1.199
    },
    "note": "",
    "pin_holes": 3,
-   "features": [],
+   "heat": {
+    "min_mm": 902.4,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/glove_strake.stl",
-    "bytes": 261784,
-    "triangles": 5234
+    "bytes": 312884,
+    "triangles": 6256,
+    "volume_cm3": 39.382,
+    "separated_verts": 0
    }
   },
   {
    "key": "stab_1",
    "name": "Stabilize yarısı 1/2 (%25 ok eksenine dik ek)",
    "group": "Kuyruk",
-   "material": "LW-PLA",
+   "material": "LW-ASA",
    "zone": "stab",
    "wall_mm": 0.5,
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 4222,
-    "faces": 8464,
+    "verts": 5278,
+    "faces": 10117,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
-    "shells": 4,
+    "shells": 2,
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 46.94,
-   "mass_g": 30.5,
-   "mass_total_g": 61.0,
-   "print_h": 2.63,
-   "print_h_total": 5.26,
+   "volume_cm3": 45.97,
+   "mass_g": 34.5,
+   "mass_total_g": 69.0,
+   "print_h": 2.76,
+   "print_h_total": 5.51,
    "size_mm": [
-    107.7,
-    108.0,
-    249.2
+    104.0,
+    104.4,
+    244.8
    ],
    "orientation": {
     "up_world": [
@@ -804,25 +1110,42 @@
     "z_rot_deg": 17.0,
     "bed_end": "stabilize eki"
    },
-   "bed_margin_mm": 74.0,
+   "bed_margin_mm": 75.8,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 26.0,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 26.5,
+   "bed_contact_cm2": 8.69,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 5.69,
+   "oh45_over_model_cm2": 20.83,
+   "oh45_over_model_gt5mm_cm2": 17.07,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.007,
-    "p05_mm": 0.499,
-    "median_mm": 0.5
+    "min_mm": 0.001,
+    "p05_mm": 0.497,
+    "median_mm": 0.499
    },
    "note": "kök yüzü kuyruk konisi konturunu izler; borular koni içindeki eyerde birleşir",
    "pin_holes": 1,
+   "heat": {
+    "min_mm": 21.0,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [
-    "servo yuvası 36×22 mm, derinlik 12.4 mm"
+    "ek pahı 0,4 × 0,3 mm",
+    "kablo kanalı Ø6 (dümen + elevatör → koni)",
+    "servo yuvası 36×22 mm, derinlik 12.5 mm",
+    "ısı kuralı: kaynağa 21 mm → LW-ASA (Tg 95 °C)"
    ],
    "stl": {
     "file": "stl/stab_1.stl",
-    "bytes": 423284,
-    "triangles": 8464
+    "bytes": 529484,
+    "triangles": 10588,
+    "volume_cm3": 45.973,
+    "separated_verts": 34
    }
   },
   {
@@ -835,83 +1158,24 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 2063,
-    "faces": 4126,
+    "verts": 3141,
+    "faces": 6290,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
-    "shells": 3,
+    "shells": 2,
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 29.42,
-   "mass_g": 19.1,
-   "mass_total_g": 38.2,
-   "print_h": 1.72,
-   "print_h_total": 3.45,
+   "volume_cm3": 31.47,
+   "mass_g": 20.5,
+   "mass_total_g": 40.9,
+   "print_h": 1.81,
+   "print_h_total": 3.62,
    "size_mm": [
-    63.5,
-    62.6,
-    172.0
-   ],
-   "orientation": {
-    "up_world": [
-     -0.481,
-     0.877,
-     0.0
-    ],
-    "up_words": "+y (sol/iskele) (29° eğik)",
-    "z_rot_deg": 106.0,
-    "bed_end": "stabilize eki"
-   },
-   "bed_margin_mm": 96.2,
-   "fits": true,
-   "fits_tight": true,
-   "overhang_cm2": 5.4,
-   "support": "kısa köprü (iç)",
-   "min_wall": {
-    "min_mm": 0.023,
-    "p05_mm": 0.499,
-    "median_mm": 0.499
-   },
-   "note": "uç dikey içine 5 mm gömülür",
-   "pin_holes": 2,
-   "features": [],
-   "stl": {
-    "file": "stl/stab_2a.stl",
-    "bytes": 206384,
-    "triangles": 4126
-   }
-  },
-  {
-   "key": "stab_2b",
-   "name": "Stabilize yarısı 2/2 (%25 ok eksenine dik ek) — parça B (tablaya sığması için bölündü)",
-   "group": "Kuyruk",
-   "material": "LW-PLA",
-   "zone": "stab",
-   "wall_mm": 0.5,
-   "qty": 2,
-   "mirror": true,
-   "check": {
-    "verts": 2084,
-    "faces": 4180,
-    "boundary": 0,
-    "nonmanifold": 0,
-    "wire": 0,
-    "flipped": 0,
-    "shells": 1,
-    "ok": true,
-    "removed_islands": 0
-   },
-   "volume_cm3": 19.16,
-   "mass_g": 12.5,
-   "mass_total_g": 24.9,
-   "print_h": 1.3,
-   "print_h_total": 2.59,
-   "size_mm": [
-    76.8,
-    78.0,
+    63.3,
+    64.2,
     172.0
    ],
    "orientation": {
@@ -924,23 +1188,116 @@
     "z_rot_deg": 16.0,
     "bed_end": "stabilize eki"
    },
-   "bed_margin_mm": 89.0,
+   "bed_margin_mm": 95.9,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 13.2,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 6.0,
+   "bed_contact_cm2": 8.22,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.55,
+   "oh45_over_model_cm2": 5.45,
+   "oh45_over_model_gt5mm_cm2": 5.39,
+   "bed_fix": "",
+   "support": "yok",
    "min_wall": {
-    "min_mm": 0.062,
+    "min_mm": 0.044,
+    "p05_mm": 0.499,
+    "median_mm": 0.499
+   },
+   "note": "uç dikey içine 5 mm gömülür",
+   "pin_holes": 2,
+   "heat": {
+    "min_mm": 153.0,
+    "source": "susturucu çıkışı"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm",
+    "kablo kanalı Ø6 (dümen + elevatör → koni)"
+   ],
+   "stl": {
+    "file": "stl/stab_2a.stl",
+    "bytes": 314584,
+    "triangles": 6290,
+    "volume_cm3": 31.465,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "stab_2b",
+   "name": "Stabilize yarısı 2/2 (%25 ok eksenine dik ek) — parça B (tablaya sığması için bölündü)",
+   "group": "Kuyruk",
+   "material": "LW-PLA",
+   "zone": "stab",
+   "wall_mm": 0.5,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 3052,
+    "faces": 5678,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 21.42,
+   "mass_g": 13.9,
+   "mass_total_g": 27.8,
+   "print_h": 1.39,
+   "print_h_total": 2.78,
+   "size_mm": [
+    78.2,
+    77.1,
+    172.0
+   ],
+   "orientation": {
+    "up_world": [
+     -0.481,
+     0.877,
+     0.0
+    ],
+    "up_words": "+y (sol/iskele) (29° eğik)",
+    "z_rot_deg": 106.0,
+    "bed_end": "stabilize eki"
+   },
+   "bed_margin_mm": 88.9,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 16.1,
+   "bed_contact_cm2": 7.0,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 4.31,
+   "oh45_over_model_cm2": 11.77,
+   "oh45_over_model_gt5mm_cm2": 10.64,
+   "bed_fix": "",
+   "support": "tabla desteği",
+   "min_wall": {
+    "min_mm": 0.079,
     "p05_mm": 0.493,
     "median_mm": 0.499
    },
    "note": "uç dikey içine 5 mm gömülür",
    "pin_holes": 2,
-   "features": [],
+   "heat": {
+    "min_mm": 284.9,
+    "source": "susturucu çıkışı"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm",
+    "kablo kanalı Ø6 (dümen + elevatör → koni)"
+   ],
    "stl": {
     "file": "stl/stab_2b.stl",
-    "bytes": 209084,
-    "triangles": 4180
+    "bytes": 306284,
+    "triangles": 6124,
+    "volume_cm3": 21.418,
+    "separated_verts": 0
    }
   },
   {
@@ -953,8 +1310,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 3890,
-    "faces": 7808,
+    "verts": 4569,
+    "faces": 8865,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -963,15 +1320,15 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 84.94,
-   "mass_g": 55.2,
-   "mass_total_g": 110.4,
-   "print_h": 4.15,
-   "print_h_total": 8.29,
+   "volume_cm3": 83.24,
+   "mass_g": 54.1,
+   "mass_total_g": 108.2,
+   "print_h": 4.08,
+   "print_h_total": 8.15,
    "size_mm": [
     153.1,
     153.4,
-    219.4
+    219.5
    ],
    "orientation": {
     "up_world": [
@@ -986,22 +1343,38 @@
    "bed_margin_mm": 51.3,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 68.7,
-   "support": "destek önerilir",
+   "overhang_cm2": 72.3,
+   "bed_contact_cm2": 16.77,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 10.08,
+   "oh45_over_model_cm2": 62.19,
+   "oh45_over_model_gt5mm_cm2": 59.18,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.004,
-    "p05_mm": 0.498,
-    "median_mm": 0.5
+    "min_mm": 0.002,
+    "p05_mm": 0.493,
+    "median_mm": 0.499
    },
    "note": "iç yüzde stabilize ucu yuvası (0,3 mm boşluk)",
    "pin_holes": 1,
+   "heat": {
+    "min_mm": 407.4,
+    "source": "susturucu çıkışı"
+   },
+   "tooling": false,
    "features": [
+    "ek pahı 0,4 × 0,3 mm",
+    "kablo kanalı Ø6 (servo → stabilize ucu)",
     "servo yuvası 36×24 mm, derinlik 16.6 mm"
    ],
    "stl": {
     "file": "stl/fin_1.stl",
-    "bytes": 390484,
-    "triangles": 7808
+    "bytes": 459184,
+    "triangles": 9182,
+    "volume_cm3": 83.235,
+    "separated_verts": 61
    }
   },
   {
@@ -1014,8 +1387,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 3072,
-    "faces": 6148,
+    "verts": 3954,
+    "faces": 7622,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1024,11 +1397,11 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 45.4,
-   "mass_g": 29.5,
-   "mass_total_g": 59.0,
-   "print_h": 2.51,
-   "print_h_total": 5.03,
+   "volume_cm3": 45.52,
+   "mass_g": 29.6,
+   "mass_total_g": 59.2,
+   "print_h": 2.52,
+   "print_h_total": 5.04,
    "size_mm": [
     99.2,
     98.6,
@@ -1048,19 +1421,35 @@
    "fits": true,
    "fits_tight": true,
    "overhang_cm2": 16.7,
-   "support": "kısa köprü (iç)",
+   "bed_contact_cm2": 16.77,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 1.75,
+   "oh45_over_model_cm2": 14.94,
+   "oh45_over_model_gt5mm_cm2": 14.66,
+   "bed_fix": "",
+   "support": "model üstü destek",
    "min_wall": {
-    "min_mm": 0.11,
+    "min_mm": 0.387,
     "p05_mm": 0.499,
     "median_mm": 0.499
    },
    "note": "",
    "pin_holes": 1,
-   "features": [],
+   "heat": {
+    "min_mm": 486.4,
+    "source": "susturucu çıkışı"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/fin_2.stl",
-    "bytes": 307484,
-    "triangles": 6148
+    "bytes": 395884,
+    "triangles": 7916,
+    "volume_cm3": 45.524,
+    "separated_verts": 0
    }
   },
   {
@@ -1073,8 +1462,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 1492,
-    "faces": 3000,
+    "verts": 1777,
+    "faces": 3420,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1083,11 +1472,11 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 21.87,
-   "mass_g": 14.2,
-   "mass_total_g": 28.4,
-   "print_h": 1.43,
-   "print_h_total": 2.87,
+   "volume_cm3": 22.1,
+   "mass_g": 14.4,
+   "mass_total_g": 28.7,
+   "print_h": 1.44,
+   "print_h_total": 2.89,
    "size_mm": [
     63.6,
     64.3,
@@ -1107,19 +1496,35 @@
    "fits": true,
    "fits_tight": true,
    "overhang_cm2": 4.7,
-   "support": "kısa köprü (iç)",
+   "bed_contact_cm2": 7.69,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 4.66,
+   "oh45_over_model_gt5mm_cm2": 4.66,
+   "bed_fix": "",
+   "support": "yok",
    "min_wall": {
-    "min_mm": 0.021,
-    "p05_mm": 0.493,
+    "min_mm": 0.174,
+    "p05_mm": 0.495,
     "median_mm": 0.499
    },
-   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 1220.9,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/aileron_1.stl",
-    "bytes": 150084,
-    "triangles": 3000
+    "bytes": 178584,
+    "triangles": 3570,
+    "volume_cm3": 22.097,
+    "separated_verts": 0
    }
   },
   {
@@ -1132,8 +1537,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 1659,
-    "faces": 3338,
+    "verts": 2065,
+    "faces": 3872,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1142,11 +1547,11 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 20.63,
-   "mass_g": 13.4,
-   "mass_total_g": 26.8,
-   "print_h": 1.38,
-   "print_h_total": 2.77,
+   "volume_cm3": 20.85,
+   "mass_g": 13.6,
+   "mass_total_g": 27.1,
+   "print_h": 1.39,
+   "print_h_total": 2.79,
    "size_mm": [
     56.4,
     56.8,
@@ -1165,22 +1570,37 @@
    "bed_margin_mm": 99.6,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 3.5,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 3.4,
+   "bed_contact_cm2": 5.54,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 3.43,
+   "oh45_over_model_gt5mm_cm2": 3.3,
+   "bed_fix": "",
+   "support": "yok",
    "min_wall": {
-    "min_mm": 0.001,
-    "p05_mm": 0.497,
+    "min_mm": 0.013,
+    "p05_mm": 0.499,
     "median_mm": 0.499
    },
-   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 1387.5,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [
-    "G10 horn yarığı"
+    "G10 horn yarığı",
+    "ek pahı 0,4 × 0,3 mm"
    ],
    "stl": {
     "file": "stl/aileron_2.stl",
-    "bytes": 166984,
-    "triangles": 3338
+    "bytes": 207584,
+    "triangles": 4150,
+    "volume_cm3": 20.851,
+    "separated_verts": 0
    }
   },
   {
@@ -1193,8 +1613,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 1570,
-    "faces": 3152,
+    "verts": 1969,
+    "faces": 3675,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1203,11 +1623,11 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 18.7,
-   "mass_g": 12.2,
-   "mass_total_g": 24.3,
-   "print_h": 1.3,
-   "print_h_total": 2.61,
+   "volume_cm3": 18.93,
+   "mass_g": 12.3,
+   "mass_total_g": 24.6,
+   "print_h": 1.31,
+   "print_h_total": 2.63,
    "size_mm": [
     49.9,
     49.7,
@@ -1227,19 +1647,35 @@
    "fits": true,
    "fits_tight": true,
    "overhang_cm2": 2.2,
+   "bed_contact_cm2": 4.1,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 2.22,
+   "oh45_over_model_gt5mm_cm2": 2.22,
+   "bed_fix": "",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.052,
-    "p05_mm": 0.497,
+    "min_mm": 0.128,
+    "p05_mm": 0.499,
     "median_mm": 0.499
    },
-   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 1558.4,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/aileron_3.stl",
-    "bytes": 157684,
-    "triangles": 3152
+    "bytes": 197584,
+    "triangles": 3950,
+    "volume_cm3": 18.929,
+    "separated_verts": 0
    }
   },
   {
@@ -1252,8 +1688,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 1594,
-    "faces": 3200,
+    "verts": 1869,
+    "faces": 3623,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1262,15 +1698,15 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 16.25,
-   "mass_g": 10.6,
-   "mass_total_g": 21.1,
-   "print_h": 1.2,
-   "print_h_total": 2.4,
+   "volume_cm3": 16.49,
+   "mass_g": 10.7,
+   "mass_total_g": 21.4,
+   "print_h": 1.21,
+   "print_h_total": 2.42,
    "size_mm": [
     42.9,
     43.4,
-    182.4
+    182.2
    ],
    "orientation": {
     "up_world": [
@@ -1286,19 +1722,35 @@
    "fits": true,
    "fits_tight": true,
    "overhang_cm2": 1.4,
+   "bed_contact_cm2": 3.04,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 1.4,
+   "oh45_over_model_gt5mm_cm2": 1.4,
+   "bed_fix": "tabla teması için alt yüz 0.2 mm düzlendi",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.063,
-    "p05_mm": 0.496,
+    "min_mm": 0.478,
+    "p05_mm": 0.498,
     "median_mm": 0.499
    },
-   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 1731.9,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/aileron_4.stl",
-    "bytes": 160084,
-    "triangles": 3200
+    "bytes": 200284,
+    "triangles": 4004,
+    "volume_cm3": 16.436,
+    "separated_verts": 0
    }
   },
   {
@@ -1311,8 +1763,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 2190,
-    "faces": 4392,
+    "verts": 2383,
+    "faces": 4782,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1321,15 +1773,15 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 22.17,
-   "mass_g": 14.4,
-   "mass_total_g": 28.8,
-   "print_h": 1.4,
-   "print_h_total": 2.8,
+   "volume_cm3": 23.81,
+   "mass_g": 15.5,
+   "mass_total_g": 30.9,
+   "print_h": 1.49,
+   "print_h_total": 2.99,
    "size_mm": [
     68.4,
     68.5,
-    163.4
+    173.4
    ],
    "orientation": {
     "up_world": [
@@ -1344,22 +1796,36 @@
    "bed_margin_mm": 93.8,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 7.5,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 7.4,
+   "bed_contact_cm2": 9.57,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 7.35,
+   "oh45_over_model_gt5mm_cm2": 7.35,
+   "bed_fix": "",
+   "support": "yok",
    "min_wall": {
-    "min_mm": 0.031,
-    "p05_mm": 0.493,
+    "min_mm": 0.01,
+    "p05_mm": 0.494,
     "median_mm": 0.499
    },
-   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 642.8,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [
-    "G10 horn yarığı"
+    "bağlayıcı tel yuvası (dış flap sürer)"
    ],
    "stl": {
     "file": "stl/flapin.stl",
-    "bytes": 219684,
-    "triangles": 4392
+    "bytes": 239184,
+    "triangles": 4782,
+    "volume_cm3": 23.805,
+    "separated_verts": 0
    }
   },
   {
@@ -1372,8 +1838,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 1364,
-    "faces": 2744,
+    "verts": 1725,
+    "faces": 3474,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1382,15 +1848,15 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 23.21,
-   "mass_g": 15.1,
-   "mass_total_g": 30.2,
-   "print_h": 1.47,
-   "print_h_total": 2.94,
+   "volume_cm3": 23.89,
+   "mass_g": 15.5,
+   "mass_total_g": 31.1,
+   "print_h": 1.51,
+   "print_h_total": 3.02,
    "size_mm": [
     69.2,
     68.3,
-    174.4
+    178.2
    ],
    "orientation": {
     "up_world": [
@@ -1405,20 +1871,37 @@
    "bed_margin_mm": 93.4,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 7.7,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 7.6,
+   "bed_contact_cm2": 8.73,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.02,
+   "oh45_over_model_cm2": 7.63,
+   "oh45_over_model_gt5mm_cm2": 7.63,
+   "bed_fix": "",
+   "support": "yok",
    "min_wall": {
-    "min_mm": 0.029,
-    "p05_mm": 0.494,
+    "min_mm": 0.186,
+    "p05_mm": 0.496,
     "median_mm": 0.499
    },
-   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 699.1,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "bağlayıcı tel yuvası (iç flabı sürer)",
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/flapout_1.stl",
-    "bytes": 137284,
-    "triangles": 2744
+    "bytes": 173784,
+    "triangles": 3474,
+    "volume_cm3": 23.889,
+    "separated_verts": 0
    }
   },
   {
@@ -1431,8 +1914,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 1483,
-    "faces": 2986,
+    "verts": 1867,
+    "faces": 3476,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1441,15 +1924,15 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 24.28,
-   "mass_g": 15.8,
-   "mass_total_g": 31.6,
-   "print_h": 1.52,
-   "print_h_total": 3.04,
+   "volume_cm3": 24.99,
+   "mass_g": 16.2,
+   "mass_total_g": 32.5,
+   "print_h": 1.56,
+   "print_h_total": 3.11,
    "size_mm": [
     69.5,
     70.3,
-    175.4
+    179.2
    ],
    "orientation": {
     "up_world": [
@@ -1465,21 +1948,36 @@
    "fits": true,
    "fits_tight": true,
    "overhang_cm2": 8.1,
-   "support": "kısa köprü (iç)",
+   "bed_contact_cm2": 8.74,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 8.08,
+   "oh45_over_model_gt5mm_cm2": 7.92,
+   "bed_fix": "",
+   "support": "yok",
    "min_wall": {
-    "min_mm": 0.003,
+    "min_mm": 0.062,
     "p05_mm": 0.499,
     "median_mm": 0.499
    },
-   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 791.3,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [
-    "G10 horn yarığı"
+    "G10 horn yarığı",
+    "ek pahı 0,4 × 0,3 mm"
    ],
    "stl": {
     "file": "stl/flapout_2.stl",
-    "bytes": 149384,
-    "triangles": 2986
+    "bytes": 187784,
+    "triangles": 3754,
+    "volume_cm3": 24.995,
+    "separated_verts": 0
    }
   },
   {
@@ -1492,25 +1990,25 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 1662,
-    "faces": 3376,
+    "verts": 1661,
+    "faces": 3366,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
     "shells": 1,
     "ok": true,
-    "removed_islands": 4
+    "removed_islands": 0
    },
-   "volume_cm3": 24.78,
-   "mass_g": 16.1,
-   "mass_total_g": 32.2,
-   "print_h": 1.54,
-   "print_h_total": 3.08,
+   "volume_cm3": 26.67,
+   "mass_g": 17.3,
+   "mass_total_g": 34.7,
+   "print_h": 1.63,
+   "print_h_total": 3.25,
    "size_mm": [
     71.4,
     70.7,
-    175.4
+    179.2
    ],
    "orientation": {
     "up_world": [
@@ -1525,20 +2023,36 @@
    "bed_margin_mm": 92.3,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 8.4,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 8.3,
+   "bed_contact_cm2": 9.07,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 8.28,
+   "oh45_over_model_gt5mm_cm2": 8.28,
+   "bed_fix": "",
+   "support": "model üstü destek",
    "min_wall": {
-    "min_mm": 0.002,
+    "min_mm": 0.003,
     "p05_mm": 0.499,
     "median_mm": 0.499
    },
-   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 910.1,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/flapout_3.stl",
-    "bytes": 168884,
-    "triangles": 3376
+    "bytes": 168384,
+    "triangles": 3366,
+    "volume_cm3": 26.666,
+    "separated_verts": 0
    }
   },
   {
@@ -1551,8 +2065,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 1578,
-    "faces": 3188,
+    "verts": 1851,
+    "faces": 3608,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1561,15 +2075,15 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 24.09,
-   "mass_g": 15.7,
-   "mass_total_g": 31.3,
-   "print_h": 1.51,
-   "print_h_total": 3.02,
+   "volume_cm3": 24.8,
+   "mass_g": 16.1,
+   "mass_total_g": 32.2,
+   "print_h": 1.55,
+   "print_h_total": 3.09,
    "size_mm": [
     72.0,
     71.3,
-    174.4
+    178.2
    ],
    "orientation": {
     "up_world": [
@@ -1585,33 +2099,49 @@
    "fits": true,
    "fits_tight": true,
    "overhang_cm2": 6.7,
-   "support": "kısa köprü (iç)",
+   "bed_contact_cm2": 9.36,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 6.66,
+   "oh45_over_model_gt5mm_cm2": 6.66,
+   "bed_fix": "",
+   "support": "yok",
    "min_wall": {
-    "min_mm": 0.031,
-    "p05_mm": 0.494,
+    "min_mm": 0.002,
+    "p05_mm": 0.493,
     "median_mm": 0.499
    },
-   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 1046.2,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/flapout_4.stl",
-    "bytes": 159484,
-    "triangles": 3188
+    "bytes": 186784,
+    "triangles": 3734,
+    "volume_cm3": 24.804,
+    "separated_verts": 0
    }
   },
   {
    "key": "elevator_1",
    "name": "Elevatör 1/2",
    "group": "Kumanda yüzeyleri",
-   "material": "LW-PLA",
+   "material": "LW-ASA",
    "zone": "control_surface",
    "wall_mm": 0.5,
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 1887,
-    "faces": 3794,
+    "verts": 2166,
+    "faces": 4214,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1620,45 +2150,61 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 20.1,
-   "mass_g": 13.1,
-   "mass_total_g": 26.1,
-   "print_h": 1.5,
-   "print_h_total": 3.0,
+   "volume_cm3": 20.42,
+   "mass_g": 15.3,
+   "mass_total_g": 30.6,
+   "print_h": 1.53,
+   "print_h_total": 3.06,
    "size_mm": [
-    43.3,
-    43.8,
-    243.3
+    111.7,
+    112.4,
+    217.0
    ],
    "orientation": {
     "up_world": [
-     -0.45,
-     0.893,
-     -0.0
+     0.0,
+     1.0,
+     0.0
     ],
-    "up_words": "+y (sol/iskele) (27° eğik)",
-    "z_rot_deg": 18.0,
+    "up_words": "+y (sol/iskele)",
+    "z_rot_deg": 45.0,
     "bed_end": ""
    },
-   "bed_margin_mm": 106.1,
+   "bed_margin_mm": 71.8,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 6.8,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 2.9,
+   "bed_contact_cm2": 4.43,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 2.86,
+   "oh45_over_model_gt5mm_cm2": 2.53,
+   "bed_fix": "",
+   "support": "yok",
    "min_wall": {
-    "min_mm": 0.009,
+    "min_mm": 0.06,
     "p05_mm": 0.499,
     "median_mm": 0.499
    },
-   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 16.3,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [
-    "G10 horn yarığı"
+    "G10 horn yarığı",
+    "ek pahı 0,4 × 0,3 mm",
+    "ısı kuralı: kaynağa 16 mm → LW-ASA (Tg 95 °C)"
    ],
    "stl": {
     "file": "stl/elevator_1.stl",
-    "bytes": 189784,
-    "triangles": 3794
+    "bytes": 217684,
+    "triangles": 4352,
+    "volume_cm3": 20.425,
+    "separated_verts": 0
    }
   },
   {
@@ -1671,25 +2217,25 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 904,
-    "faces": 1816,
+    "verts": 1244,
+    "faces": 2242,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
     "shells": 1,
     "ok": true,
-    "removed_islands": 1
+    "removed_islands": 0
    },
-   "volume_cm3": 10.83,
-   "mass_g": 7.0,
-   "mass_total_g": 14.1,
-   "print_h": 0.85,
-   "print_h_total": 1.7,
+   "volume_cm3": 11.05,
+   "mass_g": 7.2,
+   "mass_total_g": 14.4,
+   "print_h": 0.86,
+   "print_h_total": 1.72,
    "size_mm": [
-    37.6,
-    38.1,
-    129.6
+    38.0,
+    38.5,
+    129.4
    ],
    "orientation": {
     "up_world": [
@@ -1701,23 +2247,39 @@
     "z_rot_deg": 18.0,
     "bed_end": "yüzey eki"
    },
-   "bed_margin_mm": 108.9,
+   "bed_margin_mm": 108.8,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 1.7,
+   "overhang_cm2": 2.2,
+   "bed_contact_cm2": 3.03,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 2.18,
+   "oh45_over_model_gt5mm_cm2": 2.15,
+   "bed_fix": "tabla teması için alt yüz 0.1 mm düzlendi",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.01,
+    "min_mm": 0.051,
     "p05_mm": 0.499,
     "median_mm": 0.499
    },
-   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 157.6,
+    "source": "susturucu çıkışı"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/elevator_2a.stl",
-    "bytes": 90884,
-    "triangles": 1816
+    "bytes": 132184,
+    "triangles": 2642,
+    "volume_cm3": 11.023,
+    "separated_verts": 0
    }
   },
   {
@@ -1730,8 +2292,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 840,
-    "faces": 1688,
+    "verts": 1036,
+    "faces": 1962,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1740,15 +2302,15 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 9.13,
-   "mass_g": 5.9,
-   "mass_total_g": 11.9,
-   "print_h": 0.78,
-   "print_h_total": 1.56,
+   "volume_cm3": 9.33,
+   "mass_g": 6.1,
+   "mass_total_g": 12.1,
+   "print_h": 0.79,
+   "print_h_total": 1.58,
    "size_mm": [
-    34.3,
-    34.7,
-    129.6
+    34.9,
+    35.4,
+    130.3
    ],
    "orientation": {
     "up_world": [
@@ -1760,23 +2322,39 @@
     "z_rot_deg": 18.0,
     "bed_end": "yüzey eki"
    },
-   "bed_margin_mm": 110.6,
+   "bed_margin_mm": 110.3,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 1.5,
+   "overhang_cm2": 1.9,
+   "bed_contact_cm2": 8.84,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 1.95,
+   "oh45_over_model_gt5mm_cm2": 1.95,
+   "bed_fix": "1 mm kırılabilir baskı ayağı (baskıdan sonra kesilir)",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.111,
-    "p05_mm": 0.498,
+    "min_mm": 0.131,
+    "p05_mm": 0.496,
     "median_mm": 0.499
    },
-   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 278.2,
+    "source": "susturucu çıkışı"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/elevator_2b.stl",
-    "bytes": 84484,
-    "triangles": 1688
+    "bytes": 125284,
+    "triangles": 2504,
+    "volume_cm3": 10.159,
+    "separated_verts": 0
    }
   },
   {
@@ -1789,8 +2367,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 1312,
-    "faces": 2640,
+    "verts": 1552,
+    "faces": 2979,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1799,45 +2377,60 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 18.09,
-   "mass_g": 11.8,
-   "mass_total_g": 23.5,
-   "print_h": 1.23,
-   "print_h_total": 2.46,
+   "volume_cm3": 18.31,
+   "mass_g": 11.9,
+   "mass_total_g": 23.8,
+   "print_h": 1.21,
+   "print_h_total": 2.43,
    "size_mm": [
-    62.3,
-    62.7,
-    162.1
+    90.2,
+    90.2,
+    151.2
    ],
    "orientation": {
     "up_world": [
-     -0.35,
-     0.195,
-     0.916
+     -0.0,
+     0.208,
+     0.978
     ],
-    "up_words": "+z (yukarı) (24° eğik)",
-    "z_rot_deg": 43.0,
+    "up_words": "+z (yukarı) (12° eğik)",
+    "z_rot_deg": 45.0,
     "bed_end": ""
    },
-   "bed_margin_mm": 96.7,
+   "bed_margin_mm": 82.9,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 12.7,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 5.4,
+   "bed_contact_cm2": 8.4,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 5.44,
+   "oh45_over_model_gt5mm_cm2": 5.31,
+   "bed_fix": "",
+   "support": "yok",
    "min_wall": {
-    "min_mm": 0.062,
-    "p05_mm": 0.497,
+    "min_mm": 0.041,
+    "p05_mm": 0.499,
     "median_mm": 0.499
    },
-   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 438.5,
+    "source": "susturucu çıkışı"
+   },
+   "tooling": false,
    "features": [
-    "G10 horn yarığı"
+    "G10 horn yarığı",
+    "ek pahı 0,4 × 0,3 mm"
    ],
    "stl": {
     "file": "stl/rudder_a.stl",
-    "bytes": 132084,
-    "triangles": 2640
+    "bytes": 156084,
+    "triangles": 3120,
+    "volume_cm3": 18.306,
+    "separated_verts": 39
    }
   },
   {
@@ -1850,21 +2443,21 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 1242,
-    "faces": 2492,
+    "verts": 1652,
+    "faces": 3189,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
     "shells": 1,
     "ok": true,
-    "removed_islands": 1
+    "removed_islands": 0
    },
-   "volume_cm3": 15.86,
-   "mass_g": 10.3,
-   "mass_total_g": 20.6,
+   "volume_cm3": 16.06,
+   "mass_g": 10.4,
+   "mass_total_g": 20.9,
    "print_h": 1.14,
-   "print_h_total": 2.27,
+   "print_h_total": 2.29,
    "size_mm": [
     51.6,
     51.9,
@@ -1884,22 +2477,36 @@
    "fits": true,
    "fits_tight": true,
    "overhang_cm2": 2.3,
+   "bed_contact_cm2": 4.98,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 2.29,
+   "oh45_over_model_gt5mm_cm2": 2.28,
+   "bed_fix": "",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.077,
-    "p05_mm": 0.499,
+    "min_mm": 0.184,
+    "p05_mm": 0.498,
     "median_mm": 0.499
    },
-   "note": "menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri",
+   "note": "menteşe ekseni Z'de; Ø1,75 filament pim, basılı dil çentikleri",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 518.5,
+    "source": "susturucu çıkışı"
+   },
+   "tooling": false,
    "features": [
-    "1 kopuk kıymık atıldı (0.01 cm³)",
-    "G10 horn yarığı"
+    "G10 horn yarığı",
+    "ek pahı 0,4 × 0,3 mm"
    ],
    "stl": {
     "file": "stl/rudder_b.stl",
-    "bytes": 124684,
-    "triangles": 2492
+    "bytes": 165684,
+    "triangles": 3312,
+    "volume_cm3": 16.063,
+    "separated_verts": 0
    }
   },
   {
@@ -1912,8 +2519,8 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 5612,
-    "faces": 11220,
+    "verts": 6074,
+    "faces": 11684,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1922,14 +2529,14 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 35.01,
+   "volume_cm3": 35.03,
    "mass_g": 22.8,
    "mass_total_g": 22.8,
    "print_h": 1.9,
    "print_h_total": 1.9,
    "size_mm": [
     134.7,
-    127.8,
+    127.7,
     148.0
    ],
    "orientation": {
@@ -1945,20 +2552,36 @@
    "bed_margin_mm": 60.7,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 2.9,
-   "support": "yok",
+   "overhang_cm2": 5.6,
+   "bed_contact_cm2": 28.55,
+   "contact_need_cm2": 4.09,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 5.49,
+   "oh45_over_model_cm2": 0.11,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.031,
-    "p05_mm": 0.791,
+    "min_mm": 0.01,
+    "p05_mm": 0.799,
     "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 1925.0,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/fus_nose_cone.stl",
-    "bytes": 561084,
-    "triangles": 11220
+    "bytes": 607284,
+    "triangles": 12144,
+    "volume_cm3": 35.034,
+    "separated_verts": 0
    }
   },
   {
@@ -1971,8 +2594,8 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 6390,
-    "faces": 12832,
+    "verts": 7161,
+    "faces": 13164,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -1981,14 +2604,14 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 167.42,
-   "mass_g": 108.8,
-   "mass_total_g": 108.8,
-   "print_h": 7.66,
-   "print_h_total": 7.66,
+   "volume_cm3": 129.97,
+   "mass_g": 84.5,
+   "mass_total_g": 84.5,
+   "print_h": 6.1,
+   "print_h_total": 6.1,
    "size_mm": [
-    193.5,
     195.0,
+    193.8,
     252.0
    ],
    "orientation": {
@@ -1998,28 +2621,43 @@
      -0.0
     ],
     "up_words": "+x (burun)",
-    "z_rot_deg": 11.0,
+    "z_rot_deg": 78.0,
     "bed_end": "s=0.400 (sökülebilir)"
    },
    "bed_margin_mm": 30.5,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 48.5,
-   "support": "destek önerilir",
+   "overhang_cm2": 58.8,
+   "bed_contact_cm2": 55.53,
+   "contact_need_cm2": 9.15,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 35.25,
+   "oh45_over_model_cm2": 23.51,
+   "oh45_over_model_gt5mm_cm2": 23.31,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.087,
+    "min_mm": 0.457,
     "p05_mm": 0.789,
     "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 1672.6,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [
-    "burun modülü: 4×M4 kelebek + 2×Ø4 pim"
+    "burun modülü: 4×M4 kelebek + 2×Ø4 pim",
+    "ek pahı 0,4 × 0,3 mm"
    ],
    "stl": {
     "file": "stl/fus_nose_module.stl",
-    "bytes": 641684,
-    "triangles": 12832
+    "bytes": 717384,
+    "triangles": 14346,
+    "volume_cm3": 129.972,
+    "separated_verts": 0
    }
   },
   {
@@ -2032,24 +2670,24 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 5702,
-    "faces": 11472,
+    "verts": 12738,
+    "faces": 25572,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
     "shells": 1,
     "ok": true,
-    "removed_islands": 2
+    "removed_islands": 0
    },
-   "volume_cm3": 155.96,
-   "mass_g": 101.4,
-   "mass_total_g": 101.4,
-   "print_h": 7.04,
-   "print_h_total": 7.04,
+   "volume_cm3": 152.63,
+   "mass_g": 99.2,
+   "mass_total_g": 99.2,
+   "print_h": 6.9,
+   "print_h_total": 6.9,
    "size_mm": [
-    200.5,
-    200.6,
+    201.0,
+    201.1,
     191.7
    ],
    "orientation": {
@@ -2059,29 +2697,44 @@
      -0.0
     ],
     "up_words": "−x (kuyruk)",
-    "z_rot_deg": 11.0,
+    "z_rot_deg": 10.0,
     "bed_end": "s=0.400"
    },
-   "bed_margin_mm": 27.7,
+   "bed_margin_mm": 27.4,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 8.9,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 79.4,
+   "bed_contact_cm2": 46.12,
+   "contact_need_cm2": 9.81,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 60.35,
+   "oh45_over_model_cm2": 19.08,
+   "oh45_over_model_gt5mm_cm2": 18.51,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.157,
-    "p05_mm": 0.793,
-    "median_mm": 0.801
+    "min_mm": 0.0,
+    "p05_mm": 0.792,
+    "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 1480.9,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [
-    "2 kopuk kıymık atıldı (0.23 cm³)",
-    "burun modülü: 4×M4 kelebek + 2×Ø4 pim"
+    "burun modülü: 4×M4 kelebek + 2×Ø4 pim",
+    "ek pahı 0,4 × 0,3 mm",
+    "kapak oturma basamağı + 3 mıknatıs cebi (yarım başına)"
    ],
    "stl": {
     "file": "stl/fus_ring_1.stl",
-    "bytes": 573684,
-    "triangles": 11472
+    "bytes": 1278684,
+    "triangles": 25572,
+    "volume_cm3": 152.63,
+    "separated_verts": 0
    }
   },
   {
@@ -2094,8 +2747,8 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 4835,
-    "faces": 9712,
+    "verts": 11755,
+    "faces": 20769,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -2104,13 +2757,13 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 133.38,
-   "mass_g": 86.7,
-   "mass_total_g": 86.7,
-   "print_h": 6.1,
-   "print_h_total": 6.1,
+   "volume_cm3": 159.16,
+   "mass_g": 103.5,
+   "mass_total_g": 103.5,
+   "print_h": 7.18,
+   "print_h_total": 7.18,
    "size_mm": [
-    200.3,
+    200.6,
     201.1,
     191.6
    ],
@@ -2127,20 +2780,37 @@
    "bed_margin_mm": 27.5,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 44.6,
-   "support": "destek önerilir",
+   "overhang_cm2": 46.9,
+   "bed_contact_cm2": 70.78,
+   "contact_need_cm2": 9.69,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 44.85,
+   "oh45_over_model_cm2": 2.01,
+   "oh45_over_model_gt5mm_cm2": 1.03,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.772,
-    "p05_mm": 0.79,
+    "min_mm": 0.051,
+    "p05_mm": 0.791,
     "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 1289.3,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm",
+    "kapak oturma basamağı + 3 mıknatıs cebi (yarım başına)"
+   ],
    "stl": {
     "file": "stl/fus_ring_2.stl",
-    "bytes": 485684,
-    "triangles": 9712
+    "bytes": 1176984,
+    "triangles": 23538,
+    "volume_cm3": 159.153,
+    "separated_verts": 352
    }
   },
   {
@@ -2153,8 +2823,8 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 4129,
-    "faces": 8282,
+    "verts": 9659,
+    "faces": 16911,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -2163,11 +2833,11 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 128.55,
-   "mass_g": 83.6,
-   "mass_total_g": 83.6,
-   "print_h": 5.9,
-   "print_h_total": 5.9,
+   "volume_cm3": 140.31,
+   "mass_g": 91.2,
+   "mass_total_g": 91.2,
+   "print_h": 6.39,
+   "print_h_total": 6.39,
    "size_mm": [
     202.7,
     202.7,
@@ -2186,20 +2856,37 @@
    "bed_margin_mm": 26.6,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 0.6,
-   "support": "yok",
+   "overhang_cm2": 26.0,
+   "bed_contact_cm2": 46.53,
+   "contact_need_cm2": 9.95,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 25.26,
+   "oh45_over_model_cm2": 0.7,
+   "oh45_over_model_gt5mm_cm2": 0.43,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.004,
-    "p05_mm": 0.794,
+    "min_mm": 0.397,
+    "p05_mm": 0.799,
     "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 1097.6,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm",
+    "kapak oturma basamağı + 3 mıknatıs cebi (yarım başına)"
+   ],
    "stl": {
     "file": "stl/fus_ring_3.stl",
-    "bytes": 414184,
-    "triangles": 8282
+    "bytes": 966984,
+    "triangles": 19338,
+    "volume_cm3": 140.307,
+    "separated_verts": 161
    }
   },
   {
@@ -2212,8 +2899,8 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 4636,
-    "faces": 9288,
+    "verts": 6815,
+    "faces": 11966,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -2222,14 +2909,14 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 131.77,
-   "mass_g": 85.7,
-   "mass_total_g": 85.7,
-   "print_h": 6.03,
-   "print_h_total": 6.03,
+   "volume_cm3": 131.38,
+   "mass_g": 85.4,
+   "mass_total_g": 85.4,
+   "print_h": 6.02,
+   "print_h_total": 6.02,
    "size_mm": [
-    201.5,
-    201.6,
+    201.7,
+    202.0,
     191.7
    ],
    "orientation": {
@@ -2239,26 +2926,43 @@
      -0.0
     ],
     "up_words": "−x (kuyruk)",
-    "z_rot_deg": 7.0,
+    "z_rot_deg": 6.0,
     "bed_end": "s=0.975"
    },
-   "bed_margin_mm": 27.2,
+   "bed_margin_mm": 27.0,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 0.0,
+   "overhang_cm2": 0.2,
+   "bed_contact_cm2": 52.37,
+   "contact_need_cm2": 9.82,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 0.16,
+   "oh45_over_model_gt5mm_cm2": 0.08,
+   "bed_fix": "",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.789,
-    "p05_mm": 0.794,
+    "min_mm": 0.796,
+    "p05_mm": 0.799,
     "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 905.9,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm",
+    "longeron kırık soketi cepleri (PETG blok)"
+   ],
    "stl": {
     "file": "stl/fus_ring_4.stl",
-    "bytes": 464484,
-    "triangles": 9288
+    "bytes": 682384,
+    "triangles": 13646,
+    "volume_cm3": 131.379,
+    "separated_verts": 67
    }
   },
   {
@@ -2271,8 +2975,8 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 5072,
-    "faces": 10190,
+    "verts": 8240,
+    "faces": 14487,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -2281,13 +2985,13 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 135.58,
-   "mass_g": 88.1,
-   "mass_total_g": 88.1,
-   "print_h": 6.24,
-   "print_h_total": 6.24,
+   "volume_cm3": 137.04,
+   "mass_g": 89.1,
+   "mass_total_g": 89.1,
+   "print_h": 6.3,
+   "print_h_total": 6.3,
    "size_mm": [
-    203.3,
+    205.7,
     196.0,
     212.3
    ],
@@ -2301,25 +3005,41 @@
     "z_rot_deg": 0.0,
     "bed_end": "s=1.167"
    },
-   "bed_margin_mm": 26.4,
+   "bed_margin_mm": 25.1,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 7.6,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 13.1,
+   "bed_contact_cm2": 48.21,
+   "contact_need_cm2": 9.59,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 8.63,
+   "oh45_over_model_cm2": 4.51,
+   "oh45_over_model_gt5mm_cm2": 3.94,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.531,
-    "p05_mm": 0.793,
+    "min_mm": 0.048,
+    "p05_mm": 0.797,
     "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 693.6,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [
-    "kanat kutusu geçişi (G10 köprü + Ø30 soket)"
+    "ek pahı 0,4 × 0,3 mm",
+    "kanat kutusu geçişi (G10 köprü + Ø30 soket)",
+    "longeron kırık soketi cepleri (PETG blok)"
    ],
    "stl": {
     "file": "stl/fus_ring_5.stl",
-    "bytes": 509584,
-    "triangles": 10190
+    "bytes": 827684,
+    "triangles": 16552,
+    "volume_cm3": 137.036,
+    "separated_verts": 76
    }
   },
   {
@@ -2332,8 +3052,8 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 3903,
-    "faces": 7822,
+    "verts": 5702,
+    "faces": 11420,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -2342,14 +3062,14 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 107.1,
-   "mass_g": 69.6,
-   "mass_total_g": 69.6,
-   "print_h": 4.96,
-   "print_h_total": 4.96,
+   "volume_cm3": 108.22,
+   "mass_g": 70.3,
+   "mass_total_g": 70.3,
+   "print_h": 5.0,
+   "print_h_total": 5.0,
    "size_mm": [
-    199.9,
-    199.9,
+    194.3,
+    194.3,
     171.0
    ],
    "orientation": {
@@ -2362,28 +3082,44 @@
     "z_rot_deg": 45.0,
     "bed_end": "s=1.379"
    },
-   "bed_margin_mm": 28.0,
+   "bed_margin_mm": 30.8,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 1.1,
+   "overhang_cm2": 0.1,
+   "bed_contact_cm2": 46.25,
+   "contact_need_cm2": 8.34,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 0.12,
+   "oh45_over_model_gt5mm_cm2": 0.1,
+   "bed_fix": "",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.771,
-    "p05_mm": 0.792,
+    "min_mm": 0.794,
+    "p05_mm": 0.799,
     "median_mm": 0.799
    },
    "note": "",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 522.6,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/fus_ring_6.stl",
-    "bytes": 391184,
-    "triangles": 7822
+    "bytes": 571084,
+    "triangles": 11420,
+    "volume_cm3": 108.217,
+    "separated_verts": 0
    }
   },
   {
    "key": "fus_ring_7",
-   "name": "Kuyruk konisi halkası (s 1.550–1.760, LW-ASA)",
+   "name": "Kuyruk konisi halkası (s 1.550–1.715, LW-ASA)",
    "group": "Gövde",
    "material": "LW-ASA",
    "zone": "tail_cone",
@@ -2391,8 +3127,8 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 4317,
-    "faces": 8670,
+    "verts": 5896,
+    "faces": 11824,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -2401,15 +3137,15 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 145.59,
-   "mass_g": 109.2,
-   "mass_total_g": 109.2,
-   "print_h": 7.2,
-   "print_h_total": 7.2,
+   "volume_cm3": 115.43,
+   "mass_g": 86.6,
+   "mass_total_g": 86.6,
+   "print_h": 5.73,
+   "print_h_total": 5.73,
    "size_mm": [
-    205.5,
-    205.5,
-    210.0
+    184.4,
+    184.4,
+    165.0
    ],
    "orientation": {
     "up_world": [
@@ -2421,30 +3157,45 @@
     "z_rot_deg": 45.0,
     "bed_end": "s=1.550"
    },
-   "bed_margin_mm": 25.2,
+   "bed_margin_mm": 35.8,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 5.7,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 1.6,
+   "bed_contact_cm2": 42.35,
+   "contact_need_cm2": 7.37,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 1.59,
+   "oh45_over_model_cm2": 0.02,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "yok",
    "min_wall": {
-    "min_mm": 0.38,
-    "p05_mm": 0.794,
+    "min_mm": 0.191,
+    "p05_mm": 0.799,
     "median_mm": 0.999
    },
    "note": "",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 357.6,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [
-    "G10 flanş: 4×M4"
+    "G10 flanş: 4×M4",
+    "ek pahı 0,4 × 0,3 mm"
    ],
    "stl": {
     "file": "stl/fus_ring_7.stl",
-    "bytes": 433584,
-    "triangles": 8670
+    "bytes": 591284,
+    "triangles": 11824,
+    "volume_cm3": 115.434,
+    "separated_verts": 0
    }
   },
   {
    "key": "fus_ring_8",
-   "name": "Kuyruk konisi halkası (s 1.760–1.845, LW-ASA)",
+   "name": "Kuyruk konisi halkası (s 1.715–1.845, LW-ASA)",
    "group": "Gövde",
    "material": "LW-ASA",
    "zone": "tail_cone",
@@ -2452,8 +3203,8 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 2396,
-    "faces": 4808,
+    "verts": 5061,
+    "faces": 10146,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -2462,15 +3213,15 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 66.26,
-   "mass_g": 49.7,
-   "mass_total_g": 49.7,
-   "print_h": 3.31,
-   "print_h_total": 3.31,
+   "volume_cm3": 88.78,
+   "mass_g": 66.6,
+   "mass_total_g": 66.6,
+   "print_h": 4.44,
+   "print_h_total": 4.44,
    "size_mm": [
-    189.7,
-    189.7,
-    85.0
+    172.6,
+    172.6,
+    130.0
    ],
    "orientation": {
     "up_world": [
@@ -2480,30 +3231,46 @@
     ],
     "up_words": "−x (kuyruk)",
     "z_rot_deg": 45.0,
-    "bed_end": "s=1.760"
+    "bed_end": "s=1.715"
    },
-   "bed_margin_mm": 33.1,
+   "bed_margin_mm": 41.7,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 4.7,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 1.3,
+   "bed_contact_cm2": 39.78,
+   "contact_need_cm2": 6.37,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 1.3,
+   "oh45_over_model_cm2": 0.01,
+   "oh45_over_model_gt5mm_cm2": 0.01,
+   "bed_fix": "",
+   "support": "yok",
    "min_wall": {
-    "min_mm": 0.009,
-    "p05_mm": 0.794,
+    "min_mm": 0.284,
+    "p05_mm": 0.799,
     "median_mm": 0.999
    },
    "note": "",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 227.6,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/fus_ring_8.stl",
-    "bytes": 240484,
-    "triangles": 4808
+    "bytes": 507384,
+    "triangles": 10146,
+    "volume_cm3": 88.779,
+    "separated_verts": 0
    }
   },
   {
    "key": "fus_ring_9",
-   "name": "Kuyruk konisi halkası (s 1.845–2.058, LW-ASA)",
+   "name": "Kuyruk konisi halkası (s 1.845–2.042, LW-ASA)",
    "group": "Gövde",
    "material": "LW-ASA",
    "zone": "tail_cone",
@@ -2511,25 +3278,25 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 4611,
-    "faces": 9262,
+    "verts": 8451,
+    "faces": 15522,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
     "shells": 1,
     "ok": true,
-    "removed_islands": 0
+    "removed_islands": 8
    },
-   "volume_cm3": 148.8,
-   "mass_g": 111.6,
-   "mass_total_g": 111.6,
-   "print_h": 7.36,
-   "print_h_total": 7.36,
+   "volume_cm3": 125.54,
+   "mass_g": 94.2,
+   "mass_total_g": 94.2,
+   "print_h": 6.26,
+   "print_h_total": 6.26,
    "size_mm": [
-    199.8,
-    199.8,
-    212.5
+    170.9,
+    170.9,
+    197.5
    ],
    "orientation": {
     "up_world": [
@@ -2541,23 +3308,624 @@
     "z_rot_deg": 45.0,
     "bed_end": "s=1.845"
    },
-   "bed_margin_mm": 28.1,
+   "bed_margin_mm": 42.6,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 6.2,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 8.6,
+   "bed_contact_cm2": 36.1,
+   "contact_need_cm2": 5.95,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 1.31,
+   "oh45_over_model_cm2": 7.32,
+   "oh45_over_model_gt5mm_cm2": 6.69,
+   "bed_fix": "",
+   "support": "yok",
    "min_wall": {
-    "min_mm": 0.187,
-    "p05_mm": 0.794,
+    "min_mm": 0.006,
+    "p05_mm": 0.799,
     "median_mm": 0.999
    },
-   "note": "",
+   "note": "NACA dudak çerçevesi cebi + yangın perdesine kanal geçişi",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 30.1,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "3 kopuk kıymık atıldı (0.80 cm³)",
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/fus_ring_9.stl",
-    "bytes": 463184,
-    "triangles": 9262
+    "bytes": 849784,
+    "triangles": 16994,
+    "volume_cm3": 125.535,
+    "separated_verts": 442
+   }
+  },
+  {
+   "key": "wing_frame_fwd",
+   "name": "Kanat kutusu ön çerçevesi (PA-CF 3 mm; G10 köprüye yaslanır)",
+   "group": "Yük yolları",
+   "material": "PA-CF",
+   "zone": "frames",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 1163,
+    "faces": 2362,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 48.41,
+   "mass_g": 58.1,
+   "mass_total_g": 58.1,
+   "print_h": 3.37,
+   "print_h_total": 3.37,
+   "size_mm": [
+    191.2,
+    189.1,
+    12.6
+   ],
+   "orientation": {
+    "up_world": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "up_words": "+x (burun)",
+    "z_rot_deg": 0.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 32.4,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.0,
+   "bed_contact_cm2": 153.17,
+   "contact_need_cm2": 8.75,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 0.0,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.032,
+    "p05_mm": 1.983,
+    "median_mm": 2.999
+   },
+   "note": "köprü plakasına epoksi + 2 × M4; 4 longeron soketi; depo zarfı çevresinde halka",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 848.5,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [],
+   "stl": {
+    "file": "stl/wing_frame_fwd.stl",
+    "bytes": 118184,
+    "triangles": 2362,
+    "volume_cm3": 48.407,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "wing_frame_aft",
+   "name": "Kanat kutusu arka çerçevesi (PA-CF 3 mm; G10 köprüye yaslanır)",
+   "group": "Yük yolları",
+   "material": "PA-CF",
+   "zone": "frames",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 1206,
+    "faces": 2448,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 46.76,
+   "mass_g": 56.1,
+   "mass_total_g": 56.1,
+   "print_h": 3.26,
+   "print_h_total": 3.26,
+   "size_mm": [
+    190.2,
+    184.1,
+    12.6
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     0.0,
+     0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 0.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 32.9,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.0,
+   "bed_contact_cm2": 148.26,
+   "contact_need_cm2": 8.5,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 0.0,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.345,
+    "p05_mm": 1.975,
+    "median_mm": 2.999
+   },
+   "note": "köprü plakasına epoksi + 2 × M4; 4 longeron soketi",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 799.8,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [],
+   "stl": {
+    "file": "stl/wing_frame_aft.stl",
+    "bytes": 122484,
+    "triangles": 2448,
+    "volume_cm3": 46.758,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "gear_mount_L",
+   "name": "Ana takım yatağı (PA-CF; ER-150 beşiği + sokete eyerli kol)",
+   "group": "Yük yolları",
+   "material": "PA-CF",
+   "zone": "frames",
+   "wall_mm": 1.6,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 597,
+    "faces": 1194,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 38.72,
+   "mass_g": 46.5,
+   "mass_total_g": 92.9,
+   "print_h": 2.84,
+   "print_h_total": 5.67,
+   "size_mm": [
+    114.1,
+    85.2,
+    44.4
+   ],
+   "orientation": {
+    "up_world": [
+     0.0,
+     -0.07,
+     0.998
+    ],
+    "up_words": "+z (yukarı) (4° eğik)",
+    "z_rot_deg": 0.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 70.9,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 22.3,
+   "bed_contact_cm2": 30.7,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 20.73,
+   "oh45_over_model_cm2": 1.61,
+   "oh45_over_model_gt5mm_cm2": 0.98,
+   "bed_fix": "",
+   "support": "tabla desteği",
+   "min_wall": {
+    "min_mm": 0.538,
+    "p05_mm": 2.199,
+    "median_mm": 2.199
+   },
+   "note": "kök bloğu 2'nin açık iç ucundan kaydırılır; ünite ön duvara 2 × M3 ısıl gömme dişli",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 742.2,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [],
+   "stl": {
+    "file": "stl/gear_mount_L.stl",
+    "bytes": 59784,
+    "triangles": 1194,
+    "volume_cm3": 38.722,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "gear_mount_N",
+   "name": "Burun takım yatağı (PA-CF; chine longeronlarına eyer, akü kızağı tabanı)",
+   "group": "Yük yolları",
+   "material": "PA-CF",
+   "zone": "frames",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 502,
+    "faces": 1008,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 49.62,
+   "mass_g": 59.5,
+   "mass_total_g": 59.5,
+   "print_h": 3.44,
+   "print_h_total": 3.44,
+   "size_mm": [
+    195.3,
+    195.3,
+    10.1
+   ],
+   "orientation": {
+    "up_world": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "up_words": "+z (yukarı)",
+    "z_rot_deg": 45.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 30.4,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 10.8,
+   "bed_contact_cm2": 107.68,
+   "contact_need_cm2": 4.66,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 9.18,
+   "oh45_over_model_cm2": 1.64,
+   "oh45_over_model_gt5mm_cm2": 1.64,
+   "bed_fix": "",
+   "support": "tabla desteği",
+   "min_wall": {
+    "min_mm": 0.004,
+    "p05_mm": 1.788,
+    "median_mm": 4.299
+   },
+   "note": "halka 1'in ön çerçevesinden kaydırılır; G10 plaka 4 × M3 ısıl gömme dişli (M3×3)",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 1589.5,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [],
+   "stl": {
+    "file": "stl/gear_mount_N.stl",
+    "bytes": 50484,
+    "triangles": 1008,
+    "volume_cm3": 49.624,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "engine_ring",
+   "name": "Motor halkası (PA-CF; yangın perdesi önü, 4 × M4 motor + 6 × M3 kaporta dişlisi)",
+   "group": "Yük yolları",
+   "material": "PA-CF",
+   "zone": "frames",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 3787,
+    "faces": 7590,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 56.18,
+   "mass_g": 67.4,
+   "mass_total_g": 67.4,
+   "print_h": 3.95,
+   "print_h_total": 3.95,
+   "size_mm": [
+    154.2,
+    154.2,
+    30.7
+   ],
+   "orientation": {
+    "up_world": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "up_words": "+x (burun)",
+    "z_rot_deg": 45.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 50.9,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 7.3,
+   "bed_contact_cm2": 27.13,
+   "contact_need_cm2": 5.06,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 5.99,
+   "oh45_over_model_cm2": 1.29,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "tabla desteği",
+   "min_wall": {
+    "min_mm": 0.159,
+    "p05_mm": 1.766,
+    "median_mm": 2.997
+   },
+   "note": "halka 9'a 30 mm bindirerek yapıştırılır; 4 longeron ucu soketlere girer",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 30.1,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [],
+   "stl": {
+    "file": "stl/engine_ring.stl",
+    "bytes": 379584,
+    "triangles": 7590,
+    "volume_cm3": 56.181,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "panel_lock_tab",
+   "name": "Dış panel tutma dili (PETG; alttan M4 naylon cıvata, ısıl gömme dişli)",
+   "group": "Yük yolları",
+   "material": "PETG",
+   "zone": "frames",
+   "wall_mm": 1.6,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 66,
+    "faces": 132,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 3.26,
+   "mass_g": 4.1,
+   "mass_total_g": 8.3,
+   "print_h": 0.31,
+   "print_h_total": 0.62,
+   "size_mm": [
+    33.9,
+    33.9,
+    8.0
+   ],
+   "orientation": {
+    "up_world": [
+     -0.0,
+     -0.0,
+     1.0
+    ],
+    "up_words": "+z (yukarı)",
+    "z_rot_deg": 45.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 111.0,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.0,
+   "bed_contact_cm2": 4.07,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 0.0,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 3.212,
+    "p05_mm": 4.069,
+    "median_mm": 7.999
+   },
+   "note": "dış panel 1 kök kaburgasına yapıştırılır; kök bloğu 2 cebine girer",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 914.8,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [],
+   "stl": {
+    "file": "stl/panel_lock_tab.stl",
+    "bytes": 6684,
+    "triangles": 132,
+    "volume_cm3": 3.258,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "longeron_joint_chine",
+   "name": "Longeron kırık soketi — chine (PETG; s = 1.167)",
+   "group": "Yük yolları",
+   "material": "PETG",
+   "zone": "frames",
+   "wall_mm": 1.6,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 364,
+    "faces": 728,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 2.49,
+   "mass_g": 3.2,
+   "mass_total_g": 6.3,
+   "print_h": 0.37,
+   "print_h_total": 0.73,
+   "size_mm": [
+    14.2,
+    14.1,
+    37.4
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 69.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 120.9,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.9,
+   "bed_contact_cm2": 4.1,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 0.47,
+   "oh45_over_model_gt5mm_cm2": 0.46,
+   "bed_fix": "1 mm kırılabilir baskı ayağı (baskıdan sonra kesilir)",
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.392,
+    "p05_mm": 1.334,
+    "median_mm": 2.173
+   },
+   "note": "iki düz longeron parçası kırık açısıyla buluşur (halka 4–5 eki)",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 892.2,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [],
+   "stl": {
+    "file": "stl/longeron_joint_chine.stl",
+    "bytes": 49084,
+    "triangles": 980,
+    "volume_cm3": 2.892,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "longeron_joint_shoulder",
+   "name": "Longeron kırık soketi — omuz (PETG; s = 1.167)",
+   "group": "Yük yolları",
+   "material": "PETG",
+   "zone": "frames",
+   "wall_mm": 1.6,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 412,
+    "faces": 824,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 2.73,
+   "mass_g": 3.5,
+   "mass_total_g": 6.9,
+   "print_h": 0.38,
+   "print_h_total": 0.76,
+   "size_mm": [
+    14.1,
+    14.1,
+    37.3
+   ],
+   "orientation": {
+    "up_world": [
+     -1.0,
+     -0.0,
+     -0.0
+    ],
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 163.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 120.9,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 1.0,
+   "bed_contact_cm2": 4.15,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 0.48,
+   "oh45_over_model_gt5mm_cm2": 0.47,
+   "bed_fix": "1 mm kırılabilir baskı ayağı (baskıdan sonra kesilir)",
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 1.346,
+    "p05_mm": 2.16,
+    "median_mm": 2.177
+   },
+   "note": "iki düz longeron parçası kırık açısıyla buluşur (halka 4–5 eki)",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 887.3,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [],
+   "stl": {
+    "file": "stl/longeron_joint_shoulder.stl",
+    "bytes": 55184,
+    "triangles": 1102,
+    "volume_cm3": 3.136,
+    "separated_verts": 0
    }
   },
   {
@@ -2570,8 +3938,8 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 928,
-    "faces": 1880,
+    "verts": 1024,
+    "faces": 2072,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -2579,14 +3947,14 @@
     "shells": 1,
     "ok": true
    },
-   "volume_cm3": 14.04,
+   "volume_cm3": 14.01,
    "mass_g": 17.8,
    "mass_total_g": 17.8,
    "print_h": 0.89,
    "print_h_total": 0.89,
    "size_mm": [
-    189.8,
     188.3,
+    189.8,
     3.0
    ],
    "orientation": {
@@ -2596,26 +3964,40 @@
      0.0
     ],
     "up_words": "−x (kuyruk)",
-    "z_rot_deg": 79.0,
+    "z_rot_deg": 11.0,
     "bed_end": ""
    },
    "bed_margin_mm": 33.1,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 5.1,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 4.7,
+   "bed_contact_cm2": 48.93,
+   "contact_need_cm2": 8.67,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 2.34,
+   "oh45_over_model_cm2": 2.34,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.106,
-    "p05_mm": 2.999,
+    "min_mm": 0.027,
+    "p05_mm": 2.577,
     "median_mm": 2.999
    },
    "note": "",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 1672.6,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [],
    "stl": {
     "file": "stl/fus_nose_flange.stl",
-    "bytes": 94084,
-    "triangles": 1880
+    "bytes": 103684,
+    "triangles": 2072,
+    "volume_cm3": 14.008,
+    "separated_verts": 0
    }
   },
   {
@@ -2628,53 +4010,70 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 7136,
-    "faces": 14328,
+    "verts": 7832,
+    "faces": 15042,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
     "shells": 1,
     "ok": true,
-    "removed_islands": 0
+    "removed_islands": 1
    },
-   "volume_cm3": 108.1,
-   "mass_g": 129.7,
-   "mass_total_g": 129.7,
-   "print_h": 7.75,
-   "print_h_total": 7.75,
+   "volume_cm3": 80.71,
+   "mass_g": 96.9,
+   "mass_total_g": 96.9,
+   "print_h": 5.98,
+   "print_h_total": 5.98,
    "size_mm": [
-    169.7,
-    169.7,
-    127.5
+    154.3,
+    154.0,
+    142.5
    ],
    "orientation": {
     "up_world": [
-     1.0,
-     0.0,
-     0.0
+     -1.0,
+     -0.0,
+     -0.0
     ],
-    "up_words": "+x (burun)",
-    "z_rot_deg": 45.0,
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 38.0,
     "bed_end": "yangın perdesi"
    },
-   "bed_margin_mm": 43.1,
+   "bed_margin_mm": 50.8,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 83.8,
-   "support": "destek önerilir",
+   "overhang_cm2": 108.8,
+   "bed_contact_cm2": 79.99,
+   "contact_need_cm2": 4.66,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 23.17,
+   "oh45_over_model_cm2": 85.63,
+   "oh45_over_model_gt5mm_cm2": 81.44,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.032,
-    "p05_mm": 1.29,
+    "min_mm": 0.001,
+    "p05_mm": 0.437,
     "median_mm": 1.599
    },
    "note": "",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 0.0,
+    "source": "cylinder"
+   },
+   "tooling": false,
+   "features": [
+    "1 kopuk kıymık atıldı (0.00 cm³)",
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/cowl_top.stl",
-    "bytes": 716484,
-    "triangles": 14328
+    "bytes": 785884,
+    "triangles": 15716,
+    "volume_cm3": 80.704,
+    "separated_verts": 42
    }
   },
   {
@@ -2687,8 +4086,8 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 2147,
-    "faces": 4290,
+    "verts": 5640,
+    "faces": 10186,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -2697,43 +4096,59 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 33.91,
-   "mass_g": 40.7,
-   "mass_total_g": 40.7,
-   "print_h": 2.64,
-   "print_h_total": 2.64,
+   "volume_cm3": 81.48,
+   "mass_g": 97.8,
+   "mass_total_g": 97.8,
+   "print_h": 6.02,
+   "print_h_total": 6.02,
    "size_mm": [
-    102.1,
-    101.0,
-    80.0
+    144.8,
+    144.7,
+    140.5
    ],
    "orientation": {
     "up_world": [
-     0.0,
-     0.0,
-     1.0
+     -1.0,
+     -0.0,
+     -0.0
     ],
-    "up_words": "+z (yukarı)",
-    "z_rot_deg": 33.0,
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 46.0,
     "bed_end": ""
    },
-   "bed_margin_mm": 77.0,
+   "bed_margin_mm": 55.6,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 18.7,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 130.0,
+   "bed_contact_cm2": 9.89,
+   "contact_need_cm2": 3.59,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 95.99,
+   "oh45_over_model_cm2": 33.97,
+   "oh45_over_model_gt5mm_cm2": 33.11,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.02,
-    "p05_mm": 1.581,
+    "min_mm": 0.056,
+    "p05_mm": 1.583,
     "median_mm": 1.599
    },
    "note": "",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 0.0,
+    "source": "cylinder"
+   },
+   "tooling": false,
+   "features": [
+    "ek pahı 0,4 × 0,3 mm"
+   ],
    "stl": {
     "file": "stl/cowl_cheek_L.stl",
-    "bytes": 214584,
-    "triangles": 4290
+    "bytes": 564084,
+    "triangles": 11280,
+    "volume_cm3": 81.485,
+    "separated_verts": 28
    }
   },
   {
@@ -2746,55 +4161,71 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 2474,
-    "faces": 4944,
+    "verts": 6715,
+    "faces": 12598,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
     "shells": 1,
     "ok": true,
-    "removed_islands": 1
+    "removed_islands": 2
    },
-   "volume_cm3": 33.95,
-   "mass_g": 40.7,
-   "mass_total_g": 40.7,
-   "print_h": 2.64,
-   "print_h_total": 2.64,
+   "volume_cm3": 37.41,
+   "mass_g": 44.9,
+   "mass_total_g": 44.9,
+   "print_h": 3.01,
+   "print_h_total": 3.01,
    "size_mm": [
-    101.0,
-    102.1,
-    80.0
+    108.2,
+    108.3,
+    120.0
    ],
    "orientation": {
     "up_world": [
-     0.0,
-     0.0,
-     1.0
+     -1.0,
+     -0.0,
+     -0.0
     ],
-    "up_words": "+z (yukarı)",
-    "z_rot_deg": 57.0,
+    "up_words": "−x (kuyruk)",
+    "z_rot_deg": 51.0,
     "bed_end": ""
    },
-   "bed_margin_mm": 77.0,
+   "bed_margin_mm": 73.9,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 18.3,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 18.4,
+   "bed_contact_cm2": 9.51,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 4.22,
+   "oh45_over_model_cm2": 14.15,
+   "oh45_over_model_gt5mm_cm2": 3.63,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.132,
-    "p05_mm": 1.549,
-    "median_mm": 1.599
+    "min_mm": 0.003,
+    "p05_mm": 1.532,
+    "median_mm": 1.602
    },
    "note": "",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 0.0,
+    "source": "cylinder"
+   },
+   "tooling": false,
    "features": [
-    "1 kopuk kıymık atıldı (0.01 cm³)"
+    "1 kopuk kıymık atıldı (1.65 cm³)",
+    "6 panjur yarığı açık (3 × 24 mm), panel 3,5 mm dolu",
+    "ek pahı 0,4 × 0,3 mm"
    ],
    "stl": {
     "file": "stl/cowl_cheek_R.stl",
-    "bytes": 247284,
-    "triangles": 4944
+    "bytes": 672584,
+    "triangles": 13450,
+    "volume_cm3": 37.402,
+    "separated_verts": 1306
    }
   },
   {
@@ -2817,14 +4248,14 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 26.6,
-   "mass_g": 31.9,
-   "mass_total_g": 31.9,
-   "print_h": 1.93,
-   "print_h_total": 1.93,
+   "volume_cm3": 22.85,
+   "mass_g": 27.4,
+   "mass_total_g": 27.4,
+   "print_h": 1.68,
+   "print_h_total": 1.68,
    "size_mm": [
-    120.8,
-    120.8,
+    112.0,
+    112.0,
     17.0
    ],
    "orientation": {
@@ -2834,26 +4265,40 @@
      -0.0
     ],
     "up_words": "−x (kuyruk)",
-    "z_rot_deg": 45.0,
+    "z_rot_deg": 3.0,
     "bed_end": ""
    },
-   "bed_margin_mm": 67.6,
+   "bed_margin_mm": 72.0,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 25.7,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 23.7,
+   "bed_contact_cm2": 29.09,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.48,
+   "oh45_over_model_cm2": 23.23,
+   "oh45_over_model_gt5mm_cm2": 23.23,
+   "bed_fix": "",
+   "support": "model üstü destek",
    "min_wall": {
-    "min_mm": 0.006,
-    "p05_mm": 1.579,
+    "min_mm": 0.036,
+    "p05_mm": 1.582,
     "median_mm": 1.598
    },
    "note": "",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 15.4,
+    "source": "cylinder"
+   },
+   "tooling": false,
    "features": [],
    "stl": {
     "file": "stl/exhaust_ring.stl",
     "bytes": 257684,
-    "triangles": 5152
+    "triangles": 5152,
+    "volume_cm3": 22.846,
+    "separated_verts": 0
    }
   },
   {
@@ -2879,45 +4324,59 @@
    "volume_cm3": 2.73,
    "mass_g": 3.3,
    "mass_total_g": 3.3,
-   "print_h": 0.66,
-   "print_h_total": 0.66,
+   "print_h": 0.51,
+   "print_h_total": 0.51,
    "size_mm": [
-    21.6,
-    21.6,
-    49.2
+    39.2,
+    39.2,
+    6.9
    ],
    "orientation": {
     "up_world": [
-     -0.987,
      0.0,
-     0.159
+     0.0,
+     1.0
     ],
-    "up_words": "−x (kuyruk) (9° eğik)",
+    "up_words": "+z (yukarı)",
     "z_rot_deg": 45.0,
     "bed_end": ""
    },
-   "bed_margin_mm": 117.2,
+   "bed_margin_mm": 108.4,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 0.2,
-   "support": "yok",
+   "overhang_cm2": 10.6,
+   "bed_contact_cm2": 7.0,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 5.59,
+   "oh45_over_model_cm2": 4.87,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "1 mm kırılabilir baskı ayağı (baskıdan sonra kesilir)",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.007,
-    "p05_mm": 1.73,
-    "median_mm": 2.526
+    "min_mm": 0.01,
+    "p05_mm": 2.528,
+    "median_mm": 2.586
    },
-   "note": "",
+   "note": "aşınma yüzü tablada (düz, pürüzsüz); kavisli → kırılabilir ayak",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 8.5,
+    "source": "spark_cap"
+   },
+   "tooling": false,
    "features": [],
    "stl": {
     "file": "stl/scuff_pad.stl",
-    "bytes": 130284,
-    "triangles": 2604
+    "bytes": 139784,
+    "triangles": 2794,
+    "volume_cm3": 3.432,
+    "separated_verts": 0
    }
   },
   {
    "key": "intake",
-   "name": "Sırt hava alığı (PA-CF)",
+   "name": "NACA hava alığı dudak çerçevesi (PA-CF, karın)",
    "group": "İtki",
    "material": "PA-CF",
    "zone": "intake",
@@ -2925,8 +4384,8 @@
    "qty": 1,
    "mirror": false,
    "check": {
-    "verts": 5812,
-    "faces": 11624,
+    "verts": 198,
+    "faces": 396,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -2935,48 +4394,62 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 39.66,
-   "mass_g": 47.6,
-   "mass_total_g": 47.6,
-   "print_h": 3.22,
-   "print_h_total": 3.22,
+   "volume_cm3": 5.45,
+   "mass_g": 6.5,
+   "mass_total_g": 6.5,
+   "print_h": 0.5,
+   "print_h_total": 0.5,
    "size_mm": [
-    76.3,
-    76.3,
-    138.0
+    69.5,
+    69.5,
+    10.4
    ],
    "orientation": {
     "up_world": [
-     -1.0,
-     -0.0,
-     -0.0
+     1.0,
+     0.0,
+     0.0
     ],
-    "up_words": "−x (kuyruk)",
+    "up_words": "+x (burun)",
     "z_rot_deg": 45.0,
     "bed_end": ""
    },
-   "bed_margin_mm": 89.8,
+   "bed_margin_mm": 93.3,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 28.8,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 0.0,
+   "bed_contact_cm2": 5.34,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 0.0,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "yok",
    "min_wall": {
-    "min_mm": 0.002,
-    "p05_mm": 0.226,
-    "median_mm": 1.599
+    "min_mm": 1.234,
+    "p05_mm": 2.068,
+    "median_mm": 2.499
    },
-   "note": "",
+   "note": "gövde halkası 9'daki cebe yapıştırılır; kanal yangın perdesindeki açıklıktan kaportaya geçer",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 46.7,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [],
    "stl": {
     "file": "stl/intake.stl",
-    "bytes": 581284,
-    "triangles": 11624
+    "bytes": 19884,
+    "triangles": 396,
+    "volume_cm3": 5.45,
+    "separated_verts": 0
    }
   },
   {
    "key": "root_fairing",
-   "name": "Kök kaportası + ER-150 kabartması (PA-CF)",
+   "name": "Kök kaportası — kano (PA-CF)",
    "group": "Kaplamalar",
    "material": "PA-CF",
    "zone": "root_fairing",
@@ -2984,53 +4457,142 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 7555,
-    "faces": 15144,
+    "verts": 5679,
+    "faces": 11378,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
     "flipped": 0,
-    "shells": 2,
+    "shells": 1,
     "ok": true,
-    "removed_islands": 2
+    "removed_islands": 8
    },
-   "volume_cm3": 42.99,
-   "mass_g": 51.6,
-   "mass_total_g": 103.2,
-   "print_h": 3.74,
-   "print_h_total": 7.49,
+   "volume_cm3": 49.12,
+   "mass_g": 58.9,
+   "mass_total_g": 117.9,
+   "print_h": 3.91,
+   "print_h_total": 7.82,
    "size_mm": [
-    211.0,
-    208.0,
-    224.1
+    200.1,
+    202.8,
+    154.3
    ],
    "orientation": {
     "up_world": [
-     -1.0,
-     -0.0,
-     -0.0
+     -0.225,
+     0.973,
+     0.056
     ],
-    "up_words": "−x (kuyruk)",
-    "z_rot_deg": 50.0,
+    "up_words": "+y (sol/iskele) (13° eğik)",
+    "z_rot_deg": 123.0,
     "bed_end": ""
    },
-   "bed_margin_mm": 22.5,
+   "bed_margin_mm": 26.6,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 27.7,
-   "support": "kısa köprü (iç)",
+   "overhang_cm2": 26.2,
+   "bed_contact_cm2": 4.15,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 8.03,
+   "oh45_over_model_cm2": 18.12,
+   "oh45_over_model_gt5mm_cm2": 14.05,
+   "bed_fix": "1 mm kırılabilir baskı ayağı (baskıdan sonra kesilir)",
+   "support": "tabla desteği",
    "min_wall": {
     "min_mm": 0.0,
-    "p05_mm": 0.358,
+    "p05_mm": 0.849,
     "median_mm": 1.599
    },
-   "note": "",
+   "note": "1,6 mm kabuk, et < 3,6 mm olan kenar/dudaklar dolu; tüy kenar ≥ 0,8 mm'de kırpılır, kalan kama epoksi + mikrobalon ile sıfırlanır",
    "pin_holes": 0,
-   "features": [],
+   "heat": {
+    "min_mm": 648.2,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [
+    "1 kopuk kıymık atıldı (0.01 cm³)"
+   ],
    "stl": {
     "file": "stl/root_fairing.stl",
-    "bytes": 757284,
-    "triangles": 15144
+    "bytes": 571484,
+    "triangles": 11428,
+    "volume_cm3": 49.536,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "gear_blister",
+   "name": "ER-150 ünite kabartması (PA-CF)",
+   "group": "Kaplamalar",
+   "material": "PA-CF",
+   "zone": "root_fairing",
+   "wall_mm": 1.6,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 3674,
+    "faces": 7346,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 3
+   },
+   "volume_cm3": 20.41,
+   "mass_g": 24.5,
+   "mass_total_g": 49.0,
+   "print_h": 1.95,
+   "print_h_total": 3.9,
+   "size_mm": [
+    78.3,
+    77.7,
+    141.1
+   ],
+   "orientation": {
+    "up_world": [
+     -0.0,
+     -1.0,
+     -0.0
+    ],
+    "up_words": "−y (sağ/sancak)",
+    "z_rot_deg": 45.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 88.9,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 1.1,
+   "bed_contact_cm2": 8.93,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.07,
+   "oh45_over_model_cm2": 1.02,
+   "oh45_over_model_gt5mm_cm2": 0.43,
+   "bed_fix": "1 mm kırılabilir baskı ayağı (baskıdan sonra kesilir)",
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.001,
+    "p05_mm": 1.018,
+    "median_mm": 1.599
+   },
+   "note": "kano kaportasına ve kanat altına yapıştırılır; ince kenarlar dolu, tüy kenar kırpılır",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 735.6,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [],
+   "stl": {
+    "file": "stl/gear_blister.stl",
+    "bytes": 376284,
+    "triangles": 7524,
+    "volume_cm3": 21.302,
+    "separated_verts": 0
    }
   },
   {
@@ -3056,12 +4618,85 @@
    "volume_cm3": 62.66,
    "mass_g": 79.6,
    "mass_total_g": 79.6,
-   "print_h": 3.84,
-   "print_h_total": 3.84,
+   "print_h": 3.76,
+   "print_h_total": 3.76,
    "size_mm": [
-    122.4,
-    122.4,
-    74.1
+    123.0,
+    123.9,
+    51.7
+   ],
+   "orientation": {
+    "up_world": [
+     0.187,
+     -0.0,
+     -0.982
+    ],
+    "up_words": "−z (aşağı) (11° eğik)",
+    "z_rot_deg": 67.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 66.0,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 12.8,
+   "bed_contact_cm2": 75.6,
+   "contact_need_cm2": 3.76,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 12.76,
+   "oh45_over_model_gt5mm_cm2": 12.36,
+   "bed_fix": "",
+   "support": "model üstü destek",
+   "min_wall": {
+    "min_mm": 0.056,
+    "p05_mm": 1.559,
+    "median_mm": 1.581
+   },
+   "note": "",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 1797.0,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [],
+   "stl": {
+    "file": "stl/turret_collar.stl",
+    "bytes": 64084,
+    "triangles": 1280,
+    "volume_cm3": 62.657,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "hatch_buck_a",
+   "name": "Aviyonik kapağı ısıl biçimlendirme kalıbı A (PLA; alet)",
+   "group": "Kalıp (alet)",
+   "material": "PLA",
+   "zone": "frames",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 1717,
+    "faces": 3430,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 558.85,
+   "mass_g": 138.6,
+   "mass_total_g": 138.6,
+   "print_h": 3.92,
+   "print_h_total": 3.92,
+   "size_mm": [
+    191.2,
+    126.2,
+    31.4
    ],
    "orientation": {
     "up_world": [
@@ -3070,217 +4705,54 @@
      1.0
     ],
     "up_words": "+z (yukarı)",
-    "z_rot_deg": 23.0,
-    "bed_end": ""
-   },
-   "bed_margin_mm": 66.8,
-   "fits": true,
-   "fits_tight": true,
-   "overhang_cm2": 77.4,
-   "support": "destek önerilir",
-   "min_wall": {
-    "min_mm": 0.151,
-    "p05_mm": 1.558,
-    "median_mm": 1.581
-   },
-   "note": "",
-   "pin_holes": 0,
-   "features": [],
-   "stl": {
-    "file": "stl/turret_collar.stl",
-    "bytes": 64084,
-    "triangles": 1280
-   }
-  },
-  {
-   "key": "hatch_a",
-   "name": "Aviyonik kapağı (füme PETG, mıknatıslı) — parça A (tablaya sığması için bölündü)",
-   "group": "Kaplamalar",
-   "material": "PETG-füme",
-   "zone": "hatch",
-   "wall_mm": 1.6,
-   "qty": 1,
-   "mirror": false,
-   "check": {
-    "verts": 748,
-    "faces": 1492,
-    "boundary": 0,
-    "nonmanifold": 0,
-    "wire": 0,
-    "flipped": 0,
-    "shells": 1,
-    "ok": true,
-    "removed_islands": 0
-   },
-   "volume_cm3": 39.8,
-   "mass_g": 50.5,
-   "mass_total_g": 50.5,
-   "print_h": 2.71,
-   "print_h_total": 2.71,
-   "size_mm": [
-    172.5,
-    172.1,
-    116.0
-   ],
-   "orientation": {
-    "up_world": [
-     0.0,
-     1.0,
-     0.0
-    ],
-    "up_words": "+y (sol/iskele)",
-    "z_rot_deg": 140.0,
-    "bed_end": ""
-   },
-   "bed_margin_mm": 41.8,
-   "fits": true,
-   "fits_tight": true,
-   "overhang_cm2": 0.0,
-   "support": "yok",
-   "min_wall": {
-    "min_mm": 0.027,
-    "p05_mm": 1.24,
-    "median_mm": 1.434
-   },
-   "note": "",
-   "pin_holes": 0,
-   "features": [],
-   "stl": {
-    "file": "stl/hatch_a.stl",
-    "bytes": 74684,
-    "triangles": 1492
-   }
-  },
-  {
-   "key": "hatch_b",
-   "name": "Aviyonik kapağı (füme PETG, mıknatıslı) — parça B (tablaya sığması için bölündü)",
-   "group": "Kaplamalar",
-   "material": "PETG-füme",
-   "zone": "hatch",
-   "wall_mm": 1.6,
-   "qty": 1,
-   "mirror": false,
-   "check": {
-    "verts": 688,
-    "faces": 1372,
-    "boundary": 0,
-    "nonmanifold": 0,
-    "wire": 0,
-    "flipped": 0,
-    "shells": 1,
-    "ok": true,
-    "removed_islands": 0
-   },
-   "volume_cm3": 35.9,
-   "mass_g": 45.6,
-   "mass_total_g": 45.6,
-   "print_h": 2.5,
-   "print_h_total": 2.5,
-   "size_mm": [
-    164.1,
-    163.0,
-    116.0
-   ],
-   "orientation": {
-    "up_world": [
-     0.0,
-     1.0,
-     0.0
-    ],
-    "up_words": "+y (sol/iskele)",
-    "z_rot_deg": 47.0,
-    "bed_end": ""
-   },
-   "bed_margin_mm": 46.0,
-   "fits": true,
-   "fits_tight": true,
-   "overhang_cm2": 0.0,
-   "support": "yok",
-   "min_wall": {
-    "min_mm": 0.053,
-    "p05_mm": 1.24,
-    "median_mm": 1.434
-   },
-   "note": "",
-   "pin_holes": 0,
-   "features": [],
-   "stl": {
-    "file": "stl/hatch_b.stl",
-    "bytes": 68684,
-    "triangles": 1372
-   }
-  },
-  {
-   "key": "door_N_1",
-   "name": "Burun takımı kapağı (PETG 1,2 mm)",
-   "group": "Takım kapakları",
-   "material": "PETG",
-   "zone": "gear_doors",
-   "wall_mm": 1.2,
-   "qty": 2,
-   "mirror": true,
-   "check": {
-    "verts": 928,
-    "faces": 1852,
-    "boundary": 0,
-    "nonmanifold": 0,
-    "wire": 0,
-    "flipped": 0,
-    "shells": 1,
-    "ok": true,
-    "removed_islands": 0
-   },
-   "volume_cm3": 7.29,
-   "mass_g": 9.3,
-   "mass_total_g": 18.5,
-   "print_h": 0.59,
-   "print_h_total": 1.18,
-   "size_mm": [
-    188.3,
-    191.3,
-    25.0
-   ],
-   "orientation": {
-    "up_world": [
-     -0.0,
-     -1.0,
-     -0.0
-    ],
-    "up_words": "−y (sağ/sancak)",
-    "z_rot_deg": 45.0,
+    "z_rot_deg": 0.0,
     "bed_end": ""
    },
    "bed_margin_mm": 32.4,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 0.4,
+   "overhang_cm2": 0.6,
+   "bed_contact_cm2": 212.42,
+   "contact_need_cm2": 6.37,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 0.59,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
    "support": "yok",
    "min_wall": {
-    "min_mm": 0.003,
-    "p05_mm": 1.184,
-    "median_mm": 1.195
+    "min_mm": 0.083,
+    "p05_mm": 19.083,
+    "median_mm": 29.343
    },
-   "note": "",
+   "note": "1,0 mm füme PETG levha bu kalıp üstünde biçimlendirilir; uçak kütlesine dahil değil",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 1392.6,
+    "source": "muffler"
+   },
+   "tooling": true,
    "features": [],
    "stl": {
-    "file": "stl/door_N_1.stl",
-    "bytes": 92684,
-    "triangles": 1852
+    "file": "stl/hatch_buck_a.stl",
+    "bytes": 171584,
+    "triangles": 3430,
+    "volume_cm3": 558.85,
+    "separated_verts": 0
    }
   },
   {
-   "key": "door_L_1",
-   "name": "Ana takım kuyu kapağı (PETG 1,2 mm)",
-   "group": "Takım kapakları",
+   "key": "hatch_frame_a",
+   "name": "Aviyonik kapağı çerçevesi A (PETG; 3 mıknatıs cebi)",
+   "group": "Kaplamalar",
    "material": "PETG",
-   "zone": "gear_doors",
-   "wall_mm": 1.2,
-   "qty": 2,
-   "mirror": true,
+   "zone": "frames",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
    "check": {
-    "verts": 2528,
-    "faces": 5052,
+    "verts": 2131,
+    "faces": 4258,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -3289,15 +4761,380 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 9.41,
-   "mass_g": 12.0,
-   "mass_total_g": 23.9,
-   "print_h": 0.63,
-   "print_h_total": 1.25,
+   "volume_cm3": 29.66,
+   "mass_g": 37.7,
+   "mass_total_g": 37.7,
+   "print_h": 1.79,
+   "print_h_total": 1.79,
    "size_mm": [
-    94.0,
-    89.0,
-    1.2
+    175.5,
+    175.5,
+    13.3
+   ],
+   "orientation": {
+    "up_world": [
+     -0.029,
+     -0.0,
+     1.0
+    ],
+    "up_words": "+z (yukarı) (2° eğik)",
+    "z_rot_deg": 45.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 40.2,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 1.3,
+   "bed_contact_cm2": 29.95,
+   "contact_need_cm2": 5.18,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 1.28,
+   "oh45_over_model_cm2": 0.01,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.013,
+    "p05_mm": 2.314,
+    "median_mm": 7.799
+   },
+   "note": "levha altına yapıştırılır; düz alt yüz gövde basamağına oturur",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 1392.8,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [],
+   "stl": {
+    "file": "stl/hatch_frame_a.stl",
+    "bytes": 212984,
+    "triangles": 4258,
+    "volume_cm3": 29.662,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "hatch_buck_b",
+   "name": "Aviyonik kapağı ısıl biçimlendirme kalıbı B (PLA; alet)",
+   "group": "Kalıp (alet)",
+   "material": "PLA",
+   "zone": "frames",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 1866,
+    "faces": 3728,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 594.72,
+   "mass_g": 147.5,
+   "mass_total_g": 147.5,
+   "print_h": 4.16,
+   "print_h_total": 4.16,
+   "size_mm": [
+    197.9,
+    126.2,
+    32.0
+   ],
+   "orientation": {
+    "up_world": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "up_words": "+z (yukarı)",
+    "z_rot_deg": 0.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 29.1,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.6,
+   "bed_contact_cm2": 220.76,
+   "contact_need_cm2": 7.49,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 0.59,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.216,
+    "p05_mm": 17.672,
+    "median_mm": 30.029
+   },
+   "note": "1,0 mm füme PETG levha bu kalıp üstünde biçimlendirilir; uçak kütlesine dahil değil",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 1194.9,
+    "source": "muffler"
+   },
+   "tooling": true,
+   "features": [],
+   "stl": {
+    "file": "stl/hatch_buck_b.stl",
+    "bytes": 186484,
+    "triangles": 3728,
+    "volume_cm3": 594.721,
+    "separated_verts": 4
+   }
+  },
+  {
+   "key": "hatch_frame_b",
+   "name": "Aviyonik kapağı çerçevesi B (PETG; 3 mıknatıs cebi)",
+   "group": "Kaplamalar",
+   "material": "PETG",
+   "zone": "frames",
+   "wall_mm": 1.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 2266,
+    "faces": 4528,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 33.34,
+   "mass_g": 42.3,
+   "mass_total_g": 42.3,
+   "print_h": 2.0,
+   "print_h_total": 2.0,
+   "size_mm": [
+    179.6,
+    107.6,
+    15.1
+   ],
+   "orientation": {
+    "up_world": [
+     0.028,
+     0.0,
+     1.0
+    ],
+    "up_words": "+z (yukarı) (2° eğik)",
+    "z_rot_deg": 0.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 38.2,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.6,
+   "bed_contact_cm2": 35.78,
+   "contact_need_cm2": 5.8,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.64,
+   "oh45_over_model_cm2": 0.0,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.015,
+    "p05_mm": 2.316,
+    "median_mm": 7.799
+   },
+   "note": "levha altına yapıştırılır; düz alt yüz gövde basamağına oturur",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 1213.0,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [],
+   "stl": {
+    "file": "stl/hatch_frame_b.stl",
+    "bytes": 226484,
+    "triangles": 4528,
+    "volume_cm3": 33.339,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "tolerance_coupon",
+   "name": "Tolerans kuponu (LW-PLA; ilk baskı — delik payı denemesi)",
+   "group": "Test / alet",
+   "material": "LW-PLA",
+   "zone": "wing_panel",
+   "wall_mm": 0.6,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 634,
+    "faces": 1288,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 56.72,
+   "mass_g": 7.4,
+   "mass_total_g": 7.4,
+   "print_h": 0.62,
+   "print_h_total": 0.62,
+   "size_mm": [
+    96.0,
+    95.2,
+    20.0
+   ],
+   "orientation": {
+    "up_world": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "up_words": "+z (yukarı)",
+    "z_rot_deg": 133.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 80.0,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.0,
+   "bed_contact_cm2": 28.36,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 0.0,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 4.994,
+    "p05_mm": 5.287,
+    "median_mm": 19.999
+   },
+   "note": "Ø27/16/8/6 boru, Ø3 pim, Ø1,75 menteşe pimi delikleri (parçalardaki payla aynı)",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 5073.1,
+    "source": "muffler"
+   },
+   "tooling": true,
+   "features": [],
+   "stl": {
+    "file": "stl/tolerance_coupon.stl",
+    "bytes": 64484,
+    "triangles": 1288,
+    "volume_cm3": 56.717,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "door_N_1",
+   "name": "Burun takımı kapağı (menteşe dili + horn dahil) (PETG 1,2 mm)",
+   "group": "Takım kapakları",
+   "material": "PETG",
+   "zone": "gear_doors",
+   "wall_mm": 1.2,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 3459,
+    "faces": 6914,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 8.44,
+   "mass_g": 10.7,
+   "mass_total_g": 21.4,
+   "print_h": 0.58,
+   "print_h_total": 1.17,
+   "size_mm": [
+    194.8,
+    193.9,
+    4.4
+   ],
+   "orientation": {
+    "up_world": [
+     0.002,
+     -0.06,
+     0.998
+    ],
+    "up_words": "+z (yukarı) (3° eğik)",
+    "z_rot_deg": 134.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 30.6,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 46.2,
+   "bed_contact_cm2": 5.41,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 45.89,
+   "oh45_over_model_cm2": 0.28,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "tabla desteği",
+   "min_wall": {
+    "min_mm": 0.036,
+    "p05_mm": 0.789,
+    "median_mm": 0.799
+   },
+   "note": "",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 1318.7,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [],
+   "stl": {
+    "file": "stl/door_N_1.stl",
+    "bytes": 345784,
+    "triangles": 6914,
+    "volume_cm3": 8.436,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "door_N_3",
+   "name": "Burun takımı bacak tapa kapağı (bacağa bağlı) (PETG 1,2 mm)",
+   "group": "Takım kapakları",
+   "material": "PETG",
+   "zone": "gear_doors",
+   "wall_mm": 1.2,
+   "qty": 1,
+   "mirror": false,
+   "check": {
+    "verts": 472,
+    "faces": 940,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 2.01,
+   "mass_g": 2.6,
+   "mass_total_g": 2.6,
+   "print_h": 0.31,
+   "print_h_total": 0.31,
+   "size_mm": [
+    24.2,
+    18.2,
+    30.0
    ],
    "orientation": {
     "up_world": [
@@ -3309,23 +5146,110 @@
     "z_rot_deg": 0.0,
     "bed_end": ""
    },
-   "bed_margin_mm": 81.0,
+   "bed_margin_mm": 115.9,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 0.0,
+   "overhang_cm2": 1.1,
+   "bed_contact_cm2": 3.17,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 1.15,
+   "oh45_over_model_cm2": 0.0,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "1 mm kırılabilir baskı ayağı (baskıdan sonra kesilir)",
    "support": "yok",
    "min_wall": {
-    "min_mm": 1.199,
-    "p05_mm": 1.199,
-    "median_mm": 1.199
+    "min_mm": 0.199,
+    "p05_mm": 1.198,
+    "median_mm": 4.999
    },
    "note": "",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 1556.7,
+    "source": "muffler"
+   },
+   "tooling": false,
+   "features": [],
+   "stl": {
+    "file": "stl/door_N_3.stl",
+    "bytes": 53084,
+    "triangles": 1060,
+    "volume_cm3": 2.326,
+    "separated_verts": 0
+   }
+  },
+  {
+   "key": "door_L_1",
+   "name": "Ana takım kuyu kapağı (menteşe dili + horn dahil) (PETG 1,2 mm)",
+   "group": "Takım kapakları",
+   "material": "PETG",
+   "zone": "gear_doors",
+   "wall_mm": 1.2,
+   "qty": 2,
+   "mirror": true,
+   "check": {
+    "verts": 4633,
+    "faces": 9262,
+    "boundary": 0,
+    "nonmanifold": 0,
+    "wire": 0,
+    "flipped": 0,
+    "shells": 1,
+    "ok": true,
+    "removed_islands": 0
+   },
+   "volume_cm3": 14.99,
+   "mass_g": 19.0,
+   "mass_total_g": 38.1,
+   "print_h": 0.96,
+   "print_h_total": 1.92,
+   "size_mm": [
+    94.0,
+    91.5,
+    8.3
+   ],
+   "orientation": {
+    "up_world": [
+     -0.0,
+     -0.0,
+     1.0
+    ],
+    "up_words": "+z (yukarı)",
+    "z_rot_deg": 0.0,
+    "bed_end": ""
+   },
+   "bed_margin_mm": 81.0,
+   "fits": true,
+   "fits_tight": true,
+   "overhang_cm2": 0.4,
+   "bed_contact_cm2": 81.98,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 0.0,
+   "oh45_over_model_cm2": 0.43,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "yok",
+   "min_wall": {
+    "min_mm": 0.724,
+    "p05_mm": 0.799,
+    "median_mm": 1.799
+   },
+   "note": "",
+   "pin_holes": 0,
+   "heat": {
+    "min_mm": 710.8,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [],
    "stl": {
     "file": "stl/door_L_1.stl",
-    "bytes": 252684,
-    "triangles": 5052
+    "bytes": 463184,
+    "triangles": 9262,
+    "volume_cm3": 14.988,
+    "separated_verts": 0
    }
   },
   {
@@ -3338,8 +5262,8 @@
    "qty": 2,
    "mirror": true,
    "check": {
-    "verts": 2624,
-    "faces": 5244,
+    "verts": 3488,
+    "faces": 6972,
     "boundary": 0,
     "nonmanifold": 0,
     "wire": 0,
@@ -3348,175 +5272,1941 @@
     "ok": true,
     "removed_islands": 0
    },
-   "volume_cm3": 4.84,
-   "mass_g": 6.2,
-   "mass_total_g": 12.3,
-   "print_h": 0.93,
-   "print_h_total": 1.86,
+   "volume_cm3": 5.05,
+   "mass_g": 6.4,
+   "mass_total_g": 12.8,
+   "print_h": 0.45,
+   "print_h_total": 0.9,
    "size_mm": [
-    45.6,
-    45.4,
-    161.5
+    133.6,
+    134.5,
+    19.7
    ],
    "orientation": {
     "up_world": [
-     0.0,
-     0.0,
-     -1.0
+     -0.0,
+     -1.0,
+     -0.0
     ],
-    "up_words": "−z (aşağı)",
-    "z_rot_deg": 119.0,
+    "up_words": "−y (sağ/sancak)",
+    "z_rot_deg": 59.0,
     "bed_end": ""
    },
-   "bed_margin_mm": 105.2,
+   "bed_margin_mm": 60.7,
    "fits": true,
    "fits_tight": true,
-   "overhang_cm2": 0.0,
-   "support": "yok",
+   "overhang_cm2": 39.2,
+   "bed_contact_cm2": 3.64,
+   "contact_need_cm2": 3.0,
+   "contact_ok": true,
+   "oh45_to_bed_cm2": 39.23,
+   "oh45_over_model_cm2": 0.0,
+   "oh45_over_model_gt5mm_cm2": 0.0,
+   "bed_fix": "",
+   "support": "tabla desteği",
    "min_wall": {
-    "min_mm": 0.03,
-    "p05_mm": 0.809,
-    "median_mm": 1.154
+    "min_mm": 0.145,
+    "p05_mm": 0.858,
+    "median_mm": 1.195
    },
    "note": "",
    "pin_holes": 0,
+   "heat": {
+    "min_mm": 828.5,
+    "source": "muffler"
+   },
+   "tooling": false,
    "features": [],
    "stl": {
     "file": "stl/door_L_2.stl",
-    "bytes": 262284,
-    "triangles": 5244
+    "bytes": 348684,
+    "triangles": 6972,
+    "volume_cm3": 5.052,
+    "separated_verts": 0
    }
   }
  ],
  "verified_stl": [
   {
-   "key": "fus_nose_module",
+   "key": "hatch_buck_b",
    "edges": {
-    "triangles": 12832,
+    "triangles": 3728,
     "dup_directed": 0,
     "unpaired": 0,
-    "ok": true
+    "ok": true,
+    "welded": {
+     "triangles": 3728,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
    },
-   "volume_cm3": 167.42171798525504,
-   "volume_err_pct": 0.0010261529417366561,
+   "volume_cm3": 594.7206966375177,
+   "volume_err_pct": -5.100920975170365e-05,
    "blender_import": {
-    "verts": 6390,
-    "faces": 12832,
+    "verts": 1866,
+    "faces": 3728,
     "nonmanifold": 0,
-    "volume_cm3": 167.42171798527266
+    "volume_cm3": 594.7206966375192
+   }
+  },
+  {
+   "key": "hatch_buck_a",
+   "edges": {
+    "triangles": 3430,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 3430,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 558.8503517615843,
+   "volume_err_pct": 6.294382826945504e-05,
+   "blender_import": {
+    "verts": 1717,
+    "faces": 3430,
+    "nonmanifold": 0,
+    "volume_cm3": 558.8503517615835
+   }
+  },
+  {
+   "key": "fus_ring_2",
+   "edges": {
+    "triangles": 23538,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 23538,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 159.15276942522559,
+   "volume_err_pct": -0.00014487617224056266,
+   "blender_import": {
+    "verts": 11755,
+    "faces": 23538,
+    "nonmanifold": 0,
+    "volume_cm3": 159.1527694252209
+   }
+  },
+  {
+   "key": "fus_ring_1",
+   "edges": {
+    "triangles": 25572,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 25572,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 152.62968212350512,
+   "volume_err_pct": -0.00020826606491233094,
+   "blender_import": {
+    "verts": 12738,
+    "faces": 25572,
+    "nonmanifold": 0,
+    "volume_cm3": 152.6296821235051
+   }
+  },
+  {
+   "key": "wing_panel_1",
+   "edges": {
+    "triangles": 16916,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 16916,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 145.08852332374042,
+   "volume_err_pct": -0.0003285405920370941,
+   "blender_import": {
+    "verts": 8432,
+    "faces": 16916,
+    "nonmanifold": 0,
+    "volume_cm3": 145.08852332373942
+   }
+  },
+  {
+   "key": "wing_panel_2",
+   "edges": {
+    "triangles": 14972,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 14972,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 142.663198850112,
+   "volume_err_pct": 0.0001393845019278955,
+   "blender_import": {
+    "verts": 7440,
+    "faces": 14972,
+    "nonmanifold": 0,
+    "volume_cm3": 142.663198850112
+   }
+  },
+  {
+   "key": "fus_ring_3",
+   "edges": {
+    "triangles": 19338,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 19338,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 140.3073082325744,
+   "volume_err_pct": 0.00021968438810016913,
+   "blender_import": {
+    "verts": 9659,
+    "faces": 19338,
+    "nonmanifold": 0,
+    "volume_cm3": 140.30730823257932
+   }
+  },
+  {
+   "key": "fus_ring_5",
+   "edges": {
+    "triangles": 16552,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 16552,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 137.03624693894147,
+   "volume_err_pct": 0.00018020005069672418,
+   "blender_import": {
+    "verts": 8240,
+    "faces": 16552,
+    "nonmanifold": 0,
+    "volume_cm3": 137.03624693894142
+   }
+  },
+  {
+   "key": "root_block_1",
+   "edges": {
+    "triangles": 20286,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 20286,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 132.40055530146878,
+   "volume_err_pct": -0.00033587248678306066,
+   "blender_import": {
+    "verts": 10069,
+    "faces": 20286,
+    "nonmanifold": 0,
+    "volume_cm3": 132.40055530147
+   }
+  },
+  {
+   "key": "wing_panel_3",
+   "edges": {
+    "triangles": 15832,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 15832,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 131.51296666536757,
+   "volume_err_pct": -2.534702457850899e-05,
+   "blender_import": {
+    "verts": 7864,
+    "faces": 15832,
+    "nonmanifold": 0,
+    "volume_cm3": 131.51296666536774
    }
   },
   {
    "key": "fus_ring_4",
    "edges": {
-    "triangles": 9288,
+    "triangles": 13646,
     "dup_directed": 0,
     "unpaired": 0,
-    "ok": true
+    "ok": true,
+    "welded": {
+     "triangles": 13646,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
    },
-   "volume_cm3": 131.77344970161622,
-   "volume_err_pct": 0.002617971933068944,
+   "volume_cm3": 131.37883727187176,
+   "volume_err_pct": -0.0001238615975392093,
    "blender_import": {
-    "verts": 4636,
-    "faces": 9288,
+    "verts": 6815,
+    "faces": 13646,
     "nonmanifold": 0,
-    "volume_cm3": 131.7734497016122
+    "volume_cm3": 131.37883727187753
+   }
+  },
+  {
+   "key": "fus_nose_module",
+   "edges": {
+    "triangles": 14346,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 14346,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 129.97155611576358,
+   "volume_err_pct": -0.00034152297143405356,
+   "blender_import": {
+    "verts": 7161,
+    "faces": 14346,
+    "nonmanifold": 0,
+    "volume_cm3": 129.97155611576503
+   }
+  },
+  {
+   "key": "wing_panel_4",
+   "edges": {
+    "triangles": 17892,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 17892,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 129.66894223099047,
+   "volume_err_pct": -4.4551133689638645e-05,
+   "blender_import": {
+    "verts": 8884,
+    "faces": 17892,
+    "nonmanifold": 0,
+    "volume_cm3": 129.66894223098834
+   }
+  },
+  {
+   "key": "fus_ring_9",
+   "edges": {
+    "triangles": 16994,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 16994,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 125.53544955552071,
+   "volume_err_pct": 0.0003581116985041036,
+   "blender_import": {
+    "verts": 8451,
+    "faces": 16994,
+    "nonmanifold": 0,
+    "volume_cm3": 125.53544955552248
+   }
+  },
+  {
+   "key": "fus_ring_7",
+   "edges": {
+    "triangles": 11824,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 11824,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 115.43360038068258,
+   "volume_err_pct": -0.0003461885730549703,
+   "blender_import": {
+    "verts": 5896,
+    "faces": 11824,
+    "nonmanifold": 0,
+    "volume_cm3": 115.43360038068009
+   }
+  },
+  {
+   "key": "wing_panel_5",
+   "edges": {
+    "triangles": 14708,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 14708,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 112.76762794931328,
+   "volume_err_pct": -0.0003299257650406867,
+   "blender_import": {
+    "verts": 7306,
+    "faces": 14708,
+    "nonmanifold": 0,
+    "volume_cm3": 112.7676279493143
+   }
+  },
+  {
+   "key": "fus_ring_6",
+   "edges": {
+    "triangles": 11420,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 11420,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 108.21697779744032,
+   "volume_err_pct": -2.0516702252879062e-05,
+   "blender_import": {
+    "verts": 5702,
+    "faces": 11420,
+    "nonmanifold": 0,
+    "volume_cm3": 108.21697779744576
+   }
+  },
+  {
+   "key": "root_block_2",
+   "edges": {
+    "triangles": 16502,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 16502,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 94.91891861626408,
+   "volume_err_pct": -8.57401952375015e-05,
+   "blender_import": {
+    "verts": 8232,
+    "faces": 16502,
+    "nonmanifold": 0,
+    "volume_cm3": 94.91891861626367
+   }
+  },
+  {
+   "key": "wing_panel_6",
+   "edges": {
+    "triangles": 13840,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 13840,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 90.46102197816641,
+   "volume_err_pct": 2.429573674367143e-05,
+   "blender_import": {
+    "verts": 6882,
+    "faces": 13840,
+    "nonmanifold": 0,
+    "volume_cm3": 90.4610219781667
+   }
+  },
+  {
+   "key": "fus_ring_8",
+   "edges": {
+    "triangles": 10146,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 10146,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 88.77921233083691,
+   "volume_err_pct": 0.000239167862801347,
+   "blender_import": {
+    "verts": 5061,
+    "faces": 10146,
+    "nonmanifold": 0,
+    "volume_cm3": 88.77921233083612
    }
   },
   {
    "key": "fin_1",
    "edges": {
-    "triangles": 7808,
+    "triangles": 9182,
     "dup_directed": 0,
     "unpaired": 0,
-    "ok": true
+    "ok": true,
+    "welded": {
+     "triangles": 9182,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
    },
-   "volume_cm3": 84.93554414722638,
-   "volume_err_pct": -0.0052458827096976135,
+   "volume_cm3": 83.23510189229926,
+   "volume_err_pct": 0.00012241520905355156,
    "blender_import": {
-    "verts": 3890,
-    "faces": 7808,
+    "verts": 4569,
+    "faces": 9182,
     "nonmanifold": 0,
-    "volume_cm3": 84.93554414722588
+    "volume_cm3": 83.2351018922997
+   }
+  },
+  {
+   "key": "cowl_cheek_L",
+   "edges": {
+    "triangles": 11280,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 11280,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 81.48465855935406,
+   "volume_err_pct": -0.000419022698582418,
+   "blender_import": {
+    "verts": 5640,
+    "faces": 11280,
+    "nonmanifold": 0,
+    "volume_cm3": 81.48465855935449
+   }
+  },
+  {
+   "key": "cowl_top",
+   "edges": {
+    "triangles": 15716,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 15716,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 80.70431919601567,
+   "volume_err_pct": 0.000395514492071273,
+   "blender_import": {
+    "verts": 7832,
+    "faces": 15716,
+    "nonmanifold": 0,
+    "volume_cm3": 80.70431919601684
+   }
+  },
+  {
+   "key": "wing_panel_7",
+   "edges": {
+    "triangles": 13744,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 13744,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 70.20450208662734,
+   "volume_err_pct": 0.0007151823647509265,
+   "blender_import": {
+    "verts": 6820,
+    "faces": 13744,
+    "nonmanifold": 0,
+    "volume_cm3": 70.20450208662717
+   }
+  },
+  {
+   "key": "turret_collar",
+   "edges": {
+    "triangles": 1280,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 1280,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 62.65663600253774,
+   "volume_err_pct": -0.0005809366268073489,
+   "blender_import": {
+    "verts": 640,
+    "faces": 1280,
+    "nonmanifold": 0,
+    "volume_cm3": 62.65663600253776
+   }
+  },
+  {
+   "key": "tolerance_coupon",
+   "edges": {
+    "triangles": 1288,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 1288,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 56.71658681623293,
+   "volume_err_pct": -0.0007285007441605893,
+   "blender_import": {
+    "verts": 634,
+    "faces": 1288,
+    "nonmanifold": 0,
+    "volume_cm3": 56.716586816232905
+   }
+  },
+  {
+   "key": "engine_ring",
+   "edges": {
+    "triangles": 7590,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 7590,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 56.1807044722568,
+   "volume_err_pct": -0.0005260279154838207,
+   "blender_import": {
+    "verts": 3787,
+    "faces": 7590,
+    "nonmanifold": 0,
+    "volume_cm3": 56.18070447225657
+   }
+  },
+  {
+   "key": "gear_mount_N",
+   "edges": {
+    "triangles": 1008,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 1008,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 49.62441696206745,
+   "volume_err_pct": 0.000840242760453525,
+   "blender_import": {
+    "verts": 502,
+    "faces": 1008,
+    "nonmanifold": 0,
+    "volume_cm3": 49.62441696206752
+   }
+  },
+  {
+   "key": "root_fairing",
+   "edges": {
+    "triangles": 11428,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 11428,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 49.5356496314888,
+   "volume_err_pct": -0.0007073007735776121,
+   "blender_import": {
+    "verts": 5704,
+    "faces": 11428,
+    "nonmanifold": 0,
+    "volume_cm3": 49.53564963148875
+   }
+  },
+  {
+   "key": "wing_frame_fwd",
+   "edges": {
+    "triangles": 2362,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 2362,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 48.40723891793435,
+   "volume_err_pct": 0.0004935607130246074,
+   "blender_import": {
+    "verts": 1163,
+    "faces": 2362,
+    "nonmanifold": 0,
+    "volume_cm3": 48.40723891793437
+   }
+  },
+  {
+   "key": "wing_frame_aft",
+   "edges": {
+    "triangles": 2448,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 2448,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 46.7579947530173,
+   "volume_err_pct": -1.122157214283065e-05,
+   "blender_import": {
+    "verts": 1206,
+    "faces": 2448,
+    "nonmanifold": 0,
+    "volume_cm3": 46.7579947530173
+   }
+  },
+  {
+   "key": "stab_1",
+   "edges": {
+    "triangles": 10588,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 10588,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 45.97252007673139,
+   "volume_err_pct": -0.0010439241916055005,
+   "blender_import": {
+    "verts": 5278,
+    "faces": 10588,
+    "nonmanifold": 0,
+    "volume_cm3": 45.97252007673143
+   }
+  },
+  {
+   "key": "fin_2",
+   "edges": {
+    "triangles": 7916,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 7916,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 45.52364914391825,
+   "volume_err_pct": -0.0007707057414819142,
+   "blender_import": {
+    "verts": 3954,
+    "faces": 7916,
+    "nonmanifold": 0,
+    "volume_cm3": 45.523649143917936
    }
   },
   {
    "key": "glove_strake",
    "edges": {
-    "triangles": 5234,
+    "triangles": 6256,
     "dup_directed": 0,
     "unpaired": 0,
-    "ok": true
+    "ok": true,
+    "welded": {
+     "triangles": 6256,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
    },
-   "volume_cm3": 39.16353587690849,
-   "volume_err_pct": 0.00902930773364061,
+   "volume_cm3": 39.38226618602645,
+   "volume_err_pct": 0.0006759078422909189,
    "blender_import": {
-    "verts": 2621,
-    "faces": 5234,
+    "verts": 3130,
+    "faces": 6256,
     "nonmanifold": 0,
-    "volume_cm3": 39.16353587690844
+    "volume_cm3": 39.38226618602658
+   }
+  },
+  {
+   "key": "gear_mount_L",
+   "edges": {
+    "triangles": 1194,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 1194,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 38.722105757348615,
+   "volume_err_pct": 0.00027311954086468176,
+   "blender_import": {
+    "verts": 597,
+    "faces": 1194,
+    "nonmanifold": 0,
+    "volume_cm3": 38.72210575734856
+   }
+  },
+  {
+   "key": "cowl_cheek_R",
+   "edges": {
+    "triangles": 13450,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 13450,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 37.40245356971992,
+   "volume_err_pct": 0.0012126884121596362,
+   "blender_import": {
+    "verts": 6715,
+    "faces": 13450,
+    "nonmanifold": 0,
+    "volume_cm3": 37.402453569720294
+   }
+  },
+  {
+   "key": "fus_nose_cone",
+   "edges": {
+    "triangles": 12144,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 12144,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 35.03442927476795,
+   "volume_err_pct": 0.0012253090368009576,
+   "blender_import": {
+    "verts": 6074,
+    "faces": 12144,
+    "nonmanifold": 0,
+    "volume_cm3": 35.034429274768954
+   }
+  },
+  {
+   "key": "hatch_frame_b",
+   "edges": {
+    "triangles": 4528,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 4528,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 33.33888041381862,
+   "volume_err_pct": -0.000358697565544779,
+   "blender_import": {
+    "verts": 2266,
+    "faces": 4528,
+    "nonmanifold": 0,
+    "volume_cm3": 33.33888041381875
+   }
+  },
+  {
+   "key": "stab_2a",
+   "edges": {
+    "triangles": 6290,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 6290,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 31.465425542547365,
+   "volume_err_pct": 0.0013524314233756688,
+   "blender_import": {
+    "verts": 3141,
+    "faces": 6290,
+    "nonmanifold": 0,
+    "volume_cm3": 31.46542554254745
+   }
+  },
+  {
+   "key": "hatch_frame_a",
+   "edges": {
+    "triangles": 4258,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 4258,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 29.661859727356216,
+   "volume_err_pct": -0.0004729035256662894,
+   "blender_import": {
+    "verts": 2131,
+    "faces": 4258,
+    "nonmanifold": 0,
+    "volume_cm3": 29.661859727356347
+   }
+  },
+  {
+   "key": "flapout_3",
+   "edges": {
+    "triangles": 3366,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 3366,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 26.665727407688344,
+   "volume_err_pct": -0.0010222467248797676,
+   "blender_import": {
+    "verts": 1661,
+    "faces": 3366,
+    "nonmanifold": 0,
+    "volume_cm3": 26.66572740768855
+   }
+  },
+  {
+   "key": "flapout_2",
+   "edges": {
+    "triangles": 3754,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 3754,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 24.994535389209496,
+   "volume_err_pct": -0.0018588149250062184,
+   "blender_import": {
+    "verts": 1867,
+    "faces": 3754,
+    "nonmanifold": 0,
+    "volume_cm3": 24.99453538920942
    }
   },
   {
    "key": "flapout_4",
    "edges": {
-    "triangles": 3188,
+    "triangles": 3734,
     "dup_directed": 0,
     "unpaired": 0,
-    "ok": true
+    "ok": true,
+    "welded": {
+     "triangles": 3734,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
    },
-   "volume_cm3": 24.09089344749118,
-   "volume_err_pct": 0.0037087899177239507,
+   "volume_cm3": 24.804000782037892,
+   "volume_err_pct": 3.152870077399702e-06,
    "blender_import": {
-    "verts": 1578,
-    "faces": 3188,
+    "verts": 1851,
+    "faces": 3734,
     "nonmanifold": 0,
-    "volume_cm3": 24.09089344749104
+    "volume_cm3": 24.804000782037935
+   }
+  },
+  {
+   "key": "flapout_1",
+   "edges": {
+    "triangles": 3474,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 3474,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 23.889199843768775,
+   "volume_err_pct": 0.0008365514202185951,
+   "blender_import": {
+    "verts": 1725,
+    "faces": 3474,
+    "nonmanifold": 0,
+    "volume_cm3": 23.889199843768754
+   }
+  },
+  {
+   "key": "flapin",
+   "edges": {
+    "triangles": 4782,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 4782,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 23.805186142414886,
+   "volume_err_pct": 0.0007819467123980162,
+   "blender_import": {
+    "verts": 2383,
+    "faces": 4782,
+    "nonmanifold": 0,
+    "volume_cm3": 23.80518614241491
+   }
+  },
+  {
+   "key": "exhaust_ring",
+   "edges": {
+    "triangles": 5152,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 5152,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 22.846097327880535,
+   "volume_err_pct": 0.0004260171607082323,
+   "blender_import": {
+    "verts": 2576,
+    "faces": 5152,
+    "nonmanifold": 0,
+    "volume_cm3": 22.846097327880635
+   }
+  },
+  {
+   "key": "aileron_1",
+   "edges": {
+    "triangles": 3570,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 3570,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 22.097370282055035,
+   "volume_err_pct": 0.0016757118841189069,
+   "blender_import": {
+    "verts": 1777,
+    "faces": 3570,
+    "nonmanifold": 0,
+    "volume_cm3": 22.097370282055024
+   }
+  },
+  {
+   "key": "stab_2b",
+   "edges": {
+    "triangles": 6124,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 6124,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 21.41792320244676,
+   "volume_err_pct": -0.00035856547407619625,
+   "blender_import": {
+    "verts": 3052,
+    "faces": 6124,
+    "nonmanifold": 0,
+    "volume_cm3": 21.417923202446858
+   }
+  },
+  {
+   "key": "wing_tip",
+   "edges": {
+    "triangles": 8638,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 8638,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 21.283942099147513,
+   "volume_err_pct": -0.0002720393369945255,
+   "blender_import": {
+    "verts": 4295,
+    "faces": 8638,
+    "nonmanifold": 0,
+    "volume_cm3": 21.283942099147595
+   }
+  },
+  {
+   "key": "aileron_2",
+   "edges": {
+    "triangles": 4150,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 4150,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 20.850528570687665,
+   "volume_err_pct": -0.00226094341918487,
+   "blender_import": {
+    "verts": 2065,
+    "faces": 4150,
+    "nonmanifold": 0,
+    "volume_cm3": 20.850528570687626
+   }
+  },
+  {
+   "key": "elevator_1",
+   "edges": {
+    "triangles": 4352,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 4352,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 20.425063126965153,
+   "volume_err_pct": 0.00030906714884746056,
+   "blender_import": {
+    "verts": 2166,
+    "faces": 4352,
+    "nonmanifold": 0,
+    "volume_cm3": 20.4250631269652
+   }
+  },
+  {
+   "key": "gear_blister",
+   "edges": {
+    "triangles": 7524,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 7524,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 21.302000824492186,
+   "volume_err_pct": 3.870491909323723e-06,
+   "blender_import": {
+    "verts": 3763,
+    "faces": 7524,
+    "nonmanifold": 0,
+    "volume_cm3": 21.302000824492186
+   }
+  },
+  {
+   "key": "aileron_3",
+   "edges": {
+    "triangles": 3950,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 3950,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 18.929365085418368,
+   "volume_err_pct": 0.0019287094847570368,
+   "blender_import": {
+    "verts": 1969,
+    "faces": 3950,
+    "nonmanifold": 0,
+    "volume_cm3": 18.929365085418315
    }
   },
   {
    "key": "rudder_a",
    "edges": {
-    "triangles": 2640,
+    "triangles": 3120,
     "dup_directed": 0,
     "unpaired": 0,
-    "ok": true
+    "ok": true,
+    "welded": {
+     "triangles": 3120,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
    },
-   "volume_cm3": 18.085981827728745,
-   "volume_err_pct": -0.022212118691295402,
+   "volume_cm3": 18.305858462122433,
+   "volume_err_pct": -0.0007731775241316701,
    "blender_import": {
-    "verts": 1312,
-    "faces": 2640,
+    "verts": 1552,
+    "faces": 3120,
     "nonmanifold": 0,
-    "volume_cm3": 18.085981827728745
+    "volume_cm3": 18.30585846212247
+   }
+  },
+  {
+   "key": "aileron_4",
+   "edges": {
+    "triangles": 4004,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 4004,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 16.435898467972343,
+   "volume_err_pct": -0.0006177417112223381,
+   "blender_import": {
+    "verts": 1996,
+    "faces": 4004,
+    "nonmanifold": 0,
+    "volume_cm3": 16.43589846797234
+   }
+  },
+  {
+   "key": "rudder_b",
+   "edges": {
+    "triangles": 3312,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 3312,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 16.063127511771768,
+   "volume_err_pct": 0.0007938228959033252,
+   "blender_import": {
+    "verts": 1652,
+    "faces": 3312,
+    "nonmanifold": 0,
+    "volume_cm3": 16.063127511771775
+   }
+  },
+  {
+   "key": "door_L_1",
+   "edges": {
+    "triangles": 9262,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 9262,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 14.988432896501331,
+   "volume_err_pct": 0.0028882873053898144,
+   "blender_import": {
+    "verts": 4633,
+    "faces": 9262,
+    "nonmanifold": 0,
+    "volume_cm3": 14.988432896501365
+   }
+  },
+  {
+   "key": "fus_nose_flange",
+   "edges": {
+    "triangles": 2072,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 2072,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 14.008418133830089,
+   "volume_err_pct": 0.0029849645209161085,
+   "blender_import": {
+    "verts": 1024,
+    "faces": 2072,
+    "nonmanifold": 0,
+    "volume_cm3": 14.008418133830123
+   }
+  },
+  {
+   "key": "elevator_2a",
+   "edges": {
+    "triangles": 2642,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 2642,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 11.023312116463583,
+   "volume_err_pct": 0.0028315019829707674,
+   "blender_import": {
+    "verts": 1317,
+    "faces": 2642,
+    "nonmanifold": 0,
+    "volume_cm3": 11.023312116463572
+   }
+  },
+  {
+   "key": "elevator_2b",
+   "edges": {
+    "triangles": 2504,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 2504,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 10.159104790252206,
+   "volume_err_pct": 0.0010315016458837822,
+   "blender_import": {
+    "verts": 1250,
+    "faces": 2504,
+    "nonmanifold": 0,
+    "volume_cm3": 10.159104790252234
+   }
+  },
+  {
+   "key": "door_N_1",
+   "edges": {
+    "triangles": 6914,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 6914,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 8.436409683823221,
+   "volume_err_pct": 0.004856375334536332,
+   "blender_import": {
+    "verts": 3459,
+    "faces": 6914,
+    "nonmanifold": 0,
+    "volume_cm3": 8.436409683823207
+   }
+  },
+  {
+   "key": "intake",
+   "edges": {
+    "triangles": 396,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 396,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 5.450027878393825,
+   "volume_err_pct": 0.0005115301619186284,
+   "blender_import": {
+    "verts": 198,
+    "faces": 396,
+    "nonmanifold": 0,
+    "volume_cm3": 5.450027878393829
+   }
+  },
+  {
+   "key": "door_L_2",
+   "edges": {
+    "triangles": 6972,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 6972,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 5.052405565109616,
+   "volume_err_pct": 0.008027812937780003,
+   "blender_import": {
+    "verts": 3488,
+    "faces": 6972,
+    "nonmanifold": 0,
+    "volume_cm3": 5.052405565109616
+   }
+  },
+  {
+   "key": "panel_lock_tab",
+   "edges": {
+    "triangles": 132,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 132,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 3.2581729445073755,
+   "volume_err_pct": 0.00530830286603693,
+   "blender_import": {
+    "verts": 66,
+    "faces": 132,
+    "nonmanifold": 0,
+    "volume_cm3": 3.258172944507374
+   }
+  },
+  {
+   "key": "longeron_joint_shoulder",
+   "edges": {
+    "triangles": 1102,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 1102,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 3.1356515284820046,
+   "volume_err_pct": -0.011111974425878577,
+   "blender_import": {
+    "verts": 553,
+    "faces": 1102,
+    "nonmanifold": 0,
+    "volume_cm3": 3.135651528482008
+   }
+  },
+  {
+   "key": "scuff_pad",
+   "edges": {
+    "triangles": 2794,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 2794,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 3.431902597216104,
+   "volume_err_pct": -0.0028380764538404957,
+   "blender_import": {
+    "verts": 1399,
+    "faces": 2794,
+    "nonmanifold": 0,
+    "volume_cm3": 3.431902597216107
+   }
+  },
+  {
+   "key": "longeron_joint_chine",
+   "edges": {
+    "triangles": 980,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 980,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 2.891990092018795,
+   "volume_err_pct": -0.00034259962672252025,
+   "blender_import": {
+    "verts": 492,
+    "faces": 980,
+    "nonmanifold": 0,
+    "volume_cm3": 2.891990092018793
+   }
+  },
+  {
+   "key": "door_N_3",
+   "edges": {
+    "triangles": 1060,
+    "dup_directed": 0,
+    "unpaired": 0,
+    "ok": true,
+    "welded": {
+     "triangles": 1060,
+     "dup_directed": 0,
+     "unpaired": 0,
+     "ok": true
+    }
+   },
+   "volume_cm3": 2.326339404241695,
+   "volume_err_pct": 0.014591755876831296,
+   "blender_import": {
+    "verts": 532,
+    "faces": 1060,
+    "nonmanifold": 0,
+    "volume_cm3": 2.3263394042416965
    }
   }
  ],
- "warnings": [
-  "wing_tip: voksel onarım (0.15 mm), hacim 21.5 → 21.5 cm³, manifold evet"
- ],
+ "warnings": [],
  "hinges": {
   "Aileron": {
    "lugs": 8,
-   "length_mm": 733.6
+   "length_mm": 733.6,
+   "bore_mm": 2.1,
+   "pin": "Ø1.75 mm PETG filament",
+   "pin_length_mm": 860.0,
+   "insert_side": "dış uç",
+   "route": "uç kapağının dış yüzündeki Ø2,1 delikten (uç kapağı yapıştırıldıktan sonra)",
+   "retention": "iç uçta kör delik (dış panel / dış flap ucu); dış uçta delik CA + mikrobalonla tıkanır"
   },
   "FlapIn": {
    "lugs": 1,
-   "length_mm": 165.4
+   "length_mm": 175.4,
+   "bore_mm": 2.1,
+   "pin": "Ø1.75 mm PETG filament",
+   "pin_length_mm": 187.0,
+   "insert_side": "dış uç",
+   "route": "dış panel sökülüyken kök bloğu 2'nin y = 0,36 kaburgasındaki delikten",
+   "retention": "panel takılınca panel 1 kaburgası ve dış flap piminin ucu; iç uçta kör delik (kök bloğu 1)"
   },
   "FlapOut": {
-   "lugs": 8,
-   "length_mm": 701.8
+   "lugs": 7,
+   "length_mm": 716.8,
+   "bore_mm": 2.1,
+   "pin": "Ø1.75 mm PETG filament",
+   "pin_length_mm": 729.0,
+   "insert_side": "iç uç",
+   "route": "dış panel sökülüyken panel 1'in y = 0,36 kök kaburgasındaki delikten",
+   "retention": "panel takılınca kök bloğu 2 kaburgası ve iç flap piminin ucu; dış uçta kör delik (kanatçık ayrımı)"
   },
   "Elevator": {
    "lugs": 4,
-   "length_mm": 487.0
+   "length_mm": 487.0,
+   "bore_mm": 2.1,
+   "pin": "Ø1.75 mm PETG filament",
+   "pin_length_mm": 538.0,
+   "insert_side": "dış uç",
+   "route": "dikeyler takılmadan önce stabilize ucundaki delikten",
+   "retention": "dikey 1'in stabilize ucu yuvası (dikey takılınca elevatör pimi sökülemez); iç uçta kör delik"
   },
   "Rudder": {
    "lugs": 2,
-   "length_mm": 309.6
+   "length_mm": 309.6,
+   "bore_mm": 2.1,
+   "pin": "Ø1.75 mm PETG filament",
+   "pin_length_mm": 376.0,
+   "insert_side": "üst uç",
+   "route": "dikey 2'nin tepesindeki Ø2,1 delikten",
+   "retention": "alt uçta kör delik (dikey 1); üst delik CA ile tıkanır"
   }
  },
+ "load_paths": [
+  {
+   "load": "Kanat kaldırması (yarım kanat ≈ 11,7 kg × n)",
+   "path": "dış panel derisi + Ø27 panel borusu → Ø30 merkez soket → G10 köprü (2 × 3 mm, soketin iki yanında 3,3 mm yuvalarda, boru başına 2 × M4) → kanat kutusu çerçeveleri (s 1,20 / 1,29) → 4 longeron + halka 5",
+   "parts": "wing_panel_*, root_block_1/2, wing_frame_fwd, wing_frame_aft, fus_ring_5"
+  },
+  {
+   "load": "Kanat burulması / hücum açısı",
+   "path": "Ø6 dolu CF açı pimi (y 0,334–0,434, %60 veter) + Ø8 arka kiriş → kök bloğu arka ağı → çerçeveler",
+   "parts": "wing_panel_1, root_block_2, root_block_1"
+  },
+  {
+   "load": "Dış panel eki (eksenel / sökülebilir)",
+   "path": "PETG tutma dili (panel 1 kök kaburgası) → M4 naylon cıvata → kök bloğu 2'deki M4 ısıl gömme dişli",
+   "parts": "panel_lock_tab, wing_panel_1, root_block_2"
+  },
+  {
+   "load": "Ana takım (iniş darbesi, fren)",
+   "path": "ER-150 ünitesi → G10 3 mm plaka → ana takım yatağı (PA-CF beşik, 2 × M3) → sokete eyerli kol → Ø30 soket → G10 köprü → çerçeveler / longeronlar",
+   "parts": "gear_mount_L (+ ayna), root_block_2, wing_frame_*"
+  },
+  {
+   "load": "Burun takımı",
+   "path": "burun ünitesi → G10 plaka (4 × M3 kısa dişli) → burun yatağı (PA-CF, iki chine longeronuna eyer) → longeronlar → halka 1 çerçevesi",
+   "parts": "gear_mount_N, fus_ring_1"
+  },
+  {
+   "load": "İtki + titreşim (DLE-20, 1,86 kW, tek silindir)",
+   "path": "motor → 4 × M4 + kauçuk takoz → motor halkası (PA-CF, halka 9 içinde 30 mm bindirme, 4 longeron soketi) → longeronlar; G10 yangın perdesi halkaya yaslanır",
+   "parts": "engine_ring, fus_ring_9"
+  },
+  {
+   "load": "Kuyruk (stabilize + dikey yükleri)",
+   "path": "Ø12 stabilize kirişi + Ø6 arka çubuk → koni içi G10 eyer → kuyruk konisi (LW-ASA) → s = 1,55 G10 flanşı (4 × M4) → longeronlar",
+   "parts": "stab_1/2, fin_1/2, fus_ring_7–9"
+  },
+  {
+   "load": "Longeron sürekliliği",
+   "path": "düz CF parçalar s = 1,167 ve 1,55 kırıklarında PETG soket bloklarına 18 mm girer (epoksi)",
+   "parts": "longeron_joint_chine, longeron_joint_shoulder, fus_ring_4/5"
+  }
+ ],
+ "print_cuts": {
+  "wing_y_m": [
+   0.2313,
+   0.36,
+   0.57,
+   0.78,
+   0.99,
+   1.2,
+   1.41,
+   1.62,
+   1.83,
+   1.9
+  ],
+  "wing_tip_plane": {
+   "point_b": [
+    -1.3129,
+    1.832,
+    0.0829
+   ],
+   "normal_b": [
+    0.0681,
+    0.9951,
+    0.0721
+   ]
+  },
+  "strake_s_m": 1.176,
+  "fuselage_s_m": [
+   0.148,
+   0.4,
+   0.5917,
+   0.7833,
+   0.975,
+   1.1667,
+   1.379,
+   1.55,
+   1.715,
+   1.845,
+   2.0425
+  ],
+  "stab_y_m": 0.26,
+  "fin_h_m": 0.16,
+  "control_surface_y_m": {
+   "Aileron": [
+    1.2825,
+    1.465,
+    1.6475
+   ],
+   "FlapOut": [
+    0.5437,
+    0.7225,
+    0.9012
+   ],
+   "FlapIn": [],
+   "Elevator": [
+    0.2825
+   ],
+   "Rudder": []
+  },
+  "cowl_cheeks": {
+   "L": {
+    "s_m": [
+     2.046,
+     2.188
+    ],
+    "z_m": [
+     0.0,
+     0.16
+    ]
+   },
+   "R": {
+    "s_m": [
+     2.06,
+     2.18
+    ],
+    "z_m": [
+     0.04,
+     0.16
+    ]
+   }
+  },
+  "groove_mm": [
+   0.4,
+   0.3
+  ]
+ },
+ "tolerance_coupon": {
+  "stl": "tolerance_coupon.stl",
+  "holes": [
+   {
+    "label": "panel borusu Ø27",
+    "nominal_mm": 27.0,
+    "hole_mm": 27.7
+   },
+   {
+    "label": "uç borusu Ø16",
+    "nominal_mm": 16.0,
+    "hole_mm": 16.7
+   },
+   {
+    "label": "arka kiriş / longeron Ø8",
+    "nominal_mm": 8.0,
+    "hole_mm": 8.7
+   },
+   {
+    "label": "açı pimi Ø6",
+    "nominal_mm": 6.0,
+    "hole_mm": 6.7
+   },
+   {
+    "label": "hizalama pimi Ø3",
+    "nominal_mm": 3.0,
+    "hole_mm": 3.4
+   },
+   {
+    "label": "menteşe pimi Ø1,75",
+    "nominal_mm": 1.75,
+    "hole_mm": 2.1
+   }
+  ],
+  "note": "önce kupon basın, gerekirse TUBE_CLEAR ayarlayın"
+ },
+ "thermoform": [
+  "Kalıp: hatch_buck_a + hatch_buck_b (PLA, 0,3 mm katman, 3 çevre, %15 dolgu) Ø3 CF pimlerle birleştirilip yapıştırılır; üst yüz 240 → 400 kum zımpara, dolgu astarı, 800 kum; kalıp ayırıcı (PVA / mum). Yanlar 2° eğimli, 8 mm kesim payı kalıba dahil.",
+  "Levha: 1,0 mm füme PETG 65 °C'de 2 saat kurutulur (kabarcık olmasın), alüminyum çerçeveye sıkıştırılır.",
+  "Isıtma: fırında / ısıtıcı altında 140–160 °C, levha 10–20 mm sarkana kadar (≈ 1–2 dk).",
+  "Biçimlendirme: kalıp vakum masasına (≥ 350 × 200 mm) konur, levha hızla indirilir, vakum (≥ 0,6 bar) açılır; soğuyunca (≈ 1 dk) çıkarılır.",
+  "Kesim: kalıp kenar çizgisinden makas / Dremel ile kesilir, kenar 400 kumla düzeltilir.",
+  "Çerçeve: hatch_frame_a/b (PETG, düz alt yüz tablada) cepleri ile 6 mıknatıs CA ile yapıştırılır (kutup gövde basamağındaki eşleriyle denenir); çerçeve levhanın iç yüzüne şeffaf epoksi / UV yapıştırıcı ile yapıştırılır (bölme s = 0,680).",
+  "Kontrol: kapak gövde basamağına oturur, dış yüz deriden en çok 1,6 mm yüksek (flush); mıknatıs eşleri 0,3 mm içinde eş eksenli (aynı HATCH_MAGNETS listesinden)."
+ ],
+ "slicer_groups": [
+  {
+   "group": "Kanat panelleri, uç kapağı",
+   "parts": "wing_panel_*, wing_tip",
+   "material": "LW-PLA",
+   "nozzle_mm": 0.4,
+   "line_mm": "0,45 (kafes 1 × 0,45; deri 0,6 = 1 × 0,6; D-kutu 1,2 = 2 × 0,6)",
+   "layer_mm": "0,20 (kafes)–0,25",
+   "walls": "1 (D-kutu 2)",
+   "infill": "%0",
+   "arachne_mm": "min 0,40 / maks 0,65"
+  },
+  {
+   "group": "Kök blokları, strake, gövde halkaları",
+   "parts": "root_block_*, glove_strake, fus_*",
+   "material": "LW-PLA",
+   "nozzle_mm": 0.6,
+   "line_mm": "0,8 (deri 0,8 = 1 çizgi; flanş 2,4 = 3 × 0,8)",
+   "layer_mm": "0,25–0,30",
+   "walls": "1",
+   "infill": "%0",
+   "arachne_mm": "min 0,55 / maks 0,95"
+  },
+  {
+   "group": "Kuyruk konisi",
+   "parts": "fus_ring_7–9 (+ ısı kuralıyla LW-ASA'ya geçenler)",
+   "material": "LW-ASA",
+   "nozzle_mm": 0.4,
+   "line_mm": "0,5 (1,0 = 2 × 0,5)",
+   "layer_mm": "0,20–0,25",
+   "walls": "2",
+   "infill": "%0",
+   "arachne_mm": "min 0,40 / maks 0,60"
+  },
+  {
+   "group": "Kuyruk yüzeyleri, kumanda yüzeyleri",
+   "parts": "stab_*, fin_*, aileron_*, flap*, elevator_*, rudder_*",
+   "material": "LW-PLA",
+   "nozzle_mm": 0.4,
+   "line_mm": "0,5 (deri 0,5 = 1 çizgi)",
+   "layer_mm": "0,20",
+   "walls": "1",
+   "infill": "%0",
+   "arachne_mm": "min 0,40 / maks 0,60"
+  },
+  {
+   "group": "PA-CF kaplama ve yük yolu parçaları",
+   "parts": "cowl_*, exhaust_ring, intake, root_fairing, gear_blister, wing_frame_*, gear_mount_*, engine_ring",
+   "material": "PA-CF",
+   "nozzle_mm": 0.4,
+   "line_mm": "0,53 (1,6 = 3 × 0,53; 3 mm çerçeve 6 çizgi)",
+   "layer_mm": "0,20",
+   "walls": "3",
+   "infill": "%100 (≤ 3,2 mm), %40 gyroid (daha kalın)",
+   "arachne_mm": "min 0,40 / maks 0,65"
+  },
+  {
+   "group": "PETG parçalar",
+   "parts": "door_*, hatch_frame_*, fus_nose_flange, turret_collar, panel_lock_tab, longeron_joint_*",
+   "material": "PETG",
+   "nozzle_mm": 0.4,
+   "line_mm": "0,40 (1,2 = 3 × 0,4; 1,6 = 4 × 0,4)",
+   "layer_mm": "0,20",
+   "walls": "3–4",
+   "infill": "%100 (ince), %40 (blok)",
+   "arachne_mm": "min 0,34 / maks 0,50"
+  },
+  {
+   "group": "TPU pabuç",
+   "parts": "scuff_pad",
+   "material": "TPU",
+   "nozzle_mm": 0.4,
+   "line_mm": "0,45",
+   "layer_mm": "0,20",
+   "walls": "3",
+   "infill": "%100",
+   "arachne_mm": "—"
+  },
+  {
+   "group": "Alet: kalıp + kupon",
+   "parts": "hatch_buck_*, tolerance_coupon",
+   "material": "PLA / LW-PLA",
+   "nozzle_mm": 0.6,
+   "line_mm": "0,65",
+   "layer_mm": "0,30",
+   "walls": "3",
+   "infill": "%15",
+   "arachne_mm": "—"
+  }
+ ],
  "bom": [
   {
    "group": "CF boru/çubuk",
@@ -3562,9 +7252,15 @@
   },
   {
    "group": "CF boru/çubuk",
-   "item": "Gövde longeronu",
-   "spec": "Ø8/6 mm × 1660 mm",
-   "qty": 4
+   "item": "Gövde longeronu — chine (düz parçalar, sol + sağ)",
+   "spec": "Ø8/6 mm; parça boyları 767 + 385 + 498 mm (uçlar soket bloklarına 18 mm girer)",
+   "qty": 6
+  },
+  {
+   "group": "CF boru/çubuk",
+   "item": "Gövde longeronu — omuz (düz parçalar, sol + sağ)",
+   "spec": "Ø8/6 mm; parça boyları 767 + 384 + 497 mm (uçlar soket bloklarına 18 mm girer)",
+   "qty": 6
   },
   {
    "group": "CF boru/çubuk",
@@ -3586,8 +7282,8 @@
   },
   {
    "group": "CF boru/çubuk",
-   "item": "Menteşe pimi (çelik yay teli)",
-   "spec": "Ø1.5 mm, toplam ≈ 4.89 m (yüzey başına tek parça)",
+   "item": "Menteşe pimi — Ø1,75 mm PETG filament (P1; çelik tel yerine)",
+   "spec": "delik Ø2,1 mm çevrel; boylar (mm, yüzey başına): Aileron 860, FlapIn 187, FlapOut 729, Elevator 538, Rudder 376",
    "qty": 10
   },
   {
@@ -3597,15 +7293,21 @@
    "qty": 28
   },
   {
+   "group": "CF boru/çubuk",
+   "item": "İç flap bağlayıcı teli (P9: iç flap dış flaba bağlı, ayrı servo yok)",
+   "spec": "Ø2 mm yay teli, 60 mm, iki ucu 90° kıvrık + Ø3/2,1 pirinç boru soket (flap içine epoksi)",
+   "qty": 2
+  },
+  {
    "group": "G10 / kontrplak",
-   "item": "Dihedral köprüsü (epoksi dolgulu yuvalar)",
-   "spec": "2× 3×45×300 mm G10, boru başına 2×M4",
+   "item": "Dihedral köprüsü (P4: kök bloğu ve kanat kutusu çerçevelerindeki 3,3 mm yuvalara epoksi)",
+   "spec": "2× 3×40×300 mm G10 (panelin 45 mm'si kök profiline ve depo tabanına sığmaz), boru başına 2×M4",
    "qty": 1
   },
   {
    "group": "G10 / kontrplak",
-   "item": "Yangın perdesi (s = 2,06)",
-   "spec": "G10 4 mm, gövde konturu",
+   "item": "Yangın perdesi (s = 2,045)",
+   "spec": "G10 4 mm, gövde konturu; NACA kanal açıklığı",
    "qty": 1
   },
   {
@@ -3616,15 +7318,15 @@
   },
   {
    "group": "G10 / kontrplak",
-   "item": "ER-150 takım montaj plakası",
-   "spec": "G10 3 mm (kök bloğu)",
+   "item": "ER-150 takım montaj plakası (ana yatağa 2 × M3, burun yatağına 4 × M3)",
+   "spec": "G10 3 mm",
    "qty": 3
   },
   {
    "group": "G10 / kontrplak",
    "item": "Kumanda hornu",
    "spec": "G10 1,6 mm, yarığa yapıştırma",
-   "qty": 10
+   "qty": 8
   },
   {
    "group": "G10 / kontrplak",
@@ -3640,8 +7342,14 @@
   },
   {
    "group": "Dolgu",
-   "item": "Stabilize kök filetosu (basılmaz: 0,1–3 mm kama)",
-   "spec": "epoksi + mikrobalon (ısı bölgesi; LW-PLA yok), ≈ 2 × 4 cm³",
+   "item": "Stabilize kök filetosu + dikey kök mermisi (basılmaz: ≤ 3 mm kama)",
+   "spec": "epoksi + mikrobalon (ısı bölgesi; LW-PLA yok), ≈ 2 × 4 cm³ + 2 × 1 cm³",
+   "qty": 2
+  },
+  {
+   "group": "Dolgu",
+   "item": "Kaplama kenarları (kök kaportası, ER-150 kabartması: ≥ 0,8 mm'de kırpılmış)",
+   "spec": "epoksi + mikrobalon ile deriye sıfırlanır",
    "qty": 2
   },
   {
@@ -3652,14 +7360,32 @@
   },
   {
    "group": "Bağlantı",
-   "item": "M4 cıvata + somun (G10 köprü, flanş, motor)",
-   "spec": "12.9",
+   "item": "M4 cıvata + somun (G10 köprü–soket–çerçeve, s = 1,55 flanşı)",
+   "spec": "12.9; köprüde boru başına 2 adet",
    "qty": 12
   },
   {
    "group": "Bağlantı",
-   "item": "M3 cıvata + ısıl gömme dişli (kaporta, yanaklar)",
-   "spec": "M3×8",
+   "item": "Motor bağlantısı: M4 × 30 + titreşim takozu (kauçuk, Ø10 × 8, 40 Shore A)",
+   "spec": "motor halkasındaki 4 × M4 ısıl gömme dişliye, kare 60 mm",
+   "qty": 4
+  },
+  {
+   "group": "Bağlantı",
+   "item": "M4 naylon cıvata (dış panel tutma dili; P9)",
+   "spec": "M4 × 16, alttan, kök bloğu 2'deki ısıl gömme dişliye",
+   "qty": 2
+  },
+  {
+   "group": "Bağlantı",
+   "item": "Isıl gömme dişli M4",
+   "spec": "Ø5,6 delik × 8,5: motor halkası 4 + tutma dili 2",
+   "qty": 6
+  },
+  {
+   "group": "Bağlantı",
+   "item": "Isıl gömme dişli M3 + M3 × 8 cıvata",
+   "spec": "Ø4 delik: ana yatak 2 × 2, burun yatağı 4 (kısa), kaporta/yanak 6",
    "qty": 14
   },
   {
@@ -3670,21 +7396,33 @@
   },
   {
    "group": "Bağlantı",
-   "item": "Neodim mıknatıs (aviyonik kapağı)",
-   "spec": "Ø6×3 mm",
-   "qty": 6
+   "item": "Neodim mıknatıs (aviyonik kapağı; çerçeve 6 + gövde basamağı 6, eş kutup)",
+   "spec": "Ø6×3 mm N52, cep Ø6,4×3,2",
+   "qty": 12
   },
   {
    "group": "Bağlantı",
-   "item": "MPX 6 pin konnektör (kanat paneli), 8 pin (burun modülü)",
-   "spec": "",
-   "qty": 3
+   "item": "MPX konnektör",
+   "spec": "6 pin: kanat paneli ↔ kök bloğu 2 (2), kuyruk modülü s = 1,55 (1); 8 pin: burun modülü (1)",
+   "qty": 4
+  },
+  {
+   "group": "Kapak",
+   "item": "Füme PETG levha (aviyonik kapağı, ısıl biçimlendirme; P10)",
+   "spec": "1 mm, ≥ 300 × 450 mm (1 yedek)",
+   "qty": 2
   },
   {
    "group": "Servolar",
    "item": "10 mm ince kanat servosu (KST X10 sınıfı)",
-   "spec": "kanatçık, dış/iç flap, elevatör, dümen",
-   "qty": 10
+   "spec": "kanatçık, dış flap (iç flap bağlı), elevatör, dümen — yan başına 4",
+   "qty": 8
+  },
+  {
+   "group": "Servolar",
+   "item": "İtme çubuğu Ø1,6 çelik + çatal (clevis) + kilit",
+   "spec": "her kumanda servosuna 1",
+   "qty": 8
   },
   {
    "group": "Servolar",
@@ -3707,7 +7445,7 @@
   {
    "group": "İniş takımı",
    "item": "Ana tekerlek",
-   "spec": "Ø82.5 mm, frenli",
+   "spec": "Ø82,5 mm, frenli",
    "qty": 2
   },
   {
@@ -3737,7 +7475,7 @@
   {
    "group": "İtki",
    "item": "Yakıt deposu",
-   "spec": "2 × 0.7 L",
+   "spec": "2 × 0,7 L",
    "qty": 2
   },
   {
@@ -3778,8 +7516,8 @@
   "sleeve_mm": 0.8,
   "web_mm": 0.8,
   "lattice_mm": 0.45,
-  "tube_clear_mm": 0.4,
+  "tube_clear_mm": 0.7,
   "pin_mm": 3.0,
-  "hinge_pin_mm": 1.5
+  "hinge_pin_mm": 1.75
  }
 }

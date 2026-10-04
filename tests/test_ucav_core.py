@@ -536,6 +536,43 @@ class TestGeometryFixes(unittest.TestCase):
                 self.assertIn(f"U_Stencil_AdimAtma_{host}_{side}", names)
 
 
+class TestReadme(unittest.TestCase):
+    """``ucav/README.md`` güncel: kapsam notu ve bağlantılar, giriş tipi, kontrol sayısı, klip süreleri spec/koda uyar."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.path = ROOT / "ucav" / "README.md"
+        cls.text = cls.path.read_text(encoding="utf-8")
+
+    def _has(self, needle: str) -> None:
+        self.assertTrue(needle in self.text, f"README'de yok: {needle!r}")
+
+    def test_scope_note_and_links(self):
+        for w in ("Kapsam", "sivil", "Silah", "mühimmat", "askı noktası", "pilon", "bırakma mekanizması"):
+            self._has(w)
+        import re
+        links = re.findall(r"\]\(([^)#\s]+)\)", self.text)
+        self.assertTrue(links)
+        for rel in links:
+            if rel.startswith(("http://", "https://")):
+                continue
+            self.assertTrue((self.path.parent / rel).exists(), f"README bağlantısı yok: {rel}")
+        for need in ("spec.yaml", "out/sizing.md", "out/print_report.md", "out/anim/showcase.mp4",
+                     "out/anim/mechanisms.mp4", "../docs/08-guvenlik-ve-mevzuat.md"):
+            self.assertIn(need, links)
+
+    def test_matches_spec_and_sizing(self):
+        if P.SPEC["propulsion"]["intake"]["type"] == "naca_flush_ventral":
+            self._has("NACA")
+            self.assertFalse("Sırtta NACA" in self.text, "README eski sırt girişini anlatıyor")
+        C = sizing.build_checks(sizing.compute())
+        n = sum(c.is_check for c in C)
+        self._has(f"{n}/{n} kontrol")
+        self.assertFalse("⟪" in self.text, "README'de doldurulmamış yer tutucu var")
+        for frames, secs in ((504, 21), (384, 16)):              # animation.CLIPS × 24 fps
+            self._has(f"{secs} s, {frames} kare")
+
+
 class TestSizing(unittest.TestCase):
     def test_sizing_check_passes(self):
         with tempfile.TemporaryDirectory() as d:

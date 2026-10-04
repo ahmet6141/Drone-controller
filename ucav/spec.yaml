@@ -127,7 +127,7 @@ fuselage:
     battery_nominal_s_m: 0.469
     avionics_tray_s_m: [0.45, 0.85]
     gnss_s_m: 0.70                         # 2× GNSS, aviyonik kapağı altında; CDI'ya 1,15 m
-    wing_box_s_m: [1.20, 1.29]             # G10 köprü 2×3×45×300 mm, epoksi dolgulu yuvalar, boru başına 2×M4
+    wing_box_s_m: [1.20, 1.29]             # G10 köprü 2×3×40×300 mm, epoksi dolgulu yuvalar, boru başına 2×M4
     fuel_tanks: {count: 2, volume_l_each: 0.70, centre_s_m: 1.233}   # tam CG'de, yan yana
     cdi_s_m: 1.85
     stab_saddle_s_m: [1.85, 2.03]
@@ -384,7 +384,7 @@ propulsion:
     hub_len_m: 0.020              # varsayım (8 mm göbek + rondela)
     blade_max_chord_m: 0.036      # r/R ≈ 0,30'da. varsayım (görsel)
     blade_tip_chord_m: 0.016      # varsayım
-    tip_band_m: 0.020             # pala uçlarında turuncu uyarı bandı (RAL 2005)
+    tip_band_m: 0.020             # pala uçlarında turuncu uyarı bandı (RAL 2004, UM_Orange)
     rpm_max: 9000
     rpm_static: 8260
     alternatives: "15x8 veya 17x6 itici"
@@ -471,7 +471,7 @@ payload:
     window_eo_d_m: 0.026          # optik pencere. varsayım
     window_ir_d_m: 0.020          # termal pencere. varsayım
     window_spacing_m: 0.030       # iki pencere merkez arası (yatay). varsayım
-    lens_ring: "turkuaz RAL 5018 halka; yerde durum LED halkası"
+    lens_ring: "pencerelerde siyah eloksal çerçeve (UM_Bezel); yaka tabanında durum LED halkası — yalnız bakım/test (U_Root status_led), uçuşta sönük"
     rig_pan_deg: [-180, 180]
     rig_tilt_deg: [-90, 20]
 
@@ -510,7 +510,7 @@ details:
     chine_band_m: 0.010           # antrasit chine bandı
     stripe_m: 0.003               # turkuaz ince çizgi (chine boyunca, burundan glove'a)
     chevron: "yalnız sol kanat altında antrasit yönelim şevronu"
-    fin_prop_band: "dikeylerin iç yüzünde pervane düzlemi uyarı bandı (RAL 2005)"
+    fin_prop_band: "dikeylerin iç yüzünde pervane düzlemi uyarı bandı (RAL 2004)"
     registration: "tescil ve 'YK-38' şablon yazıları düşük kontrastlı gri"
     decals:                       # materials.build_decals (BVH ile deriye izdüşümlü ince katılar). varsayım
       fin_text: "YK-38"
@@ -651,7 +651,7 @@ mass:
     - ["Kök/glove blokları", 0.329]
     - ["Kanattaki PETG/PA-CF ek parçalar", 0.180]
     - ["Kanat CF boruları", 0.849]
-    - ["G10 dihedral köprüsü 2×3×45 mm, kök kaburgaları ve M4'ler", 0.246]
+    - ["G10 dihedral köprüsü 2×3×40 mm, kök kaburgaları ve M4'ler", 0.246]
     - ["Gövde kabuğu LW-PLA", 0.714]
     - ["Kuyruk konisi LW-ASA", 0.278]
     - ["Kaporta ve lüle (PA-CF)", 0.184]
@@ -671,14 +671,14 @@ mass:
     - ["Soğutma", 0.050]
     - ["Aviyonik", 0.420]
     - ["Ana akü 130 Wh", 0.600]
-    - ["Kanat servoları ×6", 0.270]
+    - ["Kanat servoları ×4 (kanatçık + dış flap; iç flap dış flaba Ø2 telle bağlı, P9) ve bağlayıcı teller", 0.190]
     - ["Kuyruk servoları ×4", 0.120]
     - ["Gaz, jikle ve yönlendirme servoları", 0.066]
     - ["ER-150 ana takım ×2", 0.760]
     - ["ER-150 burun takımı", 0.325]
     - ["Sıralayıcı, fren ve kapak servoları", 0.100]
     - ["LED'ler", 0.050]
-    - ["Kütle artış rezervi (%4; 0,072 kg düzeltmelere gitti)", 0.478]
+    - ["Kütle artış rezervi (%4,8; 0,072 kg düzeltmelere gitti; iki iç flap servosu kalktı +0,080)", 0.558]
     - ["Faydalı yük modülü", 0.600]
     - ["Yakıt 1,40 L", 1.043]
   landing_mass_kg: 10.88          # yakıtın %80'i yanmış (stall hızı, iniş)
@@ -740,16 +740,16 @@ materials:
   UM_SkinBottom:  {ral: "RAL 9003", name_tr: "sinyal beyazı, alt yüzeyler (mat)", hex: "#ECECE7", roughness: 0.55, metallic: 0.0}
   UM_Accent:      {ral: "RAL 7016", name_tr: "antrasit vurgu: chine bandı, burun ucu, HK şeridi, dudaklar", hex: "#383E42", roughness: 0.45, metallic: 0.0}
   UM_Turquoise:   {ral: "RAL 5018", name_tr: "turkuaz ince çizgi, lens halkası", hex: "#21888F", roughness: 0.40, metallic: 0.0}
-  UM_Orange:      {ral: "RAL 2005", name_tr: "parlak turuncu: kuyu ve kapak içleri, pala uçları, uyarı bandı", hex: "#FF2301", roughness: 0.50, metallic: 0.0}
+  UM_Orange:      {ral: "RAL 2004", name_tr: "saf turuncu (floresan değil, ışımaz): YALNIZ uyarı — pala uçları, dikeylerde pervane düzlemi bandı, bakım sehpası", hex: "#E75B12", roughness: 0.50, metallic: 0.0}
   UM_SmokeHatch:  {ral: null, name_tr: "füme parlak PETG aviyonik kapağı (yarı saydam)", hex: "#2B3036", roughness: 0.04, metallic: 0.0, transmission: 0.55, ior: 1.57}
   UM_PACF:        {ral: null, name_tr: "boyasız PA-CF (fileto, pabuç, bafıl)", hex: "#2E3032", roughness: 0.70, metallic: 0.0}
-  UM_Nozzle:      {ral: "RAL 7016", name_tr: "lüle halkası, ısı tonu efektli antrasit", hex: "#383E42", roughness: 0.35, metallic: 0.6, heat_tint: ["#6A4A2E", "#3B4F7A"]}
-  UM_Prop:        {ral: null, name_tr: "kayın pervane (vernikli)", hex: "#B98B5E", roughness: 0.30, metallic: 0.0}
-  UM_Spinner:     {ral: null, name_tr: "parlak alüminyum spinner", hex: "#C9CCCF", roughness: 0.18, metallic: 1.0}
+  UM_Nozzle:      {ral: null, name_tr: "lüle halkası, boyasız PA-CF (soğutma havası çıkışı; ısı tonu yok — egzoz sol yanaktaki susturucudan çıkar)", hex: "#2C2E30", roughness: 0.60, metallic: 0.0}
+  UM_Prop:        {ral: null, name_tr: "kayın pervane, mat siyah boyalı (damar görünmez; uçlar UM_Orange)", hex: "#151618", roughness: 0.45, metallic: 0.0}
+  UM_Spinner:     {ral: null, name_tr: "boyalı alüminyum spinner (saten antrasit, ayna yansıması yok)", hex: "#3C4146", roughness: 0.32, metallic: 0.0}
   UM_Gear:        {ral: null, name_tr: "anodize alüminyum bacak", hex: "#8C9196", roughness: 0.30, metallic: 1.0}
   UM_Hub:         {ral: null, name_tr: "teker göbeği", hex: "#5A5F64", roughness: 0.35, metallic: 0.9}
   UM_Tire:        {ral: null, name_tr: "lastik", hex: "#1B1B1C", roughness: 0.85, metallic: 0.0}
-  UM_TurretBody:  {ral: null, name_tr: "mat siyah kamera topu ve yaw gövdesi", hex: "#141516", roughness: 0.60, metallic: 0.0}
+  UM_TurretBody:  {ral: null, name_tr: "kamera topu ve yaw gövdesi (saten koyu gri; top formu okunur)", hex: "#2A2D30", roughness: 0.45, metallic: 0.0}
   UM_SensorGlass: {ral: null, name_tr: "kaplamalı optik cam", hex: "#0B1418", roughness: 0.03, metallic: 0.0, transmission: 0.2, ior: 1.52}
   UM_Engine:      {ral: null, name_tr: "motor (siyah soğutma kanatçıkları, alüminyum karter)", hex: "#2A2B2D", roughness: 0.45, metallic: 0.7}
   UM_Carbon:      {ral: null, name_tr: "karbon fiber boru", hex: "#1D1F21", roughness: 0.35, metallic: 0.0}
@@ -760,12 +760,15 @@ materials:
   UM_NavGreen:    {ral: null, name_tr: "sancak seyrüsefer (yeşil, ışıyan)", hex: "#18FF5A", roughness: 0.20, metallic: 0.0, emission: 8.0}
   UM_Strobe:      {ral: null, name_tr: "beyaz strobe (ışıyan)", hex: "#F4F7FF", roughness: 0.20, metallic: 0.0, emission: 20.0}
   UM_StatusLED:   {ral: "RAL 5018", name_tr: "taret durum LED halkası (yalnız yerde, kısık)", hex: "#21C8D0", roughness: 0.20, metallic: 0.0, emission: 0.8}
-  UM_Liner:       {ral: "RAL 7035", name_tr: "takım kuyusu astarı ve kapak içleri (açık gri, ipek mat astar boya)", hex: "#B4B9B6", roughness: 0.62, metallic: 0.0}
+  UM_Liner:       {ral: null, name_tr: "takım kuyusu astarı ve kapak içleri (açık gri ipek mat astar boya; RAL 7035 üst boyadan bir ton koyu)", hex: "#B4B9B6", roughness: 0.62, metallic: 0.0}
   UM_Seal:        {ral: null, name_tr: "kapak/kuyu kenarı fitili ve gölge (ayrım) çizgileri, mat koyu kauçuk", hex: "#1C1D1E", roughness: 0.85, metallic: 0.0}
   UM_Bezel:       {ral: null, name_tr: "anodize koyu gri lens çerçevesi (taret pencereleri)", hex: "#2C2F33", roughness: 0.38, metallic: 0.6}
-  UM_Exhaust:     {ral: null, name_tr: "susturucu çıkışı ve ısı kalkanı (ısıl boyalı paslanmaz)", hex: "#4D4A46", roughness: 0.48, metallic: 0.75}
+  UM_Exhaust:     {ral: null, name_tr: "susturucu çıkışı ve ısı kalkanı (ısıl boyalı paslanmaz, bronz/mavi ısı tonu)", hex: "#4D4A46", roughness: 0.48, metallic: 0.75, heat_tint: ["#6A4A2E", "#3B4F7A"]}
   UM_Erosion:     {ral: null, name_tr: "hücum kenarı aşınma bandı (poliüretan erozyon bandı)", hex: "#A9AFB1", roughness: 0.32, metallic: 0.0, coat: 0.5}
   UM_Hazard:      {ral: "RAL 3020", name_tr: "uyarı yazıları ve statik port halkası (trafik kırmızısı)", hex: "#C1121C", roughness: 0.45, metallic: 0.0}
+  # Dönen pervanenin zaman ortalamalı diski (U_PropDisc, rig kurar): saydam koyu duman + uçlarda turuncu halka.
+  # Örtme = U_PropDisc["ucav_disc"] (rig: devirle 0 → 0,35) × yarıçap profili; 900 dev/dk altında render dışı.
+  UM_PropDisc:    {ral: null, name_tr: "pervane diski (dönen pala izi, yarı saydam; uçta turuncu halka)", hex: "#2B2D30", roughness: 0.60, metallic: 0.0}
   liveries:
     standard: "Üst RAL 7035, alt RAL 9003 (karşı gölgeli mat iki ton)"
     standart: "standard ile aynı (Blender/CLI adı)"
@@ -819,6 +822,10 @@ print:
     - {zone: "control_surface", material: "LW-PLA", wall_mm: 0.5}
     - {zone: "stab",            material: "LW-PLA", wall_mm: 0.5}
     - {zone: "stab_root_fillet", material: "PA-CF", wall_mm: 1.6}
+    # Isı kuralı (heat_rule): susturucu zarfına 150 mm içindeki stabilize kök segmenti (stab_1) ve iç elevatör
+    # (elevator_1) LW-PLA olamaz → printprep bunları LW-ASA'ya geçirir (rapor: "Isı kuralı"). En dar aralık
+    # elevator_1 ↔ susturucu ≈ 16 mm (PA-CF yanak duvarı arada); prototipte termokupl ile ölçülür.
+    - {zone: "stab_root_heat",  material: "LW-ASA", wall_mm: 0.5, parts: ["stab_1", "elevator_1"]}
     - {zone: "fin",             material: "LW-PLA", wall_mm: 0.5}
     - {zone: "hatch",           material: "PETG", wall_mm: 1.6}
     - {zone: "intake",          material: "PA-CF", wall_mm: 1.6}
@@ -855,9 +862,12 @@ print:
     - {name: "stab_spar",       name_tr: "Stabilize kirişi (30° oklu)", od_mm: 12, id_mm: 10, length_m: 0.56, qty: 2}
     - {name: "stab_rear_rod",   name_tr: "Stabilize arka çubuğu", od_mm: 6, id_mm: 4, length_m: 0.50, qty: 2}
     - {name: "fin_spar",        name_tr: "Dikey kirişi", od_mm: 8, id_mm: 6, length_m: 0.32, qty: 2}
-  g10_bridge: {plates: 2, t_mm: 3, h_mm: 45, length_mm: 300, bolts: "boru başına 2×M4"}
+  g10_bridge: {plates: 2, t_mm: 3, h_mm: 40, length_mm: 300, bolts: "boru başına 2×M4"}   # panel 45 mm; kök profili iç
+                                                                                      # yüksekliği ≈ 42 mm ve depo tabanı (z −0,0165) → 40
   estimates: {print_mass_kg: 3.33, print_hours: 316, segment_count: 125}   # panel tahmini. Kurulan plan (printprep, 256 tabla):
-                                                                       # 89 basılı parça, 3,62 kg, ≈267 h → out/print_report.md
+                                                                       # 65 benzersiz STL, 104 basılı parça, 4,06 kg, ≈292 h
+                                                                       # (+0,36 kg yük yolu parçaları; 220 tabla 66/105)
+                                                                       # → out/print_report.md. Fark kütle rezervini tüketir (README §12)
 
 # -----------------------------------------------------------------------------------------------------
 # sizing.py --check toleransları (türetilen değer ile yukarıdaki referans arasındaki izinli fark)

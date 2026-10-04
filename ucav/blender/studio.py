@@ -45,7 +45,9 @@ alan derinliği (``fstop``, odak = uzaklık × ``focus``) ``apply_view`` ile uyg
 alınır (``render.render_stills`` bunu her görünümde yapar; animasyonlu kontrol eğrileri o süre için susturulur).
 
 Nesne adları: stüdyo ağları/ışıkları ``S_*``, malzemeleri ``SM_*``, dünyalar ``SW_*`` (``UM_*`` uçak
-malzemelerinden ayrı), hepsi ``UCAV_Studio`` koleksiyonunda. ``setup`` tekrar çağrılabilir (eski stüdyo
+malzemelerinden ayrı). Koleksiyonlar (``UCAV_Studio`` altında, renk etiketli): ``UCAV_Env`` (zemin, gökyüzü/stüdyo
+ışıkları, dolgu), ``UCAV_Cameras_Stills`` (``U_Cam_<görünüm>`` + ``U_CamRig_Stills``; ebeveyn tersi birim),
+``animation`` modülünün ``UCAV_Cameras_Anim`` ve ``UCAV_Stand``'i. ``setup`` tekrar çağrılabilir (eski stüdyo
 nesneleri silinir; animasyon kameraları ``U_Cam_Showcase_*``/``U_Cam_Mechanisms`` dokunulmaz).
 """
 from __future__ import annotations
@@ -62,6 +64,9 @@ from . import util as U
 
 ENVS = ("pist", "studyo")
 STUDIO = "UCAV_Studio"
+STILLS_COL = "UCAV_Cameras_Stills"         # sabit görüntü kameraları + U_CamRig_Stills (UCAV_Studio altında)
+ENV_COL = "UCAV_Env"                       # zemin, gökyüzü ışıkları, stüdyo ışıkları, dolgu (S_*; UCAV_Studio altında)
+SUB_COLORS = {STILLS_COL: "COLOR_05", ENV_COL: "COLOR_07"}
 RIG = "U_CamRig_Stills"
 LIGHT_RIG = "S_LightRig"
 SUN = "S_Sun"
@@ -158,8 +163,15 @@ def configure_cycles(scene: bpy.types.Scene | None = None, samples: int = 96, *,
 # =====================================================================================================
 # Yardımcılar
 # =====================================================================================================
-def _studio_col(scene) -> bpy.types.Collection:
-    return U.ensure_collections(scene)[STUDIO]
+def _studio_col(scene, sub: str | None = None) -> bpy.types.Collection:
+    """``UCAV_Studio`` ya da onun alt koleksiyonu (``STILLS_COL``, ``ENV_COL``; renk etiketli)."""
+    cols = U.ensure_collections(scene)
+    if sub is None:
+        return cols[STUDIO]
+    col = U.ensure_collection(sub, cols[STUDIO], scene)
+    if hasattr(col, "color_tag"):
+        col.color_tag = SUB_COLORS.get(sub, "NONE")
+    return col
 
 
 def _remove(prefixes: tuple[str, ...]) -> None:
@@ -484,7 +496,7 @@ def _hills(n: int = 2880, r: float = 4300.0, seed: int = 38) -> tuple[list, list
 
 
 def build_ground_pist(scene, az=SUN_AZ_DEG, el=SUN_EL_DEG) -> list[str]:
-    col = _studio_col(scene)
+    col = _studio_col(scene, ENV_COL)
     grass = _grass_material(scene, az, el)
     asph = _asphalt_material(scene, az, el)
     paint = _paint_material(scene, az, el)
@@ -508,7 +520,7 @@ def build_ground_pist(scene, az=SUN_AZ_DEG, el=SUN_EL_DEG) -> list[str]:
 
 
 def build_ground_studio(scene) -> list[str]:
-    col = _studio_col(scene)
+    col = _studio_col(scene, ENV_COL)
     mat = _studio_floor_material()
     n = 96
     ang = 2 * math.pi * np.arange(n) / n
@@ -542,7 +554,7 @@ def _aim(ob, target: Vector) -> None:
 
 
 def build_lights_pist(scene, az=SUN_AZ_DEG, el=SUN_EL_DEG) -> list[str]:
-    col = _studio_col(scene)
+    col = _studio_col(scene, ENV_COL)
     sun = _light(SUN, "SUN", col, SUN_STRENGTH, (1.0, 0.955, 0.90), angle=math.radians(SUN_ANGLE_DEG))
     _orient_sun(sun, az, el)
     return [sun.name, _under_fill(col, ENV_FILL_W["pist"]).name]
@@ -606,7 +618,7 @@ def _orient_sun(sun, az, el) -> None:
 
 def build_lights_studio(scene) -> list[str]:
     """Anahtar (ön-sol üst, büyük softbox), dolgu (sağ), iki kontur (arka), tepe şerit softbox."""
-    col = _studio_col(scene)
+    col = _studio_col(scene, ENV_COL)
     rig = bpy.data.objects.get(LIGHT_RIG) or bpy.data.objects.new(LIGHT_RIG, None)
     if rig.name not in col.objects:
         col.objects.link(rig)
@@ -832,7 +844,7 @@ def build_cameras(scene=None) -> list[str]:
     """``VIEWS`` kameralarını kurar; ``U_CamRig_Stills`` (``U_Root`` konum + baş açısı izler) altına bağlar.
     Uzaklıklar dinlenme pozundaki uçağa göre hesaplanır (takım açık)."""
     scene = scene or bpy.context.scene
-    col = _studio_col(scene)
+    col = _studio_col(scene, STILLS_COL)
     root = bpy.data.objects.get("U_Root")
     rest = Matrix.Translation(Vector(P.U_ROOT_B))
     # dinlenme pozu noktaları: kök şu an başka yerdeyse geri taşı
@@ -845,6 +857,9 @@ def build_cameras(scene=None) -> list[str]:
     rig = bpy.data.objects.get(RIG)
     if rig is None:
         rig = bpy.data.objects.new(RIG, None)
+    if rig.name not in col.objects:                               # eski dosyada UCAV_Studio'daysa taşı
+        for c in list(rig.users_collection):
+            c.objects.unlink(rig)
         col.objects.link(rig)
     rig.empty_display_type = "CUBE"
     rig.empty_display_size = 0.2
@@ -882,9 +897,9 @@ def build_cameras(scene=None) -> list[str]:
                 dist = v.fit / ((36.0 / 2) / v.lens / v.aspect)
             pos = tgt + _view_dir(v) * dist
         R = _look_rotation(pos, pos - _view_dir(v), Vector(v.up) if v.up else None)
-        ob.parent = rig                                         # dünya = rig · rest⁻¹ · taban → dinlenmede taban
-        ob.matrix_parent_inverse = rest.inverted()
-        ob.matrix_basis = Matrix.Translation(pos) @ R.to_4x4()
+        ob.parent = rig                                         # dünya = rig · (rest⁻¹ · taban) → dinlenmede taban
+        ob.matrix_parent_inverse = Matrix.Identity(4)           # birim ebeveyn tersi (rig modülüyle aynı kural)
+        ob.matrix_basis = rest.inverted() @ Matrix.Translation(pos) @ R.to_4x4()
         cam.dof.use_dof = v.fstop is not None and not v.ortho
         if cam.dof.use_dof:
             cam.dof.aperture_fstop = v.fstop
@@ -1022,7 +1037,7 @@ def setup(scene: bpy.types.Scene | None = None, *, env: str = "pist", samples: i
     else:
         world = build_world_studio(scene)
         objs = build_ground_studio(scene) + build_lights_studio(scene) + \
-            [_under_fill(_studio_col(scene), ENV_FILL_W["studyo"]).name]
+            [_under_fill(_studio_col(scene, ENV_COL), ENV_FILL_W["studyo"]).name]
     set_sun(az, el, scene)
     cams = build_cameras(scene) if cameras else []
     if cams and (scene.camera is None or not scene.camera.name.startswith("U_Cam_")):

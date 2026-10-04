@@ -15,20 +15,25 @@ yavaşlar ve takım toplanmaya başlayınca fren (dönüş 0).
 Her animasyon kamerasının kendi hedef boşluğu vardır (``U_CamTarget_<kamera>``), alan derinliği açıktır (odak =
 hedef). Kameralar ``UCAV_Studio/UCAV_Cameras_Anim``, sehpa ``UCAV_Studio/UCAV_Stand`` koleksiyonundadır.
 
-``showcase`` (19 s, 24 fps, 456 kare, pist)
+``showcase`` (21 s, 24 fps, 504 kare, pist)
 ------------------------------------------
-* A0 (0–1,0 s): kuruluş planı, 40 mm yavaş yaklaşma (uçak kadrajın ~%75–80'i); motor çalışır (0 → 3600 → 3000
-  dev/dk), taret bakınır.
-* A1 (1,0–2,2 s): sol kanat yakın planı (85 mm, f/11): kanatçık +20/−20, sonra flap'a pan ve flap 0 → 20°.
-* A2 (2,2–3,4 s): kuyruk yakın planı (70 mm): irtifa −22/+18, istikamet ±20 (burun tekeri birlikte döner).
-* B (3,4–8,6 s): pist kenarı araç kamerası (45 mm, öncü boşluk, hafif sarsıntı): düz kalkış koşusu 8600 dev/dk,
-  7,5 s'de 25,7 m'de teker keser (spec 25,5 m @ 13,2 m/s); amortisörler kendiliğinden uzar.
-* C (8,6–15,6 s): takip düzeneği (``U_CamRig_Follow`` uçağın konum + baş açısını izler; kamera uçakla aynı
-  yükseklikte → arkada zemin ve ufuk). Takım 10 s'de (≈ 2,8 m AGL, pozitif tırmanışta) gerçek sırayla toplanır
-  (kapak 1 s + bacak 5 s + kapak 1 s, ER-150 8,4 V'ta 5 s); 10,6 s'den sonra 26° yatışlı tırmanan sol dönüş.
-* D (15,6–19 s): uçakla aynı yükseklikte (tepe/direk) yer kamerası, kameraman zum'u: lens uçağın kadrajdaki
-  izdüşüm genişliğini ~%62'de tutar (35–300 mm, gecikmeli), öncü boşluk, el titremesi; en yakın geçiş 18,3 s'de.
-  Taret 9–10,2 s'de betikten D kamerasını izlemeye geçer. Flap 15,4–16,6 s'de 0.
+* A (0–2,0 s): kuruluş planı, ön-sol 3/4, 40 mm yaklaşma + alçalma (uçak kadrajın %63'ünden %80'ine); motor
+  çalışır (0 → 3600 → 3000 dev/dk), taret bakınır.
+* A1 (2,0–2,95 s): sol kanatçık yakın planı (85 mm, f/11): kanatçık +20/−20 (firar kenarı ~25/42 piksel @ 720p).
+* A1F (2,95–3,95 s): flap yakın planı (70 mm, arka-üst 3/4): iç + dış flap 0 → 20° (kalkış flabı). Kesmeyle.
+* A2 (3,95–5,4 s): kuyruk yakın planı (80 mm): irtifa −25/+20, istikamet ±22 (burun tekeri birlikte döner).
+* B (5,4–10,6 s): pist kenarı araç kamerası (öncü boşluk, hafif sarsıntı, kadrajın ~%60'ı): düz kalkış koşusu
+  8600 dev/dk, 9,5 s'de 25,7 m'de teker keser (spec 25,5 m @ 13,2 m/s); amortisörler kendiliğinden uzar.
+* C (10,6–17,6 s): takip düzeneği (``U_CamRig_Follow`` uçağın konum + baş açısını izler; kamera uçakla aynı
+  yükseklikte → arkada zemin ve ufuk). Takım 12 s'de (≈ 2,8 m AGL, pozitif tırmanışta) gerçek sırayla toplanır
+  (kapak 1 s + bacak 5 s + kapak 1 s, ER-150 8,4 V'ta 5 s); 12,6 s'den sonra 26° yatışlı tırmanan sol dönüş.
+* D (17,6–21 s): uçakla aynı yükseklikte (tepe/direk) yer kamerası, kameraman zum'u: lens uçağın kadrajdaki
+  izdüşüm genişliğini ~%60'ta tutar (35–300 mm, gecikmeli), öncü boşluk, el titremesi; en yakın geçiş ≈ 20 s'de
+  (12 m).
+  Taret 11–12,2 s'de betikten D kamerasını izlemeye geçer. Flap 17,4–18,6 s'de 0.
+
+Uçuş evresi zamanları ilk 19 s'lik planın ``PRE`` (2 s) kaydırılmışıdır (``_T()``); kumanda kontrolü (A1–A2)
+kendi zamanlarındadır.
 
 ``mechanisms`` (16 s, 384 kare, kesintisiz döngü, stüdyo)
 --------------------------------------------------------
@@ -63,7 +68,7 @@ ROOT = "U_Root"
 STUDIO = "UCAV_Studio"
 ANIM_COL = "UCAV_Cameras_Anim"
 STAND_COL = "UCAV_Stand"
-CLIPS = {"showcase": 19.0, "mechanisms": 16.0}           # süre (s)
+CLIPS = {"showcase": 21.0, "mechanisms": 16.0}           # süre (s)
 MARK = "YK38_"                                           # zaman çizelgesi işaret öneki
 SENSOR = 36.0                                            # mm, yatay (16:9 çıktı)
 ASPECT = 16.0 / 9.0
@@ -151,7 +156,8 @@ def _hull_local_cached() -> tuple:
             st = P.wing_station(sg * 0.5 * y)
             pts += [P.to_blender(st.le_s, sg * 0.5 * y, st.z_ref), P.to_blender(st.te_s, sg * 0.5 * y, st.z_ref)]
             ss = P.stab_station(sg * P.STAB_HALF_SPAN)
-            pts += [P.to_blender(ss.le_s, sg * P.STAB_HALF_SPAN, ss.z), P.to_blender(ss.te_s, sg * P.STAB_HALF_SPAN, ss.z)]
+            pts += [P.to_blender(ss.le_s, sg * P.STAB_HALF_SPAN, ss.z),
+                    P.to_blender(ss.te_s, sg * P.STAB_HALF_SPAN, ss.z)]
             fs = P.fin_station(float(P.SPEC["tail"]["fin"]["height_m"]), "L" if sg > 0 else "R")
             pts += [P.to_blender(*fs.le), P.to_blender(fs.te_s, fs.le[1], fs.le[2])]
         for s in np.linspace(0.0, P.FUSELAGE_LENGTH, 9):
@@ -218,32 +224,46 @@ def _world_points(loc: np.ndarray, Rm: np.ndarray, hull: np.ndarray) -> np.ndarr
 # =====================================================================================================
 # Planlar (saf numpy; bpy gerektirmez)
 # =====================================================================================================
+PRE = 2.0                                                # açılış planı uzatması (s): kuruluş planı 2 s
+T_ROLL = PRE + 3.4                                       # kalkış koşusu başlangıcı (s)
+
+
+def _T(t: float) -> float:
+    """Uçuş evresi zamanı: 19 s'lik ilk plandaki ``t`` → bu klipte (açılış ``PRE`` kadar uzun)."""
+    return PRE + t
+
+
 CONTROL_KEYS_SHOWCASE: dict[str, list[tuple[float, float]]] = {
-    # takım: pozitif tırmanışta (≈ 2,8 m AGL, teker kesmeden 2,5 s sonra) toplanır; bacaklar 11,05–15,95 s
-    "gear": [(0.0, 1.0), (10.0, 1.0), (17.0, 0.0)],
+    # takım: pozitif tırmanışta (≈ 2,8 m AGL, teker kesmeden 2,5 s sonra) toplanır; bacaklar 13,05–17,95 s
+    "gear": [(0.0, 1.0), (_T(10.0), 1.0), (_T(17.0), 0.0)],
     "gear_doors": [(0.0, 0.0)],
-    "prop_rpm": [(0.0, 0.0), (0.25, 0.0), (1.0, 3600.0), (1.6, 3000.0), (3.4, 3000.0), (4.0, 8600.0), (11.0, 8600.0),
-                 (12.4, 7400.0), (19.0, 7400.0)],
-    "aileron_deg": [(0.0, 0.0), (1.05, 0.0), (1.35, 20.0), (1.75, -20.0), (2.0, 0.0), (5.0, 0.0), (5.6, 2.0),
-                    (6.3, -1.5), (7.0, 0.0), (10.5, 0.0), (10.9, -12.0), (11.6, -1.0), (16.4, -1.0), (16.9, 6.0),
-                    (17.6, 0.0), (19.0, 0.0)],
-    "elevator_deg": [(0.0, 0.0), (2.25, 0.0), (2.45, -22.0), (2.68, 18.0), (2.85, 0.0), (6.4, 0.0), (7.1, -6.0),
-                     (8.0, -3.0), (10.6, -3.0), (11.6, -6.0), (16.4, -6.0), (17.4, -2.0), (19.0, -2.0)],
-    "rudder_deg": [(0.0, 0.0), (2.85, 0.0), (3.03, 20.0), (3.22, -20.0), (3.36, 0.0), (4.8, 0.0), (5.3, -3.0),
-                   (6.0, 2.5), (6.7, 0.0), (10.5, 0.0), (10.9, -5.0), (11.8, -1.5), (16.4, -1.5), (17.0, 2.5),
-                   (17.6, 0.0), (19.0, 0.0)],
-    "flap_deg": [(0.0, 0.0), (1.92, 0.0), (2.2, 20.0), (15.4, 20.0), (16.6, 0.0)],
+    "prop_rpm": [(0.0, 0.0), (0.45, 0.0), (1.25, 3600.0), (1.9, 3000.0), (T_ROLL, 3000.0), (_T(4.0), 8600.0),
+                 (_T(11.0), 8600.0), (_T(12.4), 7400.0), (_T(19.0), 7400.0)],
+    # kumanda kontrolü (yerde, tam sapma): kanatçık 2,0–2,95 s (A1), flap 2,95–3,95 s (A1F), irtifa ve istikamet
+    # 3,95–5,4 s (A2; burun tekeri istikametle döner)
+    "aileron_deg": [(0.0, 0.0), (2.05, 0.0), (2.3, 20.0), (2.62, -20.0), (2.88, 0.0), (_T(5.0), 0.0), (_T(5.6), 2.0),
+                    (_T(6.3), -1.5), (_T(7.0), 0.0), (_T(10.5), 0.0), (_T(10.9), -12.0), (_T(11.6), -1.0),
+                    (_T(16.4), -1.0), (_T(16.9), 6.0), (_T(17.6), 0.0), (_T(19.0), 0.0)],
+    "elevator_deg": [(0.0, 0.0), (4.0, 0.0), (4.22, -25.0), (4.5, 20.0), (4.68, 0.0), (_T(6.4), 0.0), (_T(7.1), -6.0),
+                     (_T(8.0), -3.0), (_T(10.6), -3.0), (_T(11.6), -6.0), (_T(16.4), -6.0), (_T(17.4), -2.0),
+                     (_T(19.0), -2.0)],
+    "rudder_deg": [(0.0, 0.0), (4.7, 0.0), (4.9, 22.0), (5.12, -22.0), (5.3, 0.0), (_T(4.8), 0.0), (_T(5.3), -3.0),
+                   (_T(6.0), 2.5), (_T(6.7), 0.0), (_T(10.5), 0.0), (_T(10.9), -5.0), (_T(11.8), -1.5),
+                   (_T(16.4), -1.5), (_T(17.0), 2.5), (_T(17.6), 0.0), (_T(19.0), 0.0)],
+    "flap_deg": [(0.0, 0.0), (3.05, 0.0), (3.55, 20.0), (_T(15.4), 20.0), (_T(16.6), 0.0)],
     "nav_lights": [(0.0, 1.0)],
     "strobe": [(0.0, 1.0)],
     "status_led": [(0.0, 0.0)],
     "prop_auto": [(0.0, 0.0)],                            # açı = U_Prop["ucav_turns"] (pişirilmiş ∫rpm)
 }
-TURRET_SCRIPT_SHOWCASE = {"pan": [(0.0, 0.0), (0.15, 0.0), (0.5, -40.0), (0.9, 35.0), (1.5, 0.0), (9.0, 0.0)],
-                          "tilt": [(0.0, 0.0), (0.15, 0.0), (0.5, -15.0), (0.9, -5.0), (1.5, -10.0), (9.0, -10.0)]}
-TRACK_BLEND = (9.0, 10.2)                                # betik → hedef izleme geçişi (s)
-SHOT_TIMES = {"A": 0.0, "A1": 1.0, "A2": 2.2, "B": 3.4, "C": 8.6, "D": 15.6}
-EVENTS_SHOWCASE = {"ev_motor": 0.25, "ev_kalkis": 3.4, "ev_takim_yukari": 10.0, "ev_donus": 10.6, "ev_flap_0": 15.4}
-D_PASS_T = 17.6                                          # D: en yakın geçiş anı (s)
+TURRET_SCRIPT_SHOWCASE = {"pan": [(0.0, 0.0), (0.35, 0.0), (0.85, -40.0), (1.35, 35.0), (1.9, 0.0), (_T(9.0), 0.0)],
+                          "tilt": [(0.0, 0.0), (0.35, 0.0), (0.85, -15.0), (1.35, -5.0), (1.9, -10.0),
+                                   (_T(9.0), -10.0)]}
+TRACK_BLEND = (_T(9.0), _T(10.2))                        # betik → hedef izleme geçişi (s)
+SHOT_TIMES = {"A": 0.0, "A1": 2.0, "A1F": 2.95, "A2": 3.95, "B": T_ROLL, "C": _T(8.6), "D": _T(15.6)}
+EVENTS_SHOWCASE = {"ev_motor": 0.45, "ev_kumanda_kontrol": 2.0, "ev_kalkis": T_ROLL, "ev_takim_yukari": _T(10.0),
+                   "ev_donus": _T(10.6), "ev_flap_0": _T(15.4)}
+D_PASS_T = _T(17.6)                                      # D: en yakın geçiş anı (s)
 D_SIDE, D_AHEAD, D_BELOW = 12.0, 6.0, 0.3                # D: geçiş noktasının solunda/önünde, uçağın altında (m)
 D_FILL, D_LENS = 0.60, (35.0, 300.0)                     # D: izdüşüm genişliği / kadraj, lens sınırları
 LEAD = {"B": 0.10, "D": 0.10}                            # öncü boşluk (kadraj genişliği oranı)
@@ -311,10 +331,11 @@ def _flight_path(n: int, t: np.ndarray, t_roll: float):
         if t_lof is None and v[i] >= V_LOF:
             t_lof, i_lof = t[i], i
     if t_lof is None:
-        t_lof, i_lof = 7.3, int(round(7.3 * FPS))
-    gamma = np.radians(_ease(t, [(t_lof, 0.0), (t_lof + 1.8, 7.0), (12.0, 7.0), (14.5, 2.5), (16.5, 0.5)]))
-    alpha = np.radians(_ease(t, [(t_lof - 0.15, 0.0), (t_lof + 0.6, 2.2), (19.0, 2.2)]))
-    bank = np.radians(_ease(t, [(10.6, 0.0), (11.9, -26.0), (16.4, -26.0), (17.6, -12.0)]))     # − = sol kanat aşağı
+        t_lof, i_lof = t_roll + 3.9, int(round((t_roll + 3.9) * FPS))
+    gamma = np.radians(_ease(t, [(t_lof, 0.0), (t_lof + 1.8, 7.0), (_T(12.0), 7.0), (_T(14.5), 2.5), (_T(16.5), 0.5)]))
+    alpha = np.radians(_ease(t, [(t_lof - 0.15, 0.0), (t_lof + 0.6, 2.2), (_T(19.0), 2.2)]))
+    bank = np.radians(_ease(t, [(_T(10.6), 0.0), (_T(11.9), -26.0), (_T(16.4), -26.0),     # − = sol kanat aşağı
+                                (_T(17.6), -12.0)]))
     yaw = np.zeros(n)
     pos = np.zeros((n, 3))
     for i in range(1, n):
@@ -332,7 +353,7 @@ def _lead_target(loc: np.ndarray, cam: np.ndarray, lens: np.ndarray, lead: float
     """Öncü boşluk: hedef = kök + v̂·LEAD·kadraj genişliği (uçak hareket yönünün gerisinde kalır)."""
     vel = np.gradient(loc, axis=0) * FPS
     sp = np.linalg.norm(vel, axis=1)
-    vh = _unit(vel) * np.clip(sp / 3.0, 0.0, 1.0)[:, None]          # dururken öncü yok
+    vh = _unit(vel) * np.clip(sp / 1.5, 0.0, 1.0)[:, None]          # dururken öncü yok
     width = SENSOR / np.asarray(lens, float) * np.linalg.norm(loc - cam, axis=1)
     return loc + vh * (lead * width)[:, None]
 
@@ -387,40 +408,45 @@ def showcase_plan(hull: np.ndarray | None = None) -> dict:
     w = _ease(t, [(TRACK_BLEND[0], 0.0), (TRACK_BLEND[1], 1.0)])
     pan = np.clip(pan_s + w * (pan_t - pan_s), -180.0, 180.0)
     tilt = np.clip(tilt_s + w * (tilt_t - tilt_s), -90.0, 20.0)
-    # ---------------------------------------------------------------- A0 (kuruluş), A1 (kanat), A2 (kuyruk)
-    cam_a = np.column_stack([_ease(t, [(0.0, 2.60), (1.05, 2.05)]), _ease(t, [(0.0, 3.30), (1.05, 2.85)]),
-                             _ease(t, [(0.0, 0.10), (1.05, 0.05)])])
+    # ---------------------------------------------------------------- A (kuruluş), A1, A1F, A2 (yakın planlar)
+    # A: ön-sol 3/4, 2 s yaklaşma + alçalma (planform görünür → alçak kahraman açısı); motor çalışır, taret bakınır
+    t_a = SHOT_TIMES["A1"] + 0.05
+    cam_a = np.column_stack([_ease(t, [(0.0, 2.95), (t_a, 2.05)]), _ease(t, [(0.0, 3.60), (t_a, 2.85)]),
+                             _ease(t, [(0.0, 0.62), (t_a, 0.07)])])
     tgt_a = root0 + np.array([-0.02, 0.45, -0.04])
-    # A1: kanatçığın dış-arka-üstünden (açıklık boyunca kısalır, firar kenarı hareketi bakışa dik); 1,78–2,0 s'de
-    # flap'a çevrilir (pan)
-    ail, flo = _hinge_mid("Aileron"), _hinge_mid("FlapOut")
+    # A1: kanatçık, dış-arka-üstten (açıklık boyunca kısalır, firar kenarı hareketi bakışa dik)
+    ail, flo, fli = _hinge_mid("Aileron"), _hinge_mid("FlapOut"), _hinge_mid("FlapIn")
     cam_a1 = ail + _unit(np.array([-1.0, 1.3, 0.3])) * 1.6
-    ta0, ta1 = ail + np.array([0.02, 0.03, -0.01]), flo + np.array([0.0, 0.10, 0.0])
-    tgt_a1 = np.column_stack([_ease(t, [(1.78, ta0[i]), (2.0, ta1[i])]) for i in range(3)])
+    tgt_a1 = ail + np.array([0.02, 0.03, -0.01])
+    # A1F: iki flap, arka-üst 3/4 (gövde ve ana takım arka planda) — kanatçıktan kesmeyle (pan yok)
+    tgt_af = 0.75 * flo + 0.25 * fli + np.array([-0.02, 0.0, 0.0])
+    cam_af = tgt_af + _unit(np.array([-1.0, 0.8, 0.45])) * 2.2
+    # A2: kuyruk 3/4 arka-sol-üst: irtifa ve istikamet aynı kadrajda
     ele = _hinge_mid("Elevator")
     stab_mid = np.array([ele[0], 0.0, ele[2]])
-    cam_a2 = stab_mid + np.array([-1.65, 1.05, 0.55])
-    tgt_a2 = stab_mid + np.array([-0.09, 0.25, 0.034])
+    tgt_a2 = stab_mid + np.array([-0.09, 0.27, 0.07])
+    cam_a2 = tgt_a2 + _unit(np.array([-1.65, 1.05, 0.55])) * 2.03
     # ---------------------------------------------------------------- B: pist kenarı araç kamerası
     cam_b = np.column_stack([_lag(loc[:, 0] + B_AHEAD, 0.55), np.full(n, B_Y), np.full(n, P.GROUND_Z + 0.50)])
     i_roll = int(round(t_roll * FPS))
     cam_b[:i_roll, 0] = cam_b[i_roll, 0]
-    cam_b[:, 2] += _ease(t, [(7.0, 0.0), (8.6, 1.4)])                   # kalkışta hafif yükselir
+    cam_b[:, 2] += _ease(t, [(_T(7.0), 0.0), (_T(8.6), 1.4)])             # kalkışta hafif yükselir
     x, _, _ = _project(cam_b, loc, W)                                     # kameraman zum'u: kadrajın ~%60'ı
     lens_b = np.clip(_smooth(B_FILL * SENSOR / (x.max(1) - x.min(1)), 0.3), *B_LENS)
     tgt_b = _visual_center(cam_b, _lead_target(loc, cam_b, lens_b, LEAD["B"]), loc, W)
     # ---------------------------------------------------------------- C: takip düzeneği (yerel ofsetler)
-    follow = [(8.0, (-6.8, -3.2, 0.25)), (9.8, (-6.3, -3.4, -0.20)), (13.6, (-4.6, -3.9, 0.15))]
+    follow = [(_T(8.0), (-6.8, -3.2, 0.25)), (_T(9.8), (-6.3, -3.4, -0.20)), (_T(13.6), (-4.6, -3.9, 0.15))]
     tgt_c_local = (0.25, 0.0, -0.06)
     cams = {
         "A": {"loc": cam_a, "target": tgt_a, "lens": 40.0, "fstop": 5.6},
         "A1": {"loc": cam_a1, "target": tgt_a1, "lens": 85.0, "fstop": 11.0},
-        "A2": {"loc": cam_a2, "target": tgt_a2, "lens": 70.0, "fstop": 5.6},
+        "A1F": {"loc": cam_af, "target": tgt_af, "lens": 70.0, "fstop": 8.0},
+        "A2": {"loc": cam_a2, "target": tgt_a2, "lens": 80.0, "fstop": 5.6},
         "B": {"loc": cam_b, "target": tgt_b, "lens": lens_b, "fstop": 4.0, "noise": (0.12, 14.0)},
         "C": {"follow": follow, "target_local": tgt_c_local, "lens": 40.0, "fstop": 8.0},
         "D": {"loc": cam_d, "target": tgt_d, "lens": lens_d, "fstop": 5.6, "noise": (0.6, 40.0)},
     }
-    markers = [(_fr(SHOT_TIMES[k]), f"U_Cam_Showcase_{k}") for k in ("A", "A1", "A2", "B", "C", "D")]
+    markers = [(_fr(SHOT_TIMES[k]), f"U_Cam_Showcase_{k}") for k in cams]
     events = sorted([(_fr(tt), k) for k, tt in EVENTS_SHOWCASE.items()] + [(i_lof + 1, "ev_teker_kesme")])
     return {"n": n, "t": t, "v": v, "loc": loc, "euler": eul, "rot": Rm, "hull": hull, "t_lof": t_lof,
             "i_lof": i_lof, "x_lof": float(loc[i_lof, 0] - root0[0]), "a_max": a_max, "pan": pan, "tilt": tilt,
@@ -431,7 +457,8 @@ def showcase_plan(hull: np.ndarray | None = None) -> dict:
 
 def framing_report(plan: dict | None = None) -> dict:
     """Plan tarafı kadraj ölçüleri (saf numpy, testler için): B ve D çekimlerinde uçağın izdüşüm genişliği (kadraj
-    oranı), yatay aralığı, uzak zemin çizgisinin (ufuk) yüksekliği ve lens — kare başına. Uç noktalar ``_hull_local``."""
+    oranı), yatay aralığı, uzak zemin çizgisinin (ufuk) yüksekliği ve lens — kare başına. Uç noktalar
+    ``_hull_local``."""
     sp = plan or showcase_plan()
     W = _world_points(sp["loc"], sp["rot"], sp["hull"])
     ends = {"B": SHOT_TIMES["C"], "D": CLIPS["showcase"] + 1.0 / FPS}
@@ -614,6 +641,12 @@ def _fit(act, path: str, index: int, values, tol: float, start_frame: int = 1) -
         have.add(i)
         fc.update()
     return fc
+
+
+def _drop_action(name: str) -> None:
+    act = bpy.data.actions.get(name)
+    if act is not None:
+        bpy.data.actions.remove(act)
 
 
 def _assign(ob: bpy.types.Object, act: bpy.types.Action | None) -> None:
@@ -848,7 +881,7 @@ def _build_showcase(col, root) -> dict:
     if bpy.data.objects.get("U_Prop") is not None:
         out["actions"].append(_prop_action("showcase", ra, sp["n"]).name)
     cams = sp["cams"]
-    for key in ("A", "A1", "A2", "B", "C", "D"):
+    for key in cams:
         c = cams[key]
         name = f"U_Cam_Showcase_{key}"
         tname = f"U_CamTarget_Showcase_{key}"
@@ -873,9 +906,10 @@ def _build_showcase(col, root) -> dict:
             tgt = _empty(tname, col, root, c["target_local"], 0.1, "SPHERE")
         else:
             loc = np.asarray(c["loc"], float)
-            if loc.ndim == 1:
+            if loc.ndim == 1:                              # sabit kamera (eski sürümden kalan aksiyon silinir)
                 cam.location = Vector(tuple(loc))
                 _assign(cam, None)
+                _drop_action(f"YK38_showcase_Cam{key}")
             else:
                 _loc_action(f"YK38_showcase_Cam{key}", cam, loc)
             tg = np.asarray(c["target"], float)
@@ -884,12 +918,16 @@ def _build_showcase(col, root) -> dict:
                 ta = _loc_action(f"YK38_showcase_Target{key}", tgt, tg)
                 if c.get("noise"):
                     _noise(ta, *c["noise"], seed=11.0 * (len(key) + ord(key[0])))
+            else:
+                _drop_action(f"YK38_showcase_Target{key}")
         if np.ndim(lens):
             act = _action(f"YK38_showcase_Cam{key}_Lens")
             _fit(act, "lens", -1, lens, TOL_LENS)
             if cam.data.animation_data is None:
                 cam.data.animation_data_create()
             cam.data.animation_data.action = act
+        else:
+            _drop_action(f"YK38_showcase_Cam{key}_Lens")
         _track_to(cam, tgt)
         _dof(cam, tgt, c["fstop"])
         out["cameras"].append(cam.name)
@@ -966,6 +1004,7 @@ def build(scene: bpy.types.Scene | None = None, *, select: str = "showcase") -> 
                        "root_keys": sum(len(f.keyframe_points) for f in ra.fcurves), "wheel": sc["wheel"],
                        "extent_m": [np.round(sp["loc"].min(0), 1).tolist(), np.round(sp["loc"].max(0), 1).tolist()]}
     out["mechanisms"] = {"frames": me["plan"]["n"]}
+    out["normalized"] = len(RIG.normalize_parenting())     # rig'den sonra kurulan çıkartmalar (materials) da
     set_scene_range(select, scene)
     return out
 

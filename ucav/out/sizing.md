@@ -2,7 +2,7 @@
 
 Bu rapor `python3 ucav/sizing.py` ile üretilir. Bütün değerler `ucav/params.py` geometrisinden yeniden hesaplanır ve `ucav/spec.yaml`'daki panel referanslarıyla karşılaştırılır. Elle düzenlemeyin.
 
-**Sonuç: 150/150 kontrol tolerans içinde.**
+**Sonuç: 156/156 kontrol tolerans içinde.**
 
 Toleranslar (`spec.yaml → checks`): oranlar ve alanlar %1 (ayrıntı tasarımına bağlı olanlar %5), konumlar 3 mm, açıklıklar 4 mm, açılar 0,35°, %MAC değerleri 0,6 puan, hızlar 0,15 m/s, kütle 5 g. "Sınır" satırları bir eşiğe göre, "bilgi" satırları yalnız rapor içindir.
 
@@ -16,6 +16,7 @@ Eksenler: `s` burun ucundan geriye, `y` sol +, `z` FRL'den yukarı (m). Blender:
 | Toplam boy (dikey ucu firar kenarı) | 2,475 m | 2,475 | 0,000 | ± 0,003 | ✓ |  |
 | Spinner dahil gövde boyu | 2,310 m | 2,310 | 0,000 | ± 0,003 | ✓ |  |
 | Yükseklik (takım açık) | 0,668 m | 0,668 | 0,000 | ± 0,003 | ✓ |  |
+| Yükseklik, strobe lensi dahil | 0,6726 m | 0,6725 | +0,0001 | ± 0,0030 | ✓ | dikey ucundaki strobe elipsoidinin tepesi (sahnede ölçülen en yüksek nokta) |
 | Teker izi | 0,660 m | 0,660 | 0,000 | ± 0,003 | ✓ |  |
 | Dingil açıklığı | 0,785 m | 0,785 | 0,000 | ± 0,003 | ✓ | statik temas noktaları arası (ana bacak 12° yatık; sıkışma aksı 1,7 mm öne alır) |
 
@@ -126,6 +127,7 @@ Eksenler: `s` burun ucundan geriye, `y` sol +, `z` FRL'den yukarı (m). Blender:
 | Pervane – stabilize FK aralığı (pala ucunda) | 0,1284 m | 0,1280 | +0,0004 | ± 0,0030 | ✓ | disk yarı genişliği stabilize düzleminde 0,1925 m, 5° eğim dahil |
 | Pervane – stabilize FK aralığı (kökte) | 0,2177 m | 0,2180 | -0,0003 | ± 0,0030 | ✓ |  |
 | Aralık / pervane çapı | 0,316 | 0,316 | 0,000 | ± 0,016 | ✓ |  |
+| Pala süpürme hacmi – elevatör FK (en dar) | 0,1140 m | 0,1140 | 0,0000 | ± 0,0030 | ✓ | ≥ 0,25 D = 0,102 m şartı; pala ön yüzü düzlemin ≈ 10 mm önünde |
 
 ## 6. Kararlılık
 
@@ -157,6 +159,8 @@ Yöntem (`spec.yaml → stability.method`): x_np = [a_wb·x_ac,w + F_h·x_ac,h +
 | İtki hattı z (CG istasyonunda) | 0,0418 m | 0,0420 | -0,0002 | ± 0,0030 | ✓ |  |
 | İtki momenti (tam güç, burun aşağı) | 1,95 N·m | 1,95 | 0,00 | ± 0,10 | ✓ |  |
 | İtki/ağırlık | 0,476 | 0,480 | -0,004 | ± 0,005 | ✓ |  |
+| Lüle akış alanı (halka iç çapı – spinner) | 34,3 cm² | 34,3 | 0,0 | ± 0,3 | ✓ | soğutma havası çıkışı; NACA karın girişi ≈ 22 cm² → çıkış/giriş ≈ 1,8 (+ çene yarığı ≈ 6 cm²) |
+| Lüle halka ön yüzü (dış – iç çap) | 32,0 cm² | 32,0 | 0,0 | ± 0,3 | ✓ | halka yüzü; akış alanı DEĞİL |
 
 ## 8. İniş takımı ve yer açıları
 
@@ -198,7 +202,7 @@ Temas noktaları gerçek bacak geometrisinden: ana bacak pivot (1,2825; ±0,33; 
 | Büyüklük | Hesap | Spec | Fark | Tolerans / sınır | Durum | Not |
 |---|---:|---:|---:|---:|:---:|---|
 | Azami genişlik | 0,2050 m | 0,2050 | 0,0000 | ± 0,0030 | ✓ |  |
-| Azami yükseklik | 0,2000 m | 0,2000 | 0,0000 | ± 0,0030 | ✓ | s = 0,85'de; istasyon tablosunun tepesi 0,212 (panel 0,214) |
+| Azami yükseklik | 0,2000 m | 0,2000 | 0,0000 | ± 0,0030 | ✓ | s = 0,85'de (kabin); ters motorla kuyruk konisi 0,172'ye iner, kaporta kamburu yok |
 | Islak alan | 1,214 m² | 1,210 | +0,004 | ± 0,060 | ✓ | çevre integrali |
 | İncelik oranı L/((w+h)/2) | 10,89 | 10,90 | -0,01 | ± 0,55 | ✓ | eşdeğer çapla L/d_eş = 10,76 (A_max 0,0330 m², s = 0,85) |
 | Karın kalkışı s 1,10→1,95 | 5,84 ° | 5,84 | 0,00 | ± 0,35 | ✓ |  |
@@ -222,7 +226,8 @@ Temas noktaları gerçek bacak geometrisinden: ana bacak pivot (1,2825; ±0,33; 
 | Uç borusu 16/14, y 1,70'te kalınlık payı | 0,5 mm | — | — | ≥ 0,0 mm | ✓ | yerel kalınlık 19,7 mm; ölçüt OD + 2 kabuk + 2 mm (panel: 19,2 ≤ 19,6) |
 | Arka kiriş 8/6, y 1,82'de kalınlık payı | 1,2 mm | — | — | ≥ 0,0 mm | ✓ | yerel kalınlık 10,4 mm |
 | Arka kiriş ↔ menteşe oyuğu (en dar) | 2,1 mm | — | — | ≥ 1,0 mm | ✓ | oyuk = menteşe − yuvarlak burun yarıçapı − 1 mm aralık |
-| Stabilize kirişi 12/10, dış uçta kalınlık payı | -0,7 mm | — | — | — | bilgi | boru y ≤ 0,422'e kadar sığar; dışı uç mafsalında açılır |
+| Stabilize kirişi 12/10, boru boyunca en dar kalınlık payı | 1,49 mm | — | — | ≥ 0,50 mm | ✓ | en dar y = 0,485; kesit kalınlığı − (OD + 2 kabuk), AERO-10 ≥ 0,5 mm |
+| Stabilize kirişi deliği üstünde en ince kabuk | 0,95 mm | — | — | ≥ 0,80 mm | ✓ | delik OD + 0,4 mm; P8 ≥ 0,8 mm |
 | Dikey kirişi 8/6, uçta kalınlık payı | 4,9 mm | — | — | ≥ 0,0 mm | ✓ |  |
 
 ## Notlar
@@ -230,4 +235,4 @@ Temas noktaları gerçek bacak geometrisinden: ana bacak pivot (1,2825; ±0,33; 
 - Panelden sapan ya da panelde olmayan değerler `spec.yaml`'da `# varsayım` ile işaretlidir. Bu rapordaki "bilgi" satırları tasarım kararı için girdidir, tolerans kontrolü yoktur.
 - Arka kiriş %68 yerine %65'tedir: %72 menteşenin yuvarlak burun oyuğu %68'deki 8 mm boruyla 2,6 mm çakışıyordu.
 - Dikeylerin kökü (0,24 m veter) stabilize ucunun 0,12 m arkasına uzanır; bu nokta stabilize ucundan önce yere değer (yukarıdaki "dikey kökü" satırı). Pervane çarpma açısı yine en küçük açıdır.
-- Stabilize kirişi 12/10 boyunun tamamında NACA 0010 içinde kalmaz; dış ucu dikey mafsalına (G10) girer.
+- Stabilize kalınlığı y 0,15 → 0,52 arasında %10'dan %12'ye (NACA 0012) çıkar: Ø12/10 kiriş boyunun tamamında profil içinde kalır (en dar pay ve delik üstü kabuk yukarıdaki iki satırda; AERO-10/P8).

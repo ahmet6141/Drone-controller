@@ -2369,8 +2369,9 @@ def _collar_bottom() -> tuple[float, float]:
 
 
 def turret_mount() -> MeshData:
-    """``U_Turret_Mount``: 8 fasetli antrasit yaka (yarı gömülü göz), üstte gövdeye doğru genişler; tabanı önde
-    yukarı eğik (ileri görüş açık). Yerel orijin (s, 0, gövde altı), Blender eksenleri (+X ileri)."""
+    """``U_Turret_Mount``: 8 fasetli yaka (yarı gömülü göz; gövde alt rengi ``skin_bottom`` — taret topu koyu, yaka
+    gövdeye ait okunur), üstte gövdeye doğru genişler; tabanı önde yukarı eğik (ileri görüş açık). Yerel orijin
+    (s, 0, gövde altı), Blender eksenleri (+X ileri)."""
     t = P.TURRET
     zc, k = _collar_bottom()
     z_top = turret_mount_top_z() - t.belly_z + 0.012
@@ -2379,7 +2380,7 @@ def turret_mount() -> MeshData:
     ch = 0.0028
     prof = np.array([[z_top, Rt], [zc + ch, Rb], [zc, Rb - ch], [zc, rb], [z_top, rb]])
     fac = _octagon_factor(t.collar_facets)
-    md = lathe(prof, 8 * t.collar_facets, "U_Turret_Mount", M["accent"], "z", closed_profile=True,
+    md = lathe(prof, 8 * t.collar_facets, "U_Turret_Mount", M["skin_bottom"], "z", closed_profile=True,
                radius_fn=lambda th, kk: fac(th, kk) if kk <= 2 else 1.0, smooth_angle=20.0)
     md.verts[:, 2] += k * md.verts[:, 0]
     return md
@@ -2436,7 +2437,7 @@ def turret_ball() -> MeshData:
 
 
 def turret_windows() -> MeshData:
-    """``U_Turret_Window``: EO (Ø26, iskele) ve IR (Ø20, sancak) pencereleri, turkuaz lens halkaları
+    """``U_Turret_Window``: EO (Ø26, iskele) ve IR (Ø20, sancak) pencereleri, siyah eloksal çerçeveler (``bezel``)
     (yerel: top merkezi, pencere düzlemi +X'te)."""
     t = P.TURRET
     R = 0.5 * t.ball_d
@@ -2445,7 +2446,7 @@ def turret_windows() -> MeshData:
     for yc, d in ((0.5 * t.window_spacing, t.window_eo_d), (-0.5 * t.window_spacing, t.window_ir_d)):
         r = 0.5 * d
         ring = lathe(np.array([[xf - 0.0004, r], [xf - 0.0004, r + 0.0019], [xf + 0.0010, r + 0.0019],
-                               [xf + 0.0014, r + 0.0010], [xf + 0.0014, r]]), 56, "ring", M["stripe"], "x",
+                               [xf + 0.0014, r + 0.0010], [xf + 0.0014, r]]), 56, "ring", M["bezel"], "x",
                      closed_profile=True)
         glass = lathe(np.array([[xf - 0.0012, 0.0], [xf - 0.0012, r], [xf + 0.0005, r], [xf + 0.0009, 0.7 * r],
                                 [xf + 0.0011, 0.0]]), 56, "glass", M["glass"], "x")

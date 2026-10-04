@@ -1,13 +1,17 @@
 """YELKOVAN YK-38 — Blender sahnesinin uçtan uca testleri (``bpy`` yoksa atlanır).
 
 Sahne bir kez kurulur (``ucav.blender.build.build_scene``: gövde → takım → rig → malzemeler → stüdyo →
-animasyon, ≈ 20 s). Denetlenenler: sözleşmedeki nesneler ve koleksiyonlar, kontrol paneli özellikleri, bütün
+animasyon, ≈ 25 s). Denetlenenler: sözleşmedeki nesneler ve koleksiyonlar, kontrol paneli özellikleri, bütün
 sürücülerin geçerli ve "basit ifade" olması, her ağın UM_* malzemeli ve kapalı (manifold) olması, takım açıkken
 tekerlerin zemine değmesi, takım çevriminde çakışma olmaması, kumanda yüzeyi işaret kuralı, ana ölçülerin
-spec'e %1 içinde uyması, animasyon klipleri, GLB ve küçük bir render. Baskı: küçük bir segment alt kümesi geçici
-dizine kurulur (manifold + tablaya sığma) ve depodaki STL'ler/rapor numpy ile yeniden denetlenir.
+spec'e %1 içinde uyması, şablon yazılar, görünüm kuralları (yan görünüş ortografik, panel çizgileri = baskı
+ekleri, kuyu/kapaklarda turuncu yok, CG işareti, dolgu ışığı sürücüsü, pozlama), pervane diski, kumanda
+bağlantıları, pervane açısı = ∫rpm·dt, döngü dikişi, taret LED'i, ebeveyn kuralı, takım/teker zamanlaması,
+başka dosyaya ekleme (append), animasyon klipleri, GLB ve küçük bir render. Baskı: küçük bir segment alt kümesi
+geçici dizine kurulur (manifold + tablaya sığma) ve depodaki STL'ler/rapor numpy ile yeniden denetlenir (tek
+kabuk, tabla teması, destek sınıfı, ısı kuralı, yük yolları, menteşe pimleri, tolerans kuponu, kalıp parçaları).
 
-Çalıştırma: ``python3 -m unittest tests.test_ucav_blender -v`` (≈ 1–2 dk).
+Çalıştırma: ``python3 -m unittest tests.test_ucav_blender -v`` (≈ 2 dk).
 """
 from __future__ import annotations
 
@@ -15,6 +19,7 @@ import importlib.util
 import json
 import math
 import struct
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -35,12 +40,48 @@ CONTRACT_OBJECTS = [
     "U_Prop", "U_Spinner", "U_Turret_Mount", "U_Turret_Pan", "U_Turret_Tilt", "U_Turret_Window",
     "U_Bay_N", "U_Bay_L", "U_Bay_R", "U_Door_N_1", "U_Door_N_2", "U_Door_L_1", "U_Door_R_1", "U_Door_L_2", "U_Door_R_2",
     "U_Pitot", "U_Light_Nav_L", "U_Light_Nav_R", "U_Light_Strobe_L", "U_Light_Strobe_R", "U_Light_Landing",
-    "U_Light_Turret_Ring",
+    "U_Light_Turret_Ring", "U_Door_N_3", "U_Cowl_Louvers", "U_Exhaust_Muffler", "U_Fairing_FinRoot_L",
+    "U_Fairing_FinRoot_R", "U_Hatch_Frame", "U_PropDisc",
 ] + [f"U_{k}_{leg}" for leg in ("N", "L", "R") for k in ("GearPivot", "GearStrut", "GearWheel", "GearSlider", "GearUnit")] \
-  + ["U_GearSteer_N"]
+  + ["U_GearSteer_N"] \
+  + [f"U_{k}_{s}_{side}" for k in ("Horn", "ServoArm", "Pushrod") for s in ("Aileron", "FlapOut", "Elevator", "Rudder")
+     for side in ("L", "R")]
 COLLECTIONS = ["UCAV", "UCAV_Airframe", "UCAV_Surfaces", "UCAV_Gear", "UCAV_Propulsion", "UCAV_Payload", "UCAV_Details",
                "UCAV_Print", "UCAV_Studio"]
 VIEWS = ["hero", "rear34", "side", "front", "top", "under", "nose", "tail", "gearbay"]
+
+# Başka bir dosyaya ``UCAV`` koleksiyonunu ekleme (append) denetimi — ayrı Python sürecinde çalışır
+# (argümanlar: kaynak .blend, U_Root X, U_Root'un zeminden yüksekliği).
+_APPEND_CHECK = r'''
+import sys, bpy
+src, x0, h0 = sys.argv[-3], float(sys.argv[-2]), float(sys.argv[-1])
+bpy.ops.wm.read_factory_settings(use_empty=True)
+with bpy.data.libraries.load(src, link=False) as (df, dt):
+    dt.collections = ["UCAV"]
+bpy.context.scene.collection.children.link(dt.collections[0])
+assert len(bpy.data.scenes) == 1, [s.name for s in bpy.data.scenes]
+assert not any(c.name in ("UCAV_Studio", "UCAV_Print") for c in bpy.data.collections)
+bad = [o.name for o in bpy.data.objects if o.animation_data for fc in o.animation_data.drivers
+       if not (fc.is_valid and fc.driver.is_valid)]
+assert not bad, bad
+root = bpy.data.objects["U_Root"]
+if root.animation_data is not None:
+    root.animation_data.action = None
+root["gear"] = 1.0
+root["ground_z"] = 0.0                                   # kendi zemininiz: Z = 0
+root.location = (x0, 0.0, h0)
+root.rotation_euler = (0.0, 0.0, 0.0)
+root.update_tag()
+bpy.context.view_layer.update()
+dg = bpy.context.evaluated_depsgraph_get()
+for leg in "NLR":
+    ev = bpy.data.objects["U_GearWheel_" + leg].evaluated_get(dg)
+    me = ev.to_mesh()
+    z = min((ev.matrix_world @ v.co).z for v in me.vertices)
+    ev.to_mesh_clear()
+    assert abs(z) < 5e-4, (leg, z)
+print("APPEND_OK")
+'''
 
 
 def _read_stl(path: Path):
@@ -64,6 +105,32 @@ def _closed(T: np.ndarray) -> bool:
 def _volume(V: np.ndarray, T: np.ndarray) -> float:
     a, b, c = V[T[:, 0]], V[T[:, 1]], V[T[:, 2]]
     return float(np.einsum("ij,ij->i", a, np.cross(b, c)).sum() / 6.0)
+
+
+def _shell_labels(T: np.ndarray, nv: int) -> np.ndarray:
+    """Üçgen başına bağlı bileşen (kabuk) etiketi: köşe paylaşımıyla etiket yayma + işaretçi atlama (numpy)."""
+    lab = np.arange(nv)
+    while True:
+        m = np.minimum(np.minimum(lab[T[:, 0]], lab[T[:, 1]]), lab[T[:, 2]])
+        new = lab.copy()
+        for k in range(3):
+            np.minimum.at(new, T[:, k], m)
+        np.minimum.at(new, lab, new)
+        new = new[new]
+        if np.array_equal(new, lab):
+            return lab[T[:, 0]]
+        lab = new
+
+
+def _bed_contact_cm2(V: np.ndarray, T: np.ndarray, tol: float = 0.05) -> float:
+    """Tablaya (z_min) ``tol`` mm içinde yatan, aşağı bakan (n_z < −0,999) üçgenlerin alanı (cm²)."""
+    z0 = V[:, 2].min()
+    a, b, c = V[T[:, 0]], V[T[:, 1]], V[T[:, 2]]
+    n = np.cross(b - a, c - a)
+    area = 0.5 * np.linalg.norm(n, axis=1)
+    nz = n[:, 2] / np.maximum(2 * area, 1e-30)
+    low = (np.abs(a[:, 2] - z0) < tol) & (np.abs(b[:, 2] - z0) < tol) & (np.abs(c[:, 2] - z0) < tol)
+    return float(area[low & (nz < -0.999)].sum() / 100.0)
 
 
 @unittest.skipUnless(HAVE_BPY, "bpy kurulu değil")
@@ -288,13 +355,237 @@ class TestYK38Scene(unittest.TestCase):
         self._set(gear=0.0)
         self.assertGreater(math.degrees(bpy.data.objects["U_GearPivot_L"].rotation_euler[0]), 89.0)
 
+
+    # ------------------------------------------------------------------ işaretler ve görünüm kuralları
+    def test_stencils_hosted_and_closed(self):
+        """Şablon yazılar (``U_Stencil_*``): en az 20, her biri spec'teki ev sahibine bağlı, UM_* malzemeli, kapalı."""
+        import bpy
+
+        from ucav import params as P
+        from ucav import shapes as S
+        from ucav.blender import util as U
+        specs = {x.name: x.host for x in S.stencil_specs()}
+        objs = [o for o in bpy.data.objects if o.name.startswith("U_Stencil_")]
+        self.assertGreaterEqual(len(objs), 20)
+        self.assertEqual(sorted(o.name for o in objs), sorted(specs))
+        for ob in objs:
+            self.assertIsNotNone(ob.parent, ob.name)
+            self.assertEqual(ob.parent.name, specs[ob.name], ob.name)
+            self.assertTrue(all(m is not None and m.name in P.MATERIALS for m in ob.data.materials), ob.name)
+            r = U.mesh_report(ob)
+            self.assertEqual((r["boundary"], r["nonmanifold"]), (0, 0), ob.name)
+
+    def test_look_rules(self):
+        """Yan görünüş ortografik ve kanat dihedralinde (yakın kanat kenardan); pist pozlaması −0,4 EV; panel
+        çizgileri baskı ekleriyle aynı; kuyu ve kapaklarda UM_Orange yok; CG işareti CG istasyonunda ve kök
+        filetosunun üstünde; yer dolgu ışığının sürücüsü basit ifade."""
+        import bpy
+
+        from ucav import params as P
+        from ucav.blender import animation, studio
+        from ucav.blender import materials as M
+        animation.clear()                                       # ölçümler dinlenme pozunda
+        self.assertAlmostEqual(studio.VIEWS["side"].el, P.WING_DIHEDRAL)
+        self.assertTrue(studio.VIEWS["side"].ortho)
+        self.assertEqual(bpy.data.objects["U_Cam_side"].data.type, "ORTHO")
+        self.assertAlmostEqual(studio.EXPOSURE["pist"], -0.4)
+        self.assertAlmostEqual(bpy.context.scene.view_settings.exposure, -0.4, places=3)
+        st = M.panel_stations()
+        self.assertGreaterEqual(len(st["fuselage_s"]), 10)
+        self.assertEqual(len(st["wing_y"]), 9)
+        rep = OUT / "print_report.json"
+        if rep.exists():                                        # render çizgileri = gerçek baskı ekleri
+            pc = json.loads(rep.read_text(encoding="utf-8")).get("print_cuts", {})
+            if pc.get("fuselage_s_m"):
+                np.testing.assert_allclose(st["fuselage_s"], pc["fuselage_s_m"], atol=6e-4)
+            if pc.get("wing_y_m"):
+                np.testing.assert_allclose(st["wing_y"], [y for y in pc["wing_y_m"] if y < P.WING_SEMI_SPAN - 1e-6],
+                                           atol=6e-4)
+        orange = [o.name for o in bpy.data.objects if o.type == "MESH" and o.name.startswith(("U_Bay_", "U_Door_"))
+                  and any(m is not None and m.name == "UM_Orange" for m in o.data.materials)]
+        self.assertEqual(orange, [])
+        for side in ("L", "R"):
+            V = self._world_verts(bpy.data.objects[f"U_Decal_CG_{side}"])
+            self.assertAlmostEqual(-0.5 * (V[:, 0].min() + V[:, 0].max()), P.CG.s, delta=0.005, msg=side)
+            F = self._world_verts(bpy.data.objects[f"U_Fairing_Fillet_{side}"])
+            near = F[np.abs(F[:, 0] - V[:, 0].mean()) < 0.012]
+            if len(near):
+                self.assertGreater(V[:, 2].min(), near[:, 2].max() + 0.002, side)
+        fill = bpy.data.objects.get(studio.UNDER_FILL)
+        self.assertIsNotNone(fill)
+        drv = fill.data.animation_data.drivers
+        self.assertTrue(len(drv))
+        for fc in drv:
+            self.assertTrue(fc.is_valid and fc.driver.is_valid and fc.driver.is_simple_expression, fc.data_path)
+
+    def test_turret_led_independent_of_nav_lights(self):
+        """Taret durum halkası ``status_led``'e bağlı: seyrüsefer ışıkları açıkken bile sönük (gerçek EO/IR taretler
+        ışımaz); ``status_led`` = 1 iken yanar."""
+        import bpy
+
+        from ucav.blender import rig
+        ring = bpy.data.objects["U_Light_Turret_Ring"]
+        try:
+            rig.set_controls(nav_lights=1.0, status_led=0.0)
+            self.assertEqual(float(ring["ucav_emission"]), 0.0)
+            self.assertEqual(float(bpy.data.objects["U_Light_Nav_L"]["ucav_emission"]), 1.0)
+            rig.set_controls(status_led=1.0)
+            self.assertEqual(float(ring["ucav_emission"]), 1.0)
+        finally:
+            rig.set_controls(nav_lights=1.0, status_led=0.0)
+
+    def test_prop_disc(self):
+        """Pervane diski: ``UM_PropDisc`` malzemeli; pervane dururken render dışı, 3000 dev/dk'da görünür."""
+        import bpy
+
+        from ucav.blender import rig
+        disc = bpy.data.objects["U_PropDisc"]
+        self.assertEqual([m.name for m in disc.data.materials], ["UM_PropDisc"])
+        self.assertEqual(bpy.data.materials["UM_PropDisc"]["ucav_recipe"], "propdisc")
+        try:
+            rig.set_controls(prop_rpm=0.0)
+            self.assertTrue(disc.hide_render)
+            rig.set_controls(prop_rpm=3000.0)
+            self.assertFalse(disc.hide_render)
+            self.assertGreater(float(disc["ucav_disc"]), 0.2)
+        finally:
+            rig.set_controls(prop_rpm=0.0)
+
+    # ------------------------------------------------------------------ rig: bağlantılar, ebeveyn kuralı, pervane
+    def test_control_linkages_follow_surfaces(self):
+        """Servo kolu yüzeyle aynı açıyla döner; itme çubuğu dönmez (paralelkenar), ucu boynuz deliğinde."""
+        import bpy
+        from mathutils import Vector
+
+        from ucav.blender import rig
+        try:
+            for name, ctl in (("Aileron", "aileron_deg"), ("FlapOut", "flap_deg"), ("Elevator", "elevator_deg"),
+                              ("Rudder", "rudder_deg")):
+                for side in ("L", "R"):
+                    horn, arm, rod = (bpy.data.objects[n] for n in rig.linkage_names(name, side))
+                    surf = bpy.data.objects[f"U_{name}_{side}"]
+                    R0 = np.array(rod.matrix_world.to_3x3())
+                    rig.set_controls(**{ctl: 15.0})
+                    self.assertAlmostEqual(arm.rotation_euler.x, surf.rotation_euler.x, places=6)
+                    np.testing.assert_allclose(np.array(rod.matrix_world.to_3x3()), R0, atol=1e-6)
+                    L = rig.linkage_geometry(name, side)["L"]
+                    tip = rod.matrix_world @ Vector((0.0, L, 0.0))
+                    np.testing.assert_allclose(tuple(tip), tuple(horn.matrix_world.translation), atol=2e-4,
+                                               err_msg=f"{name}_{side}")
+                    rig.set_controls(**{ctl: 0.0})
+        finally:
+            rig.set_controls(aileron_deg=0.0, flap_deg=0.0, elevator_deg=0.0, rudder_deg=0.0)
+
+    def test_viewport_locks_and_parenting(self):
+        """Sürülen nesneler kilitli; ``UCAV`` ağacında ebeveyn ters matrisleri birim; ``U_Root`` önde çizilir;
+        sabit görüntü kameraları da birim ebeveyn tersiyle ``UCAV_Cameras_Stills``'te."""
+        import bpy
+        root = bpy.data.objects["U_Root"]
+        self.assertTrue(root.show_in_front)
+        self.assertGreaterEqual(root.empty_display_size, 1.0)
+        unit = lambda M: all(abs(M[i][j] - (i == j)) < 1e-9 for i in range(4) for j in range(4))   # noqa: E731
+        for ob in bpy.data.collections["UCAV"].all_objects:
+            if ob.animation_data is not None and len(ob.animation_data.drivers) and ob is not root:
+                self.assertTrue(all(ob.lock_location) and all(ob.lock_scale), ob.name)
+            if ob.parent is not None:
+                self.assertTrue(unit(ob.matrix_parent_inverse), ob.name)
+        for v in VIEWS:
+            cam = bpy.data.objects[f"U_Cam_{v}"]
+            self.assertTrue(unit(cam.matrix_parent_inverse), cam.name)
+            self.assertIn("UCAV_Cameras_Stills", [c.name for c in cam.users_collection])
+
+    def test_prop_angle_is_rpm_integral(self):
+        """Pervane açısı ∫rpm·dt (pişirilmiş ``ucav_turns``): gösterimde etkin devir plana %1 içinde; mekanizma
+        döngüsünde dikişte açı aynı (mod 2π)."""
+        import bpy
+
+        from ucav.blender import animation, rig
+        sc = bpy.context.scene
+        prop, root = bpy.data.objects["U_Prop"], bpy.data.objects["U_Root"]
+
+        def ang(f, sub=0.0):
+            sc.frame_set(f, subframe=sub)
+            return prop.rotation_euler.x
+        try:
+            animation.set_scene_range("showcase")
+            fc = next(f for f in rig._action_fcurves(root.animation_data.action) if f.data_path == '["prop_rpm"]')
+            for f in (100, 300):
+                eff = (ang(f, 0.02) - ang(f)) / 0.02 / (2 * math.pi) * sc.render.fps * 60.0
+                self.assertAlmostEqual(eff / fc.evaluate(f), 1.0, delta=0.01, msg=f)
+            n = animation.set_scene_range("mechanisms")["frames"]
+            d = (ang(n + 1) - ang(1)) % (2 * math.pi)
+            self.assertLess(min(d, 2 * math.pi - d), 1e-3)
+        finally:
+            animation.clear()
+
+    def test_mechanisms_loop_seam(self):
+        """Döngü dikişi: kare N+1'de ``U_Root`` özellikleri, dönüşümü ve etkin kamera kare 1 ile aynı."""
+        import bpy
+
+        from ucav.blender import animation
+        sc = bpy.context.scene
+        root = bpy.data.objects["U_Root"]
+
+        def state(f):
+            sc.frame_set(f)
+            cam = max((m for m in sc.timeline_markers if m.camera is not None and m.frame <= f),
+                      key=lambda m: m.frame).camera
+            props = [float(root[k]) for k in sorted(root.keys()) if isinstance(root[k], float)]
+            return np.array(props), np.array(root.matrix_world), np.array(cam.matrix_world)
+        try:
+            n = animation.set_scene_range("mechanisms")["frames"]
+            for x, y in zip(state(1), state(n + 1)):
+                np.testing.assert_allclose(x, y, atol=1e-6)
+        finally:
+            animation.clear()
+
+    def test_showcase_gear_and_wheels(self):
+        """Takım ≥ 2,5 m AGL kazançta toplanır; teker kesmeden 1,5 s sonra teker dönüşü < %10, takım toplanırken 0."""
+        import bpy
+
+        from ucav import params as P
+        from ucav.blender import animation
+        sc = bpy.context.scene
+        sp = animation.showcase_plan()
+        g_up = animation.CONTROL_KEYS_SHOWCASE["gear"][1][0]
+        self.assertGreaterEqual(sp["loc"][animation._fr(g_up) - 1, 2] - P.U_ROOT_B[2], 2.5)
+        w = bpy.data.objects["U_GearWheel_L"]
+
+        def rate(f):
+            sc.frame_set(f)
+            a = w.rotation_euler.y
+            sc.frame_set(f, subframe=0.05)
+            return (w.rotation_euler.y - a) / 0.05
+        try:
+            animation.set_scene_range("showcase")
+            F = sp["i_lof"] + 1
+            r0 = rate(F - 1)
+            self.assertGreater(abs(r0), 100.0 / sc.render.fps)
+            self.assertLess(abs(rate(F + 36)), 0.10 * abs(r0))
+            self.assertEqual(rate(animation._fr(g_up + 1.2)), 0.0)
+        finally:
+            animation.clear()
+
+    def test_asset_append_single_scene(self):
+        """``UCAV`` başka dosyaya eklenince tek sahne, stüdyo/baskı yok, sürücüler geçerli; zemin
+        ``U_Root['ground_z']`` ile taşınır (tekerler Z = 0'a oturur). Ayrı süreçte."""
+        import bpy
+
+        from ucav import params as P
+        with tempfile.TemporaryDirectory() as td:
+            src = str(Path(td) / "a.blend")
+            bpy.ops.wm.save_as_mainfile(filepath=src, copy=True)
+            r = subprocess.run([sys.executable, "-c", _APPEND_CHECK, src, repr(P.U_ROOT_B[0]),
+                                repr(P.U_ROOT_B[2] - P.GROUND_Z)], capture_output=True, text=True, timeout=600)
+            self.assertIn("APPEND_OK", r.stdout, r.stdout[-1500:] + r.stderr[-1500:])
+
     # ------------------------------------------------------------------ animasyon, kameralar, GLB, render
     def test_animation_clips(self):
         import bpy
 
         from ucav.blender import animation
         try:
-            for name, frames in (("showcase", 456), ("mechanisms", 240)):
+            for name, frames in (("showcase", 504), ("mechanisms", 384)):
                 r = animation.set_scene_range(name)
                 self.assertEqual(r["frames"], frames)
                 self.assertIsNotNone(bpy.data.actions.get(f"YK38_{name}_Root"))
@@ -365,6 +656,11 @@ class TestYK38Scene(unittest.TestCase):
             self.assertLess(top[0], 0.8)                        # RAL 7035 (beyaz varsayılan değil)
             self.assertEqual(len(J.get("animations", [])), 1)
             self.assertGreater(r["objects"], 80)
+            nodes = [n.get("name", "") for n in J["nodes"]]
+            self.assertNotIn("U_PropDisc", nodes)               # karışım malzemeli disk glTF'te opak olurdu
+            self.assertFalse([n for n in nodes if n.startswith(("U_Env_", "UP_", "S_"))])
+            led = mats.get("UM_StatusLED", {})
+            self.assertFalse(any(led.get("emissiveFactor", [0.0])))   # taret LED'i dinlenmede sönük
         import bpy
         self.assertIsNotNone(bpy.data.materials["UM_SkinTop"].node_tree.nodes.get("Material Output"))
         self.assertNotIn("UM_SkinTop__cycles", bpy.data.materials)
@@ -422,6 +718,8 @@ class TestYK38PrintOutputs(unittest.TestCase):
             self.assertTrue((np.array(part["size_mm"]) <= bed + 1e-6).all(), part["key"])
 
     def test_stl_files_closed_and_within_bed(self):
+        """Her STL kapalı, tek pozitif kabuk (iç boşluk kabukları negatif hacimlidir), Z_min = 0, tabla teması
+        ≥ 3 cm² (z_min'in 0,05 mm içinde aşağı bakan yüzler) ve tablaya sığar; klasörde rapor dışı STL yok."""
         S = json.loads(self.report.read_text(encoding="utf-8"))
         bed = np.array(S["bed_mm"], float)
         files = [OUT / p["stl"]["file"] for p in S["parts"] if p.get("stl")]
@@ -431,8 +729,40 @@ class TestYK38PrintOutputs(unittest.TestCase):
             V, T = _read_stl(f)
             self.assertTrue(_closed(T), f.name)
             self.assertGreater(_volume(V, T), 0.0, f.name)
-            self.assertGreaterEqual(V[:, 2].min(), -1e-3, f.name)       # tablada (Z ≥ 0)
+            self.assertAlmostEqual(V[:, 2].min(), 0.0, delta=1e-3, msg=f.name)      # tablada (Z_min = 0)
             self.assertTrue((V.max(0) - V.min(0) <= bed + 1e-6).all(), f.name)
+            lab = _shell_labels(T, len(V))
+            pos = [k for k in np.unique(lab) if _volume(V, T[lab == k]) > 1e-9]
+            self.assertEqual(len(pos), 1, f"{f.name}: {len(pos)} pozitif kabuk")
+            self.assertGreaterEqual(_bed_contact_cm2(V, T), 3.0, f.name)
+        if S["bed_mm"] == [256, 256, 256] or tuple(S["bed_mm"]) == (256.0, 256.0, 256.0):
+            on_disk = {p.name for p in (OUT / "stl").glob("*.stl")}
+            self.assertEqual(on_disk, {Path(f).name for f in files})
+
+    def test_report_supports_heat_and_assembly(self):
+        """Destek sınıfı (tablaya bakan 45° sarkma > 2 cm² → "tabla desteği"), ısı kuralı (150 mm içinde LW-PLA
+        yok), yük yolları, menteşe pimi takma yönleri, tolerans kuponu, ısıl biçimlendirme adımları ve beklenen
+        P4/P10 parçaları raporda; eski kenar üstü kapak parçaları (hatch_a/b) yok."""
+        S = json.loads(self.report.read_text(encoding="utf-8"))
+        for part in S["parts"]:
+            if float(part.get("oh45_to_bed_cm2", 0.0)) > 2.0:
+                self.assertEqual(part.get("support"), "tabla desteği", part["key"])
+            if part.get("material") == "LW-PLA" and part.get("heat"):
+                self.assertGreaterEqual(float(part["heat"]["min_mm"]), 150.0, part["key"])
+        self.assertTrue(S["heat_rule"]["ok"])
+        self.assertEqual(S["heat_rule"].get("violations", []), [])
+        self.assertTrue(S.get("load_paths"))
+        self.assertTrue(S.get("hinges"))
+        for name, h in S["hinges"].items():
+            self.assertTrue(h.get("insert_side"), name)
+        self.assertTrue(S.get("tolerance_coupon"))
+        self.assertTrue(S.get("thermoform"))
+        keys = {p["key"] for p in S["parts"]}
+        need = {"hatch_buck_a", "hatch_buck_b", "hatch_frame_a", "hatch_frame_b", "tolerance_coupon", "wing_frame_fwd",
+                "wing_frame_aft", "gear_mount_L", "gear_mount_N", "engine_ring", "door_N_3"}
+        self.assertEqual(need - keys, set())
+        self.assertFalse(keys & {"hatch_a", "hatch_b"})
+        self.assertFalse((OUT / "stl" / "hatch_a.stl").exists() or (OUT / "stl" / "hatch_b.stl").exists())
 
 
 if __name__ == "__main__":

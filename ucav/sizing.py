@@ -6,10 +6,11 @@ referanslarıyla karşılaştırılır:
 
 * Kanat: referans alan, AR, MAC ve yeri (planform integrali, merkez/konik kırığı dahil), gerçek planform alanı
   (glove + raked uç), kumanda yüzeyi alanları.
-* Kuyruk: alanlar, MAC'ler, a.c. konumları, kollar, V_h / V_v, pervane–stabilize aralığı (5° disk eğimiyle).
+* Kuyruk: alanlar, MAC'ler, a.c. konumları, kollar, V_h / V_v, pervane–stabilize aralığı (5° disk eğimiyle) ve
+  elevatör firar kenarının pala SÜPÜRME hacmine en kısa uzaklığı (``shapes.prop()`` ağı ile).
 * Kararlılık: nötr nokta ve statik marj — spec ``stability.method`` (a_wb, Helmbold a_h + uç plakası,
   DATCOM dε/dα, Raymer K_f gövde terimi, glove terimi).
-* Performans: kanat yüklemesi, stall hızları; itki hattı yüksekliği ve momenti.
+* Performans: kanat yüklemesi, stall hızları; itki hattı yüksekliği ve momenti; lüle akış alanı ve halka yüzü.
 * İniş takımı: gerçek temas noktalarından iz, dingil açıklığı, tip-back, devrilme, burun yükü, pervane çarpma,
   kaporta/stabilize/kanat ucu temas açıları, açıklıklar; katlanmış teker konumları ve kuyu payları.
 * Gövde, kütle toplamı ve yapı sığma kontrolleri (CF boruların profil içinde kalması, menteşe oyuğu payı).
@@ -311,6 +312,39 @@ def gear_results(wing: dict) -> dict:
             "height": P.fin_station(float(S["tail"]["fin"]["height_m"])).le[2] - P.GROUND_Z}
 
 
+def prop_swept_gap() -> float:
+    """Elevatör (stabilize) firar kenarı ↔ pala SÜPÜRME hacmi en kısa uzaklık (m): ``shapes.prop()`` ağı
+    (pervane yerel çerçevesi: X mil, r = √(y² + z²)) dönme ekseni etrafında süpürülür; stabilize FK noktaları
+    (y 0…0,6) aynı (eksenel, yarıçap) düzlemine indirilir. Pala ön yüzü düzlemin ≈ 10 mm önündedir."""
+    from ucav import shapes as SH
+    pr = P.PROP
+    hub, ax = np.asarray(pr.hub, float), np.asarray(pr.axis_aft, float)
+    V = np.asarray(SH.prop().verts, float)
+    bx, br = V[:, 0], np.hypot(V[:, 1], V[:, 2])
+    z = float(P.SPEC["tail"]["stab"]["z_m"])
+    best = 1.0
+    for y in np.linspace(0.0, 0.6, 121):
+        d = np.array([P.stab_station(float(y)).te_s, y, z]) - hub
+        a = float(d @ ax)
+        r = float(np.linalg.norm(d - a * ax))
+        best = min(best, float(np.min(np.hypot(bx - a, br - r))))
+    return best
+
+
+def strobe_top_z() -> float:
+    """Dikey ucu strobe lensinin en yüksek noktası (z, m): ``shapes.strobe_light`` elipsoidi (yarıçaplar X, normal,
+    açıklık yönünde 10 / 3,4 / 4,2 mm) — sahnedeki en yüksek nokta."""
+    top = -1.0
+    for f in P.lights():
+        if f.kind != "strobe":
+            continue
+        st = P.fin_station(float(P.SPEC["tail"]["fin"]["height_m"]), "L" if f.pos[1] > 0 else "R")
+        axes = np.column_stack([[1.0, 0.0, 0.0], st.normal, st.span_dir])
+        ext = math.sqrt(sum((r * axes[2, i]) ** 2 for i, r in enumerate((0.010, 0.0034, 0.0042))))
+        top = max(top, float(f.pos[2]) + ext)
+    return top
+
+
 def fuselage_results() -> dict:
     """Gövde azami ölçüleri, ıslak alan (çevre integrali), incelik oranı, kuyruk konisi kalkışı."""
     ss = np.linspace(0.0, P.FUSELAGE_LENGTH, 1103)
@@ -360,22 +394,14 @@ def structure_results() -> dict:
         cove = (st.te_s - 0.28 * st.chord) - r - float(W["control_surfaces"]["hinge_gap_m"])
         margins.append((cove - (s_tube + rs.od / 2)) * 1000)
     out["rear_spar_cove_mm"] = min(margins)
-    # stabilize ve dikey kirişleri: dış uçta kalınlık − (OD + 2·0,5 mm)
+    # stabilize kirişi: boru boyunca gerçek kesit (kalınlık uca doğru %10 → %12, AERO-10/P8) — params.stab_spar_fit
     tskin = float(P.SPEC["print"]["walls_mm"]["tail_skin"]) / 1000
+    sf = P.stab_spar_fit()
+    out["fit_stab_spar"] = sf["margin_min"] * 1000
+    out["stab_spar_skin_min"] = sf["skin_min"] * 1000
+    out["stab_spar_y_at_min"] = sf["y_at_min"]
+    # dikey kirişi: uçta kalınlık − (OD + 2·0,5 mm)
     for t in P.spar_tubes("L"):
-        if t.name == "stab_spar":
-            st = P.stab_station(t.p1[1])
-            xc = (t.p1[0] - st.le_s) / st.chord
-            th = float(AF.thickness_at(P.tail_airfoil(), xc)) * st.chord
-            out["fit_stab_spar"] = (th - (t.od + 2 * tskin)) * 1000
-            # borunun sığdığı en dış y
-            for yy in np.linspace(abs(t.p1[1]), 0.0, 400):
-                st2 = P.stab_station(yy)
-                s_t = t.p0[0] + (yy - abs(t.p0[1])) * math.tan(RAD(30.0))
-                th2 = float(AF.thickness_at(P.tail_airfoil(), (s_t - st2.le_s) / st2.chord)) * st2.chord
-                if th2 >= t.od + 2 * tskin:
-                    out["stab_spar_fit_to_y"] = yy
-                    break
         if t.name == "fin_spar":
             hh = P.SPEC["tail"]["fin"]["height_m"] * 0.98
             st = P.fin_station(hh)
@@ -417,6 +443,8 @@ def build_checks(R: dict) -> list[Check]:
     add(G, "Toplam boy (dikey ucu firar kenarı)", t["fin_tip_te"], S["overall"]["length_m"], "m", "length", ".3f")
     add(G, "Spinner dahil gövde boyu", P.PROP.spinner_tip_s, S["overall"]["length_with_spinner_m"], "m", "length", ".3f")
     add(G, "Yükseklik (takım açık)", g["height"], S["overall"]["height_m"], "m", "length", ".3f")
+    add(G, "Yükseklik, strobe lensi dahil", strobe_top_z() - P.GROUND_Z, S["overall"]["height_with_lights_m"], "m",
+        "length", ".4f", "dikey ucundaki strobe elipsoidinin tepesi (sahnede ölçülen en yüksek nokta)")
     add(G, "Teker izi", g["track"], S["overall"]["wheel_track_m"], "m", "length", ".3f")
     add(G, "Dingil açıklığı", g["wheelbase"], S["overall"]["wheelbase_m"], "m", "length", ".3f",
         "statik temas noktaları arası (ana bacak 12° yatık; sıkışma aksı 1,7 mm öne alır)")
@@ -490,6 +518,8 @@ def build_checks(R: dict) -> list[Check]:
         f"disk yarı genişliği stabilize düzleminde {_fmt(t['y_disc'], '.4f')} m, 5° eğim dahil")
     add(G, "Pervane – stabilize FK aralığı (kökte)", t["gap_root"], tr["gap_root_m"], "m", "length", ".4f")
     add(G, "Aralık / pervane çapı", t["gap_over_D"], tr["gap_over_D"], "", "rel_loose", ".3f")
+    add(G, "Pala süpürme hacmi – elevatör FK (en dar)", prop_swept_gap(), tr["gap_swept_min_m"], "m", "length", ".4f",
+        f"≥ 0,25 D = {_fmt(0.25 * P.PROP.diameter, '.3f')} m şartı; pala ön yüzü düzlemin ≈ 10 mm önünde")
 
     G = "Kararlılık"
     sref = S["stability"]
@@ -520,6 +550,12 @@ def build_checks(R: dict) -> list[Check]:
     add(G, "İtki hattı z (CG istasyonunda)", pf["thrust_z_cg"], pp["thrust_line_z_at_cg_m"], "m", "length", ".4f")
     add(G, "İtki momenti (tam güç, burun aşağı)", pf["thrust_moment"], pp["thrust_moment_nm"], "N·m", "rel_loose", ".2f")
     add(G, "İtki/ağırlık", pf["T_W"], pp["thrust_to_weight"], "", "rel", ".3f")
+    er = S["propulsion"]["exhaust_ring"]
+    add(G, "Lüle akış alanı (halka iç çapı – spinner)",
+        math.pi / 4 * (float(er["id_m"]) ** 2 - P.PROP.spinner_d ** 2) * 1e4, er["area_cm2"], "cm²", "rel", ".1f",
+        "soğutma havası çıkışı; NACA karın girişi ≈ 22 cm² → çıkış/giriş ≈ 1,8 (+ çene yarığı ≈ 6 cm²)")
+    add(G, "Lüle halka ön yüzü (dış – iç çap)", math.pi / 4 * (float(er["od_m"]) ** 2 - float(er["id_m"]) ** 2) * 1e4,
+        er["annulus_cm2"], "cm²", "rel", ".1f", "halka yüzü; akış alanı DEĞİL")
 
     G = "İniş takımı ve yer açıları"
     add(G, "Ana aks s (statik)", g["main_axle_s"], gr["main_axle_s_m"], "m", "length", ".4f")
@@ -565,7 +601,7 @@ def build_checks(R: dict) -> list[Check]:
     fr = S["fuselage"]["reference"]
     add(G, "Azami genişlik", fu["max_w"], fr["max_width_m"], "m", "length", ".4f")
     add(G, "Azami yükseklik", fu["max_h"], fr["max_height_m"], "m", "length", ".4f",
-        f"s = {_fmt(fu['max_h_s'], '.2f')}'de; istasyon tablosunun tepesi 0,212 (panel 0,214)")
+        f"s = {_fmt(fu['max_h_s'], '.2f')}'de (kabin); ters motorla kuyruk konisi 0,172'ye iner, kaporta kamburu yok")
     add(G, "Islak alan", fu["wetted"], fr["wetted_area_m2"], "m²", "rel_loose", ".3f", "çevre integrali")
     add(G, "İncelik oranı L/((w+h)/2)", fu["fineness"], fr["fineness_ratio"], "", "rel_loose", ".2f",
         f"eşdeğer çapla L/d_eş = {_fmt(P.FUSELAGE_LENGTH / fu['d_eq'], '.2f')} "
@@ -592,8 +628,11 @@ def build_checks(R: dict) -> list[Check]:
         f"yerel kalınlık {_fmt(sr['thick_rear_spar'], '.1f')} mm", limit=0.0)
     add(G, "Arka kiriş ↔ menteşe oyuğu (en dar)", sr["rear_spar_cove_mm"], None, "mm", "min", ".1f",
         "oyuk = menteşe − yuvarlak burun yarıçapı − 1 mm aralık", limit=1.0)
-    add(G, "Stabilize kirişi 12/10, dış uçta kalınlık payı", sr["fit_stab_spar"], None, "mm", "info", ".1f",
-        f"boru y ≤ {_fmt(sr.get('stab_spar_fit_to_y', float('nan')), '.3f')}'e kadar sığar; dışı uç mafsalında açılır")
+    add(G, "Stabilize kirişi 12/10, boru boyunca en dar kalınlık payı", sr["fit_stab_spar"], None, "mm", "min", ".2f",
+        f"en dar y = {_fmt(sr['stab_spar_y_at_min'], '.3f')}; kesit kalınlığı − (OD + 2 kabuk), AERO-10 ≥ 0,5 mm",
+        limit=0.5)
+    add(G, "Stabilize kirişi deliği üstünde en ince kabuk", sr["stab_spar_skin_min"], None, "mm", "min", ".2f",
+        "delik OD + 0,4 mm; P8 ≥ 0,8 mm", limit=0.8)
     add(G, "Dikey kirişi 8/6, uçta kalınlık payı", sr["fit_fin_spar"], None, "mm", "min", ".1f", limit=0.0)
     return C
 
@@ -681,7 +720,8 @@ def report_md(R: dict, C: list[Check]) -> str:
         "çakışıyordu.",
         "- Dikeylerin kökü (0,24 m veter) stabilize ucunun 0,12 m arkasına uzanır; bu nokta stabilize ucundan önce "
         "yere değer (yukarıdaki \"dikey kökü\" satırı). Pervane çarpma açısı yine en küçük açıdır.",
-        "- Stabilize kirişi 12/10 boyunun tamamında NACA 0010 içinde kalmaz; dış ucu dikey mafsalına (G10) girer.",
+        "- Stabilize kalınlığı y 0,15 → 0,52 arasında %10'dan %12'ye (NACA 0012) çıkar: Ø12/10 kiriş boyunun tamamında "
+        "profil içinde kalır (en dar pay ve delik üstü kabuk yukarıdaki iki satırda; AERO-10/P8).",
         "",
     ]
     return "\n".join(lines)

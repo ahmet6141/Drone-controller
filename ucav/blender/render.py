@@ -9,21 +9,25 @@
   FFMPEG'iyle (VSE) MP4/H.264'e kodlanır — harici ``ffmpeg`` gerekmez. ``frame_step`` > 1 hızlı önizleme
   verir; video kare hızı ``fps / frame_step`` olur (süre korunur).
 * Hareket bulanıklığı (animasyonda açık): obtüratör 0,5 kare (180°). Pervane ``U_Prop`` için Cycles hareket
-  adımı 2⁶ = 64 → 8600 dev/dk'da obtüratör içindeki ≈ 3 tur doğru yaylanır (disk görünümü); tekerler 2³.
+  adımı 2⁶ = 64 → 8600 dev/dk'da obtüratör içindeki ≈ 3 tur doğru yaylanır; tekerler 2³. Palaların izi bu hızda
+  çok soluk kaldığından 900 dev/dk üstünde ``U_PropDisc`` (yarı saydam disk, uçta turuncu halka; rig sürer) görünür.
 * Gürültü giderme: OpenImageDenoise (albedo + normal). Görünüm dönüşümü: AgX, "Medium High Contrast"; pozlama
   ortama göre (``studio.EXPOSURE``: pist −0,4 EV, stüdyo 0) — her render çağrısında ``studio.configure_cycles``
   yeniden uygular. Yer yansıması dolgusu (``S_UnderFill``) animasyonda uçağı izler ve kalkıştan sonra söner.
 
-Süreler (4 çekirdekli CPU; başka ajanlarla paylaşımlı, yük ≈ 4–6 iken ölçüldü)
---------------------------------------------------------------------------
+Süreler (4 çekirdekli CPU)
+--------------------------
 * Önizleme 640×400, 16 örnek: ``pist`` görünüm başına 6–17 s, ``studyo`` 2–5 s.
-* 960×600, 32 örnek: ``pist`` görünüm başına 10–39 s (9 görünüm ≈ 4,5 dk).
-* **Varsayılan sabit görüntü 1600×1000, 64 örnek:** ``pist`` görünüm başına 67–212 s (``under`` en hızlı,
-  ``tail``/``top`` en yavaş), 9 görünüm ≈ 24 dk; ``studyo`` görünüm başına ≈ 55–65 s. (96 örnek: hero 204 s.)
-* Animasyon varsayılanı 1280×720, 24 örnek, hareket bulanıklığı: kare başına ≈ 13–20 s (havada 13 s) →
-  ``showcase`` (456 kare) ≈ 2–2,5 saat, ``mechanisms`` (240 kare, stüdyo) ≈ 1 saat.
-* Hızlı önizleme ``res=(640, 360), samples=12, frame_step=2`` (12 fps, süre korunur): kare başına 2,2 s →
-  ``mechanisms`` 4,5 dk, ``showcase`` 8,5 dk (ölçüldü).
+* 960×600, 24 örnek: ``pist`` görünüm başına ≈ 20–26 s.
+* **Depodaki sabit görüntüler 1600×1000, 128 örnek** (makine boşken): ``pist`` görünüm başına 80–370 s (``under``
+  en hızlı, ``gearbay`` en yavaş), 9 görünüm ≈ 33 dk; taktik şema 178–233 s; ``studyo`` 137–149 s. Varsayılan
+  64 örnek kabaca yarı süredir.
+* Depodaki animasyon önizlemeleri 960×540, 16 örnek, hareket bulanıklığı (ölçüldü): ``showcase`` (504 kare)
+  10,1 s/kare ≈ 85 dk (yakın planlar 16–22 s, havada 6–7 s), ``mechanisms`` (384 kare, stüdyo) 11,4 s/kare ≈ 73 dk.
+* Animasyon varsayılanı 1280×720, 24 örnek (tahmin ≈ 2,7 × önizleme): ``showcase`` ≈ 3,8 saat, ``mechanisms``
+  ≈ 3,3 saat.
+* Hızlı önizleme ``res=(640, 360), samples=12, frame_step=2`` (12 fps, süre korunur): kare sayısı yarıya, kare
+  süresi ≈ 1/3'e iner (tahmin: ``showcase`` ≈ 15 dk, ``mechanisms`` ≈ 12 dk).
 Süreler ``render_stills(...)["timings"]`` ve ``render_animation(...)["s_per_frame"]`` ile döner.
 
 Kullanım (``build.py`` bu fonksiyonları çağırır)::

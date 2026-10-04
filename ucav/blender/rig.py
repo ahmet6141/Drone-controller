@@ -56,10 +56,18 @@ Sürülen kanallar (``driver_table()`` tam listeyi verir)
   "Emission Strength" / Emission "Strength" soketlerini sürer (yer tutucu malzemeler için yedek yol).
 * ``U_PropDisc`` (yalnız ``params.MATERIALS``'ta ``UM_PropDisc`` varsa): ``ucav_disc`` = clamp((rpm − 900)/2600,
   0, 1)·0,35 — hızlı dönen pervanenin soluk diski (malzeme bu özellikle karışır); dururken render dışı.
+* Kumanda bağlantıları (``ensure_linkages``; kanatçık, dış flap, irtifa, istikamet × 2): ``U_Horn_*`` boynuz
+  (yüzeye bağlı, deliği menteşe hattının dik altında), ``U_ServoArm_*`` servo kolu (servis kapağından çıkar,
+  ``rotation_euler.x`` = yüzeyle aynı ifade), ``U_Pushrod_*`` Ø1,6 çelik itme çubuğu + çatallar (servo koluna bağlı,
+  ``rotation_euler.x`` = −aynı ifade → dönmeden öteler). Paralelkenar bağlantı: kol = boynuz vektörü.
+
+Ebeveyn kuralı (``normalize_parenting``): ``UCAV`` ağacındaki bütün çocukların ebeveyn ters matrisi birimdir;
+konum ebeveyne göre yereldir, yerel eksenler ``delta_rotation_euler``'dedir (dünya dönüşümü korunur; "Clear Parent
+Inverse" hiçbir şeyi oynatmaz). ``materials`` çıkartmaları rig'den sonra kurulduğundan ``animation.build`` de çağırır.
 
 Görünüm penceresi kolaylıkları: ``U_Root`` büyük, önde çizilen ve adı görünen bir okla seçilir; sürülen parçaların
-konum/dönüş/ölçeği kilitlidir (G/R/S ile menteşeden kaçmaz); koleksiyonlar renk etiketlidir; ``UCAV`` koleksiyonu
-varlık (asset) olarak işaretlidir (Asset Browser'dan sürüklenebilir).
+ve boynuzların konum/dönüş/ölçeği kilitlidir (G/R/S ile menteşeden kaçmaz); koleksiyonlar renk etiketlidir; ``UCAV``
+koleksiyonu varlık (asset) olarak işaretlidir (Asset Browser'dan sürüklenebilir).
 
 Sıra: ``airframe.build()`` → ``gear.build()`` → ``rig.setup()`` → ``materials.build()`` (ikisi yer değiştirebilir).
 Aralıklar ``spec.yaml → rig.ranges_deg``'dendir.
@@ -99,7 +107,8 @@ PROPS: list[tuple[str, float, float, float, str]] = [
     ("aileron_deg", 0.0, *_rng("aileron", (-25.0, 25.0)),
      "Kanatçık (°): + = sağa yatış (sol firar kenarı aşağı, sağ yukarı). Diferansiyel 1,67:1 — yukarı en çok 20°, "
      "aşağı en çok 12°"),
-    ("flap_deg", 0.0, *_rng("flap", (0.0, 35.0)), "Flap (°): iç ve dış flaplar birlikte, + = firar kenarı aşağı. Mekanik sınır 30°"),
+    ("flap_deg", 0.0, *_rng("flap", (0.0, 35.0)),
+     "Flap (°): iç ve dış flaplar birlikte, + = firar kenarı aşağı. Mekanik sınır 30°"),
     ("elevator_deg", 0.0, *_rng("elevator", (-25.0, 25.0)),
      "İrtifa dümeni (°): + = firar kenarı aşağı (burun aşağı). Mekanik sınır −25° yukarı / +20° aşağı"),
     ("rudder_deg", 0.0, *_rng("rudder", (-25.0, 25.0)),
@@ -230,7 +239,8 @@ def wheel_expr(leg: str) -> str:
 
 
 def prop_expr() -> str:
-    """Pervane açısı (radyan): ``(k + m·kare·rpm/1440)·2π`` — ``k`` = ``U_Prop["ucav_turns"]``, ``m`` = ``prop_auto``."""
+    """Pervane açısı (radyan): ``(k + m·kare·rpm/1440)·2π`` — ``k`` = ``U_Prop["ucav_turns"]``,
+    ``m`` = ``prop_auto``."""
     return f"(k + m * frame * rpm / {_f(PROP_FPS * 60.0)}) * 2 * pi"
 
 
@@ -374,7 +384,8 @@ def driver_table() -> list[dict]:
                          "expr": link_expr(leg, up), "vars": [("L", f"U_GearSlider_{leg}", "location[2]")]})
         rows.append({"obj": f"U_GearWheel_{leg}", "path": "rotation_euler", "index": 1, "expr": wheel_expr(leg),
                      "vars": ["roll", "w", ("x", ROOT, "LOC_X"), ("y", ROOT, "LOC_Y"), ("h", ROOT, "ROT_Z")]})
-    rows.append({"obj": "U_GearSteer_N", "path": "rotation_euler", "index": 2, "expr": steer_expr(), "vars": ["r", "g"]})
+    rows.append({"obj": "U_GearSteer_N", "path": "rotation_euler", "index": 2, "expr": steer_expr(),
+                 "vars": ["r", "g"]})
     for dd in P.gear_doors():
         if dd.attach == "skin":
             rows.append({"obj": dd.name, "path": "rotation_euler", "index": 0, "expr": gear_doors_expr(dd.open_deg),
@@ -398,6 +409,15 @@ def driver_table() -> list[dict]:
         rows.append({"obj": DISC_NAME, "path": '["ucav_disc"]', "index": -1, "expr": disc_expr(), "vars": ["rpm"]})
         rows.append({"obj": DISC_NAME, "path": "hide_render", "index": -1, "expr": f"rpm < {_f(DISC_RPM[0])}",
                      "vars": ["rpm"]})
+    for name in LINKAGES:                    # servo kolu yüzeyle aynı açı; çubuk ters dönüşle yalnız öteler
+        var = {"Aileron": "a", "FlapIn": "f", "FlapOut": "f", "Elevator": "e", "Rudder": "r"}[name]
+        for side in ("L", "R"):
+            _, n_arm, n_rod = linkage_names(name, side)
+            if bpy.data.objects.get(n_arm) is None or bpy.data.objects.get(n_rod) is None:
+                continue
+            ex = surface_expr(name, side)
+            rows.append({"obj": n_arm, "path": "rotation_euler", "index": 0, "expr": ex, "vars": [var]})
+            rows.append({"obj": n_rod, "path": "rotation_euler", "index": 0, "expr": f"-({ex})", "vars": [var]})
     return rows
 
 
@@ -410,12 +430,14 @@ DISC_MAT = "UM_PropDisc"
 
 def ensure_prop_disc() -> bpy.types.Object | None:
     """Pervane düzleminde ince kapalı halka (r 0,035 … pala ucu, 96 dilim, 1 mm): hızlı dönen pervanenin zaman
-    ortalamalı diski. ``U_Root``'a bağlıdır (pervaneyle dönmez), seçilemez, gölge vermez. Malzeme ``UM_PropDisc``
-    ``params.MATERIALS``'ta yoksa kurulmaz (``None``)."""
+    ortalamalı diski. Orijin göbekte, yerel X = mil ekseni (geriye; ``U_Prop`` ile aynı çerçeve) → malzeme yarıçapı
+    Object koordinatından √(y² + z²) diye okur. ``U_Root``'a bağlıdır (pervaneyle dönmez), seçilemez, gölge vermez.
+    Malzeme ``UM_PropDisc`` ``params.MATERIALS``'ta yoksa kurulmaz (``None``)."""
     if DISC_MAT not in P.MATERIALS:
         return None
     from . import util as U
     import numpy as np
+    from mathutils import Matrix
     root = bpy.data.objects[ROOT]
     pr = P.PROP
     hub = np.asarray(P.to_blender(*pr.hub), float)
@@ -424,19 +446,20 @@ def ensure_prop_disc() -> bpy.types.Object | None:
     e1 = np.cross(ax, [0.0, 0.0, 1.0])
     e1 /= np.linalg.norm(e1)
     e2 = np.cross(ax, e1)
+    Fr = np.column_stack([ax, e1, e2])                       # yerel X = mil, Y/Z = disk düzlemi
     r0, r1, th, n = 0.035, float(pr.radius), 0.001, 96
     V, F = [], []
     for k in range(n):
         a = 2 * math.pi * k / n
-        d = math.cos(a) * e1 + math.sin(a) * e2
+        d = np.array([0.0, math.cos(a), math.sin(a)])
         for r in (r0, r1):
             for s in (-0.5, 0.5):
-                V.append(tuple(hub - np.asarray(P.U_ROOT_B) + d * r + ax * s * th))
+                V.append(tuple(d * r + np.array([s * th, 0.0, 0.0])))
     for k in range(n):
         a, b = 4 * k, 4 * ((k + 1) % n)
-        # dörtlü: (iç-ön, iç-arka, dış-ön, dış-arka) = (0, 1, 2, 3)
-        F += [(a + 0, a + 2, b + 2, b + 0), (a + 1, b + 1, b + 3, a + 3),
-              (a + 2, a + 3, b + 3, b + 2), (a + 0, b + 0, b + 1, a + 1)]
+        # dörtlü: (iç-ön, iç-arka, dış-ön, dış-arka) = (0, 1, 2, 3); yüzler dışa dönük (ön −mil, arka +mil)
+        F += [(a + 0, b + 0, b + 2, a + 2), (a + 1, a + 3, b + 3, b + 1),
+              (a + 2, b + 2, b + 3, a + 3), (a + 0, a + 1, b + 1, b + 0)]
     old = bpy.data.objects.get(DISC_NAME)
     if old is not None:
         bpy.data.objects.remove(old, do_unlink=True)
@@ -453,12 +476,266 @@ def ensure_prop_disc() -> bpy.types.Object | None:
     col.objects.link(ob)
     ob.parent = root
     ob.matrix_parent_inverse.identity()
-    ob.location = (0.0, 0.0, 0.0)
+    ob.location = tuple(map(float, hub - np.asarray(P.U_ROOT_B, float)))
+    ob.rotation_mode = "XYZ"
+    ob.delta_rotation_euler = Matrix(Fr.tolist()).to_euler("XYZ")
     ob.hide_select = True
     ob.visible_shadow = False
     ob["ucav_disc"] = 0.0
     ob.id_properties_ui("ucav_disc").update(min=0.0, max=1.0, description="Pervane diski örtmesi (rig sürer)")
     return ob
+
+
+# =====================================================================================================
+# Kumanda bağlantıları: boynuz, servo kolu, itme çubuğu (GEO-01)
+# =====================================================================================================
+LINKAGES = ("Aileron", "FlapOut", "Elevator", "Rudder")    # iç flap: servo yeri baskı planında (P9) açık
+LINK_COL = "UCAV_Surfaces"
+LINK_T = 0.0016                     # boynuz ve servo kolu plaka kalınlığı (G10 / naylon). varsayım
+HORN_OUT = {"wing": 0.011, "stab": 0.009, "fin": 0.009}     # boynuz deliği, yüzey derisinin dışında (m). varsayım
+ARM_OUT = 0.009                     # servo kolu ucu, servo kapağının (ev sahibi deri) en az bu kadar dışında. varsayım
+ROD_R = 0.0008                      # Ø1,6 mm çelik itme çubuğu
+SERVO_X_C = {"wing": 0.465, "stab": 0.36, "fin": 0.40}      # servo (servis kapağı) merkezi, veter oranı. varsayım
+_SERVO_Y_DEFAULT = {"Aileron": 1.30, "FlapOut": 0.68, "Elevator": 0.17, "Rudder": 0.10, "FlapIn": 0.20}
+_KIND = {"Aileron": "wing", "FlapOut": "wing", "FlapIn": "wing", "Elevator": "stab", "Rudder": "fin"}
+
+
+def _servo_stations() -> dict[str, float]:
+    """Servo açıklık istasyonları (kanat/stabilize ``|y|``, dikey ``h``): baskı planı (``printprep.SERVO_STATIONS``)
+    ile aynı — servis kapakları (``materials``) da buradan çizilir."""
+    try:
+        from .printprep import SERVO_STATIONS
+        return {**_SERVO_Y_DEFAULT, **{k: float(v) for k, v in SERVO_STATIONS.items()}}
+    except Exception:                                       # pragma: no cover — baskı modülü yoksa
+        return dict(_SERVO_Y_DEFAULT)
+
+
+def _servo_point_b(name: str, side: str):
+    """Servo çıkış mili noktası (Blender, dinlenme): servis kapağı merkezi, kalınlık ortası."""
+    import numpy as np
+    st_v = _servo_stations()[name]
+    sg = 1.0 if side == "L" else -1.0
+    kind = _KIND[name]
+    if kind == "wing":
+        y = sg * st_v
+        st = P.wing_station(y)
+        try:
+            from .materials import SERVO_HATCH_X_C as xc
+        except Exception:                                   # pragma: no cover
+            xc = SERVO_X_C["wing"]
+        s = st.le_s + float(xc) * (st.te_s - st.le_s)
+        z = P.wing_mid_z(s, y)
+        return np.asarray(P.to_blender(s, y, st.z_ref if z is None else z), float)
+    if kind == "stab":
+        st = P.stab_station(sg * st_v)
+        return np.asarray(P.to_blender(st.le_s + SERVO_X_C["stab"] * st.chord, sg * st_v, st.z), float)
+    fs = P.fin_station(st_v, side)
+    return np.asarray(P.to_blender(fs.le[0] + SERVO_X_C["fin"] * fs.chord, fs.le[1], fs.le[2]), float)
+
+
+def _rest_matrix(ob):
+    """Dinlenme pozu dünya matrisi: sürülen ``rotation_euler`` yok sayılır, ``U_Root`` tasarım CG'sinde."""
+    from mathutils import Matrix, Vector
+    if ob.name == ROOT:
+        return Matrix.Translation(Vector(P.U_ROOT_B))
+    R = ob.delta_rotation_euler.to_matrix().to_4x4()
+    S = Matrix.Diagonal((*[a * b for a, b in zip(ob.scale, ob.delta_scale)], 1.0))
+    B = Matrix.Translation(ob.location + ob.delta_location) @ R @ S
+    return _rest_matrix(ob.parent) @ ob.matrix_parent_inverse @ B if ob.parent is not None else B
+
+
+def _skin_w(targets, M_f, x: float, u: float, s_z: float, far: float = 0.3) -> float | None:
+    """``M_f`` çerçevesinde (x, u) doğrusunda ``s_z``·Z yönündeki en dış deri (dışarıdan içe ışın): w = s_z·z."""
+    from mathutils import Vector
+    Mfi = M_f.inverted()
+    p_w = M_f @ Vector((x, u, s_z * far))
+    d_w = (M_f.to_3x3() @ Vector((0.0, 0.0, -s_z))).normalized()
+    best = None
+    for bvh, M in targets:
+        Mi = M.inverted()
+        hit = bvh.ray_cast(Mi @ p_w, (Mi.to_3x3() @ d_w).normalized(), 2.0 * far)[0]
+        if hit is None:
+            continue
+        w = s_z * (Mfi @ (M @ hit)).z
+        best = w if best is None else max(best, w)
+    return best
+
+
+def _convex_hull(pts):
+    """2B dışbükey zarf (Andrew), saat yönü tersine."""
+    pts = sorted(set((round(float(a), 7), round(float(b), 7)) for a, b in pts))
+
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lo, hi = [], []
+    for p in pts:
+        while len(lo) >= 2 and cross(lo[-2], lo[-1], p) <= 0:
+            lo.pop()
+        lo.append(p)
+    for p in reversed(pts):
+        while len(hi) >= 2 and cross(hi[-2], hi[-1], p) <= 0:
+            hi.pop()
+        hi.append(p)
+    return lo[:-1] + hi[:-1]
+
+
+def linkage_names(name: str, side: str) -> tuple[str, str, str]:
+    return f"U_Horn_{name}_{side}", f"U_ServoArm_{name}_{side}", f"U_Pushrod_{name}_{side}"
+
+
+def linkage_geometry(name: str, side: str) -> dict | None:
+    """Paralelkenar bağlantı ölçüleri (kumanda yüzeyi çerçevesinde, orijin menteşe ortası, X menteşe, Y geriye):
+    boynuz deliği H = (x, 0, s·d), servo mili S = (x, −L, 0), servo kolu = boynuz vektörü (0, 0, s·d) → çubuk
+    dönmeden öteler (kol ve yüzey aynı açıyla döner). ``s`` = dışa yön (+1 kanat/stabilize altı, dikeyde içe)."""
+    import numpy as np
+    from mathutils import Matrix, Vector
+    from mathutils.bvhtree import BVHTree
+    h = P.hinge_line(name, side)
+    surf = bpy.data.objects.get(h.obj_name)
+    if surf is None or surf.parent is None:
+        return None
+    kind = _KIND[name]
+    F = np.asarray(h.frame_b(), float)
+    O = np.asarray(h.mid_b, float)
+    M_f = Matrix.Translation(Vector(O)) @ Matrix([list(F[i]) for i in range(3)]).to_4x4()
+    S_w = _servo_point_b(name, side)
+    x = float(np.dot(S_w - O, F[:, 0]))
+    x = float(np.clip(x, -0.5 * h.length + 0.02, 0.5 * h.length - 0.02))
+    L = float(-np.dot(S_w - O, F[:, 1]))
+    if kind == "fin":                                        # dikey: boynuz ve servo kolu içe (pervane tarafı)
+        fin = np.asarray(P.to_blender(*P.fin_station(0.1, side).le), float)
+        s_z = 1.0 if float(np.dot(F[:, 2], [0.0, -np.sign(fin[1]), 0.0])) > 0 else -1.0
+    else:                                                    # yatay yüzeyler: aşağı
+        s_z = 1.0 if F[2, 2] < 0 else -1.0
+    dg = bpy.context.evaluated_depsgraph_get()
+    tg_s = [(BVHTree.FromObject(surf, dg), _rest_matrix(surf))]
+    host = surf.parent
+    hosts = [host] + [bpy.data.objects.get(n.format(s=side)) for n in
+                      (("U_WingCenter_{s}", "U_WingOuter_{s}", "U_Tip_{s}") if kind == "wing" else ())]
+    tg_h = [(BVHTree.FromObject(o, dg), _rest_matrix(o)) for o in dict.fromkeys(o for o in hosts if o is not None)]
+    w_hinge = _skin_w(tg_s, M_f, x, 0.004, s_z)
+    w_servo = _skin_w(tg_h, M_f, x, -L, s_z)
+    if w_hinge is None or w_servo is None:
+        return None
+    d = max(w_hinge + HORN_OUT[kind], w_servo + ARM_OUT)
+    base = [(u, (_skin_w(tg_s, M_f, x, u, s_z) or w_hinge) - 0.0012) for u in (0.0025, 0.011, 0.020)]
+    return {"name": name, "side": side, "kind": kind, "x": x, "L": L, "d": d, "s": s_z, "frame": F, "origin": O,
+            "M_f": M_f, "host": host.name, "surface": surf.name, "w_hinge": w_hinge, "w_servo": w_servo,
+            "horn_base": base}
+
+
+def _link_mesh_parts(g: dict):
+    """(boynuz, servo kolu, çubuk) ağları — her biri kendi nesne orijinine göre, yüzey çerçevesi eksenlerinde."""
+    import numpy as np
+    from . import gear as GR
+    d, L, s = g["d"], g["L"], g["s"]
+    ey, ez = np.array([0.0, 1.0, 0.0]), np.array([0.0, 0.0, s])
+    t2 = 0.5 * LINK_T
+    # boynuz: deri tabanı (1,2 mm gömülü) + delik çevresinde Ø5,2 mm uç → dışbükey levha; orijin delik
+    pts = [(u, w - d) for u, w in g["horn_base"]]
+    pts += [(0.0026 * math.cos(a), 0.0026 * math.sin(a)) for a in np.linspace(0.0, 2 * math.pi, 16, endpoint=False)]
+    horn = GR.prism("horn", _convex_hull(pts), np.zeros(3), ey, ez, -t2, t2, "UM_Accent", 40.0)
+    # servo kolu: mil göbeği (r 3 mm) → uç (r 2,1 mm), orijin mil
+    arm = GR.merge("arm", [GR.prism("arm", GR.stadium((0.0, 0.0), (0.0, d), 0.0030, 0.0021, 8), np.zeros(3), ey,
+                                    ez, -t2 - 0.0002, t2 + 0.0002, "UM_Carbon", 40.0),
+                           GR.cyl("spline", (-0.0030, 0.0, 0.0), (0.0030, 0.0, 0.0), 0.0019, "UM_Steel", 16)], 40.0)
+    # çubuk: Ø1,6 çelik + iki uçta çatal (klevis); orijin servo kolu ucu, çubuk +Y (geriye) boyunca L
+    rod = GR.merge("rod", [GR.cyl("rod", (0.0, 0.0028, 0.0), (0.0, L - 0.0028, 0.0), ROD_R, "UM_Steel", 10),
+                           GR.box("clevis_a", (0.0, 0.0, 0.0), (0.0018, 0.0030, 0.0019), None, "UM_Accent", 0.0006),
+                           GR.box("clevis_b", (0.0, L, 0.0), (0.0018, 0.0030, 0.0019), None, "UM_Accent", 0.0006)],
+                   40.0)
+    return horn, arm, rod
+
+
+def _link_object(name: str, md, col, parent, location, delta_euler=(0.0, 0.0, 0.0)):
+    from mathutils import Matrix, Vector
+    from . import util as U
+    U.remove_object(name)
+    md.name = name
+    me = U.mesh_from_data(md, name)
+    ob = bpy.data.objects.new(name, me)
+    col.objects.link(ob)
+    ob.parent = parent
+    ob.matrix_parent_inverse = Matrix.Identity(4)
+    ob.location = Vector(tuple(map(float, location)))
+    ob.rotation_mode = "XYZ"
+    ob.rotation_euler = (0.0, 0.0, 0.0)
+    ob.delta_rotation_euler = tuple(map(float, delta_euler))
+    ob["ucav_role"] = "linkage"
+    return ob
+
+
+def ensure_linkages() -> list[dict]:
+    """Her kumanda yüzeyi (``LINKAGES``, iki yan) için boynuz (yüzeye bağlı), servo kolu (ev sahibi deriye bağlı,
+    yüzeyle aynı ifadeyle döner) ve itme çubuğu (servo koluna bağlı, ters dönüşle öteler) kurar. Tekrar
+    çağrılabilir. Ölçüleri döndürür."""
+    from mathutils import Matrix, Vector
+    col = bpy.data.collections.get(LINK_COL) or bpy.data.collections.get("UCAV")
+    out = []
+    for name in LINKAGES:
+        for side in ("L", "R"):
+            g = linkage_geometry(name, side)
+            if g is None:
+                continue
+            horn_md, arm_md, rod_md = _link_mesh_parts(g)
+            n_horn, n_arm, n_rod = linkage_names(name, side)
+            surf, host = bpy.data.objects[g["surface"]], bpy.data.objects[g["host"]]
+            _link_object(n_horn, horn_md, col, surf, (g["x"], 0.0, g["s"] * g["d"]))
+            Mb = _rest_matrix(host).inverted() @ g["M_f"] @ Matrix.Translation(Vector((g["x"], -g["L"], 0.0)))
+            arm = _link_object(n_arm, arm_md, col, host, Mb.to_translation(), Mb.to_3x3().to_euler("XYZ"))
+            _link_object(n_rod, rod_md, col, arm, (0.0, 0.0, g["s"] * g["d"]))
+            out.append({k: (round(v, 4) if isinstance(v, float) else v) for k, v in g.items()
+                        if k in ("name", "side", "x", "L", "d", "w_hinge", "w_servo", "host")})
+    return out
+
+
+def _action_fcurves(action) -> list:
+    """Aksiyonun F-eğrileri (eski API ya da 4.4+ katmanlı aksiyon)."""
+    if len(getattr(action, "fcurves", ())):
+        return list(action.fcurves)
+    out = []
+    for layer in getattr(action, "layers", ()):
+        for strip in layer.strips:
+            for bag in getattr(strip, "channelbags", ()):
+                out.extend(bag.fcurves)
+    return out
+
+
+def normalize_parenting(objects=None) -> list[str]:
+    """Ebeveyn ters matrisini birim yapar (tek kural: yerel konum + ``delta_rotation_euler``), dünya dönüşümü
+    korunur: B' = Pinv·B → konum = R·(konum + delta) + t − delta, delta dönüş = R·delta dönüş. Anahtarlı, konumu
+    sürülen ya da ölçekli ebeveyn tersine sahip nesneler atlanır. Varsayılan: ``UCAV`` koleksiyon ağacı."""
+    from mathutils import Matrix
+    if objects is None:
+        col = bpy.data.collections.get("UCAV")
+        objects = list(col.all_objects) if col is not None else []
+    I4 = Matrix.Identity(4)
+    done = []
+    for ob in objects:
+        Pm = ob.matrix_parent_inverse
+        if ob.parent is None or all(abs(Pm[i][j] - I4[i][j]) < 1e-9 for i in range(4) for j in range(4)):
+            continue
+        ad = ob.animation_data
+        moving = ("location", "delta_location", "delta_rotation_euler")
+        if ad is not None and (any(d.data_path in moving for d in ad.drivers) or (
+                ad.action is not None and any(fc.data_path in moving for fc in _action_fcurves(ad.action)))):
+            continue
+        if ob.rotation_mode not in ("XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX"):
+            continue
+        R3 = Pm.to_3x3()
+        RRt = R3 @ R3.transposed()
+        if max(abs(RRt[i][j] - (1.0 if i == j else 0.0)) for i in range(3) for j in range(3)) > 1e-6:
+            continue                                         # ölçekli ebeveyn tersi: dokunma
+        dloc = ob.delta_location.copy()
+        loc = R3 @ (ob.location + dloc) + Pm.to_translation() - dloc
+        drot = (R3 @ ob.delta_rotation_euler.to_matrix()).to_euler(ob.rotation_mode, ob.delta_rotation_euler)
+        ob.matrix_parent_inverse = I4.copy()
+        ob.location = loc
+        ob.delta_rotation_euler = drot
+        done.append(ob.name)
+    if done:
+        bpy.context.view_layer.update()
+    return done
 
 
 # =====================================================================================================
@@ -596,6 +873,8 @@ def setup(scene: bpy.types.Scene | None = None, *, reset: bool = False) -> dict:
     ensure_props(root, reset)
     ensure_prop_turns(bpy.data.objects.get("U_Prop"))
     ensure_prop_disc()
+    normalized = normalize_parenting()
+    links = ensure_linkages()
     n_ok, missing, not_simple = 0, [], []
     driven: set[str] = set()
     for row in driver_table():
@@ -626,11 +905,12 @@ def setup(scene: bpy.types.Scene | None = None, *, reset: bool = False) -> dict:
         driven.add(row["obj"])
         n_ok += 1
     mats = drive_light_materials(scene)
-    viewport_setup(driven)
+    viewport_setup(driven | {linkage_names(g["name"], g["side"])[0] for g in links})
     mark_asset()
     embed_bake_text()
     refresh()
-    return {"drivers": n_ok, "material_drivers": mats, "missing": missing, "not_simple": not_simple}
+    return {"drivers": n_ok, "material_drivers": mats, "missing": missing, "not_simple": not_simple,
+            "linkages": links, "normalized": len(normalized)}
 
 
 def set_controls(**values) -> None:

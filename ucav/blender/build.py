@@ -28,8 +28,8 @@ Terminalde çıktı bayrağı verilmezse ``--blend`` varsayılır.
 Blender uygulamasının kendi Python'unda PyYAML yoksa (``params`` spec.yaml'ı onunla okur) sistem Python'undaki
 saf-Python ``yaml`` paketi geçici bir yol üzerinden ödünç alınır; o da yoksa kurulum komutu yazdırılır.
 
-Süreler (4 çekirdekli CPU, ölçülen): sahne kurulumu ≈ 20 s; baskı (``--print``) ≈ 3–4 dk; 9 sabit görüntü
-1600×1000 / 64 örnek ≈ 15–25 dk; animasyonlar için ``render.py`` belgesine ve ``ucav/README.md``'ye bakın.
+Süreler (4 çekirdekli CPU, ölçülen): sahne kurulumu ≈ 25 s; baskı (``--print``) ≈ 1,5 dk (+ sahne); 9 sabit
+görüntü 1600×1000 / 128 örnek ≈ 33 dk; animasyonlar için ``render.py`` belgesine ve ``ucav/README.md`` §7'ye bakın.
 """
 from __future__ import annotations
 
@@ -190,8 +190,8 @@ def parser() -> argparse.ArgumentParser:
                    help=f"sabit görüntüler → ucav/out/render/yk38_<görünüm>.jpg; görünüm verilmezse hepsi: "
                         f"{' '.join(VIEWS_ALL)}")
     g.add_argument("--anim", choices=(*CLIPS, "all"), default=None,
-                   help="animasyon → ucav/out/anim/<klip>.mp4 (H.264): showcase (19 s, pist), mechanisms "
-                        "(10 s döngü, stüdyo) ya da all")
+                   help="animasyon → ucav/out/anim/<klip>.mp4 (H.264): showcase (21 s, pist), mechanisms "
+                        "(16 s döngü, stüdyo) ya da all")
     g.add_argument("--print", dest="do_print", action="store_true",
                    help="3B baskı parçaları: segmentler, STL (mm) ve Türkçe baskı raporu (ucav/out/stl, print_report.md)")
     o = ap.add_argument_group("ayarlar")
@@ -288,8 +288,9 @@ def build_scene(livery: str = "standart", verbose: bool = True) -> dict:
 CLIP_TEXT = "YK38_klip_sec.py"
 _CLIP_SWITCHER = '''# YELKOVAN YK-38 — klip seçici ve kontrol paneli notu (depo gerekmez; Text Editor'da ▶ Run Script)
 #
-# KLIP = "showcase"   : 19 s gösterim (yer, kalkış, takım toplama, dönüş), kameralar zaman çizelgesi işaretleriyle
-# KLIP = "mechanisms" : 10 s kesintisiz döngü (bakım sehpası, takım/kumanda/taret/pervane)
+# KLIP = "showcase"   : 21 s gösterim (kuruluş planı, kumanda yakın planları, kalkış, takım toplama, dönüş);
+#                       kameralar zaman çizelgesi işaretleriyle değişir (YK38_ev_* olay işaretleri kamerasızdır)
+# KLIP = "mechanisms" : 16 s kesintisiz döngü (bakım sehpası, yakın planlar: kumandalar, burun tekeri, taret, takım)
 # KLIP = "yok"        : animasyon kaldırılır, dinlenme pozu — kendi animasyonunuz için U_Root özelliklerine
 #                       anahtar kare koyun (özellik üstünde I tuşu)
 #
@@ -297,8 +298,12 @@ _CLIP_SWITCHER = '''# YELKOVAN YK-38 — klip seçici ve kontrol paneli notu (de
 #   gear 0…1 (0 = toplu, 1 = açık; kapak-bacak-kapak sırası tek değerle), gear_doors 0…1 (el ile kapak),
 #   aileron_deg ±25 (+ = sağa yatış), flap_deg 0…35, elevator_deg ±25 (+ = firar kenarı aşağı),
 #   rudder_deg ±25 (+ = firar kenarı sancağa, burun tekeri birlikte), prop_rpm 0…9000,
-#   turret_pan_deg ±180 (+ = iskele), turret_tilt_deg −90…20 (+ = yukarı), nav_lights 0/1, strobe 0/1.
+#   prop_auto 0/1 (1 = açı kare·rpm/1440 tur; 0 = pişirilmiş U_Prop["ucav_turns"], bkz. YK38_pervane_pisir.py),
+#   turret_pan_deg ±180 (+ = iskele), turret_tilt_deg −90…20 (+ = yukarı), nav_lights 0/1, strobe 0/1,
+#   status_led 0/1 (taret durum LED'i, yalnız bakım/test), ground_z (zemin Z'si: uçağı kendi zemininize koyunca
+#   eşitleyin), wheel_auto 0/1 (tekerler U_Root'un yer ilerlemesiyle döner), wheel_roll_m (ek yuvarlanma, m).
 # Bütün hareketli parçalar bu özelliklere "basit ifade" sürücüleriyle bağlıdır (Python betiği izni gerekmez).
+# Devri değişen kendi animasyonunuzda pervane açısı için YK38_pervane_pisir.py metin bloğunu çalıştırın.
 import bpy
 
 KLIP = "mechanisms"
@@ -328,7 +333,7 @@ if KLIP == "yok":
     for k, v in info["defaults"].items():
         root[k] = v
     if prop is not None:
-        prop["ucav_turns_offset"] = 0.0
+        prop["ucav_turns"] = 0.0
     sc.camera = bpy.data.objects.get("U_Cam_hero") or sc.camera
 else:
     c = info[KLIP]
@@ -338,6 +343,8 @@ else:
     for m in c["markers"]:
         mk = sc.timeline_markers.new("YK38_" + m["camera"][6:], frame=int(m["frame"]))
         mk.camera = bpy.data.objects.get(m["camera"])
+    for e in c.get("events", []):                       # kamerasız olay işaretleri (kamera geçişini etkilemez)
+        sc.timeline_markers.new("YK38_" + e["name"], frame=int(e["frame"]))
     sc.camera = bpy.data.objects.get(c["markers"][0]["camera"])
 for ob in bpy.data.objects:
     if ob.name.startswith("U_Stand_"):
@@ -356,8 +363,10 @@ def embed_clip_switcher(scene) -> None:
     from ucav.blender import animation, rig
     clips = {}
     for name, plan in (("showcase", animation.showcase_plan), ("mechanisms", animation.mechanisms_plan)):
+        pl = plan()
         clips[name] = {"frames": animation.nframes(name),
-                       "markers": [{"frame": int(f), "camera": str(c)} for f, c in plan()["markers"]]}
+                       "markers": [{"frame": int(f), "camera": str(c)} for f, c in pl["markers"]],
+                       "events": [{"frame": int(f), "name": str(n)} for f, n in pl["events"]]}
     clips["rest_location"] = list(P.U_ROOT_B)
     clips["defaults"] = {p[0]: float(p[1]) for p in rig.PROPS}
     scene["ucav_clips"] = clips
@@ -413,14 +422,16 @@ def run_print(bed_key: str, export: bool, verbose: bool) -> dict:
     t0 = time.time()
     S = printprep.build_print_parts(bed=bed, export=export, verbose=verbose)
     T = S["totals"]
+    heat_ok = bool((S.get("heat_rule") or {}).get("ok", True))
     log(f"baskı {bed[0]}×{bed[1]}×{bed[2]}: {T['unique_parts']} benzersiz parça, {T['pieces']} adet, "
         f"{T['mass_g'] / 1000:.2f} kg, ≈{T['print_h']:.0f} h, manifold {'evet' if S['all_manifold'] else 'HAYIR'}, "
-        f"sığma {'evet' if S['all_fit'] else 'HAYIR'} ({time.time() - t0:.0f} s)")
+        f"sığma {'evet' if S['all_fit'] else 'HAYIR'}, ısı kuralı {'evet' if heat_ok else 'HAYIR'} "
+        f"({time.time() - t0:.0f} s)")
     for w in S["warnings"]:
         log(f"  baskı uyarısı: {w}")
     return {"seconds": round(time.time() - t0, 1), "all_manifold": S["all_manifold"], "all_fit": S["all_fit"],
-            "unique_parts": T["unique_parts"], "pieces": T["pieces"], "mass_kg": round(T["mass_g"] / 1000, 2),
-            "print_h": round(T["print_h"], 0)}
+            "heat_ok": heat_ok, "unique_parts": T["unique_parts"], "pieces": T["pieces"],
+            "mass_kg": round(T["mass_g"] / 1000, 2), "print_h": round(T["print_h"], 0)}
 
 
 @contextlib.contextmanager
@@ -431,6 +442,8 @@ def _gltf_materials(livery: str):
     from ucav import params as P
     from ucav.blender import materials as M
     cols = M.livery_colors(livery)
+    root = bpy.data.objects.get("U_Root")
+    led = float(root.get("status_led", 0.0)) if root is not None else 0.0      # taret LED'i: dinlenmede sönük
     originals: dict[str, bpy.types.Material] = {}
     temps: dict[str, bpy.types.Material] = {}
     for name, spec in P.MATERIALS.items():
@@ -449,9 +462,10 @@ def _gltf_materials(livery: str):
         if spec.transmission > 0:
             b.inputs["Transmission Weight"].default_value = float(spec.transmission)
             b.inputs["IOR"].default_value = float(spec.ior)
-        if spec.emission > 0:
+        emission = float(spec.emission) * (led if name == "UM_StatusLED" else 1.0)
+        if emission > 0:
             b.inputs["Emission Color"].default_value = rgba
-            b.inputs["Emission Strength"].default_value = float(spec.emission)
+            b.inputs["Emission Strength"].default_value = emission
         tm.diffuse_color = rgba
         temps[name] = tm
     by_orig = {m: temps[n] for n, m in originals.items()}
@@ -472,13 +486,15 @@ def _gltf_materials(livery: str):
             mat.name = name
 
 
-GLB_PROP_TURNS = 30          # pişirilen döngüde pervane turu (240 kare → 45°/kare, ileri yönde, kesintisiz döngü)
+GLB_PROP_TURNS = 64          # pişirilen döngüde pervane turu: mechanisms 240 dev/dk (384 kare → 60°/kare, ileri yönde)
+GLB_EXCLUDE = ("U_PropDisc",)   # glTF'e girmeyenler: pervane diski (karışım malzemesi düz PBR'de opak disk olur)
 
 
 @contextlib.contextmanager
 def _gltf_prop_spin(active: bool):
-    """Kare başına örneklenen glTF'te 2400 dev/dk (600°/kare) geriye dönüyormuş gibi örtüşür (stroboskop). Pişirme
-    süresince pervane sürücüsü susturulur ve döngüye tam sayıda tur atan yavaş, doğru yönlü bir dönüş konur."""
+    """Pişirme süresince pervane sürücüsü susturulur ve döngüye tam sayıda tur atan (``GLB_PROP_TURNS``) doğrusal,
+    doğru yönlü bir dönüş konur: kare başına örneklenen glTF'te hızlı devir geriye dönüyormuş gibi örtüşür
+    (stroboskop), döngü dikişinde de açı kesintisiz kalır."""
     import math
 
     import bpy
@@ -529,7 +545,8 @@ def export_glb(path: Path, livery: str, with_anim: bool = False) -> dict:
     vl = bpy.context.view_layer
     for ob in vl.objects:
         ob.select_set(False)
-    objs = [o for o in bpy.data.collections["UCAV"].all_objects if vl.objects.get(o.name) is not None]
+    objs = [o for o in bpy.data.collections["UCAV"].all_objects
+            if vl.objects.get(o.name) is not None and o.name not in GLB_EXCLUDE]
     for o in objs:
         o.select_set(True)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -639,7 +656,7 @@ def main(argv: list[str] | None = None) -> int:
     ok = not info["rig"]["missing"] and not info["materials"]["missing"]
     if args.do_print:
         summary["print"] = run_print(args.bed, export=not args.no_stl, verbose=not args.quiet)
-        ok = ok and summary["print"]["all_manifold"] and summary["print"]["all_fit"]
+        ok = ok and summary["print"]["all_manifold"] and summary["print"]["all_fit"] and summary["print"]["heat_ok"]
     if args.glb or args.glb_static:
         summary["glb"] = export_glb(out / GLB_NAME, args.livery, with_anim=not args.glb_static)
     if args.blend:

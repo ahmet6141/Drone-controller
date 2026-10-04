@@ -13,7 +13,7 @@ Yöntem
    önü D-kutu (1,2 mm), arkası 0,6 mm; ``spec.yaml → print.walls_mm``.
 2. **Segment**: her segment düzlemlerle sınırlı dışbükey bölgedir (kutu). ``A = dış ∩ bölge`` (EXACT),
    ``boşluk = iç ∩ bölge'`` (plaka uçlarında kaburga kalınlığı kadar içeride, diğer uçlarda dışarı taşar),
-   ``boşluk −= iç yapılar`` (kılavuz kovanları, kesme ağları, ±45° geodezik kafes, pim göbekleri, flanşlar),
+   ``boşluk −= iç yapılar`` (kılavuz kovanları, kesme ağları, ±40° geodezik kafes, pim göbekleri, flanşlar),
    ``parça = A − boşluk``, sonra eklenenler (menteşe dilleri) ``∪`` ve delikler ``−`` (boru kanalları, pim
    delikleri, hafifletme delikleri, servo yuvası, horn yarığı, menteşe pimi, çentikler).
 3. **Uç türleri**: ``plate`` (kapalı kaburga, tablaya oturan yüz; hafifletme ve pim delikli), ``frame`` (gövde
@@ -93,16 +93,47 @@ LAND_H = 0.006                                      # flanş yüksekliği. varsa
 SLEEVE_T = 0.0008                                   # boru kılavuz kovanı eti (2 çizgi). varsayım
 SHOULDER = 0.002                                    # kovan kademesi / kör uç kapağı kalınlığı. varsayım
 WEB_T = 0.0008                                      # kesme ağı (kiriş gövdesi) eti. varsayım
-LATTICE_T = _WALLS["lattice"]                       # ±45° geodezik iç kafes (0,45 mm)
+LATTICE_T = _WALLS["lattice"]                       # geodezik iç kafes (0,45 mm)
+LATTICE_DEG = 40.0                                  # kafes ağları açıklık eksenine ±40° (dik baskıda yatayla 50°;
+                                                    # 45°'lik 0,45 mm çizgi tam sınırda sarkıyordu — P12)
 LATTICE_PITCH = 0.070                               # kafes aralığı (spec yorumu "≈ 70 mm")
-TUBE_CLEAR = 0.0004                                 # CF boru deliği çap boşluğu (Ø + 0,4 mm). varsayım
 PIN_D = 0.003                                       # hizalama pimi Ø3 CF çubuk. varsayım
-PIN_HOLE_D = PIN_D + 0.0002
 PIN_DEPTH = 0.010                                   # pim deliği derinliği (her iki yanda). varsayım
-BOSS_D = 0.0075                                     # pim göbeği çapı. varsayım
-HINGE_PIN_D = float(P.SPEC["wing"]["control_surfaces"]["hinge_pin_d_m"])
-HINGE_PIN_HOLE_D = HINGE_PIN_D + 0.0001
-HINGE_SLEEVE_R = 0.5 * HINGE_PIN_HOLE_D + _WALLS["hinge_knuckles"]
+BOSS_D = 0.0080                                     # pim göbeği çapı (Ø3,4 delik + 2 × 2,3 mm). varsayım
+
+# ---------------------------------------------------------------- delik telafisi (P7)
+# FDM delikleri, özellikle köpüren LW-PLA'da, 0,2–0,4 mm küçük basar; çokgen delik yazılı (inscribed) verilirse
+# yarı boşluk da kaybolur. Bütün geçme delikleri ÇEVREL çokgendir (iç yarıçap = istenen yarıçap) ve kenar sayısı
+# yarıçapa göre seçilir: n = clamp(round(2πr / 0,6 mm), 24, 96). Çap boşlukları malzemeye göredir (varsayım; önce
+# tolerans kuponu basılır → ``tolerance_coupon.stl``).
+HOLE_CLEAR = {                                      # (çap boşluğu m) — "lw": LW-PLA/LW-ASA, "hard": PETG/PA-CF/TPU
+    "lw": {"tube": 0.0007, "pin": 0.0004, "bolt": 0.0005, "hinge": 0.00035},
+    "hard": {"tube": 0.0006, "pin": 0.0004, "bolt": 0.0005, "hinge": 0.00035},
+}
+TUBE_CLEAR = HOLE_CLEAR["lw"]["tube"]               # rapor/ayar için (LW-PLA boru deliği Ø + 0,7 mm)
+PIN_HOLE_D = PIN_D + HOLE_CLEAR["lw"]["pin"]        # Ø3,4
+M4_HOLE_D = 0.0045                                  # M4 geçiş deliği
+M3_HOLE_D = 0.0034                                  # M3 geçiş deliği
+INSERT = {"M3": (0.0040, 0.0060), "M3S": (0.0040, 0.0035), "M4": (0.0056, 0.0085)}   # ısıl gömme dişli deliği
+                                                    # (Ø, derinlik); M3S = M3×3 kısa — Ruthex tipi. varsayım
+HINGE_PIN_D = 0.00175                               # menteşe pimi: Ø1,75 PETG filament (P1; spec Ø1,5 tel yerine). varsayım
+HINGE_PIN_HOLE_D = 0.0021                           # Ø2,1 çevrel çokgen delik (iç yarıçap 1,05 mm)
+HINGE_SLEEVE_R = 0.5 * HINGE_PIN_HOLE_D / math.cos(math.pi / 24) + _WALLS["hinge_knuckles"]
+_CUR_MAT = ["LW-PLA"]                               # özellik üreticileri çalışırken parçanın filamenti (delik boşluğu için)
+
+
+def _mat_class(material: str | None = None) -> str:
+    m = (material or _CUR_MAT[0]).upper()
+    return "lw" if m.startswith("LW") else "hard"
+
+
+def hole_d(nominal: float, kind: str = "tube", material: str | None = None) -> float:
+    """Geçme deliği çapı (m): nominal + malzeme/tür boşluğu (``HOLE_CLEAR``)."""
+    return float(nominal) + HOLE_CLEAR[_mat_class(material)][kind]
+
+
+def hole_sides(r: float) -> int:
+    return int(min(96, max(24, round(2 * math.pi * r / 0.0006))))
 LUG_W = 0.005                                       # basılı menteşe dili genişliği (eksen boyunca). varsayım
 LUG_CLEAR = 0.0005                                  # dil–çentik eksenel boşluk (her yanda). varsayım
 LUG_PITCH = 0.090                                   # dil aralığı (en fazla). varsayım
@@ -111,15 +142,16 @@ HORN_SLOT = (0.0018, 0.014)                         # G10 horn yarığı (kalın
 SERVO = {"name": "10 mm ince kanat servosu (KST X10 sınıfı)", "open": (0.036, 0.024), "box_t": 0.0012}   # varsayım
 LIGHT_MARGIN = 0.0028                               # hafifletme deliği ile kenar/engel arası en az et. varsayım
 LIGHT_R = (0.003, 0.022)                            # hafifletme deliği yarıçap aralığı. varsayım
-M4_HOLE_D = 0.0043
-M3_HOLE_D = 0.0033
 NOSE_PIN_D = 0.004                                  # burun modülü hizalama pimi (çelik Ø4). varsayım
 CYL_SEG = 28                                        # silindir kenar sayısı (STL boyutu / pürüzsüzlük dengesi)
 SMALL_ISLAND_M3 = 2e-9                              # 2 mm³'ten küçük boolean kırıntıları atılır
 FRAGMENT_REL = 0.06                                 # ana kabuğun %6'sından küçük kopuk dolu kabuk atılır
+TINY_SHELL_M3 = 2e-8                                # |hacim| < 20 mm³ kabuk (sıfır hacimli kıymık / µ-boşluk) atılır
 THIN_COVER_FACTOR = 2.5                             # kaplama ortalama kalınlığı ≤ 2,5 × et ise dolu basılır. varsayım
 GLUE_GAP = 0.0002                                   # kaplama/fileto ile gövde/kanat arası yapıştırma boşluğu. varsayım
 VOXEL_REPAIR_MAX_M3 = 80e-6                         # manifold olmayan ≤ 80 cm³ parçaya son çare voksel onarım
+VOXEL_REPAIR_MAX_FACES = 60000                      # büyük ağda voksel onarım dakikalar sürer → atlanır
+N_PERTURB = 6                                       # µm kaydırmalı deneme sayısı (k · 11–13 µm düzlem/özellik kaydırması)
 PART_TIMEOUT_S = 600                                # tek parça kurulumu bu süreyi aşarsa süreç iz dökümüyle durur
 WELD_DIST = 5e-6                                    # boolean kesişim köşelerini birleştirme (5 µm ≪ baskı çözünürlüğü)
 PINCH_COLLAPSE = 0.0015                             # >2 yüzlü (sıkışma) kenarlar bu boydan kısaysa çökertilir (≤ 0,75 mm yer değişimi)
@@ -132,13 +164,15 @@ PRINT_RATE = {
     "PETG": {"cm3_h": 18.0, "layer_mm": 0.20, "nozzle_c": "235–245", "bed_c": "75–85"},
     "PA-CF": {"cm3_h": 15.0, "layer_mm": 0.20, "nozzle_c": "270–290 (sertleştirilmiş nozul)", "bed_c": "80–100"},
     "TPU": {"cm3_h": 7.0, "layer_mm": 0.20, "nozzle_c": "220–230", "bed_c": "40–50"},
+    "PLA": {"cm3_h": 30.0, "layer_mm": 0.24, "nozzle_c": "200–215", "bed_c": "55–60"},
 }
+TOOLING_INFILL = 0.20                               # kalıp: 3 çevre + %15 dolgu ≈ hacmin %20'si. varsayım
 LAYER_OVERHEAD_S = 2.5                              # katman başına seyir/geri çekme/Z hareketi (s). varsayım
 PLATE_SETUP_H = 0.10                                # tabla başına ısınma/kalibrasyon (h). varsayım
 
 # Basılı parçaların sahne malzemesi (sözleşme: params.MATERIALS adları; UCAV_Print render dışı)
 FILAMENT_MATERIAL = {"LW-PLA": "UM_SkinBottom", "LW-ASA": "UM_SkinTop", "PA-CF": "UM_PACF", "PETG": "UM_Accent",
-                     "TPU": "UM_TPU", "PETG-füme": "UM_SmokeHatch"}
+                     "TPU": "UM_TPU", "PETG-füme": "UM_SmokeHatch", "PLA": "UM_SkinBottom"}
 
 
 def _zone(name: str) -> tuple[str, float]:
@@ -147,10 +181,13 @@ def _zone(name: str) -> tuple[str, float]:
     return str(z["material"]), float(z["wall_mm"]) / 1000.0
 
 
+_EXTRA_FIL = {"PLA": {"density_g_cm3": 1.24, "tg_c": 60}}     # alet (kalıp) filamenti; spec'te yok. varsayım
+
+
 def density(material: str) -> float:
     """Filament etkin yoğunluğu (g/cm³; LW-PLA köpürmüş etkin değer)."""
     key = "PETG" if material.startswith("PETG") else material
-    return float(_FIL[key]["density_g_cm3"])
+    return float((_FIL.get(key) or _EXTRA_FIL[key])["density_g_cm3"])
 
 
 # =====================================================================================================
@@ -223,6 +260,13 @@ def prim_frustum(p0, p1, r0: float, r1: float | None = None, n: int = CYL_SEG, n
             F.append((i, j, n))
         F.append(tuple(range(n - 1, -1, -1)))
     return Solid(V, F, name)
+
+
+def prim_hole(p0, p1, d: float, name: str = "hole", n: int | None = None) -> Solid:
+    """Geçme deliği: iç yarıçapı tam ``d/2`` olan ÇEVREL çokgen silindir (P7). Kenar sayısı ``hole_sides``."""
+    r = 0.5 * float(d)
+    n = n or hole_sides(r)
+    return prim_frustum(p0, p1, r / math.cos(math.pi / n), n=n, name=name)
 
 
 def prim_box(center, axes, half, name: str = "box") -> Solid:
@@ -360,13 +404,23 @@ class Booler:
         self.solver = solver
         self.n_ops = 0
         self.t_ops = 0.0
+        self.debug = bool(int(__import__("os").environ.get("UCAV_PP_DEBUG", "0") or 0))
 
     def op(self, target: bpy.types.Object, operand, operation: str, self_: bool = False,
            solver: str | None = None) -> bpy.types.Object:
         t0 = time.time()
+        solver = solver or self.solver
+        if solver == "MANIFOLD":
+            # MANIFOLD çözücü manifold olmayan girdiyi sessizce reddeder (sonuç = girdi). EXACT kesimlerin bıraktığı
+            # 5 µm kırıntı/sınır kenarlarını önce temizle. (Kaydırılmış boşluk yüzeyi kasıtlı öz-kesişimlidir; EXACT'a
+            # geçilmez — reddedilen işlem build_segment'teki hacim denetimiyle yakalanır ve kaydırmalı yeniden denenir.)
+            if not mesh_check(target.data)["ok"]:
+                clean_mesh(target, triangles=True)
+            if isinstance(operand, bpy.types.Object) and not mesh_check(operand.data)["ok"]:
+                clean_mesh(operand, triangles=True)
         mod = target.modifiers.new("pp_bool", "BOOLEAN")
         mod.operation = operation
-        mod.solver = solver or self.solver
+        mod.solver = solver
         if isinstance(operand, bpy.types.Collection):
             mod.operand_type = "COLLECTION"
             mod.collection = operand
@@ -386,6 +440,11 @@ class Booler:
             bpy.data.meshes.remove(old)
         self.n_ops += 1
         self.t_ops += time.time() - t0
+        if self.debug:
+            c = mesh_check(target.data)
+            on = operand.name if hasattr(operand, "name") else str(operand)
+            print(f"   [bool] {target.name} {operation} {on} ({solver}) → faces {c['faces']} vol "
+                  f"{c['volume_m3'] * 1e6:.2f} cm³ bnd {c['boundary']} nm {c['nonmanifold']} ok {c['ok']}", flush=True)
         return target
 
     def safe(self, target: bpy.types.Object, operand, operation: str, first: str, second: str,
@@ -394,6 +453,9 @@ class Booler:
         backup = target.data.copy()
         self.op(target, operand, operation, solver=first)
         chk = mesh_check(target.data)
+        if not chk["ok"]:
+            clean_mesh(target, triangles=True)
+            chk = mesh_check(target.data)
         if chk["ok"] and chk["volume_m3"] > min_volume:
             bpy.data.meshes.remove(backup)
             return target
@@ -509,6 +571,79 @@ def clean_mesh(ob: bpy.types.Object, triangles: bool = False) -> dict:
     bm.free()
     ob.data.update()
     return {"removed_islands": removed, "repaired": repaired}
+
+
+def finalize_mesh(ob: bpy.types.Object) -> dict:
+    """Son temizlik, ZARARSIZ: parça zaten kapalıysa yalnız üçgenlenir (gerekirse) ve kırıntı kabuklar atılır —
+    5 µm kaynak/çökertme yapılmaz (MANIFOLD çıktısındaki µm ayrık yüzeyleri birleştirip sıkışma kenarı
+    üretebiliyordu). Kapalı değilse tam ``clean_mesh``; sonuç daha kötüyse eski ağ geri gelir."""
+    chk0 = mesh_check(ob.data)
+    tri = all(len(p.vertices) == 3 for p in ob.data.polygons)
+    if chk0["ok"]:
+        keep = ob.data.copy()
+        bm = _bm_triangulated(ob.data) if not tri else bmesh.new()
+        if tri:
+            bm.from_mesh(ob.data)
+        removed = _drop_islands(bm)
+        bm.to_mesh(ob.data)
+        bm.free()
+        ob.data.update()
+        if mesh_check(ob.data)["ok"]:
+            bpy.data.meshes.remove(keep)
+            _micro_weld(ob)
+            return {"removed_islands": removed, "repaired": 0}
+        bad = ob.data                                   # üçgenleme bozdu (kendine değen n-gen): tam temizlik
+        ob.data = keep
+        bpy.data.meshes.remove(bad)
+    keep = ob.data.copy()
+    res = clean_mesh(ob, triangles=True)
+    chk1 = mesh_check(ob.data)
+    bad0 = chk0["boundary"] + chk0["nonmanifold"] + chk0["flipped"]
+    bad1 = chk1["boundary"] + chk1["nonmanifold"] + chk1["flipped"]
+    if not chk1["ok"] and bad1 >= bad0 and chk0["volume_m3"] > 0:
+        bad = ob.data
+        ob.data = keep
+        bpy.data.meshes.remove(bad)
+    else:
+        bpy.data.meshes.remove(keep)
+    return res
+
+
+MICRO_WELD = 1e-6                                   # 1 µm: STL'de float32 / dilimleyici kaynağıyla birleşecek köşeler
+
+
+def _micro_weld(ob: bpy.types.Object, dist: float = MICRO_WELD) -> bool:
+    """1 µm'den yakın ayrık köşeleri (EXACT kesişim noktalarının µm altı kopyaları) birleştirir, dejenere üçgenleri
+    eritir. Dilimleyici / denetçi STL'yi 0,1 µm kaynakla okuduğunda çift kenar kalmaz. Ağ kapalılığı bozulursa geri
+    alınır (False)."""
+    keep = ob.data.copy()
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    n0 = len(bm.verts)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=dist)
+    if len(bm.verts) == n0:
+        bm.free()
+        bpy.data.meshes.remove(keep)
+        return True
+    bmesh.ops.dissolve_degenerate(bm, edges=bm.edges[:], dist=dist)
+    bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 3], quad_method="BEAUTY",
+                          ngon_method="EAR_CLIP")
+    _drop_fin_faces(bm)
+    loose = [v for v in bm.verts if not v.link_faces]
+    if loose:
+        bmesh.ops.delete(bm, geom=loose, context="VERTS")
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
+    c = mesh_check(ob.data)
+    c0 = mesh_check(keep)
+    if c["ok"] and abs(c["volume_m3"] - c0["volume_m3"]) <= 1e-3 * abs(c0["volume_m3"]) + 1e-12:
+        bpy.data.meshes.remove(keep)
+        return True
+    bad = ob.data
+    ob.data = keep
+    bpy.data.meshes.remove(bad)
+    return False
 
 
 def _drop_islands(bm: bmesh.types.BMesh) -> int:
@@ -632,7 +767,7 @@ def drop_fragments(ob: bpy.types.Object, rel: float = FRAGMENT_REL) -> tuple[int
                   for g in sh for i in range(1, len(g.verts) - 1))
         shells.append((vol, sh))
     vmax = max((v for v, _ in shells), default=0.0)
-    drop = [(v, sh) for v, sh in shells if 0.0 < v < rel * vmax]
+    drop = [(v, sh) for v, sh in shells if (0.0 < v < rel * vmax) or abs(v) < TINY_SHELL_M3]   # kıymık + µ-boşluk
     if drop:
         bmesh.ops.delete(bm, geom=[g for _, sh in drop for g in sh], context="FACES")
         loose = [v for v in bm.verts if not v.link_faces]
@@ -690,11 +825,56 @@ def _triangulate_fan(F: Sequence) -> np.ndarray:
     return np.asarray(tris, np.int64).reshape(-1, 3)
 
 
+def _bm_triangulated(me: bpy.types.Mesh) -> bmesh.types.BMesh:
+    """``me``'nin üçgenlenmiş bmesh'i. Bir n-genin köşegeni komşu yüzün kenarıyla / köşegeniyle çakışırsa kenar başına
+    > 2 yüz olur (STL'de manifold olmayan kenar). Sırayla denenir: ear-clip, beauty, çakışan n-genlerden küçükleri /
+    hepsi merkezden yelpaze (poke). Kabul: çakışma yok VE toplam alan korunmuş (yelpaze içbükey n-gende üst üste
+    üçgen üretirse alan büyür → ret). Hiçbiri tutmazsa en az çakışan döner."""
+    area0 = sum(p.area for p in me.polygons)
+
+    def bad_of(bm):
+        return {tuple(sorted((e.verts[0].index, e.verts[1].index))) for e in bm.edges if len(e.link_faces) > 2}
+
+    def attempt(method, bad=None, keep_big=True):
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        bm.verts.ensure_lookup_table()
+        if bad:
+            poke = set()
+            for a_, b_ in bad:
+                fs = [f for f in set(bm.verts[a_].link_faces) & set(bm.verts[b_].link_faces) if len(f.verts) > 3]
+                fs.sort(key=lambda f: f.calc_area())
+                poke.update(fs[:-1] if keep_big else fs)
+            if poke:
+                bmesh.ops.poke(bm, faces=list(poke))
+        bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 3], quad_method="BEAUTY",
+                              ngon_method=method)
+        err = abs(sum(f.calc_area() for f in bm.faces) - area0) / max(area0, 1e-12)
+        return bm, bad_of(bm), err
+
+    bm, bad0, err = attempt("EAR_CLIP")
+    if not bad0:
+        return bm
+    best = (bm, bad0, err)
+    for method, bad, keep_big in (("BEAUTY", None, True), ("EAR_CLIP", bad0, True), ("BEAUTY", bad0, True),
+                                  ("EAR_CLIP", bad0, False), ("BEAUTY", bad0, False)):
+        bm, bad, err = attempt(method, bad, keep_big)
+        if not bad and err < 1e-6:
+            best[0].free()
+            return bm
+        if (len(bad), err) < (len(best[1]), best[2]):
+            best[0].free()
+            best = (bm, bad, err)
+        else:
+            bm.free()
+    return best[0]
+
+
 def triangulate(me: bpy.types.Mesh) -> tuple[np.ndarray, np.ndarray]:
-    """Doğru (içbükey n-gen güvenli) üçgenleme: bmesh ``triangulate`` (ear-clip) → (V, T)."""
-    bm = bmesh.new()
-    bm.from_mesh(me)
-    bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method="BEAUTY", ngon_method="EAR_CLIP")
+    """Doğru (içbükey n-gen güvenli) üçgenleme: bmesh ``triangulate`` (ear-clip) → (V, T). Kendine değen bir n-genin
+    köşegeni komşu yüzün kenarıyla çakışırsa (kenar başına 4 yüz → STL'de manifold olmayan kenar) o n-genler
+    merkezden yelpaze (``poke``) ile yeniden üçgenlenir."""
+    bm = _bm_triangulated(me)
     bm.verts.index_update()
     V = np.array([v.co[:] for v in bm.verts], float)
     T = np.array([[v.index for v in f.verts] for f in bm.faces], np.int64).reshape(-1, 3)
@@ -972,14 +1152,16 @@ class Feature:
 
     structure: list = field(default_factory=list)   # boşluktan çıkarılır (iç yapı)
     holes: list = field(default_factory=list)       # parçadan çıkarılır
-    adds: list = field(default_factory=list)        # parçaya eklenir (menteşe dilleri)
+    adds: list = field(default_factory=list)        # parçaya eklenir (menteşe dilleri; bölge dışına taşanı kırpılır)
     notes: list = field(default_factory=list)
+    keepout: list = field(default_factory=list)     # iç yapının giremeyeceği hacimler (boşlukta hava kalır)
 
     def extend(self, other: "Feature") -> "Feature":
         self.structure += other.structure
         self.holes += other.holes
         self.adds += other.adds
         self.notes += other.notes
+        self.keepout += other.keepout
         return self
 
 
@@ -1013,6 +1195,11 @@ class SegSpec:
     wall_source: str | None = None                     # et fonksiyonu kaynağı (None → sources[0])
     perturb: int = 0                                   # >0: çakışma kırma denemesi (µm düzeyi kaydırma)
     force_up: bool = False                             # tercih edilen yön sığmazsa yatırma, böl (dik baskı şart)
+    builder: Callable | None = None                    # özel kurucu f(ctx, seg, out_col) → Built (yük yolu parçaları vb.)
+    tooling: bool = False                              # alet (kalıp): uçak kütle/süre toplamına girmez, %20 dolgu
+    keep_fn: Callable | None = None                    # f() → [Solid]: parça bunlarla kesişir (kaplama tüy kenarı kırpma)
+    solid: bool = False                                # dolu STL (boşluk yok): dilimleyici çevre + seyrek dolgu basar
+    cavity_keep_fn: Callable | None = None             # f() → [Solid]: boşluk yalnız bunların içinde (ince yerde dolu)
 
 
 # =====================================================================================================
@@ -1071,9 +1258,17 @@ def fit_footprint(hull: np.ndarray, bed_xy: tuple[float, float], margin: float) 
     return best
 
 
+CONTACT_MIN_CM2 = 3.0                               # tabla teması en az (cm²) ve izin %3'ü (P6). varsayım
+CONTACT_MIN_FRAC = 0.03
+FLAT_TOL = 2e-5                                     # tabla yüzü: |z| < 0,02 mm ve n_z < −0,999 (denetçi tanımı)
+SUPPORT_MIN_CM2 = 2.0                               # 45°'den dik ve altında tabla olan alan → "tabla desteği"
+MODEL_SUPPORT_MIN_CM2 = 8.0                         # 45°'den dik, modelin > 5 mm üstünde → "model üstü destek"
+
+
 def placement(V: np.ndarray, T: np.ndarray, up, bed: tuple[float, float, float], margin: float = BED_MARGIN) -> dict:
     """Parçayı ``up`` yukarı olacak biçimde çevirir, tabanı Z = 0'a, izi tabla merkezine koyar.
-    Dönüş: 4×4 dönüşüm (m → m, tabla merkezli), ölçüler (mm), çıkıntı alanı (cm²), tabla teması (cm²)."""
+    Dönüş: 4×4 dönüşüm (m → m, tabla merkezli), ölçüler (mm), çıkıntı alanları (cm²; 45°), tabla teması (cm²;
+    n_z < −0,999 ve tabanın 0,02 mm içinde — bağımsız denetçiyle aynı tanım), iz alanı (cm²)."""
     R = _rot_to_z(up)
     W = V @ R.T
     z0 = float(W[:, 2].min())
@@ -1093,22 +1288,56 @@ def placement(V: np.ndarray, T: np.ndarray, up, bed: tuple[float, float, float],
     ar = 0.5 * np.linalg.norm(fn, axis=1)
     nz = fn[:, 2] / np.maximum(2 * ar, 1e-18)
     zc = (a_[:, 2] + b_[:, 2] + c_[:, 2]) / 3.0
-    on_bed = (nz < -0.999) & (zc < 2e-5)
-    over = (nz < -math.sin(math.radians(OVERHANG_DEG))) & ~on_bed
+    on_bed = (nz < -0.999) & (zc < FLAT_TOL)
+    over45 = (nz < -math.sin(math.radians(45.0))) & ~on_bed & (zc > 5e-5)
     fits_z = height <= bed[2] - Z_MARGIN
+    hx = np.vstack([hull, hull[:1]]) if len(hull) >= 3 else hull
+    hull_cm2 = float(0.5 * abs(np.sum(hx[:-1, 0] * hx[1:, 1] - hx[1:, 0] * hx[:-1, 1]))) / 100.0 if len(hull) >= 3 else 0.0
+    contact = float(ar[on_bed].sum() * 1e4)
+    need = max(CONTACT_MIN_CM2, CONTACT_MIN_FRAC * hull_cm2)
     return {"M": M, "up": tuple(float(x) for x in _unit(up)), "angle_deg": fit["angle_deg"],
             "size_mm": (fit["w_mm"], fit["h_mm"], height), "margin_mm": fit["margin_mm"],
             "fits": bool(fit["fits"] and fits_z), "fits_tight": bool(fit["fits_tight"] and fits_z),
-            "overhang_cm2": float(ar[over].sum() * 1e4), "bed_contact_cm2": float(ar[on_bed].sum() * 1e4)}
+            "overhang_cm2": float(ar[over45].sum() * 1e4), "bed_contact_cm2": contact, "footprint_cm2": hull_cm2,
+            "contact_need_cm2": need, "contact_ok": contact >= need - 1e-9}
+
+
+def _planar_ups(V: np.ndarray, T: np.ndarray, min_cm2: float = 2.0, max_n: int = 10) -> list:
+    """Büyük düzlemsel yüz kümelerinin (normal 1°'de) "tabla yüzü" adayları: up = −n."""
+    a, b, c = V[T[:, 0]], V[T[:, 1]], V[T[:, 2]]
+    fn = np.cross(b - a, c - a)
+    ln = np.linalg.norm(fn, axis=1)
+    ok = ln > 1e-14
+    n = fn[ok] / ln[ok, None]
+    ar = 0.5 * ln[ok]
+    d = np.einsum("ij,ij->i", n, (a[ok] + b[ok] + c[ok]) / 3.0)
+    key = np.round(np.column_stack([n / 0.015, d / 0.0005])).astype(np.int64)       # yön ≈ 0,9°, düzlem 0,5 mm
+    _, inv = np.unique(key, axis=0, return_inverse=True)
+    inv = inv.ravel()
+    area = np.bincount(inv, weights=ar)
+    order = np.argsort(-area)
+    out = []
+    for g in order[:max_n]:
+        if area[g] * 1e4 < min_cm2:
+            break
+        m = inv == g
+        nn = _unit((n[m] * ar[m, None]).sum(0))
+        if all(float(nn @ o) < 0.9995 for o in out):
+            out.append(nn)
+    return [-x for x in out]
 
 
 def choose_orientation(V: np.ndarray, T: np.ndarray, bed, preferred: Sequence = (), margin: float = BED_MARGIN,
-                       prefer_slack_cm2: float = 3.0) -> dict:
-    """Aday yönler: tercih edilenler (ör. tablaya oturan kaburga), OBB eksenleri (±). Önce sığanlar; sonra en az
-    çıkıntı; tercih edilen yön, en iyiden en çok ``prefer_slack_cm2`` kötüyse seçilir."""
+                       prefer_slack_cm2: float = 3.0, force: bool = False) -> dict:
+    """Aday yönler: tercih edilenler (ör. tablaya oturan kaburga), büyük düzlemsel yüzler (−n), OBB eksenleri (±),
+    dünya eksenleri (±). Sıra: sığma → tabla teması ≥ max(3 cm², izin %3'ü) (P6, ``force`` dahil sert koşul) →
+    45° çıkıntı alanı → yükseklik. Tercih edilen yön, en iyiden en çok ``prefer_slack_cm2`` kötüyse seçilir;
+    ``force`` → tercih edilen yön sığdığı ve teması yettiği sürece seçilir."""
     C = V - V.mean(0)
     _, _, Vt = np.linalg.svd(C[:: max(1, len(C) // 4000)], full_matrices=False)
     cands = [(_unit(u), True) for u in preferred if u is not None]
+    for u in _planar_ups(V, T):
+        cands.append((u, False))
     for ax in Vt:
         cands += [(_unit(ax), False), (_unit(-ax), False)]
     for ax in np.eye(3):                                # dünya eksenleri (PCA eksenleri kabuk kırpılınca kayar)
@@ -1119,18 +1348,57 @@ def choose_orientation(V: np.ndarray, T: np.ndarray, bed, preferred: Sequence = 
         pl["preferred"] = pref
         res.append(pl)
 
-    def key(p):                                         # sığma → tabla teması (≥ 1 cm²) → çıkıntı → yükseklik
-        return (0 if p["fits"] else (1 if p["fits_tight"] else 2), 0 if p["bed_contact_cm2"] >= 1.0 else 1,
-                p["overhang_cm2"] - (0.5 if p["preferred"] else 0), p["size_mm"][2])
+    def key(p):                                         # sığma → yeterli tabla teması → puan (çıkıntı + yükseklik)
+        score = (p["overhang_cm2"] + 0.04 * p["size_mm"][2] - 0.02 * min(p["bed_contact_cm2"], 50.0)
+                 - (0.5 if p["preferred"] else 0.0))     # 25 mm yükseklik ≈ 1 cm² çıkıntı (yatık ince parça yatar)
+        return (0 if p["fits"] else (1 if p["fits_tight"] else 2), 0 if p["contact_ok"] else 1, score)
 
     res.sort(key=key)
     best = res[0]
     for p in res:
-        if p["preferred"] and (p["fits"] or not best["fits"]) and (p["fits_tight"] or not best["fits_tight"]):
-            if p["overhang_cm2"] <= best["overhang_cm2"] + prefer_slack_cm2:
+        if p["preferred"] and (p["fits"] or not best["fits"]) and (p["fits_tight"] or not best["fits_tight"]) \
+                and (p["contact_ok"] or not best["contact_ok"]):
+            if force or key(p)[2] <= key(best)[2] + prefer_slack_cm2:
                 return p
             break
     return best
+
+
+def support_class(V: np.ndarray, T: np.ndarray, M: np.ndarray) -> dict:
+    """Seçilen baskı yönünde 45°'den dik aşağı bakan yüzler için aşağı ışın (denetçi yöntemi): altında model yoksa
+    "tabla desteği" alanı, model varsa "model üstü" (düşüş > 5 mm ayrıca). Dönüş cm²."""
+    W = V @ M[:3, :3].T + M[:3, 3]
+    a, b, c = W[T[:, 0]], W[T[:, 1]], W[T[:, 2]]
+    fn = np.cross(b - a, c - a)
+    ar2 = np.linalg.norm(fn, axis=1)
+    ar = 0.5 * ar2
+    n = fn / np.maximum(ar2, 1e-18)[:, None]
+    cen = (a + b + c) / 3.0
+    on_bed = (n[:, 2] < -0.999) & (cen[:, 2] < FLAT_TOL)
+    down = ~on_bed & (cen[:, 2] > 5e-5) & (n[:, 2] < -math.sin(math.radians(45.0)))
+    idx = np.flatnonzero(down)
+    to_bed = on_model = long_drop = 0.0
+    if len(idx):
+        bvh = BVHTree.FromPolygons(W.tolist(), T.tolist(), epsilon=0.0)
+        dn = Vector((0.0, 0.0, -1.0))
+        for i in idx:
+            o = cen[i] - np.array([0.0, 0.0, 1e-5])
+            h = bvh.ray_cast(Vector(o), dn, 10.0)
+            if h[0] is None:
+                to_bed += ar[i]
+            else:
+                on_model += ar[i]
+                if o[2] - h[0][2] > 0.005:
+                    long_drop += ar[i]
+    out = {"oh45_to_bed_cm2": round(to_bed * 1e4, 2), "oh45_over_model_cm2": round(on_model * 1e4, 2),
+           "oh45_over_model_gt5mm_cm2": round(long_drop * 1e4, 2)}
+    if out["oh45_to_bed_cm2"] > SUPPORT_MIN_CM2:
+        out["support"] = "tabla desteği"
+    elif out["oh45_over_model_gt5mm_cm2"] > MODEL_SUPPORT_MIN_CM2:
+        out["support"] = "model üstü destek"
+    else:
+        out["support"] = "yok"
+    return out
 
 
 # =====================================================================================================
@@ -1188,6 +1456,8 @@ class Source:
     wall_fn: Callable[[np.ndarray], np.ndarray]
     solid_fn: Callable[[], Solid] | None = None     # sahne yerine numpy katı (ör. kuyusuz temiz gövde)
     solid: Solid | None = None
+    nudge: dict = field(default_factory=dict)       # nesne adı → µm öteleme (eş düzlemli temas yüzlerini birleşimde kır)
+    merge: bool = False                             # bileşenler tek tek MANIFOLD birleşimi; değmeyen parçalar atılır
 
 
 def _wall_const(w: float) -> Callable:
@@ -1289,13 +1559,45 @@ class Ctx:
         return new
 
     # ------------------------------------------------------------------ kaynaklar
-    def add_source(self, key: str, names: Sequence[str], wall_fn: Callable, solid_fn: Callable | None = None) -> bool:
+    def add_source(self, key: str, names: Sequence[str], wall_fn: Callable, solid_fn: Callable | None = None,
+                   nudge: dict | None = None, merge: bool = False) -> bool:
         missing = [n for n in names if n not in bpy.data.objects]
         if missing and solid_fn is None:
             self.warnings.append(f"kaynak eksik: {', '.join(missing)} ({key} atlandı)")
             return False
-        self.sources[key] = Source(key, list(names), wall_fn, solid_fn)
+        self.sources[key] = Source(key, list(names), wall_fn, solid_fn, nudge=dict(nudge or {}), merge=merge)
         return True
+
+    def _merge_components(self, key: str, solids: list) -> bpy.types.Object:
+        """Örtüşen bileşenleri (kapak + menteşe dili/horn, iki gövdeli tapa kapak) büyükten küçüğe tek tek birleştirir;
+        ana gövdeye değmeyen bileşen atılır ve not düşülür (``self.merge_notes[key]``)."""
+        comps = []
+        for sl in solids:
+            tmp = self.obj("mc", sl)
+            comps += split_shells(tmp)
+            _delete(tmp)
+        comps.sort(key=lambda c: -abs(_signed_volume(*c)))
+        ob = self.obj(f"out_{key}", Solid(comps[0][0], comps[0][1], key))
+        dropped = []
+        for Vc, Fc in comps[1:]:
+            v_c = abs(_signed_volume(Vc, Fc))
+            backup = ob.data.copy()
+            v0 = mesh_check(ob.data)["volume_m3"]
+            o2 = self.obj("mcx", Solid(Vc, Fc))
+            self.B.op(ob, o2, "UNION", solver="MANIFOLD")
+            _delete(o2)
+            c = mesh_check(ob.data)
+            if c["ok"] and c["shells"] == 1 and c["volume_m3"] >= v0 - 1e-10:
+                bpy.data.meshes.remove(backup)
+                continue
+            bad = ob.data
+            ob.data = backup
+            bpy.data.meshes.remove(bad)
+            dropped.append(round(v_c * 1e6, 3))
+        if dropped:
+            self.__dict__.setdefault("merge_notes", {})[key] = dropped
+            self.log(f"{key}: gövdeye değmeyen {len(dropped)} bileşen atıldı ({dropped} cm³)")
+        return ob
 
     def has(self, key: str) -> bool:
         return key in self.sources
@@ -1306,12 +1608,19 @@ class Ctx:
             return self._outer[key]
         src = self.sources[key]
         solids = [src.solid_fn()] if src.solid_fn else [source_solid(n) for n in src.names]
-        ob = self.obj(f"out_{key}", solids[0])
-        for s in solids[1:]:
-            o2 = self.obj(f"outx_{key}", s)
-            self.B.op(ob, o2, "UNION", solver=self.cut_solver)
-            _delete(o2)
-        clean_mesh(ob)
+        for sl in solids:                               # eş düzlemli temas (sıfır kalınlıklı zar) olmasın: µm öteleme
+            if sl.name in src.nudge:
+                sl.V = sl.V + np.asarray(src.nudge[sl.name], float)
+        if src.merge:
+            ob = self._merge_components(key, solids)
+        else:
+            ob = self.obj(f"out_{key}", solids[0])
+            for s in solids[1:]:
+                o2 = self.obj(f"outx_{key}", s)
+                self.B.op(ob, o2, "UNION", solver=self.cut_solver)
+                _delete(o2)
+        if not mesh_check(ob.data)["ok"]:               # yalnız gerekirse (temizlik geçerli birleşimi bozabilir)
+            clean_mesh(ob)
         V, F = _mesh_np(ob.data)
         src.solid = Solid(V, F, key)
         self._outer[key] = ob
@@ -1333,6 +1642,31 @@ class Ctx:
                 Vo = offset_vertices(V, T, -pad)
                 self._grown[k] = self.obj(f"gr_{key}", Solid(Vo, [tuple(t) for t in T]))
         return self._grown[k]
+
+    def custom_solid(self, key: str, parts_fn: Callable[[], dict]) -> Solid | None:
+        """Boolean ile kurulan yardımcı katı (ör. komşu parçadaki cep), önbellekli → numpy Solid."""
+        if not hasattr(self, "_custom"):
+            self._custom = {}
+        if key not in self._custom:
+            parts = parts_fn()
+            A = self.obj("cs", parts["base"])
+            col = self.B.group(self.name("csa"), parts.get("adds", []))
+            if col is not None:
+                self.B.op(A, col, "UNION")
+                Booler.drop(col)
+            for cl in parts.get("clip", []) or []:
+                co = self.obj("csc", cl)
+                self.B.op(A, co, "INTERSECT")
+                _delete(co)
+            col = self.B.group(self.name("csh"), parts.get("holes", []))
+            if col is not None:
+                self.B.op(A, col, "DIFFERENCE")
+                Booler.drop(col)
+            finalize_mesh(A)
+            V, F = _mesh_np(A.data)
+            _delete(A)
+            self._custom[key] = Solid(V, F, key) if len(F) else None
+        return self._custom[key]
 
     def cleanup(self) -> None:
         for col in list(self.work.children):
@@ -1467,6 +1801,36 @@ def rib_holes(ctx: Ctx, seg: SegSpec, e: End, feat: Feature, inner: Solid) -> li
     return holes
 
 
+def _cut_region(ctx: Ctx, seg: SegSpec, base: bpy.types.Object, center) -> bpy.types.Object:
+    """``A = kaynak ∩ bölge`` — sırayla dener: (1) tam kaynak katısından EXACT, (2) yerel (30 mm paylı) kopyadan
+    EXACT, (3) MANIFOLD. Ardışık iki EXACT kesim, eş düzlemli kaynak birleşimlerinde (kanat dış paneli ∪ uç) sıfır
+    kalınlıklı zar bırakabilir → manifold olmayan kenar; ilk kapalı sonuç alınır."""
+    B = ctx.B
+    tries = []
+    if len(seg.sources) == 1:
+        tries.append((ctx.outer(seg.sources[0]), ctx.cut_solver))
+    tries += [(base, ctx.cut_solver), (base, "MANIFOLD")]
+    best = None
+    for src, solver in tries:
+        A = ctx.copy(src, "A")
+        reg = ctx.obj("reg", region_solid(_planes(seg.ends), center))
+        B.op(A, reg, "INTERSECT", solver=solver)
+        _delete(reg)
+        c = mesh_check(A.data)
+        if not c["ok"]:
+            clean_mesh(A, triangles=True)
+            c = mesh_check(A.data)
+        if c["ok"]:
+            if best is not None:
+                _delete(best)
+            return A
+        if best is None:
+            best = A
+        else:
+            _delete(A)
+    return best
+
+
 def build_segment(ctx: Ctx, seg: SegSpec, feat: Feature, out_col: bpy.types.Collection) -> Built | None:
     """Tarifi uygular ve parçayı ``out_col``'a koyar (dünya montaj konumunda).
 
@@ -1482,7 +1846,8 @@ def build_segment(ctx: Ctx, seg: SegSpec, feat: Feature, out_col: bpy.types.Coll
         M = np.eye(4)
         M[:3, 3] = jit
         feat = Feature([x.transformed(M) for x in feat.structure], [x.transformed(M) for x in feat.holes],
-                       [x.transformed(M) for x in feat.adds], list(feat.notes))
+                       [x.transformed(M) for x in feat.adds], list(feat.notes),
+                       [x.transformed(M) for x in feat.keepout])
         seg = SegSpec(**{**seg.__dict__, "ends": [End(e.p + e.n * (1.1e-5 * k * (1 if i % 2 else -1)), e.n, e.kind,
                                                       e.width, e.thick, e.holes, e.label, e.pins)
                                                   for i, e in enumerate(seg.ends)],
@@ -1498,25 +1863,42 @@ def build_segment(ctx: Ctx, seg: SegSpec, feat: Feature, out_col: bpy.types.Coll
         _delete(reg)
     walled = [(k, pad, wall) for k, pad, wall in seg.subtract if wall > 0]
     plain = [(k, pad, wall) for k, pad, wall in seg.subtract if wall <= 0]
+    if seg.ends:
+        A = _cut_region(ctx, seg, base, center)
+    else:
+        A = ctx.copy(base, "A")
     for k, pad, _ in walled:
         B.op(base, ctx.grown(k, pad), "DIFFERENCE")
-    A = ctx.copy(base, "A")
-    if seg.ends:
-        reg = ctx.obj("reg", region_solid(_planes(seg.ends), center))
-        B.op(A, reg, "INTERSECT", solver=ctx.cut_solver)
-        _delete(reg)
+        B.op(A, ctx.grown(k, pad), "DIFFERENCE")
     for cut in seg.cutouts:                             # açıklıklar yalnız parçadan (kenar flanşı et bölgesinden gelir)
         co = ctx.obj("cut", cut)
-        B.op(A, co, "DIFFERENCE", solver=ctx.cut_solver)
+        B.safe(A, co, "DIFFERENCE", ctx.cut_solver, "MANIFOLD", min_volume=1e-9)
         _delete(co)
     for k, pad, _ in plain:                             # temiz sahne katıları: EXACT, olmazsa MANIFOLD (doğrulamalı)
         B.safe(A, ctx.grown(k, pad), "DIFFERENCE", ctx.cut_solver, B.solver, min_volume=1e-9)
+    if seg.keep_fn is not None:                         # tüy kenar kırpma: yalnız et ≥ TRIM_T bölgesi kalır (AERO-20)
+        for ks in seg.keep_fn() or []:
+            ko = ctx.obj("keep", ks)
+            B.safe(A, ko, "INTERSECT", ctx.cut_solver, B.solver, min_volume=1e-9)
+            _delete(ko)
     if len(A.data.polygons) == 0:
         _delete(A)
         _delete(base)
         return None
+    chkA = mesh_check(A.data)
+    if not chkA["ok"]:                                  # EXACT kesim kırıntıları (5 µm) → MANIFOLD adımları reddetmesin
+        clean_mesh(A, triangles=True)
+        chkA = mesh_check(A.data)
+    if not chkA["ok"]:                                  # kesim düzlemi kaynakla çakışıyor: µm kaydırmayla yeniden dene
+        _delete(base)
+        ctx.work.objects.unlink(A)
+        out_col.objects.link(A)
+        A.name = f"UP_{seg.key}"
+        chkA["cut_failed"] = True
+        return Built(seg, A, chkA, {"notes": ["kesim manifold değil"]})
+    cav_failed = False
     inner = None
-    shell = seg.shell
+    shell = seg.shell and not seg.solid
     if shell and seg.cover:                             # ince kaplama: ortalama kalınlık ≤ 2,5 × et → dolu basılır
         chk = mesh_check(A.data)
         bm = bmesh.new()
@@ -1539,6 +1921,11 @@ def build_segment(ctx: Ctx, seg: SegSpec, feat: Feature, out_col: bpy.types.Coll
         inner, cav = segment_cavity(ctx, seg, cav_base, seg.wall_source or src)
         if cav_base is not base:
             _delete(cav_base)
+        if seg.cavity_keep_fn is not None:              # et < 2 × duvar + 0,4 mm olan yerde boşluk yok → dolu (AERO-20)
+            for ks in seg.cavity_keep_fn() or []:
+                ko = ctx.obj("ckeep", ks)
+                B.op(cav, ko, "INTERSECT")
+                _delete(ko)
         for e in seg.ends:
             if e.kind == "plate" and e.holes:
                 feat.holes += rib_holes(ctx, seg, e, feat, inner)
@@ -1546,21 +1933,47 @@ def build_segment(ctx: Ctx, seg: SegSpec, feat: Feature, out_col: bpy.types.Coll
         if col is not None:
             B.op(cav, col, "DIFFERENCE")
             Booler.drop(col)
+        if feat.keepout:                                # iç yapı bu hacimlere girmez (ünite, beşik, kanal): boşluğa geri ekle
+            ko = B.group(ctx.name("ko"), feat.keepout)
+            cav0 = ctx.obj("cav0", inner)
+            creg = ctx.obj("creg", region_solid(_cavity_planes(seg.ends, seg.cavity_planes), center if center is not None
+                                                else inner.V.mean(0)))
+            B.op(cav0, creg, "INTERSECT")
+            _delete(creg)
+            B.op(cav0, ko, "INTERSECT")
+            Booler.drop(ko)
+            if len(cav0.data.polygons):
+                B.op(cav, cav0, "UNION")
+            _delete(cav0)
+        v_cav = abs(mesh_check(cav.data)["volume_m3"])
+        v_before = mesh_check(A.data)["volume_m3"]
         B.op(A, cav, "DIFFERENCE")
         _delete(cav)
+        v_after = mesh_check(A.data)["volume_m3"]
+        if v_cav < 0.08 * v_before or (v_before - v_after) < 0.25 * min(v_cav, v_before) or v_after <= 0.0:
+            cav_failed = True                           # boolean reddedildi / boşluk boş: parça dolu ya da bozuk → yeniden dene
+            feat.notes.append("boşluk çıkarılamadı")
     _delete(base)
     for k in seg.union_extra:
         if ctx.has(k):
             B.op(A, ctx.outer(k), "UNION")
     col = B.group(ctx.name("add"), feat.adds)
     if col is not None:
-        B.op(A, col, "UNION")
+        if seg.ends:                                    # eklenenler bölgeye kırpılır (komşu segmente taşmasın)
+            reg = ctx.obj("rega", region_solid(_planes(seg.ends), center))
+            for ob in list(col.objects):
+                B.op(ob, reg, "INTERSECT")
+                if len(ob.data.polygons) == 0:
+                    _delete(ob)
+            _delete(reg)
+        if len(col.objects):
+            B.op(A, col, "UNION")
         Booler.drop(col)
     col = B.group(ctx.name("hole"), feat.holes)
     if col is not None:
         B.op(A, col, "DIFFERENCE")
         Booler.drop(col)
-    cl = clean_mesh(A, triangles=True)
+    cl = finalize_mesh(A)
     me = A.data
     ctx.work.objects.unlink(A)
     out_col.objects.link(A)
@@ -1568,6 +1981,9 @@ def build_segment(ctx: Ctx, seg: SegSpec, feat: Feature, out_col: bpy.types.Coll
     me.name = A.name
     chk = mesh_check(me)
     chk["removed_islands"] = cl["removed_islands"]
+    if cav_failed:
+        chk["ok"] = False
+        chk["cavity_failed"] = True
     return Built(seg, A, chk, {"inner": inner, "pin_holes": sum(1 for h in feat.holes if h.name == "pin"),
                                "notes": list(feat.notes)})
 
@@ -1589,17 +2005,21 @@ def _line_at(p0: np.ndarray, p1: np.ndarray, y: float) -> np.ndarray:
     return p0 + t * (p1 - p0)
 
 
-def tube_prims(p0, p1, od: float, *, sleeve: bool = True, clear: float = TUBE_CLEAR, ext: float = 0.0005,
+def tube_prims(p0, p1, od: float, *, sleeve: bool = True, clear: float | None = None, ext: float = 0.0005,
                web_up=None, web_h: float = 0.08, name: str = "tube") -> Feature:
-    """CF boru kanalı: delik (Ø od + pay) + kılavuz kovanı (iç yapı) + isteğe bağlı kesme ağı (``web_up`` yönünde)."""
+    """CF boru kanalı: delik (Ø od + malzeme boşluğu, çevrel çokgen; P7) + kılavuz kovanı (iç yapı) + isteğe bağlı
+    kesme ağı (``web_up`` yönünde)."""
     p0, p1 = np.asarray(p0, float), np.asarray(p1, float)
     d = _unit(p1 - p0)
     a, b = p0 - d * ext, p1 + d * ext
-    r = 0.5 * (od + clear)
+    dh = od + clear if clear is not None else hole_d(od, "tube")
+    r = 0.5 * dh
+    n = hole_sides(r)
     f = Feature()
-    f.holes.append(prim_frustum(a, b, r, name=f"{name}_hole"))
+    f.holes.append(prim_hole(a, b, dh, name=f"{name}_hole", n=n))
     if sleeve:                                          # kovan uçları deliği 2 mm aşar: kademe omzu / kör uç kapağı
-        f.structure.append(prim_frustum(a - d * SHOULDER, b + d * SHOULDER, r + SLEEVE_T, name=f"{name}_sleeve"))
+        f.structure.append(prim_frustum(a - d * SHOULDER, b + d * SHOULDER, (r + SLEEVE_T) / math.cos(math.pi / n),
+                                        n=n, name=f"{name}_sleeve"))
     if web_up is not None:
         up = _unit(np.asarray(web_up, float) - d * float(np.dot(web_up, d)))
         nrm = np.cross(d, up)
@@ -1746,9 +2166,9 @@ def pin_boss(p0, p1, ends: Sequence[End], d: float = BOSS_D) -> Feature:
         t = float((e.p - p0) @ e.n) / den
         q = p0 + ax * t
         inward = -ax * np.sign(den)
-        f.structure.append(prim_frustum(q - inward * 0.003, q + inward * (PIN_DEPTH + 0.006), 0.5 * d, n=20,
+        f.structure.append(prim_frustum(q - inward * 0.003, q + inward * (PIN_DEPTH + 0.006), 0.5 * d, n=24,
                                         name="boss"))
-        f.holes.append(prim_frustum(q + e.n * 0.002, q - e.n * PIN_DEPTH, 0.5 * PIN_HOLE_D, n=16, name="pin"))
+        f.holes.append(prim_hole(q + e.n * 0.002, q - e.n * PIN_DEPTH, hole_d(PIN_D, "pin"), name="pin"))
     return f
 
 
@@ -1863,8 +2283,32 @@ def hinge_notch_prims(hp: HingePlan, u: float, surf_up_sign: float = 1.0) -> lis
     return out
 
 
-def hinge_pin_bore(hp: HingePlan) -> Solid:
-    return prim_frustum(hp.a - hp.X * 0.006, hp.a + hp.X * (hp.L + 0.006), 0.5 * HINGE_PIN_HOLE_D, n=12, name="pin_bore")
+# Menteşe pimi takma tarafı (P1): delik, sabit parçada eksen boyunca dışarı açılır (u = 0 iç/alt uç, L dış/üst uç).
+# (u0, u1 − L) m. Kanatçık: uç kapağından dışarı (Ø2,1 çıkış deliği, pimden sonra CA ile tıkanır); elevatör:
+# stabilize ucundan (dikey takılmadan önce; dikey 1'in yuvası pimi tutar); dümen: dikey 2'nin tepesinden; flaplar:
+# y = 0,36 kaburgalarından (panel sökülüyken; karşı kaburga/karşı pim tutar).
+PIN_BORE_EXT = {"Aileron": (-0.006, 0.120), "Elevator": (-0.006, 0.045), "Rudder": (-0.006, 0.060),
+                "FlapOut": (-0.006, 0.006), "FlapIn": (-0.006, 0.006)}
+PIN_INSERT = {
+    "Aileron": ("dış uç", "uç kapağının dış yüzündeki Ø2,1 delikten (uç kapağı yapıştırıldıktan sonra)",
+                "iç uçta kör delik (dış panel / dış flap ucu); dış uçta delik CA + mikrobalonla tıkanır"),
+    "FlapOut": ("iç uç", "dış panel sökülüyken panel 1'in y = 0,36 kök kaburgasındaki delikten",
+                "panel takılınca kök bloğu 2 kaburgası ve iç flap piminin ucu; dış uçta kör delik (kanatçık ayrımı)"),
+    "FlapIn": ("dış uç", "dış panel sökülüyken kök bloğu 2'nin y = 0,36 kaburgasındaki delikten",
+               "panel takılınca panel 1 kaburgası ve dış flap piminin ucu; iç uçta kör delik (kök bloğu 1)"),
+    "Elevator": ("dış uç", "dikeyler takılmadan önce stabilize ucundaki delikten",
+                 "dikey 1'in stabilize ucu yuvası (dikey takılınca elevatör pimi sökülemez); iç uçta kör delik"),
+    "Rudder": ("üst uç", "dikey 2'nin tepesindeki Ø2,1 delikten",
+               "alt uçta kör delik (dikey 1); üst delik CA ile tıkanır"),
+}
+
+
+def hinge_pin_bore(hp: HingePlan, u0: float = -0.006, u1: float | None = None) -> Solid:
+    """Menteşe pimi deliği: Ø2,1 çevrel çokgen (iç yarıçap 1,05 mm; Ø1,75 filament pim). ``u0``: iç/alt uç (eksen
+    koordinatı), ``u1``: dış/üst uçta L'nin ötesine uzama (varsayılan 6 mm). Takma tarafında delik komşu parçadan
+    dışarı uzatılır (``PIN_BORE_EXT``, P1)."""
+    u1 = hp.L + (0.006 if u1 is None else u1)
+    return prim_hole(hp.a + hp.X * u0, hp.a + hp.X * u1, HINGE_PIN_HOLE_D, name="pin_bore")
 
 
 # =====================================================================================================
@@ -1968,7 +2412,7 @@ def _root_rear_line() -> tuple[np.ndarray, np.ndarray]:
 
 def wing_features(y0: float, y1: float, part: str, ends: Sequence[End], plans: dict, up_sign: float,
                   host: Solid, servo: bool = True) -> Feature:
-    """Kanat segmenti (sol): boru kanalları + kovanlar + ağlar, arka kiriş, açı pimi, ±45° kafes, pim göbekleri,
+    """Kanat segmenti (sol): boru kanalları + kovanlar + ağlar, arka kiriş, açı pimi, ±40° kafes, pim göbekleri,
     servo yuvası, menteşe bölgeleri/dilleri/pim deliği, firar kenarı dolu şeridi."""
     f = Feature()
     lo, hi = y0 - 0.001, y1 + 0.001
@@ -1997,15 +2441,15 @@ def wing_features(y0: float, y1: float, part: str, ends: Sequence[End], plans: d
     a, b = Bp(*ip.p0), Bp(*ip.p1)
     ya, yb = max(0.31, lo), min(0.41, hi)
     if yb > ya:
-        f.extend(tube_prims(_line_at(a, b, ya), _line_at(a, b, yb), ip.od, clear=0.0002, name="inc_pin"))
-    # ±45° geodezik kafes (dış panel): ana ağ ile arka ağ arasında
+        f.extend(tube_prims(_line_at(a, b, ya), _line_at(a, b, yb), ip.od, name="inc_pin"))
+    # ±40° geodezik kafes (dış panel): ana ağ ile arka ağ arasında; dik baskıda ağ yüzleri yatayla 50° (P12)
     if part == "outer" and y1 <= P.wing_parts()["U_WingOuter"][1] + 0.01:
         for k in range(-3, 40):
             yk = 0.36 + k * LATTICE_PITCH
             for sg in (1.0, -1.0):
                 sa = float(-s0[0]) + 0.004
                 sb = float(-_line_at(r0, r1, yk)[0]) - 0.004
-                dy = sg * (sb - sa)
+                dy = sg * (sb - sa) / math.tan(math.radians(LATTICE_DEG))
                 ya_, yb_ = yk, yk + dy
                 if max(ya_, yb_) < y0 - 0.02 or min(ya_, yb_) > y1 + 0.02:
                     continue
@@ -2042,7 +2486,7 @@ def wing_features(y0: float, y1: float, part: str, ends: Sequence[End], plans: d
             y = float(hp.point(u)[1])
             if y0 < y < y1:
                 f.adds += hinge_lug_prims(hp, u)
-        f.holes.append(hinge_pin_bore(hp))
+        f.holes.append(hinge_pin_bore(hp, *PIN_BORE_EXT.get(nm, (-0.006, None))))
     f.structure.append(_te_band_wing(max(y0 - 0.02, 0.0), min(y1 + 0.02, 1.9), _WALLS["wing_skin"]
                                      if part == "outer" else _wall_of("root_block")))
     return f
@@ -2104,6 +2548,12 @@ def _fus_cuts() -> list[float]:
     return [round(c, 4) for c in sorted(set(out))]
 
 
+def fuselage_cuts() -> list[float]:
+    """Gövdenin GERÇEK baskı ek istasyonları (s, m; burun ucu hariç, yangın perdesi kapağı dahil): ``_fus_cuts`` —
+    render'daki panel çizgileri (``materials.panel_stations``) bunları kullanır, rapordaki ``print_cuts`` ile aynıdır."""
+    return [c for c in _fus_cuts() if c > 0.0]
+
+
 def make_recipes(ctx: Ctx, only: Sequence[str] | None = None) -> tuple[list, dict]:
     """Bütün baskı tariflerini üretir (sol/merkez). Dönüş: (Recipe listesi, menteşe planları)."""
     from .. import shapes as S
@@ -2119,7 +2569,8 @@ def make_recipes(ctx: Ctx, only: Sequence[str] | None = None) -> tuple[list, dic
         return not only or any(key.startswith(o) for o in only)
 
     # ------------------------------------------------------------------ kaynaklar
-    ctx.add_source("wing_outer", ["U_WingOuter_L", "U_Tip_L"], _wall_dbox(_WALLS["wing_skin"]))
+    ctx.add_source("wing_outer", ["U_WingOuter_L", "U_Tip_L"], _wall_dbox(_WALLS["wing_skin"]),
+                   nudge={"U_Tip_L": (0.0, -3e-5, 0.0)})          # uç kökü y = 1,83 kapağı panel kapağıyla çakışıyor
     ctx.add_source("wing_center", ["U_WingCenter_L"], _wall_dbox(_wall_of("root_block")))
     ctx.add_source("stab", ["U_Stab"], _wall_const(_WALLS["tail_skin"]))
     ctx.add_source("fin", ["U_Fin_L"], _wall_const(_WALLS["tail_skin"]))
@@ -2139,12 +2590,14 @@ def make_recipes(ctx: Ctx, only: Sequence[str] | None = None) -> tuple[list, dic
     ctx.add_source("exhaust_ring", ["U_ExhaustRing"], _wall_const(_WALLS["cowl_pa_cf"]))
     ctx.add_source("louvers", ["U_Cowl_Louvers"], _wall_const(_WALLS["cowl_pa_cf"]))
     ctx.add_source("intake", ["U_Intake"], _wall_const(_wall_of("intake")))
-    ctx.add_source("root_fairing", ["U_Fairing_Root_L", "U_Fairing_Blister_L"], _wall_const(_wall_of("root_fairing")))
+    ctx.add_source("root_fairing", ["U_Fairing_Root_L"], _wall_const(_wall_of("root_fairing")))
+    ctx.add_source("gear_blister", ["U_Fairing_Blister_L"], _wall_const(_wall_of("root_fairing")))
     ctx.add_source("collar", ["U_Turret_Mount"], _wall_const(_wall_of("turret_collar")))
     ctx.add_source("hatch", ["U_Hatch"], _wall_const(_WALLS["hatch_petg"]))
     ctx.add_source("scuff", ["U_ScuffPad"], _wall_const(_WALLS["tpu_pad"]))
-    for d in ("N_1", "L_1", "L_2"):
-        ctx.add_source(f"door_{d}", [f"U_Door_{d}"], _wall_const(_wall_of("gear_doors")))
+    for d in ("N_1", "N_3", "L_1", "L_2"):                     # kapak + menteşe dili/horn donanımı (U_DoorHw_*) tek parça
+        hw = [f"U_DoorHw_{d}"] if f"U_DoorHw_{d}" in bpy.data.objects else []
+        ctx.add_source(f"door_{d}", [f"U_Door_{d}"] + hw, _wall_const(_wall_of("gear_doors")), merge=True)
     for nm in P.CONTROL_SURFACES:
         ctx.add_source(f"surf_{nm}", [f"U_{nm}_{SIDE}"], _wall_const(_WALLS["control_surface_skin"]))
 
@@ -2258,6 +2711,22 @@ def make_recipes(ctx: Ctx, only: Sequence[str] | None = None) -> tuple[list, dic
                     zm = P.wing_mid_z(S_CUT_STRAKE, yb) or -0.04
                     pa, pb = Bp(S_CUT_STRAKE - 0.001, yb, zm), Bp(S_CUT_STRAKE + 0.014, yb, zm)
                     f.extend(pin_boss(pa, pb, [e for e in seg.ends if abs(e.n[0]) > 0.9]))
+                f.extend(g10_slot_features(0.05))                    # P4: G10 köprü yuvaları (gövde yanından)
+                f.structure += well_roof_fill()                      # kuyu tavanı–üst deri ≤ 4 mm: dolu bant
+            if part in ("root1", "root2"):                           # P4: ana takım yatağı / ER-150 hacmi + alt açıklık
+                f.keepout += gear_mount_main_keepout()
+                f.holes.append(gear_unit_opening())
+                f.notes.append("ana takım yatağı yuvası + ER-150 alt açıklığı")
+                f.holes += conduit_holes(root_conduit_polyline(), CONDUIT_D["root"])     # P9: kablo kanalı Ø6
+            if part == "outer":
+                f.holes += conduit_holes(wing_conduit_polyline(), CONDUIT_D["wing"])     # P9: servo kabloları Ø8
+            if seg.key == "wing_panel_1" or part == "root2":                 # P9: sökülebilir ek
+                f.extend(lock_tab_features("root2" if part == "root2" else "panel"))
+                f.extend(mpx_pocket("root" if part == "root2" else "panel"))
+                f.holes.append(flap_joiner_slot())
+                f.notes.append("iç/dış flap bağlayıcı tel yay yarığı")
+            if part in ("outer", "root1", "root2"):
+                f.notes.append("kablo kanalı")
             return f
 
         return Recipe(seg, ff)
@@ -2297,8 +2766,10 @@ def make_recipes(ctx: Ctx, only: Sequence[str] | None = None) -> tuple[list, dic
             q = hp.point(u)
             if all(float((q - e.p) @ e.n) < -0.004 for e in seg.ends if e.kind != "open"):
                 f.adds += hinge_lug_prims(hp, u)
-        f.holes.append(hinge_pin_bore(hp))
+        f.holes.append(hinge_pin_bore(hp, *PIN_BORE_EXT["Elevator"]))
         f.structure.append(_te_band_stab(0.0, P.STAB_HALF_SPAN + 0.006, _WALLS["tail_skin"]))
+        f.holes += conduit_holes(tail_conduit_polyline(), CONDUIT_D["tail"])        # P9: kuyruk kablo kanalı (uçtan)
+        f.notes.append("kablo kanalı Ø6 (dümen + elevatör → koni)")
         # hücum kenarı pimi (ek düzleminde)
         sec_pts = []
         for yv in (0.20, 0.32):
@@ -2329,7 +2800,8 @@ def make_recipes(ctx: Ctx, only: Sequence[str] | None = None) -> tuple[list, dic
         if want(key):
             seg = SegSpec(key, f"Stabilize yarısı {idx}/2 (%25 ok eksenine dik ek)", "Kuyruk", ["stab"], "stab",
                           stab_ends[key], mirror=True, bed_end=0, force_up=True,
-                          subtract=(fus_sub if idx == 1 else []), center=Bp(2.05, 0.13 if idx == 1 else 0.39, 0.065),
+                          subtract=(fus_sub + [("cowl", 0.0008, 0.0)] if idx == 1 else []),
+                          center=Bp(2.05, 0.13 if idx == 1 else 0.39, 0.065),
                           note=("kök yüzü kuyruk konisi konturunu izler; borular koni içindeki eyerde birleşir"
                                 if idx == 1 else "uç dikey içine 5 mm gömülür"))
             recipes.append(Recipe(seg, lambda seg, idx=idx: stab_ff(seg, idx)))
@@ -2347,8 +2819,11 @@ def make_recipes(ctx: Ctx, only: Sequence[str] | None = None) -> tuple[list, dic
             q = hp.point(u)
             if all(float((q - e.p) @ e.n) < -0.004 for e in seg.ends):
                 f.adds += hinge_lug_prims(hp, u)
-        f.holes.append(hinge_pin_bore(hp))
+        f.holes.append(hinge_pin_bore(hp, *PIN_BORE_EXT["Rudder"]))
         f.structure.append(_te_band_fin(0.0, 0.32, _WALLS["tail_skin"]))
+        if idx == 1:
+            f.holes += conduit_holes(tail_conduit_polyline()[:2], CONDUIT_D["tail"])  # P9: dümen servosu → stabilize ucu
+            f.notes.append("kablo kanalı Ø6 (servo → stabilize ucu)")
         pts = []
         for hv in (0.10, 0.22):
             sec = P.fin_section(hv, SIDE)
@@ -2390,7 +2865,7 @@ def make_recipes(ctx: Ctx, only: Sequence[str] | None = None) -> tuple[list, dic
         h = hp.h
         f = Feature()
         a, b = hp.point(u0 - 0.01), hp.point(u1 + 0.01)
-        f.structure.append(prim_frustum(a, b, HINGE_SLEEVE_R, n=16, name="pin_sleeve"))
+        f.structure.append(prim_frustum(a, b, HINGE_SLEEVE_R, n=24, name="pin_sleeve"))
         cm = 0.4 * max(h.chord_in, h.chord_out)        # orta ağ veterin ön %40'ı (pim kovanını deriye bağlar)
         f.structure.append(prim_box(0.5 * (a + b) + hp.Y * 0.5 * cm, np.column_stack([hp.X, hp.Y, hp.Z]),
                                     (0.5 * float(np.linalg.norm(b - a)), 0.5 * cm, 0.5 * WEB_T), name="mid_web"))
@@ -2405,7 +2880,13 @@ def make_recipes(ctx: Ctx, only: Sequence[str] | None = None) -> tuple[list, dic
             f.structure.append(_te_band_stab(0.0, P.STAB_HALF_SPAN, _WALLS["control_surface_skin"]))
         else:
             f.structure.append(_te_band_fin(0.0, 0.32, _WALLS["control_surface_skin"]))
-        st = SERVO_STATIONS.get(nm)
+        if nm == "FlapIn" and u1 > hp.L - 0.01:                     # P9: dış flaba bağlayıcı tel yuvası
+            f.holes.append(flap_joiner_socket("in"))
+            f.notes.append("bağlayıcı tel yuvası (dış flap sürer)")
+        if nm == "FlapOut" and u0 < 0.01:
+            f.holes.append(flap_joiner_socket("out"))
+            f.notes.append("bağlayıcı tel yuvası (iç flabı sürer)")
+        st = SERVO_STATIONS.get(nm) if nm != "FlapIn" else None   # iç flap servosuz (bağlayıcı tel)
         if st is not None:
             us = (st - h.span_from) / (h.span_to - h.span_from) * h.length
             if u0 + 0.01 < us < u1 - 0.01:
@@ -2435,10 +2916,13 @@ def make_recipes(ctx: Ctx, only: Sequence[str] | None = None) -> tuple[list, dic
                 ends.append(End(hp.point(bounds[k]), -hp.X, "plate", label="yüzey eki"))
             if k < nseg - 1:
                 ends.append(End(hp.point(bounds[k + 1]), hp.X, "plate", label="yüzey eki"))
+            sub = [("cowl", 0.0010, 0.0)] if (nm == "Elevator" and k == 0) else []   # kök: kaporta yanağı çakışması
             seg = SegSpec(key, f"{label} {k + 1}/{nseg}" if nseg > 1 else label, group, [f"surf_{nm}"],
                           "control_surface", ends, mirror=True, bed_end=(0 if k > 0 else None),
                           up_hint=hp.X, center=hp.point(0.5 * (bounds[k] + bounds[k + 1])), force_up=True,
-                          note="menteşe ekseni Z'de; Ø1,5 çelik pim, basılı dil çentikleri")
+                          subtract=sub,
+                          note=f"menteşe ekseni Z'de; Ø{HINGE_PIN_D * 1000:.2f} filament pim, basılı dil çentikleri"
+                          .replace(".", ","))
             recipes.append(Recipe(seg, lambda seg, nm=nm, u0=bounds[k], u1=bounds[k + 1]: surf_ff(seg, nm, u0, u1)))
 
     # ------------------------------------------------------------------ gövde
@@ -2474,10 +2958,43 @@ def make_recipes(ctx: Ctx, only: Sequence[str] | None = None) -> tuple[list, dic
         zone = "fuselage_nose" if s1 <= s_nose_mod + 1e-6 else ("tail_cone" if s0 >= s_flange - 1e-6 else "fuselage_mid")
         if not want(key) and not want("fus"):
             continue
+        s_int = float(P.intake_spec()["throat_s"])
+        sub = [("intake", GLUE_GAP, 0.0)] if (s0 < s_int + 0.02 and s1 > s_int - 0.02 and ctx.has("intake")) else []
         seg = SegSpec(key, name_tr, "Gövde", ["fus"], zone, ends, bed_end=bed, center=Bp(0.5 * (s0 + s1), 0.0, 0.05),
-                      force_up=True,
-                      note="")
+                      force_up=True, subtract=sub,
+                      note=("NACA dudak çerçevesi cebi + yangın perdesine kanal geçişi" if sub else ""))
         recipes.append(Recipe(seg, lambda seg, s0=s0, s1=s1: fuselage_features(ctx, seg, s0, s1)))
+
+    # ------------------------------------------------------------------ yük yolu parçaları (P4)
+    def custom(key, name_tr, material, parts_fn, mirror=False, up=None, note=""):
+        if not want(key):
+            return
+        seg = SegSpec(key, name_tr, "Yük yolları", [], "frames", [], material=material, shell=False, mirror=mirror,
+                      up_hint=up, note=note,
+                      builder=lambda ctx_, seg_, col_, fn=parts_fn: build_custom(ctx_, seg_, col_, fn()))
+        recipes.append(Recipe(seg, None))
+
+    custom("wing_frame_fwd", "Kanat kutusu ön çerçevesi (PA-CF 3 mm; G10 köprüye yaslanır)", "PA-CF",
+           lambda: wing_frame_parts(0), up=np.array([1.0, 0, 0]),
+           note="köprü plakasına epoksi + 2 × M4; 4 longeron soketi; depo zarfı çevresinde halka")
+    custom("wing_frame_aft", "Kanat kutusu arka çerçevesi (PA-CF 3 mm; G10 köprüye yaslanır)", "PA-CF",
+           lambda: wing_frame_parts(1), up=np.array([-1.0, 0, 0]),
+           note="köprü plakasına epoksi + 2 × M4; 4 longeron soketi")
+    custom("gear_mount_L", "Ana takım yatağı (PA-CF; ER-150 beşiği + sokete eyerli kol)", "PA-CF",
+           gear_mount_main_parts, mirror=True,
+           note="kök bloğu 2'nin açık iç ucundan kaydırılır; ünite ön duvara 2 × M3 ısıl gömme dişli")
+    custom("gear_mount_N", "Burun takım yatağı (PA-CF; chine longeronlarına eyer, akü kızağı tabanı)", "PA-CF",
+           gear_mount_nose_parts, up=np.array([0, 0, 1.0]),
+           note="halka 1'in ön çerçevesinden kaydırılır; G10 plaka 4 × M3 ısıl gömme dişli (M3×3)")
+    custom("engine_ring", "Motor halkası (PA-CF; yangın perdesi önü, 4 × M4 motor + 6 × M3 kaporta dişlisi)", "PA-CF",
+           engine_ring_parts, up=np.array([1.0, 0, 0]),
+           note="halka 9'a 30 mm bindirerek yapıştırılır; 4 longeron ucu soketlere girer")
+    custom("panel_lock_tab", "Dış panel tutma dili (PETG; alttan M4 naylon cıvata, ısıl gömme dişli)", "PETG",
+           lock_tab_parts, mirror=True, note="dış panel 1 kök kaburgasına yapıştırılır; kök bloğu 2 cebine girer")
+    for kind, nm in (("chine", "chine"), ("shoulder", "omuz")):
+        custom(f"longeron_joint_{kind}", f"Longeron kırık soketi — {nm} (PETG; s = {longeron_break_s():.3f})", "PETG",
+               lambda kind=kind: longeron_joint_parts(kind), mirror=True,
+               note="iki düz longeron parçası kırık açısıyla buluşur (halka 4–5 eki)")
 
     if want("fus_nose_flange") or want("fus"):
         seg = SegSpec("fus_nose_flange", "Burun modülü PETG bağlantı flanşı (4×M4, 2 pim)", "Gövde", ["fus_clean"],
@@ -2510,38 +3027,73 @@ def make_recipes(ctx: Ctx, only: Sequence[str] | None = None) -> tuple[list, dic
                 WallZone(Bp(0, 0, z_a), np.array([0, 0, -1.0]), FRAME_T, 0.0002, extra=fw, box=lim),
                 WallZone(Bp(0, 0, z_b), np.array([0, 0, 1.0]), FRAME_T, 0.0002, extra=fw, box=lim)]
 
+    hub_b, ax_b = np.asarray(P.PROP.hub_b, float), np.asarray(P.PROP.axis_aft_b, float)
+    r_noz = 0.5 * float(P.SPEC["propulsion"]["exhaust_ring"]["id_m"]) + _WALLS["cowl_pa_cf"] + 0.0003
+    nozzle_cyl = prim_frustum(hub_b - ax_b * 0.12, hub_b + ax_b * 0.02, r_noz, n=72, name="nozzle")
+
+    def cheek_cut(sd):                                 # sağ yanak (s ≤ 2,18) lüle boşluğu duvarını kesmesin → kaportada
+        if sd != "R":
+            return cheek_box(sd)
+        return ctx.custom_solid("cheek_cut_R", lambda: {"base": cheek_box("R"), "holes": [nozzle_cyl]}) or cheek_box(sd)
+
     if want("cowl"):
         front = End(*_splane(s_fw + CAP_INSET, 1.0), "frame", width=0.008, label="yangın perdesi")
+        s_front = float(P.SPEC["propulsion"]["exhaust_ring"]["s_from_m"])
+        front_cav = (Bp(s_front - _WALLS["cowl_pa_cf"] - 0.0001, 0, 0), np.array([-1.0, 0, 0]))
         seg = SegSpec("cowl_top", "Motor kaportası (PA-CF; yanak açıklıkları flanşlı)", "İtki", ["cowl"], "cowl",
-                      [front], bed_end=0, cutouts=[cheek_box("L"), cheek_box("R")],
+                      [front], bed_end=0, cutouts=[cheek_cut("L"), cheek_cut("R")], cavity_planes=[front_cav],
                       wall_zones=cheek_zones("L") + cheek_zones("R"), center=Bp(2.13, 0, 0.13))
         recipes.append(Recipe(seg, lambda seg: cowl_features(ctx, seg)))
         for sd, nm in (("L", "Sol yanak (susturucu tarafı)"), ("R", "Sağ yanak (panjurlu)")):
             s_a, s_b, z_a, z_b, sg = boxes[sd]
+            s_a = max(s_a, s_fw + CAP_INSET)          # kaynağın kapalı arka yüzü (yangın perdesi) parçada kalmasın
             ends = [End(*_splane(s_a, 1.0), "frame", width=0.006), End(*_splane(s_b, -1.0), "frame", width=0.006),
                     End(Bp(0, 0, z_a), np.array([0, 0, -1.0]), "frame", width=0.006),
                     End(Bp(0, 0, z_b), np.array([0, 0, 1.0]), "frame", width=0.006),
                     End(Bp(0, 0, 0), np.array([0, -sg, 0.0]), "open")]
             seg = SegSpec(f"cowl_cheek_{sd}", f"Kaporta {nm.lower()}", "İtki", ["cowl"], "cowl", ends,
-                          union_extra=(["louvers"] if sd == "R" else []), bed_end=None,
+                          union_extra=(["louvers"] if sd == "R" else []), bed_end=0,
+                          cutouts=([nozzle_cyl] if sd == "R" else []),
+                          cavity_planes=[front_cav] if sd == "L" else [],
                           up_hint=np.array([0, sg, 0.0]), center=Bp(0.5 * (s_a + s_b), sg * 0.05, 0.5 * (z_a + z_b)))
-            recipes.append(Recipe(seg, None))
+            recipes.append(Recipe(seg, (lambda seg: Feature(structure=louver_panel_fill(), holes=louver_slot_holes(),
+                                                            notes=["6 panjur yarığı açık (3 × 24 mm), panel 3,5 mm dolu"]))
+                                  if sd == "R" else None))
         seg = SegSpec("exhaust_ring", "Lüle halkası (PA-CF)", "İtki", ["exhaust_ring"], "exhaust_ring", [],
                       bed_end=None, up_hint=np.array([1.0, 0, 0]))
         recipes.append(Recipe(seg, None))
         seg = SegSpec("scuff_pad", "Kaporta altı sürtünme pabucu (TPU)", "İtki", ["scuff"], "cowl", [], material="TPU",
-                      wall=_WALLS["tpu_pad"], shell=False, up_hint=np.array([0, 0, -1.0]))
+                      wall=_WALLS["tpu_pad"], shell=False, up_hint=np.array([0, 0, 1.0]), force_up=True,
+                      note="aşınma yüzü tablada (düz, pürüzsüz); kavisli → kırılabilir ayak")
         recipes.append(Recipe(seg, None))
-    if want("intake"):
-        seg = SegSpec("intake", "Sırt hava alığı (PA-CF)", "İtki", ["intake"], "intake", [],
-                      subtract=[("fus_clean", GLUE_GAP, 0.0)], cover=True, up_hint=np.array([0, 0, 1.0]))
-        recipes.append(Recipe(seg, lambda seg: Feature(holes=[intake_duct_cut()])))
-    # kök kaportası, filetolar (açık kapak kabukları)
-    if want("root_fairing"):
-        seg = SegSpec("root_fairing", "Kök kaportası + ER-150 kabartması (PA-CF)", "Kaplamalar", ["root_fairing"],
-                      "root_fairing", [], mirror=True, subtract=[("wing_center_clean", GLUE_GAP, 0.0), ("fus_clean", GLUE_GAP, 0.0)],
-                      cover=True, up_hint=np.array([0, 0, -1.0]))
+    if want("intake"):                                 # karın NACA boğazının PA-CF dudak çerçevesi (olduğu gibi, dolu)
+        seg = SegSpec("intake", "NACA hava alığı dudak çerçevesi (PA-CF, karın)", "İtki", ["intake"], "intake", [],
+                      shell=False, up_hint=np.array([1.0, 0, 0]),
+                      note="gövde halkası 9'daki cebe yapıştırılır; kanal yangın perdesindeki açıklıktan kaportaya geçer")
         recipes.append(Recipe(seg, None))
+    # kök kaportası (kano), ER-150 kabartması, dikey kök kaportası (açık kapak kabukları; P6: ayrı STL, AERO-20: tüy
+    # kenar kırpılır)
+    hosts_root = ("wing_center_clean", "fus_clean")
+    if want("root_fairing") and ctx.has("root_fairing"):
+        seg = SegSpec("root_fairing", "Kök kaportası — kano (PA-CF)", "Kaplamalar", ["root_fairing"],
+                      "root_fairing", [], mirror=True, subtract=[(h, GLUE_GAP, 0.0) for h in hosts_root],
+                      cover=True, up_hint=np.array([0, 0, -1.0]),
+                      keep_fn=lambda: cover_keep_prisms(ctx, "root_fairing", hosts_root),
+                      cavity_keep_fn=lambda: cover_keep_prisms(ctx, "root_fairing", hosts_root, COVER_HOLLOW_T),
+                      note="1,6 mm kabuk, et < 3,6 mm olan kenar/dudaklar dolu; tüy kenar ≥ 0,8 mm'de kırpılır, kalan "
+                           "kama epoksi + mikrobalon ile sıfırlanır")
+        recipes.append(Recipe(seg, None))
+    if want("gear_blister") and ctx.has("gear_blister"):
+        hosts_bl = hosts_root + (("root_fairing",) if ctx.has("root_fairing") else ())
+        seg = SegSpec("gear_blister", "ER-150 ünite kabartması (PA-CF)", "Kaplamalar", ["gear_blister"],
+                      "root_fairing", [], mirror=True, subtract=[(h, GLUE_GAP, 0.0) for h in hosts_bl],
+                      cover=True, up_hint=np.array([0, 0, -1.0]),
+                      keep_fn=lambda: cover_keep_prisms(ctx, "gear_blister", hosts_bl),
+                      cavity_keep_fn=lambda: cover_keep_prisms(ctx, "gear_blister", hosts_bl, COVER_HOLLOW_T),
+                      note="kano kaportasına ve kanat altına yapıştırılır; ince kenarlar dolu, tüy kenar kırpılır")
+        recipes.append(Recipe(seg, None))
+    # Dikey kök "mermi" kaportası (U_Fairing_FinRoot) basılmaz: hacminin ≈ %98'i dikey/stabilize içinde, dışarı taşan
+    # kısım ≤ 2 mm kalınlıkta şerit (deneme: 0,6 cm³, et p05 0,05 mm) → stabilize kök filetosu gibi epoksi + mikrobalon.
     # Kanat üstü fileto basılmaz: kanat–gövde arasında sıfıra inen kama (%5 et ≈ 0,06 mm) → BOM: dolgu fileto.
     # Stabilize kök filetosu basılmaz: stabilize/koni arasında 0,1–3 mm kama (baskıya uygun değil) → BOM'da
     # epoksi + mikrobalon dolgu (ısı bölgesinde LW-PLA yok kuralı korunur).
@@ -2549,28 +3101,278 @@ def make_recipes(ctx: Ctx, only: Sequence[str] | None = None) -> tuple[list, dic
         seg = SegSpec("turret_collar", "Taret yakası (8 faset, PETG)", "Faydalı yük", ["collar"], "turret_collar", [],
                       up_hint=np.array([0, 0, 1.0]))
         recipes.append(Recipe(seg, None))
-    if want("hatch"):
-        seg = SegSpec("hatch", "Aviyonik kapağı (füme PETG, mıknatıslı)", "Kaplamalar", ["hatch"], "hatch", [],
-                      material="PETG-füme", shell=False, up_hint=np.array([0, 0, 1.0]))
+    for half, tag in ((0, "a"), (1, "b")):             # P10: ısıl biçimlendirme kalıbı + PETG çerçeve
+        if want(f"hatch_buck_{tag}") or want("hatch"):
+            seg = SegSpec(f"hatch_buck_{tag}", f"Aviyonik kapağı ısıl biçimlendirme kalıbı {tag.upper()} (PLA; alet)",
+                          "Kalıp (alet)", [], "frames", [], material="PLA", shell=False, tooling=True,
+                          up_hint=np.array([0, 0, 1.0]),
+                          note="1,0 mm füme PETG levha bu kalıp üstünde biçimlendirilir; uçak kütlesine dahil değil",
+                          builder=lambda c_, s_, o_, h=half: build_custom(c_, s_, o_, hatch_buck_parts(h)))
+            recipes.append(Recipe(seg, None))
+        if want(f"hatch_frame_{tag}") or want("hatch"):
+            seg = SegSpec(f"hatch_frame_{tag}", f"Aviyonik kapağı çerçevesi {tag.upper()} (PETG; 3 mıknatıs cebi)",
+                          "Kaplamalar", [], "frames", [], material="PETG", shell=False, up_hint=np.array([0, 0, 1.0]),
+                          note="levha altına yapıştırılır; düz alt yüz gövde basamağına oturur",
+                          builder=lambda c_, s_, o_, h=half: build_custom(c_, s_, o_, hatch_frame_parts(h)))
+            recipes.append(Recipe(seg, None))
+    if want("tolerance_coupon"):                      # P7: önce kupon basılır, delik payı doğrulanır
+        seg = SegSpec("tolerance_coupon", "Tolerans kuponu (LW-PLA; ilk baskı — delik payı denemesi)", "Test / alet",
+                      [], "wing_panel", [], material="LW-PLA", shell=False, tooling=True,
+                      up_hint=np.array([0, 0, 1.0]),
+                      note="Ø27/16/8/6 boru, Ø3 pim, Ø1,75 menteşe pimi delikleri (parçalardaki payla aynı)",
+                      builder=lambda c_, s_, o_: build_custom(c_, s_, o_, tolerance_coupon_parts()))
         recipes.append(Recipe(seg, None))
-    for d, nm, mir in (("N_1", "Burun takımı kapağı", True), ("L_1", "Ana takım kuyu kapağı", True),
+    ctx.print_cuts = {
+        "wing_y_m": sorted({round(float(v), 4) for v in list(ys) + [y_mid_root, y_join]}),
+        "wing_tip_plane": {"point_b": [round(float(v), 4) for v in tip_p], "normal_b": [round(float(v), 4) for v in tip_n]},
+        "strake_s_m": round(float(S_CUT_STRAKE), 4),
+        "fuselage_s_m": [round(float(v), 4) for v in fcuts if 0.0 < v < s_fw + 0.01],
+        "stab_y_m": round(float(cuts["stab_y"][1]), 4), "fin_h_m": round(float(cuts["fin_h"][1]), 4),
+        "control_surface_y_m": {k: [round(float(v), 4) for v in surf_cut_y[k][1:-1]] for k in surf_cut_y},
+        "cowl_cheeks": {sd: {"s_m": [boxes[sd][0], boxes[sd][1]], "z_m": [boxes[sd][2], boxes[sd][3]]} for sd in boxes},
+        "groove_mm": [float(v) for v in _PR.get("joint_groove_mm", [0.4, 0.3])],
+    }
+    for d, nm, mir in (("N_1", "Burun takımı kapağı (menteşe dili + horn dahil)", True),
+                       ("N_3", "Burun takımı bacak tapa kapağı (bacağa bağlı)", False),
+                       ("L_1", "Ana takım kuyu kapağı (menteşe dili + horn dahil)", True),
                        ("L_2", "Ana takım bacak kapağı", True)):
         key = f"door_{d}"
-        if want(key) or want("door"):
+        if (want(key) or want("door")) and ctx.has(key):
             seg = SegSpec(key, f"{nm} (PETG 1,2 mm)", "Takım kapakları", [key], "gear_doors", [], shell=False,
                           mirror=mir, up_hint=np.array([0, 0, -1.0]))
             recipes.append(Recipe(seg, None))
     return recipes, plans
 
 
+# =====================================================================================================
+# Kaplama tüy kenarı kırpma (AERO-20 / P13): kök kaportası ve takım kabartması ev sahibine (kanat/gövde) teğet
+# yaklaştığı yerde sıfır kalınlığa iner; dilimleyici < 0,4 mm'yi atar → yırtık yapıştırma kenarı. Alttan bakışta
+# her ızgara noktasında dış yüzden içe normal boyunca et ölçülür; et ≥ TRIM_T bölgesinin sınırı (yürüyen kareler)
+# dik prizmaya çevrilir ve parça bununla kesişir → kenar ≥ 0,8 mm dik duvar; kalan kama montajda epoksi +
+# mikrobalon dolgu ile sıfırlanır (stabilize kök filetosundaki yöntem).
+# =====================================================================================================
+TRIM_T = 0.0009                                     # kırpma kalınlığı (0,8 mm + 0,1 mm ızgara payı). varsayım
+TRIM_STEP = 0.001                                   # kalınlık ızgarası (1 mm)
+COVER_HOLLOW_T = 2 * 0.0016 + 0.0004                # kaplama yalnız et ≥ 2 × 1,6 + 0,4 mm olan yerde oyulur
+
+
+def _march_loops(Fv: np.ndarray, xs: np.ndarray, ys: np.ndarray) -> list[np.ndarray]:
+    """Yürüyen kareler: ``Fv[i, j]`` (x_i, y_j) ≥ 0 içeri; ızgara kenarı dışarıda (< 0) olmalı. Dönüş: kapalı
+    döngüler (k, 2); içerisi solda → dış sınır saat yönü tersi, delik saat yönü. Eyer hücresi merkez ortalamasıyla."""
+    nx, ny = Fv.shape
+    ins = Fv >= 0.0
+
+    def point(key):
+        kind, i, j = key
+        if kind == 0:
+            a, b = Fv[i, j], Fv[i + 1, j]
+            t = a / (a - b)
+            return (xs[i] + t * (xs[i + 1] - xs[i]), ys[j])
+        a, b = Fv[i, j], Fv[i, j + 1]
+        t = a / (a - b)
+        return (xs[i], ys[j] + t * (ys[j + 1] - ys[j]))
+
+    nxt: dict = {}
+    for i in range(nx - 1):
+        for j in range(ny - 1):
+            c = (ins[i, j], ins[i + 1, j], ins[i + 1, j + 1], ins[i, j + 1])
+            if all(c) or not any(c):
+                continue
+            edges = (((0, i, j), c[0], c[1]), ((1, i + 1, j), c[1], c[2]), ((0, i, j + 1), c[2], c[3]),
+                     ((1, i, j), c[3], c[0]))                       # hücre çevresi saat yönü tersi
+            xk = [(k, bool(a and not b)) for k, a, b in edges if a != b]
+            if len(xk) == 2:
+                ex, en = (xk[0], xk[1]) if xk[0][1] else (xk[1], xk[0])
+                nxt[ex[0]] = en[0]
+            else:                                                   # eyer: 4 geçiş
+                c_in = (Fv[i, j] + Fv[i + 1, j] + Fv[i + 1, j + 1] + Fv[i, j + 1]) >= 0.0
+                for q, (k, is_exit) in enumerate(xk):
+                    if is_exit:
+                        nxt[k] = xk[(q + 1) % 4][0] if c_in else xk[(q - 1) % 4][0]
+    loops, seen = [], set()
+    for start in list(nxt):
+        if start in seen:
+            continue
+        loop, k = [], start
+        while k is not None and k not in seen:
+            seen.add(k)
+            loop.append(point(k))
+            k = nxt.get(k)
+        if len(loop) >= 3:
+            loops.append(np.asarray(loop, float))
+    return loops
+
+
+def _rdp_closed(Pl: np.ndarray, eps: float) -> np.ndarray:
+    """Kapalı çokgen Douglas–Peucker sadeleştirme (yinelemesiz)."""
+    n = len(Pl)
+    if n < 8:
+        return Pl
+    i1 = int(np.argmax(np.linalg.norm(Pl - Pl[0], axis=1)))
+    keep = np.zeros(n + 1, bool)
+    Q = np.vstack([Pl, Pl[:1]])
+    keep[[0, i1, n]] = True
+    stack = [(0, i1), (i1, n)]
+    while stack:
+        a, b = stack.pop()
+        if b - a < 2:
+            continue
+        seg = Q[b] - Q[a]
+        L = float(np.hypot(seg[0], seg[1]))
+        W = Q[a + 1:b] - Q[a]
+        d = np.abs(seg[0] * W[:, 1] - seg[1] * W[:, 0]) / L if L > 1e-12 else np.hypot(W[:, 0], W[:, 1])
+        k = int(np.argmax(d))
+        if d[k] > eps:
+            m = a + 1 + k
+            keep[m] = True
+            stack += [(a, m), (m, b)]
+    return Q[:n][keep[:n]]
+
+
+def _poly_area2(Pl: np.ndarray) -> float:
+    return 0.5 * float(np.sum(Pl[:, 0] * np.roll(Pl[:, 1], -1) - np.roll(Pl[:, 0], -1) * Pl[:, 1]))
+
+
+def _point_in_poly(p, Pl: np.ndarray) -> bool:
+    x, y = p
+    inside = False
+    for k in range(len(Pl)):
+        (x1, y1), (x2, y2) = Pl[k - 1], Pl[k]
+        if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1):
+            inside = not inside
+    return inside
+
+
+def cover_keep_prisms(ctx: "Ctx", src: str, hosts: Sequence[str], t_min: float = TRIM_T,
+                      step: float = TRIM_STEP, gap: float = GLUE_GAP) -> list[Solid]:
+    """Alt yüz kaplaması (``src``, ev sahipleri ``hosts`` altında): et ≥ ``t_min`` bölgesinin dik (Z) prizmaları.
+
+    Izgara noktası durumu: kaplama dış yüzü ev sahibi içinde → tut; çevrili boşluk (kuyu açıklığı) → tut; dış
+    boşluk → at; aksi hâlde et = min(ev sahibine uzaklık − yapıştırma boşluğu, kaplamadan çıkış) içe normal boyunca.
+    """
+    cache = ctx.__dict__.setdefault("_keep_cache", {})
+    ck = (src, tuple(hosts), round(t_min, 6), round(step, 6), round(gap, 6))
+    if ck in cache:
+        return cache[ck]
+    Ss = ctx.solid(src)
+    bf = BVHTree.FromPolygons(Ss.V.tolist(), [list(f) for f in Ss.F], epsilon=0.0)
+    hb = []
+    for h in hosts:
+        if ctx.has(h):
+            Sh = ctx.solid(h)
+            hb.append(BVHTree.FromPolygons(Sh.V.tolist(), [list(f) for f in Sh.F], epsilon=0.0))
+    lo, hi = Ss.V.min(0), Ss.V.max(0)
+    xs = np.arange(lo[0] - 3 * step, hi[0] + 3 * step, step)
+    ys = np.arange(lo[1] - 3 * step, hi[1] + 3 * step, step)
+    nx, ny = len(xs), len(ys)
+    state = np.zeros((nx, ny), np.int8)                 # 0 boşluk, 1 ev sahibi içi, 2 ölçüldü
+    T = np.zeros((nx, ny))
+    up = Vector((0.0, 0.0, 1.0))
+    z0 = float(lo[2]) - 0.01
+    for i in range(nx):
+        for j in range(ny):
+            h = bf.ray_cast(Vector((float(xs[i]), float(ys[j]), z0)), up, 1.0)
+            if h[0] is None:
+                continue
+            p = h[0]
+            n = h[1] if h[1].z < 0 else -h[1]
+            inside = False
+            for b in hb:
+                q = b.find_nearest(p)
+                if q[0] is not None and (p - q[0]).dot(q[1]) < 0:
+                    inside = True
+                    break
+            if inside:
+                state[i, j] = 1
+                continue
+            o = p - n * 2e-6
+            t = 0.05
+            for b in hb:
+                g = b.ray_cast(o, -n, 0.05)
+                if g[0] is not None:
+                    t = min(t, g[3] - gap)
+            g = bf.ray_cast(o, -n, 0.05)
+            if g[0] is not None:
+                t = min(t, g[3])
+            state[i, j] = 2
+            T[i, j] = t
+    ext = np.zeros((nx, ny), bool)                      # kenardan erişilen boşluk (dış)
+    stack = [(i, j) for i in range(nx) for j in (0, ny - 1)] + [(i, j) for i in (0, nx - 1) for j in range(ny)]
+    while stack:
+        i, j = stack.pop()
+        if i < 0 or j < 0 or i >= nx or j >= ny or ext[i, j] or state[i, j] != 0:
+            continue
+        ext[i, j] = True
+        stack += [(i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)]
+    Fv = np.where(state == 2, T - t_min, np.where(ext, -t_min, t_min))
+    Fv[0, :] = Fv[-1, :] = -t_min
+    Fv[:, 0] = Fv[:, -1] = -t_min
+    loops = [_rdp_closed(L, 0.12 * step) for L in _march_loops(Fv, xs, ys)]
+    outers = [L for L in loops if _poly_area2(L) > 1e-4]          # > 1 cm², saat yönü tersi
+    outers.sort(key=_poly_area2, reverse=True)
+    top = [L for k, L in enumerate(outers) if not any(_point_in_poly(L[0], M) for M in outers[:k])]
+    z_lo, z_hi = float(lo[2]) - 0.05, float(hi[2]) + 0.05
+    prisms = [prim_prism(L, np.zeros(3), np.array([1.0, 0, 0]), np.array([0, 1.0, 0]), np.array([0, 0, 1.0]),
+                         z_lo, z_hi, name="keep") for L in top]
+    if not prisms:
+        cache[ck] = []
+        return []
+    V, Fl, off = [], [], 0                              # ayrık prizmalar tek katı (kesişim işleneni tek nesne olmalı)
+    for pz in prisms:
+        V.append(pz.V)
+        Fl += [tuple(int(x) + off for x in f) for f in pz.F]
+        off += len(pz.V)
+    thin = int(((state == 2) & (T < t_min)).sum())
+    ctx.log(f"{src}: tüy kenar kırpma — {thin} ızgara noktası < {t_min * 1000:.1f} mm, {len(top)} döngü")
+    cache[ck] = [Solid(np.vstack(V), Fl, "keep")]
+    return cache[ck]
+
+
+COUPON_T = 0.020                                    # kupon kalınlığı (delik boyu)
+COUPON_WALL = 0.005
+
+
+def coupon_holes() -> list[tuple[str, float, float]]:
+    """(etiket, nominal Ø m, basılan delik Ø m) — parçalardaki kural (``hole_d``, ``PIN_HOLE_D``, ``HINGE_PIN_HOLE_D``)."""
+    return [("panel borusu Ø27", 0.027, hole_d(0.027, "tube", "LW-PLA")),
+            ("uç borusu Ø16", 0.016, hole_d(0.016, "tube", "LW-PLA")),
+            ("arka kiriş / longeron Ø8", 0.008, hole_d(0.008, "tube", "LW-PLA")),
+            ("açı pimi Ø6", 0.006, hole_d(0.006, "tube", "LW-PLA")),
+            ("hizalama pimi Ø3", PIN_D, PIN_HOLE_D),
+            ("menteşe pimi Ø1,75", HINGE_PIN_D, HINGE_PIN_HOLE_D)]
+
+
+def tolerance_coupon_parts() -> dict:
+    """``tolerance_coupon.stl`` (P7): 20 mm LW-PLA blok, delikler dik (segmentlerdeki gibi Z ekseninde), parçalarla
+    aynı çevrel çokgen + malzeme payıyla. Köşe pahı = Ø27 tarafı."""
+    H = coupon_holes()
+    W = max(d for _, _, d in H) + 2 * COUPON_WALL
+    x, xs = COUPON_WALL, []
+    for _, _, d in H:
+        xs.append(x + 0.5 * d)
+        x += d + COUPON_WALL
+    L = x
+    o = np.array([3.0, 0.0, 0.0])                       # uçaktan uzakta (dünya)
+    base = prim_box(o + np.array([0.5 * L, 0.0, 0.5 * COUPON_T]), np.eye(3), (0.5 * L, 0.5 * W, 0.5 * COUPON_T),
+                    name="coupon")
+    holes = [prim_hole(o + np.array([xc, 0.0, -0.002]), o + np.array([xc, 0.0, COUPON_T + 0.002]), d, name="ch")
+             for xc, (_, _, d) in zip(xs, H)]
+    c = 0.004                                           # yön işareti: Ø27 ucunda 4 mm pah
+    holes.append(prim_box(o + np.array([0.0, 0.5 * W, 0.5 * COUPON_T]),
+                          np.array([[math.sqrt(0.5), -math.sqrt(0.5), 0], [math.sqrt(0.5), math.sqrt(0.5), 0],
+                                    [0, 0, 1.0]]).T, (c, c, COUPON_T), name="mark"))
+    return {"base": base, "adds": [], "holes": holes}
+
+
 def intake_duct_cut() -> Solid:
-    """Hava alığı kanal tabanından kuyruk konisine açılan hava geçişi (alık ve gövde halkası birlikte delinir)."""
+    """Karın NACA alığı (``shapes.intake_cutter``) kanal cebinin arkasından yangın perdesi düzlemine açılan hava
+    geçişi: halka 9'un arka ucu delinir, G10 perdede aynı açıklık (BOM notu) → hava kaporta içine, silindire."""
     I = P.intake_spec()
-    s0 = float(I["s_from_m"])
-    w = 0.5 * float(I["mouth_w_m"]) - 0.006
-    zt = float(I["mouth_center"][2]) - 0.004
-    zb = float(I["skin_z_at_mouth"]) - 0.030
-    lo, hi = Bp(s0 + 0.030, -w, zb), Bp(s0 + 0.006, w, zt)
+    s_t = float(I["throat_s"])
+    s_fw = float(P.SPEC["fuselage"]["modules"]["firewall_s_m"])
+    w = 0.5 * float(I["mouth_w_m"]) - 0.004
+    z0, z1 = (float(v) for v in I["duct_z"])
+    lo, hi = Bp(s_fw + 0.006, -w, z0 + 0.0015), Bp(s_t + 0.006, w, z1 - 0.0015)
     lo2, hi2 = np.minimum(lo, hi), np.maximum(lo, hi)
     return prim_box(0.5 * (lo2 + hi2), np.eye(3), 0.5 * (hi2 - lo2), name="intake_duct")
 
@@ -2675,20 +3477,43 @@ def fuselage_features(ctx: Ctx, seg: SegSpec, s0: float, s1: float) -> Feature:
         T = {t.name: t for t in P.spar_tubes(SIDE)}
         zc = Bp(*T["centre_socket"].p0)[2]
         g10 = P.SPEC["print"]["g10_bridge"]
-        hw = 0.5 * (0.030 + 2 * float(g10["t_mm"]) / 1000.0) + 0.0015
-        hh = 0.5 * float(g10["h_mm"]) / 1000.0 + 0.0015
+        hw = 0.5 * (0.030 + 2 * G10_T) + 0.0003                      # köprü zarfı + 0,3 mm (çerçeveler deriye yaslanır)
+        hh = 0.5 * G10_H + 0.003
         f.holes.append(prim_box(Bp(P.WING_SPAR_S, 0, zc + 0.003), np.eye(3), (hw, 0.25, hh + 0.003), name="wing_box"))
         f.notes.append("kanat kutusu geçişi (G10 köprü + Ø30 soket)")
-    # aviyonik kapak erişim açıklığı
+    for which in (0, 1):                                             # P4: kanat kutusu çerçeveleri (iç yapı girmez)
+        fs0, fs1 = wing_frame_parts(which)["s"]
+        if s0 - 0.01 < fs0 and fs1 < s1 + 0.01:
+            f.keepout.append(wing_frame_keepout(which))
+    if s0 < NOSE_MOUNT_S[1] and s1 > NOSE_MOUNT_S[0]:              # P4: burun takım yatağı
+        f.keepout.append(gear_mount_nose_keepout())
+    if s0 < ENGINE_RING_S[1] and s1 > ENGINE_RING_S[0]:            # P4: motor halkası
+        f.keepout.append(engine_ring_keepout())
+    tp = tail_conduit_polyline()                                      # P9: kuyruk kablo kanalı koni duvarından
+    if s0 < -float(tp[-1][0]) + 0.02 and s1 > -float(tp[-1][0]) - 0.04:
+        f.holes += conduit_holes(tp[1:], CONDUIT_D["tail"])
+    rp = root_conduit_polyline()                                      # P9: kök kanalı gövde yan duvarından
+    if s0 < 1.268 < s1:
+        f.holes += conduit_holes(rp[-3:], CONDUIT_D["root"])
+        f.holes += conduit_holes([p * np.array([1.0, -1.0, 1.0]) for p in rp[-3:]], CONDUIT_D["root"])
+    sbk = longeron_break_s()                                         # P4: longeron kırık soketi cepleri
+    if s0 - 0.025 < sbk < s1 + 0.025:
+        for kind in ("chine", "shoulder"):
+            for sd in ("L", "R"):
+                pk = ctx.custom_solid(f"ljp_{kind}_{sd}", lambda kind=kind, sd=sd: longeron_joint_pocket_parts(kind, sd))
+                if pk is not None:
+                    f.holes.append(pk)
+        f.notes.append("longeron kırık soketi cepleri (PETG blok)")
+    # aviyonik kapağı oturma basamağı + erişim açıklığı + mıknatıs cepleri (P10)
     hs = P.SPEC["details"]["hatch"]
-    if s0 < float(hs["s_to_m"]) and s1 > float(hs["s_from_m"]):
-        f.holes.append(_hatch_opening())
+    if s0 < float(hs["s_to_m"]) + 0.01 and s1 > float(hs["s_from_m"]) - 0.01:
+        f.extend(hatch_seat_features(ctx, s0, s1))
     # burun modülü bağlantısı (ring 1 ön çerçevesi)
     s_nm = float(P.SPEC["fuselage"]["modules"]["nose_module_s_m"][1])
     if abs(s0 - s_nm) < 1e-6 or abs(s1 - s_nm) < 1e-6:
         bolts, pins = nose_flange_bolts()
-        for (y, z), d in [(b, M4_HOLE_D) for b in bolts] + [(p, NOSE_PIN_D + 0.0002) for p in pins]:
-            f.holes.append(prim_frustum(Bp(s_nm - 0.01, y, z), Bp(s_nm + 0.012, y, z), 0.5 * d, n=16, name="nose_bolt"))
+        for (y, z), d in [(b, M4_HOLE_D) for b in bolts] + [(p, hole_d(NOSE_PIN_D, "pin")) for p in pins]:
+            f.holes.append(prim_hole(Bp(s_nm - 0.01, y, z), Bp(s_nm + 0.012, y, z), d, name="nose_bolt"))
         f.notes.append("burun modülü: 4×M4 kelebek + 2×Ø4 pim")
     # G10 flanş (s = 1,55): kuyruk konisi ön çerçevesinde 4×M4
     s_fl = float(P.SPEC["fuselage"]["modules"]["flange_s_m"])
@@ -2696,8 +3521,7 @@ def fuselage_features(ctx: Ctx, seg: SegSpec, s0: float, s1: float) -> Feature:
         avoid = [(_longeron_at(k, sd, s_fl)[1], _longeron_at(k, sd, s_fl)[2]) for k in ("chine", "shoulder")
                  for sd in ("L", "R")]
         for y, z in _ring_points(s_fl, _wall_of("tail_cone") + 0.005, [40, 140, 220, 320], avoid, 0.012):
-            f.holes.append(prim_frustum(Bp(s_fl - 0.01, y, z), Bp(s_fl + 0.012, y, z), 0.5 * M4_HOLE_D, n=16,
-                                        name="g10_bolt"))
+            f.holes.append(prim_hole(Bp(s_fl - 0.01, y, z), Bp(s_fl + 0.012, y, z), M4_HOLE_D, name="g10_bolt"))
         f.notes.append("G10 flanş: 4×M4")
     # stabilize boruları (koni yan duvarından geçiş + takviye göbeği)
     T = {t.name: t for t in P.spar_tubes(SIDE)}
@@ -2710,14 +3534,14 @@ def fuselage_features(ctx: Ctx, seg: SegSpec, s0: float, s1: float) -> Feature:
             ss = -a[0]
             if not (s0 - 0.01 < ss + 0.10 * abs(d[0]) / max(abs(d[1]), 1e-6) and ss < s1):
                 continue
-            f.holes.append(prim_frustum(a - d * 0.01, a + d * 0.12, 0.5 * (od + TUBE_CLEAR), n=20, name="stab_tube"))
+            f.holes.append(prim_hole(a - d * 0.01, a + d * 0.12, hole_d(od, "tube"), name="stab_tube"))
             hit = None
             bvh2 = BVHTree.FromPolygons(host.V.tolist(), [list(f_) for f_ in host.F], epsilon=0.0)
             r = bvh2.ray_cast(Vector(a + d * 0.001), Vector(d), 0.2)
             if r[0] is not None:
                 hit = np.array(r[0])
-                f.structure.append(prim_frustum(hit - d * 0.008, hit + d * 0.002, 0.5 * (od + TUBE_CLEAR) + 0.003,
-                                                n=20, name="stab_boss"))
+                f.structure.append(prim_frustum(hit - d * 0.008, hit + d * 0.002, 0.5 * hole_d(od, "tube") + 0.003,
+                                                n=32, name="stab_boss"))
     # hava alığı geçişi
     I = P.intake_spec()
     if s0 < float(I["s_from_m"]) + 0.03 and s1 > float(I["s_from_m"]):
@@ -2740,9 +3564,981 @@ def cowl_features(ctx: Ctx, seg: SegSpec) -> Feature:
         f.holes.append(prim_frustum(a + off, b + off, 0.006, n=16, name="cool_hole"))
     s_fw = float(P.SPEC["fuselage"]["modules"]["firewall_s_m"])
     for y, z in _ring_points(s_fw + 0.001, _WALLS["cowl_pa_cf"] + 0.004, [20, 90, 160, 200, 270, 340], [], 0.02):
-        f.holes.append(prim_frustum(Bp(s_fw - 0.002, y, z), Bp(s_fw + 0.008, y, z), 0.5 * M3_HOLE_D, n=12,
-                                    name="fw_screw"))
+        f.holes.append(prim_hole(Bp(s_fw - 0.002, y, z), Bp(s_fw + 0.008, y, z), M3_HOLE_D, name="fw_screw"))
     return f
+
+
+def _ring_prism(ring_a: np.ndarray, ring_b: np.ndarray, name: str) -> Solid:
+    """Eş indisli iki kapalı halka (dünya) arası prizma; yön işaretli hacimle düzeltilir."""
+    n = len(ring_a)
+    V = np.vstack([ring_a, ring_b])
+    F = [tuple(range(n - 1, -1, -1)), tuple(range(n, 2 * n))]
+    for i in range(n):
+        j = (i + 1) % n
+        F.append((i, j, n + j, n + i))
+    sol = Solid(V, F, name)
+    if _signed_volume(sol.V, sol.F) < 0:
+        sol = Solid(V, [tuple(reversed(f)) for f in F], name)
+    return sol
+
+
+def louver_slot_holes() -> list[Solid]:
+    """Sağ yanak panjur yarıkları (``shapes._louver_slots``): sahnede 2 mm derin cep; baskıda 1,6 mm deriyi delip
+    geçen açık yarık (soğutma havası çıkışı) — dudak çerçeveleri (``U_Cowl_Louvers``) yanağa eklenir."""
+    from .. import shapes as S
+    out = []
+    slots = getattr(S, "_louver_slots", None)
+    for pts, nrm, _ in (slots() if slots else []):
+        Wp = np.column_stack([-pts[:, 0], pts[:, 1], pts[:, 2]])
+        Wn = np.column_stack([-nrm[:, 0], nrm[:, 1], nrm[:, 2]])
+        out.append(_ring_prism(Wp - Wn * 0.007, Wp + Wn * 0.004, "louver_slot"))
+    return out
+
+
+def louver_panel_fill(t: float = 0.0035, margin: float = 0.005) -> list[Solid]:
+    """Panjur paneli: yarıkların çevresinde deri ``t`` kalınlıkta dolu (sahnede 2 mm derin cepler 1,6 mm eti aşar;
+    kaydırılmış boşluk yarık aralarında kıymık bırakmasın, yarıklar sağlam bir panelden geçsin)."""
+    from .. import shapes as S
+    slots = getattr(S, "_louver_slots", None)
+    rings = [p for p, _, _ in slots()] if slots else []
+    if not rings:
+        return []
+    pts = np.vstack(rings)
+    s0, s1 = float(pts[:, 0].min()) - margin, float(pts[:, 0].max()) + margin
+    z0, z1 = float(pts[:, 2].min()) - margin, float(pts[:, 2].max()) + margin
+    y_out = float(pts[:, 1].min()) - 0.004                 # sağ yanak: y < 0, dış yüzün dışından
+    y_in = float(pts[:, 1].max()) + t
+    lo, hi = Bp(s1, y_out, z0), Bp(s0, y_in, z1)
+    lo2, hi2 = np.minimum(lo, hi), np.maximum(lo, hi)
+    return [prim_box(0.5 * (lo2 + hi2), np.eye(3), 0.5 * (hi2 - lo2), name="louver_panel")]
+
+
+def well_roof_fill(gap_max: float = 0.004) -> list[Solid]:
+    """Ana kuyu tavanı kanat üst derisine ≤ ``gap_max`` yaklaştığı bant (incelen arka-iç köşe; tavan = üst deri −
+    1,5 mm): iki 0,8 mm et burada kesişir ve kaydırılmış boşluk ince kıymık bırakır → bant dolu basılır (yapı)."""
+    from .. import shapes as S
+    w = next((g for g in P.gear_wells() if g.name == SIDE), None)
+    if w is None:
+        return []
+    poly = np.asarray(w.outline, float)
+    a0, a1 = float(poly[:3, 0].min()), float(poly[:3, 0].max())
+    b0, b1 = sorted((abs(float(poly[0, 1])), abs(float(poly[2, 1]))))
+    roof = S.well_roof_z(SIDE)
+    tab = S.wing_table(SIDE)
+    ss = np.arange(a0, a1 + 1e-9, 0.001)
+    s_x = None
+    for s in ss:
+        gaps = [tab.z(s, y, "upper") - roof(s, y) for y in np.linspace(b0, b1, 7)]
+        gaps = [g for g in gaps if np.isfinite(g)]
+        if gaps and min(gaps) < gap_max:
+            s_x = float(s)
+            break
+    if s_x is None:
+        return []
+    zs = [roof(s, y) for s in (s_x, a1) for y in (b0, b1)]
+    zu = [tab.z(s, y, "upper") for s in (s_x, a1) for y in (b0, b1)]
+    zlo, zhi = min(zs) - 0.003, max(z for z in zu if np.isfinite(z)) + 0.002
+    lo = Bp(a1 + 0.004, b0 - 0.003, zlo)
+    hi = Bp(s_x - 0.003, b1 + 0.003, zhi)
+    c, h = 0.5 * (lo + hi), 0.5 * np.abs(hi - lo)
+    return [prim_box(c, np.eye(3), h, name="well_roof_fill")]
+
+
+# =====================================================================================================
+# Yük yolları (P4): kanat kutusu çerçeveleri + G10 köprü yuvaları, ana/burun takım yatakları, motor halkası,
+# longeron kırık soketleri. Hepsi numpy ilkellerinden + boolean; komşu parçalarda karşılık gelen yuva/koruma
+# hacimleri (``keepout``) aynı fonksiyonlardan türetilir → montajda tam oturma.
+# =====================================================================================================
+G10_T = float(_PR["g10_bridge"]["t_mm"]) / 1000.0          # 3 mm
+G10_L = float(_PR["g10_bridge"]["length_mm"]) / 1000.0     # 300 mm (y ±0,15)
+G10_H = float(_PR["g10_bridge"]["h_mm"]) / 1000.0         # 40 mm: kök bloğu profili (iç ≈ 42 mm) + depo tabanı
+G10_CLEAR = 0.00015                                        # yuva boşluğu her yanda (3,3 mm yuva; epoksi dolgulu)
+TANK_FLOOR_Z = -0.0165                                     # depo zarfı tabanı (params.tank_envelopes z0 −0,016) − 0,5 mm
+TANK_HALF_Y = 0.0725                                       # depo zarfı dış yanı (0,072) + 0,5 mm
+TANK_TOP_Z = 0.0665
+WB_FRAME_T = 0.003                                         # kanat kutusu çerçevesi (PA-CF)
+BRIDGE_BOLT_Y = (0.020, 0.050)                             # boru başına 2×M4: plaka–soket–plaka (|y|; panel borusu y ≥ 0,06)
+GEAR_WALL = 0.0022                                         # takım beşiği duvarı (PA-CF)
+GEAR_CLEAR = 0.0003                                        # ER-150 gövdesi ile beşik arası
+ENGINE_RING_S = (2.0125, 2.0425)                           # motor halkası (yangın perdesi önü; halka 9 içinde 30 mm bindirme)
+ENGINE_BOLT_SQ = float(P.SPEC["propulsion"]["engine"].get("mount_hole_spacing_m", 0.060))
+LONGERON_SOCKET_END_S = 2.0275                             # longeron arka ucu (motor halkası soketi; M4 dişlileriyle eksenel ayrık)
+LJ_LEN = 0.018                                             # longeron kırık soketi: kırığın her yanında 18 mm
+
+
+def _fus_ring_yz(s: float, inset: float, nq: int = 24) -> np.ndarray:
+    """Temiz gövde kesiti (y, z), içe ``inset`` kaydırılmış; sabit indis düzeni (``fuselage_outline``)."""
+    yz = np.asarray(P.fuselage_outline(s, nq), float)
+    c = yz.mean(0)
+    n = len(yz)
+    out = []
+    for i in range(n):
+        t = _unit(yz[(i + 1) % n] - yz[i - 1])
+        nr = np.array([t[1], -t[0]])
+        if (c - yz[i]) @ nr < 0:
+            nr = -nr
+        out.append(yz[i] + nr * inset)
+    return np.asarray(out)
+
+
+def fus_loft(s0: float, s1: float, inset_out: float, inset_in: float | None = None, n_st: int = 3,
+             nq: int = 24, name: str = "fus_loft") -> Solid:
+    """Gövde kesitleri boyunca loft: ``inset_out`` içe kaydırılmış dış yüz; ``inset_in`` verilirse halka (tüp),
+    yoksa dolu katı. Blender ekseni (X = −s)."""
+    ss = np.linspace(s0, s1, n_st)
+    outer = [_fus_ring_yz(s, inset_out, nq) for s in ss]
+    inner = [_fus_ring_yz(s, inset_in, nq) for s in ss] if inset_in is not None else None
+    n = len(outer[0])
+    V, F = [], []
+
+    def ring_idx(k, which):
+        base = (k * (2 if inner is not None else 1) + which) * n
+        return [base + j for j in range(n)]
+
+    for k, s in enumerate(ss):
+        V += [(-s, y, z) for y, z in outer[k]]
+        if inner is not None:
+            V += [(-s, y, z) for y, z in inner[k]]
+    m = len(ss)
+    for k in range(m - 1):
+        a, b = ring_idx(k, 0), ring_idx(k + 1, 0)
+        for j in range(n):
+            j2 = (j + 1) % n
+            F.append((a[j], a[j2], b[j2], b[j]))
+        if inner is not None:
+            a, b = ring_idx(k, 1), ring_idx(k + 1, 1)
+            for j in range(n):
+                j2 = (j + 1) % n
+                F.append((a[j], b[j], b[j2], a[j2]))
+    if inner is None:
+        F.append(tuple(reversed(ring_idx(0, 0))))
+        F.append(tuple(ring_idx(m - 1, 0)))
+    else:
+        for k, sgn in ((0, -1), (m - 1, 1)):
+            o, i_ = ring_idx(k, 0), ring_idx(k, 1)
+            for j in range(n):
+                j2 = (j + 1) % n
+                q = (o[j], o[j2], i_[j2], i_[j])
+                F.append(q if sgn > 0 else tuple(reversed(q)))
+    sol = Solid(np.asarray(V, float), F, name)
+    if _signed_volume(sol.V, sol.F) < 0:
+        sol = Solid(sol.V, [tuple(reversed(f)) for f in sol.F], name)
+    return sol
+
+
+def socket_axis_z(y: float) -> float:
+    """Merkez soket ekseni z(y) (spec), 4° dihedral V."""
+    t = {x.name: x for x in P.spar_tubes(SIDE)}["centre_socket"]
+    z0, z1, y1 = float(t.p0[2]), float(t.p1[2]), float(t.p1[1])
+    return z0 + (z1 - z0) * abs(y) / y1
+
+
+def g10_plate_planes() -> list[tuple[str, float, float]]:
+    """İki G10 köprü plakası: (ad, ön yüz s, arka yüz s). Soketin (Ø30) önüne ve arkasına teğet."""
+    r = 0.5 * float({x.name: x for x in P.spar_tubes(SIDE)}["centre_socket"].od)
+    s = P.WING_SPAR_S
+    return [("ön", s - r - G10_T, s - r), ("arka", s + r, s + r + G10_T)]
+
+
+def g10_plate_z(y: float, grow: float = 0.0) -> tuple[float, float]:
+    """Köprü plakasının y'deki alt/üst z'si (40 mm, soket eksenine ortalı; gövde içinde depo tabanında kesik)."""
+    zc = socket_axis_z(y)
+    lo, hi = zc - 0.5 * G10_H, zc + 0.5 * G10_H
+    hi = min(hi, TANK_FLOOR_Z)
+    return lo - grow, hi + grow
+
+
+def g10_plate_solid(which: int, grow_t: float = 0.0, grow_h: float = 0.0, y0: float = -0.5 * G10_L,
+                    y1: float = 0.5 * G10_L, name: str = "g10") -> Solid:
+    """Köprü plakası katısı (``which`` 0 ön / 1 arka), kalınlıkta ``grow_t``, yükseklikte ``grow_h`` büyütülmüş."""
+    _, sa, sb = g10_plate_planes()[which]
+    ys = np.unique(np.r_[np.linspace(y0, y1, 13), [v for v in (0.0,) if y0 < v < y1]])
+    lo = [g10_plate_z(y, grow_h)[0] for y in ys]
+    hi = [g10_plate_z(y, grow_h)[1] for y in ys]
+    poly = np.array([(y, z) for y, z in zip(ys, lo)] + [(y, z) for y, z in zip(ys[::-1], hi[::-1])])
+    return prim_prism(poly, Bp(sa - grow_t, 0, 0), np.array([0, 1.0, 0]), np.array([0, 0, 1.0]),
+                      np.array([-1.0, 0, 0]), 0.0, (sb - sa) + 2 * grow_t, name=name)
+
+
+def wing_frame_parts(which: int) -> dict:
+    """Kanat kutusu çerçevesi (PA-CF, 3 mm): köprü plakasının dış yüzüne yaslanan sabit-s perde; depo zarfının
+    çevresinde halka (alt bant + yan dikmeler + üst bant), 4 longeron soketi (yaka), 4 köprü cıvatası (M4).
+    Dönüş: {"base", "adds", "holes", "s"}."""
+    _, sa, sb = g10_plate_planes()[which]
+    if which == 0:
+        s1 = sa - G10_CLEAR
+        s0 = s1 - WB_FRAME_T
+    else:
+        s0 = sb + G10_CLEAR
+        s1 = s0 + WB_FRAME_T
+    base = fus_loft(s0, s1, _wall_of("fuselage_mid") + 0.0002, n_st=2, name="wf_base")
+    holes = []
+    tank = prim_box(Bp(0.5 * (s0 + s1), 0.0, 0.5 * (TANK_FLOOR_Z + TANK_TOP_Z)), np.eye(3),
+                    (0.5 * (s1 - s0) + 0.01, TANK_HALF_Y, 0.5 * (TANK_TOP_Z - TANK_FLOOR_Z)), name="tank_ko")
+    holes.append(tank)
+    yb = 0.040                                                       # plakanın altında hafifletme deliği
+    z_hi = g10_plate_z(yb)[0] - 0.005
+    sec = P.fuselage_section(0.5 * (s0 + s1))
+    z_lo = sec.z_bottom + _wall_of("fuselage_mid") + 0.007
+    if z_hi - z_lo > 0.006:
+        holes.append(prim_box(Bp(0.5 * (s0 + s1), 0.0, 0.5 * (z_lo + z_hi)), np.eye(3),
+                              (0.5 * (s1 - s0) + 0.01, yb, 0.5 * (z_hi - z_lo)), name="wf_light"))
+    for y in BRIDGE_BOLT_Y:                                          # köprü cıvataları: plaka–soket–plaka (s boyunca)
+        for sg in (1.0, -1.0):
+            z = socket_axis_z(y)
+            holes.append(prim_hole(Bp(s0 - 0.004, sg * y, z), Bp(s1 + 0.004, sg * y, z),
+                                   hole_d(0.004, "bolt", "PA-CF"), name="wf_bolt"))
+    adds = []
+    for kind in ("chine", "shoulder"):
+        for sd in ("L", "R"):
+            sa_, sb_ = (s0 - 0.009, s1) if which == 0 else (s0, s1 + 0.009)   # yaka yalnız dış yüzde (iç yüz düz)
+            pa, pb = _longeron_at(kind, sd, sa_), _longeron_at(kind, sd, sb_)
+            d = _unit(pb - pa)
+            r = 0.5 * hole_d(0.008, "tube", "PA-CF")
+            adds.append(prim_frustum(pa, pb, r + 0.002, n=32, name="wf_collar"))
+            holes.append(prim_hole(pa - d * 0.01, pb + d * 0.01, 2 * r, name="wf_long"))
+    ca, cb = (s0 - 0.012, s1) if which == 0 else (s0, s1 + 0.012)   # düz yüz (köprüye yaslanan) tam düzlem: tabla yüzü
+    clip = fus_loft(ca, cb, _wall_of("fuselage_mid") + 0.0002, n_st=3, name="wf_clip")
+    return {"base": base, "adds": adds, "holes": holes, "clip": [clip], "s": (s0, s1)}
+
+
+def wing_frame_keepout(which: int) -> Solid:
+    """Çerçeve + yakalar + 0,3 mm (gövde halkası iç yapısı girmez)."""
+    p = wing_frame_parts(which)
+    s0, s1 = p["s"]
+    return fus_loft(s0 - 0.0063, s1 + 0.0063, _wall_of("fuselage_mid") + 0.0001, n_st=2, name="wf_ko")
+
+
+def g10_slot_features(y_from: float, y_to: float = 0.5 * G10_L + 0.0015) -> Feature:
+    """Kök bloğu 1'de iki G10 köprü yuvası (3,3 mm × 40,4 mm, kör uç) + yuva duvarları (1,2 mm iç yapı)."""
+    f = Feature()
+    for which in (0, 1):
+        f.holes.append(g10_plate_solid(which, G10_CLEAR, 0.0002, y_from, y_to, name="g10_slot"))
+        f.structure.append(g10_plate_solid(which, G10_CLEAR + 0.0012, 0.0014, y_from, y_to + 0.0012, name="g10_wall"))
+    f.notes.append("G10 köprü yuvaları 2 × 3,3 × 40,4 mm")
+    return f
+
+
+# ---------------------------------------------------------------- ana takım yatağı (ER-150)
+def _unit_frame() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    env, _ = S_main_unit_box()
+    A = np.asarray(env.axes, float)                 # satırlar: s, açıklık (dihedral), düşey
+    return np.asarray(env.center, float), A, np.asarray(env.half, float)
+
+
+def S_main_unit_box():
+    from .. import shapes as S
+    return S.main_unit_box(SIDE)
+
+
+def _local_box(c, A, lo, hi, name="lbox") -> Solid:
+    """Ünite yerel çerçevesinde (A satırları) [lo, hi] kutusu → Blender katısı."""
+    lo, hi = np.asarray(lo, float), np.asarray(hi, float)
+    cl = c + A.T @ (0.5 * (lo + hi))
+    axes_b = np.column_stack([Bv(A[0]), Bv(A[1]), Bv(A[2])])
+    return prim_box(Bp(*cl), axes_b, 0.5 * (hi - lo), name=name)
+
+
+def _ceiling_solid(s0, s1, y0, y1, z_fn, z_bot, n=9, name="ceil", ns: int | None = None) -> Solid:
+    """Yükseklik alanı katısı: üst yüz ``z_fn(s, y)``, alt düz ``z_bot`` (spec), kenarlar düşey. ``ns`` s yönünde
+    örnek sayısı (varsayılan ``n``)."""
+    ns = ns or n
+    ss, ys = np.linspace(s0, s1, ns), np.linspace(y0, y1, n)
+    m = n
+    V, F = [], []
+    for s in ss:
+        for y in ys:
+            V.append(Bp(s, y, z_fn(s, y)))
+    for s in ss:
+        for y in ys:
+            V.append(Bp(s, y, z_bot))
+    top = lambda i, j: i * m + j
+    bot = lambda i, j: ns * m + i * m + j
+    for i in range(ns - 1):
+        for j in range(m - 1):
+            F.append((top(i, j), top(i + 1, j), top(i + 1, j + 1), top(i, j + 1)))
+            F.append((bot(i, j), bot(i, j + 1), bot(i + 1, j + 1), bot(i + 1, j)))
+    edges = [[(i, 0) for i in range(ns)], [(ns - 1, j) for j in range(m)], [(i, m - 1) for i in range(ns - 1, -1, -1)],
+             [(0, j) for j in range(m - 1, -1, -1)]]
+    for e in edges:
+        for (i, j), (i2, j2) in zip(e[:-1], e[1:]):
+            F.append((top(i, j), bot(i, j), bot(i2, j2), top(i2, j2)))
+    sol = Solid(np.asarray(V, float), F, name)
+    if _signed_volume(sol.V, sol.F) < 0:
+        sol = Solid(sol.V, [tuple(reversed(f)) for f in sol.F], name)
+    return sol
+
+
+def _slot_keepout(grow: float = 0.0015) -> Solid:
+    """Ana bacak yuvası (eğik açıklık, ``params._leg_slot``) + astar duvarı + pay: ağzın altından tavanın üstüne."""
+    sl = np.asarray(P._leg_slot(SIDE), float)       # (s, y) dörtgen
+    c = sl.mean(0)
+    out = []
+    for i in range(len(sl)):
+        a, b, cc = sl[i - 1], sl[i], sl[(i + 1) % len(sl)]
+        e1, e2 = _unit(b - a), _unit(cc - b)
+        n1, n2 = np.array([-e1[1], e1[0]]), np.array([-e2[1], e2[0]])
+        if (c - b) @ n1 > 0:
+            n1, n2 = -n1, -n2
+        bis = _unit(n1 + n2)
+        out.append(b + bis * grow / max(0.3, float(bis @ n1)))
+    out = np.asarray(out)
+    V2 = np.column_stack([-out[:, 0], out[:, 1]])
+    if 0.5 * np.sum(V2[:, 0] * np.roll(V2[:, 1], -1) - np.roll(V2[:, 0], -1) * V2[:, 1]) < 0:
+        V2 = V2[::-1]
+    roof = -0.021 + 0.0008 + 0.0003
+    return prim_prism(V2, np.zeros(3), np.array([1.0, 0, 0]), np.array([0, 1.0, 0]), np.array([0, 0, 1.0]),
+                      -0.09, roof, name="slot_ko")
+
+
+GEAR_ARM_Y = (0.2410, 0.2670)                    # yuva tavanı üstünden sokete uzanan kol (kök bloğu 2 flanş bandının dışında)
+GEAR_CRADLE_Y = (0.2325, 0.3175)                 # beşik (kök bloğu 2 içinde; iç uç açık, dış uç G10 plakada)
+
+
+def gear_mount_main_parts() -> dict:
+    """``gear_mount_L`` (PA-CF): ER-150 gövdesini önden/arkadan/alttan saran beşik (0,3 mm boşluk), yuva tavanının
+    üstünden Ø30 merkez sokete uzanan eyerli kol, ön duvarda 2 × M3 ısıl gömme dişli (ünite cıvataları). Spec
+    koordinatı → Blender. Dönüş: {"base", "adds", "holes", "clip", "keepout"}."""
+    c, A, h = _unit_frame()
+    w, cl = GEAR_WALL, GEAR_CLEAR
+    span_of = lambda y: (y - c[1]) / A[1, 1]
+    sp0, sp1 = span_of(GEAR_CRADLE_Y[0]), span_of(GEAR_CRADLE_Y[1])
+    base = _local_box(c, A, (-h[0] - cl - w, sp0, -h[2] - cl - w), (h[0] + cl + w, sp1, h[2] - 0.0025), "cradle")
+    holes = [_local_box(c, A, (-h[0] - cl, sp0 - 0.01, -h[2] - cl), (h[0] + cl, sp1 + 0.01, h[2] + 0.02), "unit_pocket")]
+    up_in = lambda s, y: P.wing_surface_z(s, y, "upper") - _wall_of("root_block") - 0.0021   # flanş bandının altı
+    s_sock = P.WING_SPAR_S
+    s_front = c[0] - h[0] - cl - w
+    arm_bot = -0.021 + 0.0008 + 0.0003
+    arm = _ceiling_solid(s_sock, s_front + 0.0015, GEAR_ARM_Y[0], GEAR_ARM_Y[1], up_in, arm_bot, n=7, name="arm")
+    adds = [arm, _local_box(c, A, (-h[0] - cl - w, span_of(GEAR_ARM_Y[0]), -h[2] - cl - w),
+                            (-h[0] - cl, span_of(GEAR_ARM_Y[1]), h[2] + 0.02), "arm_post")]   # kol–beşik bağlantısı
+    t = {x.name: x for x in P.spar_tubes(SIDE)}["centre_socket"]
+    sock = prim_hole(Bp(*t.p0) + np.array([0.0, -0.01, 0.0]), Bp(*t.p1), hole_d(t.od, "tube", "PA-CF"), name="sock")
+    holes.append(sock)
+    for y in (0.280, 0.310):                         # ön duvar: 2 × M3 ısıl gömme dişli (eksen s), dış yüzde göbek
+        sp = span_of(y)
+        p_in = c + A.T @ np.array([-h[0] - cl, sp, 0.0])
+        p_out = c + A.T @ np.array([-h[0] - cl - w - 0.0050, sp, 0.0])
+        adds.append(prim_frustum(Bp(*p_in), Bp(*p_out), 0.0036, n=32, name="m3_boss"))
+        di, dd = INSERT["M3"]
+        p_deep = c + A.T @ np.array([-h[0] - cl - w - 0.0050 + dd, sp, 0.0])
+        holes.append(prim_hole(Bp(*p_out) + Bv(A[0]) * -0.0005, Bp(*p_deep), di, name="m3_insert"))
+    s_aft = c[0] + h[0] + cl + w + 0.0015
+    ceiling = _ceiling_solid(P.WING_SPAR_S - 0.02, s_aft, GEAR_CRADLE_Y[0] - 0.01, GEAR_CRADLE_Y[1] + 0.01,
+                             up_in, -0.09, n=11, ns=33, name="ceil")
+    from .. import shapes as S
+    blister_in = lambda s, y: S.blister_bottom_z(s, y, SIDE) + _wall_of("root_fairing") + 0.0003
+    floor = _ceiling_solid(P.WING_SPAR_S - 0.02, s_aft, GEAR_CRADLE_Y[0] - 0.01, GEAR_CRADLE_Y[1] + 0.01,
+                           blister_in, 0.05, n=11, ns=33, name="floor")
+    holes += conduit_holes(root_conduit_polyline(), CONDUIT_D["root"])          # P9: kablo kanalı koldan geçer
+    return {"base": base, "adds": adds, "holes": holes + [_slot_keepout(0.0015)], "clip": [ceiling, floor]}
+
+
+def gear_mount_main_keepout() -> list:
+    """Kök bloklarında iç yapının girmeyeceği hacimler: beşik + kol (+0,3 mm, kök bloğu 2'nin açık iç ucuna dek
+    uzatılmış: montajda beşik y yönünde kaydırılarak yerleşir) ve ER-150 gövdesi (+0,5 mm)."""
+    c, A, h = _unit_frame()
+    w, cl = GEAR_WALL, GEAR_CLEAR
+    span_of = lambda y: (y - c[1]) / A[1, 1]
+    rb_mid = float(P.print_cuts()["root_block_y"][1])
+    ko = [_local_box(c, A, (-h[0] - cl - w - 0.0055, span_of(rb_mid - 0.006), -h[2] - cl - w - 0.0003),
+                     (h[0] + cl + w + 0.0003, span_of(GEAR_CRADLE_Y[1]) + 0.0003, h[2] + 0.0005), "cradle_ko"),
+          _local_box(c, A, (-h[0] - 0.0005, -h[1] - 0.0005, -h[2] - 0.0005), (h[0] + 0.0005, h[1] + 0.0005,
+                                                                              h[2] + 0.0005), "unit_ko")]
+    up_in = lambda s, y: P.wing_surface_z(s, y, "upper") - _wall_of("root_block") - 0.0018
+    ko.append(_ceiling_solid(P.WING_SPAR_S - 0.016, c[0] - h[0], rb_mid - 0.006, GEAR_ARM_Y[1] + 0.0003, up_in,
+                             -0.021 + 0.0008, n=7, name="arm_ko"))
+    return ko
+
+
+def gear_unit_opening() -> Solid:
+    """Kök bloklarının alt derisinde ER-150 + beşik açıklığı (kabartma kaportası altını kapatır); iç uca dek
+    (beşik/ünite y yönünde takılır)."""
+    c, A, h = _unit_frame()
+    w, cl = GEAR_WALL, GEAR_CLEAR
+    span_of = lambda y: (y - c[1]) / A[1, 1]
+    return _local_box(c, A, (-h[0] - cl - w - 0.0003, span_of(0.2130), -h[2] - 0.03),
+                      (h[0] + cl + w + 0.0003, span_of(GEAR_CRADLE_Y[1]) + 0.0003, -h[2] + 0.008), "unit_open")
+
+
+# ---------------------------------------------------------------- burun takım yatağı
+NOSE_MOUNT_S = (0.4080, 0.4860)
+
+
+def gear_mount_nose_parts() -> dict:
+    """``gear_mount_N`` (PA-CF, 4,3 mm): burun ER-150'nin G10 plakası üstünde, iki chine longeronuna eyerle yaslanan
+    yatak plakası (akü kızağı tabanı); 4 × M3 ısıl gömme dişli (alttan, plaka cıvataları)."""
+    z0, z1 = -0.0138, -0.0095
+    s0, s1 = NOSE_MOUNT_S
+    yh = 0.0905
+    base = prim_box(Bp(0.5 * (s0 + s1), 0.0, 0.5 * (z0 + z1)), np.eye(3), (0.5 * (s1 - s0), yh, 0.5 * (z1 - z0)),
+                    name="nose_plate")
+    adds, holes = [], []
+    for sd in ("L", "R"):
+        pa, pb = _longeron_at("chine", sd, s0), _longeron_at("chine", sd, s1)
+        d = _unit(pb - pa)
+        r = 0.5 * hole_d(0.008, "tube", "PA-CF")
+        adds.append(prim_frustum(pa, pb, r + 0.0020, n=32, name="nm_collar"))
+        holes.append(prim_hole(pa - d * 0.01, pb + d * 0.01, 2 * r, name="nm_long"))
+    for yc in (-0.0475, 0.0475):                                    # hafifletme (akü bu tabana oturur)
+        holes.append(prim_box(Bp(0.4470, yc, 0.5 * (z0 + z1)), np.eye(3), (0.0215, 0.0215, 0.01), name="nm_light"))
+    di, dd = INSERT["M3S"]
+    for s in (0.416, 0.478):
+        for y in (-0.015, 0.015):
+            holes.append(prim_hole(Bp(s, y, z0 - 0.001), Bp(s, y, z0 + dd), di, name="nm_insert"))
+    clip = fus_loft(s0 - 0.01, s1 + 0.01, _wall_of("fuselage_nose") + 0.0003, n_st=3, name="nm_clip")
+    above = prim_box(Bp(0.5 * (s0 + s1), 0.0, z0 + 0.03), np.eye(3), (0.5 * (s1 - s0) + 0.02, 0.15, 0.03), name="nm_up")
+    return {"base": base, "adds": adds, "holes": holes, "clip": [clip, above]}
+
+
+def gear_mount_nose_keepout() -> Solid:
+    """Yatak + yakalar + 0,3 mm; ön uca (s 0,40, halka 1 çerçeve açıklığı) dek: plaka önden kaydırılarak takılır."""
+    s0, s1 = NOSE_MOUNT_S
+    sa = float(P.SPEC["fuselage"]["modules"]["nose_module_s_m"][1]) - 0.005
+    return prim_box(Bp(0.5 * (sa + s1 + 0.0003), 0.0, -0.0102), np.eye(3), (0.5 * (s1 + 0.0003 - sa), 0.105, 0.0068),
+                    name="nm_ko")
+
+
+# ---------------------------------------------------------------- motor halkası
+def engine_bolt_points() -> list[tuple[float, float]]:
+    """DLE-20 montaj deliklerinin yangın perdesindeki (y, z) konumları: krank eksenine ortalı kare."""
+    hub, a = P.thrust_axis()
+    s_fw = float(P.SPEC["fuselage"]["modules"]["firewall_s_m"])
+    zc = float(hub[2] + (s_fw - hub[0]) * a[2] / a[0])
+    h = 0.5 * ENGINE_BOLT_SQ
+    return [(sy * h, zc + sz * h) for sy in (-1.0, 1.0) for sz in (-1.0, 1.0)]
+
+
+def engine_ring_parts() -> dict:
+    """``engine_ring`` (PA-CF): halka 9'un içine 30 mm bindiren 3 mm bilezik + krank eksenine ortalı 60 mm kare motor
+    çerçevesi (4 × M4 ısıl gömme dişli, arka yüzden), göbeklerden bileziğe yatay kollar, 4 longeron soketi (ön yüz,
+    15 mm kör) ve kaporta için 6 × M3 dişli; NACA kanal açıklığı kesik."""
+    s0, s1 = ENGINE_RING_S
+    w_skin = _wall_of("tail_cone")
+    band = fus_loft(s0, s1, w_skin + 0.0002, w_skin + 0.0032, n_st=3, name="er_band")
+    adds, holes = [], []
+    di, dd = INSERT["M4"]
+    sf = s1 - 0.010                                                  # çerçeve: arka 10 mm
+    pts = engine_bolt_points()
+    for y, z in pts:
+        adds.append(prim_frustum(Bp(sf, y, z), Bp(s1, y, z), 0.0058, n=32, name="er_boss"))
+        holes.append(prim_hole(Bp(s1 + 0.001, y, z), Bp(s1 - dd, y, z), di, name="er_m4"))
+    ys = sorted({p[0] for p in pts})
+    zs = sorted({p[1] for p in pts})
+    sc = 0.5 * (sf + s1)
+    for z in zs:                                                     # yatay kollar (bileziğe dek) ve kare kenarları
+        adds.append(prim_box(Bp(sc, 0.0, z), np.eye(3), (0.5 * (s1 - sf), 0.066, 0.0022), name="er_rib_h"))
+    for y in ys:
+        adds.append(prim_box(Bp(sc, y, 0.5 * (zs[0] + zs[1])), np.eye(3), (0.5 * (s1 - sf), 0.0022,
+                                                                          0.5 * (zs[1] - zs[0])), name="er_rib_v"))
+    r = 0.5 * hole_d(0.008, "tube", "PA-CF")
+    for kind in ("chine", "shoulder"):                              # longeron soketleri (ön yüzden kör)
+        for sd in ("L", "R"):
+            pe = _longeron_at(kind, sd, LONGERON_SOCKET_END_S)
+            pa = _longeron_at(kind, sd, s0)
+            d = _unit(pe - pa)
+            adds.append(prim_frustum(pa, pe + d * 0.003, r + 0.0022, n=32, name="er_sock"))
+            holes.append(prim_hole(pa - d * 0.003, pe, 2 * r, name="er_long"))
+            q = pe + d * 0.0015
+            yy, zz = float(q[1]), float(q[2])                        # sokete bilezik bağlantısı (dışa kol)
+            sec_hw = P.fuselage_half_width_at(0.5 * (s0 + s1), zz) or 0.06
+            ym = np.sign(yy) * (sec_hw - w_skin)
+            adds.append(prim_box(Bp(0.5 * (s0 + LONGERON_SOCKET_END_S), 0.5 * (yy + ym), zz), np.eye(3),
+                                 (0.5 * (LONGERON_SOCKET_END_S - s0), 0.5 * abs(ym - yy) + 0.001, 0.0022),
+                                 name="er_sock_web"))
+    s_fw = float(P.SPEC["fuselage"]["modules"]["firewall_s_m"])
+    di3, dd3 = INSERT["M3"]
+    for y, z in _ring_points(s_fw + 0.001, _WALLS["cowl_pa_cf"] + 0.004, [20, 90, 160, 200, 270, 340], [], 0.02):
+        adds.append(prim_frustum(Bp(s1 - 0.008, y, z), Bp(s1, y, z), 0.0038, n=24, name="er_m3_boss"))
+        holes.append(prim_hole(Bp(s1 + 0.001, y, z), Bp(s1 - dd3, y, z), di3, name="er_m3"))
+    from .. import shapes as S
+    cut = S.intake_cutter()
+    holes.append(Solid(np.asarray(cut.verts_blender(), float), [tuple(f) for f in cut.faces], "er_naca"))
+    holes.append(intake_duct_cut())
+    clip = fus_loft(s0 - 0.004, s1 + 0.004, w_skin + 0.0002, n_st=4, name="er_clip")
+    return {"base": band, "adds": adds, "holes": holes, "clip": [clip]}
+
+
+def engine_ring_keepout() -> Solid:
+    s0, s1 = ENGINE_RING_S
+    return fus_loft(s0 - 0.0005, s1 + 0.003, 0.0001, n_st=3, name="er_ko")
+
+
+# ---------------------------------------------------------------- longeron kırık soketleri (s 1,167)
+def longeron_break_s() -> float:
+    return float(P.SPEC["fuselage"]["longerons"]["breaks_s_m"][0])
+
+
+def longeron_joint_parts(kind: str) -> dict:
+    """``longeron_joint_<tür>`` (PETG): s = 1,167 kırığında iki düz longeron parçasını kırık açısıyla buluşturan
+    soket bloğu: iki Ø8,6 kör yuva (her biri 18 mm), Ø12,6 gövde, gövde iç yüzüne kırpılmış."""
+    sb = longeron_break_s()
+    pieces = P.longeron_pieces(kind, SIDE)
+    (a1, b1), (a2, b2) = pieces[0], pieces[1]
+    B = Bp(*b1)
+    d1 = _unit(Bp(*b1) - Bp(*a1))
+    d2 = _unit(Bp(*b2) - Bp(*a2))
+    r = 0.5 * hole_d(0.008, "tube", "PETG")
+    adds = [prim_frustum(B - d1 * LJ_LEN, B + d1 * 0.002, r + 0.0022, n=32, name="lj_a"),
+            prim_frustum(B - d2 * 0.002, B + d2 * LJ_LEN, r + 0.0022, n=32, name="lj_b")]
+    holes = [prim_hole(B - d1 * (LJ_LEN + 0.002), B - d1 * 0.0008, 2 * r, name="lj_ha"),
+             prim_hole(B + d2 * 0.0008, B + d2 * (LJ_LEN + 0.002), 2 * r, name="lj_hb"),
+             prim_frustum(B - d1 * 0.0009, B + d2 * 0.0009, 0.002, n=16, name="lj_vent")]
+    clip = fus_loft(sb - 0.03, sb + 0.03, _wall_of("fuselage_mid") + 0.0004, n_st=3, name="lj_clip")
+    return {"base": adds[0], "adds": adds[1:], "holes": holes, "clip": [clip]}
+
+
+def longeron_joint_pocket_parts(kind: str, side: str) -> dict:
+    """Halka 4/5'te soket bloğu cebi: blok + 0,3 mm, deri iç yüzünden 0,1 mm uzak (gövde içine kırpılır)."""
+    sb = longeron_break_s()
+    pieces = P.longeron_pieces(kind, side)
+    (a1, b1), (a2, b2) = pieces[0], pieces[1]
+    B = Bp(*b1)
+    d1, d2 = _unit(Bp(*b1) - Bp(*a1)), _unit(Bp(*b2) - Bp(*a2))
+    r = 0.5 * hole_d(0.008, "tube", "PETG") + 0.0022 + 0.0003
+    a = prim_frustum(B - d1 * (LJ_LEN + 0.0003), B + d1 * 0.0023, r, n=32, name="ljp_a")
+    b = prim_frustum(B - d2 * 0.0023, B + d2 * (LJ_LEN + 0.0003), r, n=32, name="ljp_b")
+    clip = fus_loft(sb - 0.03, sb + 0.03, _wall_of("fuselage_mid") + 0.0001, n_st=3, name="ljp_clip")
+    return {"base": a, "adds": [b], "holes": [], "clip": [clip]}
+
+
+# =====================================================================================================
+# Sökülebilir dış panel tutma, kablo kanalları, MPX cepleri, iç flap bağlayıcı (P9)
+# =====================================================================================================
+LOCK_TAB = {"s": 1.200, "w": 0.012, "h": 0.008, "y0": 0.342, "y1": 0.378, "y_bolt": 0.351, "clear": 0.0002}
+MPX = {"s": 1.2900, "w": 0.026, "h": 0.013, "depth": 0.015, "clear": 0.0003}      # MPX 6 pin gövdesi + pay. varsayım
+CONDUIT_D = {"wing": 0.008, "root": 0.006, "tail": 0.006}
+FLAP_JOINER = {"r_off": 0.012, "d": 0.002, "socket": 0.015, "slot_w": 0.0028, "deg": (-3.0, 33.0)}   # varsayım
+
+
+def lock_tab_frame() -> tuple[np.ndarray, float]:
+    """Tutma dilinin merkezi (Blender) ve z merkezi: s = 1,200 (D-kutu bölgesi), y = 0,36 ekinin iki yanında."""
+    T = LOCK_TAB
+    zc = P.wing_mid_z(T["s"], 0.36)
+    zc = float(zc if zc is not None else -0.015)
+    return Bp(T["s"], 0.5 * (T["y0"] + T["y1"]), zc), zc
+
+
+def lock_tab_parts() -> dict:
+    """``panel_lock_tab`` (PETG): 12 × 8 × 36 mm dil; dış panel 1'in kök kaburgasına yapıştırılır, kök bloğu 2'nin
+    cebine girer; kök bloğu tarafında alttan M4 naylon cıvata için ısıl gömme dişli (dikey, boydan boya)."""
+    T = LOCK_TAB
+    c, zc = lock_tab_frame()
+    base = prim_box(c, np.eye(3), (0.5 * T["w"], 0.5 * (T["y1"] - T["y0"]), 0.5 * T["h"]), name="tab")
+    di, _ = INSERT["M4"]
+    pb = Bp(T["s"], T["y_bolt"], zc)
+    holes = [prim_hole(pb - np.array([0, 0, 0.006]), pb + np.array([0, 0, 0.006]), di, name="tab_insert")]
+    return {"base": base, "adds": [], "holes": holes, "clip": []}
+
+
+def lock_tab_features(part: str) -> Feature:
+    """Dil cebi (+0,2 mm) ve cep duvarları (1,2 mm iç yapı); kök bloğu 2'de alttan Ø4,5 cıvata deliği + göbek."""
+    T = LOCK_TAB
+    c, zc = lock_tab_frame()
+    f = Feature()
+    cl = T["clear"]
+    hy = 0.5 * (T["y1"] - T["y0"]) + 0.0005
+    f.holes.append(prim_box(c, np.eye(3), (0.5 * T["w"] + cl, hy, 0.5 * T["h"] + cl), name="tab_pocket"))
+    f.structure.append(prim_box(c, np.eye(3), (0.5 * T["w"] + cl + 0.0012, hy + 0.0012, 0.5 * T["h"] + cl + 0.0012),
+                                name="tab_wall"))
+    if part == "root2":
+        pb = Bp(T["s"], T["y_bolt"], zc)
+        z_lo = (P.wing_surface_z(T["s"], T["y_bolt"], "lower") or (zc - 0.02)) - 0.004
+        f.holes.append(prim_hole(Bp(T["s"], T["y_bolt"], z_lo), pb, hole_d(0.004, "bolt"), name="tab_bolt"))
+        f.structure.append(prim_frustum(Bp(T["s"], T["y_bolt"], z_lo), pb, 0.0052, n=32, name="tab_boss"))
+        f.notes.append("dış panel tutma dili cebi + alttan M4 naylon cıvata")
+    else:
+        f.notes.append("dış panel tutma dili cebi (dil yapıştırılır)")
+    return f
+
+
+def wing_servo_center(name: str) -> np.ndarray:
+    """Kanat servo yuvası merkezi (Blender): ana kiriş kovanı ile arka kiriş arası, orta kalınlık."""
+    ys = SERVO_STATIONS[name]
+    m0, m1 = _spar_pieces()[1 if ys < 1.1 else 2][3:5]
+    r0, r1 = _rear_line()
+    sm = -_line_at(m0, m1, ys)[0] + 0.5 * (0.027 if ys < 1.1 else 0.016) + SLEEVE_T + 0.003
+    sr = -_line_at(r0, r1, ys)[0] - 0.004 - 0.003
+    sc = 0.5 * (sm + sr)
+    zc = P.wing_mid_z(sc, ys) or 0.0
+    return Bp(sc, ys, zc)
+
+
+def mpx_center() -> np.ndarray:
+    zc = P.wing_mid_z(MPX["s"], 0.355)
+    return Bp(MPX["s"], 0.36, float(zc if zc is not None else -0.0165))
+
+
+def wing_conduit_polyline() -> list[np.ndarray]:
+    """Dış panel kablo kanalı: kanatçık servo yuvası → dış flap servo yuvası → kök kaburgasındaki MPX cebi."""
+    a = wing_servo_center("Aileron")
+    b = wing_servo_center("FlapOut")
+    m = mpx_center()
+    return [a, b, m + np.array([0.0, 0.002, 0.0])]
+
+
+def root_conduit_polyline() -> list[np.ndarray]:
+    """Kök blokları kanalı (Ø6): MPX cebinin arkası → yuva tavanı üstünden (takım yatağı kolunun deliğinden) →
+    kuyu önünden gövde yan duvarına; gövde içine açılır."""
+    m = mpx_center()
+    zr = -0.0130
+    z_in = P.wing_mid_z(1.268, 0.12) or -0.031
+    return [m + np.array([0.0, -0.003, 0.0]), Bp(1.290, 0.345, zr), Bp(1.276, 0.300, zr), Bp(1.268, 0.235, zr),
+            Bp(1.268, 0.105, float(z_in)), Bp(1.268, 0.060, float(z_in))]
+
+
+def conduit_holes(points: Sequence[np.ndarray], d: float, name: str = "conduit") -> list:
+    """Kanal: ardışık noktalar arası silindirler (kıvrımlarda küre yerine 1 mm bindirme)."""
+    out = []
+    for p0, p1 in zip(points[:-1], points[1:]):
+        dd = _unit(p1 - p0)
+        out.append(prim_frustum(p0 - dd * 0.001, p1 + dd * 0.001, 0.5 * d, n=20, name=name))
+    return out
+
+
+def mpx_pocket(part: str) -> Feature:
+    """MPX 6 pin cebi (26 × 13 mm, 15 mm derin): dış panel 1 kök kaburgasında ve kök bloğu 2'de karşılıklı."""
+    c = mpx_center()
+    f = Feature()
+    sgn = 1.0 if part == "panel" else -1.0
+    cc = c + np.array([0.0, sgn * 0.5 * MPX["depth"], 0.0])
+    cl = MPX["clear"]
+    half = (0.5 * MPX["w"] + cl, 0.5 * MPX["depth"] + 0.0006, 0.5 * MPX["h"] + cl)
+    f.holes.append(prim_box(cc, np.eye(3), half, name="mpx"))
+    f.structure.append(prim_box(cc, np.eye(3), (half[0] + 0.0012, half[1] + 0.0012, half[2] + 0.0012), name="mpx_wall"))
+    f.notes.append("MPX 6 pin cebi")
+    return f
+
+
+def tail_conduit_polyline() -> list[np.ndarray]:
+    """Kuyruk kablo kanalı (Ø6): dikey 1 dümen servosu → dikey kökü / stabilize ucu birleşimi → stabilize boyunca
+    (kiriş ile arka çubuk arasında, elevatör servo yuvasından geçerek) → koni içi."""
+    def s_mid(y):
+        st = P.stab_station(y)
+        s_sp = st.le_s + float(P.SPEC["tail"]["stab"]["spar"]["offset_from_le_m"]) + 0.006 + SLEEVE_T + 0.002
+        s_rr = st.le_s + 0.5 * st.chord - 0.003 - SLEEVE_T - 0.002
+        return 0.5 * (s_sp + s_rr), st.z
+    s_r, z_r = s_mid(0.030)
+    s_t, z_t = s_mid(0.515)
+    hv = SERVO_STATIONS["Rudder"]
+    st = P.fin_station(hv, SIDE)
+    hp = P.hinge_line("Rudder", SIDE)
+    fsp = float(P.SPEC["tail"]["fin"]["spar"]["offset_from_le_m"])
+    s_a = st.le[0] + fsp + 0.004 + SLEEVE_T + 0.003
+    s_b = st.le[0] + 0.65 * st.chord - (hp.nose_radius_in + 0.001 + 0.0025 + 0.004)
+    rud = Bp(0.5 * (s_a + s_b), st.le[1], st.le[2])
+    return [rud, Bp(s_t, 0.515, z_t), Bp(s_r, 0.030, z_r)]
+
+
+def flap_joiner_geom() -> dict:
+    """İç flap ↔ dış flap bağlayıcı tel: menteşe ekseninden ``r_off`` geride, eksene paralel; y = 0,36 ekinin iki
+    yanındaki sabit kaburgalarda yay yarıkları (−3…+33°)."""
+    hi = P.hinge_line("FlapIn", SIDE)
+    ho = P.hinge_line("FlapOut", SIDE)
+    X = _unit(np.asarray(hi.axis_outboard_b))
+    F = hi.frame_b()
+    Y = np.asarray(F[:, 1])                          # veterde geriye (gövdeye göre)
+    Y = _unit(Y - X * float(Y @ X))
+    Z = np.cross(X, Y)
+    pe = np.asarray(hi.p_out_b)                      # iç flap dış ucu (eksen)
+    return {"X": X, "Y": Y, "Z": Z, "p": pe, "L_in": hi.length, "ho": ho}
+
+
+def flap_joiner_slot() -> Solid:
+    """Sabit kaburgalardaki yay yarığı: menteşe ekseni çevresinde r_off ± yarık/2, −3…33° (flap aşağı +)."""
+    g = flap_joiner_geom()
+    FJ = FLAP_JOINER
+    r0, r1 = FJ["r_off"] - 0.5 * FJ["slot_w"], FJ["r_off"] + 0.5 * FJ["slot_w"]
+    a0, a1 = (math.radians(v) for v in FJ["deg"])
+    n = 14
+    angs = np.linspace(a0, a1, n)
+    # açı + = firar kenarı aşağı: Y (geriye) → −Z_dünya yönüne döner; yerel (Y, Z) düzleminde (cos, −sin)
+    sgn = -1.0 if float(g["Z"][2]) > 0 else 1.0
+    pts = [(r1 * math.cos(a), sgn * r1 * math.sin(a)) for a in angs] + \
+          [(r0 * math.cos(a), sgn * r0 * math.sin(a)) for a in angs[::-1]]
+    poly = np.asarray(pts)
+    if 0.5 * np.sum(poly[:, 0] * np.roll(poly[:, 1], -1) - np.roll(poly[:, 0], -1) * poly[:, 1]) < 0:
+        poly = poly[::-1]
+    return prim_prism(poly, g["p"], g["Y"], g["Z"], g["X"], -0.004, 0.0145, name="fj_slot")
+
+
+def flap_joiner_socket(which: str) -> Solid:
+    """Flap ucunda bağlayıcı tel yuvası (Ø2,3 × 15 mm): ``in`` iç flap dış ucu, ``out`` dış flap iç ucu."""
+    g = flap_joiner_geom()
+    FJ = FLAP_JOINER
+    q = g["p"] + g["Y"] * FJ["r_off"]
+    d = hole_d(FJ["d"], "pin")
+    if which == "in":
+        return prim_hole(q - g["X"] * FJ["socket"], q + g["X"] * 0.003, d, name="fj_sock")
+    qo = q + g["X"] * (np.linalg.norm(np.asarray(g["ho"].p_in_b) - g["p"]))
+    return prim_hole(qo - g["X"] * 0.003, qo + g["X"] * FJ["socket"], d, name="fj_sock")
+
+
+# =====================================================================================================
+# Aviyonik kapağı (P10): 1,0 mm füme PETG levha kalıp üstünde ısıl biçimlendirilir; basılı PETG çerçeve
+# (düz alt yüz, 6 mıknatıs cebi) levhanın altına yapıştırılır; gövdede gömme oturma basamağı + karşı mıknatıslar
+# =====================================================================================================
+HATCH_SHEET_T = 0.0010                       # füme PETG levha. varsayım
+HATCH_FRAME_W = 0.008                        # çerçeve bandı: Ø6,4 mıknatıs cebi + 2 × 0,8 mm duvar
+HATCH_OPEN_INSET = 0.0084                    # gövde erişim açıklığı kapak çevresinin bu kadar içinde (basamak 9,9 mm)
+HATCH_FRAME_TMIN = 0.0044                    # çerçeve en ince yer (mıknatıs cebi 3,2 + 1,2 mm)
+HATCH_SPLIT_S = 0.680                        # kalıp ve çerçeve iki parça (tabla)
+HATCH_TRIM = 0.008                           # kalıpta kesim payı
+HATCH_DRAFT_DEG = 2.0
+HATCH_BUCK_DEPTH = 0.015                     # kalıbın üst yüzün en altından tabana derinliği
+MAGNET = {"d": 0.006, "t": 0.003, "pocket_d": 0.0064, "pocket_t": 0.0032}
+_HATCH_HW = float(np.abs(np.asarray(P.hatch_outline(), float)[:, 1]).max())      # kapak yarı genişliği (0,055)
+HATCH_MAGNETS = [(s, sg * round(_HATCH_HW - 0.0002 - 0.5 * HATCH_FRAME_W, 4))      # çerçeve bandı ortası
+                 for s in (0.560, 0.665, 0.800) for sg in (1.0, -1.0)]
+LEDGE_T = 0.0020                             # gövde oturma basamağı kalınlığı
+
+
+def hatch_outline_sy(d: float = 0.0, step: float = 0.002) -> np.ndarray:
+    """Kapak plan çokgeni (s, y), ``d`` > 0 içe / < 0 dışa ötelenmiş, ``step`` ile yeniden örneklenmiş."""
+    from .. import shapes as S
+    base = S.poly_resample(np.asarray(P.hatch_outline(), float), step)
+    return S.poly_offset(base, d) if abs(d) > 0 else base
+
+
+def hatch_outline_inset(d: float, step: float = 0.002) -> np.ndarray:
+    """İçe ``d`` ötelenmiş kapak çokgeni; arka testere ucundaki dar açılı köşelerde köşe kaydırmasının ürettiği
+    kırlangıç kuyruğu (özgün kenara ``d``'den yakın noktalar) atılır → kendini kesmeyen çokgen (P13)."""
+    if d <= 0:
+        return hatch_outline_sy(d, step)
+    base = hatch_outline_sy(0.0, step)
+    Q = hatch_outline_sy(d, step)
+    A, AB = base, np.roll(base, -1, axis=0) - base
+    L2 = np.maximum((AB ** 2).sum(1), 1e-18)
+    QA = Q[:, None, :] - A[None, :, :]
+    t = np.clip((QA * AB[None]).sum(2) / L2[None], 0.0, 1.0)
+    D = np.linalg.norm(QA - t[..., None] * AB[None], axis=2).min(1)
+    return Q[D >= d - 0.0003]
+
+
+_HATCH_BVH = [None]
+
+
+def hatch_top_z(s: float, y: float) -> float:
+    """Kapak (U_Hatch) dış yüzü z; plan dışında gövde derisi + kenar basamağı (0,6 mm)."""
+    from .. import shapes as S
+    if _HATCH_BVH[0] is None:
+        ob = bpy.data.objects.get("U_Hatch")
+        if ob is not None:
+            V, F = _mesh_np(ob.data, rest_matrix(ob))
+            _HATCH_BVH[0] = BVHTree.FromPolygons(V.tolist(), [list(f) for f in F], epsilon=0.0)
+        else:
+            _HATCH_BVH[0] = False
+    rim = float(S.HATCH_FACET["rim"])
+    if _HATCH_BVH[0]:
+        hit = _HATCH_BVH[0].ray_cast(Vector(tuple(Bp(s, y, 0.30))), Vector((0.0, 0.0, -1.0)), 1.0)
+        if hit[0] is not None:
+            return float(hit[0][2])
+    return float(S._skin_top(s, y)) + rim
+
+
+def hatch_frame_plane(half: int) -> tuple[float, float, float]:
+    """Çerçeve yarısının düz alt yüzü (tabla yüzü) z = a + b·s + c·y: üst yüze (levha iç yüzü − 0,1 mm) en küçük
+    kareler düzlemi, en ince yer ``HATCH_FRAME_TMIN`` olacak kadar aşağı kaydırılmış."""
+    outer = hatch_outline_sy(0.0002)
+    inner = hatch_outline_inset(HATCH_FRAME_W)
+    pts = np.vstack([outer, inner])
+    m = pts[:, 0] <= HATCH_SPLIT_S if half == 0 else pts[:, 0] >= HATCH_SPLIT_S
+    pts = pts[m]
+    zt = np.array([hatch_top_z(s, y) - HATCH_SHEET_T - 0.0001 for s, y in pts])
+    A = np.column_stack([np.ones(len(pts)), pts[:, 0], pts[:, 1]])
+    coef, *_ = np.linalg.lstsq(A, zt, rcond=None)
+    gap = zt - A @ coef
+    coef[0] += float(gap.min()) - HATCH_FRAME_TMIN
+    return float(coef[0]), float(coef[1]), float(coef[2])
+
+
+def _plane_z(coef, s, y) -> float:
+    return coef[0] + coef[1] * s + coef[2] * y
+
+
+def _poly_prism_sy(poly_sy: np.ndarray, z_bot: Callable, z_top: Callable, name: str) -> Solid:
+    """(s, y) çokgeni boyunca dik prizma; köşe başına alt/üst z (alt ve üst n-gen düzlemsel olmalı ya da yakın)."""
+    poly = np.asarray(poly_sy, float)
+    if 0.5 * np.sum(poly[:, 0] * np.roll(poly[:, 1], -1) - np.roll(poly[:, 0], -1) * poly[:, 1]) > 0:
+        poly = poly[::-1]                            # Blender XY'de (X = −s) saat yönü tersi olsun
+    n = len(poly)
+    V = [Bp(s, y, z_bot(s, y)) for s, y in poly] + [Bp(s, y, z_top(s, y)) for s, y in poly]
+    F = [tuple(range(n - 1, -1, -1)), tuple(range(n, 2 * n))]
+    for i in range(n):
+        j = (i + 1) % n
+        F.append((i, j, n + j, n + i))
+    sol = Solid(np.asarray(V, float), F, name)
+    if _signed_volume(sol.V, sol.F) < 0:
+        sol = Solid(sol.V, [tuple(reversed(f)) for f in sol.F], name)
+    return sol
+
+
+def _band_strip(outer_sy, inner_sy, z_bot: Callable, z_top: Callable, name: str) -> Solid:
+    """İki eş indisli halka (dış/iç, (s, y)) arası bant katısı; üst ve alt yüz köşe başına z."""
+    o, i_ = np.asarray(outer_sy, float), np.asarray(inner_sy, float)
+    n = len(o)
+    V = [Bp(s, y, z_top(s, y)) for s, y in o] + [Bp(s, y, z_top(s, y)) for s, y in i_] + \
+        [Bp(s, y, z_bot(s, y)) for s, y in o] + [Bp(s, y, z_bot(s, y)) for s, y in i_]
+    OT, IT, OB, IB = 0, n, 2 * n, 3 * n
+    F = []
+    for k in range(n):
+        j = (k + 1) % n
+        F.append((OT + k, OT + j, IT + j, IT + k))          # üst
+        F.append((OB + k, IB + k, IB + j, OB + j))          # alt
+        F.append((OB + k, OB + j, OT + j, OT + k))          # dış duvar
+        F.append((IB + k, IT + k, IT + j, IB + j))          # iç duvar
+    sol = Solid(np.asarray(V, float), F, name)
+    if _signed_volume(sol.V, sol.F) < 0:
+        sol = Solid(sol.V, [tuple(reversed(f)) for f in sol.F], name)
+    return sol
+
+
+def _half_box(half: int, gap: float = 0.0002, name: str = "half") -> Solid:
+    """Kapak ikiye bölme yarı-uzayı (s ≤ / ≥ ``HATCH_SPLIT_S``)."""
+    s0, s1 = (0.40, HATCH_SPLIT_S - gap) if half == 0 else (HATCH_SPLIT_S + gap, 1.00)
+    return prim_box(Bp(0.5 * (s0 + s1), 0.0, 0.10), np.eye(3), (0.5 * (s1 - s0), 0.12, 0.15), name=name)
+
+
+def hatch_frame_parts(half: int) -> dict:
+    """``hatch_frame_a/b`` (PETG): levhanın altına yapıştırılan 8 mm bant; üst yüz levha iç yüzünü izler, alt yüz
+    düzlem (tabla yüzü = gövde oturma basamağına oturur); 3 × Ø6,4 × 3,2 mıknatıs cebi (alttan).
+    Kurulum boolean ile: yükseklik alanı (üst yüz) ∩ dış çevre prizması ∩ alt düzlem yarı-uzayı − iç çevre (temiz
+    iç öteleme; testere uçlarında kendini kesen bant şeridi yok)."""
+    outer = hatch_outline_sy(0.0002)
+    inner = hatch_outline_inset(HATCH_FRAME_W)
+    coef = hatch_frame_plane(half)
+    s0, s1 = float(outer[:, 0].min()) - 0.003, float(outer[:, 0].max()) + 0.003
+    y0, y1 = float(outer[:, 1].min()) - 0.003, float(outer[:, 1].max()) + 0.003
+    zb = min(_plane_z(coef, s, y) for s in (s0, s1) for y in (y0, y1)) - 0.004
+    base = _ceiling_solid(s0, s1, y0, y1, lambda s, y: hatch_top_z(s, y) - HATCH_SHEET_T - 0.0001, zb,
+                          n=45, ns=181, name="hframe_hf")
+    side = _poly_prism_sy(outer, lambda s, y: zb - 0.004, lambda s, y: 0.25, "hframe_out")
+    a, b, c = coef
+    plane = region_solid([(np.array([0.0, 0.0, a]), _unit(np.array([-b, c, -1.0])))], Bp(0.68, 0.0, 0.20))
+    holes = [_poly_prism_sy(inner, lambda s, y: zb - 0.01, lambda s, y: 0.26, "hframe_in")]
+    for s, y in HATCH_MAGNETS:
+        if (s <= HATCH_SPLIT_S) == (half == 0):
+            zm = _plane_z(coef, s, y)
+            holes.append(prim_hole(Bp(s, y, zm - 0.001), Bp(s, y, zm + MAGNET["pocket_t"]), MAGNET["pocket_d"],
+                                   name="magnet"))
+    return {"base": base, "adds": [], "holes": holes, "clip": [side, plane, _half_box(half)]}
+
+
+def hatch_buck_parts(half: int) -> dict:
+    """``hatch_buck_a/b`` (PLA kalıp): üst yüz = kapak dış yüzü − levha kalınlığı (kesim payı 8 mm), 2° eğimli yanlar,
+    düz taban; ikiye bölünmüş, Ø3 CF hizalama pimi delikleri (bölme yüzünde)."""
+    poly_top = hatch_outline_sy(-HATCH_TRIM, 0.004)
+    z_top_fn = lambda s, y: hatch_top_z(s, y) - HATCH_SHEET_T
+    zs = [z_top_fn(s, y) for s, y in poly_top]
+    z_base = min(zs) - HATCH_BUCK_DEPTH
+    dd = HATCH_BUCK_DEPTH * math.tan(math.radians(HATCH_DRAFT_DEG)) + 0.0006
+    poly_bot = hatch_outline_sy(-HATCH_TRIM - dd, 0.004)
+    # yükseklik alanı (üst yüz) × eğimli çevre prizması
+    s0, s1 = float(poly_bot[:, 0].min()) - 0.002, float(poly_bot[:, 0].max()) + 0.002
+    y0, y1 = float(poly_bot[:, 1].min()) - 0.002, float(poly_bot[:, 1].max()) + 0.002
+    hf = _ceiling_solid(s0, s1, y0, y1, z_top_fn, z_base, n=25, ns=61, name="buck_hf")
+    side = _band_like_frustum(poly_bot, poly_top, z_base - 0.001, max(zs) + 0.01)
+    holes = []
+    for y in (-0.030, 0.030):
+        zc = z_base + 0.008
+        for sg in (-1.0, 1.0):
+            holes.append(prim_hole(Bp(HATCH_SPLIT_S - sg * 0.0005, y, zc), Bp(HATCH_SPLIT_S + sg * 0.011, y, zc),
+                                   hole_d(PIN_D, "pin", "PETG"), name="buck_pin"))
+    return {"base": hf, "adds": [], "holes": holes, "clip": [side, _half_box(half, 0.0)]}
+
+
+def _band_like_frustum(poly_bot, poly_top, z0, z1) -> Solid:
+    """Alt çokgen (z0) → üst çokgen (z1) eğimli prizma (eş indisli çokgenler)."""
+    a, b = np.asarray(poly_bot, float), np.asarray(poly_top, float)
+    if 0.5 * np.sum(a[:, 0] * np.roll(a[:, 1], -1) - np.roll(a[:, 0], -1) * a[:, 1]) > 0:
+        a, b = a[::-1], b[::-1]
+    n = len(a)
+    V = [Bp(s, y, z0) for s, y in a] + [Bp(s, y, z1) for s, y in b]
+    F = [tuple(range(n - 1, -1, -1)), tuple(range(n, 2 * n))]
+    for i in range(n):
+        j = (i + 1) % n
+        F.append((i, j, n + j, n + i))
+    sol = Solid(np.asarray(V, float), F, "draft")
+    if _signed_volume(sol.V, sol.F) < 0:
+        sol = Solid(sol.V, [tuple(reversed(f)) for f in sol.F], "draft")
+    return sol
+
+
+def hatch_seat_ledge_parts(half: int) -> dict:
+    """Gövdede oturma basamağı (yarım): kapak çevresinin 1,5 mm dışından 8,4 mm içine, çerçeve alt düzleminin
+    0,2 mm altından ``LEDGE_T`` kalınlıkta + basamak duvarı (gövde dış yüzüne kırpılır)."""
+    coef = hatch_frame_plane(half)
+    seat = lambda s, y: _plane_z(coef, s, y) - 0.0002
+    poly = hatch_outline_sy(-0.0015)
+    blk = _poly_prism_sy(poly, lambda s, y: seat(s, y) - LEDGE_T, lambda s, y: 0.25, "ledge")
+    adds = []
+    for s, y in HATCH_MAGNETS:                          # mıknatıs göbekleri (basamağın altında)
+        if (s <= HATCH_SPLIT_S) == (half == 0):
+            z = seat(s, y)
+            adds.append(prim_frustum(Bp(s, y, z - MAGNET["pocket_t"] - 0.0012), Bp(s, y, z - 0.0005), 0.0052, n=32,
+                                     name="mag_boss"))
+    from .. import shapes as S
+    fus = S.fuselage()
+    clip_fus = Solid(np.asarray(fus.verts_blender(), float), [tuple(f) for f in fus.faces], "fus")
+    return {"base": blk, "adds": adds, "holes": [], "clip": [clip_fus, _half_box(half, 0.0)]}
+
+
+def hatch_seat_features(ctx: Ctx, s0: float, s1: float) -> Feature:
+    """Gövde halkasında kapak oturma yeri: basamak (eklenir, bölgeye kırpılır), basamak üstü boşaltma (kapak
+    çevresi + 0,3 mm, çerçeve alt düzleminden yukarı), erişim açıklığı (çevrenin 8,4 mm içi), mıknatıs cepleri."""
+    f = Feature()
+    for half in (0, 1):
+        hs0, hs1 = (0.49, HATCH_SPLIT_S) if half == 0 else (HATCH_SPLIT_S, 0.87)
+        if s1 < hs0 or s0 > hs1:
+            continue
+        led = ctx.custom_solid(f"hatch_ledge_{half}", lambda half=half: hatch_seat_ledge_parts(half))
+        if led is not None:
+            f.adds.append(led)
+        coef = hatch_frame_plane(half)
+        seat = lambda s, y, coef=coef: _plane_z(coef, s, y) - 0.0002
+        rec = ctx.custom_solid(f"hatch_recess_{half}", lambda half=half, seat=seat: {
+            "base": _poly_prism_sy(hatch_outline_sy(-0.0003), seat, lambda s, y: 0.25, "recess"),
+            "adds": [], "holes": [], "clip": [_half_box(half, 0.0)]})
+        if rec is not None:
+            f.holes.append(rec)
+        for s, y in HATCH_MAGNETS:
+            if (s <= HATCH_SPLIT_S) == (half == 0) and s0 - 0.01 < s < s1 + 0.01:
+                z = seat(s, y)
+                f.holes.append(prim_hole(Bp(s, y, z - MAGNET["pocket_t"]), Bp(s, y, z + 0.001), MAGNET["pocket_d"],
+                                         name="magnet"))
+    f.holes.append(_poly_prism_sy(hatch_outline_inset(HATCH_OPEN_INSET), lambda s, y: 0.0, lambda s, y: 0.25,
+                                  "hatch_open"))
+    f.notes.append("kapak oturma basamağı + 3 mıknatıs cebi (yarım başına)")
+    return f
+
+
+def build_custom(ctx: Ctx, seg: SegSpec, out_col: bpy.types.Collection, parts: dict) -> Built | None:
+    """Özel parça: base ∪ adds, ∩ clip(ler), − holes (MANIFOLD) → kapalı katı; ``UP_<anahtar>``."""
+    B = ctx.B
+    A = ctx.obj("cu", parts["base"])
+    col = B.group(ctx.name("cadd"), parts.get("adds", []))
+    if col is not None:
+        B.op(A, col, "UNION")
+        Booler.drop(col)
+    for cl in parts.get("clip", []) or []:
+        co = ctx.obj("cclip", cl)
+        B.op(A, co, "INTERSECT")
+        _delete(co)
+    col = B.group(ctx.name("chole"), parts.get("holes", []))
+    if col is not None:
+        B.op(A, col, "DIFFERENCE")
+        Booler.drop(col)
+    cl = finalize_mesh(A)
+    if len(A.data.polygons) == 0:
+        _delete(A)
+        return None
+    ctx.work.objects.unlink(A)
+    out_col.objects.link(A)
+    A.name = f"UP_{seg.key}"
+    A.data.name = A.name
+    chk = mesh_check(A.data)
+    chk["removed_islands"] = cl.get("removed_islands", 0)
+    return Built(seg, A, chk, {"notes": list(parts.get("notes", []))})
 
 
 # =====================================================================================================
@@ -2771,13 +4567,13 @@ def build_nose_flange(ctx: Ctx, seg: SegSpec, out_col: bpy.types.Collection) -> 
     B.op(outer_in, inner_in, "DIFFERENCE")
     _delete(inner_in)
     bolts, pins = nose_flange_bolts()
-    holes = [prim_frustum(Bp(s - t - 0.003, y, z), Bp(s + 0.003, y, z), 0.5 * M4_HOLE_D, n=16) for y, z in bolts]
-    holes += [prim_frustum(Bp(s - t - 0.003, y, z), Bp(s + 0.003, y, z), 0.5 * (NOSE_PIN_D + 0.0002), n=16)
+    holes = [prim_hole(Bp(s - t - 0.003, y, z), Bp(s + 0.003, y, z), M4_HOLE_D) for y, z in bolts]
+    holes += [prim_hole(Bp(s - t - 0.003, y, z), Bp(s + 0.003, y, z), hole_d(NOSE_PIN_D, "pin", "PETG"))
               for y, z in pins]
     col = B.group(ctx.name("hole"), holes)
     B.op(outer_in, col, "DIFFERENCE")
     Booler.drop(col)
-    clean_mesh(outer_in, triangles=True)
+    finalize_mesh(outer_in)
     ctx.work.objects.unlink(outer_in)
     out_col.objects.link(outer_in)
     outer_in.name = f"UP_{seg.key}"
@@ -2796,14 +4592,19 @@ def build_plain(ctx: Ctx, seg: SegSpec, out_col: bpy.types.Collection) -> Built 
     if len(A.data.polygons) == 0:
         _delete(A)
         return None
-    cl = clean_mesh(A, triangles=True)
+    cl = finalize_mesh(A)
     ctx.work.objects.unlink(A)
     out_col.objects.link(A)
     A.name = f"UP_{seg.key}"
     A.data.name = A.name
     chk = mesh_check(A.data)
     chk["removed_islands"] = cl["removed_islands"]
-    return Built(seg, A, chk)
+    notes = []
+    drop = getattr(ctx, "merge_notes", {}).get(seg.sources[0])
+    if drop:
+        notes.append(f"gövdeye değmeyen {len(drop)} donanım bileşeni basılmadı ({', '.join(f'{v:.2f}' for v in drop)} "
+                     "cm³) — ayrı takılır")
+    return Built(seg, A, chk, {"notes": notes})
 
 
 # =====================================================================================================
@@ -2818,8 +4619,153 @@ def _axis_words(u: np.ndarray) -> str:
     return w if tilt < 1.0 else f"{w} ({tilt:.0f}° eğik)"
 
 
-def evaluate(b: Built, bed) -> dict:
-    """Baskı yönü, tabla sığması, çıkıntı, hacim/kütle/süre ve et ölçümü."""
+GROOVE = tuple(float(v) / 1000.0 for v in _PR.get("joint_groove_mm", [0.4, 0.3]))   # (eksen boyunca, içe) m
+GROOVE_MIN_T = 0.0012                               # pah yalnız içe et ≥ 1,2 mm olan köşede (ince firar kenarı atlanır)
+
+
+def joint_grooves(ctx: "Ctx", seg: SegSpec, ob: bpy.types.Object) -> int:
+    """P13: segment uçlarında (plate/land/frame) dış deri kenarına ``GROOVE`` pahı — iki komşu parça birleşince
+    V-oluk (panel çizgisi). bmesh: uç düzleminden ``w`` içeride kesit halkası eklenir; düzlemdeki dış deri köşeleri
+    (kaynağın dış yüzeyinde ≤ 10 µm) düzlem içinde ``d`` kadar içe kaydırılır (topoloji değişmez). İçe et
+    ``GROOVE_MIN_T``'den azsa (firar kenarı, deliğe yakın) köşe atlanır. Ağ denetimi geçmezse geri alınır → 0."""
+    ends = [e for e in seg.ends if e.kind in ("plate", "land", "frame")]
+    if not ends or not seg.sources:
+        return 0
+    w, d = GROOVE
+    cache = ctx.__dict__.setdefault("_src_bvh", {})
+    key = seg.sources[0]
+    if key not in cache:
+        Ss = ctx.solid(key)
+        cache[key] = BVHTree.FromPolygons(Ss.V.tolist(), [list(f) for f in Ss.F], epsilon=0.0)
+    bvh_src = cache[key]
+    me = ob.data
+    backup = me.copy()
+    v0 = mesh_check(me)["volume_m3"]
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    M = ob.matrix_world
+    Mi = M.inverted()
+    moved = 0
+    for e in ends:
+        pw, nw = Vector(tuple(e.p)), Vector(tuple(e.n))          # dünya; n segment dışına
+        p = Mi @ pw
+        n = (Mi.to_3x3() @ nw).normalized()
+        bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=p - n * w, plane_no=n,
+                               dist=1e-7)
+        bm.verts.ensure_lookup_table()
+        bm.faces.ensure_lookup_table()
+        bvh_part = BVHTree.FromBMesh(bm)
+        cand = []
+        for v in bm.verts:
+            if abs((v.co - p).dot(n)) > 2e-6:
+                continue
+            q = bvh_src.find_nearest(M @ v.co)
+            if q[0] is None or q[3] > 1e-5:
+                continue
+            m = (Mi.to_3x3() @ q[1])
+            m = m - n * m.dot(n)
+            if m.length < 0.3:                                    # yüzey uç düzlemine neredeyse paralel
+                continue
+            inward = -m.normalized()
+            h = bvh_part.ray_cast(v.co + inward * 2e-6 - n * 1e-5, inward, 0.01)
+            if h[0] is None or h[3] < GROOVE_MIN_T:
+                continue
+            cand.append((v, inward))
+        for v, inward in cand:
+            v.co = v.co + inward * d
+        moved += len(cand)
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
+    chk = mesh_check(me)
+    if not moved or not chk["ok"] or chk["volume_m3"] > v0 + 1e-10 or chk["volume_m3"] < 0.98 * v0:
+        bad = ob.data
+        ob.data = backup
+        bpy.data.meshes.remove(bad)
+        if moved:
+            ctx.log(f"{seg.key}: ek pahı geri alındı (ağ denetimi)")
+        return 0
+    bpy.data.meshes.remove(backup)
+    return moved
+
+
+FOOT_T = 0.0010                                     # kırılabilir baskı ayağı kalınlığı (tabla teması yetmezse)
+FOOT_GROW = 0.005                                   # ayak, alt izin 5 mm dışına taşar
+TRUNC_MAX = 0.0004                                  # eğri alt yüzde düzleme kesimi en çok 0,4 mm
+
+
+def _bed_mesh_op(ctx: "Ctx", W: np.ndarray, T: np.ndarray, tool: Solid, op: str) -> tuple[np.ndarray, np.ndarray] | None:
+    """Tabla koordinatında (W, T) ağına MANIFOLD boolean uygular → (W, T) ya da None (kapalı değilse)."""
+    ob = ctx.obj("bed", Solid(W, [tuple(t) for t in T]))
+    to = ctx.obj("bedt", tool)
+    try:
+        ctx.B.op(ob, to, op)
+        finalize_mesh(ob)
+        if not mesh_check(ob.data)["ok"]:
+            return None
+        V2, T2 = triangulate(ob.data)
+        return V2, T2
+    finally:
+        _delete(to)
+        _delete(ob)
+
+
+def bed_fix(ctx: "Ctx", V: np.ndarray, T: np.ndarray, pl: dict) -> dict | None:
+    """Tabla teması yetersizse (P6) yalnız STL için: (1) eğri tabanı ≤ 0,4 mm düzleme keser (düz temas yaması),
+    (2) olmazsa altına 1 mm kırılabilir ayak ekler (alt iz + 5 mm). Dönüş: {"W", "T", "contact_cm2", "note"}."""
+    M = pl["M"]
+    W = V @ M[:3, :3].T + M[:3, 3]
+    need = pl["contact_need_cm2"]
+    span = W.max(0) - W.min(0)
+    c = 0.5 * (W.max(0) + W.min(0))
+    for d in (0.0001, 0.0002, 0.0003, TRUNC_MAX):
+        box = prim_box((c[0], c[1], d - 0.5), np.eye(3), (span[0] + 0.05, span[1] + 0.05, 0.5), name="trunc")
+        r = _bed_mesh_op(ctx, W, T, box, "DIFFERENCE")
+        if r is None:
+            continue
+        W2, T2 = r
+        W2 = W2 - np.array([0.0, 0.0, W2[:, 2].min()])
+        pc = placement(W2, T2, (0.0, 0.0, 1.0), ctx.bed)
+        if pc["bed_contact_cm2"] >= need:
+            return {"W": W2, "T": T2, "contact_cm2": pc["bed_contact_cm2"],
+                    "note": f"tabla teması için alt yüz {d * 1000:.1f} mm düzlendi"}
+    low = W[W[:, 2] < W[:, 2].min() + 0.0015][:, :2]
+    if len(low) < 3:
+        low = W[np.argsort(W[:, 2])[:16], :2]
+    hull = _hull2(low)
+    if len(hull) < 3:
+        cxy = low.mean(0)
+        hull = np.array([cxy + [-0.002, -0.002], cxy + [0.002, -0.002], cxy + [0.002, 0.002], cxy + [-0.002, 0.002]])
+    ring = []
+    cen = hull.mean(0)
+    for k in range(len(hull)):                          # dışbükey izi FOOT_GROW kadar büyüt (köşe açıortayı)
+        a_, b_, c_ = hull[k - 1], hull[k], hull[(k + 1) % len(hull)]
+        e1, e2 = _unit(b_ - a_), _unit(c_ - b_)
+        n1, n2 = np.array([e1[1], -e1[0]]), np.array([e2[1], -e2[0]])
+        if (b_ - cen) @ n1 < 0:
+            n1, n2 = -n1, -n2
+        bis = _unit(n1 + n2)
+        ring.append(b_ + bis * FOOT_GROW / max(0.3, float(bis @ n1)))
+    ring = np.asarray(ring)
+    if 0.5 * np.sum(ring[:, 0] * np.roll(ring[:, 1], -1) - np.roll(ring[:, 0], -1) * ring[:, 1]) < 0:
+        ring = ring[::-1]
+    lift = FOOT_T - 0.0002
+    W1 = W + np.array([0.0, 0.0, lift])
+    foot = prim_prism(ring, np.zeros(3), np.array([1.0, 0, 0]), np.array([0, 1.0, 0]), np.array([0, 0, 1.0]),
+                      0.0, FOOT_T, name="foot")
+    r = _bed_mesh_op(ctx, W1, T, foot, "UNION")
+    if r is None:
+        return None
+    W2, T2 = r
+    W2 = W2 - np.array([0.0, 0.0, W2[:, 2].min()])
+    pc = placement(W2, T2, (0.0, 0.0, 1.0), ctx.bed)
+    return {"W": W2, "T": T2, "contact_cm2": pc["bed_contact_cm2"],
+            "note": f"{FOOT_T * 1000:.0f} mm kırılabilir baskı ayağı (baskıdan sonra kesilir)"}
+
+
+def evaluate(b: Built, bed, ctx: "Ctx | None" = None) -> dict:
+    """Baskı yönü (P6: tabla teması sert koşul), tabla sığması, 45° çıkıntı ve destek sınıfı (aşağı ışın), hacim /
+    kütle / süre, et ölçümü. Tabla teması yetmiyorsa STL'ye düzleme ya da kırılabilir ayak (``bed_fix``)."""
     seg = b.seg
     V, T = triangulate(b.ob.data)
     pref = []
@@ -2827,25 +4773,99 @@ def evaluate(b: Built, bed) -> dict:
         pref.append(-seg.ends[seg.bed_end].n)
     if seg.up_hint is not None:
         pref.append(np.asarray(seg.up_hint, float))
-    pl = choose_orientation(V, T, bed, pref)
+    pl = choose_orientation(V, T, bed, pref, force=seg.force_up)
     if seg.force_up and pref:                           # dik baskı zorunlu: tercih edilen yön sığmıyorsa bölünecek
         pp = placement(V, T, pref[0], bed)
         if not (pp["fits"] or pp["fits_tight"]):
             pp["fits"] = pp["fits_tight"] = False
             pl = pp
-        elif not (pl["fits"] and np.allclose(pl["up"], _unit(pref[0]), atol=1e-6)):
-            pl = pp if (pp["fits"] or not pl["fits"]) else pl
     mat = seg.material or _zone(seg.zone)[0]
     wall = seg.wall if seg.wall is not None else _zone(seg.zone)[1]
     vol_cm3 = b.check["volume_m3"] * 1e6
+    fill = TOOLING_INFILL if seg.tooling else 1.0
     rate = PRINT_RATE["PETG" if mat.startswith("PETG") else mat]
     layers = pl["size_mm"][2] / rate["layer_mm"]
-    hours = vol_cm3 / rate["cm3_h"] + layers * LAYER_OVERHEAD_S / 3600.0 + PLATE_SETUP_H
-    over = pl["overhang_cm2"]
-    support = "yok" if over < 3.0 else ("kısa köprü (iç)" if over < 30.0 else "destek önerilir")
-    mw = min_wall_mm(b.ob, n_samples=1200)
-    return {"placement": pl, "V": V, "T": T, "material": mat, "wall_mm": wall * 1000.0, "volume_cm3": vol_cm3,
-            "mass_g": vol_cm3 * density(mat), "hours": hours, "support": support, "min_wall": mw}
+    hours = fill * vol_cm3 / rate["cm3_h"] + layers * LAYER_OVERHEAD_S / 3600.0 + PLATE_SETUP_H
+    out = {"placement": pl, "V": V, "T": T, "material": mat, "wall_mm": wall * 1000.0, "volume_cm3": vol_cm3,
+           "mass_g": fill * vol_cm3 * density(mat), "hours": hours}
+    if (pl["fits"] or pl["fits_tight"]) and not pl["contact_ok"] and ctx is not None:
+        fx = bed_fix(ctx, V, T, pl)
+        if fx is not None:
+            out["bed_fix"] = fx
+            pl["bed_contact_cm2"] = fx["contact_cm2"]
+            pl["contact_ok"] = fx["contact_cm2"] >= pl["contact_need_cm2"]
+            pl["size_mm"] = (pl["size_mm"][0], pl["size_mm"][1], float((fx["W"][:, 2].max()) * 1000.0))
+    if "bed_fix" in out:
+        Wb, Tb = out["bed_fix"]["W"], out["bed_fix"]["T"]
+        out.update(support_class(Wb, Tb, np.eye(4)))
+    else:
+        out.update(support_class(V, T, pl["M"]))
+    out["min_wall"] = min_wall_mm(b.ob, n_samples=1200)
+    return out
+
+
+# ---------------------------------------------------------------- ısı kuralı (AERO-09)
+HEAT_RULE = dict(_PR.get("heat_rule", {"radius_m": 0.150, "no_material": "LW-PLA", "around": ["cylinder", "muffler"]}))
+HEAT_SAFE_MATERIAL = "LW-ASA"                       # Tg 95 °C; LW-PLA (Tg 55 °C) yerine ısı bölgesinde
+
+
+def _env_distance(e: "P.EnvPart", Q: np.ndarray) -> np.ndarray:
+    """Noktalar (spec, (n, 3)) ile paketleme zarfı (kutu ya da silindir) arası en kısa mesafe (m)."""
+    A = np.asarray(e.axes, float)
+    if A.shape == (3, 3) and not np.allclose(A @ A.T, np.eye(3), atol=1e-6):
+        A = A.T
+    c = np.asarray(e.center, float)
+    q = (Q - c) @ np.column_stack([A[0], A[1], A[2]])        # yerel (axes satır vektörleri)
+    h = np.asarray(e.half, float)
+    if e.kind == "cyl":
+        dx = np.maximum(np.abs(q[:, 0]) - h[0], 0.0)
+        dr = np.maximum(np.hypot(q[:, 1], q[:, 2]) - h[1], 0.0)
+        return np.hypot(dx, dr)
+    return np.linalg.norm(np.maximum(np.abs(q) - h, 0.0), axis=1)
+
+
+def heat_sources() -> tuple[list, np.ndarray]:
+    """Isı kaynakları: motor zarfından ``print.heat_rule.around`` (silindir + buji başlığı, susturucu) ve nokta
+    kaynaklar (susturucu çıkışı, sahnede varsa ``U_Exhaust_Muffler`` borusu/kalkanı) — spec takımı."""
+    around = set(HEAT_RULE.get("around", ["cylinder", "muffler"]))
+    env = [e for e in P.engine_envelope() if e.name in around or (e.name == "spark_cap" and "cylinder" in around)]
+    pts = [np.asarray(P.muffler_outlet().pos, float)]
+    ob = bpy.data.objects.get("U_Exhaust_Muffler")
+    if ob is not None and ob.type == "MESH":
+        V, _ = _mesh_np(ob.data, rest_matrix(ob))
+        pts += list(np.column_stack([-V[:, 0], V[:, 1], V[:, 2]]))
+    return env, np.asarray(pts, float)
+
+
+def heat_distance(V_world: np.ndarray, T: np.ndarray, mirror: bool, sources=None) -> tuple[float, str]:
+    """Parçanın (ve ayna eşinin) ısı kaynaklarına en kısa mesafesi (m) ve kaynak adı."""
+    env, pts = sources or heat_sources()
+    best = (math.inf, "")
+    variants = [V_world] + ([V_world * np.array([1.0, -1.0, 1.0])] if mirror else [])
+    for Vw in variants:
+        Q = np.column_stack([-Vw[:, 0], Vw[:, 1], Vw[:, 2]])
+        for e in env:
+            d = float(_env_distance(e, Q).min())
+            if d < best[0]:
+                best = (d, e.name)
+        if len(pts):
+            Tm = T if Vw is V_world else T[:, ::-1]
+            bvh = BVHTree.FromPolygons(Q.tolist(), Tm.tolist(), epsilon=0.0)
+            for p in pts:
+                hit = bvh.find_nearest(Vector(tuple(p)))
+                if hit[0] is not None and hit[3] < best[0]:
+                    best = (float(hit[3]), "susturucu çıkışı")
+    return best
+
+
+def _apply_material(ev: dict, mat: str) -> None:
+    """Değerlendirmedeki filamenti değiştirir; kütle ve süre yeniden hesaplanır."""
+    ev["material"] = mat
+    vol = ev["volume_cm3"]
+    rate = PRINT_RATE["PETG" if mat.startswith("PETG") else mat]
+    layers = ev["placement"]["size_mm"][2] / rate["layer_mm"]
+    ev["mass_g"] = vol * density(mat)
+    ev["hours"] = vol / rate["cm3_h"] + layers * LAYER_OVERHEAD_S / 3600.0 + PLATE_SETUP_H
 
 
 def _split_recipe(r: Recipe, ev: dict, bed) -> list[Recipe] | None:
@@ -2912,14 +4932,95 @@ def _clear_print_collection(col: bpy.types.Collection) -> None:
             _delete(ob)
 
 
+def _separate_coincident(V: np.ndarray, T: np.ndarray, eps: float = 5e-7, push: float = 2e-6) -> tuple[np.ndarray, int]:
+    """Topolojik olarak ayrı ama aynı yerdeki köşeler (kendine değen ağ: iki yüzey bir çizgide/noktada temas eder)
+    STL okunurken birleşir ve manifold olmayan kenar üretir. Bu köşeler kendi malzemelerine doğru (köşe normalinin
+    tersi) ``push`` kadar itilir → temas µm boşluğa döner, ağ topolojisi değişmez. Dönüş: (V, itilen köşe sayısı)."""
+    from mathutils.kdtree import KDTree
+    kd = KDTree(len(V))
+    for i, v in enumerate(V):
+        kd.insert(Vector(v), i)
+    kd.balance()
+    rank: dict[int, int] = {}
+    for i, v in enumerate(V):
+        if i in rank:
+            continue
+        r = sorted(j for _, j, _ in kd.find_range(Vector(v), eps))
+        if len(r) > 1:
+            for k, j in enumerate(r):                   # aynı normalli üst üste yüzeyler de ayrılsın: 1×, 2×, 3× itme
+                rank.setdefault(j, k)
+    if not rank:
+        return V, 0
+    a, b, c = V[T[:, 0]], V[T[:, 1]], V[T[:, 2]]
+    fn = np.cross(b - a, c - a)
+    N = np.zeros_like(V)
+    for k in range(3):
+        np.add.at(N, T[:, k], fn)
+    ln = np.linalg.norm(N, axis=1)
+    N /= np.maximum(ln, 1e-30)[:, None]
+    N[ln < 1e-14] = np.array([0.57735, 0.57735, 0.57735])   # yalnız sıfır alanlı üçgenlerin köşesi: sabit yön
+    idx = np.array(sorted(rank))
+    mult = np.array([1.0 + rank[i] for i in idx])
+    V2 = V.copy()
+    V2[idx] -= N[idx] * (push * mult)[:, None]
+    return V2, len(idx)
+
+
+def _welded_dups(V: np.ndarray, T: np.ndarray) -> int:
+    """STL okumasında çift yönlü kenar sayısı: (1) mm float32 tam eşitlik, (2) 0,1 µm ızgara kaynağı (denetçi /
+    dilimleyici okuması). Büyük olanı döner."""
+    worst = 0
+    for q in ((V * 1000.0).astype(np.float32), np.round(V * 1e7).astype(np.int64)):
+        _, inv = np.unique(q, axis=0, return_inverse=True)
+        Tw = inv.reshape(-1)[T]                         # dejenere üçgen de sayılır (okuyucu atmaz)
+        ec = stl_edge_check(Tw)
+        worst = max(worst, int(ec["dup_directed"]) + int(ec["unpaired"]))
+    return worst
+
+
+def _fix_pinches(b: "Built") -> None:
+    """Kendine değen ağ (STL kaynağında manifold olmayan kenar) varsa eski tam temizlik (5 µm kaynak + sıkışma
+    kenarı çökertme) bir KOPYADA denenir; kapalı, çift kenarsız ve hacim farkı ≤ %0,5 ise kabul edilir."""
+    V, T = triangulate(b.ob.data)
+    if _welded_dups(V, T) == 0:
+        return
+    keep = b.ob.data.copy()
+    v0 = mesh_check(keep)["volume_m3"]
+    clean_mesh(b.ob, triangles=True)
+    c = mesh_check(b.ob.data)
+    V2, T2 = triangulate(b.ob.data)
+    if c["ok"] and _welded_dups(V2, T2) == 0 and abs(c["volume_m3"] - v0) <= 0.005 * abs(v0):
+        bpy.data.meshes.remove(keep)
+        b.check = {**c, "removed_islands": b.check.get("removed_islands", 0)}
+        return
+    bad = b.ob.data
+    b.ob.data = keep
+    bpy.data.meshes.remove(bad)
+
+
 def export_part(b: Built, ev: dict, stl_dir: Path) -> dict:
-    """Baskı yönünde, tabla merkezli, mm STL. Dönüş: dosya bilgisi."""
-    M = ev["placement"]["M"]
-    V = ev["V"] @ M[:3, :3].T + M[:3, 3]
-    T = ev["T"]
+    """Baskı yönünde, tabla merkezli, mm STL (tabla teması düzeltmesi varsa onunla). Kendine değen köşeler µm
+    ayrılır (``_separate_coincident``). Dönüş: dosya bilgisi (yazılan ağın hacmi dahil)."""
+    if "bed_fix" in ev:
+        V, T = ev["bed_fix"]["W"], ev["bed_fix"]["T"]
+    else:
+        M = ev["placement"]["M"]
+        V = ev["V"] @ M[:3, :3].T + M[:3, 3]
+        T = ev["T"]
+    n_sep = 0
+    for push in (2e-6, 5e-6, 1.2e-5):
+        if _welded_dups(V, T) == 0:
+            break
+        V, n = _separate_coincident(V, T, push=push)
+        n_sep += n
+    if n_sep:
+        V = V - np.array([0.0, 0.0, V[:, 2].min()])     # itme tabla altına taşıdıysa z_min = 0
     path = stl_dir / f"{b.seg.key}.stl"
     size = write_stl(path, V, T, b.seg.key)
-    return {"file": f"{stl_dir.name}/{path.name}", "bytes": size, "triangles": int(len(T))}   # çıktı köküne göre
+    a, bb, c = V[T[:, 0]], V[T[:, 1]], V[T[:, 2]]
+    vol = float(np.einsum("ij,ij->i", a, np.cross(bb, c)).sum() / 6.0) * 1e6
+    return {"file": f"{stl_dir.name}/{path.name}", "bytes": size, "triangles": int(len(T)),   # çıktı köküne göre
+            "volume_cm3": round(vol, 3), "separated_verts": n_sep}
 
 
 def verify_stl(path: Path, expect_volume_cm3: float) -> dict:
@@ -2927,6 +5028,11 @@ def verify_stl(path: Path, expect_volume_cm3: float) -> dict:
     içe aktarıcısıyla (``wm.stl_import``) yükleyip bmesh manifold denetimi yapar."""
     V, T = read_stl(path)
     ec = stl_edge_check(T)
+    q = np.round(V / 1e-4).astype(np.int64)            # 0,1 µm kaynakla da (dilimleyici / denetçi okuması) kapalı mı
+    _, inv = np.unique(q, axis=0, return_inverse=True)
+    Tw = inv.reshape(-1)[T]
+    ec["welded"] = stl_edge_check(Tw)
+    ec["ok"] = ec["ok"] and ec["welded"]["ok"]
     a, b, c = V[T[:, 0]], V[T[:, 1]], V[T[:, 2]]
     vol = float(np.einsum("ij,ij->i", a, np.cross(b, c)).sum() / 6.0) / 1000.0
     out = {"edges": ec, "volume_cm3": vol, "volume_err_pct": 100.0 * (vol - expect_volume_cm3) /
@@ -2984,13 +5090,14 @@ def _explode_vector(ob: bpy.types.Object, seg: SegSpec, factor: float = 0.28) ->
 def build_print_parts(bed=BED_DEFAULT, out_dir=None, *, scene: bpy.types.Scene | None = None,
                       only: Sequence[str] | None = None, export: bool = True, write_report: bool = True,
                       solver: str = "MANIFOLD", cut_solver: str = "EXACT", mirror_objects: bool = True,
-                      verify: int = 6, verbose: bool = False) -> dict:
+                      verify: int = -1, verbose: bool = False, heat_auto: bool = True) -> dict:
     """Baskı parçalarını kurar, ``UCAV_Print``'e koyar, STL (mm) ve rapor yazar.
 
     ``bed``: tabla (mm) — varsayılan 256×256×256; 220×220×250 de desteklenir (sığmayan segment otomatik bölünür).
     ``out_dir``: çıktı kökü (varsayılan ``ucav/out``; varsayılan dışı tabla için ``ucav/out/print_<X>x<Y>x<Z>``).
     STL'ler ``<out_dir>/stl``, rapor ``<out_dir>/print_report.md`` ve ``.json``. ``only``: anahtar önekleri
-    (ör. ``["wing_panel", "fus_ring_1"]``) — kısmi kurulum. ``verify``: yeniden okunup doğrulanacak STL sayısı.
+    (ör. ``["wing_panel", "fus_ring_1"]``) — kısmi kurulum. ``verify``: yeniden okunup doğrulanacak STL sayısı
+    (−1 → hepsi).
     Dönüş: özet sözlüğü (parçalar, toplamlar, uyarılar, dosyalar).
     """
     t_start = time.time()
@@ -3017,20 +5124,35 @@ def build_print_parts(bed=BED_DEFAULT, out_dir=None, *, scene: bpy.types.Scene |
         t0 = time.time()
         faulthandler.dump_traceback_later(PART_TIMEOUT_S, exit=True)     # boolean takılırsa sessizce beklemesin
         try:
-            if seg.key == "fus_nose_flange":
+            if seg.builder is not None:
+                _CUR_MAT[0] = seg.material or _zone(seg.zone)[0]
+                b = seg.builder(ctx, seg, pcol)
+            elif seg.key == "fus_nose_flange":
                 b = build_nose_flange(ctx, seg, pcol)
             elif not seg.shell:
                 b = build_plain(ctx, seg, pcol)
             else:
                 b = None
-                for k in range(4):                      # sıkışma kalırsa küçük kaydırmayla yeniden dene
+
+                def rank(bk):                           # kapalı > boşluğu çıkmış > az sınır kenarlı
+                    c = bk.check
+                    return (0 if c["ok"] else 1, 1 if c.get("cavity_failed") else 0, c["boundary"] + c["nonmanifold"])
+
+                tries = [(k, None) for k in range(N_PERTURB)]
+                for k, solver_k in tries:               # sıkışma kalırsa küçük kaydırmayla, sonra EXACT ile yeniden dene
                     s_try = seg if k == 0 else SegSpec(**{**seg.__dict__, "perturb": k})
+                    _CUR_MAT[0] = seg.material or _zone(seg.zone)[0]       # delik boşluğu malzemeye göre (P7)
                     feat = r.feat_fn(s_try) if r.feat_fn else Feature()
-                    bk = build_segment(ctx, s_try, feat, pcol)
+                    old_solver = ctx.B.solver
+                    if solver_k:
+                        ctx.B.solver = solver_k
+                    try:
+                        bk = build_segment(ctx, s_try, feat, pcol)
+                    finally:
+                        ctx.B.solver = old_solver
                     if bk is None:
                         break
-                    bad = bk.check["boundary"] + bk.check["nonmanifold"]
-                    if b is None or bad < b.check["boundary"] + b.check["nonmanifold"]:
+                    if b is None or rank(bk) < rank(b):
                         if b is not None:
                             _delete(b.ob)
                         b = bk
@@ -3039,7 +5161,7 @@ def build_print_parts(bed=BED_DEFAULT, out_dir=None, *, scene: bpy.types.Scene |
                         _delete(bk.ob)
                     if b.check["ok"]:
                         if k:
-                            ctx.log(f"{seg.key}: {k}. kaydırmalı denemede manifold")
+                            ctx.log(f"{seg.key}: {k}. denemede manifold" + (f" ({solver_k})" if solver_k else ""))
                         break
                 if b is not None:
                     b.ob.name = f"UP_{seg.key}"
@@ -3050,17 +5172,29 @@ def build_print_parts(bed=BED_DEFAULT, out_dir=None, *, scene: bpy.types.Scene |
             continue
         finally:
             faulthandler.cancel_dump_traceback_later()
-        if b is None:
+        if b is None or len(b.ob.data.polygons) == 0:
             ctx.warnings.append(f"{seg.key}: boş sonuç (kaynak bölgede yok)")
+            if b is not None:
+                _delete(b.ob)
             continue
-        if not b.check["ok"] and 0 < b.check["volume_m3"] < VOXEL_REPAIR_MAX_M3:
+        if (not b.check["ok"] and not b.check.get("cavity_failed") and 0 < b.check["volume_m3"] < VOXEL_REPAIR_MAX_M3
+                and len(b.ob.data.polygons) < VOXEL_REPAIR_MAX_FACES):
             v0 = b.check["volume_m3"]
+            keep = b.ob.data.copy()
             info = voxel_repair(b.ob)
-            b.check = {**mesh_check(b.ob.data), "removed_islands": b.check.get("removed_islands", 0)}
-            msg = (f"{seg.key}: voksel onarım ({info['voxel_mm']:.2f} mm), hacim {v0 * 1e6:.1f} → "
-                   f"{b.check['volume_m3'] * 1e6:.1f} cm³, manifold {'evet' if b.check['ok'] else 'HAYIR'}")
+            chk = {**mesh_check(b.ob.data), "removed_islands": b.check.get("removed_islands", 0)}
+            if chk["ok"] and abs(chk["volume_m3"] - v0) <= 0.05 * v0:      # boşluk dolmadıysa kabul
+                b.check = chk
+                msg = (f"{seg.key}: voksel onarım ({info['voxel_mm']:.2f} mm), hacim {v0 * 1e6:.1f} → "
+                       f"{b.check['volume_m3'] * 1e6:.1f} cm³")
+                b.info.setdefault("notes", []).append("voksel onarım")
+                bpy.data.meshes.remove(keep)
+            else:                                       # onarım boşluğu doldurdu / kapanmadı: özgün ağ kalır
+                bad_me = b.ob.data
+                b.ob.data = keep
+                bpy.data.meshes.remove(bad_me)
+                msg = f"{seg.key}: voksel onarım reddedildi (hacim {v0 * 1e6:.1f} → {chk['volume_m3'] * 1e6:.1f} cm³)"
             ctx.warnings.append(msg)
-            b.info.setdefault("notes", []).append("voksel onarım")
             ctx.log(msg)
         if not seg.split_loose:
             n_fr, v_fr = drop_fragments(b.ob)
@@ -3068,6 +5202,14 @@ def build_print_parts(bed=BED_DEFAULT, out_dir=None, *, scene: bpy.types.Scene |
                 b.check = {**mesh_check(b.ob.data), "removed_islands": b.check.get("removed_islands", 0) + n_fr}
                 b.info.setdefault("notes", []).append(f"{n_fr} kopuk kıymık atıldı ({v_fr * 1e6:.2f} cm³)")
                 ctx.log(f"{seg.key}: {n_fr} kopuk kıymık atıldı ({v_fr * 1e6:.2f} cm³)")
+        if b.check.get("ok") and b.seg.ends and b.seg.shell and not b.seg.builder:
+            ng = joint_grooves(ctx, b.seg, b.ob)                # P13: ek kenarı pahı (V-oluk = panel çizgisi)
+            if ng:
+                b.check = {**mesh_check(b.ob.data), "removed_islands": b.check.get("removed_islands", 0)}
+                b.info.setdefault("notes", []).append(
+                    f"ek pahı {_fmt_g(GROOVE[0] * 1000)} × {_fmt_g(GROOVE[1] * 1000)} mm")
+        if b.check.get("ok"):                                   # 0,1 µm kaynakta çift kenar (kendine değen ağ) kalmasın
+            _fix_pinches(b)
         builts = [b]
         if seg.split_loose:
             shells = split_shells(b.ob)
@@ -3088,12 +5230,12 @@ def build_print_parts(bed=BED_DEFAULT, out_dir=None, *, scene: bpy.types.Scene |
                                     "mirror": c[1] > 1e-4,
                                     "name_tr": f"{seg.name_tr} ({'üst' if c[2] > 0.066 else 'alt'})"})
                     ob = _obj(f"UP_{s2.key}", Solid(Vs, Fs), pcol)
-                    clean_mesh(ob, triangles=True)
+                    finalize_mesh(ob)
                     for m in mats:
                         ob.data.materials.append(m)
                     builts.append(Built(s2, ob, mesh_check(ob.data)))
         for bb in builts:
-            ev = evaluate(bb, bed)
+            ev = evaluate(bb, bed, ctx)
             pl = ev["placement"]
             if not pl["fits"] and not pl["fits_tight"] and depth.get(bb.seg.key, 0) < 3:
                 kids = _split_recipe(Recipe(bb.seg, r.feat_fn), ev, bed)
@@ -3107,6 +5249,28 @@ def build_print_parts(bed=BED_DEFAULT, out_dir=None, *, scene: bpy.types.Scene |
             done.append((bb, ev))
             ctx.log(f"{bb.seg.key}: {'OK' if bb.check['ok'] else 'SORUN'} {ev['volume_cm3']:.1f} cm³ "
                     f"{ev['mass_g']:.0f} g {np.round(pl['size_mm'], 0)} mm ({time.time() - t0:.1f} s)")
+    # ısı kuralı (AERO-09): susturucu/silindir çevresinde LW-PLA yok → LW-ASA'ya terfi (heat_auto) ya da ihlal
+    heat_src = heat_sources()
+    heat = {"radius_mm": float(HEAT_RULE["radius_m"]) * 1000.0, "no_material": HEAT_RULE["no_material"],
+            "around": list(HEAT_RULE.get("around", [])), "switched": [], "violations": [], "near": []}
+    for b, ev in done:
+        hd, hsrc = heat_distance(ev["V"], ev["T"], b.seg.mirror, heat_src)
+        ev["heat"] = {"min_mm": round(hd * 1000.0, 1), "source": hsrc}
+        if hd < float(HEAT_RULE["radius_m"]) and ev["material"] == HEAT_RULE["no_material"]:
+            if heat_auto:
+                _apply_material(ev, HEAT_SAFE_MATERIAL)
+                heat["switched"].append({"key": b.seg.key, "min_mm": ev["heat"]["min_mm"], "source": hsrc,
+                                         "to": HEAT_SAFE_MATERIAL})
+                b.info.setdefault("notes", []).append(
+                    f"ısı kuralı: kaynağa {hd * 1000:.0f} mm → {HEAT_SAFE_MATERIAL} (Tg 95 °C)")
+            else:
+                heat["violations"].append({"key": b.seg.key, "min_mm": ev["heat"]["min_mm"], "source": hsrc})
+        if hd < 0.25:
+            heat["near"].append({"key": b.seg.key, "material": ev["material"], "min_mm": ev["heat"]["min_mm"],
+                                 "source": hsrc})
+    heat["near"].sort(key=lambda r: r["min_mm"])
+    heat["ok"] = not heat["violations"]
+    ctx.heat = heat
     # malzeme, özellikler, ayna eşleri
     results = []
     for b, ev in done:
@@ -3120,6 +5284,7 @@ def build_print_parts(bed=BED_DEFAULT, out_dir=None, *, scene: bpy.types.Scene |
         b.ob["ucav_print_mass_g"] = round(ev["mass_g"], 1)
         b.ob["ucav_print_qty"] = qty
         b.ob["ucav_explode"] = list(map(float, _explode_vector(b.ob, seg)))
+        b.ob["ucav_print_tooling"] = bool(seg.tooling)
         b.ob.hide_render = True
         if seg.mirror and mirror_objects:
             name_r = b.ob.name + "_R"
@@ -3142,8 +5307,15 @@ def build_print_parts(bed=BED_DEFAULT, out_dir=None, *, scene: bpy.types.Scene |
                                             seg.bed_end < len(seg.ends) else "")},
                 "bed_margin_mm": round(ev["placement"]["margin_mm"], 1), "fits": ev["placement"]["fits"],
                 "fits_tight": ev["placement"]["fits_tight"], "overhang_cm2": round(ev["placement"]["overhang_cm2"], 1),
+                "bed_contact_cm2": round(ev["placement"]["bed_contact_cm2"], 2),
+                "contact_need_cm2": round(ev["placement"]["contact_need_cm2"], 2),
+                "contact_ok": bool(ev["placement"]["contact_ok"]),
+                "oh45_to_bed_cm2": ev["oh45_to_bed_cm2"], "oh45_over_model_cm2": ev["oh45_over_model_cm2"],
+                "oh45_over_model_gt5mm_cm2": ev["oh45_over_model_gt5mm_cm2"],
+                "bed_fix": ev["bed_fix"]["note"] if "bed_fix" in ev else "",
                 "support": ev["support"], "min_wall": {k: round(v, 3) for k, v in ev["min_wall"].items()},
-                "note": seg.note, "pin_holes": int(b.info.get("pin_holes", 0)),
+                "note": seg.note, "pin_holes": int(b.info.get("pin_holes", 0)), "heat": ev.get("heat", {}),
+                "tooling": bool(seg.tooling),
                 "features": sorted(set(b.info.get("notes", [])))}
         if export:
             info["stl"] = export_part(b, ev, stl_dir)
@@ -3152,9 +5324,11 @@ def build_print_parts(bed=BED_DEFAULT, out_dir=None, *, scene: bpy.types.Scene |
     verified = []
     if export and verify:
         pick = sorted(results, key=lambda r: -r["volume_cm3"])
+        verify = len(pick) if verify < 0 else verify
         step = max(1, len(pick) // max(1, verify))
         for r in pick[::step][:verify]:
-            verified.append({"key": r["key"], **verify_stl(out_dir / r["stl"]["file"], r["volume_cm3"])})
+            verified.append({"key": r["key"], **verify_stl(out_dir / r["stl"]["file"],
+                                                            r["stl"].get("volume_cm3", r["volume_cm3"]))})
     summary = summarize(results, bed, plans, ctx, verified, time.time() - t_start)
     if write_report:
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -3170,59 +5344,107 @@ def build_print_parts(bed=BED_DEFAULT, out_dir=None, *, scene: bpy.types.Scene |
 # =====================================================================================================
 # Malzeme listesi (basılmayanlar) ve rapor
 # =====================================================================================================
+def _longeron_rows() -> list[dict]:
+    """Longeron düz parça boyları (P3: kırıklarda PETG soket blokları)."""
+    rows = []
+    for kind, nm in (("chine", "chine"), ("shoulder", "omuz")):
+        try:
+            pcs = P.longeron_pieces(kind, "L")
+        except Exception:                               # pragma: no cover - eski params
+            continue
+        Ls = [float(np.linalg.norm(np.asarray(b) - np.asarray(a))) for a, b in pcs]
+        rows.append({"group": "CF boru/çubuk", "item": f"Gövde longeronu — {nm} (düz parçalar, sol + sağ)",
+                     "spec": "Ø8/6 mm; parça boyları " + " + ".join(f"{L * 1000:.0f}" for L in Ls) +
+                             " mm (uçlar soket bloklarına 18 mm girer)", "qty": 2 * len(Ls)})
+    return rows
+
+
 def bom(plans: dict, n_pin_joints: int) -> list[dict]:
     """Basılmayan parçalar: CF borular, G10, bağlantı elemanları, servolar, takım, motor, aviyonik (spec'ten)."""
     out = []
     for t in _PR["spar_tubes"]:
+        if t["name"] == "longeron":
+            out += _longeron_rows()
+            continue
         L = float(t["length_m"]) if "length_m" in t else 0.0
         out.append({"group": "CF boru/çubuk", "item": t["name_tr"],
                     "spec": f"Ø{t['od_mm']}/{t['id_mm']} mm × {L * 1000:.0f} mm" if t["id_mm"] else
                     f"Ø{t['od_mm']} mm dolu × {L * 1000:.0f} mm", "qty": int(t["qty"])})
-    pin_len = sum(hp.L + 0.010 for hp in plans.values()) * 2
-    out.append({"group": "CF boru/çubuk", "item": "Menteşe pimi (çelik yay teli)",
-                "spec": f"Ø{HINGE_PIN_D * 1000:.1f} mm, toplam ≈ {pin_len:.2f} m (yüzey başına tek parça)",
+    pins = []
+    for nm, hp in plans.items():
+        u0, u1 = PIN_BORE_EXT.get(nm, (-0.006, 0.006))
+        pins.append(f"{nm} {(hp.L + u1 - u0) * 1000:.0f}")
+    out.append({"group": "CF boru/çubuk", "item": "Menteşe pimi — Ø1,75 mm PETG filament (P1; çelik tel yerine)",
+                "spec": f"delik Ø{_fmt_g(HINGE_PIN_HOLE_D * 1000)} mm çevrel; boylar (mm, yüzey başına): " + ", ".join(pins),
                 "qty": 2 * len(plans)})
     out.append({"group": "CF boru/çubuk", "item": "Segment hizalama pimi (CF çubuk)",
                 "spec": f"Ø{PIN_D * 1000:.0f} mm × {2 * PIN_DEPTH * 1000 - 2:.0f} mm", "qty": int(n_pin_joints)})
+    out.append({"group": "CF boru/çubuk", "item": "İç flap bağlayıcı teli (P9: iç flap dış flaba bağlı, ayrı servo yok)",
+                "spec": f"Ø{FLAP_JOINER['d'] * 1000:.0f} mm yay teli, 60 mm, iki ucu 90° kıvrık + Ø3/2,1 pirinç boru "
+                        "soket (flap içine epoksi)", "qty": 2})
     g = _PR["g10_bridge"]
     out += [
-        {"group": "G10 / kontrplak", "item": "Dihedral köprüsü (epoksi dolgulu yuvalar)",
-         "spec": f"{g['plates']}× {g['t_mm']}×{g['h_mm']}×{g['length_mm']} mm G10, {g['bolts']}", "qty": 1},
-        {"group": "G10 / kontrplak", "item": "Yangın perdesi (s = 2,06)",
-         "spec": f"G10 {float(P.SPEC['fuselage']['modules']['firewall_t_m']) * 1000:.0f} mm, gövde konturu", "qty": 1},
+        {"group": "G10 / kontrplak", "item": "Dihedral köprüsü (P4: kök bloğu ve kanat kutusu çerçevelerindeki "
+                                             "3,3 mm yuvalara epoksi)",
+         "spec": f"{g['plates']}× {g['t_mm']}×{G10_H * 1000:.0f}×{g['length_mm']} mm G10 (panelin 45 mm'si kök profiline "
+                 f"ve depo tabanına sığmaz), {g['bolts']}", "qty": 1},
+        {"group": "G10 / kontrplak", "item": "Yangın perdesi (s = 2,045)",
+         "spec": f"G10 {float(P.SPEC['fuselage']['modules']['firewall_t_m']) * 1000:.0f} mm, gövde konturu; NACA kanal "
+                 "açıklığı", "qty": 1},
         {"group": "G10 / kontrplak", "item": "Ön gövde / kuyruk modülü flanşı (s = 1,55)", "spec": "G10 2 mm, 4×M4",
          "qty": 1},
-        {"group": "G10 / kontrplak", "item": "ER-150 takım montaj plakası", "spec": "G10 3 mm (kök bloğu)",
-         "qty": 3},
+        {"group": "G10 / kontrplak", "item": "ER-150 takım montaj plakası (ana yatağa 2 × M3, burun yatağına 4 × M3)",
+         "spec": "G10 3 mm", "qty": 3},
         {"group": "G10 / kontrplak", "item": "Kumanda hornu", "spec": "G10 1,6 mm, yarığa yapıştırma",
-         "qty": 2 * len(plans)},
+         "qty": 2 * (len(plans) - 1)},
         {"group": "G10 / kontrplak", "item": "Kuyruk eyeri (stabilize boruları V birleşimi)",
          "spec": "G10 2 mm + epoksi, koni içinde", "qty": 1},
         {"group": "Dolgu", "item": "Kanat üstü fileto (basılmaz: sıfıra inen kama)",
          "spec": "epoksi + mikrobalon, kanat kökü–chine arası, ≈ 2 × 17 cm³; şablon: U_Fairing_Fillet_L/R", "qty": 2},
-        {"group": "Dolgu", "item": "Stabilize kök filetosu (basılmaz: 0,1–3 mm kama)",
-         "spec": "epoksi + mikrobalon (ısı bölgesi; LW-PLA yok), ≈ 2 × 4 cm³", "qty": 2},
+        {"group": "Dolgu", "item": "Stabilize kök filetosu + dikey kök mermisi (basılmaz: ≤ 3 mm kama)",
+         "spec": "epoksi + mikrobalon (ısı bölgesi; LW-PLA yok), ≈ 2 × 4 cm³ + 2 × 1 cm³", "qty": 2},
+        {"group": "Dolgu", "item": "Kaplama kenarları (kök kaportası, ER-150 kabartması: ≥ 0,8 mm'de kırpılmış)",
+         "spec": "epoksi + mikrobalon ile deriye sıfırlanır", "qty": 2},
         {"group": "Bağlantı", "item": "M4 cıvata + kelebek somun (burun modülü)", "spec": "A2 paslanmaz", "qty": 4},
-        {"group": "Bağlantı", "item": "M4 cıvata + somun (G10 köprü, flanş, motor)", "spec": "12.9", "qty": 12},
-        {"group": "Bağlantı", "item": "M3 cıvata + ısıl gömme dişli (kaporta, yanaklar)", "spec": "M3×8", "qty": 14},
+        {"group": "Bağlantı", "item": "M4 cıvata + somun (G10 köprü–soket–çerçeve, s = 1,55 flanşı)",
+         "spec": "12.9; köprüde boru başına 2 adet", "qty": 12},
+        {"group": "Bağlantı", "item": "Motor bağlantısı: M4 × 30 + titreşim takozu (kauçuk, Ø10 × 8, 40 Shore A)",
+         "spec": f"motor halkasındaki 4 × M4 ısıl gömme dişliye, kare {ENGINE_BOLT_SQ * 1000:.0f} mm", "qty": 4},
+        {"group": "Bağlantı", "item": "M4 naylon cıvata (dış panel tutma dili; P9)",
+         "spec": "M4 × 16, alttan, kök bloğu 2'deki ısıl gömme dişliye", "qty": 2},
+        {"group": "Bağlantı", "item": "Isıl gömme dişli M4",
+         "spec": f"Ø{_fmt_g(INSERT['M4'][0] * 1000)} delik × {_fmt_g(INSERT['M4'][1] * 1000)}: motor halkası 4 + tutma "
+                 "dili 2",
+         "qty": 6},
+        {"group": "Bağlantı", "item": "Isıl gömme dişli M3 + M3 × 8 cıvata",
+         "spec": f"Ø{_fmt_g(INSERT['M3'][0] * 1000)} delik: ana yatak 2 × 2, burun yatağı 4 (kısa), kaporta/yanak 6",
+         "qty": 14},
         {"group": "Bağlantı", "item": "Hizalama pimi (burun modülü)", "spec": f"çelik Ø{NOSE_PIN_D * 1000:.0f}×20 mm",
          "qty": 2},
-        {"group": "Bağlantı", "item": "Neodim mıknatıs (aviyonik kapağı)", "spec": "Ø6×3 mm", "qty": 6},
-        {"group": "Bağlantı", "item": "MPX 6 pin konnektör (kanat paneli), 8 pin (burun modülü)", "spec": "",
-         "qty": 3},
-        {"group": "Servolar", "item": SERVO["name"], "spec": "kanatçık, dış/iç flap, elevatör, dümen", "qty": 10},
+        {"group": "Bağlantı", "item": "Neodim mıknatıs (aviyonik kapağı; çerçeve 6 + gövde basamağı 6, eş kutup)",
+         "spec": f"Ø{MAGNET['d'] * 1000:.0f}×{MAGNET['t'] * 1000:.0f} mm N52, cep Ø{_fmt_g(MAGNET['pocket_d'] * 1000)}"
+                 f"×{_fmt_g(MAGNET['pocket_t'] * 1000)}", "qty": 12},
+        {"group": "Bağlantı", "item": "MPX konnektör", "spec": "6 pin: kanat paneli ↔ kök bloğu 2 (2), kuyruk "
+                                                               "modülü s = 1,55 (1); 8 pin: burun modülü (1)", "qty": 4},
+        {"group": "Kapak", "item": "Füme PETG levha (aviyonik kapağı, ısıl biçimlendirme; P10)",
+         "spec": f"{_fmt_g(HATCH_SHEET_T * 1000)} mm, ≥ 300 × 450 mm (1 yedek)", "qty": 2},
+        {"group": "Servolar", "item": SERVO["name"], "spec": "kanatçık, dış flap (iç flap bağlı), elevatör, dümen — "
+                                                            "yan başına 4", "qty": 8},
+        {"group": "Servolar", "item": "İtme çubuğu Ø1,6 çelik + çatal (clevis) + kilit", "spec": "her kumanda servosuna 1",
+         "qty": 8},
         {"group": "Servolar", "item": "Gaz, jikle, burun yönlendirme servosu", "spec": "mini", "qty": 3},
         {"group": "Servolar", "item": "Kapak servoları + sıralayıcı + fren", "spec": "mikro", "qty": 1},
         {"group": "İniş takımı", "item": P.SPEC["landing_gear"]["product"], "spec": "", "qty": 1},
         {"group": "İniş takımı", "item": "Ana tekerlek",
-         "spec": f"Ø{float(P.SPEC['landing_gear']['main']['wheel_d_m']) * 1000:.1f} mm, frenli", "qty": 2},
+         "spec": f"Ø{_fmt_g(float(P.SPEC['landing_gear']['main']['wheel_d_m']) * 1000)} mm, frenli", "qty": 2},
         {"group": "İniş takımı", "item": "Burun tekerleği",
          "spec": f"Ø{float(P.SPEC['landing_gear']['nose']['wheel_d_m']) * 1000:.0f} mm", "qty": 1},
         {"group": "İtki", "item": P.SPEC["propulsion"]["engine"]["model"], "spec": "susturucu + CDI dahil", "qty": 1},
         {"group": "İtki", "item": P.SPEC["propulsion"]["prop"]["model"], "spec": "", "qty": 1},
         {"group": "İtki", "item": "Spinner", "spec": f"Al Ø{float(P.SPEC['propulsion']['spinner']['d_m']) * 1000:.0f} mm",
          "qty": 1},
-        {"group": "İtki", "item": "Yakıt deposu", "spec": f"2 × {P.SPEC['fuselage']['internals']['fuel_tanks']['volume_l_each']} L",
+        {"group": "İtki", "item": "Yakıt deposu",
+         "spec": f"2 × {_fmt_g(float(P.SPEC['fuselage']['internals']['fuel_tanks']['volume_l_each']))} L",
          "qty": 2},
         {"group": "İtki", "item": "Isı kalkanı", "spec": P.SPEC["propulsion"]["muffler"]["shield"], "qty": 1},
         {"group": "Faydalı yük / aviyonik", "item": P.SPEC["payload"]["turret"]["model"] if "payload" in P.SPEC
@@ -3235,6 +5457,9 @@ def bom(plans: dict, n_pin_joints: int) -> list[dict]:
 
 
 def summarize(results: list, bed, plans: dict, ctx: Ctx, verified: list, elapsed: float) -> dict:
+    tools = [r for r in results if r.get("tooling")]
+    results_all = results
+    results = [r for r in results if not r.get("tooling")]          # alet (kalıp) uçak toplamına girmez
     tot_mass = sum(r["mass_total_g"] for r in results)
     tot_h = sum(r["print_h_total"] for r in results)
     n_pieces = sum(r["qty"] for r in results)
@@ -3251,7 +5476,7 @@ def summarize(results: list, bed, plans: dict, ctx: Ctx, verified: list, elapsed
         d["pieces"] += r["qty"]
         d["mass_g"] += r["mass_total_g"]
         d["hours"] += r["print_h_total"]
-    stl_bytes = sum(r.get("stl", {}).get("bytes", 0) for r in results)
+    stl_bytes = sum(r.get("stl", {}).get("bytes", 0) for r in results_all)
     n_pins = int(math.ceil(sum(r.get("pin_holes", 0) * r["qty"] for r in results) / 2))
     est = _PR["estimates"]
     return {
@@ -3265,10 +5490,27 @@ def summarize(results: list, bed, plans: dict, ctx: Ctx, verified: list, elapsed
                                      "segment_count": est["segment_count"]}},
         "by_material": {k: {kk: round(vv, 1) for kk, vv in v.items()} for k, v in by_mat.items()},
         "by_group": {k: {kk: round(vv, 1) for kk, vv in v.items()} for k, v in by_group.items()},
-        "all_manifold": all(r["check"]["ok"] for r in results),
-        "all_fit": all(r["fits"] or r["fits_tight"] for r in results),
-        "parts": results, "verified_stl": verified, "warnings": list(ctx.warnings),
-        "hinges": {k: {"lugs": len(v.lugs), "length_mm": round(v.L * 1000, 1)} for k, v in plans.items()},
+        "all_manifold": all(r["check"]["ok"] for r in results_all),
+        "all_fit": all(r["fits"] or r["fits_tight"] for r in results_all),
+        "tooling": {"parts": [r["key"] for r in tools], "pieces": sum(r["qty"] for r in tools),
+                    "mass_g": round(sum(r["mass_total_g"] for r in tools), 0),
+                    "print_h": round(sum(r["print_h_total"] for r in tools), 1)},
+        "heat_rule": getattr(ctx, "heat", {"ok": True}),
+        "parts": results_all, "verified_stl": verified, "warnings": list(ctx.warnings),
+        "hinges": {k: {"lugs": len(v.lugs), "length_mm": round(v.L * 1000, 1),
+                       "bore_mm": round(HINGE_PIN_HOLE_D * 1000, 2), "pin": f"Ø{HINGE_PIN_D * 1000:.2f} mm PETG filament",
+                       "pin_length_mm": round((v.L + PIN_BORE_EXT.get(k, (-0.006, 0.006))[1]
+                                               - PIN_BORE_EXT.get(k, (-0.006, 0.006))[0]) * 1000, 0),
+                       "insert_side": PIN_INSERT.get(k, ("", "", ""))[0], "route": PIN_INSERT.get(k, ("", "", ""))[1],
+                       "retention": PIN_INSERT.get(k, ("", "", ""))[2]} for k, v in plans.items()},
+        "load_paths": LOAD_PATHS,
+        "print_cuts": getattr(ctx, "print_cuts", {}),
+        "tolerance_coupon": {"stl": "tolerance_coupon.stl",
+                             "holes": [{"label": a, "nominal_mm": round(b * 1000, 2), "hole_mm": round(c * 1000, 2)}
+                                       for a, b, c in coupon_holes()],
+                             "note": "önce kupon basın, gerekirse TUBE_CLEAR ayarlayın"},
+        "thermoform": THERMOFORM_STEPS,
+        "slicer_groups": SLICER_GROUPS,
         "bom": bom(plans, n_pins),
         "settings": {"rib_mm": RIB_T * 1000, "frame_mm": [FRAME_T * 1000, FRAME_W * 1000],
                      "land_mm": [LAND_T * 1000, LAND_H * 1000], "sleeve_mm": SLEEVE_T * 1000,
@@ -3317,7 +5559,7 @@ def report_md(S: dict) -> str:
     L.append("")
     L.append("Kütle, filament etkin yoğunluğuyla (LW-PLA köpürmüş 0,65 g/cm³) parça hacminden hesaplanır; boya, "
              "yapıştırıcı ve basılmayan parçalar dahil değildir. Süre: hacimsel hız + katman başına "
-             f"{LAYER_OVERHEAD_S:.1f} s + tabla başına {PLATE_SETUP_H * 60:.0f} dk (kaba tahmin).")
+             f"{_fmt_g(LAYER_OVERHEAD_S)} s + tabla başına {PLATE_SETUP_H * 60:.0f} dk (kaba tahmin).")
     L.append("")
     L.append("| Malzeme | Parça | Hacim (cm³) | Kütle (g) | Süre (h) |")
     L.append("|---|---:|---:|---:|---:|")
@@ -3374,7 +5616,9 @@ def report_md(S: dict) -> str:
         bi_s = (f"{bi.get('faces', 0)} yüz, manifold olmayan {bi.get('nonmanifold', '?')}" if "error" not in bi
                 else f"hata: {bi['error']}")
         ec = v["edges"]
-        L.append(f"| `{v['key']}.stl` | {ec['triangles']} üçgen, eşsiz {ec['unpaired']}, çift {ec['dup_directed']} "
+        ew = ec.get("welded", {})
+        L.append(f"| `{v['key']}.stl` | {ec['triangles']} üçgen, eşsiz {ec['unpaired']}, çift {ec['dup_directed']}; "
+                 f"0,1 µm kaynakla eşsiz {ew.get('unpaired', '?')}, çift {ew.get('dup_directed', '?')} "
                  f"{'✓' if ec['ok'] else '✗'} | {v['volume_err_pct']:+.3f} % | {bi_s} |")
     L.append("")
     bad = [r for r in S["parts"] if not r["check"]["ok"]]
@@ -3393,6 +5637,8 @@ def report_md(S: dict) -> str:
         for w in S["warnings"]:
             L.append(f"- {w}")
     L.append("")
+    L += _report_sections(S)
+    L.append("")
     # BOM
     L.append("## Basılmayan parçalar (BOM)")
     L.append("")
@@ -3403,10 +5649,7 @@ def report_md(S: dict) -> str:
     L.append("")
     L.append(_ASSEMBLY_MD)
     L.append("")
-    L.append(_SETTINGS_MD.format(**{k: _fmt_g(v) if isinstance(v, float) else v for k, v in S["settings"].items()
-                                   if not isinstance(v, list)},
-                                 land=f"{_fmt(S['settings']['land_mm'][0], 1)} mm × {_fmt(S['settings']['land_mm'][1], 0)} mm",
-                                 frame=f"{_fmt(S['settings']['frame_mm'][0], 1)} mm × {_fmt(S['settings']['frame_mm'][1], 0)} mm"))
+    L.append(_settings_md(S))
     L.append("")
     L.append("## Kapsam")
     L.append("")
@@ -3416,65 +5659,253 @@ def report_md(S: dict) -> str:
     return "\n".join(L)
 
 
+LOAD_PATHS = [
+    {"load": "Kanat kaldırması (yarım kanat ≈ 11,7 kg × n)",
+     "path": "dış panel derisi + Ø27 panel borusu → Ø30 merkez soket → G10 köprü (2 × 3 mm, soketin iki yanında "
+             "3,3 mm yuvalarda, boru başına 2 × M4) → kanat kutusu çerçeveleri (s 1,20 / 1,29) → 4 longeron + halka 5",
+     "parts": "wing_panel_*, root_block_1/2, wing_frame_fwd, wing_frame_aft, fus_ring_5"},
+    {"load": "Kanat burulması / hücum açısı",
+     "path": "Ø6 dolu CF açı pimi (y 0,334–0,434, %60 veter) + Ø8 arka kiriş → kök bloğu arka ağı → çerçeveler",
+     "parts": "wing_panel_1, root_block_2, root_block_1"},
+    {"load": "Dış panel eki (eksenel / sökülebilir)",
+     "path": "PETG tutma dili (panel 1 kök kaburgası) → M4 naylon cıvata → kök bloğu 2'deki M4 ısıl gömme dişli",
+     "parts": "panel_lock_tab, wing_panel_1, root_block_2"},
+    {"load": "Ana takım (iniş darbesi, fren)",
+     "path": "ER-150 ünitesi → G10 3 mm plaka → ana takım yatağı (PA-CF beşik, 2 × M3) → sokete eyerli kol → Ø30 "
+             "soket → G10 köprü → çerçeveler / longeronlar",
+     "parts": "gear_mount_L (+ ayna), root_block_2, wing_frame_*"},
+    {"load": "Burun takımı",
+     "path": "burun ünitesi → G10 plaka (4 × M3 kısa dişli) → burun yatağı (PA-CF, iki chine longeronuna eyer) → "
+             "longeronlar → halka 1 çerçevesi",
+     "parts": "gear_mount_N, fus_ring_1"},
+    {"load": "İtki + titreşim (DLE-20, 1,86 kW, tek silindir)",
+     "path": "motor → 4 × M4 + kauçuk takoz → motor halkası (PA-CF, halka 9 içinde 30 mm bindirme, 4 longeron "
+             "soketi) → longeronlar; G10 yangın perdesi halkaya yaslanır",
+     "parts": "engine_ring, fus_ring_9"},
+    {"load": "Kuyruk (stabilize + dikey yükleri)",
+     "path": "Ø12 stabilize kirişi + Ø6 arka çubuk → koni içi G10 eyer → kuyruk konisi (LW-ASA) → s = 1,55 G10 "
+             "flanşı (4 × M4) → longeronlar",
+     "parts": "stab_1/2, fin_1/2, fus_ring_7–9"},
+    {"load": "Longeron sürekliliği",
+     "path": "düz CF parçalar s = 1,167 ve 1,55 kırıklarında PETG soket bloklarına 18 mm girer (epoksi)",
+     "parts": "longeron_joint_chine, longeron_joint_shoulder, fus_ring_4/5"},
+]
+
+THERMOFORM_STEPS = [
+    "Kalıp: hatch_buck_a + hatch_buck_b (PLA, 0,3 mm katman, 3 çevre, %15 dolgu) Ø3 CF pimlerle birleştirilip "
+    "yapıştırılır; üst yüz 240 → 400 kum zımpara, dolgu astarı, 800 kum; kalıp ayırıcı (PVA / mum). Yanlar 2° eğimli, "
+    "8 mm kesim payı kalıba dahil.",
+    "Levha: 1,0 mm füme PETG 65 °C'de 2 saat kurutulur (kabarcık olmasın), alüminyum çerçeveye sıkıştırılır.",
+    "Isıtma: fırında / ısıtıcı altında 140–160 °C, levha 10–20 mm sarkana kadar (≈ 1–2 dk).",
+    "Biçimlendirme: kalıp vakum masasına (≥ 350 × 200 mm) konur, levha hızla indirilir, vakum (≥ 0,6 bar) açılır; "
+    "soğuyunca (≈ 1 dk) çıkarılır.",
+    "Kesim: kalıp kenar çizgisinden makas / Dremel ile kesilir, kenar 400 kumla düzeltilir.",
+    "Çerçeve: hatch_frame_a/b (PETG, düz alt yüz tablada) cepleri ile 6 mıknatıs CA ile yapıştırılır (kutup gövde "
+    "basamağındaki eşleriyle denenir); çerçeve levhanın iç yüzüne şeffaf epoksi / UV yapıştırıcı ile yapıştırılır "
+    "(bölme s = 0,680).",
+    "Kontrol: kapak gövde basamağına oturur, dış yüz deriden en çok 1,6 mm yüksek (flush); mıknatıs eşleri 0,3 mm "
+    "içinde eş eksenli (aynı HATCH_MAGNETS listesinden).",
+]
+
+SLICER_GROUPS = [
+    {"group": "Kanat panelleri, uç kapağı", "parts": "wing_panel_*, wing_tip", "material": "LW-PLA", "nozzle_mm": 0.4,
+     "line_mm": "0,45 (kafes 1 × 0,45; deri 0,6 = 1 × 0,6; D-kutu 1,2 = 2 × 0,6)", "layer_mm": "0,20 (kafes)–0,25",
+     "walls": "1 (D-kutu 2)", "infill": "%0", "arachne_mm": "min 0,40 / maks 0,65"},
+    {"group": "Kök blokları, strake, gövde halkaları", "parts": "root_block_*, glove_strake, fus_*", "material": "LW-PLA",
+     "nozzle_mm": 0.6, "line_mm": "0,8 (deri 0,8 = 1 çizgi; flanş 2,4 = 3 × 0,8)", "layer_mm": "0,25–0,30",
+     "walls": "1", "infill": "%0", "arachne_mm": "min 0,55 / maks 0,95"},
+    {"group": "Kuyruk konisi", "parts": "fus_ring_7–9 (+ ısı kuralıyla LW-ASA'ya geçenler)", "material": "LW-ASA",
+     "nozzle_mm": 0.4, "line_mm": "0,5 (1,0 = 2 × 0,5)", "layer_mm": "0,20–0,25", "walls": "2", "infill": "%0",
+     "arachne_mm": "min 0,40 / maks 0,60"},
+    {"group": "Kuyruk yüzeyleri, kumanda yüzeyleri", "parts": "stab_*, fin_*, aileron_*, flap*, elevator_*, rudder_*",
+     "material": "LW-PLA", "nozzle_mm": 0.4, "line_mm": "0,5 (deri 0,5 = 1 çizgi)", "layer_mm": "0,20",
+     "walls": "1", "infill": "%0", "arachne_mm": "min 0,40 / maks 0,60"},
+    {"group": "PA-CF kaplama ve yük yolu parçaları", "parts": "cowl_*, exhaust_ring, intake, root_fairing, gear_blister, "
+     "wing_frame_*, gear_mount_*, engine_ring", "material": "PA-CF", "nozzle_mm": 0.4,
+     "line_mm": "0,53 (1,6 = 3 × 0,53; 3 mm çerçeve 6 çizgi)", "layer_mm": "0,20", "walls": "3",
+     "infill": "%100 (≤ 3,2 mm), %40 gyroid (daha kalın)", "arachne_mm": "min 0,40 / maks 0,65"},
+    {"group": "PETG parçalar", "parts": "door_*, hatch_frame_*, fus_nose_flange, turret_collar, panel_lock_tab, "
+     "longeron_joint_*", "material": "PETG", "nozzle_mm": 0.4, "line_mm": "0,40 (1,2 = 3 × 0,4; 1,6 = 4 × 0,4)",
+     "layer_mm": "0,20", "walls": "3–4", "infill": "%100 (ince), %40 (blok)", "arachne_mm": "min 0,34 / maks 0,50"},
+    {"group": "TPU pabuç", "parts": "scuff_pad", "material": "TPU", "nozzle_mm": 0.4, "line_mm": "0,45",
+     "layer_mm": "0,20", "walls": "3", "infill": "%100", "arachne_mm": "—"},
+    {"group": "Alet: kalıp + kupon", "parts": "hatch_buck_*, tolerance_coupon", "material": "PLA / LW-PLA",
+     "nozzle_mm": 0.6, "line_mm": "0,65", "layer_mm": "0,30", "walls": "3", "infill": "%15", "arachne_mm": "—"},
+]
+
+
+def _fmt_st(v: float) -> str:
+    """İstasyon (m): 3–4 ondalık, sondaki sıfırlar atılır (0.2325 → "0,2325", 0.4 → "0,4")."""
+    return f"{float(v):.4f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
+def _report_sections(S: dict) -> list[str]:
+    """Yük yolları, ısı kuralı, menteşe pimleri, tolerans kuponu, ısıl biçimlendirme, kesim istasyonları, aletler."""
+    L = ["## Yük yolları (P4)", "", "| Yük | Yol | Basılı parçalar |", "|---|---|---|"]
+    for r in S.get("load_paths", []):
+        L.append(f"| {r['load']} | {r['path']} | {r['parts']} |")
+    hr = S.get("heat_rule", {})
+    L += ["", "## Isı kuralı (AERO-09)", ""]
+    L.append(f"Kural: susturucu ve silindir zarflarının {_fmt(hr.get('radius_mm', 150), 0)} mm yakınında "
+             f"{hr.get('no_material', 'LW-PLA')} yok (zarflar `params.engine_envelope`, susturucu `U_Exhaust_Muffler`). "
+             f"Sonuç: **{'uygun' if hr.get('ok', True) else 'İHLAL'}**.")
+    if hr.get("switched"):
+        L.append("")
+        L.append("Otomatik malzeme değişimi: " + "; ".join(
+            f"`{x['key']}` {x['source']}'e {_fmt(x['min_mm'], 0)} mm → {x['to']}" for x in hr["switched"]))
+    if hr.get("violations"):
+        L.append("")
+        L.append("İhlaller: " + "; ".join(f"`{x['key']}` {_fmt(x['min_mm'], 0)} mm ({x['source']})"
+                                          for x in hr["violations"]))
+    if hr.get("near"):
+        L += ["", "| Parça (250 mm içinde) | Malzeme | En yakın (mm) | Kaynak |", "|---|---|---:|---|"]
+        for x in hr["near"][:16]:
+            L.append(f"| {x['key']} | {x['material']} | {_fmt(x['min_mm'], 0)} | {x['source']} |")
+    L += ["", "## Menteşe pimleri (P1)", "",
+          f"Pim: Ø{_fmt_g(HINGE_PIN_D * 1000)} mm PETG filament (çelik tel yerine; esnek, paslanmaz, kesilip ısıyla "
+          f"ucu mantarlanabilir). Delik Ø{_fmt_g(HINGE_PIN_HOLE_D * 1000)} mm çevrel çokgen (iç yarıçap "
+          f"{_fmt_g(HINGE_PIN_HOLE_D * 500)} mm). Her yüzeyin tek bir düz takma yolu vardır; delik takma tarafında "
+          "komşu parçadan dışarı uzatılmıştır.", "",
+          "| Yüzey | Dil | Pim boyu (mm) | Takma ucu | Yol | Tutma |", "|---|---:|---:|---|---|---|"]
+    for k, h in S.get("hinges", {}).items():
+        L.append(f"| {k} | {h['lugs']} | {_fmt(h.get('pin_length_mm', h['length_mm']), 0)} | {h.get('insert_side', '')} | "
+                 f"{h.get('route', '')} | {h.get('retention', '')} |")
+    tc = S.get("tolerance_coupon")
+    if tc:
+        L += ["", "## Tolerans kuponu (P7)", "",
+              f"**Önce kupon basın, gerekirse TUBE_CLEAR ayarlayın.** `{tc['stl']}`: 20 mm LW-PLA blok, delikler "
+              "segmentlerdeki gibi dik basılır ve parçalarla aynı payı taşır (çevrel çokgen, kenar ≈ 0,6 mm). Boru "
+              "elle zorlanmadan geçmeli, 0,3 mm'den fazla boşluk kalmamalı; geçmiyorsa `HOLE_CLEAR` (LW-PLA boru "
+              f"{_fmt_g(TUBE_CLEAR * 1000)} mm) artırılıp yeniden üretin.", "",
+              "| Delik | Nominal (mm) | Basılan (mm) |", "|---|---:|---:|"]
+        for hh in tc["holes"]:
+            L.append(f"| {hh['label']} | {_fmt_g(hh['nominal_mm'])} | {_fmt_g(hh['hole_mm'])} |")
+    if S.get("thermoform"):
+        L += ["", "## Aviyonik kapağı — ısıl biçimlendirme (P10)", "",
+              "FDM PETG füme cam görünümü vermez (çok çizgili, buğulu); kapak 1,0 mm füme PETG levhadan basılı "
+              "kalıp üstünde vakumla biçimlendirilir (RC kanopi yöntemi). Kalıp uçak kütlesine girmez.", ""]
+        L += [f"{i + 1}. {t}" for i, t in enumerate(S["thermoform"])]
+    pc = S.get("print_cuts")
+    if pc:
+        L += ["", "## Baskı kesim istasyonları = panel çizgileri (P13)", "",
+              f"Segment eklerinde dış deri kenarına {_fmt_g(pc['groove_mm'][0])} × {_fmt_g(pc['groove_mm'][1])} mm pah: "
+              "komşu iki parça birleşince V-oluk (panel çizgisi) oluşur. Render panel çizgileri bu istasyonlarda olmalı "
+              "(JSON `print_cuts`).", "",
+              "- kanat y (m): " + ", ".join(_fmt_st(v) for v in pc["wing_y_m"]) + f"; strake ayrımı s = {_fmt_st(pc['strake_s_m'])}",
+              "- gövde s (m): " + ", ".join(_fmt_st(v) for v in pc["fuselage_s_m"]),
+              f"- stabilize eki y = {_fmt_st(pc['stab_y_m'])} m (ok ekseni boyunca), dikey eki h = {_fmt_st(pc['fin_h_m'])} m",
+              "- kumanda yüzeyi ekleri y (m): " + "; ".join(f"{k} " + ", ".join(_fmt_st(v) for v in vv)
+                                                           for k, vv in pc["control_surface_y_m"].items() if vv)]
+    tl = S.get("tooling", {})
+    if tl.get("parts"):
+        L += ["", "## Alet ve test parçaları", "",
+              f"Uçak toplamına girmez: {', '.join('`' + k + '.stl`' for k in tl['parts'])} — {tl['pieces']} parça, "
+              f"≈ {_fmt(tl['mass_g'], 0)} g, ≈ {_fmt(tl['print_h'], 1)} h (kalıp %{TOOLING_INFILL * 100:.0f} dolgu "
+              "eşdeğeri)."]
+    return L
+
+
 _ASSEMBLY_MD = """## Montaj sırası
 
+0. **Tolerans kuponu**: `tolerance_coupon.stl` ilk basılır; CF borular, pimler ve Ø1,75 PETG menteşe pimi deliklerde
+   denenir (bkz. Tolerans kuponu). Gerekirse `HOLE_CLEAR` ayarlanıp STL'ler yeniden üretilir.
 1. **Kanat dış paneli** (her yan): segmentleri kökten uca dizin; her ekte alttaki segmentin kaburgası üstteki
    segmentin 2,4 mm flanşına oturur. Ø3 CF hizalama pimlerini hücum kenarı göbeklerine yapıştırın, 27/25 panel
    borusunu ve 8/6 arka kirişi kılavuz kovanlarından geçirerek kuru montajla hizayı kontrol edin; sonra ekleri
-   ince CA / 5 dk epoksi ile sırayla yapıştırın. Uç borusu (16/14) ve kademeli burç 1,00–1,10'da panel borusuna girer.
-2. **Uç kapağı**: seyrüsefer LED'ini yuvasına koyup kabloyu kaburga deliklerinden geçirin; eğik uç düzlemine yapıştırın.
-3. **Kumanda yüzeyleri**: segmentleri çift kaburga yüzlerinden yapıştırın (pim deliği hizalı). Yüzeyi oyuğa
-   yerleştirip Ø1,5 çelik pimi dış uçtan dil ve kovanlardan geçirin; pim ucunu oyuk duvarında CA ile sabitleyin.
-   G10 hornu yarığa epoksiyle yapıştırın; servo yuvasına servoyu takıp itme çubuğunu bağlayın.
-4. **Kök blokları ve strake**: kök bloğu 1 ile glove strake'i pimlerle birleştirin, kök bloğu 2'yi flanşından
-   yapıştırın. Ø30 soketi ve açı pimi kovanını epoksiyle sabitleyin; ER-150 ünitesini G10 plakasıyla kuyu
-   üstüne bağlayın.
-5. **Gövde**: halkaları çerçeve (tabla tarafı) → flanş (üst) sırasıyla dizin; 4 adet 8/6 CF longeronu chine ve omuz
-   kovanlarından geçirerek hizalayın ve yapıştırın. s = 1,55'e G10 flanşı, s = 2,06'ya G10 yangın perdesini
-   yapıştırın (kuyruk konisi LW-ASA). G10 dihedral köprüsünü kanat kutusu açıklığından geçirip kök bloklarına
-   M4 ile bağlayın; kök kaportasını yapıştırın, kanat üstü filetoyu epoksi + mikrobalonla şekillendirin.
+   ince CA / 5 dk epoksi ile sırayla yapıştırın. Uç borusu (16/14) ve kademeli burç 1,00–1,10'da panel borusuna
+   girer. Servo kablolarını Ø8 kablo kanalından (ana kirişin arkasında; kaburga ve kafes delikleri hizalı) panel 1
+   kök kaburgasındaki MPX 6 pin cebine çekin. PETG tutma dilini panel 1 kök kaburgasına (açı piminin arkası) yapıştırın.
+2. **Dış flap, uç kapağı, kanatçık** (menteşe pimleri, P1):
+   a. Dış flap segmentlerini çift kaburga yüzlerinden (pim delikleri hizalı) yapıştırın; flabı oyuğa yerleştirip
+      Ø1,75 PETG pimi **iç uçtan**, panel 1'in y = 0,36 kök kaburgasındaki delikten sürün (dış uçta kör delikte durur).
+   b. Uç kapağını seyrüsefer LED'i ve kablosuyla eğik uç düzlemine yapıştırın.
+   c. Kanatçığı oyuğa yerleştirip pimi **dış uçtan**, uç kapağının dış yüzündeki Ø2,1 delikten sürün (iç uçta kör
+      delikte durur); dış deliği CA + mikrobalonla tıkayın (sökmek için tıkaç delinir).
+   G10 hornları yarıklarına epoksiyle yapıştırın; servoları yuvalarına takıp itme çubuğu + çatalla bağlayın.
+3. **Kök blokları, iç flap, ana takım**: kök bloğu 1 ile glove strake'i pimlerle birleştirin, kök bloğu 2'yi
+   flanşından yapıştırın; Ø30 soketi, iç takviyeyi ve açı pimi kovanını epoksiyle sabitleyin. İç flap: Ø3/2,1 pirinç
+   bağlayıcı soketini flap içine epoksileyin; iç flabı oyuğa yerleştirip pimi **dış uçtan**, kök bloğu 2'nin
+   y = 0,36 kaburgasındaki delikten sürün (panel sökülüyken). İç flabın servosu yoktur: Ø2 bağlayıcı tel panel
+   takılırken dış flabın soketine girer (P9). Ana takım yatağını (gear_mount_L/R) kök bloğu 2'nin açık iç ucundan
+   kaydırıp sokete eyerleyin; ER-150 ünitesini G10 plakasıyla yatağa 2 × M3 (ısıl gömme dişli) bağlayın.
+4. **Gövde ve kanat kutusu** (P4): halkaları çerçeve (tabla tarafı) → flanş (üst) sırasıyla dizin. Longeronlar 3'er
+   düz CF parçadır: chine ve omuz kovanlarından geçirip s = 1,167 ve 1,55 kırıklarında PETG soket bloklarına
+   (longeron_joint_*) epoksiyle birleştirin. Kanat kutusu çerçevelerini (wing_frame_fwd/aft, PA-CF) halka 5'teki
+   yuvalarına yerleştirin; G10 köprü plakalarını (2 × 3 × 40 × 300 mm) çerçeve ve kök bloğu yuvalarına epoksiyle
+   oturtun, boru başına 2 × M4 ile plaka–soket–plaka sıkın. s = 1,55'e G10 flanşı yapıştırın. Burun takım yatağını
+   (gear_mount_N) halka 1'in ön ucundan kaydırıp iki chine longeronuna eyerleyin; burun ünitesi 4 × M3.
+5. **Kaplamalar**: kök kaportasını (kano) ve ER-150 kabartmasını yapıştırın; ≥ 0,8 mm'de kırpılmış kenarları ve
+   kanat üstü filetoyu epoksi + mikrobalonla deriye sıfırlayın.
 6. **Burun modülü**: burun konisi + modül halkasını yapıştırın; PETG flanşı modül halkasının flanşına yapıştırın;
-   taret yakasını yuvasına takın. Modül 2×Ø4 pim + 4×M4 kelebek somunla halka 1'e bağlanır (sökülebilir).
+   taret yakasını takın. Modül 2 × Ø4 pim + 4 × M4 kelebek somunla halka 1'e bağlanır (sökülebilir; MPX 8 pin).
 7. **Kuyruk**: stabilize yarılarını 12/10 kiriş ve 6/4 arka çubukla koni içindeki G10 eyerde birleştirin; kök
-   yüzleri koni konturuna 0,3 mm boşlukla oturur. Kök filetosunu epoksi + mikrobalonla doldurun. Dikeyleri stabilize ucuna
-   (iç yüz yuvası) ve 8/6 dikey kirişine geçirin.
-8. **Motor bölümü**: DLE-20'yi yangın perdesine bağlayın, ısı kalkanını takın; PA-CF kaportayı 6×M3 ile perdeye,
-   yanakları M3 ısıl gömme dişlilerle flanşlarına vidalayın; lüle halkasını kaporta arkasına yapıştırın; TPU pabucu
-   kaporta altına yapıştırın.
-9. **Kapaklar**: takım kapaklarını (PETG) menteşelerine, aviyonik kapağını mıknatıslarına yerleştirin. Ağırlık
-   merkezini s = 1,232 m'de (aralık 1,219–1,245) doğrulayın."""
+   filetosunu epoksi + mikrobalonla doldurun. **Dikeyler takılmadan önce** elevatörü oyuğa yerleştirip pimi
+   **dış uçtan**, stabilize ucundaki delikten sürün (dikey takılınca elevatör pimi sökülemez). Dikeyleri stabilize
+   ucuna ve 8/6 dikey kirişine geçirin. Dümeni oyuğa yerleştirip pimi **üst uçtan**, dikey 2 tepesindeki Ø2,1
+   delikten sürün; üst deliği CA ile tıkayın. Kuyruk servo kabloları Ø6 kanaldan (stabilize ağları → kök duvarı →
+   koni) s = 1,55 MPX 6 pine.
+8. **Motor bölümü**: motor halkasını (engine_ring) halka 9 içine 30 mm bindirerek yapıştırın (4 longeron ucu
+   soketlere girer); G10 yangın perdesini halkaya yaslayın. DLE-20'yi 4 × M4 + kauçuk takozla halkadaki ısıl gömme
+   dişlilere bağlayın, ısı kalkanını takın; PA-CF kaportayı 6 × M3 ile, yanakları flanşlarından vidalayın; lüle
+   halkasını kaporta önüne, NACA dudak çerçevesini halka 9'daki cebe, TPU pabucu kaporta altına yapıştırın.
+9. **Kapaklar**: takım kapaklarını (PETG; menteşe dilleri ve horn baskıda dahil) menteşelerine takın, burun tapa
+   kapağını (door_N_3) bacak dirseğine bağlayın. Aviyonik kapağını (ısıl biçimlendirilmiş levha + PETG çerçeve)
+   mıknatıslarla oturtun.
+10. **Saha montajı**: dış paneli boruya geçirip MPX'i takın, tutma dilini alttan M4 naylon cıvatayla kök bloğu 2'ye
+   bağlayın. Ağırlık merkezini s = 1,232 m'de (aralık 1,219–1,245) doğrulayın."""
 
 
-_SETTINGS_MD = """## Yazıcı ayarları
-
-**LW-PLA tek duvar deriler** (kanat, gövde, kuyruk; colorFabb LW-PLA): nozul 0,4 mm, 230–245 °C (köpürme), akış
-%55–60, çizgi genişliği 0,6 mm (köpürmüş), katman 0,25–0,30 mm, çevre sayısı 1 (0,6 mm deri tek çizgi;
-1,2 mm D-kutu ve flanşlar 2 çizgi), dolgu %0, üst/alt katman 3 (kaburga {rib_mm} mm ve çerçeveler dolu basılır),
-hız 40–60 mm/s, fan %30–50, tabla 50–60 °C, geri çekme 0,5–1 mm (LW-PLA sızar; "geri çekmede sil" açık),
-"çevreleri geçme" seyir açık, dikiş firar kenarında hizalı. İnce duvar algılama (Arachne / "Print Thin Walls")
-açık olmalı: {lattice_mm} mm geodezik kafes tek ince çizgiyle basılır; boşluk dolgusu kapalı.
-Segmentler dik (açıklık Z'de) basılır; kaburga tablada, {land} flanş üstte. 45°'den dik çıkıntı yalnız
-menteşe dili kamalarında ve kapalı kuyruk uçlarında (kısa köprü) vardır; destek gerekmez.
-
-**LW-ASA** (kuyruk konisi, 1,0 mm): 250–265 °C, akış %55–65, kapalı kabin, tabla 95–105 °C, fan %0–20.
-**PA-CF** (kaporta, lüle, kök kaportası, alık; 1,6 mm): sertleştirilmiş nozul, 270–290 °C,
-kurutulmuş filament (80 °C 6 h), 3 çevre, %100 dolgu (ince duvar), kapalı kabin. Kaplamaların gövdeye/kanada
-yapışan kenarı sıfıra incelir (alanın %2–7'si < 0,5 mm); dilimleyici 0,4 mm altını basmaz → montajda epoksi
-macunla kenar düzeltilir.
-**PETG** (kapaklar, taret yakası, burun flanşı; 1,2–3 mm): 235–245 °C, %100 dolgu, katman 0,2 mm; aviyonik
-kapağı füme PETG, parlak yüz yukarı.
-**TPU 95A** (sürtünme pabucu): 220–230 °C, yavaş (20 mm/s), geri çekme kapalı.
-
-Montaj payları: boru deliği Ø + {tube_clear_mm} mm, kovan eti {sleeve_mm} mm, kesme ağı {web_mm} mm,
-geodezik kafes {lattice_mm} mm (±45°, 70 mm aralık), hizalama pimi Ø{pin_mm} mm, menteşe pimi Ø{hinge_pin_mm} mm,
-çerçeve {frame}."""
+def _settings_md(S: dict) -> str:
+    """Yazıcı ayarları (P14): grup başına dilimleyici tablosu + malzeme süreçleri + destek + ısı/boya kuralı."""
+    st = S["settings"]
+    L = ["## Yazıcı ayarları", "",
+         "Çizgi genişlikleri modeldeki etlerle (spec `print.walls_mm`) uyumludur: her et, tablodaki çizgi genişliğinin "
+         "tam katıdır ya da Arachne aralığına tek çizgi olarak sığar.", "",
+         "| Grup | Parçalar | Malzeme | Nozul (mm) | Çizgi (mm) | Katman (mm) | Çevre | Dolgu | Arachne duvar genişliği |",
+         "|---|---|---|---:|---|---|---|---|---|"]
+    for g in S.get("slicer_groups", SLICER_GROUPS):
+        L.append(f"| {g['group']} | {g['parts']} | {g['material']} | {_fmt_g(g['nozzle_mm'])} | {g['line_mm']} | "
+                 f"{g['layer_mm']} | {g['walls']} | {g['infill']} | {g['arachne_mm']} |")
+    L += ["",
+          "**LW-PLA** (colorFabb, köpüren): 230–245 °C, akış %55–60, 40–60 mm/s, fan %30–50, tabla 50–60 °C, geri çekme "
+          "0,5–1 mm (\"geri çekmede sil\" açık), seyir \"çevreleri geçme\", dikiş firar kenarında hizalı. İnce duvar "
+          "algılama (Arachne / \"Print Thin Walls\") açık, boşluk dolgusu kapalı; kaburga "
+          f"{_fmt_g(st['rib_mm'])} mm ve çerçeveler dolu basılır. Segmentler dik (açıklık / gövde ekseni Z'de) basılır: "
+          "kaburga ya da çerçeve tablada, flanş üstte.",
+          "**LW-ASA**: 250–265 °C, akış %55–65, kapalı kabin, tabla 95–105 °C, fan %0–20.",
+          "**PA-CF**: sertleştirilmiş nozul, 270–290 °C, kurutulmuş filament (80 °C 6 h), kapalı kabin, fan %0–20.",
+          "**PETG**: 235–245 °C, fan %30–50, tabla 70–80 °C. **TPU 95A**: 220–230 °C, 20 mm/s, geri çekme kapalı.",
+          "**PLA kalıp**: 0,6 mm nozul, 0,3 mm katman, 3 çevre, %15 dolgu; üst yüz zımpara + astar (ısıl "
+          "biçimlendirme bölümü).", "",
+          "**Destek** (P6): parça tablosundaki \"Destek\" sütunu bağlayıcıdır — \"tabla desteği\": seçilen yönde "
+          f"45°'den dik, altında model olmayan çıkıntı > {_fmt_g(SUPPORT_MIN_CM2)} cm²; \"model üstü destek\": 5 mm'den "
+          f"yüksekten modele inen çıkıntı > {_fmt_g(MODEL_SUPPORT_MIN_CM2)} cm²; \"yok\". Ağaç (tree) destek, arayüz "
+          "boşluğu 0,2 mm önerilir. Tabla teması 3 cm²'den ya da izin %3'ünden azsa STL'ye 1 mm kırılabilir baskı ayağı "
+          "eklenmiştir (Not sütunu); baskıdan sonra kesilir. Kanat ve gövde segmentlerindeki çıkıntılar: menteşe dili "
+          "kamaları, kuyu tavanları, kapak/kuyu açıklığı kenarları ve kapalı uç kapakları.", "",
+          "**Isı / boya kuralı** (P14): LW-PLA Tg ≈ 55 °C; güneşte koyu üst deri 65–75 °C'ye ısınır. Üst yüz boyasının "
+          "güneş yansıtması ≥ 0,5 olmalı (açık gri ya da IR-yansıtıcı \"cool\" pigmentli gri). **\"taktik\" (koyu) "
+          "livery yalnız render içindir**: gerçek uçakta koyu üst yüz kullanılacaksa üst deriler (kanat, gövde üstü, "
+          "kuyruk) LW-ASA'ya (Tg 95 °C) geçirilmelidir. Isı kuralı bölgesindeki parçalar zaten LW-ASA / PA-CF.", "",
+          f"**Montaj payları** (P7): boru deliği Ø + {_fmt_g(HOLE_CLEAR['lw']['tube'] * 1000)} mm (LW-PLA/LW-ASA; "
+          f"PETG/PA-CF + {_fmt_g(HOLE_CLEAR['hard']['tube'] * 1000)} mm), pim deliği Ø + "
+          f"{_fmt_g(HOLE_CLEAR['lw']['pin'] * 1000)} mm, M4 Ø{_fmt_g(M4_HOLE_D * 1000)}, M3 Ø{_fmt_g(M3_HOLE_D * 1000)}, "
+          f"ısıl gömme dişli M3 Ø{_fmt_g(INSERT['M3'][0] * 1000)} / M4 Ø{_fmt_g(INSERT['M4'][0] * 1000)} mm; bütün "
+          "delikler çevrel çokgen (iç yarıçap = delik yarıçapı, kenar ≈ 0,6 mm). Kovan eti "
+          f"{_fmt_g(st['sleeve_mm'])} mm, kesme ağı {_fmt_g(st['web_mm'])} mm, geodezik kafes "
+          f"{_fmt_g(st['lattice_mm'])} mm (±{LATTICE_DEG:.0f}°, 70 mm aralık; dik baskıda yatayla "
+          f"{90 - LATTICE_DEG:.0f}°), hizalama pimi Ø{_fmt_g(st['pin_mm'])} mm, menteşe pimi Ø{_fmt_g(st['hinge_pin_mm'])} "
+          f"mm, çerçeve {_fmt(st['frame_mm'][0], 1)} × {_fmt(st['frame_mm'][1], 0)} mm, flanş "
+          f"{_fmt(st['land_mm'][0], 1)} × {_fmt(st['land_mm'][1], 0)} mm."]
+    return "\n".join(L)
 
 
 # =====================================================================================================
 # Önizleme (patlatılmış) — düşük çözünürlük Cycles
 # =====================================================================================================
 PREVIEW_COLOR = {"LW-PLA": (0.80, 0.80, 0.77), "LW-ASA": (0.62, 0.58, 0.50), "PA-CF": (0.09, 0.09, 0.10),
-                 "PETG": (0.85, 0.32, 0.06), "PETG-füme": (0.12, 0.16, 0.20), "TPU": (0.03, 0.03, 0.03)}
+                 "PETG": (0.85, 0.32, 0.06), "PETG-füme": (0.12, 0.16, 0.20), "TPU": (0.03, 0.03, 0.03),
+                 "PLA": (0.20, 0.45, 0.75)}
 
 
 def render_exploded_preview(filepath: str | Path, res=(640, 400), samples: int = 16, explode: float = 1.0,
@@ -3509,7 +5940,7 @@ def render_exploded_preview(filepath: str | Path, res=(640, 400), samples: int =
         mats[k] = m
     tmp = []
     for ob in src_col.objects:
-        if not ob.name.startswith("UP_"):
+        if not ob.name.startswith("UP_") or ob.get("ucav_print_tooling"):    # kalıp / kupon uçak görünümünde değil
             continue
         o2 = bpy.data.objects.new(ob.name + "_pv", ob.data)
         ex = np.asarray(ob.get("ucav_explode", (0, 0, 0)), float) * explode
@@ -3579,10 +6010,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--blend", default=None, help="sonuç sahnesini .blend olarak kaydet")
     ap.add_argument("--solver", default="MANIFOLD", choices=["MANIFOLD", "EXACT"],
                     help="kabuk/özellik boolean çözücüsü (segment kesimi her zaman EXACT)")
+    ap.add_argument("--no-heat-auto", action="store_true",
+                    help="ısı kuralı: LW-PLA'yı otomatik LW-ASA'ya geçirme, ihlal olarak raporla (çıkış 1)")
     ap.add_argument("-q", "--quiet", action="store_true")
     a = ap.parse_args(argv)
     S = build_print_parts(tuple(a.bed), a.out, only=a.only, export=not a.no_stl, write_report=not a.no_report,
-                          solver=a.solver, verbose=not a.quiet)
+                          solver=a.solver, verbose=not a.quiet, heat_auto=not a.no_heat_auto)
     T = S["totals"]
     print(f"{T['unique_parts']} benzersiz STL, {T['pieces']} parça, {T['mass_g'] / 1000:.2f} kg, ≈{T['print_h']:.0f} h, "
           f"{T['stl_mb']:.1f} MB; manifold: {'evet' if S['all_manifold'] else 'HAYIR'}; "
@@ -3594,7 +6027,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("önizleme:", a.preview)
     if a.blend:
         bpy.ops.wm.save_as_mainfile(filepath=str(Path(a.blend).resolve()))
-    return 0 if (S["all_manifold"] and S["all_fit"]) else 1
+    heat_ok = S.get("heat_rule", {}).get("ok", True)
+    if not heat_ok:
+        print("UYARI: ısı kuralı ihlali:", ", ".join(v["key"] for v in S["heat_rule"].get("violations", [])))
+    return 0 if (S["all_manifold"] and S["all_fit"] and heat_ok) else 1
 
 
 if __name__ == "__main__":                                      # pragma: no cover

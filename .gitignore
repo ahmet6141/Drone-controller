@@ -38,3 +38,11 @@ cad/v2/out/step/
 cad/v2/out/*.glb
 cad/v2/out/*.blend
 cad/**/render/*.blend
+
+# UCAV (YK-38): Blender sahnesi ve GLB `python3 ucav/blender/build.py --blend --glb` ile yeniden üretilir
+ucav/out/*.blend
+ucav/out/*.blend1
+ucav/out/*.glb
+ucav/out/anim/*_frames/
+ucav/out/print_*/stl/
+ucav/work/

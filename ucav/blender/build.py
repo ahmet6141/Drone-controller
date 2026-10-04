@@ -1,0 +1,671 @@
+#!/usr/bin/env python3
+"""YELKOVAN YK-38 — tek komutla Blender sahnesi ve bütün çıktılar (bpy 4.5, Cycles CPU).
+
+Sıra: ``airframe`` → ``gear`` → ``rig`` → ``materials`` → ``studio`` → ``animation`` → çıktılar
+(``--print`` baskı parçaları/STL, ``--glb``, ``--blend``, ``--stills`` sabit görüntüler, ``--anim`` animasyonlar).
+Her modül tekrar çağrılabilir; bu betik onları sözleşmedeki sırayla çağırır, süreleri ölçer ve sonda çıktı
+dosyalarını boyutlarıyla listeler.
+
+Kullanım (depo kökünden)
+------------------------
+::
+
+    python3 ucav/blender/build.py --blend                         # ucav/out/yk38.blend (sıkıştırılmış, rig hazır)
+    python3 ucav/blender/build.py --blend --glb --print --stills    # sahne + GLB + STL/rapor + 9 sabit görüntü
+    python3 ucav/blender/build.py --stills hero side --samples 32 --res 960x600
+    python3 ucav/blender/build.py --stills hero rear34 --livery taktik      # → yk38_hero_taktik.jpg …
+    python3 ucav/blender/build.py --stills hero side --env studyo           # koyu stüdyo
+    python3 ucav/blender/build.py --anim mechanisms --res 960x540 --samples 16
+    python3 ucav/blender/build.py --anim showcase --frames 1-120 --step 2   # hızlı önizleme (süre korunur)
+    python3 ucav/blender/build.py --print --bed 220                         # 220×220×250 tabla raporu
+    blender -b -P ucav/blender/build.py -- --blend --stills                 # Blender uygulamasıyla (arka plan)
+
+Blender arayüzünde (Scripting sekmesi): *Text → Open* ile bu dosyayı açıp *Run Script* (▶). Argüman yoksa
+sahne mevcut dosyaya kurulur, çıktı yazılmaz; argüman vermek için aşağıdaki ``SCRIPTING_ARGS`` satırını
+düzenleyin (ör. ``"--blend --stills hero"``) ya da Blender'ı ``UCAV_BUILD_ARGS`` ortam değişkeniyle başlatın.
+Terminalde çıktı bayrağı verilmezse ``--blend`` varsayılır.
+
+Blender uygulamasının kendi Python'unda PyYAML yoksa (``params`` spec.yaml'ı onunla okur) sistem Python'undaki
+saf-Python ``yaml`` paketi geçici bir yol üzerinden ödünç alınır; o da yoksa kurulum komutu yazdırılır.
+
+Süreler (4 çekirdekli CPU, ölçülen): sahne kurulumu ≈ 20 s; baskı (``--print``) ≈ 3–4 dk; 9 sabit görüntü
+1600×1000 / 64 örnek ≈ 15–25 dk; animasyonlar için ``render.py`` belgesine ve ``ucav/README.md``'ye bakın.
+"""
+from __future__ import annotations
+
+import argparse
+import contextlib
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+# Blender arayüzünden (Scripting sekmesi) çalıştırırken argümanlar: ör. "--blend --stills hero side --samples 32"
+SCRIPTING_ARGS = ""
+
+VIEWS_ALL = ("hero", "rear34", "side", "front", "top", "under", "nose", "tail", "gearbay")
+CLIPS = ("showcase", "mechanisms")
+BEDS = {"256": (256, 256, 256), "220": (220, 220, 250)}
+BLEND_NAME = "yk38.blend"
+GLB_NAME = "yk38.glb"
+STILL_DEFAULT = {"res": (1600, 1000), "samples": 64}
+ANIM_DEFAULT = {"res": (1280, 720), "samples": 24}
+
+_T0 = time.time()
+
+
+def log(msg: str) -> None:
+    print(f"[build {time.time() - _T0:7.1f} s] {msg}", flush=True)
+
+
+# =====================================================================================================
+# Ortam: depo kökü, sys.path, PyYAML
+# =====================================================================================================
+def _repo_root() -> Path:
+    """Depo kökünü bulur (``ucav/params.py`` içeren dizin): ``__file__``, Blender metin blokları, açık .blend,
+    ``UCAV_REPO`` ortam değişkeni ve çalışma dizini sırayla denenir."""
+    cands: list[Path] = []
+    env = os.environ.get("UCAV_REPO")
+    if env:
+        cands.append(Path(env) / "ucav")
+    f = globals().get("__file__")
+    if f:
+        cands.append(Path(f))
+    try:
+        import bpy
+        for t in bpy.data.texts:
+            if t.filepath:
+                cands.append(Path(bpy.path.abspath(t.filepath)))
+        if bpy.data.filepath:
+            cands.append(Path(bpy.data.filepath))
+    except Exception:                                   # bpy yok ya da kısıtlı bağlam
+        pass
+    cands.append(Path.cwd() / "_")
+    for c in cands:
+        try:
+            c = c.resolve()
+        except OSError:
+            continue
+        for p in (c, *c.parents):
+            if (p / "ucav" / "params.py").is_file() and (p / "ucav" / "blender" / "airframe.py").is_file():
+                return p
+    raise RuntimeError("depo kökü bulunamadı: UCAV_REPO=/yol/Drone-controller ortam değişkenini ayarlayın")
+
+
+def _ensure_yaml() -> None:
+    """PyYAML yoksa (Blender'ın paketli Python'u) sistem Python'unun ``yaml`` paketini geçici dizine bağlar."""
+    try:
+        import yaml  # noqa: F401
+        return
+    except ImportError:
+        pass
+    for exe in ("python3", "python"):
+        path = shutil.which(exe)
+        if not path or Path(path).resolve() == Path(sys.executable).resolve():
+            continue
+        try:
+            res = subprocess.run([path, "-c", "import os, yaml; print(os.path.dirname(yaml.__file__))"],
+                                 capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        src = Path(res.stdout.strip()) if res.returncode == 0 else None
+        if not src or not src.is_dir():
+            continue
+        shim = Path(tempfile.gettempdir()) / "ucav_yaml_shim"
+        dst = shim / "yaml"
+        shim.mkdir(exist_ok=True)
+        if not dst.exists():
+            try:
+                dst.symlink_to(src, target_is_directory=True)
+            except OSError:
+                shutil.copytree(src, dst)
+        sys.path.append(str(shim))
+        try:
+            import yaml  # noqa: F401,F811  (C hızlandırıcısı uyumsuzsa saf Python sürümü yüklenir)
+            print(f"[build] PyYAML sistem Python'undan ödünç alındı: {src}")
+            return
+        except ImportError:
+            sys.path.remove(str(shim))
+    raise SystemExit(f"PyYAML bulunamadı. Blender'ın Python'una kurun:\n  \"{sys.executable}\" -m pip install pyyaml")
+
+
+def _setup_path() -> Path:
+    root = _repo_root()
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    _ensure_yaml()
+    return root
+
+
+# =====================================================================================================
+# Argümanlar
+# =====================================================================================================
+def _res(text: str) -> tuple[int, int] | int:
+    t = text.lower().replace("×", "x")
+    if "x" in t:
+        w, h = t.split("x", 1)
+        return int(w), int(h)
+    return int(t)
+
+
+def _frames(text: str) -> tuple[int, int]:
+    a, _, b = text.partition("-")
+    a, b = int(a), int(b or a)
+    if b < a:
+        raise argparse.ArgumentTypeError("kare aralığı a-b, a ≤ b olmalı")
+    return a, b
+
+
+class _TrHelp(argparse.HelpFormatter):
+    def add_usage(self, usage, actions, groups, prefix=None):
+        return super().add_usage(usage, actions, groups, "kullanım: " if prefix is None else prefix)
+
+
+class _TrParser(argparse.ArgumentParser):
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        self.exit(2, f"{self.prog}: hata: {message}\n")
+
+
+def parser() -> argparse.ArgumentParser:
+    ap = _TrParser(
+        prog="build.py", add_help=False, formatter_class=_TrHelp,
+        description="YELKOVAN YK-38 sahnesini kurar (gövde → takım → rig → malzemeler → stüdyo → animasyon) ve "
+                    "istenen çıktıları üretir. Terminalde çıktı bayrağı verilmezse --blend varsayılır.",
+        epilog="Örnek: python3 ucav/blender/build.py --blend --glb --print --stills  |  "
+               "blender -b -P ucav/blender/build.py -- --anim mechanisms --res 960x540 --samples 16")
+    ap._optionals.title = "genel"
+    ap.add_argument("-h", "--help", action="help", help="bu yardımı göster ve çık")
+    g = ap.add_argument_group("çıktılar")
+    g.add_argument("--blend", action="store_true", help=f"sahneyi ucav/out/{BLEND_NAME} olarak kaydet (sıkıştırılmış; "
+                   "kontrol paneli, sürücüler ve iki animasyon klibi hazır)")
+    g.add_argument("--glb", action="store_true", help=f"uçağı ucav/out/{GLB_NAME} olarak dışa aktar (glTF 2.0, Y yukarı; "
+                   "boya renkleri basit PBR'ye çevrilir; 'mechanisms' döngüsü — takım, yüzeyler, taret, pervane — "
+                   "kare kare pişirilmiş tek animasyon olarak eklenir)")
+    g.add_argument("--glb-static", action="store_true", help="GLB'yi animasyonsuz, dinlenme pozunda yaz")
+    g.add_argument("--stills", nargs="*", metavar="GÖRÜNÜM", default=None,
+                   help=f"sabit görüntüler → ucav/out/render/yk38_<görünüm>.jpg; görünüm verilmezse hepsi: "
+                        f"{' '.join(VIEWS_ALL)}")
+    g.add_argument("--anim", choices=(*CLIPS, "all"), default=None,
+                   help="animasyon → ucav/out/anim/<klip>.mp4 (H.264): showcase (19 s, pist), mechanisms "
+                        "(10 s döngü, stüdyo) ya da all")
+    g.add_argument("--print", dest="do_print", action="store_true",
+                   help="3B baskı parçaları: segmentler, STL (mm) ve Türkçe baskı raporu (ucav/out/stl, print_report.md)")
+    o = ap.add_argument_group("ayarlar")
+    o.add_argument("--bed", choices=sorted(BEDS), default="256",
+                   help="baskı tablası: 256 = 256×256×256 mm (STL'ler ucav/out/stl), 220 = 220×220×250 mm "
+                        "(ucav/out/print_220x220x250)")
+    o.add_argument("--no-stl", action="store_true", help="--print ile yalnız rapor yaz (STL yok)")
+    o.add_argument("--livery", choices=("standart", "taktik"), default="standart",
+                   help="boya şeması (taktik: koyu gri, yalnız render; LW-PLA güneşte ısınır)")
+    o.add_argument("--env", choices=("pist", "studyo"), default=None,
+                   help="sabit görüntü ortamı (varsayılan pist); animasyonda klibin kendi ortamı kullanılır")
+    o.add_argument("--samples", type=int, default=None,
+                   help=f"Cycles örnek sayısı (varsayılan: görüntü {STILL_DEFAULT['samples']}, "
+                        f"animasyon {ANIM_DEFAULT['samples']})")
+    o.add_argument("--res", type=_res, default=None, metavar="GxY",
+                   help="çözünürlük, ör. 1600x1000 (tek sayı = uzun kenar). Varsayılan: görüntü 1600x1000, "
+                        "animasyon 1280x720")
+    o.add_argument("--frames", type=_frames, default=None, metavar="a-b",
+                   help="animasyonda yalnız bu kare aralığı (ör. 1-120)")
+    o.add_argument("--step", type=int, default=1, help="animasyonda her N. kare (önizleme; video süresi korunur)")
+    o.add_argument("--no-motion-blur", action="store_true", help="animasyonda hareket bulanıklığını kapat")
+    o.add_argument("--keep-scene", action="store_true",
+                   help="mevcut sahneyi sıfırlama (varsayılan: arka planda boş fabrika sahnesiyle başlanır)")
+    o.add_argument("-q", "--quiet", action="store_true", help="modüllerin ayrıntılı günlüğünü kapat")
+    return ap
+
+
+def _argv(argv: list[str] | None) -> list[str]:
+    if argv is not None:
+        return list(argv)
+    if "--" in sys.argv:
+        return sys.argv[sys.argv.index("--") + 1:]
+    import bpy
+    if not bpy.app.background:                          # Blender arayüzü: Scripting sekmesi
+        return (os.environ.get("UCAV_BUILD_ARGS") or SCRIPTING_ARGS).split()
+    if Path(sys.argv[0]).name.lower().startswith("blender"):     # blender -b -P build.py (-- yok)
+        return (os.environ.get("UCAV_BUILD_ARGS") or "").split()
+    return sys.argv[1:]
+
+
+# =====================================================================================================
+# Sahne
+# =====================================================================================================
+_DEFAULT_OBJECTS = {"Cube": "MESH", "Light": "LIGHT", "Camera": "CAMERA"}
+
+
+def reset_scene(keep: bool = False) -> None:
+    """Arka planda boş fabrika sahnesi; arayüzde yalnız Blender'ın varsayılan küp/ışık/kamerası silinir
+    (açık metin düzenleyicisi ve kullanıcının diğer verisi korunur)."""
+    import bpy
+    if bpy.app.background and not keep:
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        return
+    for name, kind in _DEFAULT_OBJECTS.items():
+        ob = bpy.data.objects.get(name)
+        if ob is not None and ob.type == kind and not ob.name.startswith(("U_", "S_")):
+            bpy.data.objects.remove(ob, do_unlink=True)
+
+
+def build_scene(livery: str = "standart", verbose: bool = True) -> dict:
+    """Sözleşme sırasıyla bütün modülleri kurar; her adımın süresini ve özetini döndürür."""
+    import bpy
+    from ucav.blender import airframe, animation, gear, materials, rig, studio
+    scene = bpy.context.scene
+    info: dict = {"timings": {}}
+
+    def step(name, fn):
+        t0 = time.time()
+        res = fn()
+        info["timings"][name] = round(time.time() - t0, 2)
+        log(f"{name}: {info['timings'][name]:.1f} s")
+        return res
+
+    objs = step("airframe", lambda: airframe.build(scene, verbose=verbose))
+    info["airframe_objects"] = len(objs)
+    step("gear", lambda: gear.build(scene))
+    r = step("rig", lambda: rig.setup(scene))
+    info["rig"] = {k: r[k] for k in ("drivers", "missing", "not_simple")}
+    if r["missing"] or r["not_simple"]:
+        log(f"UYARI rig: eksik {r['missing']}, basit olmayan {r['not_simple']}")
+    m = step("materials", lambda: materials.build(livery, scene=scene))
+    info["materials"] = {"livery": m["livery"], "count": len(m["materials"]), "decals": len(m["decals"]),
+                         "missing": m["missing"]}
+    if m["missing"]:
+        log(f"UYARI malzeme: yuvası eksik nesneler {m['missing']}")
+    st = step("studio", lambda: studio.setup(scene, env="pist"))
+    info["studio"] = {"env": st["env"], "cameras": len(st["cameras"])}
+    a = step("animation", lambda: animation.build(scene, select="showcase"))
+    info["animation"] = {"actions": len(a["actions"]), "cameras": a["cameras"], "showcase": a["showcase"]}
+    finish_scene(scene)
+    return info
+
+
+CLIP_TEXT = "YK38_klip_sec.py"
+_CLIP_SWITCHER = '''# YELKOVAN YK-38 — klip seçici ve kontrol paneli notu (depo gerekmez; Text Editor'da ▶ Run Script)
+#
+# KLIP = "showcase"   : 19 s gösterim (yer, kalkış, takım toplama, dönüş), kameralar zaman çizelgesi işaretleriyle
+# KLIP = "mechanisms" : 10 s kesintisiz döngü (bakım sehpası, takım/kumanda/taret/pervane)
+# KLIP = "yok"        : animasyon kaldırılır, dinlenme pozu — kendi animasyonunuz için U_Root özelliklerine
+#                       anahtar kare koyun (özellik üstünde I tuşu)
+#
+# Kontrol paneli: U_Root seçin → Object Properties → Custom Properties (ya da N paneli → Item):
+#   gear 0…1 (0 = toplu, 1 = açık; kapak-bacak-kapak sırası tek değerle), gear_doors 0…1 (el ile kapak),
+#   aileron_deg ±25 (+ = sağa yatış), flap_deg 0…35, elevator_deg ±25 (+ = firar kenarı aşağı),
+#   rudder_deg ±25 (+ = firar kenarı sancağa, burun tekeri birlikte), prop_rpm 0…9000,
+#   turret_pan_deg ±180 (+ = iskele), turret_tilt_deg −90…20 (+ = yukarı), nav_lights 0/1, strobe 0/1.
+# Bütün hareketli parçalar bu özelliklere "basit ifade" sürücüleriyle bağlıdır (Python betiği izni gerekmez).
+import bpy
+
+KLIP = "mechanisms"
+
+sc = bpy.context.scene
+info = sc["ucav_clips"]
+root = bpy.data.objects["U_Root"]
+prop = bpy.data.objects.get("U_Prop")
+
+
+def assign(ob, act):
+    if ob is None:
+        return
+    if ob.animation_data is None:
+        ob.animation_data_create()
+    ob.animation_data.action = act
+
+
+for m in list(sc.timeline_markers):
+    if m.name.startswith("YK38_"):
+        sc.timeline_markers.remove(m)
+if KLIP == "yok":
+    assign(root, None)
+    assign(prop, None)
+    root.location = tuple(info["rest_location"])
+    root.rotation_euler = (0.0, 0.0, 0.0)
+    for k, v in info["defaults"].items():
+        root[k] = v
+    if prop is not None:
+        prop["ucav_turns_offset"] = 0.0
+    sc.camera = bpy.data.objects.get("U_Cam_hero") or sc.camera
+else:
+    c = info[KLIP]
+    assign(root, bpy.data.actions.get("YK38_%s_Root" % KLIP))
+    assign(prop, bpy.data.actions.get("YK38_%s_Prop" % KLIP))
+    sc.frame_start, sc.frame_end = 1, int(c["frames"])
+    for m in c["markers"]:
+        mk = sc.timeline_markers.new("YK38_" + m["camera"][6:], frame=int(m["frame"]))
+        mk.camera = bpy.data.objects.get(m["camera"])
+    sc.camera = bpy.data.objects.get(c["markers"][0]["camera"])
+for ob in bpy.data.objects:
+    if ob.name.startswith("U_Stand_"):
+        ob.hide_render = ob.hide_viewport = KLIP != "mechanisms"
+root.update_tag()
+sc.frame_set(1)
+print("YK-38 klip:", KLIP)
+'''
+
+
+def embed_clip_switcher(scene) -> None:
+    """.blend içine depo gerektirmeyen klip seçici metin bloğu ve klip bilgisini (kare sayısı, kamera işaretleri,
+    varsayılan kontrol değerleri) koyar."""
+    import bpy
+    from ucav import params as P
+    from ucav.blender import animation, rig
+    clips = {}
+    for name, plan in (("showcase", animation.showcase_plan), ("mechanisms", animation.mechanisms_plan)):
+        clips[name] = {"frames": animation.nframes(name),
+                       "markers": [{"frame": int(f), "camera": str(c)} for f, c in plan()["markers"]]}
+    clips["rest_location"] = list(P.U_ROOT_B)
+    clips["defaults"] = {p[0]: float(p[1]) for p in rig.PROPS}
+    scene["ucav_clips"] = clips
+    txt = bpy.data.texts.get(CLIP_TEXT) or bpy.data.texts.new(CLIP_TEXT)
+    txt.from_string(_CLIP_SWITCHER)
+
+
+def finish_scene(scene) -> None:
+    """Kullanıcıya hazır sahne: gösterim klibi etkin, kare 1, F12 için makul render ayarları, görünüm
+    penceresi malzeme önizlemesi, klip seçici metin bloğu."""
+    import bpy
+    from ucav.blender import animation, rig
+    embed_clip_switcher(scene)
+    animation.set_scene_range("showcase", scene)
+    r = scene.render
+    r.resolution_x, r.resolution_y, r.resolution_percentage = 1920, 1080, 50
+    r.filepath = "//anim/yk38_"
+    scene.cycles.samples = 64
+    scene.frame_set(1)
+    rig.refresh()
+    root = bpy.data.objects.get("U_Root")
+    if root is not None and bpy.context.view_layer.objects.get(root.name) is not None:
+        for ob in bpy.context.view_layer.objects:
+            ob.select_set(False)
+        root.select_set(True)
+        bpy.context.view_layer.objects.active = root
+    for scr in bpy.data.screens:
+        for area in scr.areas:
+            if area.type != "VIEW_3D":
+                continue
+            for sp in area.spaces:
+                if sp.type == "VIEW_3D":
+                    sp.clip_start, sp.clip_end = 0.01, 2000.0
+                    sp.shading.type = "MATERIAL"
+
+
+def _layer_collection(lc, name):
+    if lc.name == name:
+        return lc
+    for ch in lc.children:
+        found = _layer_collection(ch, name)
+        if found is not None:
+            return found
+    return None
+
+
+# =====================================================================================================
+# Çıktılar
+# =====================================================================================================
+def run_print(bed_key: str, export: bool, verbose: bool) -> dict:
+    from ucav.blender import printprep
+    bed = BEDS[bed_key]
+    t0 = time.time()
+    S = printprep.build_print_parts(bed=bed, export=export, verbose=verbose)
+    T = S["totals"]
+    log(f"baskı {bed[0]}×{bed[1]}×{bed[2]}: {T['unique_parts']} benzersiz parça, {T['pieces']} adet, "
+        f"{T['mass_g'] / 1000:.2f} kg, ≈{T['print_h']:.0f} h, manifold {'evet' if S['all_manifold'] else 'HAYIR'}, "
+        f"sığma {'evet' if S['all_fit'] else 'HAYIR'} ({time.time() - t0:.0f} s)")
+    for w in S["warnings"]:
+        log(f"  baskı uyarısı: {w}")
+    return {"seconds": round(time.time() - t0, 1), "all_manifold": S["all_manifold"], "all_fit": S["all_fit"],
+            "unique_parts": T["unique_parts"], "pieces": T["pieces"], "mass_kg": round(T["mass_g"] / 1000, 2),
+            "print_h": round(T["print_h"], 0)}
+
+
+@contextlib.contextmanager
+def _gltf_materials(livery: str):
+    """GLB için geçici basit PBR malzemeleri: düğüm ağaçlı boyalar glTF'e renksiz çıkar; aynı ``UM_*`` adıyla
+    düz Principled (temel renk = boya şeması rengi) konur, dışa aktarımdan sonra özgün malzemeler geri döner."""
+    import bpy
+    from ucav import params as P
+    from ucav.blender import materials as M
+    cols = M.livery_colors(livery)
+    originals: dict[str, bpy.types.Material] = {}
+    temps: dict[str, bpy.types.Material] = {}
+    for name, spec in P.MATERIALS.items():
+        mat = bpy.data.materials.get(name)
+        if mat is None:
+            continue
+        mat.name = name + "__cycles"
+        originals[name] = mat
+        tm = bpy.data.materials.new(name)
+        tm.use_nodes = True
+        b = tm.node_tree.nodes.get("Principled BSDF")
+        rgba = (*cols.get(name, spec.rgb_linear), 1.0)
+        b.inputs["Base Color"].default_value = rgba
+        b.inputs["Roughness"].default_value = float(spec.roughness)
+        b.inputs["Metallic"].default_value = float(spec.metallic)
+        if spec.transmission > 0:
+            b.inputs["Transmission Weight"].default_value = float(spec.transmission)
+            b.inputs["IOR"].default_value = float(spec.ior)
+        if spec.emission > 0:
+            b.inputs["Emission Color"].default_value = rgba
+            b.inputs["Emission Strength"].default_value = float(spec.emission)
+        tm.diffuse_color = rgba
+        temps[name] = tm
+    by_orig = {m: temps[n] for n, m in originals.items()}
+    swapped: list[tuple] = []
+    for me in bpy.data.meshes:
+        for i, m in enumerate(me.materials):
+            if m in by_orig:
+                me.materials[i] = by_orig[m]
+                swapped.append((me, i, m))
+    try:
+        yield
+    finally:
+        for me, i, m in swapped:
+            me.materials[i] = m
+        for name, tm in temps.items():
+            bpy.data.materials.remove(tm)
+        for name, mat in originals.items():
+            mat.name = name
+
+
+GLB_PROP_TURNS = 30          # pişirilen döngüde pervane turu (240 kare → 45°/kare, ileri yönde, kesintisiz döngü)
+
+
+@contextlib.contextmanager
+def _gltf_prop_spin(active: bool):
+    """Kare başına örneklenen glTF'te 2400 dev/dk (600°/kare) geriye dönüyormuş gibi örtüşür (stroboskop). Pişirme
+    süresince pervane sürücüsü susturulur ve döngüye tam sayıda tur atan yavaş, doğru yönlü bir dönüş konur."""
+    import math
+
+    import bpy
+    prop = bpy.data.objects.get("U_Prop")
+    if not active or prop is None or prop.animation_data is None:
+        yield
+        return
+    ad = prop.animation_data
+    drv = [d for d in ad.drivers if d.data_path == "rotation_euler" and d.array_index == 0]
+    old_action = ad.action
+    scene = bpy.context.scene
+    act = bpy.data.actions.new("YK38_glb_PropSpin")
+    fc = act.fcurves.new("rotation_euler", index=0) if hasattr(act, "fcurves") else None
+    if fc is None:                                       # katmanlı aksiyon API'si (ileri sürümler)
+        ad.action = act
+        prop.keyframe_insert("rotation_euler", index=0, frame=scene.frame_start)
+        fc = ad.action.fcurves[0]
+    f0, f1 = scene.frame_start, scene.frame_end + 1
+    fc.keyframe_points.add(2)
+    fc.keyframe_points[0].co = (f0, 0.0)
+    fc.keyframe_points[1].co = (f1, GLB_PROP_TURNS * 2 * math.pi)
+    for k in fc.keyframe_points:
+        k.interpolation = "LINEAR"
+    for d in drv:
+        d.mute = True
+    ad.action = act
+    try:
+        yield
+    finally:
+        for d in drv:
+            d.mute = False
+        ad.action = old_action
+        bpy.data.actions.remove(act)
+        prop.rotation_euler[0] = 0.0
+
+
+def export_glb(path: Path, livery: str, with_anim: bool = False) -> dict:
+    """Uçağı (``UCAV`` koleksiyon ağacı; stüdyo, kameralar ve baskı parçaları hariç) GLB olarak yazar. Dinlenme
+    pozu (takım açık, kumandalar nötr). ``with_anim``: ``mechanisms`` döngüsü kare kare pişirilir."""
+    import bpy
+    from ucav.blender import animation, rig
+    scene = bpy.context.scene
+    t0 = time.time()
+    if with_anim:
+        animation.set_scene_range("mechanisms", scene)
+    else:
+        animation.clear(scene)
+    vl = bpy.context.view_layer
+    for ob in vl.objects:
+        ob.select_set(False)
+    objs = [o for o in bpy.data.collections["UCAV"].all_objects if vl.objects.get(o.name) is not None]
+    for o in objs:
+        o.select_set(True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    kw = dict(filepath=str(path), export_format="GLB", use_selection=True, export_apply=True, export_yup=True,
+              export_extras=True, export_cameras=False, export_lights=False, export_animations=with_anim)
+    if with_anim:
+        kw.update(export_animation_mode="SCENE", export_anim_scene_split_object=False, export_bake_animation=True,
+                  export_frame_range=True, export_force_sampling=True, export_optimize_animation_size=True)
+    try:
+        with _gltf_materials(livery), _gltf_prop_spin(with_anim):
+            bpy.ops.export_scene.gltf(**kw)
+    finally:
+        for o in objs:
+            o.select_set(False)
+        animation.set_scene_range("showcase", scene)
+        scene.frame_set(1)
+        rig.refresh()
+    sec = round(time.time() - t0, 1)
+    log(f"GLB: {path} ({path.stat().st_size / 1e6:.1f} MB, {len(objs)} nesne, {sec} s)")
+    return {"file": str(path), "mb": round(path.stat().st_size / 1e6, 2), "objects": len(objs), "seconds": sec}
+
+
+def save_blend(path: Path) -> dict:
+    """Sıkıştırılmış .blend. ``UCAV_Print`` (varsa) görünüm katmanından çıkarılır (dosyada durur; Outliner'da
+    işaretlenince görünür) — görünüm penceresi yalnız uçak ve stüdyoyla açılır."""
+    import bpy
+    t0 = time.time()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lc = _layer_collection(bpy.context.view_layer.layer_collection, "UCAV_Print")
+    if lc is not None:
+        lc.exclude = True
+    bpy.ops.wm.save_as_mainfile(filepath=str(path), compress=True, check_existing=False)
+    for bak in (path.with_suffix(".blend1"),):
+        if bak.exists():
+            bak.unlink()
+    sec = round(time.time() - t0, 1)
+    log(f"blend: {path} ({path.stat().st_size / 1e6:.1f} MB, {sec} s)")
+    return {"file": str(path), "mb": round(path.stat().st_size / 1e6, 2), "seconds": sec}
+
+
+def render_stills(views, res, samples: int, livery: str, env: str | None) -> dict:
+    from ucav.blender import render
+    t0 = time.time()
+    r = render.render_stills(views or None, res=res, samples=samples, env=env,
+                             livery=livery if livery != "standart" else None)
+    log(f"sabit görüntüler: {len(r['files'])} dosya, {time.time() - t0:.0f} s — {r['timings']}")
+    return {"files": r["files"], "timings": r["timings"], "seconds": round(time.time() - t0, 1)}
+
+
+def render_anims(clips, res, samples: int, frames, step: int, motion_blur: bool, livery: str) -> dict:
+    from ucav.blender import render
+    out = {}
+    for c in clips:
+        t0 = time.time()
+        r = render.render_animation(c, res=res, samples=samples, frames=frames, frame_step=step,
+                                    motion_blur=motion_blur, livery=livery if livery != "standart" else None)
+        log(f"animasyon {c}: {r['file']} — {r['frames']} kare, {r['s_per_frame']} s/kare, {time.time() - t0:.0f} s")
+        out[c] = r
+    return out
+
+
+def _size(p: Path) -> str:
+    n = p.stat().st_size
+    return f"{n / 1e6:.1f} MB" if n >= 1e5 else f"{n / 1e3:.0f} kB"
+
+
+def outputs_summary(root: Path) -> list[str]:
+    """``ucav/out`` altındaki çıktıların dosya boyutları (rapor)."""
+    out = root / "ucav" / "out"
+    lines = []
+    for name in (BLEND_NAME, GLB_NAME, "print_report.md", "sizing.md"):
+        p = out / name
+        if p.exists():
+            lines.append(f"  {p.relative_to(root)}: {_size(p)}")
+    stl = sorted((out / "stl").glob("*.stl"))
+    if stl:
+        tot = sum(p.stat().st_size for p in stl)
+        lines.append(f"  ucav/out/stl/: {len(stl)} STL, {tot / 1e6:.1f} MB")
+    for sub, pat in (("render", "*.jpg"), ("anim", "*.mp4")):
+        for p in sorted((out / sub).glob(pat)):
+            lines.append(f"  {p.relative_to(root)}: {_size(p)}")
+    return lines
+
+
+# =====================================================================================================
+# Ana akış
+# =====================================================================================================
+def main(argv: list[str] | None = None) -> int:
+    root = _setup_path()
+    import bpy
+    raw = _argv(argv)
+    try:
+        args = parser().parse_args(raw)
+    except SystemExit as exc:                           # --help ya da hatalı argüman: Blender arayüzünü kapatma
+        if bpy.app.background:
+            raise
+        return int(exc.code or 0)
+    wants = args.blend or args.glb or args.glb_static or args.do_print or args.stills is not None or args.anim
+    if not wants and bpy.app.background and argv is None:
+        args.blend = True
+        log("çıktı bayrağı yok → --blend (yardım: --help)")
+    out = root / "ucav" / "out"
+    log(f"depo {root}; Blender {bpy.app.version_string}; argümanlar: {' '.join(raw) or '(yok)'}")
+    reset_scene(args.keep_scene)
+    info = build_scene(args.livery, verbose=not args.quiet)
+    summary: dict = {"scene": info}
+    ok = not info["rig"]["missing"] and not info["materials"]["missing"]
+    if args.do_print:
+        summary["print"] = run_print(args.bed, export=not args.no_stl, verbose=not args.quiet)
+        ok = ok and summary["print"]["all_manifold"] and summary["print"]["all_fit"]
+    if args.glb or args.glb_static:
+        summary["glb"] = export_glb(out / GLB_NAME, args.livery, with_anim=not args.glb_static)
+    if args.blend:
+        summary["blend"] = save_blend(out / BLEND_NAME)
+    if args.stills is not None:
+        summary["stills"] = render_stills(args.stills, args.res or STILL_DEFAULT["res"],
+                                          args.samples or STILL_DEFAULT["samples"], args.livery, args.env)
+    if args.anim:
+        clips = CLIPS if args.anim == "all" else (args.anim,)
+        summary["anim"] = render_anims(clips, args.res or ANIM_DEFAULT["res"], args.samples or ANIM_DEFAULT["samples"],
+                                       args.frames, args.step, not args.no_motion_blur, args.livery)
+    log("sahne adımları: " + ", ".join(f"{k} {v:.1f} s" for k, v in info["timings"].items()))
+    lines = outputs_summary(root)
+    if lines:
+        log("çıktılar:\n" + "\n".join(lines))
+    log(f"bitti ({'sorunsuz' if ok else 'UYARILAR VAR'}), toplam {time.time() - _T0:.0f} s")
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    try:
+        import bpy as _bpy
+        _ui = not _bpy.app.background
+    except ImportError:                                  # bpy yoksa (ör. düz Python, bpy kurulu değil)
+        sys.exit("bpy bulunamadı: 'pip install bpy==4.5.*' ya da 'blender -b -P ucav/blender/build.py -- ...'")
+    if _ui:
+        main()                                           # Scripting sekmesi: Blender'ı kapatma
+    else:
+        sys.exit(main())

@@ -39,10 +39,13 @@ cad/v2/out/*.glb
 cad/v2/out/*.blend
 cad/**/render/*.blend
 
-# UCAV (YK-38): Blender sahnesi ve GLB `python3 ucav/blender/build.py --blend --glb` ile yeniden üretilir
+# UCAV (YK-38): hazır sahne (yk38.blend) ve GLB depoda gelir; `python3 ucav/blender/build.py --blend --glb`
+# ile yeniden üretilir. Diğer .blend/.glb dosyaları, Blender yedekleri ve geçici kareler git'e girmez.
 ucav/out/*.blend
+!ucav/out/yk38.blend
 ucav/out/*.blend1
 ucav/out/*.glb
+!ucav/out/yk38.glb
 ucav/out/anim/*_frames/
 ucav/out/print_*/stl/
 ucav/work/

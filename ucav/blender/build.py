@@ -213,6 +213,9 @@ def parser() -> argparse.ArgumentParser:
                    help="animasyonda yalnız bu kare aralığı (ör. 1-120)")
     o.add_argument("--step", type=int, default=1, help="animasyonda her N. kare (önizleme; video süresi korunur)")
     o.add_argument("--no-motion-blur", action="store_true", help="animasyonda hareket bulanıklığını kapat")
+    o.add_argument("--gpu", action="store_true",
+                   help="Cycles'ı GPU'da çalıştır (OptiX → CUDA → HIP → Metal → oneAPI sırayla denenir; "
+                        "GPU bulunamazsa CPU). Kendi bilgisayarında render için önerilir")
     o.add_argument("--keep-scene", action="store_true",
                    help="mevcut sahneyi sıfırlama (varsayılan: arka planda boş fabrika sahnesiyle başlanır)")
     o.add_argument("-q", "--quiet", action="store_true", help="modüllerin ayrıntılı günlüğünü kapat")
@@ -663,6 +666,11 @@ def main(argv: list[str] | None = None) -> int:
     reset_scene(args.keep_scene)
     info = build_scene(args.livery, verbose=not args.quiet)
     summary: dict = {"scene": info}
+    if args.gpu:
+        from ucav.blender import studio
+        backend = studio.enable_gpu(bpy.context.scene)
+        summary["device"] = backend
+        log(f"render aygıtı: {backend}" + (" (GPU bulunamadı, CPU kullanılıyor)" if backend == "CPU" else ""))
     ok = not info["rig"]["missing"] and not info["materials"]["missing"]
     if args.do_print:
         summary["print"] = run_print(args.bed, export=not args.no_stl, verbose=not args.quiet)

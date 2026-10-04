@@ -1019,6 +1019,36 @@ class TestHeatRuleLogic(unittest.TestCase):
         self.assertLessEqual(PP.HEAT_TG_RULE["radius_m"], 0.050 + 1e-9)
 
 
+class TestRenderDevice(unittest.TestCase):
+    """Render aygıtı: ``studio.enable_gpu`` GPU arka ucu bulursa sahneyi GPU'ya işaretler, bulamazsa CPU'da kalır;
+    ``configure_cycles`` işarete uyar (yerel bilgisayarda ``build.py --gpu``)."""
+
+    @unittest.skipUnless(HAVE_BPY, "bpy kurulu değil")
+    def test_enable_gpu_and_configure(self):
+        import bpy
+        from ucav.blender import studio
+        sc = bpy.data.scenes.new("YK38_device_test")
+        try:
+            backend = studio.enable_gpu(sc)
+            self.assertIn(backend, ("CPU",) + studio.GPU_BACKENDS)
+            studio.configure_cycles(sc, samples=8)
+            self.assertEqual(sc.cycles.device, "CPU" if backend == "CPU" else "GPU")
+            sc["ucav_device"] = "GPU"
+            studio.configure_cycles(sc, samples=8)
+            self.assertEqual(sc.cycles.device, "GPU")
+            sc["ucav_device"] = "CPU"
+            studio.configure_cycles(sc, samples=8)
+            self.assertEqual(sc.cycles.device, "CPU")
+        finally:
+            bpy.data.scenes.remove(sc)
+
+    @unittest.skipUnless(HAVE_BPY, "bpy kurulu değil")
+    def test_cli_has_gpu_flag(self):
+        from ucav.blender import build
+        self.assertTrue(build.parser().parse_args(["--gpu", "--anim", "mechanisms"]).gpu)
+        self.assertFalse(build.parser().parse_args([]).gpu)
+
+
 class TestYK38PrintOutputs(unittest.TestCase):
     """Depodaki baskı çıktıları (``build.py --print``): rapor tutarlı, her STL kapalı ve tablaya sığar (numpy)."""
 

@@ -139,8 +139,9 @@ Sahnedeki koleksiyonlar: `UCAV` (uçak: `UCAV_Airframe`, `UCAV_Surfaces`, `UCAV_
 
 ## 4. Kurulum ve çalıştırma
 
-Gerekenler: Python 3.11, `pip install bpy==4.5.3 numpy pyyaml` (bpy modülü Blender 4.5 LTS'tir; render Cycles CPU
-ile yapılır). Ya da Blender 4.5 uygulaması (aşağıya bakın).
+Gerekenler: Python 3.11, `pip install bpy==4.5.3 numpy pyyaml` (bpy modülü Blender 4.5 LTS'tir; render Cycles ile
+varsayılan olarak CPU'da, `--gpu` ile ekran kartında yapılır). Ya da Blender 4.5 uygulaması (aşağıya bakın).
+Hazır sahne depodadır: `out/yk38.blend` (Blender 4.5 LTS ya da üstüyle açın) ve görüntüleyiciler için `out/yk38.glb`.
 
 ```bash
 python3 ucav/sizing.py --check                         # boyutlandırma: 163 kontrol → out/sizing.md (bpy gerekmez)
@@ -151,6 +152,7 @@ python3 ucav/blender/build.py --stills hero rear34 side --livery taktik        #
 python3 ucav/blender/build.py --stills hero side --env studyo                  # koyu stüdyo
 python3 ucav/blender/build.py --anim mechanisms --res 960x540 --samples 16     # → out/anim/mechanisms.mp4
 python3 ucav/blender/build.py --anim all                                       # tam kalite: 1280×720, 24 örnek
+python3 ucav/blender/build.py --anim all --gpu                                 # aynısı ekran kartında (§7)
 python3 ucav/blender/build.py --anim showcase --frames 1-120 --step 2          # hızlı önizleme (süre korunur)
 python3 ucav/blender/build.py --print --bed 220                                # 220×220×250 tabla raporu
 python3 ucav/blender/build.py --help                                           # bütün seçenekler
@@ -165,6 +167,9 @@ python3 ucav/blender/build.py --stills hero rear34 side --livery taktik --res 16
 python3 ucav/blender/build.py --stills hero side --env studyo --res 1600x1000 --samples 128
 python3 ucav/blender/build.py --anim all --res 960x540 --samples 16
 ```
+
+`anim/mechanisms.mp4` bu son komutun yarıda kesilmiş hâlidir: 384 karenin ilk 300'ü (16 s döngünün ilk 12,5 s'si;
+takımın yeniden açılması eksik). Tamamını ve tam kalite sürümleri kendi bilgisayarınızda üretin (§7).
 
 Sıra her zaman aynıdır: `airframe → gear → rig → materials → studio → animation → çıktılar`. Çıktı bayrağı
 verilmezse `--blend` varsayılır. Sonda çıktılar boyutlarıyla listelenir; bir sorun varsa (eksik sürücü, malzemesiz ağ,
@@ -260,7 +265,7 @@ girmez, taret LED'i sönüktür.
 
 ## 7. Render
 
-Cycles CPU, uyarlamalı örnekleme, OpenImageDenoise, AgX (Medium High Contrast). Pozlama pistte −0,4 EV, stüdyoda 0.
+Cycles (varsayılan CPU; `--gpu` ile ekran kartı), uyarlamalı örnekleme, OpenImageDenoise, AgX (Medium High Contrast). Pozlama pistte −0,4 EV, stüdyoda 0.
 Pistte uçağın altına, kameraya ve yansımalara görünmez bir yer yansıması dolgusu (`S_UnderFill`) konur; uçağı izler
 ve kalkıştan sonra söner. Animasyonda hareket bulanıklığı açıktır (obtüratör 0,5 kare; pervanede 64 alt adım) ve
 900 dev/dk üstünde yarı saydam açık "pus" diski (uçta yumuşak kenarlı, soluk turuncu halka) görünür.
@@ -292,12 +297,29 @@ mat boya, açık gri işaretler). **Taktik şema yalnız render içindir:** koyu
 | `--stills hero rear34 side --livery taktik` | 1600×1000, 128 örnek | 178 + 197 + 233 s |
 | `--stills hero side --env studyo` | 1600×1000, 128 örnek | 137 + 149 s |
 | `--anim showcase` | 960×540, 16 örnek, 24 fps, hareket bulanıklığı, pervane diski | **85 dk** (504 kare, 10,1 s/kare; yakın planlar 16–22 s, havada 6–7 s) → `anim/showcase.mp4` 2,5 MB |
-| `--anim mechanisms` | 960×540, 16 örnek, stüdyo | **73 dk** (384 kare, 11,4 s/kare) → `anim/mechanisms.mp4` 1,6 MB |
+| `--anim mechanisms` | 960×540, 16 örnek, stüdyo | **73 dk** (384 kare, 11,4 s/kare) → `anim/mechanisms.mp4`; depodaki dosya 300/384 kare (12,5 s, 0,9 MB) |
 | Tam kalite animasyon (tahmin) | 1280×720, 24 örnek, hareket bulanıklığı | ≈ 2,7 × önizleme: showcase ≈ 3,8 h, mechanisms ≈ 3,3 h |
 
 Daha yüksek kalite için: `--samples 192` (sabit görüntü), `--anim all` (1280×720, 24 örnek). Animasyon kareleri
 `out/anim/<klip>_frames/`'e yazılır. Yarıda kalırsa aynı komut kaldığı yerden sürer (var olan kareler atlanır).
 Kodlamadan sonra bu klasör silinir.
+
+**Kendi bilgisayarında render (GPU).** Yukarıdaki süreler 4 çekirdekli bir sunucu CPU'sunda ölçüldü. Ekran kartıyla
+çok daha kısa sürer (ölçmedik; karta göre değişir):
+
+```bash
+blender -b -P ucav/blender/build.py -- --anim all --gpu                     # Blender 4.5 uygulamasıyla
+python3 ucav/blender/build.py --anim all --gpu                              # ya da bpy==4.5.3 kurulu Python 3.11
+python3 ucav/blender/build.py --stills --gpu --samples 192                   # 9 sabit görüntü, yüksek kalite
+python3 ucav/blender/build.py --anim mechanisms --gpu --res 1920x1080        # tek klip, Full HD
+```
+
+`--gpu` arka uçları sırayla dener: OptiX (NVIDIA RTX) → CUDA (NVIDIA) → HIP (AMD) → Metal (Apple) → oneAPI (Intel).
+Bulamazsa CPU'da sürer ve bunu günlüğe yazar. **Blender arayüzünde:** `out/yk38.blend`'i açın → *Edit → Preferences →
+System → Cycles Render Devices*'ta kartınızın arka ucunu seçin → *Render Properties → Device: GPU Compute* →
+`YK38_klip_sec.py` metin bloğunda `KLIP`'i seçip *Run Script* → *Render → Render Animation* (Ctrl+F12). Kareler
+`//anim/yk38_` önekiyle `out/anim/`'e yazılır. MP4 için komut satırı yolu daha pratiktir: kodlamayı kendisi yapar ve
+yarıda kalırsa kaldığı yerden sürer.
 
 ## 8. 3B baskı
 
@@ -488,5 +510,6 @@ Fiziksel doğrulama (prototipte, uçuştan önce):
   eklenmiştir ve yalnız render'dadır. Disk açık bir pus (#9A9FA3) ve soluk turuncu uç halkasıdır; güneşe karşı arkadan
   bakışta zeminden hafifçe koyu okunur.
 * **Sözleşme farkı:** kumanda yüzeylerinde yerel X, `HingeLine.axis_positive_b`'dir; sol yüzeylerde içe bakar (§5).
-* Tam kalite animasyonlar (1280×720, 24 örnek; tahmini 7 h) depoya eklenmedi; depodakiler 960×540, 16 örnekli
-  önizlemelerdir (§7).
+* Tam kalite animasyonlar (1280×720, 24 örnek; sunucu CPU'sunda tahmini 7 h) depoya eklenmedi; depodakiler
+  960×540, 16 örnekli önizlemelerdir. `mechanisms.mp4` yarıda kesildi (300/384 kare, 12,5 s): takımın yeniden
+  açılması videoda yok. İkisini de kendi bilgisayarınızda `--gpu` ile üretin (§7).

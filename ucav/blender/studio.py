@@ -112,16 +112,48 @@ STUDIO_BG = (0.040, 0.042, 0.046)  # doğrusal fon: koyu antrasit (beyaz uçakla
 # =====================================================================================================
 # Cycles ve renk yönetimi
 # =====================================================================================================
+GPU_BACKENDS = ("OPTIX", "CUDA", "HIP", "METAL", "ONEAPI")
+
+
+def enable_gpu(scene: bpy.types.Scene | None = None, prefer: tuple[str, ...] = GPU_BACKENDS) -> str:
+    """Cycles'ı GPU'da çalıştırır: arka uçları sırayla dener (OptiX → CUDA → HIP → Metal → oneAPI), ilk bulunan
+    arka ucun bütün aygıtlarını açar ve sahneyi ``ucav_device = "GPU"`` diye işaretler; ``configure_cycles`` bu
+    işarete uyar. GPU yoksa CPU'da kalır. Seçilen arka ucun adını ya da ``"CPU"`` döndürür. Tercih Blender
+    kullanıcı ayarına yazılır (.blend'e değil); .blend yalnız ``cycles.device`` değerini taşır."""
+    scene = scene or bpy.context.scene
+    backend = "CPU"
+    addon = bpy.context.preferences.addons.get("cycles")
+    cp = addon.preferences if addon else None
+    for name in (prefer if cp is not None else ()):
+        try:
+            cp.compute_device_type = name
+        except (TypeError, ValueError):               # bu derlemede ya da işletim sisteminde yok
+            continue
+        if hasattr(cp, "refresh_devices"):
+            cp.refresh_devices()
+        else:
+            cp.get_devices()
+        if not any(d.type == name for d in cp.devices):
+            continue
+        for d in cp.devices:                          # GPU + CPU karışımı çoğu sahnede yavaşlatır
+            d.use = d.type == name
+        backend = name
+        break
+    scene["ucav_device"] = "GPU" if backend != "CPU" else "CPU"
+    scene.cycles.device = scene["ucav_device"]
+    return backend
+
+
 def configure_cycles(scene: bpy.types.Scene | None = None, samples: int = 96, *, adaptive: float = 0.015,
                      look: str = "AgX - Medium High Contrast", exposure: float | None = None) -> None:
-    """Cycles CPU, uyarlamalı örnekleme, OIDN gürültü giderme (albedo+normal), ışık ağacı, sınırlı sekmeler,
-    AgX görünüm dönüşümü. 4 çekirdekli CPU için dengeli varsayılanlar. ``exposure`` None → ortamın değeri
-    (``EXPOSURE``: pist −0,4 EV, stüdyo 0)."""
+    """Cycles (CPU; ``enable_gpu`` ile işaretlenmiş sahnede GPU), uyarlamalı örnekleme, OIDN gürültü giderme
+    (albedo+normal), ışık ağacı, sınırlı sekmeler, AgX görünüm dönüşümü. 4 çekirdekli CPU için dengeli
+    varsayılanlar. ``exposure`` None → ortamın değeri (``EXPOSURE``: pist −0,4 EV, stüdyo 0)."""
     scene = scene or bpy.context.scene
     r = scene.render
     r.engine = "CYCLES"
     c = scene.cycles
-    c.device = "CPU"
+    c.device = "GPU" if scene.get("ucav_device") == "GPU" else "CPU"
     c.feature_set = "SUPPORTED"
     c.samples = int(samples)
     c.preview_samples = 16

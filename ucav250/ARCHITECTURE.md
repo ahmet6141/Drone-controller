@@ -139,3 +139,33 @@ Run everything from the repo root: `python3 -m ucav250.analysis.sizing --check`,
 
 `sizing.md`, `structures.md`, `mass.md`, `checks.md`, `bom.csv`, `ga_3view.svg` / `.pdf`, `montaj_kilavuzu.md`,
 `yk250.blend`, `yk250.glb`, `previews/*.png`. All generated, reproducible from the spec.
+
+## 9. `spec.yaml` schema (v1 written by the sizing phase, `layout`/`assembly` filled by later phases)
+
+All lengths in metres, masses in kg, angles in degrees (`_deg`), powers in W. Every number that is not a pure design
+choice carries a `source` (research file key or URL) or is produced by `analysis/sizing.py` (then sizing `--check`
+verifies the spec value against the computed one within a stated tolerance).
+
+| key | content |
+|---|---|
+| `meta` | `name`, `project`, `revision`, `date`, `description_tr`, `scope_tr` (civil EO/IR; no weapons, hardpoints, pylons or release mechanisms) |
+| `requirements` | list of `{id, text_tr, metric, op, value, unit, source}`; `metric` is a key of `out/sizing.json` (or `mass.*`, `structures.*`) |
+| `mission` | payload, altitudes, endurance/range targets, runway, climb, ceiling, `profile` segments for the fuel calculation |
+| `engine` | model/vendor, displacement, max/continuous power, rpm, dry and installed masses (itemised), BSFC curve `[[power_fraction, g_per_kWh], ...]`, fuel, generator, envelope and mount pattern (all sourced) |
+| `propeller` | type, blades, diameter, pitch, mass, position (pusher/tractor), efficiencies, static thrust, tip speed |
+| `configuration` | chosen layout (`propulsion`, `tail`, `wing_position`, `gear`, `fuselage_style`, `transport_breakdown`) + `reasons_tr` and trade-study reference |
+| `wing` | `span`, `area` (reference, trapezoid continued to the centre line), `aspect_ratio`, `taper`, `sweep_c4_deg`, `dihedral_deg`, `incidence_deg`, `washout_deg`, airfoils, `sections` (LiftingSurface format, starboard, root at the fuselage side to the tip), `mac`, `mac_le_x`, `mac_y`, `controls` (`aileron`/`flap`: `eta0`, `eta1` span coordinates, `xc_hinge`, `range_deg`) |
+| `tail` | `type`; `surfaces: {name: {sections, mirror, area, span, controls}}`; `volume_h`, `volume_v`, arms |
+| `fuselage` | `length`, `width_max`, `height_max`, `stations` (n × 6 or 7: x, w, h, zc, n_top, n_bot[, top_frac]) |
+| `landing_gear` | type, positions, track, wheelbase, tyres, static load split, tip-back/turnover angles, propeller ground clearance, tail-strike angle |
+| `aero` | drag build-up items, `cd0`, `e`, `k`, `clmax_clean/_to/_ld`, `ld_max`, polar references |
+| `mass` | `mtow_kg`, `empty_kg`, `fuel_kg`, `payload_kg`, `budget: {group: {target_kg, tol_kg}}` (groups = part groups), `cases` (`name`, `fuel_fraction`, `payload`) |
+| `stability` | `mac`, `mac_le_x`, `np_x`, `cg_design` [x, y, z], `cg_range_x` [fwd, aft], `static_margin_range` [min, max] |
+| `performance` | reference copy of the sizing results (speeds, L/D, endurance, range, climb, ceiling, field lengths, payload) |
+| `structures` | limit load factors (+3.8 / −1.5), FoS 1.5, fitting factor, design speeds (VA, VC, VD), gust velocities, gear sink rate, standards references |
+| `materials` | `{key: {name, kind (metal/composite/polymer/core/elastomer), density, E, Ftu, Fty, Fsu, Fbru, ply_t (plies), Tg_C/HDT_C, source}}` |
+| `layups` | `{key: {plies: [[material, angle_deg, count]], core, core_t, adhesive_areal, use}}` |
+| `processes` | `{key: {name, name_tr, min_thickness, tolerance (ISO 2768-m), draft_deg, min_bend_radius_t, edge_distance_D, notes}}` |
+| `display` | `colors` per group, `drawing.dimensions`, `preview_states` |
+| `layout` | datum, `ground_z`, `root_part`, stations/frames, interface points, keep-out envelopes, `part_numbers` ranges, `clearances` rules |
+| `assembly` | `general` notes and `steps` (`step`, `title_tr`, `subassembly`, `text`, `tools`, `checks`) |

@@ -1,0 +1,88 @@
+manta:
+  name: MANTA
+  name_tr: Kanat-gövde birleşik (BWB)
+  summary_tr: 'Taşıyıcı merkez gövde (BWB) yüksek açıklıklı dış kanatlara kesintisiz
+    geçer; motor sırttaki omurga kaportasında, itici pervane iki dışa eğik dikey kuyruk
+    arasında korunur. Geniş iç hacim: yakıt, faydalı yük ve aviyonik ağırlık merkezinin
+    üzerinde; içeri katlanır iniş takımı.'
+  pitch_tr: Merkez gövde ve dış kanat arka kenarındaki eleron/elevonlar + eğik ikiz
+    dümen-yükseliş (ruddervator)
+  gear_retractable: true
+  S_ref_m2: 4.74
+  span_m: 6.7
+  AR: 9.5
+  S_wet_m2: 15.4
+  cd0: 0.0255
+  e: 0.86
+  LD_max: 15.8
+  endurance_h: 17.0
+  v_loiter_tas_m_s: 25.1
+  ws_kg_m2: 30.6
+  length_m: 3.07
+  sheet: /home/user/Drone-controller/ucav250/data/concepts_v2/manta/sheet.png
+ok:
+  name: OK
+  name_tr: Kanard-itici, ok kanat + kanatucu dümen
+  summary_tr: 'Burunda kanard, arkada geriye ok açılı ana kanat ve kanat uçlarından
+    kıvrılarak yükselen dikey dümenler: kuyruk yok. Kanard önce perdövites yapar,
+    ana kanat stall''a girmez (doğal stall koruması). İtici pervane gövde sonunda,
+    altında ventral koruma kanadı.'
+  pitch_tr: Kanard üzerinde yükseliş dümeni; ana kanatta kanatçık, kanat ucu dikeylerinde
+    dümen
+  gear_retractable: false
+  S_ref_m2: 3.61
+  span_m: 6.44
+  AR: 11.5
+  S_wet_m2: 11.5
+  cd0: 0.0285
+  e: 0.8
+  LD_max: 15.9
+  endurance_h: 15.3
+  v_loiter_tas_m_s: 28.7
+  ws_kg_m2: 40.1
+  length_m: 3.97
+  sheet: /home/user/Drone-controller/ucav250/data/concepts_v2/ok/sheet.png
+halka:
+  name: HALKA
+  name_tr: Kutu / birleşik kanat
+  summary_tr: Alçak, geriye ok açılı ön kanat; sırttaki dikey kuyruğun tepesinden
+    çıkan ileri ok açılı arka kanat; kanat uçlarında ikisini birleştiren dikey plakalar
+    (kutu kanat). Aynı açıklıkta indüklenmiş sürükleme ~%20 daha düşük; 5,5 m açıklıkla
+    tek parça taşınabilir kanat yarıları.
+  pitch_tr: Arka kanatta yükseliş dümenleri, ön kanatta kanatçık/flap, dikey kuyrukta
+    dümen
+  gear_retractable: false
+  S_ref_m2: 4.77
+  span_m: 5.5
+  AR: 6.3
+  S_wet_m2: 14.9
+  cd0: 0.029
+  e: 1.0
+  LD_max: 13.1
+  endurance_h: 13.9
+  v_loiter_tas_m_s: 25.0
+  ws_kg_m2: 30.4
+  length_m: 3.82
+  sheet: /home/user/Drone-controller/ucav250/data/concepts_v2/halka/sheet.png
+hancer:
+  name: HANÇER
+  name_tr: Köşeli taşıyıcı gövde + kanalli itici fan
+  summary_tr: 'Elmas kesitli, keskin kenar çizgili (chine) taşıyıcı gövde ön kenar
+    uzantılarıyla (LERX) kanada kaynaşır; dışa eğik ikiz dikey kuyruk + hareketli
+    yatay kuyruk; pervane bir kanal (duct) içinde: daha sessiz, yerde güvenli, jet
+    görünümlü arka bölüm.'
+  pitch_tr: Hareketli yatay stabilizatör (stabilator) + dışa eğik ikiz dümen, kanatçık/flap
+  gear_retractable: true
+  S_ref_m2: 3.64
+  span_m: 6.3
+  AR: 10.9
+  S_wet_m2: 15.3
+  cd0: 0.0312
+  e: 0.8
+  LD_max: 14.8
+  endurance_h: 14.3
+  v_loiter_tas_m_s: 28.6
+  ws_kg_m2: 39.8
+  length_m: 4.02
+  sheet: /home/user/Drone-controller/ucav250/data/concepts_v2/hancer/sheet.png
+compare: /home/user/Drone-controller/ucav250/data/concepts_v2/compare.png

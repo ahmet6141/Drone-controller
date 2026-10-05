@@ -1,0 +1,767 @@
+# =====================================================================================================
+# YK-250 (ucav250) - RESEARCH PHASE - BASELINE (synthesis of the six research files)
+# Civil surveillance / research UAV with a UCAV/MALE look, one ~250 cc piston engine.
+# Payload: EO/IR sensors and mission equipment only. No weapons, munitions, hardpoints, pylons or release
+# mechanisms anywhere in this file or in the files it summarises.
+#
+# What this file is
+#   The recommended STARTING INPUTS for the concept trade study and sizing phase (spec.yaml v1,
+#   analysis/sizing.py). It picks one value (plus a range) for every input the sizing needs, keeps the
+#   source and tag of the research value it came from, and records the cross-checks between the files.
+#   It does not replace the research files: every block names the research file and key it came from ("ref").
+#
+# Conventions
+#   - SI units, named in the key (m, m2, kg, s, N, N_m, Pa, W, V, m_per_s, kg_per_h, degC). Angles in deg.
+#   - Every number carries "source" (URL, via YAML alias to the sources list, or a research-file path) and
+#     "tag": manufacturer | datasheet | standard | paper | vendor | estimate.
+#     A value copied from a research file keeps that file's source and tag. A value computed here is tagged
+#     estimate and carries a "basis" with the formula and inputs.
+#   - "ref" = research file and key the value came from (ucav250/data/research/<file>#<key path>).
+#   - Corrections made to the research files during this synthesis are listed in cross_checks.corrections_applied
+#     and in the "corrections" list inside each corrected file.
+# Date: 2026-10-05
+# =====================================================================================================
+
+meta:
+  project: YK-250 (ucav250)
+  topic: research baseline for concept/sizing
+  phase: research -> sizing hand-over
+  date: "2026-10-05"
+  scope: >-
+    Civil EO/IR surveillance and research UAV, runway operation, single Limbach L 275 EF two-stroke twin,
+    MTOM strictly below 150 kg (Turkish class M2). Payload is EO/IR sensors and mission equipment only.
+  files_synthesised:
+    - ucav250/data/research/engine.yaml
+    - ucav250/data/research/comparables.yaml
+    - ucav250/data/research/standards.yaml
+    - ucav250/data/research/aero.yaml
+    - ucav250/data/research/aero_polars.py
+    - ucav250/data/airfoils/*.dat
+    - ucav250/data/research/components.yaml
+    - ucav250/data/research/materials.yaml
+  how_to_use: >-
+    sizing.py reads design_point, engine, propeller, aero, mass_targets and design_loads as its first-iteration
+    inputs, then replaces the estimates with its own results. materials_to_use / processes / fasteners map
+    onto the spec.yaml materials / processes keys of ARCHITECTURE.md section 9. Every value tagged estimate is
+    a starting guess the sizing phase must confirm or replace. open_items lists what must be obtained from
+    suppliers or tests before design freeze.
+
+# -----------------------------------------------------------------------------------------------------
+# SOURCES (only the ones cited in this file; the research files hold the full lists)
+# -----------------------------------------------------------------------------------------------------
+sources:
+  # research files (for values computed there)
+  - {id: engine_yaml, url: &s_engine "ucav250/data/research/engine.yaml", tag: estimate}
+  - {id: comparables_yaml, url: &s_comp "ucav250/data/research/comparables.yaml", tag: estimate}
+  - {id: standards_yaml, url: &s_std "ucav250/data/research/standards.yaml", tag: standard}
+  - {id: aero_yaml, url: &s_aero "ucav250/data/research/aero.yaml", tag: estimate}
+  - {id: components_yaml, url: &s_cmp "ucav250/data/research/components.yaml", tag: estimate}
+  - {id: materials_yaml, url: &s_mat "ucav250/data/research/materials.yaml", tag: standard}
+  # engine
+  - {id: lim_web, url: &s_lim_web "https://www.limflug.de/en/products/engines-15kw-40kw.php", tag: manufacturer, note: "re-checked 2026-10-05: L 275 EF 18 kW / 7500 rpm, 7 kg, starter set 2.3 kg, alternators 5.2 kg"}
+  - {id: lim_ds_275ef, url: &s_lim_ds "https://limflug.de/downloads/datasheets/L275-EF-datasheet-en.pdf", tag: datasheet}
+  - {id: lim_ds_275e, url: &s_lim_ds_e "https://limflug.de/downloads/datasheets/L275-E-datasheet-en.pdf", tag: datasheet}
+  - {id: ust018_p61, url: &s_ust61 "https://www.ust-media.com/ust-magazine/UST018/61/", tag: paper}
+  - {id: ust018_p66, url: &s_ust66 "https://www.ust-media.com/ust-magazine/UST018/66/", tag: paper}
+  - {id: ust048, url: &s_ust048 "https://www.uncrewed-systems.com/?p=9652", tag: paper, note: "re-checked 2026-10-05: SG750 '800 W over 50 V AC at 7500 rpm', 1 kW for 3 min, 440 g, 101 x 28.6 mm, 'will integrate'"}
+  - {id: hirth_4201, url: &s_hirth4201 "https://hirthengines.com/wp-content/uploads/2025-4201.pdf", tag: datasheet}
+  - {id: hirth_2301, url: &s_hirth2301 "https://hirthengines.com/wp-content/uploads/2025-2301.pdf", tag: datasheet}
+  - {id: moulton_2007, url: &s_moulton "https://drum.lib.umd.edu/handle/1903/6905", tag: paper}
+  - {id: w3_manual, url: &s_w3man "http://3w-modellmotoren.de/wp-content/uploads/2016/11/Operating-Manual.pdf", tag: manufacturer}
+  - {id: ust001_hirth, url: &s_ust001 "https://www.ust-media.com/ust-magazine/UST001/43/", tag: paper}
+  - {id: sky_275fi, url: &s_sky275 "https://skypower-international.com/product/sp-275-fi-ts-ros/", tag: manufacturer}
+  - {id: fuel_density, url: &s_fuel "https://www.engineeringtoolbox.com/fuels-higher-calorific-values-d_169.html", tag: estimate}
+  - {id: iso2533, url: &s_isa "https://www.iso.org/standard/7472.html", tag: standard}
+  # comparables
+  - {id: primoco_mfr, url: &s_primoco "https://uav-stol.com/?p=145", tag: manufacturer, note: "re-checked 2026-10-05: 150 kg MTOW, 1-30 kg payload, 10 h, 120 km/h, 3300 m"}
+  # standards and regulation
+  - {id: cs_luas, url: &s_csluas "http://jarus-rpas.org/wp-content/uploads/2023/06/jar_07_doc_CS_LUAS.pdf", tag: standard}
+  - {id: cs_vla, url: &s_csvla "https://www.easa.europa.eu/en/downloads/66874/en", tag: standard}
+  - {id: stanag4703, url: &s_stanag "https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/391827/20140916-STANAG-4703_AEP-83_A__1_.pdf", tag: standard}
+  - {id: far23_2017, url: &s_far23 "https://www.ecfr.gov/on/2017-08-29/title-14/chapter-I/subchapter-C/part-23", tag: standard}
+  - {id: sc_light_uas, url: &s_sclu "https://www.easa.europa.eu/sites/default/files/dfu/special_condition_sc_light-uas_medium_risk_01.pdf", tag: standard}
+  - {id: shgm_sht_iha_2026, url: &s_shtiha "https://web.shgm.gov.tr/documents/sivilhavacilik/files/mevzuat/sektorel/talimatlar/SHT-IHA(1).pdf", tag: standard, note: "re-checked 2026-10-05: Madde 8(1) M2 = 25 kg (dahil) - 150 kg, M3 = 150 kg (dahil) ve daha fazla; Madde 8(5) M2/M3 need an SHGM airworthiness certificate; Madde 11(2) tescil above 120 m / beyond 3000 m with P2"}
+  - {id: compositesworld_tg, url: &s_cwtg "https://www.compositesworld.com/articles/environmental-testing-of-composites", tag: paper}
+  - {id: flutter_damping_paper, url: &s_flutter "https://journals.sagepub.com/doi/pdf/10.1177/0954410016638867", tag: paper}
+  # aero and propeller
+  - {id: tp1861, url: &s_tp1861 "https://ntrs.nasa.gov/api/citations/19810015487/downloads/19810015487.pdf", tag: paper}
+  - {id: tnd7428, url: &s_tnd7428 "https://ntrs.nasa.gov/citations/19740003708", tag: paper}
+  - {id: tp2256, url: &s_tp2256 "https://ntrs.nasa.gov/citations/19840018592", tag: paper}
+  - {id: r824, url: &s_r824 "https://ntrs.nasa.gov/api/citations/19930090976/downloads/19930090976.pdf", tag: paper}
+  - {id: tn3963, url: &s_tn3963 "https://ntrs.nasa.gov/api/citations/19930084707/downloads/19930084707.pdf", tag: paper}
+  - {id: neuralfoil, url: &s_nf "https://github.com/peterdsharpe/NeuralFoil", tag: estimate}
+  - {id: uiuc_coord, url: &s_uiuc "https://m-selig.ae.illinois.edu/ads/coord/", tag: paper}
+  - {id: mz_0161, url: &s_mz0161 "https://www.mejzlik.eu/files/0161-zanzottera-motor-305hs-mejzlik-32x18-2b.pdf", tag: manufacturer, note: "re-checked 2026-10-05: 32x18 2B CW and CCW, 334 g; static 451 N / 23.15 N m at 5500 rpm"}
+  - {id: mz_0164, url: &s_mz0164 "https://www.mejzlik.eu/files/0164-zanzottera-motor-305hs-mejzlik-31x12-3b.pdf", tag: manufacturer}
+  - {id: mz_cwccw, url: &s_mzcw "https://www.mejzlik.eu/files/cw-ccwmanual.pdf", tag: manufacturer}
+  - {id: falcon_chart, url: &s_falcon "https://www.falconpropellers.com/wp-content/uploads/2020/04/Falcon-Propeller-Test-Chart.pdf", tag: manufacturer}
+  # components
+  - {id: volz_da26, url: &s_da26 "https://www.volz-servos.com/fileadmin/user_upload/Downloads/Datasheets/DA-26_Datasheet_uni.pdf", tag: datasheet, note: "re-checked 2026-10-05: 28 V (12-32 V), 2.7 N m rated, 5.0 N m peak, 270 g"}
+  - {id: volz_da30, url: &s_da30 "https://www.volz-servos.com/fileadmin/user_upload/Downloads/Datasheets/DA-30_Datasheet_RevI.pdf", tag: datasheet}
+  - {id: tost_cat_2026, url: &s_tost "https://www.tost.de/wp-content/uploads/2026/03/tost_katalog_dt_2026-3_download.pdf", tag: manufacturer}
+  - {id: sagitta_lg, url: &s_sagitta "https://elib.dlr.de/114590/1/DLRK_2017_LDG_Design_Sagitta_UAV.pdf", tag: paper}
+  - {id: trillium_hd59_ds, url: &s_hd59 "https://www.trilliumeng.com/uploads/documents/Trillium-HD59-2026.pdf", tag: datasheet, note: "re-checked 2026-10-05: HD59-LLVV 1550 g, 147 x 202 mm, 20 W average / 100 W peak"}
+  - {id: redwire_e180, url: &s_e180 "https://rdw.com/product-archive/octopus-isr-and-optics-payloads/e180/", tag: manufacturer}
+  - {id: octopus_e180_launch, url: &s_e180p "https://insideunmannedsystems.com/octopus-isr-systems-launches-epsilon-180/", tag: paper}
+  - {id: riegl_minivux3, url: &s_riegl "https://www.riegl.com/en-usa/products/detail/riegl-minivux-3uav", tag: manufacturer, note: "read 2026-10-05: 1.55 kg scanner"}
+  - {id: veronte_changelog, url: &s_veronte "https://manuals.embention.com/1x/en/4.12⧸1.8/changelog/index.md", tag: manufacturer}
+  - {id: silvus_sc4200ep, url: &s_silvus "https://silvustechnologies.com/wp-content/uploads/2026/03/StreamCaster-4200-SC4200EP-Enhanced-Plus-Datasheet.pdf", tag: datasheet}
+  - {id: microhard_pddl2450, url: &s_microhard "https://microhardcorp.com/brochures/pDDL2450.Brochure.Rev.1.4.1.pdf", tag: datasheet}
+  - {id: ping200x_ds, url: &s_ping "https://uavionix.com/wp-content/uploads/2019/04/Ping200X-Datasheet-Rev-B.pdf", tag: datasheet}
+  - {id: dronetag_beacon, url: &s_dronetag "https://dronetag.com/products/beacon/", tag: manufacturer}
+  - {id: calian_hc977exf, url: &s_calian "https://sites.calian.com/app/uploads/sites/8/2024/06/Calian%C2%AE-HC977EXF-Datasheet-Rev.-202203.pdf", tag: datasheet}
+  - {id: powerbox_hasa, url: &s_hasa "https://www.powerbox-systems.com/data/dokumente/00002088/EN/Downloads/Bedienungsanleitung/Datasheet%20Pitot%20HASA.pdf", tag: datasheet}
+  - {id: vat_1000w, url: &s_vat "https://vat.aero/1000w-power-distribution-unit-3/", tag: manufacturer}
+  - {id: a123_anr26650, url: &s_a123 "https://www.nkon.nl/novat/amfile/file/download/file/169/product/1793", tag: datasheet}
+  - {id: atl_bladders, url: &s_atl "https://www.unmannedsystemstechnology.com/2024/03/custom-uav-fuel-bladders-fluid-containment-solutions/", tag: manufacturer}
+  - {id: galaxy_grs4_240, url: &s_grs "https://galaxysky.cz/grs-4-240-40m2-p30-en", tag: manufacturer, note: "re-checked 2026-10-05: 5.9 kg, 240 kg, 240 km/h, 13.1 kN, 43 m2, 6.9 m/s"}
+  - {id: aveo_lsa, url: &s_aveo "https://www.aircraftspruce.eu/catalog/pdf/11-07360.pdf", tag: datasheet}
+  # materials, processes, fasteners
+  - {id: ncamp_ud, url: &s_ncud "https://www.wichita.edu/industry_and_defense/NIAR/Documents/NCP-RP-2008-004-Rev-B-MTM45-1-AS4-145-UNI-Qual-Stat-report-10-20-23-Final.pdf", tag: standard, note: "re-checked 2026-10-05: ETW = 200 degF wet, ETW2 = 250 degF; Tg dry 397.33 degF, wet 339.46 degF; ETW B-basis LT 225.78, LC 111.93, TC 13.15, IPS0.2 3.71 ksi; A-estimate/B ratios read from Tables 4-1, 4-4, 4-7, 4-9"}
+  - {id: ncamp_pw, url: &s_ncpw "https://www.wichita.edu/industry_and_defense/NIAR/Research/cytec-mtm45-1/NCP-RP-2009-037NCACG3KPWAS4FabricStatAnalysisReport01-08-19.pdf", tag: standard}
+  - {id: ncamp_7781, url: &s_nc7781 "https://www.wichita.edu/industry_and_defense/NIAR/Research/cytec-mtm45-1/QualificationNCP-RP-2009-009RevAMTM45-17781GlassFabric9-24-18.pdf", tag: standard}
+  - {id: ncamp_nps81451, url: &s_nps81451 "https://www.wichita.edu/industry_and_defense/NIAR/Research/cytec-mtm45-1/NPS-81451-Rev-D-September-23-2022.pdf", tag: standard}
+  - {id: rohacell_wf, url: &s_rohacell "https://products.evonik.com/assets/23/50/ROHACELL_WF_and_WF_HT_May_2026_EN_Asset_4252350.pdf", tag: manufacturer}
+  - {id: hrh10_us, url: &s_hrh10 "https://hexcel.com/wp-content/uploads/2026/01/HexWeb_HRH10_DataSheet_us.pdf", tag: manufacturer}
+  - {id: ea9394, url: &s_ea9394 "https://dm.henkel-dam.com/is/content/henkel/EA-9394-Aero", tag: manufacturer}
+  - {id: dp490, url: &s_dp490 "https://multimedia.3m.com/mws/media/2409614O/", tag: manufacturer}
+  - {id: mil_hdbk_5g_v1, url: &s_h5v1 "https://archive.org/download/DTIC_ADA295150/DTIC_ADA295150.pdf", tag: standard}
+  - {id: mil_hdbk_5g_v2, url: &s_h5v2 "https://archive.org/download/DTIC_ADA322636/DTIC_ADA322636.pdf", tag: standard}
+  - {id: dlr_design_rules, url: &s_dlr "https://elib.dlr.de/107894/1/__Bsfait00_fa_Archive_IB_2016_IB_2016_173_MA%20Werthen.pdf", tag: paper}
+  - {id: nasa_cr198266, url: &s_cr198266 "https://ntrs.nasa.gov/citations/19960029069", tag: paper}
+  - {id: hart_smith, url: &s_hartsmith "https://ntrs.nasa.gov/api/citations/19740005082/downloads/19740005082.pdf", tag: paper}
+  - {id: ecss_inserts, url: &s_ecssins "https://ecss.nl/wp-content/uploads/handbooks/ecss-e-hb/ECSS-E-HB-32-22A20March2011.pdf", tag: standard}
+  - {id: ecss_fasteners, url: &s_ecssfst "https://ecss.nl/wp-content/uploads/handbooks/ecss-e-hb/ECSS-E-HB-32-23A16April2010.pdf", tag: standard}
+  - {id: faa_ac43_13_1b, url: &s_ac43 "https://www.faa.gov/documentLibrary/media/Advisory_Circular/AC_43.13-1B_w-chg1.pdf", tag: standard}
+  - {id: hubs_cnc, url: &s_hubs "https://www.hubs.com/guides/cnc-machining/", tag: vendor}
+  - {id: iso2768_repro, url: &s_iso2768 "https://www.rapiddirect.com/blog/iso-2768/", tag: vendor}
+  - {id: iso286_repro, url: &s_iso286 "https://en.wikipedia.org/wiki/Engineering_fit", tag: standard}
+  - {id: skybolt, url: &s_skybolt "https://www.skybolt.com/wp-content/uploads/2025/07/Skybolt-Fasteners-Catalog-2025-Catalog.pdf", tag: manufacturer}
+  - {id: clickbond, url: &s_clickbond "https://www.clickbond.com/products/nutplates/", tag: manufacturer}
+  - {id: eos_pa2200, url: &s_pa2200 "https://www.shapeways.com/wp-content/uploads/2021/10/Material-Data-sheet-Nylon-12-PA2200.pdf", tag: manufacturer}
+  - {id: markforged, url: &s_onyx "https://static.markforged.com/downloads/composites-data-sheet.pdf", tag: manufacturer}
+
+# -----------------------------------------------------------------------------------------------------
+# DESIGN POINT used for every number computed in this file (first iteration only)
+# -----------------------------------------------------------------------------------------------------
+design_point:
+  mtow_kg: {value: 145.0, tag: estimate, source: *s_comp, basis: "comparables nominal 150 kg, moved below the 149.9 kg Turkish M2 cap with 4.9 kg (3.4 %) of headroom; see mass_targets"}
+  wing_area_m2: {value: 3.0, tag: estimate, source: *s_comp, ref: "comparables.yaml#recommended_ranges.wing_area_m2"}
+  span_m: {value: 6.0, tag: estimate, source: *s_comp, ref: "comparables.yaml#recommended_ranges.span_m"}
+  aspect_ratio: {value: 12.0, tag: estimate, source: *s_comp, basis: "6.0^2 / 3.0"}
+  taper_ratio: {value: 0.5, tag: estimate, source: *s_aero, ref: "aero.yaml#design_point.aircraft_nominals.taper_ratio_assumed"}
+  root_chord_m: {value: 0.667, tag: estimate, source: *s_aero, basis: "2 S / (b (1 + taper))"}
+  tip_chord_m: {value: 0.333, tag: estimate, source: *s_aero, basis: "0.5 x root chord"}
+  mean_geometric_chord_m: {value: 0.500, tag: estimate, source: *s_comp, basis: "S / b"}
+  mac_m: {value: 0.519, tag: estimate, source: *s_aero, basis: "(2/3) c_r (1 + l + l^2)/(1 + l), l = 0.5"}
+  wing_loading_kg_per_m2: {value: 48.3, tag: estimate, source: *s_comp, basis: "145 / 3.0"}
+  wing_loading_Pa: {value: 474.0, tag: estimate, source: *s_comp, basis: "145 x 9.80665 / 3.0"}
+  oswald_e: {value: 0.75, tag: estimate, source: *s_comp, ref: "comparables.yaml#recommended_ranges.consistency_check.design_point.oswald_e"}
+  cd0: {value: 0.035, range: [0.030, 0.040], tag: estimate, source: *s_aero, ref: "aero.yaml#propellers.requirement.thrust_required_N", basis: "parabolic polar used by comparables and aero; replace with a drag build-up in sizing"}
+  lift_curve_slope_per_rad: {value: 5.10, tag: estimate, source: *s_csvla, basis: "Helmbold 2 pi AR / (2 + sqrt(4 + AR^2/0.95^2)), AR 12, unswept; used for the gust formula of CS-VLA 341"}
+
+# -----------------------------------------------------------------------------------------------------
+# MISSION TARGETS (starting values; the sizing phase turns them into requirements)
+# -----------------------------------------------------------------------------------------------------
+mission_targets:
+  endurance_h: {value: 10.0, range: [10.0, 13.0], tag: estimate, source: *s_comp, ref: "comparables.yaml#recommended_ranges.endurance_h_expected", basis: "about 10 h with a 10 % reserve; cross-checked in cross_checks.loiter_fuel_flow (9.8-10.9 h)"}
+  loiter_speed_m_per_s_eas: {value: 28.0, range: [26.0, 30.0], tag: estimate, source: *s_comp, basis: "best-endurance CL about 0.9-1.0 at 48 kg/m2 (comparables cruise_speed_m_s basis)"}
+  cruise_speed_m_per_s: {value: 33.0, range: [30.0, 36.0], tag: estimate, source: *s_comp, ref: "comparables.yaml#recommended_ranges.cruise_speed_m_s"}
+  service_ceiling_m: {value: 4500.0, range: [3600.0, 5500.0], tag: estimate, source: *s_comp, ref: "comparables.yaml#recommended_ranges.service_ceiling_m"}
+  operating_altitude_m: {value: [1000.0, 3000.0], tag: estimate, source: *s_comp, basis: "EO/IR surveillance band of the comparables; used for the 3000 m loiter check"}
+  takeoff_landing: {value: "runway (paved or prepared strip), conventional wheeled take-off and landing; no catapult or net", tag: estimate, source: *s_comp, basis: "comparables runway types (Aerostar, Primoco, AR5) quote 200-300 m take-off distance"}
+  runway_length_m: {value: 300.0, tag: estimate, source: *s_primoco, basis: "Primoco One 150 and Aerostar 300 m take-off distance (comparables.yaml); target for the sizing check"}
+  climb_rate_sea_level_m_per_s: {value: 4.9, tag: estimate, source: *s_comp, ref: "comparables.yaml#recommended_ranges.consistency_check.climb_estimate"}
+  emergency_recovery: {value: "rocket-deployed parachute as emergency termination only, not routine recovery", tag: estimate, source: *s_cmp, ref: "components.yaml#categories.recovery_and_safety.recommended"}
+
+# -----------------------------------------------------------------------------------------------------
+# CONFIGURATION STARTING POINT (input to the trade study, not a decision)
+# -----------------------------------------------------------------------------------------------------
+configuration_starting_point:
+  propulsion: {value: "single pusher propeller behind a single fuselage, direct drive, engine cylinders horizontal", tag: estimate, source: *s_comp, basis: "11 of 13 comparables with a known layout are pushers; keeps the nose/belly EO/IR turret field of view clear"}
+  fuselage: {value: "single MALE-style fuselage, length 3.4 m (3.0-3.8 m); aft section must contain a 0.397 m wide engine (cheek inlets/blisters allowed)", tag: estimate, source: *s_comp, ref: "comparables.yaml#recommended_ranges.length_m; engine.yaml#installation.envelope_m"}
+  wing: {value: "straight tapered wing, taper 0.5, high or mid position, two removable outer panels", tag: estimate, source: *s_aero}
+  tail_options: {value: ["V or inverted-V tail on the fuselage (MALE look)", "twin boom with H tail (structurally proven in this class)"], tag: estimate, source: *s_comp, ref: "comparables.yaml#recommended_ranges.configuration_guidance"}
+  landing_gear: {value: "fixed tricycle: GFRP spring main bow, steerable nose leg; retractable gear not baselined", tag: estimate, source: *s_cmp, ref: "components.yaml#categories.landing_gear.recommended"}
+  payload_location: {value: "EO/IR turret in a chin or forward belly bay sized for 0.18 m dia x 0.23 m (E180 growth)", tag: estimate, source: *s_cmp}
+  look_rule: {value: "UCAV/MALE look is shape language only; no weapon bays, hardpoints, pylons or release mechanisms", tag: estimate, source: *s_comp}
+
+# -----------------------------------------------------------------------------------------------------
+# ENGINE
+# -----------------------------------------------------------------------------------------------------
+engine:
+  ref: "engine.yaml#recommended, #candidates[limbach_l275_ef], #installation"
+  model: Limbach L 275 EF
+  vendor: Limbach Flugmotoren GmbH (Koenigswinter, Germany)
+  type: two-stroke boxer twin, loop scavenged, port fuel injection with ECU (altitude/temperature compensation), air-cooled, single spark plug per cylinder, both cylinders fire together
+  displacement_m3: {value: 274.0e-6, source: *s_lim_web, tag: manufacturer}
+  power_max_W: {value: 18000.0, rpm: 7500, source: *s_lim_web, tag: manufacturer}
+  power_takeoff_W: {value: 17150.0, rpm: 6950, source: *s_ust66, tag: paper}
+  power_max_continuous_W: {value: 16200.0, rpm: 6000, source: *s_lim_ds, tag: estimate, basis: "not published; datasheet WOT curve at 6000 rpm, top of the 4000-6000 rpm regular-flight band"}
+  torque_max_N_m: {value: 25.9, rpm: 5000, source: *s_lim_ds, tag: datasheet, note: "plateau 25.3-25.9 N m from 4000 to 6000 rpm (read from curve, +/-0.3 N m)"}
+  rpm:
+    regular_flight: {value: [4000, 6000], source: *s_ust66, tag: paper}
+    operating_range: {value: [4000, 7500], source: *s_ust66, tag: paper}
+    takeoff: {value: 6950, source: *s_ust66, tag: paper}
+    hard_cut: {value: 8000, source: *s_ust61, tag: paper}
+  wot_curve:
+    source: *s_lim_ds
+    tag: datasheet
+    note: read from the datasheet chart (engine.yaml), +/-0.3 hp / +/-0.3 N m / +/-4 g/HPh
+    rpm: [4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500]
+    power_W: [10740, 12080, 13720, 14910, 16260, 17000, 17900, 18870]
+    torque_N_m: [25.3, 25.4, 25.9, 25.6, 25.7, 24.7, 24.0, 23.7]
+    bsfc_g_per_kWh: [467, 476, 481, 499, 479, 461, 433, 414]
+  dry_mass_kg: {value: 7.0, source: *s_lim_web, tag: manufacturer, note: "excludes ECU, pump, starter, generator; the datasheet 'approx. 15 kg' most likely includes alternator + starter (open item)"}
+  installed_mass_kg:
+    total: {value: 10.96, range: [10.0, 12.5], tag: estimate, source: *s_engine, ref: "engine.yaml#recommended.installed_engine_group_mass"}
+    items:
+      engine_bare: {value: 7.00, source: *s_lim_web, tag: manufacturer}
+      ecu_harness_ignition_coils: {value: 0.80, source: *s_ust61, tag: estimate}
+      fuel_pump_regulator_filter: {value: 0.35, source: *s_ust61, tag: estimate}
+      starter_generator_sg750: {value: 0.44, source: *s_ust048, tag: paper}
+      generator_power_electronics: {value: 0.40, source: *s_ust048, tag: estimate}
+      generator_adapter_coupling: {value: 0.15, source: *s_ust61, tag: estimate}
+      exhaust_with_silencers: {value: 1.00, source: *s_hirth4201, tag: estimate}
+      engine_mount_isolators_bolts: {value: 0.70, source: *s_ust61, tag: estimate}
+      throttle_servo_cht_egt_sensors: {value: 0.12, source: *s_ust61, tag: estimate}
+    fallback_with_limbach_28V_alternator_and_starter: {value: 17.57, tag: estimate, source: *s_lim_web, note: "use if the SG750 is not released (+6.6 kg)"}
+    excluded: propeller, spinner, cowling, cooling ducts, firewall, fuel system, battery (counted in mass_targets.systems_rollup)
+  fuel:
+    type: {value: "92 RON (or better) gasoline + fully synthetic two-stroke oil 50:1", source: *s_lim_web, tag: manufacturer}
+    density_kg_per_m3: {value: 740.0, source: *s_fuel, tag: estimate, basis: "0.98 x 737 + 0.02 x 870 (engine.yaml meta); use everywhere (comparables.yaml corrected to it, C-COMP-02)"}
+    lower_heating_value_J_per_kg: {value: 43.4e+6, source: *s_fuel, tag: estimate}
+  bsfc_curve:
+    format: "[[power_fraction of 18 kW, g_per_kWh]] - ARCHITECTURE.md spec.yaml engine.bsfc"
+    points: [[0.20, 600], [0.30, 540], [0.50, 470], [0.75, 460], [1.00, 430]]
+    tag: estimate
+    source: *s_engine
+    ref: "engine.yaml#recommended.fuel_flow"
+    uncertainty_fraction: 0.12
+    basis: >-
+      0.30-1.00 points are engine.yaml estimates anchored on the datasheet WOT SFC (414-499 g/kWh) and the UST
+      'about 340 g/hph' (456 g/kWh). The 0.20 point is added here as a flagged extrapolation (+11 % over the
+      30 % point, Moulton 2007 shows BSFC rising again at light load) because the loiter design point
+      (24-28 % incl. generator load) lies below the lowest engine.yaml point (C-ENG-02). Interpolate linearly.
+    extrapolated_points: [0.20]
+  fuel_flow_kg_per_h:
+    points: {p030: 2.92, p050: 4.23, p075: 6.21, p100: 7.74}
+    source: *s_engine
+    tag: estimate
+    ref: "engine.yaml#recommended.fuel_flow.points"
+  altitude_power_lapse:
+    formula: "P(h)/P0 = sigma(h)^1.23"
+    tag: estimate
+    source: *s_hirth4201
+    basis: fitted to the Hirth 4201 full-throttle altitude curve (engine.yaml); no Limbach data
+    power_max_W_at_altitude: {altitude_m: [0, 1000, 2000, 3000, 4000, 4500, 6000], power_W: [18000, 15970, 14140, 12470, 10970, 10280, 8410]}
+  envelope_m:
+    length_prop_hub_face_to_generator_flange: {value: 0.2214, source: *s_ust61, tag: paper}
+    length_with_sg750: {value: 0.26, source: *s_ust048, tag: estimate}
+    width_incl_spark_plug_caps: {value: 0.3968, source: *s_ust61, tag: paper}
+    height_cylinder_side_to_intake_cover_top: {value: 0.2946, source: *s_ust61, tag: paper}
+    crank_axis_to_cylinder_side_extreme: {value: 0.060, source: *s_ust61, tag: paper}
+    prop_hub_face_to_crankcase_mount_face: {value: 0.1814, source: *s_lim_ds, tag: datasheet, note: read_from_drawing}
+  mount:
+    bolts: {value: "4 x M8 threaded bosses on the rear crankcase face", source: *s_lim_ds_e, tag: datasheet}
+    bolt_pattern_yz_m: {value: [[-0.0295, 0.051], [-0.0295, -0.051], [0.052, 0.031], [0.052, -0.031]], tag: estimate, source: *s_lim_ds_e, basis: "scaled from the illegible datasheet detail, +/-3 mm; packaging only, never for drilling"}
+    isolator_rigid_body_modes_Hz_max: {value: 20.0, tag: estimate, source: *s_ust66, basis: "1st-order excitation 33 Hz at a 2000 rpm idle; f_exc/f_n >= sqrt(2), preferably 2"}
+    excitation_Hz: {first_order_5000rpm: 83.3, second_order_5000rpm: 166.7, takeoff_first_order: 115.8, tag: estimate, source: *s_ust66}
+    gimbal_isolator_keep_out_Hz: {value: [[80, 120], [160, 240]], tag: estimate, source: *s_ust66, ref: "engine.yaml#installation.vibration.isolator_target"}
+  cooling:
+    airflow_kg_per_s_at_max_power: {value: 0.42, range: [0.29, 0.66], tag: estimate, source: *s_moulton}
+    inlet_area_m2: {value: 0.031, tag: estimate, source: *s_isa}
+    exit_area_m2: {value: 0.040, tag: estimate, source: *s_w3man}
+    cht_limit_continuous_degC: {value: 240.0, tag: estimate, source: *s_w3man, basis: "10 K below the 3W 250 degC short-term limit; replace with the Limbach limit"}
+    exhaust_gas_design_temperature_degC: {value: 750.0, tag: estimate, source: *s_ust001}
+    composite_clearance_to_exhaust_m: {value: [0.025, 0.050], tag: estimate, source: *s_ust001, note: "or a heat shield"}
+    ground_running: pusher gets no propeller wash over the cylinders; limit ground runs by CHT or add a ground blower
+  generator:
+    model: ePropelled SG750 starter/generator on the crank rear
+    power_continuous_W: {value: 800.0, rpm: 7500, source: *s_ust048, tag: paper}
+    power_peak_W: {value: 1000.0, duration_s: 180, source: *s_ust048, tag: paper}
+    output_voltage: {value: "50 V AC 3-phase at 7500 rpm (needs rectifier/regulator)", source: *s_ust048, tag: paper}
+    power_at_cruise_W: {value: 550, rpm: 5200, tag: estimate, source: *s_ust048, basis: "rpm scaling"}
+    power_at_loiter_W: {value: 405, rpm: 3800, tag: estimate, source: *s_ust048, basis: "rpm scaling at the 32x18 2B loiter rpm (C-ENG-01); about 34 V rectified, so the controller must boost"}
+    status: {value: "announced 2023 as 'will integrate'; production status unconfirmed", source: *s_ust048, tag: paper}
+  tbo_planning_s: {value: 1.8e+6, tag: estimate, source: *s_hirth2301, basis: "500 h planning value (Hirth UAV two-strokes); Limbach publishes none"}
+  backup_engine: {model: Sky Power SP-275 FI TS ROS, power_max_W: 15800.0, dry_mass_kg: 9.25, source: *s_sky275, tag: manufacturer, note: "twin spark, CW/CCW at order, positioned for 100-150 kg MTOW; no public dimensions or SFC"}
+
+# -----------------------------------------------------------------------------------------------------
+# PROPELLER
+# -----------------------------------------------------------------------------------------------------
+propeller:
+  ref: "aero.yaml#propellers.recommendation"
+  primary:
+    model: Mejzlik 32x18 2B carbon (pusher hand chosen per Mejzlik CW/CCW rule)
+    position: pusher
+    blades: {value: 2, source: *s_mz0161, tag: manufacturer}
+    diameter_m: {value: 0.8128, source: *s_mz0161, tag: manufacturer}
+    pitch_nominal_m: {value: 0.4572, source: *s_mz0161, tag: manufacturer}
+    mass_kg: {value: 0.334, source: *s_mz0161, tag: manufacturer}
+    rotation: {value: "CW and CCW available", source: *s_mz0161, tag: manufacturer}
+    static_thrust_N: {value: 500, rpm: 5790, tip_mach: 0.724, tag: estimate, source: *s_mz0161, basis: "Mejzlik 5500 rpm static row scaled with n^2 to the L 275 EF WOT torque (corrected from 512 N, C-AERO-01)"}
+    static_thrust_N_for_sizing: {value: 460, tag: estimate, source: *s_falcon, basis: "500 N x 0.92 (Falcon measured/Mejzlik table ratio, lower half)"}
+    wot_thrust_N: {V20: 385, V30: 326, V40: 289, tag: estimate, source: *s_mz0161, ref: "aero.yaml#propellers.recommendation.pusher_primary.wot_thrust_N", note: "isolated propeller; 20 and 40 m/s points extrapolated above 5500 rpm (few-percent uncertainty)"}
+    cruise_points:
+      V30: {rpm: 3802, shaft_power_W: 3979, efficiency: 0.786}
+      V35: {rpm: 4174, shaft_power_W: 4853, efficiency: 0.813}
+      V40: {rpm: 4580, shaft_power_W: 6397, efficiency: 0.806}
+      tag: estimate
+      source: *s_mz0161
+      basis: "thrust = estimated drag at 150 kg, S 3.0 m2, CD0 0.035, e 0.75 (aero.yaml); inside the Mejzlik tables"
+    installation_factor: {value: 0.95, range: [0.93, 0.97], tag: estimate, source: *s_aero, basis: "pusher behind the fuselage, until measured"}
+    tip_speed_limit_m_per_s: {value: 255.0, tag: estimate, source: *s_engine, basis: "static helical tip Mach <= 0.75 (noise, Mejzlik data accuracy)"}
+    hub_interface: {value: "10 mm centre bore, drilled to the Limbach hub pattern (pattern not yet known)", tag: estimate, source: *s_falcon}
+    caveat: "30 m/s sea-level loiter at about 3800 rpm is just below Limbach's 4000-6000 rpm regular-flight band and limits generator output (cross_checks.electrical_margin)"
+  alternative:
+    model: Mejzlik 31x12 3B carbon
+    diameter_m: {value: 0.7874, source: *s_mz0164, tag: manufacturer}
+    pitch_nominal_m: {value: 0.3048, source: *s_mz0164, tag: manufacturer}
+    mass_kg: {value: 0.412, source: *s_mz0164, tag: manufacturer}
+    static_thrust_N: {value: 550, rpm: 5960, tag: estimate, source: *s_mz0164}
+    cruise_points: {V30: {rpm: 4453, efficiency: 0.746}, V35: {rpm: 4945, efficiency: 0.769}, V40: {rpm: 5477, efficiency: 0.753}, tag: estimate, source: *s_mz0164}
+    when_to_use: "if loiter rpm must stay inside 4000-6000 rpm (generator output, engine band) or for 25 mm more ground clearance; costs about 5 points of cruise efficiency"
+  ground_clearance_min_m: {value: 0.18, source: *s_csvla, tag: standard, clause: "CS-VLA 925(a), nose-wheel gear", note: "at the critical attitude, statically deflected gear; with the 0.813 m propeller the hub must be >= 0.59 m above ground at that attitude"}
+  radial_tip_clearance_to_structure_m: {value: 0.026, source: *s_csvla, tag: standard, clause: "CS-VLA 925(c)(1)"}
+  plane_behind_fuselage_trailing_edge: {value: "0.10-0.15 D", tag: estimate, source: *s_engine}
+
+# -----------------------------------------------------------------------------------------------------
+# MASS TARGETS
+# -----------------------------------------------------------------------------------------------------
+mass_targets:
+  mtow_kg:
+    nominal: {value: 145.0, tag: estimate, source: *s_comp, basis: "comparables statistics give 144-158 kg at 18-20 kW; moved below the M2 cap"}
+    range: {value: [125.0, 149.9], tag: estimate, source: *s_comp}
+    hard_cap: {value: 149.9, tag: standard, source: *s_shtiha, clause: "SHT-IHA (2026) Madde 8(1): 150 kg (dahil) is M3", note: "the statistical comparables range (125-180 kg) is capped here (C-COMP-01)"}
+  empty_mass_fraction: {value: 0.60, range: [0.55, 0.62], tag: estimate, source: *s_comp, ref: "comparables.yaml#recommended_ranges.empty_mass_fraction"}
+  empty_mass_kg: {value: 87.0, tag: estimate, source: *s_comp, basis: "0.60 x 145"}
+  fuel_fraction: {value: 0.22, range: [0.18, 0.26], tag: estimate, source: *s_comp, ref: "comparables.yaml#recommended_ranges.fuel_fraction"}
+  fuel_mass_kg: {value: 31.9, tag: estimate, source: *s_comp, basis: "0.22 x 145"}
+  fuel_volume_m3: {value: 0.0431, tag: estimate, source: *s_fuel, basis: "31.9 kg / 740 kg/m3 = 43.1 L; the recommended ATL bladder is about 45 L (2 % expansion space leaves about 44 L); a 0.26 fuel fraction (37.7 kg, 51 L) would need a larger tank"}
+  payload_design_kg: {value: 20.0, range: [15.0, 27.0], tag: estimate, source: *s_comp, basis: "lower end of the comparables 20-35 kg payload band; the baseline sensor set is only about 3.3 kg (payload_set), the rest is an allocation for research payloads (C-COMP-03)"}
+  growth_reserve_kg: {value: 6.1, tag: estimate, source: *s_comp, basis: "145 - 87.0 empty - 31.9 fuel - 20.0 payload = 6.1 kg (4.2 % MTOW), plus 4.9 kg more up to the 149.9 kg cap"}
+  systems_rollup_kg:
+    note: bottom-up mass of bought/installed systems, to set the structure budget (empty mass minus systems)
+    engine_group_installed: {value: 10.96, tag: estimate, source: *s_engine}
+    propeller: {value: 0.334, tag: manufacturer, source: *s_mz0161}
+    spinner_and_hub_adapter: {value: 0.40, tag: estimate, source: *s_engine, basis: "engine.yaml excluded list gives 0.6-1.0 kg for propeller + spinner"}
+    cowling_cooling_ducts_baffles_firewall: {value: 1.50, tag: estimate, source: *s_csvla, basis: "not researched; about 1 m2 composite cowl/ducts at about 1 kg/m2 + 0.38 mm stainless firewall (CS-VLA 1191) about 0.45 kg"}
+    fuel_system: {value: 1.73, tag: estimate, source: *s_cmp, ref: "components.yaml#categories.fuel_system.recommended.mass_estimate_kg"}
+    landing_gear: {value: 9.6, tag: estimate, source: *s_cmp, basis: "components.yaml 9.1 kg + 0.5 kg for a longer-stroke main bow (C-CMP-03)"}
+    flight_control_actuators: {value: 3.28, tag: estimate, source: *s_cmp, ref: "components.yaml#categories.control_surface_actuators.recommended.mass_installed_kg"}
+    avionics: {value: 0.62, tag: estimate, source: *s_cmp, ref: "components.yaml#categories.avionics.recommended.mass_estimate_kg"}
+    electrical_power: {value: 4.53, tag: estimate, source: *s_cmp, ref: "components.yaml#categories.electrical.recommended.mass_estimate_kg"}
+    wiring_harness_connectors_coax: {value: 2.50, tag: estimate, source: *s_cmp, basis: "not researched (components.yaml excludes harness); about 1.7 % MTOW allowance"}
+    recovery_and_safety: {value: 6.30, tag: estimate, source: *s_cmp, ref: "components.yaml#categories.recovery_and_safety.recommended.mass_estimate_kg"}
+    total: {value: 41.75, tag: estimate, source: *s_cmp, basis: "sum of the items above"}
+  structure_budget_kg: {value: 45.25, tag: estimate, source: *s_comp, basis: "87.0 empty - 41.75 systems = 45.25 kg (31 % MTOW): wing, tail, fuselage, wing joints, gear and engine-mount attachment structure, paint, sealant. The sizing phase must check it with a weight estimate"}
+  loading_cases:
+    tag: estimate
+    source: *s_comp
+    basis: "starting set for the CG/structures envelope; sizing adds its own cases"
+    cases:
+      - {name: mtow_full_fuel_design_payload, fuel_fraction: 1.0, payload_kg: 20.0}
+      - {name: full_fuel_baseline_sensors_only, fuel_fraction: 1.0, payload_kg: 3.25}
+      - {name: zero_fuel_design_payload, fuel_fraction: 0.0, payload_kg: 20.0}
+      - {name: minimum_flying, fuel_fraction: 0.1, payload_kg: 1.75}
+
+# -----------------------------------------------------------------------------------------------------
+# PAYLOAD SET (EO/IR and mission equipment only)
+# -----------------------------------------------------------------------------------------------------
+payload_set:
+  eo_ir_turret:
+    model: Trillium HD59-LLVV (EO zoom + dual-FOV LWIR 640 x 512, laser pointer option)
+    mass_kg: {value: 1.55, source: *s_hd59, tag: datasheet}
+    diameter_m: {value: 0.147, source: *s_hd59, tag: datasheet}
+    height_m: {value: 0.202, source: *s_hd59, tag: datasheet}
+    power_average_W: {value: 20.0, source: *s_hd59, tag: datasheet}
+    power_peak_W: {value: 100.0, source: *s_hd59, tag: datasheet}
+    interface: {value: "24 V payload rail; Ethernet video with MISB KLV", source: *s_hd59, tag: datasheet}
+    mount_and_isolator_kg: {value: 0.20, tag: estimate, source: *s_cmp}
+  turret_bay_growth_envelope:
+    reference_item: Octopus E180 class
+    diameter_m: {value: 0.18, source: *s_e180, tag: manufacturer}
+    height_m: {value: 0.23, source: *s_e180, tag: estimate, basis: "227 mm + 3 mm"}
+    mass_kg: {value: 4.0, source: *s_e180, tag: estimate, basis: "3.75 kg + mount"}
+    power_peak_W: {value: 160.0, source: *s_e180p, tag: paper}
+  mission_computer_and_recorder:
+    mass_kg: {value: 1.0, tag: estimate, source: *s_cmp, basis: "not researched (session search budget exhausted); rugged embedded GPU computer + SSD video recorder class"}
+    power_W: {value: 30.0, tag: estimate, source: *s_cmp, basis: "same; select an item in the next phase"}
+  payload_tray_harness_kg: {value: 0.5, tag: estimate, source: *s_cmp}
+  baseline_sensor_set_total_kg: {value: 3.25, tag: estimate, source: *s_cmp, basis: "1.55 + 0.20 + 1.0 + 0.5"}
+  research_payload_allowance_kg: {value: 16.75, tag: estimate, source: *s_comp, basis: "20.0 design payload - 3.25 baseline set"}
+  research_payload_example:
+    model: RIEGL miniVUX-3UAV laser scanner (example of a research payload; optional)
+    mass_kg: {value: 1.55, source: *s_riegl, tag: manufacturer}
+    note: power, interface and IMU/GNSS mass not read; for the bay-sizing discussion only
+  isolation_rule: {value: "turret isolator modes outside 80-120 Hz and 160-240 Hz (engine 1st/2nd order)", tag: estimate, source: *s_ust66}
+
+# -----------------------------------------------------------------------------------------------------
+# AERODYNAMICS
+# -----------------------------------------------------------------------------------------------------
+aero:
+  ref: "aero.yaml#recommendation, #method.recommended_corrections_for_sizing"
+  wing_airfoil:
+    root: {name: NASA NLF(1)-0416, file: ucav250/data/airfoils/nlf416.dat, t_over_c: 0.16, source: *s_tp1861, tag: paper}
+    tip: {name: NLF(1)-0416 thickness-scaled to 13 %, build: "ucav250/design/oml.py resampled('nlf416', thickness_scale=0.8125)", t_over_c: 0.13, tag: estimate, source: *s_tp1861, note: "derived section; confirm with XFoil/MSES"}
+    fallback: {name: "NLF(1)-0416 16 % root to tip", tag: estimate, source: *s_tp1861}
+    loft: linear in t/c root to tip; same mean line
+    washout_deg: {value: 2.5, range: [2.0, 3.0], tag: estimate, source: *s_nf, basis: "tip cl_max about 0.15 below root at taper 0.5; confirm with lifting line"}
+    reasons:
+      - {text: "cl_max unaffected by leading-edge roughness at 0.075c (Re 1-9e6)", source: *s_tp1861, tag: paper}
+      - {text: "trailing-edge stall, gentle post-stall (NeuralFoil ratio 0.96)", source: *s_tn3963, tag: paper}
+      - {text: "best tripped endurance figure cl^1.5/cd of the 13 wing sections (117.6 at Re 1.5e6)", source: *s_nf, tag: estimate}
+      - {text: "cm about -0.10 (same as NACA 44xx), root spar depth about 0.106 m at x/c 0.30", source: *s_nf, tag: estimate}
+  tail_airfoil: {name: NACA 0012, file: ucav250/data/airfoils/n0012.dat, applies_to: "horizontal + vertical tail or V-tail panels", source: *s_r824, tag: paper, alternative: "NACA 0010 (lighter; leading-edge stall, 5-7 % lower cl_max)"}
+  section_data_Re_1p5e6_nlf416:
+    source: *s_nf
+    tag: estimate
+    tripped: {cl_max: 1.709, cd_min: 0.0108, cd_cl0p6: 0.01144, cd_cl0p9: 0.01228, cd_cl1p1: 0.01302, cm_c4_cl0p6: -0.096}
+    clean_n9: {cl_max: 1.714, cd_min: 0.0060, cd_cl0p9: 0.00755, cm_c4_cl0p6: -0.104}
+    after_corrections: {cl_max: 1.61, cd_cl0p9_tripped: 0.0141}
+  corrections_for_sizing:
+    cl_max_factor: {value: 0.94, source: *s_tp1861, tag: estimate, basis: "NLF(1)-0416 experiment 1.69 / NeuralFoil 1.80 at Re 3e6"}
+    cd_factor_tripped: {value: 1.15, source: *s_tnd7428, tag: estimate, basis: "LS(1)-0417 fixed-transition L/D 11-17 % below NeuralFoil"}
+    cd_factor_clean: {value: 1.05, source: *s_nf, tag: estimate}
+    rule: {value: "size endurance and climb on the tripped polars x 1.15; clean polars are upside only; leading-edge erosion tape on the first 8-10 % chord", source: *s_tp2256, tag: estimate}
+    trim_margin_cm_shift: {value: 0.01, tag: estimate, source: *s_tp2256, note: "nose-down trim change in rain on NLF wings"}
+  aircraft_clmax:
+    clean_trimmed: {value: 1.40, tag: estimate, source: *s_comp, basis: "comparables CLmax 1.4 (clean); consistent with 0.9 x corrected section cl_max (1.47-1.61) minus trim"}
+    flaps_landing: {value: 1.80, tag: estimate, source: *s_comp, basis: "plain/slotted flap value used in comparables wing_loading basis"}
+  drag_polar_first_iteration: {cd0: 0.035, cd0_range: [0.030, 0.040], oswald_e: 0.75, tag: estimate, source: *s_comp, note: "replace with a component drag build-up (fuselage, tail, gear, cooling drag, turret) in sizing"}
+  airfoil_file_warning: {value: "naca4415.dat and naca0010.dat now shadow the analytic NACA generator in design/oml.py; the baseline does not use them, but rename/delete them if NACA 4415/0010 are ever selected", tag: estimate, source: *s_aero}
+
+# -----------------------------------------------------------------------------------------------------
+# DESIGN SPEEDS (proposed; sizing decides)
+# -----------------------------------------------------------------------------------------------------
+design_speeds_m_per_s_eas:
+  VS1g_clean: {value: 23.5, tag: estimate, source: *s_csvla, basis: "sqrt(2 x 474 Pa / (1.225 x 1.40))"}
+  VS_flaps: {value: 20.7, tag: estimate, source: *s_csvla, basis: "CLmax 1.80"}
+  VA: {value: 45.0, tag: estimate, source: *s_csluas, basis: "VS sqrt(3.8) = 45.8, capped at VC (CS-LUAS.335(c))"}
+  VC: {value: 45.0, range: [40.0, 45.0], tag: estimate, source: *s_csluas, basis: "CS-LUAS lets VC follow the mission; 45 m/s is about 0.8 x the estimated level top speed and above the 30-36 m/s cruise"}
+  VD: {value: 57.0, tag: estimate, source: *s_csluas, basis: ">= 1.25 VC (56.3) and >= the estimated full-throttle level speed VH (55-60 m/s, CD0 0.035 with the aero.yaml WOT thrust trend x 0.95). A lower VC/VD (40/50) is allowed only with FCS overspeed protection that also covers a stuck throttle"}
+  VF_min: {value: 37.3, tag: estimate, source: *s_csluas, basis: "max(1.4 VS, 1.8 VSF), CS-LUAS.345(b); components.yaml flap screening corrected to this speed (C-CMP-04)"}
+  VNO_max: {value: 51.3, tag: estimate, source: *s_stanag, basis: "VCmax <= 0.9 VD (STANAG 4703 UL2.1)"}
+  parachute_deploy_limit: {value: 66.7, source: *s_grs, tag: manufacturer, note: "GRS 4/240 VNE 240 km/h, above VD"}
+  tyre_speed_limit: {value: 36.0, source: *s_tost, tag: manufacturer, note: "TOST tyre rating; lift-off/touch-down should stay below about 33 m/s"}
+
+# -----------------------------------------------------------------------------------------------------
+# DESIGN LOADS (from standards.yaml design_loads_recommended; values are LIMIT unless named ultimate)
+# -----------------------------------------------------------------------------------------------------
+design_loads:
+  ref: "standards.yaml#design_loads_recommended"
+  certification_basis_candidate: {value: "JARUS CS-LUAS Ed. 0.3, tailored by risk, cross-checked with STANAG 4703; to be agreed with SHGM", source: *s_csluas, tag: standard}
+  manoeuvre:
+    n_limit_pos: {value: 3.8, source: *s_csluas, tag: standard, clause: "CS-LUAS.337(a)"}
+    n_limit_neg_at_VC: {value: -1.52, source: *s_csluas, tag: standard, clause: "CS-LUAS.337(b)"}
+    n_limit_neg_at_VD: {value: 0.0, source: *s_csluas, tag: standard, clause: "CS-LUAS.333(b), linear from VC to VD", note: "analysis/structlib.vn_diagram keeps -1.52 to VD (conservative); state it or implement the taper"}
+    n_limit_flaps: {value: 2.0, source: *s_csluas, tag: standard, clause: "CS-LUAS.345"}
+  gust:
+    Ude_at_VC_m_per_s: {value: 15.24, source: *s_csluas, tag: standard, clause: "CS-LUAS.333(c)(1)(i)", note: "full value up to 6096 m"}
+    Ude_at_VD_m_per_s: {value: 7.62, source: *s_csluas, tag: standard, clause: "CS-LUAS.333(c)(1)(ii)"}
+    Ude_at_VF_m_per_s: {value: 7.62, source: *s_csluas, tag: standard, clause: "CS-LUAS.345(a)(2)"}
+    formula: {value: "n = 1 +/- 0.5 rho0 V_EAS a Kg Ude / (M g / S); Kg = 0.88 mu / (5.3 + mu); mu = 2 (M/S) / (rho c_mean a)", source: *s_csvla, tag: standard, clause: "CS-VLA 341"}
+    baseline_evaluation:
+      tag: estimate
+      source: *s_csvla
+      basis: "145 kg, S 3.0 m2, c_mean 0.50 m, a 5.10 /rad, VC 45, VD 57 m/s EAS, ISA density for mu"
+      sea_level: {mu: 31.0, Kg: 0.751, n_gust_VC: [4.40, -2.40], n_gust_VD: [3.15, -1.15]}
+      altitude_3000_m: {mu: 41.7, Kg: 0.781, n_gust_VC: [4.53, -2.53], n_gust_VD: [3.23, -1.23]}
+      altitude_4500_m: {mu: 48.8, Kg: 0.794, n_gust_VC: [4.59, -2.59], n_gust_VD: [3.27, -1.27]}
+      with_VC_40_VD_50: {n_gust_VC_sea_level: 4.02, n_gust_VC_4500m: 4.19}
+      conclusion: "gust at VC governs the wing (about +4.6 / -2.6 limit at 4500 m, ultimate about +6.9 / -3.9 with FoS 1.5); evaluate every weight and altitude in sizing"
+  factors:
+    factor_of_safety: {value: 1.5, source: *s_csluas, tag: standard, clause: "CS-LUAS.303"}
+    fitting_factor: {value: 1.15, source: *s_csluas, tag: standard, clause: "CS-LUAS.625"}
+    casting_factor: {value: 2.0, value_with_radiography: 1.25, source: *s_csluas, tag: standard, clause: "CS-LUAS.621"}
+    bearing_factor_rotating_or_pinned_joints: {value: 2.0, source: *s_stanag, tag: standard, clause: "UL2.4 (common practice)"}
+    frequent_assembly_attachment_factor: {value: 1.5, source: *s_stanag, tag: standard, clause: "UL2.4 (removable wings, tail, payload modules)"}
+    hinge_bearing_total_factor: {value: 6.67, source: *s_csluas, tag: standard, clause: "CS-LUAS.657"}
+    push_pull_joint_total_factor: {value: 3.33, source: *s_csluas, tag: standard, clause: "CS-LUAS.693"}
+    control_system_load_factor: {value: 1.25, source: *s_csluas, tag: standard, clause: "CS-LUAS.395", note: "actuator stall torque at the horn >= 1.25 x max computed hinge moment; structure designed for full stall torque"}
+    combination_rule: {value: "ultimate = limit x 1.5 x max(applicable special factors); composite factors multiply", source: *s_csluas, tag: standard, clause: "CS-LUAS.619"}
+  composites:
+    design_values_basis: {value: "A-basis for single load path, B-basis for redundant structure", source: *s_csluas, tag: standard, clause: "CS-LUAS.613(b)"}
+    special_factor_with_ETW_B_basis: {value: 1.2, total_ultimate_factor: 1.8, source: *s_csluas, tag: standard, clause: "AMC LUAS.619 (hot/wet 1.0 x manufacturing 1.2); applies to OOA prepreg too unless lowered by demonstrated QC"}
+    special_factor_RTD_only_data: {value: 2.4, total_ultimate_factor: 3.6, source: *s_csluas, tag: standard, clause: "AMC LUAS.619 (2.0 x 1.2)"}
+    max_structure_temperature_degC: {value: 70.0, source: *s_csvla, tag: estimate, basis: "AMC VLA 613(c) curve, light-grey livery (solar absorptivity <= 0.6); dark paint about 84 degC"}
+    required_wet_Tg_min_degC: {value: 98.0, source: *s_cwtg, tag: estimate, basis: "MOL = wet Tg - 28 K"}
+    damage_tolerance_strain_limits_microstrain: {thin_and_sandwich: {tension: 5000, compression: 2600, shear: 5200}, thick_gt_2mm: {tension: 5000, compression: 3000, shear: 6000}, source: *s_stanag, tag: standard, clause: "UL13.1.2 (applied at ultimate, conservative)"}
+  landing:
+    sink_speed_formula: {value: "V = clip(0.51 (M g / S)^0.25, 2.13, 3.05) m/s", source: *s_csluas, tag: standard, clause: "App. H H.2(b)"}
+    sink_speed_m_per_s: {value: 2.38, tag: estimate, source: *s_csluas, basis: "0.51 x 474^0.25"}
+    drop_height_m: {value: 0.287, tag: estimate, source: *s_csluas, basis: "0.0132 x sqrt(474), H.13(a)"}
+    wing_lift_fraction: {value: 0.667, source: *s_csluas, tag: standard}
+    n_inertia_min: {value: 2.67, source: *s_csluas, tag: standard, clause: "H.2(e)"}
+    n_inertia_target_max: {value: 4.0, tag: estimate, source: *s_stanag, basis: "design target; concentrated-mass rule: if nj > 3.13 design engine/tank/payload/parachute mounts for nj + 0.67"}
+    wheel_load_factor_formula: {value: "nj = (h + (1 - L) d)/(ef d); n_inertia = nj + L", source: *s_stanag, tag: standard, clause: "Annex B UL.GL.1"}
+    required_effective_deflection_m:
+      tag: estimate
+      source: *s_stanag
+      basis: "solve the formula above for d at 145 kg (h 0.287 m, L 0.667)"
+      spring_bow_ef_0p5: {for_n_4p47: 0.183, for_n_4p0: 0.216}
+      damped_leg_ef_0p65: {for_n_4p47: 0.134, for_n_4p0: 0.157}
+      oleo_ef_0p8: {for_n_4p47: 0.106, for_n_4p0: 0.123}
+      note: "components.yaml bow with 0.12-0.13 m deflection gives n_inertia about 6.1 (C-CMP-03)"
+    side_load: {value: {vertical_factor: 1.33, side_total: 0.83, inboard_wheel: 0.50, outboard_wheel: 0.33}, source: *s_csluas, tag: standard, clause: "H.7"}
+    braked_roll: {value: {vertical_factor: 1.33, mu: 0.8}, source: *s_csluas, tag: standard, clause: "H.8"}
+    nose_gear_multiples_of_static: {value: {aft: {vertical: 2.25, drag: 1.80}, forward: {vertical: 3.2, forward: 0.90}, side: {vertical: 2.25, side: 1.575}}, source: *s_stanag, tag: standard, clause: "Annex B UL.GL.6 (envelope with CS-LUAS H.10)"}
+    level_landing_drag_ratio: {value: 0.25, source: *s_csluas, tag: standard, clause: "H.4(b)"}
+    ultimate_factor: {value: 1.5, source: *s_stanag, tag: standard}
+  engine_mount:
+    torque_factor: {value: 6.0, tag: estimate, source: *s_csvla, basis: "simultaneous-firing twin treated as a single-cylinder two-stroke (CS-VLA 361 gives 6); letter of the codes 3 (CS-VLA) or 4 (CS-LUAS)"}
+    limit_torque_MCP_N_m: {value: 154.7, tag: estimate, source: *s_csvla, basis: "25.8 N m x 6, with 100 % flight condition A loads"}
+    limit_torque_takeoff_N_m: {value: 141.4, tag: estimate, source: *s_csluas, basis: "23.6 N m x 6, with 75 % flight condition A loads"}
+    vertical_load_factor_with_torque: {value: 3.8, source: *s_csluas, tag: standard}
+    side_load_factor: {value: 1.47, tag: estimate, source: *s_csluas, basis: "max of CS-LUAS.363 (1.33) and App. F simplified value (1.47)"}
+    gyroscopic: {value: "yaw 2.5 rad/s, pitch 1.0 rad/s, n 2.5, max continuous thrust; M = 2 Ip Omega omega for 2 blades", source: *s_far23, tag: standard, clause: "FAR 23.371(a)(2)"}
+    crash_forward_ultimate_g: {value: 15.0, tag: estimate, source: *s_csvla, basis: "CS-VLA 561(c) value for engines aft of occupants, used as pusher retention criterion"}
+  emergency_landing_ultimate_g: {forward: 9.0, upward: 3.0, sideward: 1.5, downward: 6.0, source: *s_csvla, tag: standard, clause: "CS-VLA 561(b)(2); downward 6.0 from FAR 23.561 (estimate)", applies_to: "tank, battery, turret, parachute, engine (15 g forward)"}
+  parachute_opening_load:
+    opening_shock_N: {value: 13100.0, source: *s_grs, tag: manufacturer, note: "at 240 kg and 240 km/h"}
+    load_factor_at_145kg: {value: 9.2, tag: estimate, source: *s_grs, basis: "13100 / (145 x 9.80665); treat as ultimate on a dedicated hard point (CS-LUAS.380)"}
+  flutter:
+    clearance_speed_factor: {value: 1.2, applies_to: VD, speed_m_per_s: 68.4, source: *s_csluas, tag: standard, clause: "CS-LUAS.629(c)"}
+    min_total_damping: {value: 0.03, source: *s_flutter, tag: paper}
+    single_failure: {value: "disconnected (free-floating) surface flutter-free up to VD", source: *s_csluas, tag: standard, clause: "CS-LUAS.629(f)"}
+  fuel_system_rules:
+    tank_test_pressure: {value: "max(24 kPa, rho g n_ult head) with n_ult 9", source: *s_csluas, tag: standard, clause: "CS-LUAS.965(a)"}
+    expansion_space_fraction: {value: 0.02, source: *s_csluas, tag: standard}
+    pump_flow_factor: {value: 1.25, source: *s_csluas, tag: standard}
+    strainer_mesh_per_m: {value: [300, 600], strainer_area_ratio_min: 5.0, source: *s_csvla, tag: standard}
+    firewall_clearance_m: {value: 0.013, source: *s_csluas, tag: standard}
+    negative_g_feed_s: {value: 2.0, source: *s_csvla, tag: standard}
+    vent_no_loss_slope: {value: 0.01, source: *s_csluas, tag: standard}
+    hot_fuel_test_degC: {value: 43.0, source: *s_csvla, tag: standard}
+  electrical_and_lightning:
+    bonding_conductor_min_area_m2: {value: 1.3e-6, source: *s_csvla, tag: standard, clause: "CS-VLA 857(b)"}
+    lightning_strategy: {value: "operational limitation (no flight where lightning is likely) + bonding of engine, fuel system and antennas", source: *s_sclu, tag: estimate}
+
+# -----------------------------------------------------------------------------------------------------
+# MATERIALS TO USE (design values; spec.yaml materials schema)
+# Composites: B-basis ETW (93 degC wet) unless noted. Metals: A-basis min(L, LT), Fbru at e/D 2.0.
+# Apply the design_loads factors on top (composites: total 1.8 on these values).
+# -----------------------------------------------------------------------------------------------------
+materials_to_use:
+  ref: "materials.yaml#spec_ready"
+  primary_composite_system: {value: "Solvay MTM45-1 out-of-autoclave prepreg (oven, vacuum bag, 121 degC + 177 degC free-standing post-cure)", source: *s_nps81451, tag: standard}
+  cfrp_ud_mtm45_as4: {density: 1542.0, E: 1.2762e+11, E2: 7.929e+09, G12: 2.9647e+09, nu12: 0.31, Ftu: 1.5567e+09, Fcu: 7.7173e+08, F2tu: 2.1994e+07, F2cu: 9.0666e+07, Fsu: 2.558e+07, Fbru: 4.1596e+08, ply_t: 1.397e-04, Tg_wet_C: 170.8, source: *s_ncud, tag: standard, note: "Fsu is the 0.2 % offset in-plane shear (conservative); F2tu and Fbru estimated (materials.yaml)"}
+  cfrp_pw_mtm45_as4: {density: 1517.0, E: 6.419e+10, E2: 6.1019e+10, G12: 2.5511e+09, nu12: 0.05, Ftu: 7.1361e+08, Fcu: 2.8427e+08, Fsu: 1.9167e+07, Fbru: 4.1596e+08, ply_t: 2.0066e-04, Tg_wet_C: 156.3, source: *s_ncpw, tag: standard}
+  gfrp_7781_mtm45: {density: 1813.0, E: 2.489e+10, E2: 2.296e+10, G12: 2.3442e+09, nu12: 0.123, Ftu: 2.3559e+08, Fcu: 2.4318e+08, Fsu: 1.4617e+07, ply_t: 2.54e-04, Tg_wet_C: 160.0, source: *s_nc7781, tag: standard, use: "isolation plies, radomes/antenna covers, gear bow (UD glass is a separate estimate in components.yaml)"}
+  cfrp_qi_laminate_design_values:
+    OHT_Pa: {value: 3.1247e+08, source: *s_ncpw, tag: standard}
+    OHC_Pa: {value: 1.7540e+08, source: *s_ncpw, tag: standard}
+    bearing_2pct_offset_Pa: {value: 4.1596e+08, source: *s_ncud, tag: estimate, basis: "min(UD-QI ETW2 B-basis, 0.85 x PW-QI mean), e/D 3"}
+    E_qi_Pa: {value: 4.3368e+10, source: *s_ncpw, tag: estimate}
+    G_qi_Pa: {value: 1.7e+10, source: *s_ncpw, tag: estimate}
+    rule: use these (not lamina strengths) for every notched, bolted or damage-tolerant carbon check
+  a_basis_for_single_load_path:
+    value: 0.85
+    tag: estimate
+    source: *s_ncud
+    basis: >-
+      NCAMP MTM45-1/AS4 UD report (re-read 2026-10-05): A-estimate / B-basis (mod-CV) = 0.91-0.92 for LT and
+      UNT0, 0.86-0.92 for LC and UNC0 (lowest at ETW/ETW2). Multiply the B-basis values above by 0.85 for
+      single-load-path composite parts (e.g. a one-piece spar carry-through or wing-attach lug) until A-basis
+      values are generated, or design those parts with a redundant load path.
+  cores:
+    nomex_hrh10_3p2_48: {density: 48.0, E: 1.38e+08, G_L: 4.1e+07, G_W: 2.4e+07, Fsu_L: 1.0687e+06, Fsu_W: 5.8605e+05, Fcu: 1.8616e+06, source: *s_hrh10, tag: manufacturer, use: "wing and tail sandwich skins (film adhesive)"}
+    rohacell_71wf: {density: 75.0, E: 7.5e+07, G: 2.41e+07, Fsu: 1.0e+06, Fcu: 1.05e+06, max_process_C: 130.0, source: *s_rohacell, tag: manufacturer, note: "below the 177 degC post-cure: use WF-HT or post-cure before bonding"}
+    rohacell_51wf: {density: 52.0, E: 4.5e+07, G: 1.4e+07, Fsu: 5.0e+05, Fcu: 4.0e+05, max_process_C: 130.0, source: *s_rohacell, tag: manufacturer}
+  adhesives:
+    ea9394: {lap_shear_23C_Pa: 2.8958e+07, lap_shear_82C_Pa: 2.0684e+07, max_service_C: 177.0, use: "potting, engine-bay and primary bonds", source: *s_ea9394, tag: manufacturer}
+    dp490: {lap_shear_23C_Pa: 2.3e+07, lap_shear_82C_Pa: 9.5e+06, max_service_C: 80.0, use: "secondary bonds below 80 degC", source: *s_dp490, tag: manufacturer}
+  metals:
+    al_7075_t651_plate: {density: 2796.0, E: 7.1016e+10, Ftu: 5.309e+08, Fty: 4.6195e+08, Fsu: 2.9647e+08, Fbru: 9.9974e+08, Fbry: 7.86e+08, use: "machined fittings", source: *s_h5v1, tag: standard}
+    al_6061_t6_sheet: {density: 2713.0, E: 6.8258e+10, Ftu: 2.8958e+08, Fty: 2.4132e+08, Fsu: 1.8616e+08, Fbru: 6.0674e+08, Fbry: 3.999e+08, use: "bent brackets", source: *s_h5v1, tag: standard}
+    al_2024_t3_sheet: {density: 2796.0, E: 7.2395e+10, Ftu: 4.3437e+08, Fty: 2.8958e+08, Fsu: 2.689e+08, Fbru: 8.8942e+08, Fbry: 6.0674e+08, source: *s_h5v1, tag: standard}
+    steel_4130_normalized: {density: 7833.0, E: 1.9995e+11, Ftu: 6.55e+08, Fty: 5.1711e+08, Fsu: 3.93e+08, Fbru: 1.379e+09, Ftu_near_weld: 5.5158e+08, use: "engine mount, gear frames (TIG, AMS 6457 filler); design to Ftu_near_weld", source: *s_h5v1, tag: standard, basis_note: S-basis}
+    ti_6al_4v_annealed: {density: 4429.0, E: 1.1032e+11, Ftu: 9.239e+08, Fty: 8.6874e+08, Fsu: 5.9984e+08, Fbru: 1.8754e+09, use: "fasteners/pins in CFRP, hot fittings", source: *s_h5v2, tag: standard}
+    ss_304_annealed: {density: 7916.0, E: 1.9995e+11, Ftu: 5.0332e+08, Fty: 1.7926e+08, use: "firewall, exhaust shields", source: *s_h5v1, tag: standard}
+  polymers_additive:
+    pa12_sls: {density: 930.0, E: 1.65e+09, Ftu_design: 1.6e+07, max_service_C: 80.0, source: *s_pa2200, tag: estimate, basis: "0.34 x datasheet"}
+    pa_cf_fdm: {density: 1200.0, E: 2.4e+09, Ftu_design_xy: 1.25e+07, Ftu_design_z: 6.3e+06, max_service_C: 100.0, source: *s_onyx, tag: estimate, basis: "0.34 / 0.17 x datasheet"}
+    allowed_use: {value: "non-structural and secondary parts only; never primary structure, flight-control load path, engine mount, gear, fuel system or the exhaust zone", source: *s_mat, tag: estimate}
+  qualification_note: {value: "NCAMP shared allowables require a CMH-17/NCAMP equivalency programme on the YK-250 production process before certification credit; wet lay-up and infusion values are estimates that need a 3-batch coupon programme before primary use", source: *s_ncud, tag: estimate}
+
+# -----------------------------------------------------------------------------------------------------
+# PROCESS RULES (spec.yaml processes schema)
+# -----------------------------------------------------------------------------------------------------
+processes:
+  ref: "materials.yaml#spec_ready.processes, #processes"
+  prepreg_ooa_vacbag: {min_thickness_m: 0.6e-3, draft_deg: 2.0, min_inside_radius_m: {female: 3.0e-3, male: 1.5e-3, ud_tape: 5.0e-3}, edge_distance_D: 3.0, edge_distance_D_min: 2.5, tolerance: "ISO 2768-mK on trimmed edges and holes; laminate thickness +/-10 %", source: *s_dlr, tag: estimate}
+  laminate_stacking: {value: "symmetric, balanced, +/-45 outer plies, max 4 contiguous same-orientation plies (0.51 mm), >= 10 % of plies in each of 0/+45/-45/90, ply-drop slope 1:20 in the load direction (1:10 others), >= 40 % +/-45 at fastener zones", source: *s_dlr, tag: paper}
+  min_laminate_thickness_m: {external_skin: 0.6e-3, sandwich_face_primary: 0.6e-3, sandwich_face_secondary: 0.4e-3, at_fasteners: "t >= 0.5 D and >= 1.0 mm; countersink depth <= 0.67 t", source: *s_dlr, tag: estimate}
+  sandwich: {core_ramp_max_deg: 30.0, rule: "close out every free edge that carries inserts or fasteners; never clamp through bare core", source: *s_ecssins, tag: estimate}
+  potted_inserts: {value: "ESA ECSS-E-HB-32-22A potting radius b_p,min = 0.9 b_i + 0.7 S_c; edge distance >= b_p (>= 5 b_p for full capability); spacing >= 2 b_p (prefer 4 b_p)", source: *s_ecssins, tag: standard}
+  bonded_joints: {value: "Hart-Smith method; double-lap overlap >= 30 t of the thinner adherend; avoid single-lap primary bonds (>= 80 t if unavoidable); bondline 0.10-0.30 mm; minimum structural overlap 12.5 mm", source: *s_hartsmith, tag: estimate}
+  wet_layup_vacbag: {min_thickness_m: 0.6e-3, draft_deg: 2.0, use: "secondary structure and fairings only unless qualified by coupons", source: *s_mat, tag: estimate}
+  cnc_milling_metal: {min_wall_m: 1.5e-3, min_internal_radius_m: 3.0e-3, tolerance: "ISO 2768-mK; +/-0.125 mm default, +/-0.025 mm on fits", pocket_depth_max: "4 x width", thread_engagement_max: "3 D", surface_Ra_m: 3.2e-6, source: *s_hubs, tag: vendor}
+  sheet_metal_aluminium: {min_bend_radius_over_t: {al_5052_H32: 1.5, al_6061_T6: 3.0, al_2024_T3: 6.0, al_7075_T6: 7.0}, hole_to_bend: "2.5 t + R", flange_min: "4 t + R", rivet_edge_distance_D: 2.0, rivet_spacing_D: 3.0, source: *s_ac43, tag: standard, note: "upper end of AC 43.13-1B Table 4-6 at 3.25 mm; use the table for other thicknesses"}
+  tig_welding_4130: {min_wall_m: 0.89e-3, filler: "AMS 6457", near_weld_Ftu_Pa: 5.5158e+08, welder: "Group 1 per MIL-STD-1595A", source: *s_ac43, tag: standard}
+  additive: {sls_pa12_min_wall_m: 1.0e-3, fdm_pa_cf_min_wall_m: 1.2e-3, source: *s_mat, tag: estimate}
+  general_tolerance: {value: "ISO 2768-mK on all drawings unless stated", source: *s_iso2768, tag: vendor, note: "secondary reproduction of ISO 2768"}
+  fits: {hinge_pins: "H7/g6", dowels_spigots: "H7/h6", bushings_in_metal: "H7/p6", bushings_in_CFRP: "bonded (EA 9394), 0.05-0.15 mm diametral clearance, never interference", source: *s_iso286, tag: standard}
+
+# -----------------------------------------------------------------------------------------------------
+# FASTENER RULES
+# -----------------------------------------------------------------------------------------------------
+fasteners:
+  ref: "materials.yaml#fasteners"
+  edge_distance:
+    metal_D: {value: 2.0, source: *s_h5v1, tag: standard, note: "e/D 1.5-2.0 interpolate bearing; < 1.5 not allowed"}
+    composite_primary_D: {value: 2.5, plus_tolerance_m: 1.3e-3, source: *s_cr198266, tag: estimate}
+    composite_full_bearing_D: {value: 3.0, source: *s_cr198266, tag: paper}
+    composite_secondary_min_D: {value: 2.0, source: *s_cr198266, tag: estimate}
+  pitch:
+    composite_row_spacing_min_D: {value: 4.0, source: *s_cr198266, tag: estimate}
+    composite_width_per_fastener_D: {value: 6.0, source: *s_cr198266, tag: paper}
+    fairing_quarter_turn_pitch_m: {value: [0.100, 0.150], source: *s_mat, tag: estimate}
+    engine_cowl_quarter_turn_pitch_m: {value: [0.060, 0.090], source: *s_mat, tag: estimate}
+  materials_in_cfrp: {value: "titanium (Ti-6Al-4V), A286 or passivated stainless only; no aluminium, cadmium- or zinc-plated parts in contact with carbon; E-glass isolation ply + primer + wet-installed fasteners at aluminium/CFRP faying surfaces", source: *s_ecssfst, tag: estimate}
+  preload_and_torque:
+    method: {value: "ECSS-E-HB-32-23A: F_V = 0.65 sigma_y A_s; M_A = F_V (0.16 p + 0.58 d2 mu + mu D_Km/2), mu = 0.12", source: *s_ecssfst, tag: standard}
+    torque_8p8_N_m: {M3: 1.12, M4: 2.57, M5: 5.08, M6: 8.62, M8: 20.7, M10: 40.5, source: *s_ecssfst, tag: estimate}
+    torque_A2_70_N_m: {M3: 0.78, M4: 1.81, M5: 3.57, M6: 6.06, M8: 14.6, M10: 28.5, source: *s_ecssfst, tag: estimate}
+    composite_clamp: {value: "utilisation 0.5 (0.77 x table torque), large-OD washers (ISO 7093), mean clamp pressure <= 100 MPa", source: *s_ecssfst, tag: estimate}
+    note: design/fastener_catalog.py uses VDI 2230 90 % values, about 15-20 % higher; reconcile in the detailed design
+  locking: {value: "all-metal self-locking nuts/nutplates or safety wire in the engine bay and near the exhaust; nylon-insert nuts only below about 120 degC; removable fasteners whose loss is hazardous need 2 retaining devices (CS-LUAS.607)", source: *s_csluas, tag: standard}
+  nutplates: {value: "bonded rivetless nutplates (Click Bond type) on CFRP skins and spars; MS21047-class two-lug anchor nuts in metal", source: *s_clickbond, tag: manufacturer}
+  quarter_turn: {fairings: "Skybolt SK2600 (Camloc 2600 equivalent), 890 N working", cowls_and_structural_panels: "Skybolt SK4002 (Camloc 4002 equivalent), 3114 N working", source: *s_skybolt, tag: manufacturer}
+  edge_distance_check_rule: {value: "ARCHITECTURE.md checks: >= 2.0 D metal, >= 2.5 D composite", source: *s_mat, tag: estimate}
+
+# -----------------------------------------------------------------------------------------------------
+# RECOMMENDED SUBSYSTEMS
+# -----------------------------------------------------------------------------------------------------
+subsystems:
+  ref: "components.yaml#categories.*.recommended"
+  flight_control_actuators:
+    primary: {model: Volz DA 26 (28 V, RS-485), quantity: 6, use: "2 ailerons, 2 ruddervators/elevator-rudder, nose-wheel steering, brake master cylinder", torque_rated_N_m: 2.7, torque_peak_N_m: 5.0, mass_kg: 0.27, source: *s_da26, tag: datasheet}
+    flaps: {model: Volz DA 30, quantity: 2, torque_rated_N_m: 8.0, torque_peak_N_m: 16.0, mass_kg: 0.63, source: *s_da30, tag: datasheet}
+    horn_ratio_min: {primary: 1.5, flaps: 2.4, tag: estimate, source: *s_cmp, basis: "screening hinge moments x 1.25 (CS-LUAS.395); flaps at VF 37.3 m/s (C-CMP-04)"}
+    installed_mass_kg: {value: 3.28, tag: estimate, source: *s_cmp}
+    flutter_note: {value: "one actuator per surface: a disconnected actuator leaves a free-floating surface (CS-LUAS.629(f)); decide mass balance or dual actuators in structures", source: *s_csluas, tag: standard}
+  landing_gear:
+    configuration: fixed tricycle; GFRP spring main bow (in-house); steerable nose leg with damper
+    wheels: {main: "TOST SB Max II 70-50-20 3.5 in disc-brake wheels + BZT M calipers + 200x50 tyres", nose: "TOST LR Max II", source: *s_tost, tag: manufacturer}
+    braked_wheel_assembly_mass_kg: {value: 1.79, tag: estimate, source: *s_tost}
+    brake_torque_max_N_m: {value: 100.0, source: *s_tost, tag: manufacturer}
+    tyre_static_rating_kg: {value: 200.0, source: *s_tost, tag: manufacturer, note: "2026 catalogue; SAGITTA paper gives 2.5 kN; lower value used"}
+    reference_design: {value: "DLR SAGITTA 150 kg UAV landing gear", source: *s_sagitta, tag: paper}
+    stroke_requirement: {value: ">= 0.18-0.22 m effective deflection for a spring bow, or a damped leg (design_loads.landing)", tag: estimate, source: *s_stanag}
+    mass_kg: {value: 9.6, tag: estimate, source: *s_cmp}
+    retractable: {value: "not baselined: no purchasable unit for 100-200 kg; custom electric 11.5-13 kg", source: *s_sagitta, tag: paper}
+  eo_ir_gimbal: {model: Trillium HD59-LLVV, mass_kg: 1.55, power_average_W: 20.0, power_peak_W: 100.0, bay_growth: "Octopus E180 class 0.18 x 0.23 m, 4.0 kg, 160 W peak", source: *s_hd59, tag: datasheet}
+  avionics:
+    autopilot: {model: "Embention Veronte Autopilot 1x (ADS-B variant), DO-178C/DO-254, dissimilar supervisor with FTS logic, 8-54 V", mass_kg: 0.209, source: *s_veronte, tag: manufacturer}
+    prototype_autopilot: {model: "CubePilot Cube Orange+ with ArduPilot (iron bird, early flight tests)", source: *s_cmp, tag: vendor}
+    air_data: {model: "28 V heated pitot-static probe to Veronte + PowerBox Pitot HASA (DroneCAN) as dissimilar second source", hasa_mass_kg: 0.048, source: *s_hasa, tag: datasheet}
+    gnss_antennas: {model: Calian HC977EXF, quantity: 2, mass_kg: 0.008, source: *s_calian, tag: datasheet}
+    transponder: {model: "uAvionix ping200X (Mode S ES, ADS-B Out)", mass_kg: 0.05, power_W: 1.5, source: *s_ping, tag: datasheet, note: "values via search excerpt; confirm current datasheet"}
+    remote_id: {model: "Dronetag Beacon (or Veronte RID variant)", mass_kg: 0.016, source: *s_dronetag, tag: manufacturer, note: "SHGM remote-ID format to be confirmed"}
+    mass_estimate_kg: {value: 0.62, tag: estimate, source: *s_cmp}
+  datalink:
+    primary: {model: "Silvus StreamCaster 4200 EP (2x2 MIMO, C2 + IP video), module variant", data_rate_bit_per_s: 1.0e+8, latency_s: 0.007, source: *s_silvus, tag: datasheet, note: "12 V rail; band per BTK allocation (2.4 GHz ISM default)"}
+    backup_c2: {model: "Microhard pDDL2450 (2.4 GHz) or pDDL900", data_rate_bit_per_s: 2.5e+7, source: *s_microhard, tag: datasheet}
+  electrical:
+    architecture: {value: "SG750 + iPS-class controller -> 48 V-class DC bus (boost needed at loiter rpm), 14S2P LiFePO4 buffer (also the starting source), VISIONAIRtronics 1000 W PDU with redundant 28 V servo and avionics rails and a 24 V payload rail, 28-to-12 V converter for radio and lights", source: *s_cmp, tag: estimate}
+    pdu: {model: VISIONAIRtronics 1000 W PDU, mass_kg: 1.6, input_V: [24, 55], source: *s_vat, tag: manufacturer}
+    battery: {model: "14S2P A123 ANR26650M1-B LiFePO4", energy_J: 831600.0, mass_kg: 2.43, hold_up_s_at_400W: 1660, source: *s_a123, tag: estimate}
+    fallback: {value: "Limbach 28 V 45 A alternator (5.2 kg) + 12 V starter (2.3 kg), 28 V bus, 8S2P LiFePO4", source: *s_lim_web, tag: manufacturer}
+    mass_estimate_kg: {value: 4.53, tag: estimate, source: *s_cmp}
+  fuel_system:
+    tank: {value: "ATL ultralight (0.25 mm) bladder about 45 L in a composite fuselage bay near the CG + about 0.3 L header tank with flop pickup", source: *s_atl, tag: manufacturer}
+    feed: {value: "Limbach EFI pump/regulator (2.5 bar) with return to the header; Andair gascolator; roll-over + check valve vent; obp AN6 dry-break refuel coupling; capacitive level probe + header low-level switch", source: *s_cmp, tag: estimate}
+    mass_estimate_kg: {value: 1.73, tag: estimate, source: *s_cmp}
+  recovery_and_safety:
+    parachute: {model: Galaxy GRS 4/240 SOFT (rocket-deployed), mass_kg: 5.9, rated_mass_kg: 240.0, vne_m_per_s: 66.7, opening_shock_N: 13100.0, canopy_area_m2: 43.0, descent_rate_m_per_s: 6.9, min_rescue_height_m: 70.0, source: *s_grs, tag: manufacturer}
+    termination_sequence: {value: "engine kill before deployment; canopy exits forward of the pusher disc; dedicated hard point", source: *s_cmp, tag: estimate}
+    flight_termination: {value: "Veronte integrated FTS + independent channel (own receiver and backup cell, about 0.15 kg)", source: *s_cmp, tag: estimate}
+    lights: {model: "AveoFlashLP LSA x 3 (wing tips + tail)", mass_kg_each: 0.083, source: *s_aveo, tag: datasheet}
+    mass_estimate_kg: {value: 6.3, tag: estimate, source: *s_cmp}
+  electrical_load_W:
+    continuous_components_yaml: {value: 273.0, tag: estimate, source: *s_cmp, ref: "components.yaml#categories.electrical.load_budget_estimate"}
+    mission_computer: {value: 30.0, tag: estimate, source: *s_cmp}
+    continuous_total: {value: 303.0, tag: estimate, source: *s_cmp}
+    peak_with_hd59: {value: 383.0, tag: estimate, source: *s_cmp, basis: "303 + 80 W gimbal peak increment"}
+    peak_with_e180_growth: {value: 443.0, tag: estimate, source: *s_cmp, basis: "303 + 140 W (160 W peak - 20 W)"}
+
+# -----------------------------------------------------------------------------------------------------
+# TURKISH REGULATION (summary; full text in standards.yaml#turkey_regulation)
+# -----------------------------------------------------------------------------------------------------
+regulation_turkey:
+  document: {value: "SHGM SHT-IHA (2026), in force 30 July 2026, transition to 31 July 2027", source: *s_shtiha, tag: standard}
+  class: {value: "M2 if MTOM < 150 kg; M3 at 150 kg and above", source: *s_shtiha, tag: standard, clause: "Madde 8(1)"}
+  airworthiness: {value: "SHGM airworthiness certificate (ucusa elverislilik belgesi) for M2; technical code not yet published - propose CS-LUAS + STANAG 4703", source: *s_shtiha, tag: standard, clause: "Madde 8(5)"}
+  software_certification: {value: "SHGM software certification of flight-control and ground-station software; embedded compliance module executing IHATTYS commands", source: *s_shtiha, tag: standard, clause: "Madde 8(6), 23(3)-(4)"}
+  mandatory_functions: {value: ["remote ID", "IHATTYS-fed geofence", "C2-loss automatic recovery to a predefined area or flight termination", "BTK-compliant radios"], source: *s_shtiha, tag: standard, clause: "Madde 18(1), 23"}
+  registration_and_pilot: {value: "tescil + P2 pilot (class 3 medical) for flights above 120 m or beyond 3000 m; P2 flights within a light-aircraft operator", source: *s_shtiha, tag: standard, clause: "Madde 11(2), 15, 19"}
+
+# -----------------------------------------------------------------------------------------------------
+# CROSS-CHECKS between the research files (done in this synthesis)
+# -----------------------------------------------------------------------------------------------------
+cross_checks:
+  corrections_applied:
+    - {id: C-COMP-01, file: comparables.yaml, what: "MTOW nominal 150 / max 180 kg are Turkish class M3; regulatory_cap 149.9 kg added (SHT-IHA re-read)"}
+    - {id: C-COMP-02, file: comparables.yaml, what: "fuel volume conversion 750 -> 740 kg/m3 (33 kg = 44.6 L)"}
+    - {id: C-COMP-03, file: comparables.yaml, what: "payload band assumed a 10-20 kg gimbal; the selected turret is 1.55 kg (HD59 datasheet re-read)"}
+    - {id: C-ENG-01, file: engine.yaml, what: "generator output at the 3800 rpm loiter about 405 W (not 550 W); voltage about 34 V rectified"}
+    - {id: C-ENG-02, file: engine.yaml, what: "loiter (24-28 % power) is below the lowest BSFC point; note added, extrapolated point held here"}
+    - {id: C-ENG-03, file: engine.yaml, what: "cross-reference to the aero.yaml propeller (same 0.81 x 0.46 m)"}
+    - {id: C-AERO-01, file: aero.yaml, what: "32x18 2B static thrust 512 -> 500 N (5790 rpm), sizing value 470 -> 460 N; the script's cubic extrapolation did not match the stated n^2 method (Mejzlik sheet re-read); 31x12 3B static rpm 6104 -> 5960"}
+    - {id: C-CMP-01, file: components.yaml, what: "SG750 bus voltage at loiter rpm about 34 V: controller must boost"}
+    - {id: C-CMP-02, file: components.yaml, what: "generator margin at loiter about 1.15-1.7x, not 2.3-2.9x"}
+    - {id: C-CMP-03, file: components.yaml, what: "gear screening factors are ground-reaction factors; inertia factor 5.3-6.2 exceeds the standards target; >= 0.18-0.22 m stroke needed"}
+    - {id: C-CMP-04, file: components.yaml, what: "flap hinge moment at VF >= 37.3 m/s (CS-LUAS.345(b)) instead of 30-33 m/s"}
+  verified_without_change:
+    - {item: "Limbach L 275 EF 18 kW / 7500 rpm, 7 kg, option masses", source: *s_lim_web, tag: manufacturer}
+    - {item: "SG750 800 W at 7500 rpm, 1 kW for 3 min, 440 g, 'will integrate'; UST 048 '25 kg MTOW' phrase confirmed as printed (still treated as an editorial error)", source: *s_ust048, tag: paper}
+    - {item: "SHT-IHA class boundaries, airworthiness certificate for M2/M3, tescil rule", source: *s_shtiha, tag: standard}
+    - {item: "NCAMP MTM45-1 ETW = 200 degF wet, Tg wet 339.46 degF, ETW B-basis values used in materials.yaml spec_ready", source: *s_ncud, tag: standard}
+    - {item: "Mejzlik 32x18 2B 334 g, CW/CCW, static table", source: *s_mz0161, tag: manufacturer}
+    - {item: "Volz DA 26 torque/voltage/mass; Trillium HD59-LLVV mass/size/power; Galaxy GRS 4/240 data; Primoco One 150 data", source: *s_cmp, tag: estimate}
+    - {item: "arithmetic re-done: engine fuel-flow table, altitude lapse, cooling airflow, comparables power fit and stall table, standards gust/landing example, materials torque and AM knock-downs, aero thrust required", source: *s_engine, tag: estimate}
+  loiter_fuel_flow:
+    tag: estimate
+    source: *s_engine
+    basis: "145 kg, S 3.0, AR 12, CD0 0.035, e 0.75, 30 m/s EAS, propeller efficiency 0.786 x 0.95, electrical 303 W / 0.85 generator efficiency, bsfc_curve above"
+    sea_level: {drag_N: 101.1, prop_shaft_W: 4063, total_shaft_W: 4419, power_fraction: 0.246, bsfc_g_per_kWh: 573, fuel_flow_kg_per_h: 2.53}
+    altitude_3000_m: {tas_m_per_s: 34.8, prop_shaft_W: 4716, total_shaft_W: 5073, power_fraction: 0.282, bsfc_g_per_kWh: 551, fuel_flow_kg_per_h: 2.80}
+    endurance_h: {sea_level: 10.9, altitude_3000_m: 9.8, basis: "(31.9 kg - 0.2 unusable - 10 % reserve - 1.0 climb/taxi) / fuel flow"}
+    conclusion: "consistent with the comparables 10-13 h band; endurance is fuel-volume and part-load-BSFC limited, not power limited"
+  power_and_thrust:
+    takeoff_thrust_to_weight: {value: 0.32, tag: estimate, source: *s_mz0161, basis: "460 N / (145 x 9.80665)"}
+    power_loading_kg_per_kW: {value: 8.1, tag: estimate, source: *s_comp, basis: "145 / 18; comparables power-class median 8.0"}
+    power_available_3000m_W: {value: 12470, tag: estimate, source: *s_hirth4201}
+  electrical_margin:
+    tag: estimate
+    source: *s_ust048
+    generator_at_loiter_W: {with_32x18_3800rpm: 405, with_31x12_4450rpm: 475}
+    load_W: {continuous: 303, peak_hd59: 383, peak_e180_growth: 443}
+    conclusion: >-
+      Thin margin at loiter: continuous load uses 64-75 % of the estimated output and growth-payload peaks exceed it
+      (battery covers peaks). Sizing must check it; options: get the ePropelled output curve, loiter at >= 4400 rpm
+      (31x12 3B or a lower-pitch prop), duty-cycle the 42 W pitot heater, or keep the 28 V alternator fallback.
+  geometry_consistency:
+    - {check: "stall speed <= 24 m/s clean at CLmax 1.40 needs W/S <= 50.4 kg/m2; baseline 48.3 passes (23.5 m/s)", tag: estimate, source: *s_comp}
+    - {check: "fuel 43.1 L fits the 45 L bladder; aero.yaml wing box (inboard 70 %) 0.077 m3 could take it as an integral tank alternative", tag: estimate, source: *s_aero}
+    - {check: "engine width 0.397 m must fit the aft fuselage (cheek blisters/inlets if the fuselage is narrower)", tag: paper, source: *s_ust61}
+    - {check: "propeller hub >= 0.59 m above ground at the critical attitude (0.18 m clearance + 0.406 m radius)", tag: standard, source: *s_csvla}
+
+# -----------------------------------------------------------------------------------------------------
+# OPEN ITEMS (priority order)
+# -----------------------------------------------------------------------------------------------------
+open_items:
+  - {priority: 1, item: "Limbach: STEP/DXF installation drawing (mount bolt pattern, prop hub bolt circle/spigot), TBO, CHT/EGT limits, idle rpm, maximum continuous rating, pusher rotation, permitted cylinder attitude, quote", source: *s_engine, tag: estimate}
+  - {priority: 1, item: "ePropelled: SG750 release status for the L 275 EF, output and voltage vs rpm (3500-7500 rpm), iPS controller boost range, mass and starter-mode current", source: *s_ust048, tag: estimate}
+  - {priority: 1, item: "SHGM: accepted certification basis for the M2 airworthiness certificate (propose CS-LUAS + STANAG 4703), software-certification procedure, compliance-module command set, Remote ID format", source: *s_shtiha, tag: estimate}
+  - {priority: 2, item: "Sizing: choose VC/VD (45/57 m/s proposed) and run gusts at all weights/altitudes; confirm VH <= VD or add FCS overspeed protection", source: *s_csluas, tag: estimate}
+  - {priority: 2, item: "Sizing: replace CD0 0.035 with a drag build-up (cooling, gear, turret, fuselage); recompute loiter rpm, fuel flow and electrical margin", source: *s_aero, tag: estimate}
+  - {priority: 2, item: "Landing gear: size the main bow for >= 0.18-0.22 m effective deflection or choose a damped leg; check bounce/shimmy", source: *s_stanag, tag: estimate}
+  - {priority: 2, item: "Mejzlik: static test report of 32x18 2B and 31x12 3B on the L 275 EF; fix the aero_polars.py extrapolation (C-AERO-01) and re-run --update-yaml", source: *s_mz0161, tag: estimate}
+  - {priority: 3, item: "Composite allowables: NCAMP equivalency on the production process; A-basis values (or redundant load paths) for single-load-path parts; ETW coupons for any non-NCAMP material", source: *s_ncud, tag: estimate}
+  - {priority: 3, item: "Select and research the mission computer/recorder (mass, power, interfaces); research payload bay interface", source: *s_cmp, tag: estimate}
+  - {priority: 3, item: "Quotes and lead times: Volz, Embention, Silvus, Trillium (ICD/STEP), Galaxy GRS, TOST, ATL", source: *s_cmp, tag: estimate}
+  - {priority: 3, item: "Confirm the NLF(1)-0416 13 % tip with XFoil/MSES; rename/delete naca4415.dat and naca0010.dat if those sections are ever used", source: *s_aero, tag: estimate}
+  - {priority: 3, item: "Turkish BTK frequency allocations for C2/video links; Remote ID and transponder carriage rules", source: *s_shtiha, tag: estimate}

@@ -446,6 +446,16 @@ categories:
       ruddervator_full_deflection_at_VA_Nm: 2.63
       flap_35deg_at_30_m_s_Nm: 8.85
       flap_35deg_at_33_m_s_Nm: 11.8
+      flap_35deg_at_VF_min_Nm:
+        value: 15.1
+        tag: estimate
+        source: *u_csluas_meta
+        basis: >-
+          Added in the synthesis cross-check (C-CMP-04). CS-LUAS.345(b) / CS-VLA 345(b): VF >= max(1.4 VS,
+          1.8 VSF). At the baseline (145 kg, 3.0 m2, CLmax 1.40 clean / 1.80 flapped) VS = 23.5 m/s and
+          VSF = 20.7 m/s, so VF >= 37.3 m/s, not 30-33 m/s. Scaling the 33 m/s value with V^2:
+          11.8 x (37.3/33)^2 = 15.1 N m; x 1.25 (CS-LUAS.395) = 18.8 N m. DA 30 then needs a horn ratio of
+          at least about 2.4 on its 8 N m rating (or 1.2 on its 16 N m peak).
       conclusion: >-
         Ailerons and tail surfaces need about 3-4 Nm at the surface, flaps about 9-12 Nm. With the
         CS-LUAS.395 system-load factor of 1.25 (standards.yaml CTL-001) and a 1.5 margin on the
@@ -697,6 +707,11 @@ categories:
         lift = 2/3 W during impact. Energy into main gear E = 0.5 m_main v^2 + (1 - 2/3) m_main g d.
         A linear spring gear needs d = 0.12-0.15 m deflection for a main-gear load factor of about 4.6-5.6.
         An oleo (efficiency 0.8) needs about 0.07 m stroke (SAGITTA used 70 mm).
+        Synthesis note (C-CMP-03): the 4.6-5.6 values are ground-reaction factors (nj). The airframe inertia
+        factor is nj + 0.67 = 5.3-6.2, above the standards.yaml target of 4.0 (or 4.47, the level at which
+        concentrated masses stop being driven by landing). A spring bow (efficiency 0.5) needs about
+        0.18-0.22 m effective vertical deflection (tyre + spring) to reach 4.47-4.0 at 145-150 kg; a damped leg
+        (efficiency 0.65-0.8) needs about 0.12-0.16 m.
       static_load_per_main_tyre_N: 625.0
       static_load_nose_tyre_N: 221.0
       main_impact_energy_J: {value: 417.0, source: *u_csluas_meta, tag: estimate, basis: "0.5 x 127.5 kg x 2.40^2 + (1/3) x 127.5 kg x 9.81 x 0.12 m"}
@@ -909,6 +924,7 @@ categories:
       risks:
         - TOST speed rating 36 m/s; if the sizing phase pushes VLOF/VTD above about 33 m/s, qualify the tyres on a drum (as DLR did) or move to the 4 in Tria wheel.
         - Spring bows have little damping; check bounce and shimmy (nose) in the structures/dynamics phase.
+        - "Stroke (C-CMP-03): with 0.12-0.15 m deflection the landing inertia factor is 5.3-6.2, so engine, tank, payload and parachute mounts would be sized by landing, not by the 3.8 g manoeuvre. Size the bow for >= 0.18-0.22 m effective deflection or add a damper; the bow mass may rise toward the 2.5 kg upper estimate."
 
   # ===================================================================================== 3
   eo_ir_gimbals:
@@ -1240,7 +1256,7 @@ categories:
         mass_kg: {value: 0.44, source: *u_ust048, tag: paper, note: "101 mm dia x 28.6 mm"}
         power_electronics: {value: "ePropelled iPS750 takes the 3-phase starter/generator output and provides a DC output with battery back-up (used on the Apus 15 with the SG750)", source: *u_ep_apus, tag: paper}
         power_electronics_mass_kg: {value: 0.40, source: *u_ust048, tag: estimate, basis: "engine.yaml generator_power_electronics estimate; iPS750 mass not published"}
-        dc_bus_voltage_V: {value: null, note: "iPS750 output voltage not published; a 48 V-class bus is assumed (rectified 50 V AC 3-phase about 45-67 V depending on rpm)"}
+        dc_bus_voltage_V: {value: null, note: "iPS750 output voltage not published; a 48 V-class bus is assumed (rectified 50 V AC 3-phase about 45-67 V depending on rpm). Synthesis note (C-CMP-01): 50 V AC is the 7500 rpm value (UST 048 re-read: '800 W over 50 V AC at 7500 rpm'); at the ~3800 rpm loiter of the recommended 32x18 2B propeller (aero.yaml) the PM voltage is about 25 V AC (about 34 V rectified, estimate), below a 14S LiFePO4 charge voltage. The iPS-class controller must boost, or the bus must be 28 V class. Confirm with ePropelled."}
       - id: limbach_alternator_28v
         reference: "engine.yaml - generator.options (fallback)"
         output_V: {value: 28.0, source: *u_lim_web, tag: manufacturer}
@@ -1350,7 +1366,7 @@ categories:
       engine_ecu_pump_ignition_W: 70.0
       total_continuous_W: 273.0
       total_with_gimbal_peak_W: 353.0
-      generator_margin_note: "SG750 800 W continuous gives about 2.3-2.9x margin; battery charging uses part of it."
+      generator_margin_note: "SG750 800 W continuous gives about 2.3-2.9x margin; battery charging uses part of it. Corrected (C-CMP-02): 800 W is the 7500 rpm rating. At the 3800-4450 rpm loiter of the aero.yaml propellers the estimated output is about 405-475 W (rpm scaling, engine.yaml generator_output_at_loiter_W), i.e. about 1.15-1.7x the 273-353 W load before battery charging and before the mission computer (baseline.yaml adds about 30 W)."
     recommended:
       item_id: vat_1000w_pdu
       architecture: >-
@@ -1654,3 +1670,53 @@ uncertainties:
   - The HD59 power figure (20 W average) is published for the family; the LLVV may draw less.
   - Hinge moments, landing-gear loads, bow mass, battery and bladder masses are screening estimates (+/-30-50 %); they size the selection only, not the parts.
   - The TOST 200x50 tyre static capacity is 200 kg in the 2026 catalogue but 2.5 kN (255 kg) in the SAGITTA paper and a US dealer listing; the lower value is used.
+
+# -----------------------------------------------------------------------------------------------------
+# CORRECTIONS (synthesis cross-check, 2026-10-05; see ucav250/data/research/baseline.yaml)
+# Re-checked against the sources: Volz DA 26 datasheet (28 V rated, 12-32 V, 2.7 N m rated, 5.0 N m peak,
+# 270 g), Trillium HD59 2026 datasheet (HD59-LLVV 1550 g, 147 x 202 mm, 20 W avg / 100 W peak),
+# Galaxy GRS 4/240 page (5.9 kg, 240 kg, 240 km/h, 13.1 kN, 43 m2, 6.9 m/s), UST 048 (SG750). All
+# confirmed as recorded above.
+# -----------------------------------------------------------------------------------------------------
+corrections:
+  - id: C-CMP-01
+    date: "2026-10-05"
+    location: categories.electrical.generator_integration[epropelled_sg750].dc_bus_voltage_V
+    issue: >-
+      The 45-67 V rectified range assumes rpm near 5000-7500. The recommended propeller loiters at about
+      3800 rpm (aero.yaml), where the SG750 gives about 25 V AC (about 34 V rectified, estimate).
+    fix: Note added in place. A boost stage in the generator controller (or a 28 V bus) is now an open item.
+    source: "https://www.uncrewed-systems.com/?p=9652"
+    tag: estimate
+  - id: C-CMP-02
+    date: "2026-10-05"
+    location: categories.electrical.load_budget_estimate.generator_margin_note
+    issue: The 2.3-2.9x generator margin used the 7500 rpm rating (800 W) at loiter.
+    fix: >-
+      Corrected in place to about 405-475 W at 3800-4450 rpm, i.e. 1.15-1.7x margin before battery charging.
+      baseline.yaml carries the electrical-margin check as a sizing requirement.
+    source: "https://www.uncrewed-systems.com/?p=9652"
+    tag: estimate
+  - id: C-CMP-03
+    date: "2026-10-05"
+    location: categories.landing_gear.design_loads_screening and recommended.risks
+    issue: >-
+      The screening load factors (4.6-5.6 for 0.12-0.15 m) are ground-reaction factors. The inertia factor is
+      +0.67 higher and exceeds the standards.yaml landing target (n_inertia <= 4.0, LDG-005 concentrated-mass
+      rule at 4.47).
+    fix: >-
+      Notes added in place. The baseline gear requirement is >= 0.18-0.22 m effective deflection for a spring
+      bow, or a damped leg. Formula: STANAG 4703 Annex B UL.GL.1 / CS-LUAS App. H (standards.yaml LDG-001..005).
+    source: "https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/391827/20140916-STANAG-4703_AEP-83_A__1_.pdf"
+    tag: standard
+  - id: C-CMP-04
+    date: "2026-10-05"
+    location: categories.control_surface_actuators.hinge_moment_screening
+    issue: >-
+      The flap screening assumed a flap speed of 30-33 m/s. CS-LUAS.345(b) (same text as CS-VLA 345(b)) requires
+      VF >= max(1.4 VS, 1.8 VSF), which is about 37.3 m/s at the baseline design point.
+    fix: >-
+      Added flap_35deg_at_VF_min_Nm (15.1 N m limit, 18.8 N m with the 1.25 control-system factor). The DA 30
+      choice stands, with a horn ratio of about 2.4 on its rated torque. Re-check with real hinge-moment data.
+    source: "http://jarus-rpas.org/wp-content/uploads/2023/06/jar_07_doc_CS_LUAS.pdf"
+    tag: estimate

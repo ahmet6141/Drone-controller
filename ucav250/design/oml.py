@@ -310,10 +310,10 @@ class LiftingSurface:
         chord = np.array([1.0, 0.0, 0.0])
         up = np.cross(chord, sd)                 # flat right wing: (1,0,0) x (0,1,0) = (0,0,1)
         up = unit(up)
-        tw = math.radians(float(s.get("twist_deg", 0.0)))   # positive twist = leading edge up
+        tw = math.radians(float(s.get("twist_deg", 0.0)))   # positive twist = leading edge up (more incidence)
         c, sn = math.cos(tw), math.sin(tw)
-        chord_t = c * chord + sn * up
-        up_t = -sn * chord + c * up
+        chord_t = c * chord - sn * up            # flow is +X (nose to tail): LE up => chord LE->TE points down
+        up_t = sn * chord + c * up
         return self._le(i), chord_t, up_t
 
     def section_points(self, i, n: int | None = None) -> np.ndarray:
@@ -349,6 +349,44 @@ class LiftingSurface:
                 rings.append((1 - t) * a + t * b)
         rings.append(self.section_points(len(self.sections) - 1))
         return fix_orientation(loft(rings))
+
+    # ------------------------------------------------------------------ span-coordinate (eta) access, exact on the loft
+    def span_coords(self) -> np.ndarray:
+        """Span coordinate of every section: cumulative leading-edge distance in the YZ plane (sweep ignored), starting
+        at the first section's distance from the plane of symmetry (|y| of a flat wing root, panel length for a fin
+        that starts on the centre line)."""
+        P = np.array([[s["y"], s["z_le"]] for s in self.sections], float)
+        seg = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
+        return abs(float(P[0, 0])) + seg
+
+    def _bracket(self, eta: float):
+        e = self.span_coords()
+        if not (e[0] - 1e-9 <= eta <= e[-1] + 1e-9):
+            raise ValueError(f"{self.name}: eta={eta:.4f} outside [{e[0]:.4f}, {e[-1]:.4f}]")
+        j = int(np.clip(np.searchsorted(e, eta, side="right") - 1, 0, len(e) - 2))
+        t = float(np.clip((eta - e[j]) / max(e[j + 1] - e[j], EPS), 0.0, 1.0))
+        return j, t
+
+    def loop_at(self, eta: float, n: int | None = None) -> np.ndarray:
+        """Section loop at span coordinate ``eta``: linear blend of the neighbouring section loops, i.e. exactly the
+        ruled loft surface used by :meth:`mesh` (so ribs and skins built from it fit the OML)."""
+        j, t = self._bracket(eta)
+        return (1 - t) * self.section_points(j, n) + t * self.section_points(j + 1, n)
+
+    def frame_at(self, eta: float):
+        """(LE origin, chord unit vector, up unit vector, span unit normal of the section plane) at ``eta``."""
+        j, t = self._bracket(eta)
+        o0, c0, u0 = self.section_frame(j)
+        o1, c1, u1 = self.section_frame(j + 1)
+        o = (1 - t) * o0 + t * o1
+        c = unit((1 - t) * c0 + t * c1)
+        u = unit((1 - t) * u0 + t * u1)
+        u = unit(u - np.dot(u, c) * c)
+        return o, c, u, np.cross(c, u) * -1.0
+
+    def chord_at(self, eta: float) -> float:
+        j, t = self._bracket(eta)
+        return (1 - t) * float(self.sections[j]["chord"]) + t * float(self.sections[j + 1]["chord"])
 
     def interpolate_section(self, y: float) -> dict:
         """Section dict at span station ``y`` (linear in chord/LE/twist, airfoil of the nearer inboard section)."""

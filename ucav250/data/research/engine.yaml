@@ -1,0 +1,1010 @@
+# =====================================================================================================
+# YK-250 (ucav250) - RESEARCH PHASE - ENGINE
+# Civil surveillance / research UAV, 80-200 kg MTOW class, sole powerplant ~200-300 cc piston engine.
+# Payload: EO/IR sensors and mission equipment only.
+#
+# Conventions
+#   - SI units, explicit in key names or in a "unit" field (m, kg, s, N, Pa, W, K / degC named).
+#   - Every number carries "source" (URL, via YAML alias to the sources list) and "tag":
+#       manufacturer | datasheet | standard | paper | vendor | estimate
+#     "paper" is also used for trade-journal engineering dossiers (Unmanned Systems Technology),
+#     which quote the manufacturer's engineers directly.
+#   - Values tagged "estimate" carry a "basis" explaining the reasoning.
+#   - HP conversions: 1 hp (mechanical) = 745.7 W. Limbach charts are labelled "HP"; the datasheet
+#     equates 18 kW = 24 HP, which fits mechanical hp (24.1 hp) better than PS (24.5 PS).
+#     Using PS instead would change derived g/kWh values by about +1.4 %.
+#   - Values read off raster drawings/curves are marked "read_from_drawing" or "read_from_curve".
+#     Their uncertainty is given explicitly.
+# Accessed: 2026-10-05
+# =====================================================================================================
+
+meta:
+  project: YK-250 (ucav250)
+  topic: engine
+  phase: research
+  date: "2026-10-05"
+  scope: >-
+    Purchasable UAV piston engines of about 200-300 cc that can be the only powerplant of an
+    80-200 kg MTOW fixed-wing UAV. Wankel and hobby engines near the range are included for
+    comparison. The recommended engine is for a 100-150 kg surveillance UAV.
+  hp_mechanical_to_W: 745.7
+  fuel_density_kg_per_m3:
+    value: 740.0
+    tag: estimate
+    source: "https://www.engineeringtoolbox.com/fuels-higher-calorific-values-d_169.html"
+    basis: >-
+      Gasoline 737 kg/m3 (Engineering ToolBox; EN 228 allows 720-775 kg/m3 at 15 degC). A 50:1
+      premix with about 870 kg/m3 synthetic oil gives 0.98 x 737 + 0.02 x 870 = 740 kg/m3.
+      This value is used for all L/h conversions.
+  fuel_lower_heating_value_J_per_kg:
+    value: 43.4e+6
+    tag: estimate
+    source: "https://www.engineeringtoolbox.com/fuels-higher-calorific-values-d_169.html"
+    basis: Gasoline LHV 43.4 MJ/kg (Engineering ToolBox table), used only for energy-balance estimates.
+
+# -----------------------------------------------------------------------------------------------------
+# SOURCES (anchors are reused as per-item "source" URLs below)
+# -----------------------------------------------------------------------------------------------------
+sources:
+  - id: lim_web
+    url: &u_lim_web "https://www.limflug.de/en/products/engines-15kw-40kw.php"
+    title: Limbach Flugmotoren - Engines 15 kW to 40 kW (L 275 E, L 275 EF, L 550 EF, L 550 E)
+    tag: manufacturer
+    notes: L 275 EF option masses (starter set, alternators) are listed only here.
+  - id: lim_ds_275e
+    url: &u_lim_ds_275e "https://limflug.de/downloads/datasheets/L275-E-datasheet-en.pdf"
+    title: LIMBACH L275E Technical Specification (2 pages, incl. 3-view, detail views, power/SFC curve)
+    tag: datasheet
+    notes: >-
+      The drawings are embedded as roughly 220 dpi raster images, and most dimension labels are
+      illegible. Labels quoted here were read only where the pixel scale cross-checks.
+  - id: lim_ds_275ef
+    url: &u_lim_ds_275ef "https://limflug.de/downloads/datasheets/L275-EF-datasheet-en.pdf"
+    title: LIMBACH L275EF Technical Specification (2 pages, incl. 3-view and WOT power/torque/SFC curve)
+    tag: datasheet
+    notes: >-
+      Lists "Dry weight approx. 15 kg". This conflicts with 7 kg on the manufacturer web page and
+      in UST 018. The 15 kg most likely covers the "engine with accessories" shown in the photo:
+      7 kg engine + 5.2 kg alternator + 2.3 kg starter is about 14.5 kg. Not confirmed.
+  - id: lim_tb913
+    url: &u_lim_tb913 "https://www.limflug.de/en/support/downloads.php?type=technicalBulletins&id=905.700.009.135.pdf&action=download"
+    title: Limbach Technical Bulletin 9.13 Time between overhauls (TBO), edition 04.08.21
+    tag: manufacturer
+    notes: Covers the L 1700 / L 2000 / L 2400 four-strokes only. No TBO is published for the L 275.
+  - id: ust018_p60
+    url: &u_ust018_p60 "https://www.ust-media.com/ust-magazine/UST018/60/"
+    title: "Unmanned Systems Technology 018 (Feb/Mar 2018), Dossier: Limbach L 275 EF, p.60"
+    tag: paper
+  - id: ust018_p61
+    url: &u_ust018_p61 "https://www.ust-media.com/ust-magazine/UST018/61/"
+    title: "Unmanned Systems Technology 018 (Feb/Mar 2018), Dossier: Limbach L 275 EF, p.61 (dimensions, mounting, fuel system, starter)"
+    tag: paper
+  - id: ust018_p62
+    url: &u_ust018_p62 "https://www.ust-media.com/ust-magazine/UST018/62/"
+    title: "Unmanned Systems Technology 018, Dossier: Limbach L 275 EF, p.62 (vibration, design)"
+    tag: paper
+  - id: ust018_p58
+    url: &u_ust018_p58 "https://www.ust-media.com/ust-magazine/UST018/58/"
+    title: "Unmanned Systems Technology 018, Dossier: Limbach L 275 EF, p.58 (history, >2000 carburettor engines, EFI from 2015)"
+    tag: paper
+  - id: ust018_p64
+    url: &u_ust018_p64 "https://www.ust-media.com/ust-magazine/UST018/64/"
+    title: "Unmanned Systems Technology 018, Dossier: Limbach L 275 EF, p.64 (cylinder heat sink, cooling history)"
+    tag: paper
+  - id: ust018_p65
+    url: &u_ust018_p65 "https://www.ust-media.com/ust-magazine/UST018/65/"
+    title: "Unmanned Systems Technology 018, Dossier: Limbach L 275 EF, p.65 (ignition timing, compression)"
+    tag: paper
+  - id: ust018_p66
+    url: &u_ust018_p66 "https://www.ust-media.com/ust-magazine/UST018/66/"
+    title: "Unmanned Systems Technology 018, Dossier: Limbach L 275 EF, p.66 (mass, generator, power, SFC, exhaust)"
+    tag: paper
+  - id: ust048
+    url: &u_ust048 "https://www.uncrewed-systems.com/?p=9652"
+    title: "Unmanned Systems Technology 048 (Feb/Mar 2023): Limbach L 2400 DX and L 550 EFG (SG750 starter/generator for L 275 EF, new ECU, mounts and dampers)"
+    tag: paper
+    notes: Same text is at https://www.ust-media.com/ust-magazine/UST048/82/
+  - id: w3_prod
+    url: &u_w3_prod "https://3w-modellmotoren.de/product/3w-275xi-b2r-ts/?lang=en"
+    title: 3W-Modellmotoren 3W-275Xi B2R TS product page (price, SKUs tractor/pusher)
+    tag: manufacturer
+  - id: w3_annex_a
+    url: &u_w3_annex_a "http://3w-modellmotoren.de/wp-content/uploads/2016/11/3W-275XiB2-R-TS-Annex-A-tech.-details-EN-Rev-4_2016.pdf"
+    title: 3W-275XiB2 R TS Annex A - 3-view drawing, drilling template, specifications (Rev. 4, 2016)
+    tag: datasheet
+  - id: w3_manual
+    url: &u_w3_manual "http://3w-modellmotoren.de/wp-content/uploads/2016/11/Operating-Manual.pdf"
+    title: General Operating Manual for 3W Engines, rev. 5 (2017) - installation, cooling, CHT limits, warranty
+    tag: manufacturer
+  - id: sky_275fi
+    url: &u_sky_275fi "https://skypower-international.com/product/sp-275-fi-ts-ros/"
+    title: Sky Power SP-275 FI TS ROS product page
+    tag: manufacturer
+  - id: sky_275ts
+    url: &u_sky_275ts "https://skypower-international.com/product/sp-275-ts-ros/"
+    title: Sky Power SP-275 TS ROS product page (incl. MTOW class, test hours, units built)
+    tag: manufacturer
+  - id: sky_210fi
+    url: &u_sky_210fi "https://skypower-international.com/product/sp-210-fi-ts-ros/"
+    title: Sky Power SP-210 FI TS ROS product page
+    tag: manufacturer
+    notes: >-
+      The page body text describes the SP-275 FI and repeats its 21.5 hp / 15.8 kW figure.
+      Its own torque of 20.5 Nm at 6000 rpm gives 12.9 kW. Treat the 15.8 kW as a probable
+      copy error.
+  - id: sky_180sre
+    url: &u_sky_180sre "https://skypower-international.com/product/sp-180-sre-hybrid/"
+    title: Sky Power SP-180 SRE Hybrid (Wankel) product page
+    tag: manufacturer
+  - id: sky_brochure_2018
+    url: &u_sky_brochure_2018 "https://www.unmannedsystemstechnology.com/wp-content/uploads/2018/10/SkyPower-Brochure.pdf"
+    title: Sky Power GmbH brochure (2018) - SP-28 ... SP-275, SP-180 SRE, ECU030, HKZ215
+    tag: manufacturer
+  - id: sky_std_config
+    url: &u_sky_std_config "https://skypower.online/standard-configurations/"
+    title: Sky Power - Standard configurations (mounting plate, ROS, silencers, 3D models on request)
+    tag: manufacturer
+  - id: sky_faq
+    url: &u_sky_faq "https://skypower.online/faq/"
+    title: Sky Power FAQ (push vs pull cooling, carburettor vs EFI)
+    tag: manufacturer
+  - id: sky_210_news_2023
+    url: &u_sky_210_news_2023 "https://www.unmannedsystemstechnology.com/2023/06/sky-power-two-stroke-engine-now-with-increased-power/"
+    title: "Sky Power press release via UST (Jun 2023): SP-210 FI TS ROS raised from 11 kW to 14 kW, same weight"
+    tag: manufacturer
+    notes: The site returned HTTP 403 to the fetcher, so the content was read from search-engine excerpts only.
+  - id: sky_210_news_2019
+    url: &u_sky_210_news_2019 "https://www.unmannedsystemstechnology.com/2019/01/sky-power-unveils-new-two-stroke-uav-engine/"
+    title: "Sky Power press release via UST (Jan 2019): SP-210 FI TS launch, 60-100 kg UAS tier, ~480 g/HP/h at 5000 rpm"
+    tag: manufacturer
+    notes: The site returned HTTP 403 to the fetcher, so the content was read from search-engine excerpts only.
+  - id: uel_aarg
+    url: &u_uel_aarg "http://www.aarg.com.au/uelar74.html"
+    title: Moorabbin Air Museum (AARG) - UEL AR74-1025 UAV engine data plate / display text
+    tag: vendor
+    notes: >-
+      Secondary source: a museum display that reproduces manufacturer data. The manufacturer site
+      www.uavenginesltd.co.uk returned HTTP 403.
+  - id: uel_airframer
+    url: &u_uel_airframer "https://www.airframer.com/product/524-ar741"
+    title: Airframer - UAV Engines Ltd AR741 (38 hp, single-rotor, air-cooled Wankel)
+    tag: vendor
+  - id: hirth_4201
+    url: &u_hirth_4201 "https://hirthengines.com/wp-content/uploads/2025-4201.pdf"
+    title: Hirth Engines 42 Series 4201 datasheet (2025) - power, SFC, mass, dims, altitude power curve
+    tag: datasheet
+  - id: hirth_2301
+    url: &u_hirth_2301 "https://hirthengines.com/wp-content/uploads/2025-2301.pdf"
+    title: Hirth Engines 23 Series 2301 datasheet (2025) - states TBO 500 h for this two-stroke UAV series
+    tag: datasheet
+  - id: dle222_mac
+    url: &u_dle222_mac "https://www.macgregor.co.uk/dleengine/dle222.htm"
+    title: MacGregor (UK distributor) - DLE-222 specifications
+    tag: vendor
+  - id: dle222_manual
+    url: &u_dle222_manual "https://www.macgregor.co.uk/dleengine/support/dle222-user-manual.pdf"
+    title: DLE222 User Manual (DLE / Mile Haoxiang Technology), hosted by distributor
+    tag: manufacturer
+  - id: dle222_dim1
+    url: &u_dle222_dim1 "https://www.macgregor.co.uk/dleengine/support/dle222-dimensions-1.pdf"
+    title: DLE222 dimension drawing 1 (front view, mount pattern)
+    tag: datasheet
+  - id: dle222_dim2
+    url: &u_dle222_dim2 "https://www.macgregor.co.uk/dleengine/support/dle222-dimensions-2.pdf"
+    title: DLE222 dimension drawing 2 (plan view, length, prop hub)
+    tag: datasheet
+  - id: dle222_horizon
+    url: &u_dle222_horizon "https://horizonhobby.com/product/dle-222-222cc-4-cyl-gas-engine-with-electronic-ignition-and-mufflers/DLEG0222.html"
+    title: Horizon Hobby - DLE-222 (status Discontinued; component masses)
+    tag: vendor
+  - id: da200
+    url: &u_da200 "https://www.desertaircraft.com/products/da-200"
+    title: Desert Aircraft DA-200 product page
+    tag: manufacturer
+  - id: moulton_2007
+    url: &u_moulton_2007 "https://drum.lib.umd.edu/handle/1903/6905"
+    title: "N. L. Moulton, Performance Measurement and Simulation of a Small Internal Combustion Engine, MSc thesis, Univ. of Maryland, 2007 (3W-100i B2 boxer twin)"
+    tag: paper
+  - id: ust001_hirth
+    url: &u_ust001_hirth "https://www.ust-media.com/ust-magazine/UST001/43/"
+    title: "Unmanned Systems Technology 001, Dossier: Hirth S1218 UAV two-stroke twin (EGT, CHT)"
+    tag: paper
+  - id: wiki_l275e
+    url: &u_wiki_l275e "https://en.wikipedia.org/wiki/Limbach_L275E"
+    title: Wikipedia - Limbach L275E (cites World Directory of Leisure Aviation 2011-12, pp. 240-241)
+    tag: paper
+    notes: Secondary source, used only for the L 275 E overall dimensions, which the datasheet raster does not show legibly.
+  - id: iso2533
+    url: &u_iso2533 "https://www.iso.org/standard/7472.html"
+    title: ISO 2533:1975 Standard Atmosphere
+    tag: standard
+
+# -----------------------------------------------------------------------------------------------------
+# CANDIDATES
+# Common item shape: {value, unit, source, tag, [rpm], [note], [basis]}
+# null = not published / not found; the "missing" list says what to request from the manufacturer.
+# -----------------------------------------------------------------------------------------------------
+candidates:
+
+  # ---------------------------------------------------------------------------------- 1
+  - id: limbach_l275_ef
+    manufacturer: Limbach Flugmotoren GmbH (Koenigswinter, Germany)
+    model: L 275 EF
+    status: in production, listed on manufacturer web page 2026
+    variant_notes: >-
+      "E" = one spark plug per cylinder. "F" = port fuel injection with full engine management (2015).
+      The design is the 1972 L 275, with more than 2000 carburettor engines sold by 2015 (UST 018 p.58).
+    displacement_m3: {value: 274.0e-6, source: *u_lim_web, tag: manufacturer}
+    bore_m: {value: 0.066, source: *u_lim_ds_275ef, tag: datasheet}
+    stroke_m: {value: 0.040, source: *u_lim_ds_275ef, tag: datasheet}
+    compression_ratio: {value: 8.0, source: *u_ust018_p60, tag: paper, note: "8.0:1 geometric; effective < 8:1 (UST 018 p.65)"}
+    cycle: 2-stroke, loop scavenged, piston-port intake (no reed/rotary valve)
+    cylinders: 2
+    layout: horizontally opposed (boxer), 180 deg crankpins; one-piece forged 16MnCr5 crankshaft, 3 ball main bearings (twin front)
+    cooling: air-cooled, finned cylinders plus finned heat sinks on cylinder ends (needs ram/ducted air)
+    ignition: electronic, ECU-controlled timing (37 deg BTDC high rpm ... 25 deg BTDC low rpm), coils mounted on airframe, 14 mm plugs
+    max_power_W: {value: 18000.0, rpm: 7500, source: *u_lim_web, tag: manufacturer}
+    max_power_hp: {value: 24.0, rpm: 7500, source: *u_ust018_p66, tag: paper, note: "at least 24 bhp at 7500 rpm with standard exhaust"}
+    takeoff_power_W:
+      value: 17150.0
+      rpm: 6950
+      source: *u_ust018_p66
+      tag: paper
+      note: "Normal take-off just under 7000 rpm for about 23 bhp (17.15 kW). Engine typically kept below 7000 rpm."
+    max_continuous_power_W:
+      value: 16200.0
+      rpm: 6000
+      source: *u_lim_ds_275ef
+      tag: estimate
+      basis: >-
+        Not published. Limbach states regular flight is between 4000 and 6000 rpm (UST 018 p.66).
+        The datasheet WOT curve gives 21.8 hp = 16.2 kW at 6000 rpm, so that point is taken as
+        the design maximum continuous power.
+    max_torque_Nm: {value: 25.0, rpm_range: [4000, 6000], source: *u_lim_ds_275ef, tag: datasheet}
+    rpm_limits:
+      operating_range_rpm: {value: [4000, 7500], source: *u_ust018_p66, tag: paper}
+      hard_cut_rpm: {value: 8000, source: *u_ust018_p61, tag: paper}
+    wot_curve_read_from_datasheet:
+      source: *u_lim_ds_275ef
+      tag: datasheet
+      note: >-
+        Read from the datasheet WOT chart. Uncertainty is about +/-0.3 hp, +/-0.3 Nm and
+        +/-4 g/HPh. Power from torque cross-checks within 1.5 %. SFC was converted with
+        mechanical hp.
+      rpm:            [4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500]
+      power_hp:       [14.4, 16.2, 18.4, 20.0, 21.8, 22.8, 24.0, 25.3]
+      power_W:        [10740, 12080, 13720, 14910, 16260, 17000, 17900, 18870]
+      torque_Nm:      [25.3, 25.4, 25.9, 25.6, 25.7, 24.7, 24.0, 23.7]
+      sfc_g_per_HPh:  [348, 355, 359, 372, 357, 344, 323, 309]
+      sfc_kg_per_J:   [1.297e-7, 1.322e-7, 1.336e-7, 1.386e-7, 1.331e-7, 1.281e-7, 1.203e-7, 1.150e-7]
+      sfc_g_per_kWh:  [467, 476, 481, 499, 479, 461, 433, 414]
+    bsfc_typical_g_per_kWh:
+      value: 456
+      source: *u_ust018_p66
+      tag: paper
+      note: '"Specific fuel consumption is in the region of 340 g/hph" (= 456 g/kWh mech hp, 462 g/kWh PS).'
+    dry_mass_kg:
+      value: 7.0
+      source: *u_lim_web
+      tag: manufacturer
+      note: >-
+        Excludes the ECU and wiring, fuel pump and supply line, starter and generator
+        (UST 018 p.66). The datasheet's "approx. 15 kg" conflicts; see sources.lim_ds_275ef.
+    installation_items:
+      starter_set_12V_400W_kg: {value: 2.3, source: *u_lim_web, tag: manufacturer, note: "datasheet lists starter 12/24 V 0.2 kW (conflict)"}
+      alternator_14V_95A_kg: {value: 5.2, source: *u_lim_web, tag: manufacturer}
+      alternator_28V_45A_incl_voltage_transformer_kg: {value: 5.2, source: *u_lim_web, tag: manufacturer}
+      legacy_28V_automotive_generator_kg: {value: 4.5, source: *u_ust018_p66, tag: paper}
+      sg750_starter_generator_kg:
+        value: 0.44
+        source: *u_ust048
+        tag: paper
+        note: "ePropelled SG750 with all ancillaries, 101 mm dia x 28.6 mm; announced in 2023 for the L 275 EF ('will integrate')."
+      heat_sinks_kg: {value: 0.0, source: *u_ust018_p60, tag: paper, note: "Finned heat sinks are standard on the EF and counted in the 7 kg (on the L 275 E they are a +0.6 kg option)."}
+      ecu_wiring_coils_kg: {value: 0.8, tag: estimate, source: *u_ust018_p61, basis: "Not published. Small motorsport-class ECU (Trijekt) 0.3-0.5 kg, harness 0.2-0.3 kg, 2 coils 0.1-0.2 kg."}
+      fuel_pump_regulator_filter_kg: {value: 0.35, tag: estimate, source: *u_ust018_p61, basis: "Not published. Inline 12 V pump plus mechanical 2.5 bar regulator plus filter and fittings."}
+      exhaust_kg: {value: 1.0, tag: estimate, source: *u_hirth_4201, basis: "Limbach standard is 2 x 200 mm open stacks (mass not published, about 0.5 kg). Allowing for silencers needed for a civil UAV, scaled from the Hirth 4201 twin exhaust at 1.15 kg."}
+    dimensions_m:
+      length_prop_hub_to_generator_coupling_flange: {value: 0.2214, source: *u_ust018_p61, tag: paper}
+      width_incl_spark_plug_caps: {value: 0.3968, source: *u_ust018_p61, tag: paper}
+      height_to_top_of_intake_covers: {value: 0.2946, source: *u_ust018_p61, tag: paper}
+      note: Envelope L x W x H = 0.221 x 0.397 x 0.295 m without starter-generator. See the installation block for datum distances.
+    mounting:
+      type: 4 threaded bosses on rear face of crankcase; engine cantilevered from a mounting plate tied into the airframe
+      bolt_size: {value: M8, source: *u_ust018_p61, tag: paper, note: '"tied via 8 mm bolts to a mounting plate"; L 275 E datasheet detail reads "M8 ... deep - 4 places"'}
+      bolt_pattern: see installation.mount.bolt_pattern_estimate (datasheet labels illegible)
+      isolators: {value: optional "Damper Shock Mount", source: *u_lim_ds_275ef, tag: datasheet, note: "New mounts and vibration dampers announced 2023 (UST 048)."}
+    propeller_interface:
+      description: >-
+        Propeller hub on a brass spool, press fit with a keyway, retained by a bolt at the crank
+        nose. The flange for the timing wheel is on the same spool. A starter ring gear is added
+        to the hub when the starter is fitted.
+      source: *u_ust018_p60
+      tag: paper
+      bolt_pattern: null
+      missing: Hub drawing with flange OD, bolt circle, bolt size and spigot diameter (illegible in the published raster).
+    propeller_recommendation: see recommended.propeller (Limbach publishes no propeller recommendation)
+    fuel: {value: "92 RON (or better) gasoline + fully synthetic 2-stroke oil 50:1", source: *u_lim_web, tag: manufacturer}
+    oil_mix_ratio: {value: 50, source: *u_lim_web, tag: manufacturer}
+    generator:
+      options:
+        - {name: Limbach alternator 14 V 95 A, power_W: 1330, voltage_V: 14, mass_kg: 5.2, source: *u_lim_web, tag: manufacturer, note: "power = 14 V x 95 A (nominal product)"}
+        - {name: Limbach alternator 28 V 45 A incl. voltage transformer, power_W: 1260, voltage_V: 28, mass_kg: 5.2, source: *u_lim_web, tag: manufacturer}
+        - {name: datasheet listing, power_W: 1000, voltage_V: 28, mass_kg: null, source: *u_lim_ds_275ef, tag: datasheet}
+        - {name: ePropelled SG750 starter/generator, power_W: 800, peak_power_W: 1000, peak_duration_s: 180, voltage: "50 V AC 3-phase at 7500 rpm (needs rectifier/regulator)", mass_kg: 0.44, source: *u_ust048, tag: paper}
+    starter_options:
+      - {name: Starter set 12 V 0.4 kW, mass_kg: 2.3, mounting: "plate at base of crankcase, drives ring gear on prop hub", source: *u_lim_web, tag: manufacturer}
+      - {name: ePropelled SG750 starter/generator on crank rear, mass_kg: 0.44, source: *u_ust048, tag: paper}
+      - {name: hand start by spinning propeller (ground crew), source: *u_ust018_p61, tag: paper}
+    ecu:
+      supply_V: {value: 12, source: *u_ust048, tag: paper, note: "A new ECU with CAN, throttle-servo control and a 24 V option (internal DC-DC) was announced in 2023."}
+      altitude_compensation: linear offsets on ambient pressure and air temperature (sensors in ECU / engine bay)
+      telemetry: EGT and CHT readable by the flight control system (not used by the ECU)
+      source: *u_ust018_p61
+      tag: paper
+    tbo_s:
+      value: null
+      source: *u_lim_tb913
+      tag: manufacturer
+      note: Not published (TB 9.13 covers four-strokes only). See recommended.tbo_planning_s for a planning value.
+    altitude_capability: ECU altitude compensation, no published ceiling or power lapse. See installation.altitude.
+    price: {value: null, note: "price on request; not public"}
+    documentation_quality: >-
+      Good. Public datasheet with 3-view and WOT power/torque/SFC curves, an in-depth engineering
+      dossier (UST 018) giving key installation dimensions, and an EASA-approved manufacturer
+      organisation for its certified four-strokes.
+    missing:
+      - TBO and maintenance intervals
+      - CHT/EGT limits
+      - Mount bolt-pattern and prop-hub drawings (vector/STEP)
+      - Confirmation of SG750 availability, and an alternator/regulator output curve versus rpm
+      - CW/CCW rotation availability for a pusher
+
+  # ---------------------------------------------------------------------------------- 2
+  - id: limbach_l275_e
+    manufacturer: Limbach Flugmotoren GmbH
+    model: L 275 E
+    status: in production, listed on manufacturer web page 2026
+    displacement_m3: {value: 274.0e-6, source: *u_lim_web, tag: manufacturer}
+    bore_m: {value: 0.066, source: *u_lim_ds_275e, tag: datasheet}
+    stroke_m: {value: 0.040, source: *u_lim_ds_275e, tag: datasheet}
+    cycle: 2-stroke
+    cylinders: 2
+    layout: horizontally opposed (boxer); both cylinders fire simultaneously
+    cooling: air-cooled; optional heat sinks
+    ignition: solid-state magneto (single), no battery needed
+    fuel_system: 2 diaphragm all-position carburettors without choke
+    max_power_W: {value: 15000.0, rpm: 7200, source: *u_lim_web, tag: manufacturer}
+    max_continuous_power_W: {value: null, note: not published}
+    wot_curve_read_from_datasheet:
+      source: *u_lim_ds_275e
+      tag: datasheet
+      note: Read from the raster chart (+/-0.4 hp, +/-8 g/HPh). The carburettor runs rich at low rpm.
+      rpm:           [4000, 6000, 7000, 7200]
+      power_hp:      [11.6, null, 21.3, 20.6]
+      sfc_g_per_HPh: [503, 367, 380, 356]
+      sfc_g_per_kWh: [675, 492, 510, 477]
+    dry_mass_kg: {value: 7.2, source: *u_lim_web, tag: manufacturer, note: "with magneto ignition"}
+    installation_items:
+      heat_sinks_kg: {value: 0.6, source: *u_lim_web, tag: manufacturer}
+      starter_12_24V_300W_kg: {value: null, source: *u_lim_ds_275e, tag: datasheet, note: "0.3 kW starter optional, mass not published"}
+      alternator_28V_1000W_kg: {value: null, source: *u_lim_ds_275e, tag: datasheet, note: "accessory housing + 28 V 1000 W alternator optional, mass not published"}
+    dimensions_m:
+      length: {value: 0.255, source: *u_wiki_l275e, tag: paper, note: "secondary source"}
+      width: {value: 0.400, source: *u_wiki_l275e, tag: paper, note: "secondary; datasheet plan view appears to give about 400 with shielded plug caps (label barely legible)"}
+      height: {value: 0.261, source: *u_wiki_l275e, tag: paper}
+    mounting: {type: "4 x M8 threaded bosses on rear of crankcase (datasheet detail 'Bolt pattern for engine mount')", source: *u_lim_ds_275e, tag: datasheet}
+    propeller_interface: {description: "6 holes at 60 deg plus 6 interleaved holes on hub flange (datasheet 'Propeller hub dimensions'); dimensions illegible", source: *u_lim_ds_275e, tag: datasheet}
+    fuel: {value: "AVGAS 100LL or 90 RON unleaded, oil mix 1:25 mineral / 1:50 synthetic", source: *u_lim_web, tag: manufacturer}
+    generator: {power_W: 1000, voltage_V: 28, optional: true, source: *u_lim_ds_275e, tag: datasheet}
+    starter_options: [{name: "12/24 V 0.3 kW (optional)", source: *u_lim_ds_275e, tag: datasheet}]
+    tbo_s: {value: null, note: not published}
+    altitude_capability: carburettor, no automatic altitude compensation (manual/fixed jetting)
+    price: {value: null, note: on request}
+    assessment: >-
+      Not recommended for the YK-250. It gives 3 kW less than the EF, its SFC is 15-40 % worse at
+      part rpm on the WOT curve, it has no altitude compensation, and its generator is heavy and
+      optional. Its only advantage is magneto ignition, which needs no electrical power to run.
+
+  # ---------------------------------------------------------------------------------- 3
+  - id: skypower_sp275_fi_ts_ros
+    manufacturer: Sky Power GmbH (Bad Homburg / Altenstadt, Germany)
+    model: SP-275 FI TS ROS
+    status: in production, price on request (2026 web shop)
+    displacement_m3: {value: 275.0e-6, source: *u_sky_275fi, tag: manufacturer}
+    bore_m: {value: 0.059, source: *u_sky_275fi, tag: manufacturer}
+    stroke_m: {value: 0.050, source: *u_sky_275fi, tag: manufacturer}
+    cycle: 2-stroke
+    cylinders: 2
+    layout: horizontally opposed (boxer), rear output shaft (ROS) for starter-generator, twin spark per cylinder
+    cooling: air-cooled
+    ignition: twin spark (HKZ215 dual ignition), ECU030 fuel injection with CAN bus
+    max_power_W: {value: 15800.0, rpm: 6000, source: *u_sky_275fi, tag: manufacturer}
+    max_continuous_power_W: {value: null, note: not published}
+    max_torque_Nm: {value: 28.3, rpm: 3250, source: *u_sky_275fi, tag: manufacturer}
+    rpm_range: {value: [1500, 8000], source: *u_sky_275fi, tag: manufacturer}
+    operating_voltage_V: {value: [12, 15], source: *u_sky_275fi, tag: manufacturer}
+    dry_mass_kg: {value: 9.25, source: *u_sky_275fi, tag: manufacturer, note: '"without subcomponents" (definition not published)'}
+    installation_items:
+      starter_generator_and_controller: {value: null, source: *u_sky_275fi, tag: manufacturer, note: "configurator option; output and mass not published"}
+      silencer: {value: null, source: *u_sky_std_config, tag: manufacturer, note: "Sky Power silencers recommended; mass not public"}
+    dimensions_m: {value: null, source: *u_sky_std_config, tag: manufacturer, note: "3D models provided on request; no public drawing"}
+    mounting: {type: "standard mounting plate (accepts 4th bearing for ROS; generator mounting plates available)", source: *u_sky_std_config, tag: manufacturer}
+    propeller_interface: {value: null, note: "Sky Power sells 'Propeller Drilling Template 210/275' (EUR 385), so the 210 and 275 share one hub pattern", source: *u_sky_275fi, tag: manufacturer}
+    fuel: {value: "gasoline + 2-stroke oil 1:50 (Aspen 2-stroke mix recommended)", source: *u_sky_275fi, tag: manufacturer}
+    oil_mix_ratio: {value: 50, source: *u_sky_275fi, tag: manufacturer}
+    fuel_consumption: {value: null, note: "not published for SP-275"}
+    rotation: {value: "CW or CCW selectable at order", source: *u_sky_275fi, tag: manufacturer}
+    mtow_class_kg: {value: [100, 150], source: *u_sky_275fi, tag: manufacturer}
+    service_experience: {value: ">1000 units, >10000 field hours, >800 h test stand, >12 h missions", source: *u_sky_275fi, tag: manufacturer}
+    tbo_s: {value: null, source: *u_sky_brochure_2018, tag: manufacturer, note: "TBO depends on environment and maintenance; no figure published"}
+    altitude_capability: EFI adjusts the mixture for air pressure and temperature (ECU030). No ceiling is published.
+    price: {value: null, note: on request}
+
+  # ---------------------------------------------------------------------------------- 4
+  - id: skypower_sp275_ts_ros
+    manufacturer: Sky Power GmbH
+    model: SP-275 TS ROS (carburettor)
+    status: in production
+    displacement_m3: {value: 275.0e-6, source: *u_sky_275ts, tag: manufacturer}
+    bore_m: {value: 0.059, source: *u_sky_275ts, tag: manufacturer}
+    stroke_m: {value: 0.050, source: *u_sky_275ts, tag: manufacturer}
+    cycle: 2-stroke
+    cylinders: 2
+    layout: boxer, rear output shaft, twin spark
+    cooling: air-cooled
+    max_power_W: {value: 16000.0, rpm: 6000, source: *u_sky_275ts, tag: manufacturer}
+    max_torque_Nm: {value: 27.9, rpm: 4750, source: *u_sky_275ts, tag: manufacturer}
+    rpm_range: {value: [1500, 10000], source: *u_sky_275ts, tag: manufacturer}
+    dry_mass_kg: {value: 7.86, source: *u_sky_275ts, tag: manufacturer, note: "incl. ignition"}
+    ignition_voltage_V: {value: [6.0, 8.4], source: *u_sky_275ts, tag: manufacturer}
+    installation_items:
+      exhaust: {value: "stainless steel exhaust system option", source: *u_sky_275ts, tag: manufacturer}
+      starter_generator_and_controller: {value: "option on ROS, specs not public", source: *u_sky_275ts, tag: manufacturer}
+    series_power_W_2018: {value: 18920.0, source: *u_sky_brochure_2018, tag: manufacturer, note: "series maximum across versions (2018 brochure); 7.26 kg"}
+    mtow_class_kg: {value: [100, 150], source: *u_sky_275ts, tag: manufacturer}
+    fuel: {value: "gasoline + oil 1:50", source: *u_sky_275ts, tag: manufacturer}
+    dimensions_m: {value: null, note: "on request"}
+    price: {value: null, note: on request}
+
+  # ---------------------------------------------------------------------------------- 5
+  - id: skypower_sp210_fi_ts_ros
+    manufacturer: Sky Power GmbH
+    model: SP-210 FI TS ROS
+    status: in production
+    displacement_m3: {value: 210.0e-6, source: *u_sky_210fi, tag: manufacturer}
+    bore_m: {value: 0.055, source: *u_sky_210fi, tag: manufacturer}
+    stroke_m: {value: 0.045, source: *u_sky_210fi, tag: manufacturer}
+    cycle: 2-stroke
+    cylinders: 2
+    layout: boxer, rear output shaft, twin spark, EFI
+    cooling: air-cooled
+    max_power_W:
+      value: 14000.0
+      source: *u_sky_210_news_2023
+      tag: manufacturer
+      note: >-
+        Raised from 11 kW (engines until May 2023) to 14 kW at the same weight. The product page
+        shows 15.8 kW at 6000 rpm, which looks like a copy of the SP-275 FI figure: its own
+        20.5 Nm at 6000 rpm gives 12.9 kW.
+    max_torque_Nm: {value: 20.5, rpm: 6000, source: *u_sky_210fi, tag: manufacturer}
+    rpm_range: {value: [1500, 7000], source: *u_sky_210fi, tag: manufacturer}
+    dry_mass_kg: {value: 9.4, source: *u_sky_210fi, tag: manufacturer, note: '"without subcomponents"; 2018 brochure gave 5.78 kg (different definition)'}
+    fuel_consumption_g_per_hph: {value: 480, rpm: 5000, source: *u_sky_210_news_2019, tag: manufacturer, note: "2019 launch figure (about 644 g/kWh mech hp); read via search excerpt only"}
+    mtow_class_kg: {value: [60, 100], source: *u_sky_210_news_2019, tag: manufacturer}
+    fuel: {value: "gasoline + oil 1:50", source: *u_sky_210fi, tag: manufacturer}
+    assessment: Too small for 100-150 kg (manufacturer positions it at 60-100 kg). Kept as the low-MTOW fallback.
+
+  # ---------------------------------------------------------------------------------- 6
+  - id: w3_275xib2_r_ts
+    manufacturer: 3W-Modellmotoren GmbH (Hanau, Germany)
+    model: 3W-275Xi B2 R TS
+    status: in production, web shop price listed
+    displacement_m3: {value: 273.0e-6, source: *u_w3_annex_a, tag: datasheet, note: "product page states 275 cm3"}
+    bore_m: {value: 0.059, source: *u_w3_annex_a, tag: datasheet}
+    stroke_m: {value: 0.050, source: *u_w3_annex_a, tag: datasheet}
+    cycle: 2-stroke
+    cylinders: 2
+    layout: boxer, rear carburettor, twin spark (TS); 3 ball-bearing crankshaft, needle-bearing rods
+    cooling: air-cooled (requires baffled air guide)
+    ignition: 3W IIS electronic, 6.0-8.4 V (5-cell or 2S LiPo)
+    max_power_W: {value: 19100.0, source: *u_w3_annex_a, tag: datasheet, note: "26.0 HP (19.1 kW); rpm not stated"}
+    rpm_range: {value: [1000, 7000], source: *u_w3_annex_a, tag: datasheet}
+    dry_mass_kg: {value: 7.03, source: *u_w3_annex_a, tag: datasheet, note: "incl. ignition; muffler not included"}
+    dimensions_m:
+      overall_length_incl_prop_bolts: {value: 0.423, source: *u_w3_annex_a, tag: datasheet}
+      prop_drive_flange_to_mount_face: {value: 0.2155, source: *u_w3_annex_a, tag: datasheet}
+      prop_bolt_tips_to_mount_face: {value: 0.270, source: *u_w3_annex_a, tag: datasheet}
+      mount_face_to_rear: {value: 0.153, source: *u_w3_annex_a, tag: datasheet}
+      width_front_view: {value: 0.361, source: *u_w3_annex_a, tag: datasheet}
+      width_plan_view: {value: 0.372, source: *u_w3_annex_a, tag: datasheet}
+      mount_plate_height: {value: 0.120, source: *u_w3_annex_a, tag: datasheet}
+    mounting:
+      type: flat rear mount flange (firewall), 4 bolts, rectangular pattern with central clearance cut-out
+      bolt_pattern_m: {value: [0.080, 0.120], source: *u_w3_annex_a, tag: datasheet, note: "drilling template, horizontal x vertical"}
+      hole_diameter_m: {value: 0.0065, count: 4, source: *u_w3_annex_a, tag: datasheet, note: "fits M6"}
+      firewall_cutout: {value: "dia 112 mm envelope with 2 x dia 15 mm reliefs", source: *u_w3_annex_a, tag: datasheet}
+      guidance: tension-free mounting (aluminium crankcase); plate or engine mount with spacers; set down/side thrust in mount
+      guidance_source: *u_w3_manual
+      guidance_tag: manufacturer
+    propeller_interface: {value: "hub dia 44 mm, 6 bolts at 60 deg", source: *u_w3_annex_a, tag: datasheet}
+    propeller_recommendation:
+      two_blade: {value: "34 x 12 in wood (0.864 x 0.305 m), part 10.101.613", source: *u_w3_annex_a, tag: datasheet}
+      three_blade: {value: "'13,75 x 14 x8 CFK' part 10.101.760 (string as printed; probably a typo)", source: *u_w3_annex_a, tag: datasheet}
+      pusher: {value: "pusher engine version SKU 10.002.541 (tractor 10.002.540)", source: *u_w3_prod, tag: manufacturer}
+    fuel: {value: "min. 92 octane gasoline + fully synthetic oil 1:50 to 1:80", source: *u_w3_annex_a, tag: datasheet}
+    oil_mix_ratio: {value: [50, 80], source: *u_w3_annex_a, tag: datasheet}
+    generator: {value: null, note: "no integrated generator offered"}
+    starter_options: [{name: "external 3W hand-held starter (item 10.102.990); no on-board starter", source: *u_w3_manual, tag: manufacturer}]
+    warranty: {value: "36 months or 1200 h", source: *u_w3_manual, tag: manufacturer}
+    tbo_s: {value: null, note: "not published (warranty 1200 h)"}
+    price_EUR: {value: 3239.0, source: *u_w3_prod, tag: manufacturer, note: "incl. German VAT"}
+    altitude_capability: carburettor (manual needle setting), no compensation
+    assessment: >-
+      Lightest and cheapest of the group with a fully public installation drawing. It is hobby/UAV
+      grade, carburetted, has no on-board starter or generator and no altitude compensation.
+      Suitable as a low-cost prototype or test-bed engine.
+
+  # ---------------------------------------------------------------------------------- 7
+  - id: uel_ar741
+    manufacturer: UAV Engines Ltd (Shenstone, UK)
+    model: AR741 (UEL AR74-1025)
+    status: legacy production engine; civil availability not verified (manufacturer site returned HTTP 403)
+    displacement_m3: {value: 208.0e-6, source: *u_uel_aarg, tag: vendor, note: "single-rotor chamber volume"}
+    cycle: Wankel rotary
+    cylinders: 1 rotor
+    layout: single rotor
+    cooling: air-cooled
+    ignition: electronic contactless magneto
+    max_power_W: {value: 28300.0, rpm: 7800, source: *u_uel_aarg, tag: vendor, note: "38 hp"}
+    dry_mass_kg: {value: 10.7, source: *u_uel_aarg, tag: vendor}
+    vibration: {value: "nominally zero vibration", source: *u_uel_aarg, tag: vendor}
+    generator: {value: "provision for GEC/Plessey 28 V generator", source: *u_uel_aarg, tag: vendor}
+    dimensions_m: {value: null}
+    fuel_consumption: {value: null}
+    tbo_s: {value: null}
+    price: {value: null}
+    assessment: >-
+      Highest power in range and very smooth, but documentation and civil availability are poor.
+      Listed for completeness only.
+
+  # ---------------------------------------------------------------------------------- 8
+  - id: skypower_sp180_sre
+    manufacturer: Sky Power GmbH
+    model: SP-180 SRE Hybrid (Wankel)
+    status: in production; nominal 180 cm3 chamber (below the 200 cc band, but in the right power class)
+    displacement_m3: {value: 180.0e-6, source: *u_sky_180sre, tag: manufacturer}
+    cycle: Wankel rotary (oil premix 1:200)
+    cylinders: 1 rotor
+    cooling: water-cooled housing + oil-cooled rotor (needs radiator and oil cooler)
+    max_power_W: {value: 22000.0, rpm: 6000, source: *u_sky_180sre, tag: manufacturer}
+    max_torque_Nm: {value: 36.8, rpm: 5500, source: *u_sky_180sre, tag: manufacturer}
+    rpm_range: {value: [1500, 10000], source: *u_sky_180sre, tag: manufacturer}
+    dry_mass_kg: {value: 9.5, source: *u_sky_180sre, tag: manufacturer, note: '"without subcomponents"; 2018 brochure: 6.8 kg bare, 9.5 kg with generator'}
+    bsfc_g_per_kWh: {value: 340, condition: "max load", source: *u_sky_brochure_2018, tag: manufacturer}
+    generator: {value: "integral starter-generator; hybrid boost +15 kW (battery dependent)", source: *u_sky_brochure_2018, tag: manufacturer}
+    fuel: {value: "gasoline or heavy fuel; oil 1:200", source: *u_sky_180sre, tag: manufacturer}
+    price: {value: null, note: on request}
+    assessment: >-
+      Best published SFC and smoothest running, which helps EO/IR image stability. Liquid cooling
+      adds radiator, coolant and plumbing mass, and Wankel TBO and cost are higher. This is a
+      growth or hybrid option, not the baseline.
+
+  # ---------------------------------------------------------------------------------- 9
+  - id: hirth_4201
+    manufacturer: Hirth Engines GmbH (Benningen, Germany)
+    model: 4201 (42 Series)
+    status: in production (2025 datasheet); 183 cm3, below the band. Used here as the reference for part-load SFC and altitude lapse.
+    displacement_m3: {value: 183.2e-6, source: *u_hirth_4201, tag: estimate, basis: "2 x pi/4 x 0.054^2 x 0.040 from datasheet bore/stroke"}
+    bore_m: {value: 0.054, source: *u_hirth_4201, tag: datasheet}
+    stroke_m: {value: 0.040, source: *u_hirth_4201, tag: datasheet}
+    cycle: 2-stroke
+    cylinders: 2
+    layout: boxer
+    cooling: air-cooled
+    ignition: single; closed-loop EFI with automatic altitude/temperature compensation
+    max_power_W: {value: 11100.0, rpm: 6500, source: *u_hirth_4201, tag: datasheet}
+    max_torque_Nm: {value: 16.3, source: *u_hirth_4201, tag: datasheet}
+    sfc_rated_g_per_kWh: {value: 482.83, rpm: 6500, source: *u_hirth_4201, tag: datasheet}
+    sfc_best_point_g_per_kWh: {value: 434.79, condition: "70-80 % load, 1/2 rated speed", source: *u_hirth_4201, tag: datasheet}
+    dry_mass_kg: {value: 7.14, source: *u_hirth_4201, tag: datasheet, note: "without exhaust"}
+    installation_items:
+      exhaust_kg: {value: 1.15, source: *u_hirth_4201, tag: datasheet}
+      starter_generator: {value: "standard (starting device = starter generator)", source: *u_hirth_4201, tag: datasheet}
+    dimensions_m:
+      length: {value: 0.2145, source: *u_hirth_4201, tag: datasheet}
+      width: {value: 0.3398, source: *u_hirth_4201, tag: datasheet}
+      height: {value: 0.2397, source: *u_hirth_4201, tag: datasheet}
+      length_incl_exhaust_silencer: {value: 0.685, source: *u_hirth_4201, tag: datasheet}
+    propeller_interface: {value: "bolt circle (LK) dia 34 mm, 6 x 60 deg", source: *u_hirth_4201, tag: datasheet}
+    altitude_power_curve_read:
+      source: *u_hirth_4201
+      tag: datasheet
+      note: "100 % throttle, 6500 rpm; read from chart (+/-0.15 kW)"
+      altitude_m: [0, 1000, 2000, 3000, 4000, 5000, 6000]
+      power_W:    [11050, 9800, 8700, 7650, 6700, 5900, 5150]
+    fuel: {value: petrol (gasoline); 4202 variant runs Jet A-1/JP-8, source: *u_hirth_4201, tag: datasheet}
+    tbo_s: {value: null, note: "not on 4201 sheet; sister 23-series states 500 h"}
+    assessment: Underpowered for 100-150 kg (11 kW). It has the best public documentation of the group (SFC, altitude and drawing).
+
+  # ---------------------------------------------------------------------------------- 10
+  - id: dle_222
+    manufacturer: DLE Engines (Mile Haoxiang Technology, China)
+    model: DLE-222
+    status: hobby engine; listed as Discontinued at Horizon Hobby (US); still listed by UK distributor
+    displacement_m3: {value: 222.5e-6, source: *u_dle222_manual, tag: manufacturer}
+    bore_m: {value: 0.045, source: *u_dle222_manual, tag: manufacturer}
+    stroke_m: {value: 0.035, source: *u_dle222_manual, tag: manufacturer}
+    compression_ratio: {value: 7.6, source: *u_dle222_manual, tag: manufacturer}
+    cycle: 2-stroke
+    cylinders: 4
+    layout: 2 x boxer pairs in line (flat-four), 2 carburettors, dual electronic ignition
+    cooling: air-cooled
+    max_power_hp: {value: 21.5, rpm: 7500, source: *u_dle222_manual, tag: manufacturer}
+    max_power_W: {value: 16030.0, rpm: 7500, source: *u_dle222_manual, tag: estimate, basis: "21.5 hp x 745.7 W/hp"}
+    rpm_range: {value: [1000, 7500], source: *u_dle222_mac, tag: vendor}
+    dry_mass_kg: {value: 4.84, source: *u_dle222_manual, tag: manufacturer, note: "net; gross 5.78 kg incl. ignition, mufflers"}
+    installation_items:
+      ignition_kg: {value: 0.391, source: *u_dle222_horizon, tag: vendor}
+      mufflers_kg: {value: 0.402, source: *u_dle222_horizon, tag: vendor}
+    dimensions_m:
+      length_standoff_rear_to_prop_hub_front: {value: 0.286, source: *u_dle222_dim2, tag: datasheet}
+      standoff_length: {value: 0.025, source: *u_dle222_dim2, tag: datasheet}
+      width: {value: 0.257, source: *u_dle222_dim1, tag: datasheet}
+      crank_axis_to_carb_top: {value: 0.116, source: *u_dle222_dim1, tag: datasheet}
+    mounting: {bolt_pattern_m: {value: [0.080, 0.090], source: *u_dle222_dim1, tag: datasheet}, hole_diameter_m: {value: 0.0062, count: 4, source: *u_dle222_dim1, tag: datasheet}, note: "manual: must run with shock absorbers"}
+    propeller_interface: {value: "6-bolt hub, hub dia 58 mm", source: *u_dle222_dim2, tag: datasheet}
+    propeller_recommendation: {value: "32x10, 32x12, 34x10 in", source: *u_dle222_manual, tag: manufacturer}
+    fuel: {value: "93 octane gasoline, oil 30:1", source: *u_dle222_manual, tag: manufacturer}
+    generator: {value: null}
+    starter_options: [{name: hand start / external starter}]
+    price: {value: null, note: "discontinued at Horizon"}
+    assessment: Very light, but a hobby engine with no generator, starter, altitude compensation or TBO data. Not suitable for a production civil UAV.
+
+  # ---------------------------------------------------------------------------------- 11
+  - id: desert_aircraft_da200
+    manufacturer: Desert Aircraft (Tucson, USA)
+    model: DA-200
+    status: hobby engine; listed but "Sold out" (2026)
+    displacement_m3: {value: 200.0e-6, source: *u_da200, tag: manufacturer}
+    cycle: 2-stroke, reed valve, bottom induction
+    cylinders: 4
+    layout: flat-four
+    cooling: air-cooled (baffling template supplied)
+    max_power_hp: {value: 19.0, source: *u_da200, tag: manufacturer}
+    max_power_W: {value: 14170.0, source: *u_da200, tag: estimate, basis: "19 hp x 745.7"}
+    rpm_range: {value: [900, 6700], source: *u_da200, tag: manufacturer}
+    dry_mass_kg: {value: 4.95, source: *u_da200, tag: manufacturer, note: "standard; Light version 4.56 kg"}
+    dimensions_m: {length: {value: 0.244, source: *u_da200, tag: manufacturer}}
+    propeller_interface: {value: "bolt circle 34 mm, 6 x M5x55 prop bolts", source: *u_da200, tag: manufacturer}
+    propeller_recommendation: {value: "2-blade 30x13, 31x12, 32x10-12; 3-blade 29x12, 29x13 in", source: *u_da200, tag: manufacturer}
+    price_USD: {value: 3245.0, source: *u_da200, tag: manufacturer}
+    warranty: {value: "3 years", source: *u_da200, tag: manufacturer}
+    assessment: Hobby competition engine with no generator or EFI. Reference only.
+
+# -----------------------------------------------------------------------------------------------------
+# RECOMMENDED ENGINE for a 100-150 kg surveillance UAV
+# -----------------------------------------------------------------------------------------------------
+recommended:
+  engine_id: limbach_l275_ef
+  configuration: >-
+    Limbach L 275 EF (EFI), direct drive, ePropelled SG750 starter/generator on the crank rear
+    (or the Limbach 28 V 45 A alternator if the SG750 is not released), Limbach ECU, standard
+    stacks plus silencers, and an isolated M8 four-point rear mount.
+  justification:
+    power: >-
+      18 kW maximum, about 17 kW for take-off and about 16 kW continuous at 6000 rpm. This is
+      the most power among the dedicated, documented UAV boxer twins in the 275 cc class
+      (Sky Power SP-275: 15.8-16 kW). At 150 kg MTOW the power loading is 8.3 kg/kW. Sky Power
+      places a 16 kW 275 cc twin at 100-150 kg MTOW, and the estimated static thrust with a
+      0.81 m prop is about 400-480 N (T/W about 0.3 at 150 kg).
+    mass: >-
+      7.0 kg bare. With a starter/generator it is the lightest EFI option. The 3W-275 is equal on
+      mass but carburetted with no generator. The SP-275 FI is 9.25 kg without subcomponents.
+    generator: >-
+      SG750 gives 800 W (1 kW for 3 min) for 0.44 kg and also acts as the starter. The heavier
+      proven fallback is the 28 V 45 A alternator (about 1.26 kW, 5.2 kg) plus the 12 V 0.4 kW
+      starter (2.3 kg).
+    efficiency: >-
+      EFI WOT SFC is 414-499 g/kWh (datasheet curve), about 456 g/kWh typical (UST). That is
+      15-40 % better than the carburettor L 275 E at part rpm. The ECU compensates for altitude
+      and temperature.
+    availability: >-
+      Current catalogue item (limflug.de, 2026). The type has been built since 1972 (>2000
+      carburettor units by 2015). The manufacturer is an established German aero-engine maker
+      with an EASA-approved organisation for its certified four-strokes.
+    documentation: >-
+      The best public installation data of the 200-300 cc UAV candidates: datasheet 3-view with
+      WOT power/torque/SFC curves, plus a detailed engineering dossier with envelope, crank-axis
+      offset, mount bolt size, fuel-system pressure and rev limit.
+    risks:
+      - Single spark plug per cylinder, so no ignition redundancy (Sky Power SP-275 has twin spark).
+      - TBO, CHT/EGT limits and maintenance intervals are not published. Obtain them before the design freeze.
+      - SG750 integration was announced in 2023 as "will integrate". Confirm its production status.
+      - Mount bolt pattern and prop-hub dimensions are not legible in public drawings. Request a STEP/DXF file.
+      - The "aimed at 25 kg MTOW UAV" phrase in UST 048 appears to be an editorial error (an 18 kW engine would give a 1.4 kg/kW power loading). It is not used.
+  backup_engine_id: skypower_sp275_fi_ts_ros
+  backup_reason: >-
+    Twin-spark redundancy, starter-generator on the rear output shaft, explicitly positioned for
+    100-150 kg MTOW, and more than 1000 units built. It is 2.25 kg heavier and has less power,
+    and no dimensions, SFC or generator data are public.
+  power_ratings_W:
+    max: {value: 18000.0, rpm: 7500, source: *u_lim_web, tag: manufacturer}
+    takeoff: {value: 17150.0, rpm: 6950, source: *u_ust018_p66, tag: paper}
+    max_continuous: {value: 16200.0, rpm: 6000, source: *u_lim_ds_275ef, tag: estimate, basis: "WOT curve at 6000 rpm, upper end of the manufacturer's 4000-6000 rpm cruise band"}
+  fuel_flow:
+    note: >-
+      Percent is of 18 kW maximum power. The WOT curve does not directly give propeller-curve
+      part-load SFC. Two-stroke engines often reach their best SFC at 50-80 % load (Hirth 4201
+      best point 435 vs 483 g/kWh rated; Moulton 2007 3W-100i B2 best 406 g/kWh at 55 % power
+      vs 485 g/kWh at maximum). The L 275 EF's own WOT minimum is at maximum rpm (414 g/kWh).
+      The assumed BSFC is held near the UST typical value at 50-75 %, with a light-load penalty
+      at 30 % (throttling, scavenging and combustion stability). Uncertainty is +/-12 %.
+    density_basis_kg_per_m3: 740.0
+    points:
+      - power_fraction: 1.00
+        shaft_power_W: 18000.0
+        bsfc_g_per_kWh: 430
+        bsfc_kg_per_J: 1.194e-7
+        fuel_flow_kg_per_s: 2.150e-3
+        fuel_flow_kg_per_h: 7.74
+        fuel_flow_L_per_h: 10.5
+        source: *u_lim_ds_275ef
+        tag: estimate
+        basis: "Datasheet WOT SFC 414-433 g/kWh at 7000-7500 rpm (read_from_curve)"
+      - power_fraction: 0.75
+        shaft_power_W: 13500.0
+        bsfc_g_per_kWh: 460
+        bsfc_kg_per_J: 1.278e-7
+        fuel_flow_kg_per_s: 1.725e-3
+        fuel_flow_kg_per_h: 6.21
+        fuel_flow_L_per_h: 8.4
+        source: *u_ust018_p66
+        tag: estimate
+        basis: "UST typical 340 g/hph = 456 g/kWh; datasheet WOT 461-481 g/kWh at 5000-6500 rpm"
+      - power_fraction: 0.50
+        shaft_power_W: 9000.0
+        bsfc_g_per_kWh: 470
+        bsfc_kg_per_J: 1.306e-7
+        fuel_flow_kg_per_s: 1.175e-3
+        fuel_flow_kg_per_h: 4.23
+        fuel_flow_L_per_h: 5.7
+        source: *u_ust018_p66
+        tag: estimate
+        basis: "Cruise band 4000-6000 rpm (UST); peers improve 10-15 % at part load, but the WOT curve worsens mid-rpm, so held at about the typical value + 3 %"
+      - power_fraction: 0.30
+        shaft_power_W: 5400.0
+        bsfc_g_per_kWh: 540
+        bsfc_kg_per_J: 1.500e-7
+        fuel_flow_kg_per_s: 0.811e-3
+        fuel_flow_kg_per_h: 2.92
+        fuel_flow_L_per_h: 3.95
+        source: *u_moulton_2007
+        tag: estimate
+        basis: "Light-load penalty of about +15 % over the 50 % point (throttled two-stroke). Moulton shows BSFC rising again below 1/4 throttle. Treat as a conservative loiter value."
+  propeller:
+    tag: estimate
+    source: *u_w3_annex_a
+    basis: >-
+      Limbach publishes no propeller. Peer 200-275 cc recommendations: 3W-275 34x12 in;
+      DLE-222 32x10 to 34x10; DA-200 30x13 to 32x12 (2-blade) and 29x12-13 (3-blade). Those are
+      low-pitch, high-thrust hobby choices. For a 30-40 m/s surveillance cruise, a higher
+      pitch-to-diameter ratio (about 0.55-0.65) is chosen. Diameter is capped so the helical tip
+      speed stays at or below about 250 m/s at take-off rpm for noise; at 5500 rpm,
+      D = 0.81 m gives 233 m/s. A 0.81 x 0.46 m 2-blade prop should absorb about 14-15 kW
+      static near 5300-5600 rpm (Cp about 0.045-0.05), which is within the engine's 25 Nm torque
+      plateau. Cruise J at 35 m/s and 4800-5200 rpm is about 0.5-0.55. Verify with the
+      propeller/performance model in the sizing phase.
+    tractor:
+      blades: 2
+      diameter_m: {value: 0.81, range: [0.76, 0.86], tag: estimate, source: *u_w3_annex_a}
+      pitch_m: {value: 0.46, range: [0.41, 0.51], tag: estimate, source: *u_w3_annex_a}
+    pusher:
+      blades: 2
+      diameter_m: {value: 0.81, range: [0.76, 0.86], tag: estimate, source: *u_w3_annex_a}
+      pitch_m: {value: 0.46, range: [0.41, 0.51], tag: estimate, source: *u_w3_annex_a}
+      note: >-
+        Use a pusher-hand blade, or order the opposite engine rotation if available (Limbach:
+        unconfirmed; Sky Power and 3W offer it). Keep the prop plane at least 0.1-0.15 D behind
+        the fuselage/cowl trailing edge to limit wake-induced blade loading and noise.
+    three_blade_alternative:
+      diameter_m: {value: 0.76, tag: estimate, source: *u_da200}
+      pitch_m: {value: 0.41, range: [0.38, 0.46], tag: estimate, source: *u_da200}
+      note: Smaller disc for ground or tail-boom clearance, at about 2-4 % lower efficiency.
+    tip_speed_check_m_per_s:
+      tag: estimate
+      source: *u_iso2533
+      basis: "pi x D x rpm / 60 (static, no forward speed); speed of sound 340.3 m/s at ISA sea level"
+      d_0p81_at_rpm: {"5000": 212, "5500": 233, "6000": 254, "6500": 276, "7000": 297}
+  installed_engine_group_mass:
+    configuration: L 275 EF + SG750 starter/generator + ECU + fuel pump/regulator + exhaust with silencers + isolated mount + servo/sensors
+    items_kg:
+      engine_bare:                {value: 7.00, source: *u_lim_web, tag: manufacturer}
+      ecu_harness_ignition_coils: {value: 0.80, source: *u_ust018_p61, tag: estimate, basis: "not published; ECU and coils mount on the airframe"}
+      fuel_pump_regulator_filter: {value: 0.35, source: *u_ust018_p61, tag: estimate, basis: "inline pump + 2.5 bar mechanical regulator + filter/fittings"}
+      starter_generator_sg750:    {value: 0.44, source: *u_ust048, tag: paper}
+      generator_power_electronics: {value: 0.40, source: *u_ust048, tag: estimate, basis: "3-phase rectifier/regulator or ePropelled iPS-class controller, mass not published"}
+      generator_adapter_coupling: {value: 0.15, source: *u_ust018_p61, tag: estimate, basis: "flexible coupling and adapter plate on the crank rear"}
+      exhaust_with_silencers:     {value: 1.00, source: *u_hirth_4201, tag: estimate, basis: "Hirth 4201 twin exhaust 1.15 kg; Limbach stacks lighter"}
+      engine_mount_isolators_bolts: {value: 0.70, source: *u_ust018_p61, tag: estimate, basis: "Al/CFRP mount plate + 4 elastomer isolators + 4 x M8 hardware for a 9 kg cantilevered engine"}
+      throttle_servo_cht_egt_sensors: {value: 0.12, source: *u_ust018_p61, tag: estimate}
+    total_kg: {value: 10.96, range: [10.0, 12.5], tag: estimate, source: *u_lim_web, basis: "sum of the items above"}
+    alternative_legacy_alternator_config_kg:
+      value: 17.57
+      tag: estimate
+      source: *u_lim_web
+      basis: "7.0 engine + 0.8 ECU + 0.35 pump + 5.2 alternator (28 V 45 A incl. transformer) + 2.3 starter set + 1.0 exhaust + 0.8 mount + 0.12 sensors"
+    excluded: propeller and spinner (est. 0.6-1.0 kg), fuel tank and fuel, cowling and cooling ducts, battery, firewall
+  electrical:
+    generator_output_W: {value: 800, rpm: 7500, source: *u_ust048, tag: paper}
+    generator_output_at_cruise_W:
+      value: 550
+      rpm: 5200
+      tag: estimate
+      source: *u_ust048
+      basis: "PM generator output roughly proportional to rpm when voltage-limited: 800 x 5200/7500. Confirm with the ePropelled curve."
+    engine_own_consumption_W:
+      value: 70
+      tag: estimate
+      source: *u_ust048
+      basis: "ECU + 2 injectors + fuel pump + 2 coils at 12 V, about 5-6 A. L 2400 DX draws 9 A at 28 V for a 4-cylinder with larger pumps."
+    ecu_supply_V: {value: 12, source: *u_ust048, tag: paper}
+  tbo_planning_s:
+    value: 1.80e+6
+    tag: estimate
+    source: *u_hirth_2301
+    basis: >-
+      500 h (1.8e6 s) planning value. Hirth 23-series UAV two-strokes state a 500 h TBO;
+      Limbach has not published one. 3W warranty is 1200 h / 36 months. Confirm with Limbach.
+
+# -----------------------------------------------------------------------------------------------------
+# INSTALLATION (recommended engine: Limbach L 275 EF)
+# Engine axes: x along crankshaft, positive toward the propeller; z perpendicular to the cylinder
+# plane; y along the cylinder axes.
+# -----------------------------------------------------------------------------------------------------
+installation:
+  envelope_m:
+    length_prop_hub_face_to_generator_coupling_flange: {value: 0.2214, source: *u_ust018_p61, tag: paper}
+    width_y_incl_spark_plug_caps: {value: 0.3968, source: *u_ust018_p61, tag: paper}
+    height_z_cylinder_side_to_intake_cover_top: {value: 0.2946, source: *u_ust018_p61, tag: paper}
+    crank_axis_to_cylinder_side_extreme_z: {value: 0.060, source: *u_ust018_p61, tag: paper, note: "lowest point = cylinder fins in UST orientation; datasheet front view shows 60 mm, read_from_drawing"}
+    crank_axis_to_intake_cover_extreme_z: {value: 0.2346, source: *u_ust018_p61, tag: estimate, basis: "294.6 - 60.0 mm; datasheet label reads 23x.6, consistent"}
+    length_with_sg750_estimate: {value: 0.26, tag: estimate, source: *u_ust048, basis: "221.4 mm + SG750 28.6 mm + adapter about 10 mm"}
+    note: >-
+      Intake throttle bodies with hemispherical mesh filters stand on one side of the crank axis.
+      The datasheet drawing shows them hanging below and the UST orientation has them on top.
+      Either orientation is possible with EFI; confirm the permitted attitude with Limbach.
+  datum_distances_m:
+    prop_hub_face_to_crankcase_mount_face:
+      value: 0.1814
+      source: *u_lim_ds_275ef
+      tag: datasheet
+      note: "read_from_drawing (side view). Label legible as 181.4 and consistent with 221.4 - 40.0 mm; pixel-scale check within 3 %."
+    crankcase_mount_face_to_generator_coupling_flange: {value: 0.040, source: *u_lim_ds_275ef, tag: datasheet, note: read_from_drawing}
+    crankcase_mount_face_to_rearmost_accessory: {value: 0.0522, source: *u_lim_ds_275ef, tag: datasheet, note: "read_from_drawing; rear bracket/sensor"}
+    prop_flange_outer_diameter_estimate: {value: 0.072, source: *u_lim_ds_275ef, tag: estimate, basis: "scaled from the EF side view at 2.07 px/mm; +/-5 mm"}
+    starter_ring_gear_diameter_estimate: {value: 0.080, source: *u_lim_ds_275ef, tag: estimate, basis: "scaled from the EF front view; +/-5 mm"}
+  mount:
+    type: rear-crankcase 4-boss cantilever mount to a plate tied into the airframe
+    bolts: {value: "4 x M8, about 12 mm thread engagement (datasheet detail 'M8 .. deep - 4 places')", source: *u_lim_ds_275e, tag: datasheet, note: "M8 confirmed by UST 018 p.61; depth label partly legible"}
+    bolt_pattern_estimate:
+      tag: estimate
+      source: *u_lim_ds_275e
+      basis: >-
+        Scaled from the L 275 E datasheet detail "Bolt pattern for engine mount". Labels are
+        illegible; ratios were fitted to partially legible "5x.x / 3x.x" labels. Hole centres
+        (y, z) relative to the crank axis in the mount face are about (-0.0295, +/-0.051) and
+        (+0.052, +/-0.031) m, +/-0.003 m. Use for packaging only, not for drilling. Request the
+        drawing from Limbach.
+      holes_yz_m: [[-0.0295, 0.051], [-0.0295, -0.051], [0.052, 0.031], [0.052, -0.031]]
+    isolators: {value: "Limbach optional damper shock mount; new mounts/dampers announced 2023", source: *u_ust048, tag: paper}
+    mount_guidance:
+      - {text: "Tension-free mounting on an aluminium crankcase; thrust angle set by the mount plate", source: *u_w3_manual, tag: manufacturer}
+      - {text: "Large two-strokes of this class must run on shock absorbers, including during break-in", source: *u_dle222_manual, tag: manufacturer}
+  propeller_flange:
+    description: Hub on a brass spool (press fit + keyway), bolt at crank nose, timing-wheel flange on the same spool; starter ring gear on the hub
+    source: *u_ust018_p60
+    tag: paper
+    bolt_pattern: {value: "6 holes at 60 deg plus 6 interleaved holes (L 275 E hub detail); diameters illegible", source: *u_lim_ds_275e, tag: datasheet}
+    crankshaft_bearings: {value: "front: 2 x ball bearings 20 mm dia x 8 mm wide; rear: 1 x 12 mm wide", source: *u_ust018_p60, tag: paper, note: "Twin front bearings take propeller bending load out of the crankshaft (UST 018 p.65)."}
+  cooling:
+    method: Ram/ducted air over cylinder fins and the bolted finned heat sinks (2 x M5 each). No fan, so a pusher needs ducted inlets.
+    source: *u_ust018_p60
+    tag: paper
+    manufacturer_history: {text: "Before the heat sinks were added it was difficult to keep cylinder temperatures low", source: *u_ust018_p64, tag: paper}
+    guidance_peer_manufacturer:
+      - {text: "Direct the incoming air onto the cylinders with a close-fitting air guide (baffle); avoid stagnant hot air behind cylinders", source: *u_w3_manual, tag: manufacturer}
+      - {text: "Outlet area about 4x the inlet area for unbaffled model-style installs (e.g. 20 cm2 in, 80 cm2 out)", source: *u_w3_manual, tag: manufacturer}
+      - {text: "Crankcase temperature max 55 degC", source: *u_w3_manual, tag: manufacturer}
+      - {text: "Push configuration raises cooling and integration demands; pull gives cleaner airflow", source: *u_sky_faq, tag: manufacturer}
+    cht_limits_degC:
+      note: Limbach CHT limits are not published. Peer values follow.
+      short_term_full_throttle: {value: 250, source: *u_w3_manual, tag: manufacturer}
+      critical_seizure_risk: {value: 270, source: *u_w3_manual, tag: manufacturer}
+      minimum_to_avoid_deposits: {value: 180, source: *u_w3_manual, tag: manufacturer}
+      peer_uav_twin_head_max: {value: 280, source: *u_ust001_hirth, tag: paper, note: "Hirth S1218 UAV twin"}
+      design_limit_continuous: {value: 240, tag: estimate, source: *u_w3_manual, basis: "10 degC margin below the 3W short-term 250 degC; replace with the Limbach limit when obtained"}
+    cht_sensor: {value: "14 mm spark-plug thermocouple (Limbach optional)", source: *u_lim_ds_275ef, tag: datasheet}
+    cooling_airflow_estimate:
+      tag: estimate
+      source: *u_moulton_2007
+      basis: >-
+        Energy balance at 18 kW. Fuel 7.74 kg/h x 43.4 MJ/kg = 93.3 kW, so brake efficiency is
+        about 19.3 %. Small air-cooled two-strokes reject about 15-25 % of fuel energy to the
+        cooling air (peer engine test literature), giving Q about 14-20 kW (about 0.8-1.1 x brake
+        power). The cooling-air temperature rise across a baffled fin pack is 30-50 K (assumed).
+        m_dot = Q / (cp x dT) with cp = 1005 J/(kg K).
+      heat_to_cooling_air_W_at_max_power: {value: 17000.0, range: [14000.0, 20000.0], tag: estimate, source: *u_moulton_2007}
+      mass_flow_kg_per_s_at_max_power: {value: 0.42, range: [0.29, 0.66], tag: estimate, source: *u_moulton_2007}
+      volume_flow_m3_per_s_sea_level_at_max_power: {value: 0.35, tag: estimate, source: *u_iso2533, basis: "0.42 kg/s / 1.225 kg/m3"}
+      mass_flow_kg_per_s_at_50pct_power: {value: 0.22, tag: estimate, source: *u_moulton_2007, basis: "heat rejection scaled with fuel flow 4.23/7.74"}
+      inlet_area_m2_first_cut: {value: 0.031, tag: estimate, source: *u_iso2533, basis: "0.42 kg/s / (1.225 kg/m3 x 11 m/s), with inlet velocity ratio about 0.4 at a 28 m/s climb"}
+      exit_area_m2_first_cut: {value: 0.040, tag: estimate, source: *u_w3_manual, basis: "about 1.3 x inlet, for heated-air density drop and a controlled exit velocity; use the 3W 4x rule if the installation is not baffled"}
+      ground_running: Pusher installations get no prop-wash over the cylinders. Limit static ground runs by CHT, or add a ground-cooling blower.
+  exhaust:
+    standard: {value: "2 x individual 200 mm stacks open to atmosphere, bolted to each cylinder; EGT sensor provision", source: *u_ust018_p60, tag: paper}
+    tuned_option: {value: "980 mm tuned pipes: +20 % power at 6000 rpm, +15 % at 7500 rpm, better SFC; 400 mm pipe option also offered", source: *u_ust018_p66, tag: paper}
+    egt_degC:
+      note: Limbach EGT values are not published. Peer UAV twin values follow (measured 110 mm downstream of the exhaust port).
+      wot: {value: 680, source: *u_ust001_hirth, tag: paper}
+      part_load: {value: 720, source: *u_ust001_hirth, tag: paper}
+      design_gas_temperature_near_port: {value: 750, tag: estimate, source: *u_ust001_hirth, basis: "peer maximum 720 degC + 30 degC margin"}
+      pipe_outer_wall_estimate: {value: [400, 600], tag: estimate, source: *u_ust001_hirth, basis: "uninsulated steel pipe wall typically 100-300 K below gas temperature"}
+    integration_rules:
+      - {text: "Use flexible muffler brackets on the reinforced part of the muffler", source: *u_w3_manual, tag: manufacturer}
+      - {text: "Muffler and manifold must be well cooled; keep the ignition/ECU out of the cylinder hot-air stream", source: *u_w3_manual, tag: manufacturer}
+      - {text: "Keep composites at least 25-50 mm from pipes, or use a heat shield; low-Tg plastics are not allowed near the exhaust", tag: estimate, source: *u_ust001_hirth, basis: "derived from the EGT levels above"}
+  vibration:
+    configuration: {value: "boxer twin, separate crankpins at 180 deg; both cylinders fire simultaneously (one combined power stroke per revolution)", source: *u_lim_ds_275e, tag: datasheet}
+    primary_forces: {value: "largely balanced; residual rocking couple from the crankpin offset, counterbalanced by the outer crank webs (no other damping)", source: *u_ust018_p62, tag: paper}
+    dominant_loading: {value: "mass forces dominate over firing forces at about 6000 rpm (low compression)", source: *u_ust018_p62, tag: paper}
+    excitation_frequencies_Hz:
+      tag: estimate
+      source: *u_ust018_p66
+      basis: "1st order = rpm/60 (firing and rocking couple); 2nd order = 2-blade blade-passing"
+      idle_2000rpm_1st_order: 33.3
+      cruise_5000rpm_1st_order: 83.3
+      cruise_5000rpm_2nd_order: 166.7
+      takeoff_6950rpm_1st_order: 115.8
+    isolator_target:
+      value: "rigid-body mount modes at or below 15-20 Hz; keep the gimbal/EO-IR isolator modes away from 80-120 Hz and 160-240 Hz"
+      tag: estimate
+      source: *u_ust018_p66
+      basis: "isolation needs f_exc / f_n > sqrt(2), preferably > 2; lowest excitation is 1st order at idle (assumed 2000 rpm, about 33 Hz)"
+    propeller_balance: {text: "Only fully balanced, flat, accurately bored propellers; blade-tip track within 0.5 mm; spinner balanced with the prop", source: *u_w3_manual, tag: manufacturer}
+  fuel_system:
+    supply: {value: "inline electric pump feeds one end of the rail; mechanical regulator at the other end holds 2.5 bar; excess returns to the tank (return line required)", source: *u_ust018_p61, tag: paper}
+    rail_pressure_Pa: {value: 2.5e+5, source: *u_ust018_p61, tag: paper}
+    injectors: {value: "1 solenoid injector per cylinder, below the butterfly", source: *u_ust018_p61, tag: paper}
+    fuel: {value: "92 RON or better gasoline + synthetic 2-stroke oil 50:1", source: *u_lim_web, tag: manufacturer}
+    tank_notes: Size the return line like the supply line. Fit a filter in the tank and a fuel-proof pendulum pickup (3W practice).
+    tank_notes_source: *u_w3_manual
+    tank_notes_tag: manufacturer
+  altitude:
+    compensation: {value: "ECU linear offset on ambient pressure and air temperature", source: *u_ust018_p61, tag: paper}
+    power_lapse_model:
+      formula: P(h) / P0 = sigma(h)^1.23   (sigma = ISA density ratio)
+      tag: estimate
+      source: *u_hirth_4201
+      basis: >-
+        Fitted to the Hirth 4201 published full-throttle altitude curve (naturally aspirated EFI
+        boxer twin, same class). The exponent is 1.22-1.24 for every point from 1000 to 6000 m.
+        sigma is from ISO 2533.
+      standard_source: *u_iso2533
+      l275ef_power_W_at_altitude:
+        altitude_m: [0, 1000, 2000, 3000, 4000, 4500, 6000]
+        sigma:      [1.000, 0.907, 0.822, 0.742, 0.669, 0.634, 0.539]
+        power_W:    [18000, 15970, 14140, 12470, 10970, 10280, 8410]
+  starting:
+    options: SG750 starter/generator (preferred), Limbach 12 V 0.4 kW starter on crankcase base driving a ring gear on the prop hub (2.3 kg), or hand propping on the ground
+    source: *u_lim_web
+    tag: manufacturer
+
+open_items:
+  - Request from Limbach the L 275 EF installation drawing (STEP/DXF) with mount bolt pattern, prop-hub bolt circle and spigot, and the permitted installation attitude.
+  - Request TBO, maintenance intervals, CHT/EGT limits, idle rpm and maximum continuous rating.
+  - Confirm SG750 release status, its output-vs-rpm curve and the rectifier/controller mass. Otherwise baseline the 28 V 45 A alternator (5.2 kg).
+  - Confirm whether counter-rotating (pusher) crank rotation is available, or plan a pusher-hand propeller.
+  - Request a quote and lead time (price not public).
+  - In parallel, request the Sky Power SP-275 FI TS ROS 3D model, SFC map and starter-generator data as the backup.
+  - Propeller final selection by performance model (sizing phase); candidate suppliers to be researched separately.

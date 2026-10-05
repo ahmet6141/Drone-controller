@@ -52,3 +52,4 @@ ucav/work/
 # ucav250 (YK-250)
 ucav250/**/__pycache__/
 ucav250/out/*.blend1
+ucav250/data/polars/

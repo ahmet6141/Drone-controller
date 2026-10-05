@@ -98,6 +98,8 @@ Run everything from the repo root: `python3 -m ucav250.analysis.sizing --check`,
 * Model real features that matter for fit and function: holes for every fastener (clearance per ISO 273 medium,
   e.g. M5 → Ø5.5), flanges where panels fasten, hinge lugs and bores, pin clearances (ISO 286 fits), cut-outs for
   pass-throughs. Cosmetic micro-detail is not required.
+* Boolean unions must OVERLAP (>= 0.1 mm), never merely touch: manifold3d keeps face-touching solids as separate
+  shells, which the self-intersection check then reports. Extend joined features into each other.
 * Mesh density: enough to represent the shape within ~0.5 mm (OML surfaces) and ~0.2 mm (fittings). Avoid needless
   millions of triangles; the whole aircraft should stay below ~3 M triangles.
 * Thin parts: thickness from the layup/process (never below `processes[*].min_thickness`).

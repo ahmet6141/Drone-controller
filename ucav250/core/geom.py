@@ -159,8 +159,9 @@ class Mesh:
 
     # ------------------------------------------------------------------ manifold3d interop
     def to_manifold(self) -> m3.Manifold:
-        mg = m3.Mesh64(vert_properties=np.ascontiguousarray(self.V, dtype=np.float64),
-                       tri_verts=np.ascontiguousarray(self.F, dtype=np.uint64))
+        # explicit writable copies: arrays that came from manifold3d are read-only views and nanobind rejects them
+        mg = m3.Mesh64(vert_properties=np.array(self.V, dtype=np.float64, order="C", copy=True),
+                       tri_verts=np.array(self.F, dtype=np.uint64, order="C", copy=True))
         man = m3.Manifold(mg)
         st = man.status()
         if str(st) not in ("Error.NoError", "NoError"):
@@ -170,8 +171,8 @@ class Mesh:
     @staticmethod
     def from_manifold(man: m3.Manifold) -> "Mesh":
         mg = man.to_mesh64()
-        V = np.asarray(mg.vert_properties, dtype=np.float64)[:, :3]
-        F = np.asarray(mg.tri_verts, dtype=np.int64)
+        V = np.array(np.asarray(mg.vert_properties)[:, :3], dtype=np.float64, order="C", copy=True)
+        F = np.array(mg.tri_verts, dtype=np.int64, order="C", copy=True)
         return Mesh(V, F)
 
     # ------------------------------------------------------------------ validation
@@ -283,7 +284,25 @@ def self_intersections(mesh: Mesh) -> int:
         import bpy  # noqa: F401  (importing bpy makes mathutils importable)
         from mathutils.bvhtree import BVHTree
     t = BVHTree.FromPolygons(mesh.V.tolist(), mesh.F.tolist(), all_triangles=True, epsilon=0.0)
-    return len(t.overlap(t))
+    pairs = t.overlap(t)
+    if not pairs:
+        return 0
+    # Pairs that share a vertex "touch" there; the float32 tri-tri test sometimes reports them (thin fans at poles).
+    # Re-test those with both triangles shrunk 0.2 % about their centroids: a real fold still intersects.
+    real = 0
+    F = mesh.F
+    for a, b in pairs:
+        if not set(F[a].tolist()) & set(F[b].tolist()):
+            real += 1
+            continue
+        ta, tb = mesh.V[F[a]], mesh.V[F[b]]
+        ta = ta.mean(0) + 0.998 * (ta - ta.mean(0))
+        tb = tb.mean(0) + 0.998 * (tb - tb.mean(0))
+        t2 = BVHTree.FromPolygons(np.vstack([ta, tb]).tolist(), [(0, 1, 2), (3, 4, 5)], all_triangles=True,
+                                  epsilon=0.0)
+        if any((i, j) in ((0, 1), (1, 0)) for i, j in t2.overlap(t2)):
+            real += 1
+    return real
 
 
 # =====================================================================================================================

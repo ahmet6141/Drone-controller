@@ -49,3 +49,6 @@ ucav/out/*.glb
 ucav/out/anim/*_frames/
 ucav/out/print_*/stl/
 ucav/work/
+# ucav250 (YK-250)
+ucav250/**/__pycache__/
+ucav250/out/*.blend1

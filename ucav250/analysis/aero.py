@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 
 from ..core.spec import DATA_DIR
-from ..design.oml import airfoil_coords
+from ..design.oml import airfoil_coords, resampled
 from . import aerolib as AL
 
 POLAR_DIR = Path(DATA_DIR) / "polars"
@@ -34,21 +34,32 @@ ALPHAS = tuple(float(a) for a in np.arange(-8.0, 20.01, 0.5))
 # =====================================================================================================================
 # section polars
 # =====================================================================================================================
-def _polar_path(airfoil: str, Re: float, n_crit: float) -> Path:
-    return POLAR_DIR / f"{airfoil.lower()}_Re{int(round(Re)):d}_N{n_crit:g}.json"
+def _polar_path(airfoil: str, Re: float, n_crit: float, ts: float = 1.0) -> Path:
+    tag = "" if abs(ts - 1.0) < 1e-9 else f"_t{ts:.4f}"
+    return POLAR_DIR / f"{airfoil.lower()}{tag}_Re{int(round(Re)):d}_N{n_crit:g}.json"
+
+
+def section_coords(airfoil: str, thickness_scale: float = 1.0) -> np.ndarray:
+    """Selig-ordered coordinates (TE upper -> LE -> TE lower); thickness scaled about the camber line if requested
+    (the same operation the OML uses for ``thickness_scale``)."""
+    if abs(thickness_scale - 1.0) < 1e-9:
+        return airfoil_coords(airfoil)
+    x, yu, yl = resampled(airfoil, 161, 0.0, float(thickness_scale))
+    return np.vstack([np.column_stack([x, yu])[::-1], np.column_stack([x, yl])[1:]])
 
 
 @functools.lru_cache(maxsize=None)
-def raw_polar(airfoil: str, Re: float, n_crit: float = 9.0) -> dict:
+def raw_polar(airfoil: str, Re: float, n_crit: float = 9.0, thickness_scale: float = 1.0) -> dict:
     """NeuralFoil polar on ``ALPHAS`` (deg) at one Reynolds number; cached on disk."""
-    path = _polar_path(airfoil, Re, n_crit)
+    path = _polar_path(airfoil, Re, n_crit, thickness_scale)
     if path.exists():
         return json.loads(path.read_text())
     import neuralfoil as nf
-    P = airfoil_coords(airfoil)
+    P = section_coords(airfoil, thickness_scale)
     a = np.array(ALPHAS)
     r = nf.get_aero_from_coordinates(P, alpha=a, Re=float(Re), n_crit=float(n_crit), model_size="xlarge")
-    out = {"airfoil": airfoil, "Re": float(Re), "n_crit": float(n_crit), "alpha": list(ALPHAS),
+    out = {"airfoil": airfoil, "thickness_scale": float(thickness_scale), "Re": float(Re), "n_crit": float(n_crit),
+           "alpha": list(ALPHAS),
            "cl": [float(v) for v in r["CL"]], "cd": [float(v) for v in r["CD"]], "cm": [float(v) for v in r["CM"]],
            "confidence": [float(v) for v in r["analysis_confidence"]],
            "xtr_top": [float(v) for v in r["Top_Xtr"]], "xtr_bot": [float(v) for v in r["Bot_Xtr"]],
@@ -84,15 +95,15 @@ def polar_characteristics(pol: dict) -> dict:
 
 
 @functools.lru_cache(maxsize=None)
-def characteristics(airfoil: str, Re: float, n_crit: float = 9.0) -> dict:
+def characteristics(airfoil: str, Re: float, n_crit: float = 9.0, thickness_scale: float = 1.0) -> dict:
     """Characteristics at any Re, log-linearly interpolated between the two bracketing grid polars."""
     Re = float(np.clip(Re, RE_GRID[0], RE_GRID[-1]))
     j = int(np.searchsorted(RE_GRID, Re))
     j = min(max(j, 1), len(RE_GRID) - 1)
     r0, r1 = RE_GRID[j - 1], RE_GRID[j]
     t = (math.log(Re) - math.log(r0)) / (math.log(r1) - math.log(r0))
-    c0 = polar_characteristics(raw_polar(airfoil, r0, n_crit))
-    c1 = polar_characteristics(raw_polar(airfoil, r1, n_crit))
+    c0 = polar_characteristics(raw_polar(airfoil, r0, n_crit, thickness_scale))
+    c1 = polar_characteristics(raw_polar(airfoil, r1, n_crit, thickness_scale))
     out = {k: (1 - t) * c0[k] + t * c1[k] for k in c0 if k not in ("cd_table",)}
     out["_tables"] = (c0["cd_table"], c1["cd_table"], t)
     out["Re"] = Re
@@ -193,8 +204,9 @@ def surface_analysis(sections: list[dict], V: float, h: float = 0.0, n_crit: flo
     chars = []
     for k in range(len(T["y"])):
         i, f = int(T["idx"][k]), float(T["frac"][k])
-        ca = characteristics(sections[i]["airfoil"], float(re[k]), n_crit)
-        cb = characteristics(sections[i + 1]["airfoil"], float(re[k]), n_crit)
+        sa, sb = sections[i], sections[i + 1]
+        ca = characteristics(sa["airfoil"], float(re[k]), n_crit, float(sa.get("thickness_scale", 1.0)))
+        cb = characteristics(sb["airfoil"], float(re[k]), n_crit, float(sb.get("thickness_scale", 1.0)))
         chars.append((ca, cb, f))
 
     def blend(key):

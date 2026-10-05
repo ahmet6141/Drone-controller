@@ -33,6 +33,21 @@ class TestFuselage(unittest.TestCase):
         self.assertAlmostEqual(hi[0], 3.2, places=9)
         self.assertAlmostEqual(hi[1], 0.21, delta=1e-3)          # half max width
 
+    def test_chined_section_top_frac(self):
+        Fuselage = O.Fuselage
+        F = Fuselage(np.array([[0.0, 0.0, 0.0, 0.0, 2, 2, 0.3], [0.5, 0.4, 0.3, 0.0, 1.0, 1.5, 0.3],
+                               [2.0, 0.5, 0.4, 0.0, 1.0, 1.5, 0.3], [3.0, 0.1, 0.1, 0.0, 2, 2, 0.5]]))
+        top = F.point(2.0, 0.0)
+        bot = F.point(2.0, np.pi)
+        side = F.point(2.0, np.pi / 2)
+        self.assertAlmostEqual(top[2], 0.12, places=6)        # 30 % of 0.4 above the chine line
+        self.assertAlmostEqual(bot[2], -0.28, places=6)
+        self.assertAlmostEqual(side[1], 0.25, places=6)
+        self.assertAlmostEqual(side[2], 0.0, places=6)        # chine at zc
+        self.assertTrue(F.mesh(60, 48).check(self_intersect=True)["ok"])
+        with self.assertRaises(ValueError):
+            Fuselage(np.array([[0.0, 0.1, 0.1, 0, 2, 2, 1.0], [1.0, 0.1, 0.1, 0, 2, 2, 0.5]]))
+
     def test_outward_normal_and_inward_panel(self):
         n = self.F.normal(1.2, math.pi / 2)
         np.testing.assert_allclose(n, [0, 1, 0], atol=1e-3)

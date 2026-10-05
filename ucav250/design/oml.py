@@ -126,17 +126,21 @@ def max_thickness(name: str) -> tuple[float, float]:
 # =====================================================================================================================
 @dataclass
 class Fuselage:
-    stations: np.ndarray                    # (n, 6): x, width, height, zc, n_top, n_bot
+    stations: np.ndarray                    # (n, 6|7): x, width, height, zc, n_top, n_bot[, top_frac]
 
     def __post_init__(self):
         S = np.asarray(self.stations, float)
-        if S.ndim != 2 or S.shape[1] != 6:
-            raise ValueError("fuselage stations must be (n, 6): x, width, height, zc, n_top, n_bot")
+        if S.ndim != 2 or S.shape[1] not in (6, 7):
+            raise ValueError("fuselage stations must be (n, 6|7): x, width, height, zc, n_top, n_bot[, top_frac]")
         if np.any(np.diff(S[:, 0]) <= 0):
             raise ValueError("fuselage stations must have increasing x")
+        if S.shape[1] == 6:                 # top_frac: share of the height above the chine/max-width line zc
+            S = np.column_stack([S, np.full(len(S), 0.5)])
+        if np.any((S[:, 6] <= 0.05) | (S[:, 6] >= 0.95)):
+            raise ValueError("fuselage top_frac must be in (0.05, 0.95)")
         self.stations = S
-        self._f = {k: PchipInterpolator(S[:, 0], S[:, i]) for i, k in enumerate(["x", "w", "h", "zc", "nt", "nb"])
-                   if k != "x"}
+        self._f = {k: PchipInterpolator(S[:, 0], S[:, i])
+                   for i, k in enumerate(["x", "w", "h", "zc", "nt", "nb", "tf"]) if k != "x"}
 
     @property
     def x0(self) -> float:
@@ -167,14 +171,21 @@ class Fuselage:
                     h[m] = S[i1, 2] * f
         return w, h, self._f["zc"](x), self._f["nt"](x), self._f["nb"](x)
 
+    def top_frac(self, x):
+        return self._f["tf"](np.clip(np.asarray(x, float), self.x0, self.x1))
+
     def point(self, x, phi) -> np.ndarray:
-        """Surface point(s); x and phi broadcast."""
+        """Surface point(s); x and phi broadcast. Upper half: superellipse of half-width w/2 and height
+        top_frac·h above zc; lower half: height (1 − top_frac)·h below zc. n < 2 gives a sharp chine at zc
+        (n = 1 is a diamond), n > 2 a boxy section."""
         x, phi = np.broadcast_arrays(np.asarray(x, float), np.asarray(phi, float))
         w, h, zc, nt, nb = self.section(x)
+        tf = self.top_frac(x)
         s, c = np.sin(phi), np.cos(phi)
         n = np.where(c >= 0, nt, nb)
+        hh = np.where(c >= 0, tf * h, (1.0 - tf) * h)
         y = 0.5 * w * np.sign(s) * np.abs(s) ** (2.0 / n)
-        z = zc + 0.5 * h * np.sign(c) * np.abs(c) ** (2.0 / n)
+        z = zc + hh * np.sign(c) * np.abs(c) ** (2.0 / n)
         return np.stack([x, y, z], axis=-1)
 
     def grid(self, x0, x1, phi0, phi1, nx: int, nphi: int, x_spacing: str = "linear") -> np.ndarray:

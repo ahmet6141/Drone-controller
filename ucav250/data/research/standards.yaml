@@ -1,0 +1,2408 @@
+# =====================================================================================================
+# YK-250 (ucav250) - RESEARCH PHASE - AIRWORTHINESS STANDARDS AND REGULATION
+# Civil surveillance / research UAV, 100-150 kg MTOW class, single ~250-275 cc piston engine.
+# Payload: EO/IR sensors and mission equipment only (no weapons, no hardpoints).
+#
+# Conventions
+#   - SI units, explicit in key names or in a "unit" field. Load factors are dimensionless ("-").
+#     Speeds are equivalent airspeed (EAS) unless stated.
+#   - Every number carries "source" (URL, via YAML alias to the sources list) and "tag":
+#       manufacturer | datasheet | standard | paper | vendor | estimate
+#     "paper" is also used for trade journals and news articles. Values tagged "estimate" carry a
+#     "basis" that explains the reasoning.
+#   - status:
+#       requirement     = mandatory ("must") text in the cited document and clause.
+#       common_practice = AMC / guidance / "should" text, industry practice, or a design choice
+#                         derived for the YK-250. The "text_type" field says which one.
+#     None of these codes is legally binding on a Turkish civil UAV by itself. SHT-IHA (2026) says
+#     SHGM sets the technical requirements and that EASA/ICAO AMC/GM may be used as guidance
+#     (see turkey_regulation). The certification basis must be agreed with SHGM.
+#   - Imperial values in the source documents were converted exactly:
+#       50 ft/s = 15.24 m/s, 25 ft/s = 7.62 m/s, 1 psi = 6894.757 Pa, 1 in = 0.0254 m,
+#       1 lb/ft2 = 4.8824 kg/m2.
+#   - Values read from figures in the PDFs are marked read_from_drawing and give their uncertainty.
+# Accessed: 2026-10-05
+# =====================================================================================================
+
+meta:
+  project: YK-250 (ucav250)
+  topic: airworthiness_standards_and_regulation
+  phase: research
+  date: "2026-10-05"
+  scope: >-
+    Structural and system design requirements used for light fixed-wing UAS. Covered:
+    NATO STANAG 4703 / AEP-83 (light UAS, MTOW at most 150 kg), JARUS CS-LUAS (light unmanned
+    aeroplanes, MTOW at most 750 kg), EASA SC Light-UAS (objective-based special condition),
+    ASTM F3298 (scope only, paywalled), and the manned analogues CS-VLA Amdt 1 and FAR/CS-23
+    (prescriptive, pre-2017). The loads in CS-LUAS, STANAG 4703 and CS-VLA have the same origin,
+    and most numeric values are identical across them. Turkish regulation (SHT-IHA, July 2026) is
+    summarised in turkey_regulation.
+  how_to_use: >-
+    "requirements" is the traceable list (document / clause / value). "design_loads_recommended"
+    is the set of numbers and formulas a sizing script should use. It takes the most conservative
+    value of the codes unless a note explains why not. "turkey_regulation" gives the class,
+    registration, approval route, licensing and airspace rules for a 100-150 kg civil UAV.
+  related_files:
+    engine: ucav250/data/research/engine.yaml (recommended engine Limbach L 275 EF; torque data used in engine_mount)
+    structures_library: ucav250/analysis/structlib.py (already implements the CS-VLA 341 gust formula)
+
+# -----------------------------------------------------------------------------------------------------
+# SOURCES (anchors are reused as per-item "source" URLs below)
+# -----------------------------------------------------------------------------------------------------
+sources:
+  - id: stanag4703
+    url: &u_stanag4703 "https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/391827/20140916-STANAG-4703_AEP-83_A__1_.pdf"
+    title: "NATO AEP-83 Light Unmanned Aircraft Systems Airworthiness Requirements (STANAG 4703), Edition A Version 1, Ratification Draft 1, letter of promulgation dated 4 Sep 2014 (113 pages)"
+    tag: standard
+    notes: >-
+      Published on gov.uk by the UK MoD. This is the ratification draft. The promulgated edition is
+      sold as STANAG 4703:2016 / AEP-83:2016 (see stanag4703_sai). The 2016 numbers were not
+      compared. Annex B landing-gear tables and figures were read from the rendered PDF pages.
+      Scope: fixed-wing light UAS with MTOW not greater than 150 kg and impact energy above 66 J.
+      Wording convention: "must" = requirement, "should" = acceptable argument (AMC-like).
+  - id: stanag4703_sai
+    url: &u_stanag4703_sai "https://infostore.saiglobal.com/en-us/Standards/STANAG-4703-2016-737548_SAIG_NATO_NATO_1791832/"
+    title: STANAG 4703 (2016) catalogue entry (paywalled), promulgated edition
+    tag: standard
+    notes: Used only to confirm that a 2016 promulgated edition exists. Content not read.
+  - id: cs_luas
+    url: &u_csluas "http://jarus-rpas.org/wp-content/uploads/2023/06/jar_07_doc_CS_LUAS.pdf"
+    title: "JARUS CS-LUAS Recommendations for Certification Specification for Light Unmanned Aeroplane Systems, JAR_DEL_WG3_D.04, Edition 0.3 (Final), 9 Nov 2016 (177 pages)"
+    tag: standard
+    notes: >-
+      Full text read (Book 1 airworthiness code, Book 2 AMC, Appendices F/G/H). Applicable to
+      fixed-wing RPA with MTOW at most 750 kg. Derived from CS-VLA/CS-23. Some clauses keep the
+      "CS 23." label (for example CS 23.423 and CS 23.629). Clause CS-LUAS.363 is printed as
+      "CS-LURS.363" (a typo in the source). A few equation images did not extract to text. Those
+      equations were checked against the CS-VLA originals with the same wording.
+  - id: cs_vla_ear
+    url: &u_csvla "https://www.easa.europa.eu/en/downloads/66874/en"
+    title: "EASA Easy Access Rules for Very Light Aeroplanes (CS-VLA), Amendment 1 (ED Decision 2009/003/R), Nov 2018 edition (190 pages)"
+    tag: standard
+    notes: >-
+      Book 1 and AMC. The AMC VLA 613(c) temperature curve and Appendix B Figure B1 were read
+      from rendered pages.
+  - id: cs_vla_page
+    url: &u_csvla_page "https://www.easa.europa.eu/en/document-library/certification-specifications/cs-vla-amendment-1"
+    title: EASA document library page, CS-VLA Amendment 1 (effective 5 March 2009)
+    tag: standard
+  - id: far23_2017
+    url: &u_far23 "https://www.ecfr.gov/on/2017-08-29/title-14/chapter-I/subchapter-C/part-23"
+    title: "14 CFR Part 23 as in force on 2017-08-29 (last day before Amendment 23-64 replaced the prescriptive rules); text equivalent to EASA CS-23 Amdt 4 for the clauses used here"
+    tag: standard
+    notes: >-
+      Retrieved section by section with the eCFR point-in-time API
+      (https://www.ecfr.gov/api/versioner/v1/full/2017-08-29/title-14.xml?part=23&section=23.xxx).
+      Sections read: 23.335, 23.337, 23.341, 23.361, 23.363, 23.371, 23.473, 23.561, 23.573,
+      23.613, 23.621, 23.625, 23.629, 23.867, 23.965, 23.977. EASA CS-23 Amdt 5 / FAR 23
+      Amdt 23-64 are performance-based and point to ASTM F3116 for the same load cases.
+  - id: easa_sc_light_uas
+    url: &u_sclu "https://www.easa.europa.eu/sites/default/files/dfu/special_condition_sc_light-uas_medium_risk_01.pdf"
+    title: "EASA Special Condition SC Light-UAS Medium Risk 01, Issue 01, 17 Dec 2020"
+    tag: standard
+    notes: >-
+      Objective-based. Applies to UA in the EU Specific category at medium risk with MTOM up to
+      600 kg. It contains no numeric load values. Numbers come from the accepted MoC (EUROCAE
+      ED-325 Vol. I, 2025, paywalled, not read) or from codes such as CS-LUAS.
+  - id: astm_f3298
+    url: &u_astm_f3298 "https://store.astm.org/f3298-24.html"
+    title: "ASTM F3298-24 Standard Specification for Design, Construction, and Verification of Lightweight Unmanned Aircraft Systems (UAS) (paywalled), last updated 14 Aug 2024"
+    tag: standard
+    notes: >-
+      Only the public scope was read: light fixed-wing UAS airworthiness design, construction and
+      verification, "not necessarily limited to UAs under 55 lb GTOW". No structural numbers could
+      be verified, so none are recorded from this standard.
+  - id: jarus_icao_2017
+    url: &u_jarus_icao "https://www.icao.int:443/Meetings/RPAS17/Presentations/Mike%20Lissone%20_1.pdf"
+    title: JARUS presentation at ICAO RPAS Symposium (lists JARUS WG-3 deliverables incl. CS-LURS 2013 and CS-LUAS 2016)
+    tag: paper
+    notes: >-
+      Used only for the existence and date of CS-LURS (rotorcraft, Oct 2013). It was located by a
+      web search and not read in full.
+  - id: shgm_sht_iha_2026
+    url: &u_shtiha "https://web.shgm.gov.tr/documents/sivilhavacilik/files/mevzuat/sektorel/talimatlar/SHT-IHA(1).pdf"
+    title: "SHGM Insansiz Hava Araci Sistemleri Talimati (SHT-IHA), 2026 issue (19 pages, PDF dated 29 Jul 2026); repeals the SHT-IHA of 22/2/2016"
+    tag: standard
+    notes: >-
+      Official SHGM PDF, read in full (Turkish). Article numbers below are from this text. The
+      PDF carries a watermark that adds stray digits to the extracted text. They were removed by
+      hand and do not affect the quoted numbers.
+  - id: shgm_sht_iha_news
+    url: &u_shtiha_news "https://www.alomaliye.com/2026/07/30/iha-pilotlari-icin-yeni-lisans-donemi/"
+    title: "Alomaliye (30 Jul 2026): IHA pilotlari icin yeni lisans donemi - SHT-IHA in force 30 July 2026"
+    tag: paper
+    notes: >-
+      News article. Used only to confirm the entry-into-force date (Article 31 says the
+      instruction applies from publication). It also matches the press coverage (memurlar.net,
+      cnbce.com).
+  - id: compositesworld_tg
+    url: &u_cw_tg "https://www.compositesworld.com/articles/environmental-testing-of-composites"
+    title: "D. Adams, Environmental testing of composites, CompositesWorld, 1 Apr 2019 (MOL = wet Tg - 28 degC; CMH-17 conditioning guidance)"
+    tag: paper
+  - id: incompliance_bonding
+    url: &u_icm_bond "https://incompliancemag.com/?p=35487"
+    title: "In Compliance Magazine, The Origin and Application of the 2.5 mOhm Requirement (bonding classes L and R in MIL-STD-464 / SAE ARP1870 lineage)"
+    tag: paper
+    notes: >-
+      Page body did not load. Only the title and the search abstract were verified ("2.5 milliohm
+      class L & R bonding requirements are used in aerospace, space, and military vehicles").
+  - id: flutter_damping_paper
+    url: &u_flutter_paper "https://journals.sagepub.com/doi/pdf/10.1177/0954410016638867"
+    title: "Proc. IMechE Part G paper (2016) citing MIL-A-8870C minimum 3 % total damping for flutter clearance"
+    tag: paper
+    notes: Verified only from the search-result abstract. MIL-A-8870C itself was not read. Low confidence.
+  - id: limbach_l275ef_ds
+    url: &u_lim_ds_275ef "https://limflug.de/downloads/datasheets/L275-EF-datasheet-en.pdf"
+    title: LIMBACH L275EF Technical Specification (power/torque curve). Engine data is used as recorded in engine.yaml.
+    tag: datasheet
+
+# -----------------------------------------------------------------------------------------------------
+# DOCUMENTS - scope, status and how each one is used for the YK-250
+# -----------------------------------------------------------------------------------------------------
+documents:
+  - id: stanag4703
+    full_name: NATO STANAG 4703 / AEP-83 Light UAS Airworthiness Requirements
+    applicability: "Fixed-wing UAS, MTOW <= 150 kg, impact energy > 66 J, regular flight in non-segregated airspace"
+    mtow_limit_kg: {value: 150.0, bound: max_inclusive, source: *u_stanag4703, tag: standard, clause: "Section 1 Scope"}
+    style: >-
+      Hybrid. Essential requirements (mandatory) plus "detailed arguments" (UL.x) with acceptable
+      evidence. Many numbers are "should" values that may be replaced by a rational argument.
+    military_origin_note: >-
+      A military standard. It is used here only as an engineering reference for a civil UAV. Only
+      the structural, propulsion, fuel and electrical design content was extracted.
+    use_for_yk250: Cross-check of every load value. It is the only source of UAV-specific special factors (bearing 2.0, frequent-disassembly 1.5, composite damage-tolerance strains).
+  - id: cs_luas
+    full_name: JARUS CS-LUAS Edition 0.3 (Nov 2016)
+    applicability: "Fixed-wing RPA, MTOW <= 750 kg, no human transport, no flight into known icing; BVLOS (DAA not covered)"
+    mtow_limit_kg: {value: 750.0, bound: max_inclusive, source: *u_csluas, tag: standard, clause: "CS-LUAS.1(a)"}
+    style: >-
+      Prescriptive CS-VLA / CS-23 code adapted to RPA. Applicability is tailored to the SORA risk
+      (AMC-LUAS.1). JARUS recommendation, not law.
+    use_for_yk250: Primary candidate certification basis to propose to SHGM. It covers RPA-specific items (envelope protection, ERC, C2 link, launch, parachute, crash containment).
+  - id: cs_vla
+    full_name: EASA CS-VLA Amendment 1 (2009)
+    applicability: Manned single-engine aeroplanes, MTOM <= 750 kg (reference only for the YK-250)
+    use_for_yk250: The numeric source that STANAG 4703 and CS-LUAS were derived from. Gives SI formulas (descent velocity, drop height, VC min) and two-stroke torque factors.
+  - id: far23_cs23_legacy
+    full_name: 14 CFR Part 23 before Amdt 23-64 (equivalent to CS-23 Amdt 4)
+    applicability: Manned normal/utility/acrobatic/commuter aeroplanes (reference only)
+    use_for_yk250: Gyroscopic engine-mount conditions, downward emergency factor, tank vibration and slosh tests, casting inspection table, 8-16 mesh strainer.
+  - id: easa_sc_light_uas
+    full_name: EASA SC Light-UAS Medium Risk 01 (2020)
+    applicability: "EU Specific category, medium risk (SAIL III-IV), MTOM <= 600 kg, no humans on board"
+    mtow_limit_kg: {value: 600.0, bound: max_inclusive, source: *u_sclu, tag: standard, clause: "Light-UAS.2000(a)(2)"}
+    use_for_yk250: >-
+      Objective-level checklist only (2235 strength, 2240 durability, 2305 landing gear, 2325 fire,
+      2335 lightning, 2350 forced landing containment, 2511 containment). Numbers must come from a
+      MoC such as CS-LUAS.
+  - id: astm_f3298
+    full_name: ASTM F3298-24 (light UAS design, construction and verification)
+    applicability: "Light fixed-wing UAS (not necessarily limited to < 55 lb GTOW)"
+    use_for_yk250: Not used for numbers (paywalled, not verified). Purchase is recommended if FAA-style D&R or ASTM-based compliance is wanted.
+  - id: jarus_cs_lurs
+    full_name: JARUS CS-LURS Certification Specification for Light Unmanned Rotorcraft Systems (Oct 2013)
+    applicability: Unmanned rotorcraft only
+    use_for_yk250: >-
+      Not applicable (the YK-250 is fixed-wing). Note: the task brief called it "EASA CS-LURS".
+      It is a JARUS document, not an EASA one.
+    source: *u_jarus_icao
+    tag: paper
+
+# -----------------------------------------------------------------------------------------------------
+# REQUIREMENTS - traceable list
+# Fields: id, category, item, value, unit, bound (min | max | equal | formula | qualitative),
+#         status, text_type, document, clause, source, tag, note, also_in
+# -----------------------------------------------------------------------------------------------------
+requirements:
+
+  # ---------------- general structure / factor of safety ----------------
+  - id: FOS-001
+    category: factor_of_safety
+    item: Ultimate factor of safety (limit to ultimate)
+    value: 1.5
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.303
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 303, value: 1.5, source: *u_csvla, tag: standard}
+      - {document: STANAG 4703, clause: UL2.3, value: ">= 1.5 for structure whose failure is Hazardous or worse; >= 1.25 for other structure", status: common_practice, source: *u_stanag4703, tag: standard}
+  - id: FOS-002
+    category: factor_of_safety
+    item: Ultimate factor of safety for non-hazardous structure (fairings, non-PSE)
+    value: 1.25
+    unit: "-"
+    bound: min
+    status: common_practice
+    text_type: should
+    document: STANAG 4703
+    clause: UL2.3
+    source: *u_stanag4703
+    tag: standard
+    note: CS-LUAS / CS-VLA have no reduced factor. Use 1.5 unless SHGM accepts the STANAG argument.
+  - id: FOS-003
+    category: factor_of_safety
+    item: Limit-load factor of safety on maximum operational loads
+    value: 1.0
+    unit: "-"
+    bound: min
+    status: common_practice
+    text_type: should
+    document: STANAG 4703
+    clause: UL2.2 and UL5.2
+    source: *u_stanag4703
+    tag: standard
+    note: >-
+      Must be greater than 1.0 if no load-envelope protection or operator warning exists
+      (UL5.2). The YK-250 will have FCS envelope protection (CS-LUAS.1329(e)), so 1.0 applies.
+  - id: FOS-004
+    category: strength_and_deformation
+    item: Limit load without detrimental permanent deformation; ultimate load without failure for at least 3 s (static test)
+    value: 3.0
+    unit: s
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.305(b)
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 305, value: 3.0, source: *u_csvla, tag: standard}
+  - id: GEN-001
+    category: design_speeds
+    item: Maximum operating speed VCmax relative to design dive speed VD
+    value: 0.9
+    unit: "VCmax/VD"
+    bound: max
+    status: common_practice
+    text_type: should
+    document: STANAG 4703
+    clause: UL2.1
+    source: *u_stanag4703
+    tag: standard
+    also_in:
+      - {document: CS-LUAS, clause: "CS-LUAS 1505(a)-(b)", value: "0.9 VD_min <= VNE <= 0.9 VD; VNO <= min(VC, 0.89 VNE); max speed allowed by FCS envelope protection <= VNO", source: *u_csluas, tag: standard}
+  - id: GEN-002
+    category: design_speeds
+    item: Design dive speed VD relative to design cruise speed VC
+    value: 1.25
+    unit: "VD/VC"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.335(b)(1)
+    source: *u_csluas
+    tag: standard
+    note: CS-LUAS.335(a)(1) lets VC be "defined according to RPA operating requirements". It has no minimum formula.
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 335(b), value: "VD >= 1.25 VC and VD >= 1.40 VCmin", source: *u_csvla, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.335(b), value: "VD >= 1.25 VC; VD >= 1.40 VCmin (normal category)", source: *u_far23, tag: standard}
+  - id: GEN-003
+    category: design_speeds
+    item: Minimum design cruising speed (manned code only)
+    value: "VC_min = 2.4 * sqrt(M*g/S)   [m/s; M/S in kg/m2]; VC need not exceed 0.9 VH at sea level"
+    unit: m/s
+    bound: formula
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 335(a)
+    source: *u_csvla
+    tag: standard
+    note: >-
+      Not required by CS-LUAS. It gives about 53 m/s at 50 kg/m2, which is faster than a MALE-type
+      surveillance cruise. For the YK-250, choose VC from the mission (CS-LUAS) and keep VD >= 1.25 VC.
+    also_in:
+      - {document: FAR 23 (2017), clause: 23.335(a), value: "VC_min = 33 sqrt(W/S) kt, W/S in lb/ft2 (normal category)", source: *u_far23, tag: standard}
+  - id: GEN-004
+    category: design_speeds
+    item: Design manoeuvring speed VA
+    value: "VA >= VS * sqrt(n_limit); VA need not exceed VC"
+    unit: m/s
+    bound: formula
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.335(c)
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 335(c), value: same, source: *u_csvla, tag: standard}
+
+  # ---------------- manoeuvre envelope ----------------
+  - id: FLT-001
+    category: flight_envelope
+    item: Positive limit manoeuvring load factor
+    value: "n = min(2.1 + 10900/(W_kg + 4536), 3.8); equals 3.8 for any W below 750 kg"
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.337(a)
+    source: *u_csluas
+    tag: standard
+    note: >-
+      At W = 100 kg the formula gives 4.45 and at 150 kg it gives 4.43, so the cap of 3.8 governs.
+      It is the SI form of FAR 23.337(a)(1): 2.1 + 24000/(W_lb + 10000).
+    also_in:
+      - {document: STANAG 4703, clause: UL5.2, value: ">= 3.8 (should)", source: *u_stanag4703, tag: standard}
+      - {document: CS-VLA, clause: CS-VLA 337(a), value: ">= 3.8", source: *u_csvla, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.337(a), value: "normal: formula capped at 3.8; utility 4.4; acrobatic 6.0", source: *u_far23, tag: standard}
+  - id: FLT-002
+    category: flight_envelope
+    item: Negative limit manoeuvring load factor at VC
+    value: "-0.4 * n_pos (= -1.52 for n_pos = 3.8)"
+    unit: "-"
+    bound: min_magnitude
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.337(b)
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: STANAG 4703, clause: UL5.2, value: "<= -1.5 (should)", source: *u_stanag4703, tag: standard}
+      - {document: CS-VLA, clause: CS-VLA 337(b), value: "-1.5", source: *u_csvla, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.337(b), value: "0.4 n (normal/utility/commuter), 0.5 n (acrobatic)", source: *u_far23, tag: standard}
+  - id: FLT-003
+    category: flight_envelope
+    item: Shape of manoeuvre envelope (positive n up to VD; negative n at VC, varying linearly to 0.0 at VD for the normal category)
+    value: "n_neg(VD) = 0.0 (normal category); -1.0 for aerobatic categories"
+    unit: "-"
+    bound: equal
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.333(b)
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 333(b), value: "linear from n_neg at VC to 0.0 at VD", source: *u_csvla, tag: standard}
+  - id: FLT-004
+    category: flight_envelope
+    item: Reduced manoeuvre load factors allowed if design features make it impossible to exceed them in flight
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.337(c)
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: STANAG 4703, clause: UL5.2, value: same, source: *u_stanag4703, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.337(c), value: same, source: *u_far23, tag: standard}
+  - id: FLT-005
+    category: flight_envelope
+    item: Flaps extended - manoeuvre load factor at VF
+    value: 2.0
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.345(a)(1)
+    source: *u_csluas
+    tag: standard
+    note: "VF >= max(1.4 VS, 1.8 VSF) unless an automatic flap load limiter is used (CS-LUAS.345(b))."
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 345(a)-(b), value: same, source: *u_csvla, tag: standard}
+  - id: FLT-006
+    category: flight_envelope
+    item: Flight envelope protection - FCS must keep the RPA within the operational envelope; protected limits compatible with structural limits
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.1329(e) and CS-LUAS.23
+    source: *u_csluas
+    tag: standard
+  - id: FLT-007
+    category: unsymmetrical_flight
+    item: Rolling condition - semispan airload on one side with fraction on the other side (condition A)
+    value: {one_side: 1.00, other_side: 0.70}
+    unit: "-"
+    bound: equal
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.349(a)
+    source: *u_csluas
+    tag: standard
+    note: "Aileron loads with n >= 2/3 n_pos; wing torsion increment over aileron span dCm = -0.01 * delta_deg (CS-LUAS.349(b))."
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 349, value: same, source: *u_csvla, tag: standard}
+
+  # ---------------- gusts ----------------
+  - id: GUST-001
+    category: gust
+    item: Derived gust velocity Ude at VC (vertical and lateral), sea level to 6096 m
+    value: 15.24
+    unit: m/s (EAS)
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.333(c)(1)(i)
+    source: *u_csluas
+    tag: standard
+    note: "Reduced linearly from 15.24 m/s at 6096 m to 7.62 m/s at 15240 m."
+    also_in:
+      - {document: STANAG 4703, clause: UL5.3, value: "15.2 m/s at VC, same altitude reduction, same values for lateral gust (should, unless rational analysis)", source: *u_stanag4703, tag: standard}
+      - {document: CS-VLA, clause: CS-VLA 333(c)(1)(i), value: "15.24 m/s (no altitude reduction)", source: *u_csvla, tag: standard}
+  - id: GUST-002
+    category: gust
+    item: Derived gust velocity Ude at VD, sea level to 6096 m
+    value: 7.62
+    unit: m/s (EAS)
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.333(c)(1)(ii)
+    source: *u_csluas
+    tag: standard
+    note: "Reduced linearly from 7.62 m/s at 6096 m to 3.81 m/s at 15240 m. Gust load factors vary linearly between VC and VD."
+    also_in:
+      - {document: STANAG 4703, clause: UL5.3, value: "7.6 m/s applied at VCmax (not VD)", source: *u_stanag4703, tag: standard}
+      - {document: CS-VLA, clause: CS-VLA 333(c)(1)(ii), value: "7.62 m/s at VD", source: *u_csvla, tag: standard}
+  - id: GUST-003
+    category: gust
+    item: Gust with flaps extended at VF
+    value: 7.62
+    unit: m/s (EAS)
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.345(a)(2), (d)(1)
+    source: *u_csluas
+    tag: standard
+    note: Flaps and their supports also take a 7.62 m/s head-on gust combined with 75 % maximum continuous power slipstream (CS-LUAS.345(d)).
+  - id: GUST-004
+    category: gust
+    item: Gust load factor (Pratt) and gust alleviation factor
+    value: >-
+      n = 1 +/- (0.5 * rho0 * V * a * Kg * Ude) / (M*g/S);  Kg = 0.88*mu/(5.3 + mu);
+      mu = 2*(M/S) / (rho * c_mean * a)   [SI: V EAS m/s, M/S kg/m2, c_mean m, a per rad]
+    unit: "-"
+    bound: formula
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 341
+    source: *u_csvla
+    tag: standard
+    note: >-
+      "a" = airplane CNA slope if wing and tail gust loads are applied together. The wing CL slope
+      may be used if tail gust loads are a separate condition. Gust shape is 1-cosine over 25
+      chords (CS-VLA 333(c)(2)). CS-LUAS.341 refers to the same criteria and requires a rational
+      analysis for canard/tandem layouts.
+    also_in:
+      - {document: FAR 23 (2017), clause: 23.341(c), value: same formula in imperial units, source: *u_far23, tag: standard}
+  - id: GUST-005
+    category: gust
+    item: Horizontal tail incremental gust load
+    value: "dL_ht [daN] = Kg * Ude * V * a_ht * S_ht * (1 - deps/dalpha) / 16.3"
+    unit: daN
+    bound: formula
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 425(d)
+    source: *u_csvla
+    tag: standard
+  - id: GUST-006
+    category: gust
+    item: Vertical tail lateral gust load at VC
+    value: "L_vt [daN] = Kgt * Ude * V * a_vt * S_vt / 16.3;  Kgt = 0.88 mu_gt/(5.3 + mu_gt);  mu_gt = 2M/(rho * c_t * a_vt * S_vt) * (K/l_t)^2"
+    unit: daN
+    bound: formula
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 443(b)
+    source: *u_csvla
+    tag: standard
+    note: K = yaw radius of gyration (m); l_t = CG to vertical tail lift centre (m).
+
+  # ---------------- tail and control surface loads ----------------
+  - id: CTL-001
+    category: control_system
+    item: Control system limit loads as a fraction of computed hinge moments
+    value: 1.25
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.395(a)-(b)
+    source: *u_csluas
+    tag: standard
+    note: >-
+      The system limit loads are the maximum loads the actuators can produce. The factor may be
+      reduced towards 1.0 if hinge moments come from accurate flight-test data.
+    also_in:
+      - {document: STANAG 4703, clause: UL2.2, value: ">= 1.25 on computed hinge moments", source: *u_stanag4703, tag: standard}
+      - {document: CS-VLA, clause: CS-VLA 395(a)-(b), value: 1.25, source: *u_csvla, tag: standard}
+  - id: CTL-002
+    category: control_surface
+    item: Control surface hinge bearing factor of safety (non-ball/roller hinges), on ultimate bearing strength of the softest bearing material
+    value: 6.67
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.657(a)
+    source: *u_csluas
+    tag: standard
+    note: STANAG states it as a special factor of 4.45 on top of FoS 1.5, which gives the same total of 6.67. For ball or roller bearings, the bearing rating must not be exceeded.
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 657(a), value: 6.67, source: *u_csvla, tag: standard}
+      - {document: STANAG 4703, clause: UL2.4, value: ">= 4.45 special factor (times 1.5 = 6.67)", source: *u_stanag4703, tag: standard}
+  - id: CTL-003
+    category: control_system
+    item: Push-pull control joints subject to angular motion (non-ball/roller), factor on ultimate bearing strength of the softest material
+    value: 3.33
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.693
+    source: *u_csluas
+    tag: standard
+    note: 2.0 for joints in cable systems. STANAG gives 2.2 special factor times 1.5 = 3.3.
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 693, value: 3.33, source: *u_csvla, tag: standard}
+      - {document: STANAG 4703, clause: UL2.4, value: ">= 2.2 special factor on push-pull joints", source: *u_stanag4703, tag: standard}
+  - id: CTL-004
+    category: control_surface
+    item: Inertia loads parallel to hinge line (limit), as multiple of movable surface weight
+    value: {vertical_surfaces: 24.0, horizontal_surfaces: 12.0}
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.393(b)
+    source: *u_csluas
+    tag: standard
+    note: AMC LUAS.393(a) says to include wear and axial play.
+  - id: CTL-005
+    category: control_surface
+    item: Concentrated mass balance weight attachments (limit load factors)
+    value: {normal_to_surface: 24.0, fore_aft: 12.0, parallel_to_hinge: 12.0}
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 659
+    source: *u_csvla
+    tag: standard
+    note: CS-LUAS.659 keeps the three directions but leaves the values "as agreed with the Authority". The CS-VLA values are the reference.
+  - id: CTL-006
+    category: control_surface
+    item: Ground gust limit hinge moment
+    value: >-
+      H = K * c * S * q; q from V >= 2.01*sqrt(M/S) + 4.45 m/s (M/S kg/m2), V need not exceed
+      26.8 m/s; K = 0.75 (aileron, stick locked mid), +/-0.50 (ailerons at full throw),
+      +/-0.75 (elevator full up/down), +/-0.75 (rudder neutral / full throw)
+    unit: N*m
+    bound: formula
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 415
+    source: *u_csvla
+    tag: standard
+    note: Applies to the whole control system if design actuator/pilot forces are below the CS-VLA 397(b) minimums. For a UAV, servo stall torque normally sets the limit (CS-LUAS.395(a)(1)).
+  - id: CTL-007
+    category: control_surface
+    item: Limit average manoeuvring control-surface loading (Appendix B Figure B1), w_bar = K * n/4.4
+    value:
+      K_curve_A_kg_per_m2: "58.6 for W/S <= 24.8; else 58.6 + 2.284*(W/S - 24.8)"
+      K_curve_B_kg_per_m2: "58.6 for W/S <= 28.8; else 58.6 + 1.972*(W/S - 28.8)"
+      K_curve_C_kg_per_m2: "58.6 for W/S <= 37.1; else 58.6 + 1.556*(W/S - 37.1)"
+      w_bar_min_kg_per_m2: 55.0
+    unit: kg/m2 (multiply by g for Pa)
+    bound: formula
+    status: common_practice
+    text_type: AMC-like simplified criteria (allowed for conventional aircraft)
+    document: CS-VLA
+    clause: CS-VLA Appendix B, B11 and Figure B1
+    source: *u_csvla
+    tag: standard
+    read_from_drawing: >-
+      Lines digitised from the rendered figure (axis 0-20 lb/ft2). Uncertainty about +/-0.5 lb/ft2
+      (+/-2.5 kg/m2) on K. Breakpoints were converted from 5.07, 5.9 and 7.6 lb/ft2. Curve A is
+      for deflection >= 30 deg, B for 20 deg, C for <= 10 deg; interpolate in between. Ailerons use
+      curve B up and down. The min w_bar of 55 kg/m2 is printed on the figure.
+    note: >-
+      CS-LUAS Appendix G holds the same loadings for conventional RPA meeting CS-LUAS.391(b). A
+      MALE-type UAV with aft spar or high performance may be excluded, in which case rational
+      loads are required.
+  - id: CTL-008
+    category: tail_loads
+    item: Unsymmetrical horizontal tail load - fraction on opposite side
+    value: "100 - 10*(n - 1) percent, at most 80 % (= 72 % for n = 3.8)"
+    unit: percent
+    bound: formula
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.427(b)
+    source: *u_csluas
+    tag: standard
+    note: Non-conventional tails (V-tail, high dihedral, tail on fin) need combined vertical and horizontal loads per condition (CS-LUAS.427(c)).
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 427(b), value: same, source: *u_csvla, tag: standard}
+  - id: CTL-009
+    category: tail_loads
+    item: Vertical tail manoeuvre - sideslip with rudder neutral; dynamic overswing factor on static sideslip
+    value: {yaw_angle_deg: 15.0, overswing_factor_cs_luas: 1.5, overswing_factor_cs_vla: 1.3}
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.441(a)
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 441(a), value: "15 deg; overswing 1.3", source: *u_csvla, tag: standard}
+  - id: CTL-010
+    category: tail_loads
+    item: Combined horizontal + vertical tail loads (75 % of each acting together, at point A or D)
+    value: 0.75
+    unit: "-"
+    bound: equal
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 447
+    source: *u_csvla
+    tag: standard
+  - id: CTL-011
+    category: tail_loads
+    item: Checked pitch manoeuvre angular acceleration (above VA)
+    value: "alpha_dot [rad/s2] = 20.1/V * n_m * (n_m - 1.5), V in m/s; down-load at n = 1.0, up-load at n = n_m"
+    unit: rad/s2
+    bound: formula
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 423(b); Appendix B Figure B2 alternative T/W = k^2/(g*l_t) * alpha_dot
+    source: *u_csvla
+    tag: standard
+    note: The CS-LUAS clause (labelled CS 23.423(b)) gives V in knots (equation image not extracted). Use the CS-VLA SI form.
+  - id: CTL-012
+    category: tail_loads
+    item: V-tail - additional gust perpendicular to one tail surface
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 449
+    source: *u_csvla
+    tag: standard
+    note: Relevant if the YK-250 uses a V or inverted-V tail (MQ-1 style). CS-VLA 449 requires the case at "VE". This is probably a misprint for VC in the source. Use VC (estimate).
+
+  # ---------------- materials, design values and special factors ----------------
+  - id: MAT-001
+    category: material_design_values
+    item: Single-load-path structure - A-basis (99 % probability, 95 % confidence)
+    value: {probability: 0.99, confidence: 0.95}
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.613(b)(1)
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 615(a)(1),(3), value: A-basis, source: *u_csvla, tag: standard}
+      - {document: STANAG 4703, clause: UL9.2, value: A-basis (should), source: *u_stanag4703, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.613(b)(1), value: A-basis, source: *u_far23, tag: standard}
+  - id: MAT-002
+    category: material_design_values
+    item: Redundant (fail-safe) structure - B-basis (90 % probability, 95 % confidence)
+    value: {probability: 0.90, confidence: 0.95}
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.613(b)(2)
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 615(a)(2),(3), value: B-basis, source: *u_csvla, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.613(b)(2), value: B-basis, source: *u_far23, tag: standard}
+  - id: MAT-003
+    category: material_design_values
+    item: Acceptable allowable sources and S-basis status
+    value: "MMPDS, ESDU 00932, CMH-17 A/B values acceptable; S-basis alone does not satisfy CS-LUAS.613"
+    unit: "-"
+    bound: qualitative
+    status: common_practice
+    text_type: AMC
+    document: CS-LUAS
+    clause: AMC to LUAS.603 and LUAS.613, para 2.2.2 and 2.5
+    source: *u_csluas
+    tag: standard
+    note: >-
+      AMC 20-29 may be applied to composites by agreement (para 1.3). If A/B values cannot be
+      justified statistically, apply a "safety super factor" agreed with the Authority
+      (para 2.2.4; also AMC VLA 615).
+  - id: MAT-004
+    category: special_factors
+    item: How special factors combine - multiply the FoS by the highest pertinent special factor of 621-625
+    value: "FoS_total = 1.5 * max(applicable special factors)"
+    unit: "-"
+    bound: formula
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.619
+    source: *u_csluas
+    tag: standard
+    note: >-
+      The composite factors of AMC LUAS.619 are "considered in conjunction as necessary", which
+      means they multiply each other (see CMP-002 to CMP-005). STANAG UL2.4 lists each special
+      factor as a multiplier on the UL2.3 FoS.
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 619, value: highest pertinent special factor, source: *u_csvla, tag: standard}
+  - id: MAT-005
+    category: special_factors
+    item: Fitting factor (fitting, means of attachment, bearing on joined members) unless proven by limit and ultimate tests with real stress conditions
+    value: 1.15
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.625(a)
+    source: *u_csluas
+    tag: standard
+    note: An integral fitting counts as a fitting up to where its section becomes typical of the member (625(c)). Not needed for joints based on comprehensive test data (625(b)).
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 625, value: 1.15, source: *u_csvla, tag: standard}
+      - {document: STANAG 4703, clause: UL2.4, value: ">= 1.15", source: *u_stanag4703, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.625(a), value: 1.15, source: *u_far23, tag: standard}
+  - id: MAT-006
+    category: special_factors
+    item: Casting factor - visual inspection and at least one static test
+    value: 2.0
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.621
+    source: *u_csluas
+    tag: standard
+    note: >-
+      May be reduced to 1.25 if justified by tests on at least 3 sample castings and all production
+      castings get approved visual plus radiographic (or equivalent) NDI.
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 621, value: "2.0 / 1.25", source: *u_csvla, tag: standard}
+      - {document: STANAG 4703, clause: UL2.4, value: ">= 2.0 on castings", source: *u_stanag4703, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.621, value: "critical castings 1.25 (100 % visual + radiographic + MPI/penetrant) or 2.0 (100 % visual + 100 % NDI); non-critical table 2.0 / >1.5 / 1.25-1.5; bearing stresses need not exceed 1.25", source: *u_far23, tag: standard}
+  - id: MAT-007
+    category: special_factors
+    item: Bearing factor - bolted or pinned joints subject to rotation
+    value: 2.0
+    unit: "-"
+    bound: min
+    status: common_practice
+    text_type: should
+    document: STANAG 4703
+    clause: UL2.4
+    source: *u_stanag4703
+    tag: standard
+    note: >-
+      CS-LUAS.623 and CS-VLA 623 require "a bearing factor large enough" for free-fit parts subject
+      to pounding or vibration but give no number. For hinges and control joints, 657 and 693 apply
+      (CTL-002, CTL-003). Use 2.0 for landing-gear pivots, engine-mount pins and wing-fold or
+      quick-release pins with clearance.
+  - id: MAT-008
+    category: special_factors
+    item: Attachments in frequently assembled/disassembled structure (e.g. removable wings, tail, payload modules)
+    value: 1.5
+    unit: "-"
+    bound: min
+    status: common_practice
+    text_type: should
+    document: STANAG 4703
+    clause: UL2.4
+    source: *u_stanag4703
+    tag: standard
+    note: Not needed if a test with the required number of assembly/disassembly cycles shows no strength degradation.
+  - id: MAT-009
+    category: fasteners
+    item: Removable fastener whose loss would preclude continued safe flight - two retaining devices; no self-locking nut on bolts subject to rotation without a non-friction lock
+    value: 2
+    unit: retaining_devices
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.607(a),(c)
+    source: *u_csluas
+    tag: standard
+    note: AMC LUAS.607(b) - locking devices in the engine bay must not be affected by temperature or vibration (no nylon-insert nuts near cylinders or exhaust).
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 607, value: self-locking nut rule only, source: *u_csvla, tag: standard}
+  - id: MAT-010
+    category: fatigue
+    item: Safe-life evidence by stress level at maximum limit load (allowable normal stress)
+    value:
+      glass_fibre_epoxy_rovings_Pa: 250.0e+6
+      carbon_fibre_epoxy_rovings_Pa: 400.0e+6
+      aluminium_alloy: "0.5 * Ftu"
+      steel_alloy: "0.5 * Ftu"
+      wood: per ANC-18
+    unit: Pa
+    bound: max
+    status: common_practice
+    text_type: AMC
+    document: CS-VLA
+    clause: AMC VLA 572(b)
+    source: *u_csvla
+    tag: standard
+    note: >-
+      Converted from 25 and 40 daN/mm2. Higher stresses need a fatigue test or analysis. STANAG
+      UL11.2.1 has the same 0.5 Ftu rule for Al and steel. For composites, STANAG UL11.2.3 accepts
+      strains below the damage-tolerance limits of CMP-007 as safe-life evidence.
+    also_in:
+      - {document: STANAG 4703, clause: UL11.2.1, value: "Al and steel stress < 0.5 Ftu", source: *u_stanag4703, tag: standard}
+
+  # ---------------- composites: environment and knock-downs ----------------
+  - id: CMP-001
+    category: composite_environment
+    item: Structure test temperature for white surface in vertical sunlight
+    value: 54.0
+    unit: degC
+    bound: min
+    status: common_practice
+    text_type: AMC
+    document: CS-VLA
+    clause: AMC VLA 613(c)(a)
+    source: *u_csvla
+    tag: standard
+    note: If the test cannot be done at this temperature, use an additional factor of 1.25. Other colours follow the solar-absorptivity curve (CMP-001b).
+    also_in:
+      - {document: CS-LUAS, clause: "AMC to LUAS.603 and LUAS.613 para 2.3.2", value: "54 degC white; otherwise curve; extra factor per AMC LUAS.619", source: *u_csluas, tag: standard}
+  - id: CMP-001b
+    category: composite_environment
+    item: Skin temperature vs solar absorptivity (38 degC ambient, still air, sun at zenith, emissivity 0.9, 3 min taxi cooling)
+    value:
+      - {solar_absorptivity: 0.0, temperature_degC: 41}
+      - {solar_absorptivity: 0.2, temperature_degC: 52}
+      - {solar_absorptivity: 0.5, temperature_degC: 66}
+      - {solar_absorptivity: 0.6, temperature_degC: 71}
+      - {solar_absorptivity: 0.9, temperature_degC: 84}
+      - {solar_absorptivity: 1.1, temperature_degC: 93}
+    unit: degC
+    bound: equal
+    status: common_practice
+    text_type: AMC
+    document: CS-VLA
+    clause: AMC VLA 613(c)(b) curve (from NASA CP-2036 / CR-3290)
+    source: *u_csvla
+    tag: standard
+    read_from_drawing: >-
+      Digitised from the rendered figure (Kelvin scale 290-370 K). Uncertainty is +/-3 degC. The
+      white-paint marker sits near absorptivity 0.2. The figure's own 54 degC line crosses the
+      curve at about 0.25.
+  - id: CMP-002
+    category: composite_special_factors
+    item: Composite special factor when moisture-conditioned specimens are tested at maximum service temperature (well-established manufacturing and QC)
+    value: 1.2
+    unit: "-"
+    bound: min
+    status: common_practice
+    text_type: AMC
+    document: CS-VLA
+    clause: AMC VLA 619 a.
+    source: *u_csvla
+    tag: standard
+    note: Cold-cured structure may be assumed fully moisture-conditioned (Note 1). The factor may follow the coefficient of variation (CMP-004).
+    also_in:
+      - {document: STANAG 4703, clause: UL2.4, value: ">= 1.2 if hot/wet A/B allowables are not statistically justified and ETW-conditioned specimens are used", source: *u_stanag4703, tag: standard}
+  - id: CMP-003
+    category: composite_special_factors
+    item: Composite special factor when specimens are tested with no allowance for moisture and temperature
+    value: 1.5
+    unit: "-"
+    bound: min
+    status: common_practice
+    text_type: AMC
+    document: CS-VLA
+    clause: AMC VLA 619 b.
+    source: *u_csvla
+    tag: standard
+    also_in:
+      - {document: STANAG 4703, clause: UL2.4, value: ">= 1.5", source: *u_stanag4703, tag: standard}
+  - id: CMP-003b
+    category: composite_special_factors
+    item: "CS-LUAS composite factors (multiply together as needed): hot/wet, scatter, manufacturing variability, impact damage"
+    value:
+      hot_wet_factor_if_RTD_design_values_and_T_max_le_70degC: 2.0
+      hot_wet_factor_if_ETW_design_values_or_ETW_test: 1.0
+      hot_wet_factor_if_T_max_gt_70degC_or_RTW_ETD_values: agreed with Authority
+      scatter_factor: ">= 1.0 (1.0 when A/B-basis values are used)"
+      manufacturing_variability_factor: 1.2
+      impact_damage_factor: ">= 1.0 (1.0 if covered by test conditions)"
+    unit: "-"
+    bound: min
+    status: common_practice
+    text_type: AMC
+    document: CS-LUAS
+    clause: AMC LUAS.619 para 2.1-2.4
+    source: *u_csluas
+    tag: standard
+    note: >-
+      This is stricter than CS-VLA/STANAG for RTD-only data. 1.5 x 2.0 x 1.2 = 3.6 total, against
+      1.5 x 1.5 = 2.25. The manufacturing variability factor of 1.2 can be lowered only by
+      demonstrated QC.
+  - id: CMP-004
+    category: composite_special_factors
+    item: Test factor vs coefficient of variation (alternative to the fixed 1.2)
+    value:
+      - {cv_percent: 5, factor: 1.00}
+      - {cv_percent: 6, factor: 1.03}
+      - {cv_percent: 7, factor: 1.06}
+      - {cv_percent: 8, factor: 1.10}
+      - {cv_percent: 9, factor: 1.12}
+      - {cv_percent: 10, factor: 1.15}
+      - {cv_percent: 12, factor: 1.22}
+      - {cv_percent: 14, factor: 1.30}
+      - {cv_percent: 15, factor: 1.33}
+      - {cv_percent: 20, factor: 1.55}
+    unit: "-"
+    bound: equal
+    status: common_practice
+    text_type: AMC
+    document: CS-VLA
+    clause: AMC VLA 619 Table 1
+    source: *u_csvla
+    tag: standard
+    note: Estimate the CV from at least 6 specimens and correct it to 95 % confidence with the F factor in AMC VLA 619 (Up = 1.6452, c = 0.2 if unknown).
+  - id: CMP-005
+    category: composite_environment
+    item: Temperature/moisture effects must be included in design values (worst operational condition)
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: STANAG 4703
+    clause: UL9.3
+    source: *u_stanag4703
+    tag: standard
+    also_in:
+      - {document: CS-LUAS, clause: "CS-LUAS.603(a)(3), CS-LUAS.613(c)", value: qualitative, source: *u_csluas, tag: standard}
+      - {document: CS-VLA, clause: "CS-VLA 603(a)(3), 613(c), 619(c)", value: qualitative, source: *u_csvla, tag: standard}
+  - id: CMP-006
+    category: composite_environment
+    item: Material operational limit (MOL) relative to wet glass-transition temperature
+    value: "MOL = Tg_wet - 28 degC"
+    unit: degC
+    bound: formula
+    status: common_practice
+    text_type: industry practice (CMH-17 guidance as reported)
+    document: CMH-17 practice (via CompositesWorld)
+    clause: n/a
+    source: *u_cw_tg
+    tag: paper
+    note: >-
+      Same article: CMH-17 suggests a maximum moisture-conditioning temperature of 82 degC for
+      177 degC-cure epoxies. Equilibrium is reached when the mass changes by less than 0.02 %
+      between weighings.
+  - id: CMP-007
+    category: composite_damage_tolerance
+    item: Composite PSE damage-tolerance design strains (BVID; also accepted as safe-life evidence)
+    value:
+      sandwich_skins_and_laminates_le_2mm: {tension_microstrain: 5000, compression_microstrain: 2600, shear_microstrain: 5200}
+      laminates_gt_2mm: {tension_microstrain: 5000, compression_microstrain: 3000, shear_microstrain: 6000}
+    unit: microstrain
+    bound: max
+    status: common_practice
+    text_type: should ("could be designed")
+    document: STANAG 4703
+    clause: UL13.1.2 (table read from rendered page 1-13)
+    source: *u_stanag4703
+    tag: standard
+    note: >-
+      Valid only if hot/wet degradation is less than 50 % of RTD properties; otherwise use 6.0.
+      The alternative (UL13.1.1) is a special factor >= 6.0 on the UL2.3 FoS. The load level is
+      not stated. Applying the strains at ultimate load is the conservative reading
+      (interpretation, estimate).
+  - id: CMP-008
+    category: composite_damage_tolerance
+    item: Composite airframe damage tolerance - ultimate load with damage up to detectability threshold; no-growth or growth established; residual strength at limit (manned code)
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: FAR 23 (2017)
+    clause: 23.573(a)(1)-(6)
+    source: *u_far23
+    tag: standard
+    note: CS-LUAS.572 requires PSE identification and an adequate safe life (AMC LUAS.572 not extracted in detail). STANAG UL13.1 requires BVID at ultimate with no growth.
+
+  # ---------------- flutter ----------------
+  - id: FLU-001
+    category: aeroelasticity
+    item: Flutter, divergence and control-reversal freedom by rational analysis up to a speed margin over VD
+    value: 1.2
+    unit: "V/VD"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.629(c) (printed as CS 23.629)
+    source: *u_csluas
+    tag: standard
+    note: >-
+      CS-LUAS.629(a)-(b) also requires natural frequencies from vibration tests and flight flutter
+      tests up to VD with proper damping margin. AMC LUAS.629(a) para 2 can waive ground vibration
+      test frequency determination if VD < 259 km/h (72 m/s), flight tests are done, and FAA
+      Report 45 criteria apply. Report 45 is not valid for T-, V- or boom-tails.
+    also_in:
+      - {document: STANAG 4703, clause: UL.8, value: ">= 1.2 VD; may be reduced to 1.15 with flight flutter tests with excitation", source: *u_stanag4703, tag: standard}
+      - {document: CS-VLA, clause: CS-VLA 629(b), value: 1.2 VD, source: *u_csvla, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.629(c), value: "1.2 VD / 1.2 MD", source: *u_far23, tag: standard}
+  - id: FLU-002
+    category: aeroelasticity
+    item: Minimum total (aero + structural) damping of flutter-critical modes
+    value: 0.03
+    unit: "-"
+    bound: min
+    status: common_practice
+    text_type: military specification practice (MIL-A-8870C), secondary source
+    document: MIL-A-8870C (via paper)
+    clause: n/a
+    source: *u_flutter_paper
+    tag: paper
+    note: Low confidence, verified only from an abstract. Use as a target for flight-flutter test clearance, not as a requirement.
+  - id: FLU-003
+    category: aeroelasticity
+    item: Freedom from flutter up to VD after failure or disconnection of any single element of a primary flight control or tab system or flutter damper
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.629(f)
+    source: *u_csluas
+    tag: standard
+    note: For a UAV with one servo per surface, a disconnected servo gives a free-floating surface. Mass-balance or dual-servo choice must be driven by this.
+
+  # ---------------- ground loads / landing gear ----------------
+  - id: LDG-001
+    category: landing_gear
+    item: Limit descent (sink) velocity for ground-load conditions
+    value: "V_sink = 0.51 * (M*g/S)^0.25 m/s, at least 2.13 m/s, need not exceed 3.05 m/s"
+    unit: m/s
+    bound: formula
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS Appendix H, H.2(b)
+    source: *u_csluas
+    tag: standard
+    note: "Example: M/S = 40, 50, 60 kg/m2 gives 2.27, 2.40, 2.51 m/s."
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 473(b), value: same formula, source: *u_csvla, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.473(d), value: "4.4 (W/S)^0.25 ft/s, 7-10 ft/s (2.13-3.05 m/s)", source: *u_far23, tag: standard}
+      - {document: STANAG 4703, clause: "Annex B UL.GL.1 1.1", value: "drop height h = 3.6 sqrt(W/S) in (W/S lb/ft2), h > 9 in (0.229 m); numerically the same as CS-VLA 725", source: *u_stanag4703, tag: standard}
+  - id: LDG-002
+    category: landing_gear
+    item: Free drop test height
+    value: "h = 0.0132 * sqrt(M*g/S) m, at least 0.235 m, need not exceed 0.475 m"
+    unit: m
+    bound: formula
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS Appendix H, H.13(a)
+    source: *u_csluas
+    tag: standard
+    note: "Effective drop mass with wing lift: Me = M*(h + (1 - L)*d)/(h + d), L <= 0.667. Limit inertia factor n = nj*Me/M + L (H.13(b),(e))."
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 725, value: same, source: *u_csvla, tag: standard}
+  - id: LDG-003
+    category: landing_gear
+    item: Wing lift during landing impact, and the minimum limit inertia / ground-reaction load factors
+    value: {wing_lift_fraction_max: 0.667, inertia_load_factor_min: 2.67, ground_reaction_load_factor_min: 2.0}
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS Appendix H, H.2(c),(e)
+    source: *u_csluas
+    tag: standard
+    note: Lower values are allowed only if they will not be exceeded in taxiing at speeds up to take-off over terrain as rough as expected in service.
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 473(c),(e), value: same, source: *u_csvla, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.473(e),(g), value: same, source: *u_far23, tag: standard}
+  - id: LDG-004
+    category: landing_gear
+    item: Wheel load factor from energy balance (simplified)
+    value: >-
+      nj = (h + d/3) / (ef * d); d = tyre + shock travel; ef*d = 0.5*d for tyre and rubber/spring
+      gear, or 0.5*d_tyre + 0.65*d_shock for hydraulic (oleo) gear; limit inertia factor
+      n = nj + 0.667
+    unit: "-"
+    bound: formula
+    status: common_practice
+    text_type: should (guidance annex)
+    document: STANAG 4703
+    clause: Annex B UL.GL.1 para 1.1
+    source: *u_stanag4703
+    tag: standard
+    note: The formula assumes L = 2/3 (d/3 = (1 - L) d). The text-layer drop-height formula reads "3.6 x W/S". The rendered page shows 3.6 x sqrt(W/S), and the square-root form is the correct one.
+  - id: LDG-005
+    category: landing_gear
+    item: Concentrated masses (engine, fuel tanks, payload, ballast) must also be designed for the landing load factor when it exceeds the flight factor
+    value: "if nj > n_max - 0.67 then design masses for n = nj + 0.67"
+    unit: "-"
+    bound: formula
+    status: requirement
+    text_type: rule ("must")
+    document: STANAG 4703
+    clause: Annex B UL.GL.1 para 1.2
+    source: *u_stanag4703
+    tag: standard
+  - id: LDG-006
+    category: landing_gear
+    item: Ultimate landing factor and reserve energy
+    value:
+      ultimate_factor: 1.5
+      reserve_energy_descent_velocity_factor: 1.2
+      reserve_energy_drop_height_factor: 1.44
+      fast_energy_absorbing_gear_ultimate_factor: 1.2
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS Appendix H, H.12(b) and H.15(a)
+    source: *u_csluas
+    tag: standard
+    note: >-
+      In the reserve-energy test the gear may yield but not fail, at 1.2 x limit descent velocity
+      with wing lift equal to weight. STANAG Annex B 1.3: FoS 1.5 unless a drop test from 1.44 h
+      shows a lower factor is safe. For fast energy-absorbing gear, ultimate = 1.2 x limit.
+      Dynamic drop-test proof of strength (H.14) uses 2.25 h or enough height for 1.5 x limit
+      factor.
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 723(b), value: "1.2 x limit descent velocity", source: *u_csvla, tag: standard}
+      - {document: STANAG 4703, clause: Annex B UL.GL.1 para 1.3, value: "1.5; drop from 1.44 h; 1.2 for fast energy-absorbing gear", source: *u_stanag4703, tag: standard}
+  - id: LDG-007
+    category: landing_gear
+    item: Level landing drag component (combined with vertical reaction)
+    value: 0.25
+    unit: "drag / max vertical reaction"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS Appendix H, H.4(b)
+    source: *u_csluas
+    tag: standard
+    note: "Proper combination (AMC VLA 479(b)): spin-up Pz = 0.6 Pz_max with Px = -0.5 Pz_max; spring-back Pz = 0.8 Pz_max with Px = +0.5 Pz_max; max vertical Pz = Pz_max with Px = +/-0.3 Pz_max. Appendix C uses K = 0.25 for W <= 1361 kg."
+    also_in:
+      - {document: CS-VLA, clause: "CS-VLA 479(b), AMC VLA 479(b), Appendix C", value: 0.25, source: *u_csvla, tag: standard}
+      - {document: STANAG 4703, clause: "Annex B UL.GL.1 table (K = 0.25)", value: 0.25, source: *u_stanag4703, tag: standard}
+  - id: LDG-008
+    category: landing_gear
+    item: Landing attitudes - level (nose and main wheels together; nose wheel just clear), tail-down (stall attitude or max clearance angle, vertical reactions), one-wheel (same reactions as level on that side)
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS Appendix H, H.4-H.6
+    source: *u_csluas
+    tag: standard
+  - id: LDG-009
+    category: landing_gear
+    item: Side load condition (level attitude, main wheels only, static deflections)
+    value: {vertical_load_factor: 1.33, side_inertia_factor_total: 0.83, side_inboard_one_wheel_W: 0.50, side_outboard_other_wheel_W: 0.33}
+    unit: "-"
+    bound: equal
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS Appendix H, H.7
+    source: *u_csluas
+    tag: standard
+    note: The vertical reaction is split equally between the main wheels (0.67 W each). Side reactions act at the ground contact.
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 485, value: same, source: *u_csvla, tag: standard}
+      - {document: STANAG 4703, clause: Annex B UL.GL.3, value: "0.67W vertical per wheel, 0.5W inboard, 0.33W outboard, 0.83W at CG", source: *u_stanag4703, tag: standard}
+  - id: LDG-010
+    category: landing_gear
+    item: Braked roll (static deflections, level-landing attitude)
+    value: {vertical_load_factor: 1.33, friction_coefficient: 0.8}
+    unit: "-"
+    bound: equal
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS Appendix H, H.8
+    source: *u_csluas
+    tag: standard
+    note: Drag = 0.8 x vertical reaction at each braked wheel (STANAG figure 0.67W vertical and 0.54W rearward per main wheel). It need not exceed the limiting brake torque.
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 493, value: same, source: *u_csvla, tag: standard}
+      - {document: STANAG 4703, clause: Annex B UL.GL.4, value: "0.67W vertical, 0.54W rearward per wheel", source: *u_stanag4703, tag: standard}
+  - id: LDG-011
+    category: landing_gear
+    item: Nose wheel supplementary conditions (multiples of static nose-wheel load at the most critical weight/CG)
+    value:
+      aft_load: {vertical: 2.25, drag_rearward: 1.80, applied_at: axle}
+      forward_load: {vertical: 2.25, forward: 0.90, applied_at: ground contact}
+      side_load: {vertical: 2.25, side: 1.575, applied_at: axle}
+      stanag_forward_case_vertical: 3.2
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS Appendix H, H.10
+    source: *u_csluas
+    tag: standard
+    note: >-
+      CS text: drag 0.8 x vertical, forward 0.4 x vertical, side 0.7 x vertical, with vertical =
+      2.25 x static. The STANAG Annex B figure (ASTM F2245 origin) shows the forward case as 3.2 x
+      static vertical with 0.9 x static forward. That is more severe than CS (2.25), so the
+      recommended set uses 3.2.
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 499, value: same as CS-LUAS, source: *u_csvla, tag: standard}
+      - {document: STANAG 4703, clause: Annex B UL.GL.6 figure, value: "(a) 2.25 vert + 1.8 rearward; (b) 2.25 vert + 1.57 side; (c) 3.2 vert + 0.9 forward", source: *u_stanag4703, tag: standard}
+  - id: LDG-012
+    category: landing_gear
+    item: Tail wheel / tail bumper supplementary loads
+    value: {obstruction: "tail-down landing reaction acting up and aft at 45 deg through axle", side: "vertical = static tail load with equal side load"}
+    unit: "-"
+    bound: equal
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS Appendix H, H.9
+    source: *u_csluas
+    tag: standard
+  - id: LDG-013
+    category: landing_gear
+    item: Energy absorption test required unless analysis is justified (spring/composite gear with rate-insensitive energy absorption may use analysis)
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS Appendix H, H.12(a)(3)
+    source: *u_csluas
+    tag: standard
+  - id: LDG-014
+    category: landing_gear
+    item: Retractable gear belly landing (manned code; for a UAV it protects equipment, fuel and third parties)
+    value: {downward_ultimate_inertia_factor: 3.0, ground_friction_coefficient: 0.5}
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 561(e)
+    source: *u_csvla
+    tag: standard
+    note: Fuel tanks must retain fuel in a wheels-up landing and in a landing with the most critical leg collapsed (CS-LUAS.967(e)(2)).
+    also_in:
+      - {document: FAR 23 (2017), clause: 23.561(c), value: same, source: *u_far23, tag: standard}
+
+  # ---------------- engine mount ----------------
+  - id: ENG-001
+    category: engine_mount
+    item: Engine torque load cases
+    value: >-
+      (1) take-off torque x factor with 75 % of the flight condition A limit loads;
+      (2) maximum-continuous torque x factor with 100 % of the flight condition A limit loads
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.361(a)
+    source: *u_csluas
+    tag: standard
+    note: CS-VLA 361(a)(1) applies the take-off case to the mean torque (no factor). The factor applies to the MCP case (CS-VLA 361(b)). CS-23 and CS-LUAS apply the factor to both.
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 361(a), value: same cases, source: *u_csvla, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.361(a), value: same cases, source: *u_far23, tag: standard}
+      - {document: CS-LUAS, clause: "Appendix F (d)(2) simplified criteria", value: "max take-off torque with limit loads at n1", source: *u_csluas, tag: standard}
+  - id: ENG-002
+    category: engine_mount
+    item: Limit engine torque factor on mean torque (piston engines)
+    value:
+      cs_luas_and_far23:
+        five_or_more_cylinders: 1.33
+        four_cylinders: 2.0
+        three_cylinders: 3.0
+        two_cylinders: 4.0
+        wankel: 1.33
+        electric: "maximum peak torque over the speed range"
+      cs_vla_four_stroke:
+        five_or_more_cylinders: 1.33
+        four_cylinders: 2.0
+        three_cylinders: 3.0
+        two_cylinders: 4.0
+        one_cylinder: 8.0
+      cs_vla_two_stroke:
+        three_or_more_cylinders: 2.0
+        two_cylinders: 3.0
+        one_cylinder: 6.0
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.361(c),(d); CS-VLA 361(b); FAR 23.361(c)
+    source: *u_csluas
+    tag: standard
+    note: >-
+      CS-LUAS and FAR 23 do not separate two-stroke and four-stroke and have no single-cylinder
+      entry. The Limbach L 275 EF is a two-stroke boxer twin whose cylinders fire simultaneously
+      (one combined power stroke per revolution, engine.yaml). By the letter of CS-VLA the factor
+      is 3; by CS-LUAS it is 4. Its torque pulse pattern is that of a single-cylinder two-stroke
+      (CS-VLA factor 6). See design_loads_recommended.engine_mount.
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 361(b), value: see cs_vla tables, source: *u_csvla, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.361(c), value: see cs_luas_and_far23, source: *u_far23, tag: standard}
+  - id: ENG-003
+    category: engine_mount
+    item: Side load on engine mount (limit lateral load factor, independent of other flight conditions)
+    value: "max(1.33, n_A/3); = 1.33 for n_A = 3.8"
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.363 (printed CS-LURS.363)
+    source: *u_csluas
+    tag: standard
+    note: CS-LUAS Appendix F simplified criteria use a lateral limit factor of at least 1.47 instead.
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 363, value: 1.33, source: *u_csvla, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.363, value: "max(1.33, n_A/3)", source: *u_far23, tag: standard}
+      - {document: CS-LUAS, clause: "Appendix F (d)(3)", value: 1.47, source: *u_csluas, tag: standard}
+  - id: ENG-004
+    category: engine_mount
+    item: Gyroscopic, inertia and aerodynamic loads at maximum continuous rpm (all combinations)
+    value:
+      far23_cs23:
+        yaw_rate_rad_per_s: 2.5
+        pitch_rate_rad_per_s: 1.0
+        normal_load_factor: 2.5
+        thrust: maximum continuous
+      cs_luas:
+        yaw_rate: 1.5 x maximum predicted yaw rate in the FCS-protected envelope
+        pitch_rate: 1.5 x maximum predicted pitch rate
+        normal_load_factor: 1.5 x maximum predicted load factor
+        thrust: maximum continuous
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.371(a)(2)
+    source: *u_csluas
+    tag: standard
+    note: >-
+      The alternative (a)(1) uses the conditions of 351 (yaw) and 423 (pitch). Gyroscopic couple
+      (AMC LUAS.371 para 1): two-blade propeller M = 2 * Ip * Omega_prop * omega_body; three or
+      more evenly spaced blades M = Ip * Omega_prop * omega_body. Asymmetric disc-flow loads may
+      be ignored for propellers up to 2.74 m diameter (para 2).
+    also_in:
+      - {document: FAR 23 (2017), clause: 23.371(a)(2), value: "2.5 rad/s yaw, 1.0 rad/s pitch, n = 2.5, MC thrust", source: *u_far23, tag: standard}
+      - {document: STANAG 4703, clause: "Annex E UL.TE.9(b) (turbine engines)", value: gyroscopic loads from normal manoeuvres must be considered, source: *u_stanag4703, tag: standard}
+  - id: ENG-005
+    category: engine_mount
+    item: Engine mount and attachments maximum allowable loads must be specified from the design usage spectrum and withstood without failure or permanent deformation
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: STANAG 4703
+    clause: Annex C UL.RE.11
+    source: *u_stanag4703
+    tag: standard
+    also_in:
+      - {document: CS-LUAS, clause: "Appendix B, B-LUAS.23", value: same intent, source: *u_csluas, tag: standard}
+  - id: ENG-006
+    category: engine_mount
+    item: Engine mount forward crash load for engines installed behind and above the seating compartment (manned code)
+    value: 15.0
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 561(c)
+    source: *u_csvla
+    tag: standard
+    note: >-
+      For a UAV this is only a reference. CS-LUAS.561(c)(1) requires that projection of engines
+      and payloads outside the forced-landing area be unlikely. FAR 23.561(e)(1) asks for 18 g
+      forward plus take-off thrust for engines inside the fuselage aft of the cabin.
+    also_in:
+      - {document: FAR 23 (2017), clause: 23.561(e)(1), value: "18.0 g forward + maximum take-off thrust", source: *u_far23, tag: standard}
+  - id: ENG-007
+    category: propeller
+    item: Propeller clearances (max weight, adverse CG, adverse pitch)
+    value: {ground_nose_wheel_gear_m: 0.180, ground_tail_wheel_gear_m: 0.230, radial_tip_to_structure_m: 0.026, longitudinal_blade_to_structure_m: 0.013}
+    unit: m
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 925
+    source: *u_csvla
+    tag: standard
+    note: >-
+      Smaller clearances are allowed if substantiated. There must also be positive clearance with
+      the critical tyre flat and the strut bottomed (leaf-spring gear: at 1.5 g deflection). For a
+      pusher, also check the rotation (tail-down) attitude.
+
+  # ---------------- emergency landing / crashworthiness ----------------
+  - id: CRASH-001
+    category: emergency_landing
+    item: Crash containment (UAV) - minimise projection of parts (engine, propeller, payload), avoid ignition sources and flammable leaks in hazardous quantity, explosion hazard to third parties
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.561(b)-(c) and AMC LUAS.561
+    source: *u_csluas
+    tag: standard
+    note: Applies when a forced-landing area is used for the emergency recovery capability (CS-LUAS.1412(a)(2)). No inertia factors are given.
+    also_in:
+      - {document: EASA SC Light-UAS, clause: "Light-UAS.2350(a)", value: "self-containment to minimise debris, fire or explosion beyond the crash area", source: *u_sclu, tag: standard}
+      - {document: STANAG 4703, clause: ER.1.1.1.2, value: "N/A in AEP-83 (no detailed argument)", source: *u_stanag4703, tag: standard}
+  - id: CRASH-002
+    category: emergency_landing
+    item: Ultimate emergency-landing inertia load factors (manned occupant protection; used as retention criterion for items of mass and fuel tanks)
+    value: {upward: 3.0, forward: 9.0, sideward: 1.5}
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 561(b)(2)
+    source: *u_csvla
+    tag: standard
+    note: CS-VLA 967(e)(1) and CS-LUAS.967(e)(1) require fuel tanks and fuel system components to retain fuel under these 561 inertia forces. CS-LUAS.561 gives no numbers, so the CS-VLA values are the practical reference.
+    also_in:
+      - {document: FAR 23 (2017), clause: 23.561(b)(2), value: "up 3.0 (4.5 acrobatic), forward 9.0, side 1.5, down 6.0 (when 23.807(d)(4) is applied)", source: *u_far23, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.561(b)(3), value: "items of mass in cabin: up 3.0, forward 18.0, side 4.5", source: *u_far23, tag: standard}
+  - id: CRASH-003
+    category: emergency_landing
+    item: Turnover (manned code) - upward ultimate inertia and ground friction
+    value: {upward: 3.0, friction_coefficient: 0.5}
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 561(d)
+    source: *u_csvla
+    tag: standard
+  - id: CRASH-004
+    category: emergency_landing
+    item: Parachute recovery loads - normal recovery is a limit condition; emergency-only parachute is an ultimate-only condition (worst weight and flight envelope point)
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.380, CS-LUAS.382
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: STANAG 4703, clause: "UL5.4, UL5.5", value: same, source: *u_stanag4703, tag: standard}
+  - id: CRASH-005
+    category: emergency_recovery
+    item: Emergency recovery capability - flight termination system and/or automatic route to a predefined unpopulated forced-landing area; independent of failed systems; protected from inadvertent activation
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.1412
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: SHT-IHA 2026, clause: "Madde 18(1)", value: "on C2 loss, automatic flight to a predefined recovery area not over populated areas, or flight termination", source: *u_shtiha, tag: standard}
+
+  # ---------------- fuel system ----------------
+  - id: FUEL-001
+    category: fuel_system
+    item: Unusable fuel - not less than the quantity at first evidence of malfunction under the most adverse feed condition for each intended operation and manoeuvre (established by test)
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.959(a)-(b)
+    source: *u_csluas
+    tag: standard
+    note: CS-LUAS adds that the effect of any pump failure on unusable fuel must be determined.
+    also_in:
+      - {document: STANAG 4703, clause: UL19.2, value: "established by test; first evidence of starvation", source: *u_stanag4703, tag: standard}
+      - {document: CS-VLA, clause: CS-VLA 959, value: same, source: *u_csvla, tag: standard}
+  - id: FUEL-002
+    category: fuel_system
+    item: Fuel flow capacity relative to take-off fuel consumption
+    value: {pump_system: 1.25, gravity_system: 1.50}
+    unit: "-"
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.955(b)-(c)
+    source: *u_csluas
+    tag: standard
+    note: Shown in the most critical feed attitude with only unusable fuel plus test fuel in the tank, with any flowmeter blocked. After switching tanks, full power must return within 10 s (955(d)).
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 955, value: same, source: *u_csvla, tag: standard}
+  - id: FUEL-003
+    category: fuel_system
+    item: Fuel tank pressure test - conventional metal tank or non-metallic tank not supported by structure
+    value: "max(24 kPa, pressure at maximum ultimate acceleration with full tank)"
+    unit: Pa
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.965(a)
+    source: *u_csluas
+    tag: standard
+    note: "Fuel head pressure p = rho_fuel * g * n_ult * head. Example: 740 kg/m3, 9 g forward, 0.5 m tank length gives 32.7 kPa, more than 24 kPa."
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 965(a), value: "24 kPa", source: *u_csvla, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.965(a)(1), value: "3.5 psi (24.1 kPa) or ultimate-acceleration pressure", source: *u_far23, tag: standard}
+      - {document: STANAG 4703, clause: UL19.4, value: "withstand pressure at maximum ultimate acceleration with full tank (should)", source: *u_stanag4703, tag: standard}
+  - id: FUEL-004
+    category: fuel_system
+    item: Fuel tank pressure test - integral tank / structure-supported non-metallic tank / pressurised bottle
+    value:
+      integral_tank: "pressure at maximum limit acceleration, full tank, with critical limit structural loads"
+      structure_supported_non_metallic_Pa: 14000.0
+      pressurised_tank_proof_factor: 1.5
+      pressurised_tank_burst_factor: 2.0
+      proof_hold_s: 120.0
+      burst_hold_s: 60.0
+    unit: mixed
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.965(b)-(d)
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: FAR 23 (2017), clause: 23.965(a)(3), value: "2 psi (13.8 kPa) for supported non-metallic tanks", source: *u_far23, tag: standard}
+  - id: FUEL-005
+    category: fuel_system
+    item: Tank vibration and slosh tests (tanks with large unsupported flat surfaces; non-metallic liners)
+    value:
+      vibration_duration_h: 25.0
+      vibration_total_displacement_m: 0.00079
+      vibration_frequency: "0.9 x max continuous propeller rpm (cycles/min) unless a critical frequency exists"
+      fill_fraction: 0.667
+      slosh_rate_cycles_per_min: [16, 20]
+      slosh_angle_deg: 15.0
+      slosh_duration_h: 25.0
+      liner_slosh_fuel_temperature_degC: 43.3
+    unit: mixed
+    bound: min
+    status: requirement
+    text_type: rule
+    document: FAR 23 (2017)
+    clause: 23.965(b)-(d)
+    source: *u_far23
+    tag: standard
+    note: Converted from 1/32 in and 110 degF. Not in CS-VLA or CS-LUAS. It is a manned-code requirement and a good practice test for a rotomoulded or composite UAV tank near a two-stroke engine.
+  - id: FUEL-006
+    category: fuel_system
+    item: Fuel tank installation - no concentrated loads, non-absorbent chafe pads, ventilated and drained tank bay, no tank on engine side of firewall, clearance to firewall
+    value: 0.013
+    unit: m
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.967(a)-(c)
+    source: *u_csluas
+    tag: standard
+    note: 13 mm minimum gap between tank and firewall. Fuel must also be retained under 561 inertia forces and in wheels-up or leg-collapsed landings (967(e)).
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 967, value: 0.013, source: *u_csvla, tag: standard}
+      - {document: STANAG 4703, clause: "UL19.3, UL19.5", value: "protect tanks from vibration wear; withstand inertial loads; vent each tank", source: *u_stanag4703, tag: standard}
+  - id: FUEL-007
+    category: fuel_system
+    item: Fuel tank expansion space (unless the vent discharges clear of the aircraft)
+    value: 0.02
+    unit: fraction of tank capacity
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.969
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 969, value: 0.02, source: *u_csvla, tag: standard}
+  - id: FUEL-008
+    category: fuel_system
+    item: Fuel tank sump effective capacity
+    value: {fraction_of_capacity: 0.001, cs_vla_minimum_m3: 120.0e-6, cs_vla_alternative_sediment_bowl_m3: 25.0e-6}
+    unit: m3
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.971
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 971, value: "0.10 % or 120 cm3, whichever is greater (25 cm3 sediment bowl alternative)", source: *u_csvla, tag: standard}
+  - id: FUEL-009
+    category: fuel_system
+    item: Fuel tank venting
+    value: >-
+      Vent from top of expansion space; resistant to ice/debris blockage; anti-siphon; rapid relief
+      of pressure differences; no undrainable low points; discharge not a fire hazard; no fuel
+      loss when parked on a 1 % slope in any direction; separate vapour-return line to tank top
+      for EFI/carburettor vapour return.
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.975
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 975, value: same, source: *u_csvla, tag: standard}
+      - {document: STANAG 4703, clause: UL19.5, value: "each tank should be vented", source: *u_stanag4703, tag: standard}
+  - id: FUEL-010
+    category: fuel_system
+    item: Tank outlet strainer and main filter
+    value:
+      strainer_mesh_per_m: [300, 600]
+      strainer_clear_area_over_outlet_area_min: 5.0
+      strainer_length_over_outlet_diameter_min_cs_vla: 2.0
+      strainer_diameter_min: equal to tank outlet diameter
+      main_filter: "between tank outlet and carburettor/EFI pump inlet; accessible for draining and cleaning; capacity for contamination above engine approval level"
+    unit: mixed
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 977
+    source: *u_csvla
+    tag: standard
+    note: 3-6 meshes per cm (CS-VLA) matches 8-16 meshes per inch (FAR 23.977). The 5x clear area is from CS-LUAS.977(b) / FAR 23.977(b).
+    also_in:
+      - {document: CS-LUAS, clause: "CS-LUAS.977, CS-LUAS.997", value: "strainer clear area >= 5 x outlet line area; filter between tank and metering device", source: *u_csluas, tag: standard}
+      - {document: FAR 23 (2017), clause: 23.977, value: "8-16 meshes per inch; clear area >= 5 x outlet", source: *u_far23, tag: standard}
+      - {document: STANAG 4703, clause: "UL19.6, Annex C UL.RE.14(c)", value: "drainage and accessible strainer/filter; filter blockage indication if power-critical", source: *u_stanag4703, tag: standard}
+  - id: FUEL-011
+    category: fuel_system
+    item: Hot-weather operation - no vapour lock with fuel at the critical temperature
+    value: 43.0
+    unit: degC
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 961
+    source: *u_csvla
+    tag: standard
+    note: CS-LUAS.961 uses "critical temperature with respect to vapour formation" and gives no number. AMC LUAS.961 warns against routing fuel lines near the exhaust.
+  - id: FUEL-012
+    category: fuel_system
+    item: Negative acceleration - no hazardous powerplant malfunction (AMC test at least 2 s continuous below 0 g, plus two rapid excursions totalling at least 2 s)
+    value: 2.0
+    unit: s
+    bound: min
+    status: common_practice
+    text_type: AMC
+    document: CS-VLA
+    clause: CS-VLA 943 and AMC VLA 943
+    source: *u_csvla
+    tag: standard
+    note: Drives a header tank, flop (clunk) pickup or bladder feed for the two-stroke EFI system.
+    also_in:
+      - {document: CS-LUAS, clause: AMC LUAS.943, value: "max value and duration of negative g for which approval is requested, at MCP", source: *u_csluas, tag: standard}
+  - id: FUEL-013
+    category: fuel_system
+    item: Fuel lines - supported against vibration; flexible hose between parts with relative motion; fire-resistant in the engine compartment
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: STANAG 4703
+    clause: UL19.7, UL19.8
+    source: *u_stanag4703
+    tag: standard
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 993, value: same intent, source: *u_csvla, tag: standard}
+  - id: FUEL-014
+    category: fuel_system
+    item: Fuel shut-off - remote-operator fuel shut-off valve to be considered from the safety analysis; no shut-off valve on engine side of firewall
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: common_practice
+    text_type: should
+    document: STANAG 4703
+    clause: UL19.9
+    source: *u_stanag4703
+    tag: standard
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 995(a)-(b), value: "means to rapidly shut off fuel in flight; no valve on engine side of firewall (requirement, manned)", source: *u_csvla, tag: standard}
+  - id: FUEL-015
+    category: fuel_system
+    item: Drains - at least one drain for the whole system in normal ground attitude, discharging clear of the aircraft, positive locking closed, accessible
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 999
+    source: *u_csvla
+    tag: standard
+  - id: FUEL-016
+    category: fuel_system
+    item: Two-stroke premix - reliable means of providing the correct fuel/oil mixture
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 1011(c)
+    source: *u_csvla
+    tag: standard
+  - id: FIRE-001
+    category: fire_protection
+    item: Firewall or shroud isolating the engine; fireproof materials accepted without test
+    value: {stainless_steel_sheet_thickness_m: 0.00038, coated_mild_steel_sheet_thickness_m: 0.0005, test_flame_degC: 1100, test_flame_tolerance_degC: 25, penetration_resistance_s: 900}
+    unit: mixed
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 1191
+    source: *u_csvla
+    tag: standard
+    note: >-
+      For the UAV: STANAG UL16.3 requires a fire-hazard assessment. If the risk is not acceptable,
+      fit fire detection with a warning in the GCS and a fire-propagation assessment. CS-LUAS.861
+      protects structure and controls needed for the emergency recovery from powerplant fires.
+    also_in:
+      - {document: STANAG 4703, clause: UL16.3, value: fire hazard assessment, source: *u_stanag4703, tag: standard}
+
+  # ---------------- electrical bonding / lightning ----------------
+  - id: ELEC-001
+    category: electrical_bonding
+    item: Electrical continuity between powerplant, fuel and other tanks and other significant conductive parts
+    value: 1.3e-6
+    unit: m2 (minimum copper bonding-connector cross-section)
+    bound: min
+    status: requirement
+    text_type: rule
+    document: CS-VLA
+    clause: CS-VLA 857(a)-(b)
+    source: *u_csvla
+    tag: standard
+    note: The extracted text shows "1.3 mm*"; it means 1.3 mm2.
+    also_in:
+      - {document: STANAG 4703, clause: "UL21 (bonding should be guaranteed); Annex C UL.RE.8 (engine components grounded to engine earth)", value: qualitative, source: *u_stanag4703, tag: standard}
+  - id: ELEC-002
+    category: electrical_bonding
+    item: Provision for bonding the aircraft to ground fuelling equipment (at each filler point except pressure fuelling)
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.867(d), CS-LUAS.973(d)
+    source: *u_csluas
+    tag: standard
+    also_in:
+      - {document: CS-VLA, clause: CS-VLA 857(c), value: same, source: *u_csvla, tag: standard}
+  - id: ELEC-003
+    category: lightning
+    item: Protection against catastrophic effects of lightning and static electricity (lightning analysis agreed with the Authority)
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: requirement
+    text_type: rule
+    document: CS-LUAS
+    clause: CS-LUAS.867(a)-(c); AMC CS-LUAS.867 (SAE ARP5577 / EUROCAE ED-113)
+    source: *u_csluas
+    tag: standard
+    note: >-
+      Metallic parts: bond to the airframe or design so a strike is not catastrophic.
+      Non-metallic parts: minimise strike effects or provide current diversion. CS-LUAS.1316
+      requires lightning protection for electrical and electronic systems needed for continued
+      safe flight. EASA SC Light-UAS.2335(b) allows another route: an operational limitation
+      prohibiting flight where lightning exposure is likely.
+    also_in:
+      - {document: FAR 23 (2017), clause: 23.867, value: same (a)-(c), source: *u_far23, tag: standard}
+      - {document: EASA SC Light-UAS, clause: Light-UAS.2335, value: "protect, or limit operations to avoid lightning", source: *u_sclu, tag: standard}
+      - {document: STANAG 4703, clause: "UL.0, UL35.1, UL27.6", value: "lightning in the usage spectrum; GCS protected", source: *u_stanag4703, tag: standard}
+  - id: ELEC-004
+    category: electrical_bonding
+    item: Bond resistance target for equipment-to-structure (classes R and L)
+    value: 0.0025
+    unit: ohm
+    bound: max
+    status: common_practice
+    text_type: industry practice (MIL-STD-464 / SAE ARP1870 lineage)
+    document: MIL-STD-464 / SAE ARP1870 (via In Compliance Magazine)
+    clause: n/a
+    source: *u_icm_bond
+    tag: paper
+    note: Only the title and abstract of the source were verified. Treat as a target value.
+  - id: ELEC-005
+    category: electrical
+    item: Electrical system - overload protection (fuses/breakers), wires sized for loads, protection from mechanical damage, drainage of moisture, venting of flammable vapour zones
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: common_practice
+    text_type: should (examples)
+    document: STANAG 4703
+    clause: UL21
+    source: *u_stanag4703
+    tag: standard
+
+  # ---------------- structural dynamics / vibration ----------------
+  - id: DYN-001
+    category: structural_dynamics
+    item: Monitor airframe dynamic response in ground and flight tests; dynamic load analysis if relevant
+    value: qualitative
+    unit: "-"
+    bound: qualitative
+    status: common_practice
+    text_type: should
+    document: STANAG 4703
+    clause: UL.7
+    source: *u_stanag4703
+    tag: standard
+  - id: DYN-002
+    category: propulsion
+    item: Engine/propeller rpm compatibility - max rpm not exceeded at full throttle up to VCmax; 110 % of max continuous rpm not exceeded in a throttle-closed glide at VCmax
+    value: 1.10
+    unit: "rpm/rpm_MC"
+    bound: max
+    status: requirement
+    text_type: rule ("must")
+    document: STANAG 4703
+    clause: UL18.1
+    source: *u_stanag4703
+    tag: standard
+    note: Matters for a fixed-pitch propeller on the L 275 EF (hard rev limit 8000 rpm per engine.yaml).
+
+# -----------------------------------------------------------------------------------------------------
+# NOTABLE DIFFERENCES BETWEEN DOCUMENTS (the sizing script must pick one; choices in design_loads_recommended)
+# -----------------------------------------------------------------------------------------------------
+differences_between_documents:
+  - topic: second gust point
+    detail: STANAG 4703 applies the 7.6 m/s gust at VCmax (at most 0.9 VD). CS-LUAS, CS-VLA and CS-23 apply 7.62 m/s at VD. Recommended - at VD (more conservative).
+    sources: [*u_stanag4703, *u_csluas]
+  - topic: negative manoeuvre factor
+    detail: CS-VLA uses -1.5. CS-LUAS and CS-23 use -0.4 n (-1.52 at n = 3.8). STANAG says at most -1.5. Recommended -1.52.
+    sources: [*u_csvla, *u_csluas]
+  - topic: overswing factor (vertical tail)
+    detail: CS-VLA uses 1.3 and CS-LUAS uses 1.5. Recommended 1.5.
+    sources: [*u_csvla, *u_csluas]
+  - topic: engine torque factor for two-stroke twins
+    detail: CS-VLA gives 3 (two-stroke, two cylinders). CS-LUAS and CS-23 give 4 (two cylinders, no stroke distinction). A simultaneous-firing twin behaves like a single-cylinder two-stroke (CS-VLA 6). Recommended 6 (estimate).
+    sources: [*u_csvla, *u_csluas]
+  - topic: nose-wheel forward-load case
+    detail: CS uses 2.25 x static vertical with 0.4 x vertical forward. The STANAG/ASTM F2245 figure uses 3.2 x static vertical with 0.9 x static forward. Recommended - check both (envelope).
+    sources: [*u_csluas, *u_stanag4703]
+  - topic: composite factors with RTD-only data
+    detail: CS-VLA AMC and STANAG give 1.5. CS-LUAS AMC gives 2.0 hot/wet x 1.2 manufacturing = 2.4. With ETW-conditioned allowables, all three give 1.2. Recommended - generate ETW allowables and use 1.2.
+    sources: [*u_csvla, *u_stanag4703, *u_csluas]
+  - topic: VC definition
+    detail: CS-VLA sets VC_min = 2.4 sqrt(Mg/S). CS-LUAS lets VC follow the operating requirements. Recommended - CS-LUAS rule (mission-defined VC, VD >= 1.25 VC and VD >= VCmax/0.9).
+    sources: [*u_csvla, *u_csluas]
+  - topic: flutter margin with flight tests
+    detail: STANAG allows 1.15 VD if flight flutter tests with excitation are done. CS-LUAS, CS-VLA and CS-23 require 1.2 VD for rational analysis. Recommended 1.2 VD.
+    sources: [*u_stanag4703, *u_csluas]
+
+# -----------------------------------------------------------------------------------------------------
+# DESIGN LOADS RECOMMENDED - ready for the sizing / structures scripts
+# Values are limit loads unless the key says ultimate. Apply ultimate = limit x factor_of_safety x special factor.
+# -----------------------------------------------------------------------------------------------------
+design_loads_recommended:
+  basis: >-
+    Certification-basis candidate: JARUS CS-LUAS Ed. 0.3 (closest UAV code; SHT-IHA Art. 5 lists
+    EASA/ICAO AMC/GM as acceptable guidance). Each value is the most conservative of CS-LUAS,
+    STANAG 4703, CS-VLA Amdt 1 and FAR/CS-23 (2017), unless a note gives the reason.
+  constants:
+    g_m_per_s2: {value: 9.80665, tag: standard, source: *u_csvla}
+    rho0_kg_per_m3: {value: 1.225, tag: standard, source: *u_csvla}
+    fuel_density_kg_per_m3: {value: 740.0, tag: estimate, basis: "Same value as engine.yaml (gasoline + 2 % synthetic 2T oil at 50:1)", source: *u_lim_ds_275ef}
+  mtow_cap_for_turkish_class_M2_kg:
+    value: 149.9
+    tag: estimate
+    source: *u_shtiha
+    basis: "SHT-IHA Art. 8(1): M2 is 25 kg (inclusive) to 150 kg. 150 kg itself is M3 ('150 kg (dahil) ve daha fazla'). Keep MTOW strictly below 150 kg."
+
+  factors:
+    factor_of_safety_ultimate: {value: 1.5, status: requirement, document: CS-LUAS, clause: CS-LUAS.303, source: *u_csluas, tag: standard}
+    factor_of_safety_ultimate_non_hazardous_secondary_structure: {value: 1.5, tag: estimate, basis: "STANAG UL2.3 would allow 1.25. 1.5 is kept until SHGM accepts the STANAG argument.", source: *u_stanag4703}
+    combination_rule: {value: "ultimate = limit x 1.5 x max(applicable special factor), except that composite factors multiply each other", source: *u_csluas, tag: standard, clause: "CS-LUAS.619; AMC LUAS.619"}
+    fitting_factor: {value: 1.15, source: *u_csluas, tag: standard, clause: CS-LUAS.625}
+    casting_factor_visual_inspection: {value: 2.0, source: *u_csluas, tag: standard, clause: CS-LUAS.621}
+    casting_factor_with_radiography_and_3_sample_tests: {value: 1.25, source: *u_csluas, tag: standard, clause: CS-LUAS.621}
+    bearing_factor_rotating_bolted_or_pinned_joints: {value: 2.0, source: *u_stanag4703, tag: standard, clause: UL2.4, status: common_practice}
+    frequent_assembly_attachment_factor: {value: 1.5, source: *u_stanag4703, tag: standard, clause: UL2.4, status: common_practice, note: "Removable wings, tail and payload modules. Can be dropped after an assembly-cycle test."}
+    hinge_bearing_total_factor: {value: 6.67, source: *u_csluas, tag: standard, clause: CS-LUAS.657}
+    push_pull_joint_total_factor: {value: 3.33, source: *u_csluas, tag: standard, clause: CS-LUAS.693}
+    control_system_hinge_moment_factor: {value: 1.25, source: *u_csluas, tag: standard, clause: CS-LUAS.395}
+
+  composites:
+    design_values_basis: {value: "A-basis for single load path, B-basis for redundant structure", source: *u_csluas, tag: standard, clause: CS-LUAS.613(b)}
+    special_factor_ETW_conditioned_allowables: {value: 1.2, source: *u_csvla, tag: standard, clause: "AMC VLA 619 a.; STANAG UL2.4; equals the CS-LUAS AMC 619 manufacturing factor with hot/wet = 1.0"}
+    special_factor_RTD_only_allowables_cs_vla_stanag: {value: 1.5, source: *u_csvla, tag: standard, clause: "AMC VLA 619 b."}
+    special_factor_RTD_only_allowables_cs_luas: {value: 2.4, source: *u_csluas, tag: standard, clause: "AMC LUAS.619 2.1(i) x 2.3 (2.0 x 1.2)"}
+    recommended_composite_special_factor:
+      value: 1.2
+      tag: estimate
+      source: *u_csluas
+      basis: >-
+        Plan qualified prepreg allowables in ETW condition (moisture-conditioned specimens tested
+        at the maximum structure temperature) and a controlled cure process. Total ultimate factor
+        on composite PSE = 1.5 x 1.2 = 1.8 on ETW allowables. If only RTD typical data exist, use
+        1.5 x 2.4 = 3.6 (CS-LUAS) for sizing until ETW data are available.
+    max_structure_temperature_degC:
+      value: 70.0
+      tag: estimate
+      source: *u_csvla
+      basis: >-
+        AMC VLA 613(c) curve gives about 66-71 degC for a light-grey finish (solar absorptivity
+        0.5-0.6, assumed) and 54 degC for white. 70 degC is also the CS-LUAS AMC 619 threshold
+        above which hot/wet factors must be agreed. A dark finish (absorptivity 0.9) gives about
+        84 degC and would need a higher-Tg resin. Keep the external livery light (absorptivity at
+        most 0.6).
+    required_wet_Tg_min_degC:
+      value: 98.0
+      tag: estimate
+      source: *u_cw_tg
+      basis: "MOL = Tg_wet - 28 degC, so Tg_wet >= 70 + 28 = 98 degC. Areas near the engine or exhaust need a separate thermal check."
+    damage_tolerance_strain_limits_microstrain:
+      value:
+        thin_le_2mm_and_sandwich_skins: {tension: 5000, compression: 2600, shear: 5200}
+        laminates_gt_2mm: {tension: 5000, compression: 3000, shear: 6000}
+      source: *u_stanag4703
+      tag: standard
+      clause: UL13.1.2
+      status: common_practice
+      note: Apply at ultimate load (conservative interpretation). Valid only if HW/RTD degradation < 50 %.
+
+  flight_envelope:
+    n_limit_pos: {value: 3.8, source: *u_csluas, tag: standard, clause: "CS-LUAS.337(a); STANAG UL5.2; CS-VLA 337"}
+    n_limit_neg_at_VC: {value: -1.52, source: *u_csluas, tag: standard, clause: "CS-LUAS.337(b) (0.4 x 3.8)"}
+    n_limit_neg_at_VD: {value: 0.0, source: *u_csluas, tag: standard, clause: "CS-LUAS.333(b)(3) (linear from VC to VD)"}
+    n_limit_flaps: {value: 2.0, source: *u_csluas, tag: standard, clause: CS-LUAS.345}
+    VD_over_VC_min: {value: 1.25, source: *u_csluas, tag: standard, clause: CS-LUAS.335(b)}
+    VCmax_over_VD_max: {value: 0.9, source: *u_stanag4703, tag: standard, clause: UL2.1}
+    VA_rule: {value: "VA = VS1g_clean * sqrt(n_limit_pos), capped at VC", source: *u_csluas, tag: standard, clause: CS-LUAS.335(c)}
+    VF_rule: {value: "VF >= max(1.4 VS, 1.8 VSF)", source: *u_csluas, tag: standard, clause: CS-LUAS.345(b)}
+    note_envelope_protection: >-
+      CS-LUAS.337(c) and STANAG UL5.2 allow a lower n if the FCS makes exceeding it impossible.
+      This is not used: 3.8 is kept and gusts usually govern at these wing loadings (see
+      example_evaluation).
+    note_existing_code: >-
+      ucav250/analysis/structlib.py vn_diagram() keeps n_neg constant up to VD. The codes reduce
+      it linearly to 0.0 at VD. Keeping it constant is conservative but should be stated in the
+      structures report.
+
+  gust:
+    Ude_VC_m_per_s: {value: 15.24, source: *u_csluas, tag: standard, clause: CS-LUAS.333(c)(1)(i)}
+    Ude_VD_m_per_s: {value: 7.62, source: *u_csluas, tag: standard, clause: CS-LUAS.333(c)(1)(ii)}
+    Ude_VF_m_per_s: {value: 7.62, source: *u_csluas, tag: standard, clause: CS-LUAS.345(a)(2)}
+    altitude_reduction:
+      full_value_up_to_m: 6096.0
+      linear_to_m: 15240.0
+      Ude_VC_at_15240m_m_per_s: 7.62
+      Ude_VD_at_15240m_m_per_s: 3.81
+      source: *u_csluas
+      tag: standard
+      clause: CS-LUAS.333(c)(1)
+    lateral_gust_same_values: {value: true, source: *u_stanag4703, tag: standard, clause: UL5.3}
+    formula:
+      n: "1 +/- 0.5*rho0*V_EAS*a*Kg*Ude/(M*g/S)"
+      Kg: "0.88*mu/(5.3 + mu)"
+      mu: "2*(M/S)/(rho*c_mean*a)   (rho = density at altitude)"
+      source: *u_csvla
+      tag: standard
+      clause: CS-VLA 341
+
+  unsymmetric_and_tail:
+    rolling_semispan_airload_split: {value: [1.0, 0.7], source: *u_csluas, tag: standard, clause: CS-LUAS.349(a)}
+    aileron_condition_load_factor_fraction: {value: 0.667, source: *u_csluas, tag: standard, clause: CS-LUAS.349(b)}
+    horizontal_tail_unsym_other_side_percent: {value: "min(100 - 10*(n - 1), 80) (72 % at n = 3.8)", source: *u_csluas, tag: standard, clause: CS-LUAS.427(b)}
+    vertical_tail_yaw_angle_deg: {value: 15.0, source: *u_csluas, tag: standard, clause: CS-LUAS.441(a)(3)}
+    vertical_tail_overswing_factor: {value: 1.5, source: *u_csluas, tag: standard, clause: CS-LUAS.441(a)(2)}
+    combined_tail_fraction: {value: 0.75, source: *u_csvla, tag: standard, clause: CS-VLA 447}
+    checked_manoeuvre_pitch_acceleration_rad_per_s2: {value: "20.1/V_m_per_s * n_m*(n_m - 1.5)", source: *u_csvla, tag: standard, clause: CS-VLA 423(b)}
+
+  control_surfaces:
+    hinge_line_parallel_inertia_factor: {value: {vertical_surfaces: 24.0, horizontal_surfaces: 12.0}, source: *u_csluas, tag: standard, clause: CS-LUAS.393(b)}
+    mass_balance_limit_factors: {value: {normal: 24.0, fore_aft: 12.0, parallel_to_hinge: 12.0}, source: *u_csvla, tag: standard, clause: CS-VLA 659}
+    average_surface_loading: {value: "w_bar = K_curve(W/S) * n/4.4, at least 55 kg/m2 (see CTL-007)", source: *u_csvla, tag: standard, clause: "CS-VLA Appendix B Figure B1 (read_from_drawing)"}
+    ground_gust: {value: "H = K*c*S*q, V = min(2.01*sqrt(M/S) + 4.45, 26.8) m/s, K = 0.75 / 0.5 / 0.75", source: *u_csvla, tag: standard, clause: CS-VLA 415}
+    actuator_sizing_rule: {value: "servo stall torque at the horn >= 1.25 x max computed hinge moment; structure designed for full servo stall torque", source: *u_csluas, tag: standard, clause: "CS-LUAS.395(a)(1)"}
+
+  landing_gear:
+    descent_velocity: {value: "V = clip(0.51*(M*g/S)^0.25, 2.13, 3.05) m/s", source: *u_csluas, tag: standard, clause: "CS-LUAS App. H H.2(b)"}
+    drop_height: {value: "h = clip(0.0132*sqrt(M*g/S), 0.235, 0.475) m", source: *u_csluas, tag: standard, clause: "CS-LUAS App. H H.13(a)"}
+    wing_lift_fraction_L: {value: 0.667, source: *u_csluas, tag: standard, clause: "H.2(c)"}
+    gear_efficiency: {value: {spring_or_rubber_or_tyre: 0.50, oleo_shock_stroke: 0.65, tyre: 0.50}, source: *u_stanag4703, tag: standard, clause: "Annex B UL.GL.1 1.1"}
+    wheel_load_factor: {value: "nj = (h + (1 - L)*d)/(ef*d); n_inertia = nj + L", source: *u_stanag4703, tag: standard, clause: "Annex B UL.GL.1 1.1"}
+    n_inertia_min: {value: 2.67, source: *u_csluas, tag: standard, clause: "H.2(e)"}
+    ground_reaction_factor_min: {value: 2.0, source: *u_csluas, tag: standard, clause: "H.2(e)"}
+    target_n_inertia_max:
+      value: 4.0
+      tag: estimate
+      source: *u_stanag4703
+      basis: >-
+        Design target (not a code value). Keep n_inertia <= n_limit_pos + 0.67 (4.47) so that
+        concentrated masses are not driven by landing (STANAG Annex B 1.2). This needs about
+        0.15-0.20 m of effective stroke for a spring gear (ef = 0.5) at 50 kg/m2, or an oleo strut.
+    concentrated_mass_rule: {value: "if nj > n_limit_pos - 0.67: design engine/tanks/payload for nj + 0.67", source: *u_stanag4703, tag: standard, clause: "Annex B UL.GL.1 1.2"}
+    level_landing_drag_ratio: {value: 0.25, source: *u_csluas, tag: standard, clause: "H.4(b)"}
+    spin_up_spring_back_combinations: {value: {spin_up: [0.6, -0.5], spring_back: [0.8, 0.5], max_vertical: [1.0, 0.3]}, note: "[Pz/Pz_max, Px/Pz_max]", source: *u_csvla, tag: standard, clause: "AMC VLA 479(b)"}
+    side_load: {value: {vertical_factor: 1.33, side_total: 0.83, inboard_wheel: 0.50, outboard_wheel: 0.33}, source: *u_csluas, tag: standard, clause: "H.7"}
+    braked_roll: {value: {vertical_factor: 1.33, mu: 0.8}, source: *u_csluas, tag: standard, clause: "H.8"}
+    nose_gear_multiples_of_static:
+      value:
+        aft: {vertical: 2.25, drag: 1.80}
+        forward: {vertical: 3.2, forward: 0.90}
+        side: {vertical: 2.25, side: 1.575}
+      source: *u_stanag4703
+      tag: standard
+      clause: "Annex B UL.GL.6 (envelope with CS-LUAS H.10)"
+    reserve_energy: {value: "1.2 x V_sink with lift = weight; gear may yield, not fail", source: *u_csluas, tag: standard, clause: "H.12(b)"}
+    ultimate_factor: {value: 1.5, source: *u_stanag4703, tag: standard, clause: "Annex B UL.GL.1 1.3"}
+    belly_landing_ultimate: {value: {downward: 3.0, friction: 0.5}, source: *u_csvla, tag: standard, clause: "CS-VLA 561(e)"}
+
+  engine_mount:
+    engine: {value: "Limbach L 275 EF (two-stroke boxer twin, simultaneous firing)", source: *u_lim_ds_275ef, tag: datasheet}
+    mean_torque_MCP_Nm:
+      value: 25.8
+      tag: estimate
+      source: *u_lim_ds_275ef
+      basis: "16.2 kW at 6000 rpm (engine.yaml max_continuous): T = P/omega = 16200/628.3"
+    mean_torque_takeoff_Nm:
+      value: 23.6
+      tag: estimate
+      source: *u_lim_ds_275ef
+      basis: "17.15 kW at 6950 rpm (engine.yaml take-off): T = 17150/727.8"
+    torque_factor:
+      value: 6.0
+      tag: estimate
+      source: *u_csvla
+      basis: >-
+        CS-VLA 361(b)(2) factor for a single-cylinder two-stroke. Both L 275 cylinders fire
+        together, so the gas-torque pulse is that of a single cylinder. By the letter of the codes,
+        CS-VLA gives 3 and CS-LUAS/CS-23 give 4. The mass penalty of 6 is small (limit torque
+        155 Nm vs 103 Nm). A measured dynamic torque survey could justify reducing it.
+    limit_torque_MCP_Nm: {value: 154.7, tag: estimate, source: *u_csvla, basis: "25.8 x 6.0; acts with 100 % flight condition A loads"}
+    limit_torque_takeoff_case_Nm: {value: 141.4, tag: estimate, source: *u_csluas, basis: "23.6 x 6.0 (CS-LUAS applies the factor to the take-off case too); acts with 75 % flight condition A loads"}
+    vertical_load_factor_with_torque: {value: 3.8, source: *u_csluas, tag: standard, clause: "CS-LUAS.361(a)(2) flight condition A"}
+    negative_vertical_load_factor: {value: -1.52, source: *u_csluas, tag: standard, clause: "CS-LUAS.333/337 (mount must carry all envelope points)"}
+    side_load_factor: {value: 1.47, tag: estimate, source: *u_csluas, basis: "Max of CS-LUAS.363 (1.33) and CS-LUAS Appendix F (d)(3) simplified value (1.47)"}
+    gyroscopic_case:
+      yaw_rate_rad_per_s: 2.5
+      pitch_rate_rad_per_s: 1.0
+      normal_load_factor: 2.5
+      thrust: maximum continuous
+      couple_formula_two_blade: "M = 2*Ip*Omega_prop*omega_body"
+      couple_formula_three_plus_blades: "M = Ip*Omega_prop*omega_body"
+      source: *u_far23
+      tag: standard
+      clause: "FAR 23.371(a)(2); AMC LUAS.371 para 1"
+      note: CS-LUAS alternative - 1.5 x FCS-limited max rates and load factor. Use the larger. Ip comes from the propeller vendor.
+    landing_case: {value: "engine as concentrated mass at nj + 0.67 if larger than 3.8", source: *u_stanag4703, tag: standard, clause: "Annex B UL.GL.1 1.2"}
+    crash_forward_ultimate:
+      value: 15.0
+      tag: estimate
+      source: *u_csvla
+      basis: >-
+        CS-VLA 561(c) value for engines aft of and above occupants. It is used as the retention
+        criterion for a pusher engine behind avionics and payload bays (CS-LUAS.561(c)(1):
+        projection of engine/propeller must be unlikely). FAR 23 would ask 18 g plus take-off
+        thrust.
+    combination_with_special_factors: {value: "mount fittings 1.15; rubber isolator pins 2.0 bearing; castings (crankcase lugs excluded) 2.0", tag: estimate, source: *u_stanag4703, basis: "Factors from MAT-005/006/007 applied to the mount parts"}
+
+  emergency_landing_ultimate_inertia:
+    forward: {value: 9.0, source: *u_csvla, tag: standard, clause: "CS-VLA 561(b)(2)"}
+    upward: {value: 3.0, source: *u_csvla, tag: standard, clause: "CS-VLA 561(b)(2)"}
+    sideward: {value: 1.5, source: *u_csvla, tag: standard, clause: "CS-VLA 561(b)(2)"}
+    downward:
+      value: 6.0
+      tag: estimate
+      source: *u_far23
+      basis: "FAR 23.561(b)(2)(iv) value. CS-VLA has none. Added so heavy items (battery, payload, tank) are retained in a hard flat impact."
+    applies_to: >-
+      Fuel tank and fuel system retention (CS-LUAS.967(e)), engine (with 15 g forward),
+      payload/EO-IR turret, batteries, parachute canister, ballast. Use as ultimate (no extra 1.5).
+    status: common_practice
+
+  flutter:
+    analysis_speed_margin_over_VD: {value: 1.2, source: *u_csluas, tag: standard, clause: "CS-LUAS.629(c); STANAG UL.8"}
+    flight_test_required_up_to: {value: VD, source: *u_csluas, tag: standard, clause: "CS-LUAS.629(b)"}
+    min_total_damping_target: {value: 0.03, source: *u_flutter_paper, tag: paper, status: common_practice}
+    single_failure_case: {value: "free-floating surface (servo disconnected) must be flutter-free up to VD", source: *u_csluas, tag: standard, clause: "CS-LUAS.629(f)"}
+
+  fuel_system:
+    tank_test_pressure_Pa: {value: "max(24000, rho_fuel*g*n_ult*head)", source: *u_csluas, tag: standard, clause: "CS-LUAS.965(a)"}
+    n_ult_for_tank_pressure: {value: 9.0, tag: estimate, source: *u_csvla, basis: "Largest emergency-landing factor (forward) applied along the longest tank head"}
+    expansion_space_fraction: {value: 0.02, source: *u_csluas, tag: standard, clause: CS-LUAS.969}
+    sump_fraction: {value: 0.001, source: *u_csluas, tag: standard, clause: CS-LUAS.971}
+    sump_min_m3: {value: 120.0e-6, source: *u_csvla, tag: standard, clause: CS-VLA 971}
+    pump_flow_factor: {value: 1.25, source: *u_csluas, tag: standard, clause: "CS-LUAS.955(c)"}
+    strainer_mesh_per_m: {value: [300, 600], source: *u_csvla, tag: standard, clause: "CS-VLA 977(b)"}
+    strainer_area_ratio_min: {value: 5.0, source: *u_csluas, tag: standard, clause: "CS-LUAS.977(b)"}
+    firewall_clearance_m: {value: 0.013, source: *u_csluas, tag: standard, clause: "CS-LUAS.967(c)"}
+    hot_fuel_test_degC: {value: 43.0, source: *u_csvla, tag: standard, clause: "CS-VLA 961"}
+    negative_g_duration_s: {value: 2.0, source: *u_csvla, tag: standard, clause: "AMC VLA 943"}
+    vent_no_loss_ramp_slope: {value: 0.01, source: *u_csluas, tag: standard, clause: "CS-LUAS.975(a)(7)"}
+    tank_vibration_test: {value: "25 h, 0.79 mm total displacement, 0.9 x MC prop rpm, 2/3 full", source: *u_far23, tag: standard, clause: "FAR 23.965(b)", status: common_practice}
+    tank_slosh_test: {value: "25 h, +/-15 deg, 16-20 cycles/min", source: *u_far23, tag: standard, clause: "FAR 23.965(b)(5)", status: common_practice}
+
+  electrical_and_lightning:
+    bonding_conductor_min_area_m2: {value: 1.3e-6, source: *u_csvla, tag: standard, clause: "CS-VLA 857(b)"}
+    bond_resistance_max_ohm: {value: 0.0025, source: *u_icm_bond, tag: paper, status: common_practice}
+    refuelling_bonding_point: {value: required, source: *u_csluas, tag: standard, clause: "CS-LUAS.867(d), 973(d)"}
+    lightning_strategy:
+      value: >-
+        Operational limitation (no flight where lightning exposure is likely, per SC
+        Light-UAS.2335(b)) plus bonding of the engine, fuel system, metallic tanks and antennas.
+        A CFRP airframe without a lightning-strike protection layer cannot claim lightning
+        tolerance.
+      tag: estimate
+      source: *u_sclu
+      basis: >-
+        Full ARP5577 direct-effects qualification is out of proportion for a 150 kg UAV. CS-LUAS.867
+        needs a lightning assessment agreed with the Authority, and the limitation route is
+        explicitly accepted by EASA SC Light-UAS.
+
+  propeller_clearance:
+    ground_m: {value: 0.180, source: *u_csvla, tag: standard, clause: "CS-VLA 925(a) (nose-wheel gear)"}
+    radial_tip_m: {value: 0.026, source: *u_csvla, tag: standard, clause: "CS-VLA 925(c)(1)"}
+    longitudinal_m: {value: 0.013, source: *u_csvla, tag: standard, clause: "CS-VLA 925(c)(2)"}
+    note: For a pusher, check ground clearance at the rotation/flare attitude with the main gear statically deflected, and with a flat tyre and bottomed strut (positive clearance).
+
+  example_evaluation:
+    status: example only - inputs are placeholders, not YK-250 sizing results
+    inputs: {M_kg: 145.0, wing_loading_kg_per_m2: 50.0, CLalpha_per_rad: 5.0, c_mean_m: 0.45, VC_EAS_m_per_s: 45.0, VD_EAS_m_per_s: 60.0}
+    tag: estimate
+    source: *u_csvla
+    basis: Formulas of CS-VLA 341 and CS-LUAS App. H applied to assumed placeholder inputs (sea level).
+    results:
+      mu_g: 36.3
+      Kg: 0.768
+      gust_n_at_VC: [4.29, -2.29]
+      gust_n_at_VD: [3.19, -1.19]
+      governing_n_pos: "4.29 (gust at VC exceeds the 3.8 manoeuvre value)"
+      governing_n_neg: "-2.29 (gust at VC)"
+      sink_speed_m_per_s: 2.40
+      drop_height_m: 0.292
+      n_inertia_spring_gear_d_0p10m: 7.18
+      n_inertia_spring_gear_d_0p15m: 5.23
+      n_inertia_spring_gear_d_0p20m: 4.26
+      ground_gust_design_speed_m_per_s: 18.7
+    note: >-
+      With a high-aspect-ratio, lightly loaded wing the 15.24 m/s gust at VC sets the wing design
+      load factors. The sizing script must evaluate gusts at every weight and altitude, not only
+      n = 3.8. Landing loads strongly favour about 0.2 m effective stroke or an oleo strut.
+
+# -----------------------------------------------------------------------------------------------------
+# TURKISH REGULATION - SHGM SHT-IHA (2026)
+# -----------------------------------------------------------------------------------------------------
+turkey_regulation:
+  document:
+    name: "Insansiz Hava Araci Sistemleri Talimati (SHT-IHA)"
+    issuer: "Sivil Havacilik Genel Mudurlugu (SHGM)"
+    version: 2026 issue. It repeals the SHT-IHA of 22/2/2016 and its amendments (Madde 30).
+    in_force_date: "2026-07-30"
+    in_force_basis: "Madde 31 (in force on publication); publication and date confirmed by press (30 Jul 2026)"
+    transition_end_date: "2027-07-31"
+    transition_basis: "Gecici Madde 1 (operational rules), Madde 25(7) (registration of existing UAVs), Madde 27 (conversion: remote ID, geofence, software module), Madde 28-29 (existing documents and licences)"
+    references_used_by_shgm: "EU 2019/947, EU 2019/945, ICAO Doc 10019. EASA/ICAO AMC and GM may be considered as guidance (Madde 5)."
+    source: *u_shtiha
+    tag: standard
+    date_source: *u_shtiha_news
+  classification:
+    classes_by_mtom_kg:
+      M0: {min_inclusive: 0.5, max_exclusive: 4.0}
+      M1: {min_inclusive: 4.0, max_exclusive: 25.0}
+      M2: {min_inclusive: 25.0, max_exclusive: 150.0}
+      M3: {min_inclusive: 150.0, max_exclusive: null}
+    basit_iha_toy: "Cannot leave a 10 m radius x 20 m high cylinder by design and within M0 limits; exempt from licence, registration and import permit (Madde 4(1)(b), 8(2))"
+    yk250_class: >-
+      M2 if MTOM < 150 kg, M3 at 150 kg or more. The class does not by itself set the operation
+      scope. Authority comes from the pilot licence level and the zone status (Madde 8(4)).
+    source: *u_shtiha
+    tag: standard
+    clause: "Madde 8(1)-(4)"
+  airworthiness_and_design_approval:
+    route_M2_M3: >-
+      Airworthiness rests on compliance with technical requirements set by SHGM for the class.
+      M0/M1 need a safety and conformity declaration. M2/M3 need an airworthiness certificate
+      ("ucusa elverislilik belgesi") issued by SHGM (Madde 8(5)).
+    certification_basis_status: >-
+      The 2026 text does not publish the technical requirements, and no type-certification code
+      is named. Product conformity and market surveillance will be set by a separate technical
+      regulation under Law 7223, by mass class M0-M3 (Madde 24(1)). Recommended: propose CS-LUAS
+      (JARUS) tailored by risk, with STANAG 4703 cross-references, as the certification basis in
+      an early meeting with SHGM.
+    software_certification: >-
+      Mandatory for all UAVs except Basit IHA. Covers flight control software, control
+      station software and multi-UAV command software, issued by SHGM (Madde 23(4)). UAVs subject
+      to registration must pass SHGM software certification tests (Madde 8(6)).
+    compliance_software_module: >-
+      An embedded "uyum yazilim modulu" in the control station must execute IHATTYS commands
+      without delay: envelope reduction, re-routing, landing and flight termination
+      (Madde 23(3)). The manufacturer, importer or software supplier must integrate it.
+    mandatory_functions:
+      - "Mobile app or system link; the UAV must not operate unless the app is open and communicating; serial number verified through the database (Madde 23(1)(a))"
+      - "Geofence test of staying inside the zones and the envelope allowed by the licence (Madde 23(1)(b)); default geofence 10 m radius x 20 m height until user registration is verified (Madde 23(2))"
+      - "Remote identification for every UAV subject to registration (Madde 23(7))"
+      - "C2-link loss: automatic flight to a predefined recovery area avoiding populated areas, or flight termination (Madde 18(1))"
+      - "Radio equipment compliant with BTK technical regulations; frequency use under Law 5809 (Madde 23(5))"
+      - "Noise emission rules to be set by SHGM (Madde 23(6))"
+    import: "SHGM import conformity letter needed for imported UAVs (brand, model, serial, MTOM, class). Proof of embedded compliance module and software certification required (Madde 24(2))"
+    source: *u_shtiha
+    tag: standard
+  registration:
+    user_registration: "Mandatory for all users except Basit IHA, through IHATTYS (Madde 11(1))"
+    aircraft_registration_tescil: >-
+      Mandatory for UAVs flown with a P2 licence beyond 120 m height and/or 3000 m horizontal
+      distance (VLOS or BVLOS). A registration number and a P2 pilot are needed to receive air
+      traffic services. Procedure per SHY-7 (Madde 11(2)).
+    yk250_implication: >-
+      A MALE-type surveillance mission (above 120 m, BVLOS) requires tescil, a P2 pilot,
+      operation inside an operator, and IHATTYS flight notification for every flight.
+    existing_uav_deadline: "Registration of UAVs already in use must be done by 2027-07-31 (Madde 25(7))"
+    press_note: >-
+      Press summaries say certified-category aircraft and aircraft of 150 kg and above go into the
+      SHGM aircraft register. The official text found (Madde 11(2)) ties tescil to the
+      120 m / 3000 m flight envelope instead. The official text governs.
+    source: *u_shtiha
+    tag: standard
+  pilot_licensing:
+    principle: "Licence level is independent of UAV class and mass (Madde 15(2)); IHA0 -> P0, IHA1 -> P1, IHA2/IHA3 -> P2 (Madde 29(2))"
+    P0: {use: "amateur, VLOS, daytime", height_max_m: 120, distance_max_m: 3000, min_age: 10, medical: self-declaration, clause: "Madde 15(2)(a), 15(6), 17(1)"}
+    P1: {use: "commercial, VLOS, night allowed with suitable equipment", height_max_m: 120, distance_max_m: 3000, min_age: 18, medical: self-declaration, clause: "Madde 15(2)(b), 15(6), 17(2)"}
+    P2:
+      use: "everything in P0/P1 plus BVLOS, autonomous, cargo, flight over people/crowds, dangerous goods and other high-risk operations that need certification"
+      airspace: "Same flight-zone rules as helicopters. Envelope defined by an IHA corridor or allocated volume. Above 120 m only with coordination with the relevant institutions."
+      min_age: 18
+      medical: "At least a class 3 medical certificate from SHGM or an EASA member state"
+      operator: "P2 flights must be done within a light-aircraft operator ('cok hafif hava araci isleticisi', SHY-6A-CH) or a general aviation operator (SHY-6B) (Madde 15(2)(c), 19)"
+      clause: "Madde 15(2)(c), 15(6), 17(3), 19"
+    licence_process: "Diploma licence (training and exam at an authorised organisation, KDM-ORG), then an operational licence (KDM-ERP). Only the operational licence allows flying (Madde 15(4))."
+    autonomous_ops: "Only under P2 with SHGM operational authorisation. The OM must document the mission profile, emergency scenarios and human-intervention conditions (Madde 7(3)-(4)). AI-assisted autonomy needs a controlled permit until a separate instruction is issued (Madde 7(5))."
+    source: *u_shtiha
+    tag: standard
+  operator:
+    M2_operator_type: "M0, M1 and M2 UAVs operate within a light-aircraft operator (Madde 19(1))"
+    M3_operator_type: "M3 operates within a light-aircraft operator if MTOM is within the SHY-6A-CH category limits, otherwise within a general aviation operator (Madde 19(1))"
+    risk_assessment: "No separate per-flight risk methodology (no SORA). Risk is embedded in the licence level (Madde 9(1))."
+    sms_and_reporting: "SMS and occurrence reporting per national regulations (Madde 20)"
+    source: *u_shtiha
+    tag: standard
+  airspace:
+    zones:
+      green: "No operational permit within published altitude/conditions (P0, P1, P2). P2 needs coordination, SHGM permit and NOTAM if the height or long-range nature requires it."
+      red: "Closed by authorities. Flight only with the closing institution's consent (and the Presidency where needed), an SHGM permit and a NOTAM for a defined volume."
+      orange: "Area with an existing permit/allocation for someone else. Multi-user flights allowed only with the consent of the permit holder and the issuing authority."
+      outside_zones: "Treated as restricted. Permit from SHGM after the local governor's consent."
+    vlos_limits: {height_max_m: 120, horizontal_max_m: 3000, applies_to: [P0, P1]}
+    above_120m: "P2 only, with coordination with the relevant institutions (Madde 15(2)(c))"
+    corridors: "SHGM may set up UAV corridors for long-range BVLOS/autonomous operations. Corridor operations are P2 and need operational authorisation (Madde 14)."
+    allocated_volume: "Paid allocation of an airspace volume (m3 x days tariff) through IHATTYS. Its ceiling and floor cannot exceed the licence limits (Madde 13)."
+    flight_notification: "P2 users file a notification in IHATTYS before each operation (route or area coordinates, altitude, times) and close it after the flight (Madde 22(1))"
+    source: *u_shtiha
+    tag: standard
+    clause: "Madde 12-15, 21-22"
+  design_implications_for_yk250:
+    - "Keep MTOM strictly below 150 kg (M2). At 150.0 kg the aircraft becomes M3 (operator type may change; SHY-6A-CH limits apply)."
+    - "Plan for an SHGM airworthiness certificate (M2) with a negotiated certification basis (CS-LUAS recommended) and for SHGM software certification of the autopilot and GCS software."
+    - "Avionics must provide remote ID, geofencing driven by IHATTYS data, a GCS-embedded compliance software module able to execute IHATTYS commands, and lost-link automatic recovery or flight termination."
+    - "Airframe registration (tescil) and P2 pilots are needed for the intended surveillance missions (above 120 m, BVLOS)."
+    - "BTK-compliant C2 and payload data links."
+  open_items:
+    - "SHGM technical requirements for the M2 airworthiness certificate are not published in SHT-IHA. Ask SHGM which code (CS-LUAS, STANAG 4703-derived, SC Light-UAS) it will accept."
+    - "Separate Law 7223 technical regulation on UAV product conformity (Madde 24) - not yet located."
+    - "SHGM software certification procedure and compliance-module command set (Madde 23(3)-(4)) - not yet published or located."
+    - "SHY-6A-CH maximum take-off weight limits for light-aircraft operator categories (they decide the M3 operator type) - not checked."
+  source: *u_shtiha
+  tag: standard
+
+# -----------------------------------------------------------------------------------------------------
+# OPEN ITEMS / LIMITATIONS OF THIS RESEARCH
+# -----------------------------------------------------------------------------------------------------
+open_items:
+  - "STANAG 4703 values are from the 2014 ratification draft. Check them against the promulgated AEP-83 (2016) if it can be obtained."
+  - "ASTM F3298-24 and EUROCAE ED-325 (MoC for SC Light-UAS) are paywalled and were not read. Buy them if an FAA or EASA route is pursued."
+  - "CS-LUAS AMC LUAS.572 (fatigue / damage tolerance details) and Appendix G figures were not extracted in detail. The CS-VLA Appendix B Figure B1 digitisation is used instead."
+  - "The 54 degC / absorptivity curve was read from a figure (+/-3 degC). The livery solar absorptivity (assumed 0.5-0.6 for light grey) must be measured or taken from the paint supplier."
+  - "The engine torque factor of 6 is a conservative interpretation. A dynamic torque measurement on the L 275 EF with the chosen propeller could support a lower value."
+  - "The 2.5 mOhm bonding target and the 3 % flutter damping target are from secondary sources (abstract level only)."
+  - "Composite ETW knock-down values (strength retention) belong in the materials research file. Only the factors and the method are given here."

@@ -2358,6 +2358,15 @@ recommended_ranges:
     nominal: 150.0
     max: 180.0
     tag: estimate
+    regulatory_cap:
+      value: 149.9
+      tag: standard
+      source: "https://web.shgm.gov.tr/documents/sivilhavacilik/files/mevzuat/sektorel/talimatlar/SHT-IHA(1).pdf"
+      note: >-
+        Added in the synthesis cross-check (see corrections C-COMP-01). SHT-IHA (2026) Madde 8(1): M2 = 25 kg
+        (inclusive) to 150 kg, M3 = 150 kg (inclusive) and above. The statistical nominal (150.0 kg) and max
+        (180 kg) above are class M3. The project keeps MTOM strictly below 150 kg (standards.yaml
+        mtow_cap_for_turkish_class_M2_kg); baseline.yaml uses 145 kg as the sizing start point.
     supporting_numbers:
       class_median_W_per_N_at_18kW: 144.0
       class_median_W_per_N_at_20kW: 160.0
@@ -2439,8 +2448,8 @@ recommended_ranges:
       Comparables 0.15-0.32 (median 0.20, several from mass balance). Sanity check: at 150 kg, S = 3.0 m2, AR 12,
       CD0 0.030-0.040, e 0.75, eta_p 0.72, cruise shaft power is 4.0-4.7 kW at 30 m/s (see consistency_check);
       adding ~0.6 kW shaft for ~0.4 kW electrical load and using the engine.yaml light-load BSFC of ~540 g/kWh (30
-      % power point; may be worse below) gives ~2.5-3.0 kg/h. 0.22 x 150 = 33 kg (~44 l at 750 kg/m3) gives ~11-13
-      h before reserves.
+      % power point; may be worse below) gives ~2.5-3.0 kg/h. 0.22 x 150 = 33 kg (~44.6 l at 740 kg/m3, the
+      engine.yaml premix density; corrected from "~44 l at 750 kg/m3", see C-COMP-02) gives ~11-13 h before reserves.
   payload_mass_kg:
     min: 20.0
     nominal: 27.0
@@ -2450,7 +2459,9 @@ recommended_ranges:
       Payload fraction: core set median 0.2085 (IQR 0.1625-0.2475), power class median 0.1695 -> 24-37 kg at 150
       kg. Mass balance at 150 kg with empty fraction 0.60 and fuel fraction 0.18-0.26 leaves 21-33 kg, so 20-35 kg
       is the usable band. Nominal 27 kg = 150 - 90 (empty) - 33 (fuel). Covers a 10-20 kg stabilised EO/IR gimbal
-      plus datalink/mission computer.
+      plus datalink/mission computer. Synthesis note (C-COMP-03): components.yaml selected a 1.55 kg turret
+      (Trillium HD59-LLVV) with a 4.0 kg growth bay, so the EO/IR share of this band is small; the rest is an
+      allocation for mission/research equipment, growth reserve or fuel (see baseline.yaml mass_targets).
   empty_mass_fraction:
     min: 0.55
     nominal: 0.6
@@ -2599,3 +2610,39 @@ uncertainties:
   - >-
     Military types dominate the class; the YK-250 civil role (EO/IR only) does not change the airframe statistics,
     but civil certification (e.g. EASA specific category / SORA) may push empty mass up.
+
+# -----------------------------------------------------------------------------------------------------
+# CORRECTIONS (synthesis cross-check, 2026-10-05; see ucav250/data/research/baseline.yaml)
+# -----------------------------------------------------------------------------------------------------
+corrections:
+  - id: C-COMP-01
+    date: "2026-10-05"
+    location: recommended_ranges.mtow_kg
+    issue: >-
+      The statistical nominal MTOW (150.0 kg) and ceiling (180 kg) fall in Turkish class M3. SHT-IHA (2026)
+      Madde 8(1) puts 150 kg itself in M3 ("150 kg (dahil) ve daha fazla"). Re-checked in the official SHGM PDF.
+    fix: >-
+      Added recommended_ranges.mtow_kg.regulatory_cap (149.9 kg, tag standard). The statistics are unchanged;
+      the baseline sizing start point is 145 kg with a 149.9 kg hard cap.
+    source: "https://web.shgm.gov.tr/documents/sivilhavacilik/files/mevzuat/sektorel/talimatlar/SHT-IHA(1).pdf"
+    tag: standard
+  - id: C-COMP-02
+    date: "2026-10-05"
+    location: recommended_ranges.fuel_fraction.basis
+    issue: >-
+      The fuel volume was converted with 750 kg/m3, which matches neither this file's own convention (720 kg/m3)
+      nor the premix density used by engine.yaml and standards.yaml (740 kg/m3).
+    fix: 33 kg = 44.6 l at 740 kg/m3 (text corrected in place).
+    source: "https://www.engineeringtoolbox.com/fuels-higher-calorific-values-d_169.html"
+    tag: estimate
+  - id: C-COMP-03
+    date: "2026-10-05"
+    location: recommended_ranges.payload_mass_kg.basis
+    issue: >-
+      The basis assumed a 10-20 kg EO/IR gimbal. components.yaml selected a 1.55 kg turret (Trillium HD59-LLVV,
+      datasheet re-checked) and a 4.0 kg growth bay.
+    fix: >-
+      Note added in place. The 20-35 kg band remains a valid statistical payload capacity, but most of it is an
+      allocation (mission/research equipment, growth reserve or fuel), not EO/IR mass.
+    source: "https://www.trilliumeng.com/uploads/documents/Trillium-HD59-2026.pdf"
+    tag: manufacturer

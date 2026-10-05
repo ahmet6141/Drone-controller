@@ -1,0 +1,2328 @@
+# =====================================================================================================
+# YK-250 (ucav250) - RESEARCH PHASE - MATERIALS, PROCESSES, FASTENERS, TOLERANCES
+# Civil surveillance / research UAV, 100-150 kg MTOW class, single ~250 cc piston engine.
+# Payload: EO/IR sensors and mission equipment only (no weapons, no hardpoints, no release mechanisms).
+#
+# Conventions
+#   - SI units only: m, kg, s, N, Pa, N*m, kg/m3; temperatures in degC (key suffix _degC).
+#     Strengths and moduli are in Pa (e.g. 1.6548e+09 = 1654.8 MPa).
+#   - Every number carries "source" (URL, via YAML alias to the sources list) and "tag":
+#       manufacturer | datasheet | standard | paper | vendor | estimate
+#     "standard" is used for public design-allowable databases that follow a handbook procedure
+#     (MIL-HDBK-5G, NCAMP/CMH-17 B-basis reports), for ISO/SAE/ESA/FAA documents, and for
+#     encyclopedia reproductions of ISO tables (marked "secondary" in the source notes).
+#     Values tagged "estimate" carry a "basis" that explains the reasoning.
+#   - Imperial values were converted exactly from the printed source value:
+#       1 ksi = 6.894757 MPa, 1 Msi = 6.894757 GPa, 1 psi = 6894.757 Pa, 1 in = 25.4 mm,
+#       1 lb/in3 = 27679.9 kg/m3, 1 lbf = 4.448222 N, T[degC] = (T[degF] - 32) / 1.8.
+#   - Composite environments (NCAMP / CMH-17 naming):
+#       CTD = cold temperature dry, -54 degC (-65 degF)
+#       RTD = room temperature dry, 24 degC (75 degF)
+#       ETD = elevated temperature dry, 93 degC (200 degF)
+#       ETW = elevated temperature wet, 93 degC (200 degF), moisture-saturated (85 % RH, 63 degC)
+#       ETW2 = elevated temperature wet, 121 degC (250 degF)
+#   - Statistical basis:
+#       B-basis = 90 % of the population exceeds the value with 95 % confidence.
+#       A-basis = 99 % of the population exceeds the value with 95 % confidence.
+#       S-basis = specification minimum (MIL-HDBK-5), no statistical guarantee.
+#       mean / typical = average test value, NOT a design allowable.
+#     Which basis to use (A for single load path, B for redundant structure) and the composite
+#     special factors are set in standards.yaml (STR-* and CMP-* items); they are not repeated here.
+#   - Lamina strengths of carbon prepregs are NCAMP values normalised to the nominal cured ply
+#     thickness (fibre-dominated properties); matrix-dominated properties are as measured.
+# Accessed: 2026-10-05
+# =====================================================================================================
+
+meta:
+  project: YK-250 (ucav250)
+  topic: materials_processes_fasteners_tolerances
+  phase: research
+  date: "2026-10-05"
+  scope: >-
+    Design data for building a 100-150 kg UAV airframe with industrial processes: composite laminae
+    (out-of-autoclave carbon/epoxy prepreg UD and woven, 200 g/m2 twill prepreg, carbon wet lay-up
+    and infusion, E-glass/epoxy, aramid/epoxy), sandwich cores, structural adhesives, aircraft
+    metals (Al 7075/2024/6061/5052, 4130 steel, Ti-6Al-4V, 304 stainless), process design rules
+    (composite moulding, CNC milling, sheet metal, 4130 tube welding, SLS/FDM printing), fasteners
+    (ISO screws, nutplates, quarter-turn, inserts, joint geometry, torques) and tolerances
+    (ISO 2768, ISO 286, surface finish).
+  how_to_use: >-
+    "spec_ready" at the end of the file is the short list of design values in the schema of
+    ARCHITECTURE.md (materials / processes). Use it in code. The sections above it hold the full
+    source data (every environment and basis) so that later phases can change the selection.
+    Composite design values in spec_ready are B-basis ETW (93 degC, wet) values. They cover a skin
+    temperature up to 84 degC (black paint, CMP-001b in standards.yaml), so the CS-LUAS hot/wet
+    factor is 1.0 (CMP-003b). Apply the other factors of standards.yaml on top.
+  material_choice_summary: >-
+    Primary composite system: Solvay (ex-Cytec/ACG) MTM45-1 out-of-autoclave prepreg family, oven
+    vacuum-bag cure. It has public NCAMP B-basis data for AS4 UD tape (145 g/m2), AS4 3K plain
+    weave (193 g/m2) and 7781 E-glass (293 g/m2) with the same resin, cure and Tg, which gives one
+    consistent allowables set for the whole airframe. Gurit SE 84LV (80-120 degC cure, vacuum bag)
+    RC200T 2x2 twill is given as a lower-cost cosmetic/secondary twill skin option with
+    manufacturer mean data only.
+  related_files:
+    standards: ucav250/data/research/standards.yaml (factors of safety, A/B-basis rules, composite special factors, solar skin temperature)
+    fastener_catalog: ucav250/design/fastener_catalog.py (head dimensions, clearance holes, torque table used by code)
+    structures_library: ucav250/analysis/structlib.py (lug_axial uses Ftu and Fbru from here)
+
+# -----------------------------------------------------------------------------------------------------
+# SOURCES (anchors are reused as per-item "source" URLs below)
+# -----------------------------------------------------------------------------------------------------
+sources:
+  - id: ncamp_mtm45_as4_ud
+    url: &u_ncamp_ud "https://www.wichita.edu/industry_and_defense/NIAR/Documents/NCP-RP-2008-004-Rev-B-MTM45-1-AS4-145-UNI-Qual-Stat-report-10-20-23-Final.pdf"
+    title: "NCAMP NCP-RP-2008-004 Rev B (20 Oct 2023): ACG/Solvay MTM45-1/12K AS4-145-32%RW unidirectional tape, qualification statistical analysis report (104 pages)"
+    tag: standard
+    notes: >-
+      Tables 3-1 (NCAMP recommended B-basis), 3-3 (lamina summary) and 3-4 (laminate summary) were
+      read. Normalising CPT 0.0055 in. "MH" cure = oven vacuum bag only (NPS 81451). F1tu and F1cu
+      are back-calculated from cross-ply laminates (AI/TR/1392). Modified-CV B-basis values are
+      used where NCAMP recommends them.
+  - id: ncamp_mtm45_as4_pw
+    url: &u_ncamp_pw "https://www.wichita.edu/industry_and_defense/NIAR/Research/cytec-mtm45-1/NCP-RP-2009-037NCACG3KPWAS4FabricStatAnalysisReport01-08-19.pdf"
+    title: "NCAMP NCP-RP-2009-037 Rev N/C (8 Jan 2019): ACG MTM45-1/CF0525-36%RW 3K AS4 plain weave fabric, qualification statistical analysis report (102 pages)"
+    tag: standard
+    notes: Tables 3-1, 3-3, 3-4 read. Normalising CPT 0.0079 in. Same "MH" vacuum-bag cure.
+  - id: ncamp_mtm45_7781
+    url: &u_ncamp_7781 "https://www.wichita.edu/industry_and_defense/NIAR/Research/cytec-mtm45-1/QualificationNCP-RP-2009-009RevAMTM45-17781GlassFabric9-24-18.pdf"
+    title: "NCAMP NCP-RP-2009-009 Rev A (24 Sep 2018): ACG MTM45-1/GF0103-35%RW style 7781 E-glass fabric, qualification statistical analysis report (77 pages)"
+    tag: standard
+    notes: Tables 3-1 and 3-3 read. Normalising CPT 0.0100 in. 1 = warp, 2 = fill.
+  - id: ncamp_nps81451
+    url: &u_nps81451 "https://www.wichita.edu/industry_and_defense/NIAR/Research/cytec-mtm45-1/NPS-81451-Rev-D-September-23-2022.pdf"
+    title: "NCAMP NPS 81451 Rev D (23 Sep 2022): process specification for MTM45-1 laminate panels (oven, vacuum bag)"
+    tag: standard
+    notes: Section 4.3 baseline "MH" cure cycle and 4.3.1 vacuum requirements read.
+  - id: ncamp_nms451_7
+    url: &u_nms451_7 "https://www.wichita.edu/industry_and_defense/NIAR/Research/cytec-mtm45-1/NMS451slash7Rev-January082019ACGMTM45-1AS4PW.pdf"
+    title: "NCAMP NMS 451/7 (8 Jan 2019): MTM45-1 / 3K AS4 plain weave material specification"
+    tag: standard
+    notes: Table 1 (FAW 193 g/m2, resin content 36 %) and Table 3 (CPT, dry Tg) read.
+  - id: ncamp_nms451_4
+    url: &u_nms451_4 "https://www.wichita.edu/industry_and_defense/NIAR/Documents/NMS-451-4-Rev-D-Aug-18-2021-MTM45-1-7781.pdf"
+    title: "NCAMP NMS 451/4 Rev D (18 Aug 2021): MTM45-1 / style 7781 E-glass material specification"
+    tag: standard
+    notes: Fabric areal weight 293 g/m2 and cured ply thickness 0.0093-0.0105 in read.
+  - id: ncamp_mtm45_page
+    url: &u_ncamp_mtm45 "https://wichita.edu/industry_and_defense/NIAR/Research/cytec-mtm45-1.php"
+    title: NCAMP MTM45-1 material page (index of specifications and statistical reports)
+    tag: standard
+    notes: MTM45-1 is described there as a medium-temperature, out-of-autoclave, oven-vacuum-bag cure epoxy prepreg.
+  - id: agate_t700_2510_pw
+    url: &u_agate_2510 "https://thyme.ornl.gov/CFCrush/materials/cmh17/wp3.3-033051-134.pdf"
+    title: "AGATE-WP3.3-033051-134 (Oct 2002): A- and B-basis design allowables for Toray T700SC-12K-50C/#2510 plain weave fabric [SI units]"
+    tag: standard
+    notes: >-
+      Cross-check only (a 132 degC vacuum-bag prepreg used in general aviation). Moduli in the
+      summary table are printed as 0.056 "GPa" (factor-1000 unit typo; 56 GPa is meant).
+  - id: gurit_se84lv
+    url: &u_se84lv "https://www.gurit.com/wp-content/uploads/2025/12/PDS-SE84LV-03-0625.pdf"
+    title: "Gurit SE 84LV product data sheet PDS-SE84LV-03-0625 (Jun 2025)"
+    tag: manufacturer
+    notes: Mean values from a single batch, 85 degC / 10 h cure. Woven values normalised to 55 % Vf, UD to 60 % Vf.
+  - id: hexcel_8552
+    url: &u_hex8552 "https://hexcel.com/wp-content/uploads/2025/12/HexPly_8552_eu_DataSheet1.pdf"
+    title: "Hexcel HexPly 8552 product data sheet (EU)"
+    tag: manufacturer
+    notes: Autoclave 180 degC system; used only as an autoclave-grade cross-check of the OOA values.
+  - id: hexcel_prepreg_technology
+    url: &u_hex_ppt "https://www.hexcel.com/user_area/content_media/raw/Prepreg_Technology.pdf"
+    title: "Hexcel, HexPly Prepreg Technology (publication FGU 017c)"
+    tag: manufacturer
+    notes: Appendix B (cured ply thickness, fibre volume, density formulas) and section C (vacuum bag vs autoclave) read.
+  - id: performance_composites
+    url: &u_pc "http://www.performance-composites.com/carbonfibre/mechanicalproperties_2.asp"
+    title: "Performance Composites Ltd, Mechanical properties of carbon fibre composite materials (fibre/epoxy, 120 degC cure, Vf 60 % UD / 50 % fabric, RT dry)"
+    tag: vendor
+    notes: Typical values, "for reference only". Company in liquidation since 2009; page still online. Used for aramid/epoxy and as a sanity check.
+  - id: abdurohman_2026
+    url: &u_process_cmp "https://journal.unimma.ac.id/AutomotiveExperiences/article/view/16310"
+    title: "Abdurohman K. et al., Effect of manufacturing route and fiber orientation on the mechanical performance of carbon fiber composites, Automotive Experiences 9(2):365-393, 2026"
+    tag: paper
+    notes: Abstract read only. 0 deg UD carbon/epoxy tensile strength by route - hand lay-up 507.7, vacuum bag 685.7, vacuum infusion 774.3 MPa.
+  - id: evonik_rohacell_wf
+    url: &u_rohacell "https://products.evonik.com/assets/23/50/ROHACELL_WF_and_WF_HT_May_2026_EN_Asset_4252350.pdf"
+    title: "Evonik ROHACELL WF / WF-HT product information (May 2026)"
+    tag: manufacturer
+    notes: Typical values at nominal density, minimum values in brackets.
+  - id: airex_c70
+    url: &u_airex "https://www.metyx.com/wp-content/uploads/2020/10/TDS-AIREX-C70-E-04.2020.pdf"
+    title: "3A Composites AIREX C70 technical data sheet GM-TDS-106 (04.2020), hosted by distributor Metyx"
+    tag: manufacturer
+    notes: Average values at nominal density; minimum values per DNV-GL type approval.
+  - id: hexcel_hrh10_eu
+    url: &u_hrh10_eu "https://hexcel.com/wp-content/uploads/2025/12/HexWeb_HRH10_DataSheet_eu1.pdf"
+    title: "Hexcel HexWeb HRH-10 aramid/phenolic honeycomb data sheet (EU, metric designations)"
+    tag: manufacturer
+    notes: Typical values, MIL-STD-401B, 12.7 mm core thickness.
+  - id: hexcel_hrh10_us
+    url: &u_hrh10_us "https://hexcel.com/wp-content/uploads/2026/01/HexWeb_HRH10_DataSheet_us.pdf"
+    title: "Hexcel HexWeb HRH-10 data sheet (US, imperial designations, typical and minimum values)"
+    tag: manufacturer
+  - id: threem_dp490
+    url: &u_dp490 "https://multimedia.3m.com/mws/media/2409614O/"
+    title: "3M Scotch-Weld Epoxy Adhesive DP490 technical data sheet, V-9 (May 2026)"
+    tag: manufacturer
+  - id: henkel_ea9394
+    url: &u_ea9394 "https://dm.henkel-dam.com/is/content/henkel/EA-9394-Aero"
+    title: "Henkel LOCTITE EA 9394 AERO (Hysol EA 9394) technical process bulletin"
+    tag: manufacturer
+  - id: huntsman_araldite_2015_1
+    url: &u_ar2015 "https://www.chemical-concepts.com/wp-content/uploads/2022/06/47e731f62fe3d9767848733bd251fc70.pdf"
+    title: "Huntsman Araldite 2015-1 A/B technical data sheet (US edition, 1/5/2018), hosted by distributor Chemical Concepts"
+    tag: manufacturer
+    notes: Araldite 2015 has been replaced by 2015-1. The EU TDS (conro.com copy, July 2018) gives the same Tg and tensile data; its lap-shear tables are bar charts only.
+  - id: huntsman_araldite_2015_1_eu
+    url: &u_ar2015_eu "https://conro.com/downloads/Manuals/Araldite-2015-1-TDS.pdf"
+    title: "Huntsman Araldite 2015-1 technical data sheet (EU edition, July 2018), hosted by distributor Conro"
+    tag: manufacturer
+  - id: mil_hdbk_5g_v1
+    url: &u_h5v1 "https://archive.org/download/DTIC_ADA295150/DTIC_ADA295150.pdf"
+    title: "MIL-HDBK-5G Vol. 1 (1 Nov 1994), Metallic materials and elements for aerospace vehicle structures (DTIC ADA295150, public release)"
+    tag: standard
+    notes: >-
+      Scanned PDF without a text layer; tables were rendered and read: 2.3.1.0(c) low-alloy steels,
+      2.7.1.0(b) AISI 301 and other annealed stainless, 3.2.3.0(b1) 2024 sheet/plate,
+      3.5.1.0(b1) 5052, 3.6.2.0(b1) 6061 sheet, 3.7.4.0(b1) 7075 sheet/plate. MIL-HDBK-5 was replaced
+      by MMPDS (paywalled). MMPDS values for these mature alloys are expected to be equal or very
+      close, but this was not verified.
+  - id: mil_hdbk_5g_v2
+    url: &u_h5v2 "https://archive.org/download/DTIC_ADA322636/DTIC_ADA322636.pdf"
+    title: "MIL-HDBK-5G Vol. 2 incl. Change Notice 1 (Dec 1995) (DTIC ADA322636, public release)"
+    tag: standard
+    notes: Tables 5.4.1.0(b) Ti-6Al-4V sheet/plate and 8.2.2.1.1(a)-(c) fusion-welded steel joints rendered and read.
+  - id: dlr_design_rules
+    url: &u_dlr "https://elib.dlr.de/107894/1/__Bsfait00_fa_Archive_IB_2016_IB_2016_173_MA%20Werthen.pdf"
+    title: "E. Werthen, Design rules consideration within ... optimization (DLR IB-FA-BS-2016-173, 2016), Tables 2-1 and 2-2"
+    tag: paper
+    notes: Summarises the aircraft-industry laminate rules of Niu (Composite Airframe Structures, 1992), MIL-HDBK-17-3F (2002) and Airbus training.
+  - id: nasa_cr198266
+    url: &u_cr198266 "https://ntrs.nasa.gov/citations/19960029069"
+    title: "Portanova M.A., Masters J.E., Standard methods for bolt-bearing testing of textile composites, NASA CR-198266, Dec 1995"
+    tag: paper
+    notes: Recommends W/D >= 6 and e/D >= 3 so that bearing (not net-tension or shear-out) is measured.
+  - id: hart_smith_cr112235
+    url: &u_hartsmith "https://ntrs.nasa.gov/api/citations/19740005082/downloads/19740005082.pdf"
+    title: "L.J. Hart-Smith, Adhesive-bonded double-lap joints, NASA CR-112235, Jan 1973"
+    tag: paper
+    notes: Section on design (practical overlap, eq. 107) and elastic-trough guidance read.
+  - id: ecss_insert_handbook
+    url: &u_ecss_ins "https://ecss.nl/wp-content/uploads/handbooks/ecss-e-hb/ECSS-E-HB-32-22A20March2011.pdf"
+    title: "ECSS-E-HB-32-22A, Insert design handbook (ESA, 20 Mar 2011)"
+    tag: standard
+    notes: Sections 7.3-7.5 (potting radius, potting height), 10.6.3 (safety factor), 18.1 (edge distance) read.
+  - id: ecss_fastener_handbook
+    url: &u_ecss_fst "https://ecss.nl/wp-content/uploads/handbooks/ecss-e-hb/ECSS-E-HB-32-23A16April2010.pdf"
+    title: "ECSS-E-HB-32-23A, Threaded fasteners handbook (ESA, 16 Apr 2010)"
+    tag: standard
+    notes: Section 6.2 (coefficient of utilisation), Table 12-1 (thread geometry), 13.2 (galvanic corrosion) read.
+  - id: nasa_rp1228
+    url: &u_rp1228 "https://ntrs.nasa.gov/api/citations/19900009424/downloads/19900009424.pdf"
+    title: "R.L. Barrett, Fastener design manual, NASA Reference Publication 1228, Mar 1990"
+    tag: standard
+    notes: Torque-tension section read (T = K F d, K = 0.2 commonly assumed, 0.15 more realistic steel-on-steel).
+  - id: faa_ac43_13_1b
+    url: &u_ac43 "https://www.faa.gov/documentLibrary/media/Advisory_Circular/AC_43.13-1B_w-chg1.pdf"
+    title: "FAA AC 43.13-1B incl. Change 1 (2001), Acceptable methods, techniques and practices - aircraft inspection and repair"
+    tag: standard
+    notes: Table 4-6 (bend radii), 4-56 (setback), 4-57/4-58 (rivet edge distance and spacing), 4-74...4-99 (welding, filler table 4-15, engine mounts) read.
+  - id: hubs_cnc_guide
+    url: &u_hubs "https://www.hubs.com/guides/cnc-machining/"
+    title: "Protolabs Network (formerly Hubs), CNC machining design guide"
+    tag: vendor
+  - id: sendcutsend_bending
+    url: &u_scs "https://sendcutsend.com/guidelines/bending/"
+    title: "SendCutSend, sheet metal bending guidelines"
+    tag: vendor
+  - id: wiki_screw
+    url: &u_wiki_screw "https://en.wikipedia.org/wiki/Screw"
+    title: "Wikipedia, Screw - table 'Head markings and properties for metric hex-head cap screws' (ISO 898-1 / ISO 3506-1 values)"
+    tag: standard
+    notes: Secondary reproduction of ISO 898-1 and ISO 3506-1 minimum values (the standards are paywalled). Cross-check against the purchased standard before release.
+  - id: wiki_engineering_fit
+    url: &u_wiki_fit "https://en.wikipedia.org/wiki/Engineering_fit"
+    title: "Wikipedia, Engineering fit - ISO 286 preferred fits and limit-deviation table"
+    tag: standard
+    notes: >-
+      Secondary reproduction of ISO 286-2 deviations. The table header lists 12 size ranges but the
+      rows hold 8 values; they map to 0-3, 3-6, 6-10, 10-18, 18-30, 30-50, 50-80, 80-120 mm
+      (checked against the IT6/IT7 formula of ISO 286-1 for each range).
+  - id: rapiddirect_iso2768
+    url: &u_iso2768 "https://www.rapiddirect.com/blog/iso-2768/"
+    title: "RapidDirect, ISO 2768 general tolerances (reproduction of ISO 2768-1 tables 1-3 and ISO 2768-2 tables)"
+    tag: vendor
+    notes: Secondary reproduction; values agree with the well-known ISO 2768-1 table.
+  - id: wiki_surface_roughness
+    url: &u_wiki_ra "https://en.wikipedia.org/wiki/Surface_roughness"
+    title: "Wikipedia, Surface roughness - ISO roughness grade numbers N1-N12 vs Ra"
+    tag: standard
+    notes: Secondary reproduction of ISO 1302 roughness grades.
+  - id: skybolt_catalog_2025
+    url: &u_skybolt "https://www.skybolt.com/wp-content/uploads/2025/07/Skybolt-Fasteners-Catalog-2025-Catalog.pdf"
+    title: "Skybolt Fasteners product catalog (2025 edition; pages printed '2023 Product Catalog')"
+    tag: manufacturer
+    notes: CLoc SK2600 (Camloc 2600 replacement) and SK4002 (Camloc 4002 replacement) grip tables and loads read. "CLoc-CamLoc grip charts are identical" (catalog note).
+  - id: aircraftspruce_k1000
+    url: &u_acs_k1000 "https://www.aircraftspruce.com/catalog/hapages/anchornutsk1000.php"
+    title: "Aircraft Spruce, two-lug all-metal anchor nuts K1000 / MS21047 (cross reference NAS680, NAS1023A)"
+    tag: vendor
+  - id: wiki_nutplate
+    url: &u_wiki_nutplate "https://en.wikipedia.org/wiki/Nutplate"
+    title: "Wikipedia, Plate nut (nutplate) - fixed and floating two-lug anchor nuts, MS21047"
+    tag: paper
+  - id: clickbond_nutplates
+    url: &u_clickbond "https://www.clickbond.com/products/nutplates/"
+    title: "Click Bond, rivetless (adhesive-bonded) nutplates product page"
+    tag: manufacturer
+  - id: wiki_rivet_nut
+    url: &u_wiki_rivnut "https://en.wikipedia.org/wiki/Rivet_nut"
+    title: "Wikipedia, Rivet nut"
+    tag: paper
+  - id: wiki_dzus
+    url: &u_wiki_dzus "https://en.wikipedia.org/wiki/Dzus_fastener"
+    title: "Wikipedia, Dzus fastener (Southco brand, quarter-turn spiral cam)"
+    tag: paper
+  - id: markforged_composites
+    url: &u_markforged "https://static.markforged.com/downloads/composites-data-sheet.pdf"
+    title: "Markforged composites material datasheet REV 5.0 (08/01/2021) - Onyx (chopped-carbon PA) and continuous fibres"
+    tag: manufacturer
+  - id: eos_pa2200
+    url: &u_pa2200 "https://www.shapeways.com/wp-content/uploads/2021/10/Material-Data-sheet-Nylon-12-PA2200.pdf"
+    title: "EOS PA 2200 Balance 1.0 material data sheet (2018-11-22), hosted by service bureau Shapeways"
+    tag: manufacturer
+  - id: compositesworld_tg
+    url: &u_cw_tg "https://www.compositesworld.com/articles/environmental-testing-of-composites"
+    title: "D. Adams, Environmental testing of composites, CompositesWorld, 1 Apr 2019 (MOL = wet Tg - 28 degC)"
+    tag: paper
+    notes: Same source as in standards.yaml; not re-read here.
+
+# =====================================================================================================
+# 1. COMPOSITES
+# =====================================================================================================
+composites:
+  notes: >-
+    Strength keys: Xt/Xc = 1-direction (fibre / warp) tension / compression, Yt/Yc = 2-direction
+    (transverse / fill), S_0p2 = in-plane shear at 0.2 % offset, S_5pct = in-plane shear at 5 %
+    strain (or ultimate if lower), ILSS = short-beam strength (as measured). Each strength is
+    {b_basis, mean} in Pa; b_basis null means NCAMP did not publish a recommended value (reason in
+    "nb"). Moduli are mean values (moduli have no statistical basis).
+  laminae:
+    # -------------------------------------------------------------------------------------------
+    cfrp_ud_ooa_prepreg_as4_145:
+      name: Carbon/epoxy UD tape prepreg, Solvay MTM45-1 / 12K AS4, 145 g/m2, 32 % resin weight
+      kind: composite
+      process: Out-of-autoclave prepreg, oven vacuum-bag cure ("MH" cycle, see cure)
+      source: *u_ncamp_ud
+      tag: standard
+      cure:
+        description: >-
+          Vacuum >= 28 inHg (95 kPa below atmosphere) throughout; ramp 0.6-3 K/min to 79-88 degC,
+          dwell >= 3 h; ramp to 121 +/- 6 degC, dwell >= 3 h; cool under vacuum to <= 60 degC;
+          free-standing post-cure 177 +/- 6 degC for 1-2 h (ramp <= 19 K/h above 121 degC).
+        source: *u_nps81451
+        tag: standard
+      fibre_areal_weight_kg_per_m2: {value: 0.145, source: *u_ncamp_ud, tag: standard, note: grade 145 in the material designation}
+      resin_content_mass_fraction: {value: 0.32, source: *u_ncamp_ud, tag: standard}
+      cured_ply_thickness_m: {value: 1.3970e-04, source: *u_ncamp_ud, tag: standard, note: NCAMP normalising CPT}
+      fibre_volume_fraction:
+        value: 0.580
+        tag: estimate
+        source: *u_hex_ppt
+        basis: "Vf = FAW / (rho_fibre * CPT) (Hexcel Prepreg Technology appendix B) = 145 / (1790 * 0.1397e-3 * 1000); rho_fibre AS4 = 1.79 g/cm3 (Hexcel 8552 data sheet)."
+      density_kg_per_m3:
+        value: 1542.0
+        tag: estimate
+        source: *u_hex_ppt
+        basis: "Rule of mixtures 0.580 * 1790 + 0.420 * 1200; cured MTM45-1 resin density not published, 1200 kg/m3 assumed (SE 84LV cured resin 1220, 8552 1300). Uncertainty +/- 25 kg/m3."
+      tg_dry_degC: {value: 203.0, source: *u_ncamp_ud, tag: standard, method: DMA SACMA SRM 18R-94}
+      tg_wet_degC: {value: 170.8, source: *u_ncamp_ud, tag: standard}
+      max_operating_temperature_wet_degC:
+        value: 142.8
+        tag: estimate
+        source: *u_cw_tg
+        basis: MOL = wet Tg - 28 degC = 170.8 - 28 (CMH-17 practice). Far above the 84 degC black-skin temperature.
+      elastic:
+        E1_t_Pa: {value: 1.2762e+11, source: *u_ncamp_ud, tag: standard, note: RTD normalised}
+        E1_c_Pa: {value: 1.1735e+11, source: *u_ncamp_ud, tag: standard, note: RTD normalised}
+        E2_t_Pa: {value: 7.9290e+09, source: *u_ncamp_ud, tag: standard, note: RTD as measured}
+        E2_c_Pa: {value: 8.6184e+09, source: *u_ncamp_ud, tag: standard}
+        G12_Pa: {RTD: 3.9300e+09, ETW: 2.9647e+09, CTD: 4.7574e+09, ETW2: 2.3442e+09, source: *u_ncamp_ud, tag: standard}
+        nu12: {value: 0.31, source: *u_ncamp_ud, tag: standard, note: "nu12 from 0 deg compression, RTD; tension Poisson ratio not measured"}
+        E1_t_ETW_Pa: {value: 1.2866e+11, source: *u_ncamp_ud, tag: standard}
+        E1_c_ETW_Pa: {value: 1.1887e+11, source: *u_ncamp_ud, tag: standard}
+      strength_Pa:
+        CTD:
+          temperature_degC: -53.9
+          Xt: {b_basis: 1.6041e+09, mean: 1.8140e+09}
+          Xc: {b_basis: 1.4328e+09, mean: 1.5983e+09}
+          Yt: {b_basis: null, mean: 4.8953e+07, nb: "NA:A (ANOVA, 3 batches); CV 14.8 %"}
+          Yc: {b_basis: 2.2780e+08, mean: 2.6441e+08}
+          S_0p2: {b_basis: 5.2469e+07, mean: 5.7640e+07}
+          S_5pct: {b_basis: 8.3909e+07, mean: 9.2183e+07}
+          ILSS: {b_basis: 9.9353e+07, mean: 1.1273e+08}
+        RTD:
+          temperature_degC: 23.9
+          Xt: {b_basis: 1.6548e+09, mean: 1.8668e+09}
+          Xc: {b_basis: 1.2341e+09, mean: 1.3983e+09}
+          Yt: {b_basis: null, mean: 4.7712e+07, nb: "NA:A; CV 17.5 %, very scattered"}
+          Yc: {b_basis: 1.6727e+08, mean: 1.8485e+08, nb: "Stat17 B-basis > 90 % of mean; use with caution"}
+          S_0p2: {b_basis: 3.8335e+07, mean: 4.3506e+07}
+          S_5pct: {b_basis: 5.9571e+07, mean: 6.7775e+07}
+          ILSS: {b_basis: 7.6945e+07, mean: 8.7288e+07}
+        ETW:
+          temperature_degC: 93.3
+          Xt: {b_basis: 1.5567e+09, mean: 1.7698e+09}
+          Xc: {b_basis: 7.7173e+08, mean: 9.3583e+08}
+          Yt: {b_basis: null, mean: 2.7510e+07, nb: "NA:A"}
+          Yc: {b_basis: 9.0666e+07, mean: 1.0315e+08}
+          S_0p2: {b_basis: 2.5580e+07, mean: 2.8682e+07}
+          S_5pct: {b_basis: 3.7507e+07, mean: 4.2127e+07}
+          ILSS: {b_basis: 5.0470e+07, mean: 5.7295e+07}
+        ETW2:
+          temperature_degC: 121.1
+          Xt: {b_basis: 1.6349e+09, mean: 1.8481e+09}
+          Xc: {b_basis: 7.8821e+08, mean: 9.5230e+08}
+          Yt: {b_basis: null, mean: 2.2477e+07, nb: "NA:A"}
+          Yc: {b_basis: 7.5153e+07, mean: 8.4806e+07}
+          S_0p2: {b_basis: 1.9926e+07, mean: 2.2339e+07}
+          S_5pct: {b_basis: null, mean: 3.3026e+07, nb: "NA:I"}
+          ILSS: {b_basis: 4.1093e+07, mean: 4.7091e+07}
+      notes: >-
+        B-basis = NCAMP recommended (modified CV) values, Table 3-1. Transverse tension (Yt) has no
+        B-basis; for design use 0.8 x mean (estimate) or, better, a laminate-level allowable
+        (laminates section). Hot/wet knocks down compression by 37 % (Xc ETW/RTD) and shear by 33 %.
+
+    # -------------------------------------------------------------------------------------------
+    cfrp_pw_ooa_prepreg_as4_193:
+      name: Carbon/epoxy 3K plain-weave prepreg, Solvay MTM45-1 / CF0525 3K AS4 PW, 193 g/m2, 36 % resin weight
+      kind: composite
+      process: Out-of-autoclave prepreg, oven vacuum-bag cure (same "MH" cycle as the UD tape)
+      source: *u_ncamp_pw
+      tag: standard
+      fibre_areal_weight_kg_per_m2: {value: 0.193, tolerance: 0.009, source: *u_nms451_7, tag: standard}
+      resin_content_mass_fraction: {value: 0.36, tolerance: 0.03, source: *u_nms451_7, tag: standard}
+      cured_ply_thickness_m: {value: 2.0066e-04, range: [1.9202e-04, 2.1285e-04], source: *u_nms451_7, tag: standard, note: nominal = NCAMP normalising CPT; range = acceptance limits}
+      fibre_volume_fraction:
+        value: 0.537
+        tag: estimate
+        source: *u_hex_ppt
+        basis: "193 / (1790 * 0.2007e-3 * 1000) (Hexcel appendix B formula)."
+      density_kg_per_m3:
+        value: 1517.0
+        tag: estimate
+        source: *u_hex_ppt
+        basis: "0.537 * 1790 + 0.463 * 1200 (resin density assumed as for the UD tape). Hexcel 8552/AS4 PW at Vf 55.3 % is 1570 (resin 1300)."
+      tg_dry_degC: {value: 190.6, source: *u_ncamp_pw, tag: standard, method: DMA SACMA SRM 18R-94}
+      tg_wet_degC: {value: 156.3, source: *u_ncamp_pw, tag: standard}
+      max_operating_temperature_wet_degC: {value: 128.3, tag: estimate, source: *u_cw_tg, basis: MOL = wet Tg - 28 degC}
+      elastic:
+        E1_t_Pa: {value: 6.4190e+10, source: *u_ncamp_pw, tag: standard, note: "warp, RTD normalised"}
+        E2_t_Pa: {value: 6.1019e+10, source: *u_ncamp_pw, tag: standard, note: "fill, RTD normalised"}
+        E1_c_Pa: {value: 5.9502e+10, source: *u_ncamp_pw, tag: standard}
+        E2_c_Pa: {value: 5.5503e+10, source: *u_ncamp_pw, tag: standard}
+        G12_Pa: {RTD: 3.7301e+09, ETW: 2.5511e+09, CTD: 4.3230e+09, ETW2: 2.1305e+09, source: *u_ncamp_pw, tag: standard}
+        nu12: {value: 0.045, source: *u_ncamp_pw, tag: standard, note: "warp compression, RTD. Fabric in-plane nu12 is 0.04-0.10; 0.05 is a reasonable FE input."}
+      strength_Pa:
+        CTD:
+          temperature_degC: -53.9
+          Xt: {b_basis: 7.7745e+08, mean: 8.9273e+08}
+          Xc: {b_basis: null, mean: 7.0492e+08, nb: "NA:A"}
+          Yt: {b_basis: null, mean: 8.5495e+08, nb: "NA:A"}
+          Yc: {b_basis: null, mean: 6.4211e+08, nb: "NA:A"}
+          S_0p2: {b_basis: 4.5574e+07, mean: 5.4124e+07}
+          S_5pct: {b_basis: null, mean: 9.1356e+07, nb: "NA:I"}
+          ILSS: {b_basis: null, mean: 8.0462e+07, nb: "NA:A"}
+        RTD:
+          temperature_degC: 23.9
+          Xt: {b_basis: 7.9876e+08, mean: 9.1349e+08}
+          Xc: {b_basis: 5.7923e+08, mean: 6.5700e+08}
+          Yt: {b_basis: 7.5311e+08, mean: 8.6040e+08}
+          Yc: {b_basis: null, mean: 6.0343e+08, nb: "NA:A, CV 11.5 %"}
+          S_0p2: {b_basis: 3.6335e+07, mean: 4.1369e+07}
+          S_5pct: {b_basis: 6.0536e+07, mean: 6.8603e+07}
+          ILSS: {b_basis: 6.3294e+07, mean: 7.1774e+07}
+        ETW:
+          temperature_degC: 93.3
+          Xt: {b_basis: 7.4463e+08, mean: 8.6102e+08}
+          Xc: {b_basis: null, mean: 4.5492e+08, nb: "NA:A, CV 10.7 %"}
+          Yt: {b_basis: null, mean: 8.2496e+08, nb: "NA:A"}
+          Yc: {b_basis: 2.8427e+08, mean: 3.8328e+08}
+          S_0p2: {b_basis: 1.9167e+07, mean: 2.2891e+07}
+          S_5pct: {b_basis: null, mean: 3.8059e+07, nb: "NA:I"}
+          ILSS: {b_basis: 3.8266e+07, mean: 4.3437e+07}
+        ETW2:
+          temperature_degC: 121.1
+          Xt: {b_basis: 7.7014e+08, mean: 8.8715e+08}
+          Xc: {b_basis: null, mean: 3.5887e+08, nb: "NA:A"}
+          Yt: {b_basis: null, mean: 7.7856e+08, nb: "NA:A"}
+          Yc: {b_basis: 2.4869e+08, mean: 3.2798e+08}
+          S_0p2: {b_basis: 1.5996e+07, mean: 1.8133e+07}
+          S_5pct: {b_basis: 2.6958e+07, mean: 3.0820e+07}
+          ILSS: {b_basis: 2.9785e+07, mean: 3.4198e+07}
+      notes: >-
+        The fabric is balanced (warp ~ fill), so design with one value for both directions: the
+        lower B-basis of warp/fill. ETW compression B-basis exists only for fill (41.23 ksi); use it
+        for both directions. ETW in-plane shear (0.2 % offset) falls to 46 % of RTD - the main
+        hot/wet weakness of this system.
+
+    # -------------------------------------------------------------------------------------------
+    cfrp_twill_prepreg_se84lv_rc200t:
+      name: Carbon/epoxy 2x2 twill prepreg 200 g/m2 HEC fibre (T700/TR50S class), Gurit SE 84LV RC200T
+      kind: composite
+      process: Low-temperature prepreg (80-120 degC), vacuum bag or autoclave; post-cure not required
+      source: *u_se84lv
+      tag: manufacturer
+      basis_of_values: mean of a single batch, cured 10 h at 85 degC; strengths and moduli normalised to Vf 55 %
+      fibre_areal_weight_kg_per_m2: {value: 0.200, source: *u_se84lv, tag: manufacturer, note: "RC200T = 200 g/m2"}
+      resin_content_mass_fraction: {value: 0.42, source: *u_se84lv, tag: manufacturer, note: uncured}
+      cured_ply_thickness_m: {value: 2.3000e-04, source: *u_se84lv, tag: manufacturer}
+      fibre_volume_fraction: {range: [0.47, 0.53], source: *u_se84lv, tag: manufacturer}
+      density_kg_per_m3:
+        value: 1500.0
+        tag: estimate
+        source: *u_se84lv
+        basis: "Vf = 200/(1800*0.23e-3*1000) = 0.483; 0.483*1800 + 0.517*1220 (cured resin density 1.22 g/cm3 from the same data sheet)."
+      tg_degC:
+        cure_80C_12h: {value: 95.0, source: *u_se84lv, tag: manufacturer}
+        cure_85C_10h: {value: 105.0, source: *u_se84lv, tag: manufacturer}
+        cure_120C_1h: {value: 125.0, source: *u_se84lv, tag: manufacturer}
+        method: DMA ASTM D7028 (dry)
+      max_operating_temperature_degC:
+        value: 70.0
+        tag: estimate
+        source: *u_se84lv
+        basis: >-
+          Wet Tg not published. Assumed wet Tg ~ dry Tg - 20 K = 105 degC (120 degC cure), MOL = wet
+          Tg - 28 = 77 degC, rounded down to 70 degC. Restrict to light-coloured skins
+          (absorptivity <= 0.5, 66 degC per standards.yaml CMP-001b) or secondary parts.
+      elastic:
+        E1_t_Pa: {value: 6.0600e+10, source: *u_se84lv, tag: manufacturer}
+        E2_t_Pa: {value: 6.1600e+10, source: *u_se84lv, tag: manufacturer}
+        E1_c_Pa: {value: 5.8300e+10, source: *u_se84lv, tag: manufacturer}
+        E2_c_Pa: {value: 5.9000e+10, source: *u_se84lv, tag: manufacturer}
+        G12_Pa: {value: 3.8000e+09, tag: estimate, source: *u_ncamp_pw, basis: "not published; taken equal to the MTM45-1 AS4 PW RTD value (matrix dominated, similar Vf)"}
+        nu12: {value: 0.05, tag: estimate, source: *u_ncamp_pw, basis: as for the plain weave}
+      strength_Pa:
+        RT_dry_mean:
+          Xt: {mean: 7.1900e+08}
+          Yt: {mean: 6.6200e+08}
+          Xc: {mean: 7.5900e+08}
+          Yc: {mean: 7.3100e+08}
+          flexural: {mean: 8.4700e+08}
+          ILSS: {mean: 7.4800e+07}
+        design_RTD_estimate:
+          tag: estimate
+          basis: >-
+            B-basis-like = mean x 0.878 (as-built Vf 0.483 instead of the normalised 0.55) x 0.82
+            (single batch; B ~ mean (1 - 2.2 CV) with CV 8 %). In-plane shear from the PW data (RTD
+            B-basis S_0p2). Use only with the CS-LUAS hot/wet factor 2.0 (T <= 70 degC) of
+            standards.yaml CMP-003b, because no hot/wet data exist.
+          Xt: 5.1800e+08
+          Yt: 4.7700e+08
+          Xc: 5.4600e+08
+          Yc: 5.2600e+08
+          S_0p2: 3.6335e+07
+          ILSS: 5.3900e+07
+
+    # -------------------------------------------------------------------------------------------
+    cfrp_ud_prepreg_se84lv_hec:
+      name: Carbon/epoxy UD prepreg HEC fibre, Gurit SE 84LV (150-600 g/m2)
+      kind: composite
+      process: Low-temperature prepreg, vacuum bag
+      source: *u_se84lv
+      tag: manufacturer
+      basis_of_values: mean, single batch, 85 degC / 10 h cure; fibre-direction values normalised to Vf 60 %, test Vf 55 %
+      elastic:
+        E1_t_Pa: {value: 1.3400e+11, source: *u_se84lv, tag: manufacturer}
+        E1_c_Pa: {value: 1.2100e+11, source: *u_se84lv, tag: manufacturer}
+        E2_t_Pa: {value: 8.3000e+09, source: *u_se84lv, tag: manufacturer}
+      strength_Pa:
+        RT_dry_mean:
+          Xt: {mean: 2.4580e+09}
+          Xc: {mean: 1.3540e+09}
+          Yt: {mean: 3.9200e+07}
+          flexural: {mean: 1.4480e+09}
+          ILSS: {mean: 8.7000e+07}
+      notes: Alternative UD for spar caps where the MTM45-1 supply chain is not available. Same Tg limits as RC200T.
+
+    # -------------------------------------------------------------------------------------------
+    cfrp_twill_wet_layup_vacbag:
+      name: Carbon/epoxy 2x2 twill 200-245 g/m2, wet lay-up with laminating epoxy, vacuum-bag consolidated, post-cured
+      kind: composite
+      process: Wet (hand) lay-up + vacuum bag, room-temperature cure + post-cure per resin supplier
+      tag: estimate
+      source: *u_se84lv
+      basis: >-
+        No public B-basis data for a specific wet lay-up system was found. Values are scaled from the
+        Gurit RC200T twill mean values (Vf 0.55) by fibre volume (fibre-dominated properties) and
+        a process factor for voids and waviness: tension 0.95, compression 0.85, ILSS 0.70. The
+        order of magnitude of the process penalty agrees with Abdurohman 2026 (UD carbon: hand
+        lay-up 508 MPa, vacuum bag 686 MPa, infusion 774 MPa).
+      cross_check_source: *u_process_cmp
+      fibre_volume_fraction: {value: 0.42, range: [0.35, 0.45], tag: estimate, basis: "typical for vacuum-bagged wet lay-up of woven carbon; measure by ASTM D3171 on witness panels"}
+      cured_ply_thickness_m:
+        fabric_200gsm: {value: 2.6600e-04, tag: estimate, basis: "CPT = FAW/(rho_f Vf) = 200/(1790*0.42)/1000 m"}
+        fabric_245gsm: {value: 3.2600e-04, tag: estimate, basis: "245/(1790*0.42)/1000 m"}
+      density_kg_per_m3: {value: 1420.0, tag: estimate, basis: "0.42*1790 + 0.58*1150 (cured laminating epoxy ~1150 kg/m3)"}
+      tg_degC: {value: 80.0, range: [60.0, 110.0], tag: estimate, basis: "depends on resin and post-cure; RT-cure laminating epoxies post-cured at 50-80 degC reach Tg 60-100 degC. Take the resin supplier value; use MOL = wet Tg - 28 degC"}
+      elastic:
+        E1_Pa: {value: 4.6300e+10, tag: estimate, basis: "60.6 GPa x 0.42/0.55"}
+        E2_Pa: {value: 4.6300e+10, tag: estimate, basis: balanced twill}
+        G12_Pa: {value: 3.0000e+09, tag: estimate, basis: "PW RTD 3.73 GPa x 0.8 (lower Vf, resin-rich)"}
+        nu12: {value: 0.05, tag: estimate}
+      strength_Pa:
+        RT_dry_mean:
+          Xt: {mean: 5.2200e+08, basis: "719 x 0.42/0.55 x 0.95"}
+          Xc: {mean: 4.9300e+08, basis: "759 x 0.42/0.55 x 0.85"}
+          S_ult: {mean: 7.0000e+07, basis: "Performance Composites std CF fabric S = 90 MPa at Vf 0.50, x 0.42/0.50 x 0.93"}
+          ILSS: {mean: 5.2000e+07, basis: "74.8 x 0.70"}
+        design_RTD_estimate:
+          basis: "0.75 x mean (hand-process CV ~ 10 %, B ~ mean (1 - 2.5 CV)); use with CS-LUAS hot/wet factor 2.0 and manufacturing factor 1.2 (standards.yaml CMP-003b)."
+          Xt: 3.9200e+08
+          Xc: 3.7000e+08
+          S: 3.1500e+07
+          S_basis: "0.75 x 0.60 x S_ult; 0.60 = NCAMP PW RTD ratio S_0p2 / S_5pct, so S is a 0.2 % offset-equivalent value"
+          ILSS: 3.9000e+07
+
+    # -------------------------------------------------------------------------------------------
+    cfrp_twill_infusion:
+      name: Carbon/epoxy 2x2 twill or NCF 200-400 g/m2, vacuum infusion (VARI) with infusion epoxy, post-cured
+      kind: composite
+      process: Vacuum infusion, single-sided tool, flow media, cure + post-cure per resin supplier
+      tag: estimate
+      source: *u_se84lv
+      basis: "Scaled from Gurit RC200T as for wet lay-up with Vf 0.50 and process factors tension 1.0, compression 0.90, ILSS 0.80 (infusion gives the best route in Abdurohman 2026)."
+      cross_check_source: *u_process_cmp
+      fibre_volume_fraction: {value: 0.50, range: [0.45, 0.55], tag: estimate}
+      cured_ply_thickness_m:
+        fabric_200gsm: {value: 2.2300e-04, tag: estimate, basis: "200/(1790*0.50)/1000"}
+        fabric_400gsm: {value: 4.4700e-04, tag: estimate, basis: "400/(1790*0.50)/1000"}
+      density_kg_per_m3: {value: 1470.0, tag: estimate, basis: "0.50*1790 + 0.50*1150"}
+      tg_degC: {value: 90.0, range: [70.0, 120.0], tag: estimate, basis: infusion epoxies with elevated post-cure; take resin supplier value}
+      elastic:
+        E1_Pa: {value: 5.5100e+10, tag: estimate, basis: "60.6 x 0.50/0.55"}
+        E2_Pa: {value: 5.5100e+10, tag: estimate}
+        G12_Pa: {value: 3.5000e+09, tag: estimate}
+        nu12: {value: 0.05, tag: estimate}
+      strength_Pa:
+        RT_dry_mean:
+          Xt: {mean: 6.5400e+08, basis: "719 x 0.50/0.55"}
+          Xc: {mean: 6.2100e+08, basis: "759 x 0.50/0.55 x 0.90"}
+          S_ult: {mean: 8.0000e+07, basis: "90 MPa (Performance Composites, Vf 0.50) x 0.9"}
+          ILSS: {mean: 6.0000e+07, basis: "74.8 x 0.80"}
+        design_RTD_estimate:
+          basis: "0.80 x mean; hot/wet and manufacturing factors as for wet lay-up"
+          Xt: 5.2300e+08
+          Xc: 4.9700e+08
+          S: 3.8400e+07
+          S_basis: "0.80 x 0.60 x S_ult (0.2 % offset-equivalent, as for wet lay-up)"
+          ILSS: 4.8000e+07
+
+    # -------------------------------------------------------------------------------------------
+    gfrp_7781_ooa_prepreg:
+      name: E-glass/epoxy 7781 8-harness satin prepreg, Solvay MTM45-1 / GF0103, 293 g/m2, 35 % resin weight
+      kind: composite
+      process: Out-of-autoclave prepreg, oven vacuum-bag cure ("MH" cycle)
+      source: *u_ncamp_7781
+      tag: standard
+      use: radomes / antenna and GNSS windows, sensor bay doors, wear/isolation plies between carbon and aluminium
+      fibre_areal_weight_kg_per_m2: {value: 0.293, tolerance: 0.018, source: *u_nms451_4, tag: standard}
+      resin_content_mass_fraction: {value: 0.35, source: *u_ncamp_7781, tag: standard}
+      cured_ply_thickness_m: {value: 2.5400e-04, range: [2.3622e-04, 2.6670e-04], source: *u_nms451_4, tag: standard}
+      fibre_volume_fraction: {value: 0.451, tag: estimate, basis: "293/(2560*0.254e-3*1000); E-glass density 2560 kg/m3 assumed"}
+      density_kg_per_m3: {value: 1813.0, tag: estimate, basis: "0.451*2560 + 0.549*1200"}
+      tg_dry_degC: {value: 180.0, source: *u_ncamp_7781, tag: standard}
+      tg_wet_degC: {value: 160.0, source: *u_ncamp_7781, tag: standard}
+      elastic:
+        E1_t_Pa: {value: 2.4890e+10, source: *u_ncamp_7781, tag: standard, note: "warp, RTD normalised"}
+        E2_t_Pa: {value: 2.2960e+10, source: *u_ncamp_7781, tag: standard}
+        E1_c_Pa: {value: 2.3994e+10, source: *u_ncamp_7781, tag: standard}
+        E2_c_Pa: {value: 2.3787e+10, source: *u_ncamp_7781, tag: standard}
+        G12_Pa: {RTD: 3.7232e+09, ETW: 2.3442e+09, CTD: 4.4126e+09, ETW2: 2.2753e+09, source: *u_ncamp_7781, tag: standard}
+        nu12: {value: 0.123, source: *u_ncamp_7781, tag: standard, note: warp compression RTD}
+      strength_Pa:
+        CTD:
+          temperature_degC: -53.9
+          Xt: {b_basis: null, mean: 5.5772e+08, nb: "NA:A"}
+          Xc: {b_basis: 6.5142e+08, mean: 7.1781e+08}
+          Yt: {b_basis: 4.2182e+08, mean: 4.7360e+08}
+          Yc: {b_basis: 5.5627e+08, mean: 6.3328e+08}
+          S_0p2: {b_basis: 4.2196e+07, mean: 4.7781e+07}
+          ILSS: {b_basis: 7.4601e+07, mean: 8.4737e+07}
+        RTD:
+          temperature_degC: 23.9
+          Xt: {b_basis: 4.2920e+08, mean: 4.6988e+08}
+          Xc: {b_basis: 4.9298e+08, mean: 5.5937e+08}
+          Yt: {b_basis: 3.6549e+08, mean: 4.1734e+08}
+          Yc: {b_basis: null, mean: 4.8394e+08, nb: "NA:A"}
+          S_0p2: {b_basis: 3.1440e+07, mean: 3.7163e+07}
+          S_5pct: {b_basis: null, mean: 6.7569e+07, nb: "NA:I"}
+          ILSS: {b_basis: 6.8189e+07, mean: 7.1981e+07, nb: "Stat17 B > 90 % of mean"}
+        ETW:
+          temperature_degC: 93.3
+          Xt: {b_basis: 2.6572e+08, mean: 3.0654e+08}
+          Xc: {b_basis: 2.4318e+08, mean: 3.0957e+08}
+          Yt: {b_basis: 2.3559e+08, mean: 2.6724e+08}
+          Yc: {b_basis: null, mean: 3.1537e+08, nb: "NA:A"}
+          S_0p2: {b_basis: 1.4617e+07, mean: 2.0271e+07}
+          S_5pct: {b_basis: 3.1854e+07, mean: 3.6542e+07}
+          ILSS: {b_basis: 3.1509e+07, mean: 3.3509e+07}
+      notes: E-glass loses ~40 % of tension strength at ETW (resin-sensitive sizing/interface), much more than carbon. Design glass parts with ETW values.
+
+    # -------------------------------------------------------------------------------------------
+    gfrp_woven_wet_layup:
+      name: E-glass/epoxy woven 200-300 g/m2, wet lay-up, vacuum-bag consolidated
+      kind: composite
+      process: Wet lay-up + vacuum bag, RT cure + post-cure
+      tag: estimate
+      source: *u_ncamp_7781
+      basis: "Scaled from MTM45-1/7781 RTD mean (Vf 0.451) to Vf 0.40 with process factors tension 0.95, compression 0.85."
+      fibre_volume_fraction: {value: 0.40, tag: estimate}
+      cured_ply_thickness_m: {fabric_293gsm: 2.8600e-04, tag: estimate, basis: "293/(2560*0.40)/1000"}
+      density_kg_per_m3: {value: 1714.0, tag: estimate, basis: "0.40*2560 + 0.60*1150"}
+      elastic:
+        E1_Pa: {value: 2.2100e+10, tag: estimate, basis: "24.9 GPa x 0.40/0.451"}
+        E2_Pa: {value: 2.0400e+10, tag: estimate}
+        G12_Pa: {value: 3.0000e+09, tag: estimate}
+        nu12: {value: 0.13, tag: estimate}
+      strength_Pa:
+        RT_dry_mean:
+          Xt: {mean: 3.9600e+08, basis: "469.9 x 0.887 x 0.95"}
+          Xc: {mean: 4.2200e+08, basis: "559.4 x 0.887 x 0.85"}
+          S_ult: {mean: 5.5000e+07, basis: "NCAMP 7781 S_5pct RTD 67.6 MPa x 0.887 x 0.92"}
+        design_RTD_estimate:
+          basis: 0.75 x mean; hot/wet factor 2.0 per CMP-003b
+          Xt: 2.9700e+08
+          Xc: 3.1600e+08
+          S: 2.4800e+07
+          S_basis: "0.75 x 0.60 x S_ult (0.2 % offset-equivalent)"
+
+    # -------------------------------------------------------------------------------------------
+    afrp_kevlar49_fabric_epoxy:
+      name: Aramid (Kevlar 49) fabric / epoxy, 120 degC cure, Vf 0.50
+      kind: composite
+      process: Prepreg or vacuum-bagged wet lay-up
+      source: *u_pc
+      tag: vendor
+      basis_of_values: typical (not design) values, RT dry
+      density_kg_per_m3: {value: 1400.0, source: *u_pc, tag: vendor}
+      elastic:
+        E1_Pa: {value: 3.0000e+10, source: *u_pc, tag: vendor}
+        E2_Pa: {value: 3.0000e+10, source: *u_pc, tag: vendor}
+        G12_Pa: {value: 5.0000e+09, source: *u_pc, tag: vendor}
+        nu12: {value: 0.20, source: *u_pc, tag: vendor}
+      strength_Pa:
+        RT_dry_typical:
+          Xt: 4.8000e+08
+          Xc: 1.9000e+08
+          Yt: 4.8000e+08
+          Yc: 1.9000e+08
+          S: 5.0000e+07
+        ultimate_strain:
+          tension: 0.016
+          compression: 0.006
+      use_note: >-
+        Very low compression strength (40 % of tension). Use only where impact/abrasion resistance
+        matters and compression is low (belly rub strip, leading-edge erosion ply, propeller-plane
+        debris liner). Absorbs moisture, is hard to machine and drill (fuzzing) and bonds poorly;
+        avoid in bonded joints and in skins with fasteners.
+      use_note_tag: estimate
+
+    # -------------------------------------------------------------------------------------------
+    cross_checks:
+      hexcel_8552_as4_ud_autoclave:
+        source: *u_hex8552
+        tag: manufacturer
+        note: Autoclave 180 degC, RT dry mean. Shows the OOA MTM45-1 tape is within ~20 % of an autoclave system.
+        cured_ply_thickness_m: 1.3000e-04
+        fibre_volume_fraction: 0.5742
+        density_kg_per_m3: 1580.0
+        E1_t_Pa: 1.4100e+11
+        E2_t_Pa: 1.0000e+10
+        E1_c_Pa: 1.2800e+11
+        Xt_Pa: 2.2070e+09
+        Yt_Pa: 8.1000e+07
+        Xc_Pa: 1.5310e+09
+        S_Pa: 1.1400e+08
+      hexcel_8552_as4_pw_agp193_autoclave:
+        source: *u_hex8552
+        tag: manufacturer
+        fibre_volume_fraction: 0.5529
+        density_kg_per_m3: 1570.0
+        E1_t_Pa: 6.8000e+10
+        E2_t_Pa: 6.6000e+10
+        E1_c_Pa: 6.0000e+10
+        Xt_Pa: 8.2800e+08
+        Yt_Pa: 7.9300e+08
+        Xc_Pa: 8.8300e+08
+      toray_t700_2510_pw_vacbag_132C:
+        source: *u_agate_2510
+        tag: standard
+        note: >-
+          AGATE B-basis, vacuum-bag 132 degC/2 h cure, FAW 193 g/m2, CPT 0.2184 mm, Vf 0.496,
+          density 1501 kg/m3, Tg 146 degC dry / 131 degC wet. Values normalised. Shows lower Tg
+          and lower ETW compression than MTM45-1.
+        tg_dry_degC: 146.0
+        tg_wet_degC: 131.0
+        cured_ply_thickness_m: 2.1840e-04
+        density_kg_per_m3: 1501.0
+        E1_t_Pa: 5.6000e+10
+        G12_Pa: 4.0000e+09
+        RTD_Xt_b_basis_Pa: 8.4770e+08
+        RTD_Yt_b_basis_Pa: 6.7400e+08
+        RTD_Xc_b_basis_Pa: 6.0360e+08
+        RTD_Yc_b_basis_Pa: 6.2610e+08
+        ETW_Xc_b_basis_Pa: 4.0440e+08
+        ETW_Xt_b_basis_Pa: 9.7510e+08
+
+  # ---------------------------------------------------------------------------------------------
+  laminates:
+    notes: >-
+      NCAMP laminate-level B-basis values (normalised). Layup codes are % of 0 / +-45 / 90 plies.
+      "Quasi-isotropic" 25/50/25 is the default for skins, fittings and bolted joints. Use these
+      for notched (open-hole, filled-hole) and bearing checks instead of lamina values.
+      Pin bearing per NCAMP (ASTM D5961 type, e/D 3); "2 % offset" is the onset of hole
+      elongation and is the usual design bearing allowable, "ultimate" the failure load.
+    cfrp_ud_as4_145_qi_25_50_25:
+      source: *u_ncamp_ud
+      tag: standard
+      E_x_tension_Pa: 4.8263e+10
+      E_x_compression_Pa: 4.3368e+10
+      nu_xy: 0.2958
+      strength_Pa:
+        UNT_RTD: {b_basis: 6.7334e+08, mean: 7.5525e+08}
+        UNC_RTD: {b_basis: 4.8560e+08, mean: 5.3972e+08}
+        OHT_CTD: {b_basis: 3.5522e+08, mean: 3.9638e+08}
+        OHT_RTD: {b_basis: 3.5453e+08, mean: 3.9569e+08}
+        OHT_ETW2: {b_basis: 3.3777e+08, mean: 3.7894e+08}
+        OHC_RTD: {b_basis: 2.7103e+08, mean: 3.0171e+08}
+        OHC_ETW: {b_basis: null, mean: 2.6193e+08, nb: "modified-CV estimate 32.89 ksi, not in NCAMP recommended table"}
+        OHC_ETW2: {b_basis: 2.0767e+08, mean: 2.3835e+08}
+        FHC_ETW2: {b_basis: 2.6696e+08, mean: 3.1116e+08}
+        bearing_2pct_offset_RTD: {b_basis: 5.3055e+08, mean: 6.4142e+08, nb: "NCAMP recommended (Stat17), CV 8.75 %"}
+        bearing_2pct_offset_ETW2: {b_basis: 4.6285e+08, mean: 5.3621e+08}
+        bearing_ultimate_RTD: {b_basis: 7.9559e+08, mean: 8.7998e+08}
+        bearing_ultimate_ETW2: {b_basis: 5.7309e+08, mean: 6.5631e+08}
+        CAI_RTD: {b_basis: null, mean: 2.1436e+08, nb: "single condition, no basis"}
+    cfrp_pw_as4_193_qi_25_50_25:
+      source: *u_ncamp_pw
+      tag: standard
+      E_x_tension_Pa: 4.3368e+10
+      E_x_compression_Pa: 3.9024e+10
+      nu_xy: 0.296
+      strength_Pa:
+        UNT_RTD: {b_basis: null, mean: 6.4962e+08, nb: "NA:A; Table 3-4 modified-CV estimate 81.09 ksi"}
+        UNC_RTD: {b_basis: 4.4830e+08, mean: 5.1449e+08}
+        UNC_ETW2: {b_basis: null, mean: 3.0413e+08, nb: "NA:A"}
+        OHT_CTD: {b_basis: 3.1247e+08, mean: 3.5446e+08}
+        OHT_RTD: {b_basis: null, mean: 3.6618e+08, nb: "NA:A; modified-CV estimate 46.20 ksi"}
+        OHT_ETW: {b_basis: null, mean: 3.8562e+08, nb: "not in the recommended table; modified-CV estimate 46.32 ksi"}
+        OHT_ETW2: {b_basis: null, mean: 3.6218e+08, nb: "NA:A; modified-CV estimate 45.60 ksi"}
+        OHC_RTD: {b_basis: 2.5931e+08, mean: 2.8586e+08}
+        OHC_ETW: {b_basis: null, mean: 2.3042e+08, nb: "not in the recommended table; modified-CV estimate 29.01 ksi"}
+        OHC_ETW2: {b_basis: 1.7540e+08, mean: 2.0195e+08}
+        bearing_2pct_offset_RTD: {b_basis: 4.7877e+08, mean: 6.5466e+08, nb: "NCAMP recommended, CV 14.5 %"}
+        bearing_2pct_offset_ETW2: {b_basis: null, mean: 4.8939e+08, nb: "NA:A, CV 17.3 %"}
+        bearing_ultimate_RTD: {b_basis: 8.1282e+08, mean: 9.2328e+08}
+        bearing_ultimate_ETW2: {b_basis: null, mean: 7.1954e+08, nb: "NA:A; modified-CV estimate 90.04 ksi"}
+      notes: B-basis = NCAMP recommended values (Table 3-2); "modified-CV estimate" = Table 3-4 values that NCAMP does not recommend (ANOVA with 3 batches).
+    design_values_for_code:
+      tag: estimate
+      basis: >-
+        Recommended quasi-isotropic carbon laminate design allowables for YK-250 sizing (hot/wet
+        covered). OHT = lowest NCAMP-recommended OHT B-basis of UD-QI (ETW2 48.99) and PW-QI
+        (CTD 45.32; PW ETW/ETW2 means are higher than CTD). OHC = PW-QI ETW2 B-basis (lowest).
+        Bearing (2 % offset, ETW2) = min(UD-QI B-basis 67.13, PW-QI mean 70.98 x 0.85 = 60.33).
+        Unnotched values are capped by OHC/OHT because every YK-250 skin carries fastener holes or
+        is assumed to carry 6.35 mm damage (CMH-17 practice).
+      source: *u_ncamp_pw
+      OHT_Pa: 3.1247e+08
+      OHC_Pa: 1.7540e+08
+      bearing_Pa: 4.1596e+08
+      bearing_basis: "min(67.13 UD-QI ETW2 B-basis, 70.98 x 0.85 PW-QI ETW2) = 60.33 ksi"
+      E_qi_Pa: 4.3368e+10
+      G_qi_Pa: 1.7000e+10
+      G_qi_basis: "E/(2(1+nu)) = 43.4e9 / (2 x 1.296) ~ 16.7 GPa, rounded to 17 GPa"
+
+  # ---------------------------------------------------------------------------------------------
+  knockdowns_and_factors:
+    reference: >-
+      Factors of safety, A/B-basis choice, composite special factors (hot/wet 2.0 for RTD data,
+      1.0 for ETW data; manufacturing 1.2; scatter), solar skin temperatures and the max structural
+      temperature are defined in standards.yaml (CMP-001...CMP-005). They are not repeated here.
+    hot_wet_ratio_ETW_over_RTD_b_basis:
+      tag: standard
+      source: *u_ncamp_ud
+      cfrp_ud_Xt: 0.941
+      cfrp_ud_Xc: 0.625
+      cfrp_ud_S_0p2: 0.667
+      cfrp_pw_Xt: 0.932
+      cfrp_pw_S_0p2: 0.527
+      gfrp_7781_Xt: 0.619
+      gfrp_7781_Xc: 0.493
+      note: Ratios of the B-basis values in this file (ETW / RTD). Use to judge processes without ETW data.
+    process_ratio_vs_prepreg:
+      tag: estimate
+      source: *u_process_cmp
+      basis: >-
+        Strength ratio to an autoclave/OOA prepreg of the same fabric at its own Vf, including the
+        Vf drop. Hand lay-up/vacuum bag/infusion ratios from Abdurohman 2026 (UD carbon, 0 deg
+        tension): 0.66 / 0.89 / 1.00 relative to infusion. Prepreg taken as 1.05-1.15 x infusion.
+      wet_layup_vacbag_tension: 0.70
+      wet_layup_vacbag_compression: 0.60
+      infusion_tension: 0.85
+      infusion_compression: 0.78
+
+  # ---------------------------------------------------------------------------------------------
+  cores:
+    rohacell_51_wf:
+      name: Evonik ROHACELL 51 WF (PMI foam, prepreg-compatible)
+      kind: core
+      source: *u_rohacell
+      tag: manufacturer
+      basis_of_values: typical at nominal density, minimum in "min"
+      density_kg_per_m3: {typical: 52.0, tolerance: 12.0}
+      compressive_strength_Pa: {typical: 6.0000e+05, min: 4.0000e+05}
+      tensile_strength_Pa: {typical: 1.6000e+06, min: 8.8000e+05}
+      elastic_modulus_Pa: {typical: 7.5000e+07, min: 4.5000e+07}
+      shear_strength_Pa: {typical: 8.0000e+05, min: 5.0000e+05, method: DIN 53294}
+      shear_modulus_Pa: {typical: 2.0000e+07, min: 1.4000e+07}
+      strain_at_break: 0.030
+      cte_per_K: 3.1e-5
+      process_limits: {max_cure_temperature_degC: 130.0, max_cure_pressure_Pa: 7.0000e+05, creep_le_4pct_at_130C_Pa: 2.0000e+05, creep_test_time_s: 7200.0, note: "WF-HT grade: 180 degC, 0.25 MPa creep pressure for 2 h"}
+      compatibility: MTM45-1 MH cure (121 degC + 177 degC free-standing post-cure) - post-cure is after demould, core already bonded; check that 177 degC post-cure does not exceed WF limit -> use WF-HT or post-cure before core bonding (open item).
+    rohacell_71_wf:
+      name: Evonik ROHACELL 71 WF
+      kind: core
+      source: *u_rohacell
+      tag: manufacturer
+      density_kg_per_m3: {typical: 75.0, tolerance: 15.0}
+      compressive_strength_Pa: {typical: 1.3000e+06, min: 1.0500e+06}
+      tensile_strength_Pa: {typical: 2.2000e+06, min: 1.5600e+06}
+      elastic_modulus_Pa: {typical: 1.0500e+08, min: 7.5000e+07}
+      shear_strength_Pa: {typical: 1.3000e+06, min: 1.0000e+06}
+      shear_modulus_Pa: {typical: 3.4000e+07, min: 2.4100e+07}
+      strain_at_break: 0.030
+      process_limits: {max_cure_temperature_degC: 130.0, max_cure_pressure_Pa: 7.0000e+05, creep_le_4pct_at_130C_Pa: 3.0000e+05, note: "WF-HT grade: 180 degC, 0.5 MPa"}
+    airex_c70_75:
+      name: 3A AIREX C70.75 (cross-linked PVC foam)
+      kind: core
+      source: *u_airex
+      tag: manufacturer
+      basis_of_values: average and DNV-GL minimum
+      density_kg_per_m3: {average: 80.0, range: [72.0, 92.0]}
+      compressive_strength_Pa: {average: 1.4500e+06, min: 1.1000e+06}
+      compressive_modulus_Pa: {average: 1.0400e+08, min: 8.0000e+07}
+      tensile_strength_Pa: {average: 2.0000e+06, min: 1.6000e+06}
+      tensile_modulus_Pa: {average: 6.6000e+07, min: 5.0000e+07}
+      shear_strength_Pa: {average: 1.2000e+06, min: 1.0000e+06, method: ISO 1922}
+      shear_modulus_Pa: {average: 3.0000e+07, min: 2.4000e+07, method: ASTM C393}
+      shear_elongation_at_break: {average: 0.18, min: 0.10}
+      thermal_conductivity_W_per_mK: 0.033
+      process_limits:
+        max_process_temperature_degC: null
+        note: >-
+          Not given in the TDS read (it lists "pre-preg processing"). PVC foams are normally limited
+          to ~80-120 degC with outgassing; do not use with the 121 degC MTM45-1 cure without the
+          supplier's processing guide (open item). Suitable for infusion / wet lay-up parts.
+    nomex_hrh10_3p2_48:
+      name: Hexcel HexWeb HRH-10-3.2-48 (US designation HRH-10-1/8-3.0), aramid/phenolic honeycomb
+      kind: core
+      source: *u_hrh10_eu
+      tag: manufacturer
+      density_kg_per_m3: {nominal: 48.0, tolerance_fraction: 0.10}
+      cell_size_m: 3.2e-3
+      compression_bare_strength_Pa: {typical: 2.0700e+06, min: 1.6203e+06}
+      compression_stabilised_strength_Pa: {typical: 2.2400e+06, min: 1.8616e+06}
+      compression_stabilised_modulus_Pa: {typical: 1.3800e+08}
+      shear_L_strength_Pa: {typical: 1.2100e+06, min: 1.0687e+06}
+      shear_L_modulus_Pa: {typical: 4.1000e+07}
+      shear_W_strength_Pa: {typical: 6.9000e+05, min: 5.8605e+05}
+      shear_W_modulus_Pa: {typical: 2.4000e+07}
+      min_source: *u_hrh10_us
+      thickness_tolerance_m: {t_3_to_50mm: 0.125e-3, t_50_to_100mm: 0.25e-3}
+      notes: >-
+        L = ribbon direction. Strongly orthotropic (W shear ~ 57 % of L): orient L along the main
+        shear path (spar direction). Needs film adhesive or a tacky prepreg for the skin bond
+        (fillet), edge close-outs and potting for inserts. Nomex softens at 230-260 degC (data sheet).
+    selection_note:
+      tag: estimate
+      text: >-
+        Weight-specific shear strength (typical): Nomex 48 L 25.2, Rohacell 71 WF 17.3, Airex C70.75
+        15.0, Rohacell 51 WF 15.4 (Pa per kg/m3). Nomex for prepreg wing/tail skins with film
+        adhesive; Rohacell WF for co-cured complex-shape prepreg sandwich (fairings, hatches) where
+        no film adhesive is wanted; Airex C70 for infused/wet-laid secondary parts.
+
+  # ---------------------------------------------------------------------------------------------
+  adhesives:
+    threem_dp490:
+      name: 3M Scotch-Weld DP490 (black, toughened two-part epoxy, 2:1 by volume)
+      kind: adhesive
+      source: *u_dp490
+      tag: manufacturer
+      lap_shear_Pa:
+        aluminium_sandblasted_23C: 2.3000e+07
+        aluminium_sandblasted_minus40C: 2.3000e+07
+        aluminium_sandblasted_82C: 9.5000e+06
+        aluminium_after_240h_85C_85RH: 1.5000e+07
+        stainless_sandblasted_23C: 2.4000e+07
+        steel_sandblasted_23C: 2.7000e+07
+        titanium_sandblasted_23C: 2.0000e+07
+        cfrp_epoxy_ipa_wipe_23C: 1.9000e+07
+        test: ASTM D1002 / ISO 4587, 25 x 12.7 mm overlap, 0.07-0.25 mm bondline
+      worklife_s: 5400.0
+      time_to_full_strength_s: 172800.0
+      thermal_conductivity_W_per_mK: 0.202
+      service_temperature_degC:
+        min: -40.0
+        max: 80.0
+        tag: estimate
+        basis: Lap shear falls from 23 MPa (23 degC) to 9.5 MPa at 82 degC (41 %). Limit structural use to 80 degC; older 3M literature quotes 120 degC resistance (not in the current TDS).
+    henkel_ea9394:
+      name: Henkel LOCTITE EA 9394 AERO (Hysol EA 9394), aluminium-filled paste, RT cure, MMM-A-132 Type I Class 3
+      kind: adhesive
+      source: *u_ea9394
+      tag: manufacturer
+      lap_shear_Pa:
+        test: ASTM D1002, 2024-T3 bare, phosphoric acid anodised, cured 5 days at 25 degC
+        minus55C: 2.2753e+07
+        plus25C: 2.8958e+07
+        plus82C: 2.0684e+07
+        plus93C: 1.9995e+07
+        plus121C: 1.5858e+07
+        plus149C: 1.1032e+07
+        plus177C: 8.2737e+06
+        plus204C: 4.1369e+06
+      t_peel_N_per_m: 875.6
+      t_peel_note: "5 lb/in at 25 degC = 875.6 N/m"
+      bulk:
+        tensile_strength_Pa: 4.6000e+07
+        tensile_modulus_Pa: 4.2370e+09
+        shear_modulus_dry_Pa: 1.4610e+09
+        shear_modulus_wet_Pa: 1.0270e+09
+        compressive_strength_Pa: 6.8900e+07
+        elongation: 0.0166
+        density_kg_per_m3: 1360.0
+        tg_dry_degC: 78.0
+        tg_wet_degC: 68.0
+      service_temperature_degC: {value: 177.0, definition: "temperature at which lap shear still >= 6.9 MPa (TDS definition)", source: *u_ea9394, tag: manufacturer}
+      pot_life_s: 5400.0
+      cure: 3-5 days at 25 degC, or 1 h at 66 degC
+      mix_ratio_by_mass: "100:17 (A:B)"
+      use: potting of inserts, liquid shim, structural paste bonds near the engine bay
+    huntsman_araldite_2015_1:
+      name: Huntsman Araldite 2015-1 (successor of Araldite 2015), thixotropic toughened epoxy paste
+      kind: adhesive
+      source: *u_ar2015
+      tag: manufacturer
+      lap_shear_Pa:
+        test: ASTM D1002, cured 24 h at 25 degC, tested at 25 degC
+        primed_aluminium: 1.8202e+07
+        treated_steel: 1.6478e+07
+        stainless_steel: 1.8754e+07
+        specification_minimum_A501: 1.5000e+07
+      bulk:
+        tensile_strength_Pa: 3.1000e+07
+        tensile_modulus_Pa: 1.6000e+09
+        elongation: 0.042
+        flexural_strength_Pa: 4.3000e+07
+        tg_degC: 78.0
+        tg_method: DMA, cure 1 h at 80 degC
+        shear_storage_modulus_Pa: {minus50C: 1.8000e+09, plus0C: 1.0000e+09, plus20C: 9.0000e+08, plus50C: 5.4000e+08, plus75C: 6.1000e+07, plus100C: 1.2000e+07}
+      optimum_bondline_m: [5.0e-5, 1.0e-4]
+      pot_life_s: {range: [2700.0, 3300.0], note: 100 g at 25 degC}
+      service_temperature_degC:
+        max: 60.0
+        tag: estimate
+        basis: Tg 78 degC and shear modulus down to 61 MPa at 75 degC (93 % loss). Structural use limited to 60 degC; not for dark skins in sun.
+      eu_tds: *u_ar2015_eu
+    selection:
+      tag: estimate
+      text: >-
+        EA 9394 for hot areas (engine bay, exhaust-side fittings, potting); DP490 for general
+        metal-to-composite and composite-to-composite secondary bonds up to 80 degC; Araldite 2015-1
+        only for interior, light-coloured or low-temperature bonds. Primary bonds need surface
+        preparation (peel ply / grit blast / PAA for aluminium) and process control per
+        standards.yaml bonded-structure items.
+
+# =====================================================================================================
+# 2. METALS (MIL-HDBK-5G design allowables; L = longitudinal / rolling direction, LT = long transverse)
+# =====================================================================================================
+metals:
+  notes: >-
+    Values as printed in MIL-HDBK-5G (1994), converted to SI. Bearing values (Fbru, Fbry) are
+    "dry pin" values at edge-distance ratio e/D = 1.5 and 2.0 (MIL-HDBK-5 section 1.4.7.1); for
+    e/D between 1.5 and 2.0 interpolate linearly, below 1.5 not allowed. Fsu is the ultimate shear
+    strength. Use A-basis for single-load-path parts and B-basis for redundant parts
+    (standards.yaml STR rules). S-basis = specification minimum.
+  al_7075_t6_sheet:
+    name: Aluminium 7075-T6 (and T62) bare sheet, 1.02-3.18 mm (0.040-0.125 in), AMS 4045 / QQ-A-250/12
+    kind: metal
+    source: *u_h5v1
+    tag: standard
+    table: MIL-HDBK-5G Table 3.7.4.0(b1)
+    density_kg_per_m3: 2796.0
+    E_Pa: 7.1016e+10
+    E_c_Pa: 7.2395e+10
+    G_Pa: 2.6890e+10
+    nu: 0.33
+    A_basis_Pa:
+      Ftu_L: 5.3779e+08
+      Ftu_LT: 5.3779e+08
+      Fty_L: 4.8263e+08
+      Fty_LT: 4.6884e+08
+      Fcy_L: 4.7574e+08
+      Fcy_LT: 4.9642e+08
+      Fsu: 3.2405e+08
+      Fbru_eD1p5: 8.3427e+08
+      Fbru_eD2p0: 1.0756e+09
+      Fbry_eD1p5: 7.0327e+08
+      Fbry_eD2p0: 8.2048e+08
+    B_basis_Pa:
+      Ftu_L: 5.5158e+08
+      Ftu_LT: 5.5158e+08
+      Fty_L: 4.9642e+08
+      Fty_LT: 4.8263e+08
+      Fcy_L: 4.8953e+08
+      Fcy_LT: 5.1021e+08
+      Fsu: 3.3095e+08
+      Fbru_eD1p5: 8.5495e+08
+      Fbru_eD2p0: 1.1032e+09
+      Fbry_eD1p5: 7.2395e+08
+      Fbry_eD2p0: 8.4116e+08
+    elongation_min: 0.08
+    notes: Poor formability in T6 (see sheet_metal bend radii); form in O or W temper and age, or machine from plate. Stress-corrosion sensitive in ST direction.
+  al_7075_t651_plate:
+    name: Aluminium 7075-T651 plate, 6.35-25.4 mm (0.250-1.000 in), AMS 4045 / QQ-A-250/12
+    kind: metal
+    source: *u_h5v1
+    tag: standard
+    table: MIL-HDBK-5G Table 3.7.4.0(b1)
+    density_kg_per_m3: 2796.0
+    E_Pa: 7.1016e+10
+    E_c_Pa: 7.3084e+10
+    G_Pa: 2.6890e+10
+    nu: 0.33
+    t_6p35_to_12p7mm:
+      A_basis_Pa: {Ftu_L: 5.3090e+08, Ftu_LT: 5.3779e+08, Fty_L: 4.7574e+08, Fty_LT: 4.6195e+08, Fcy_L: 4.6195e+08, Fcy_LT: 4.8953e+08, Fsu: 2.9647e+08, Fbru_eD1p5: 8.0669e+08, Fbru_eD2p0: 9.9974e+08, Fbry_eD1p5: 6.6879e+08, Fbry_eD2p0: 7.8600e+08}
+      B_basis_Pa: {Ftu_L: 5.4469e+08, Ftu_LT: 5.5158e+08, Fty_L: 4.8953e+08, Fty_LT: 4.7574e+08, Fcy_L: 4.7574e+08, Fcy_LT: 5.0332e+08, Fsu: 3.0337e+08, Fbru_eD1p5: 8.2737e+08, Fbru_eD2p0: 1.0204e+09, Fbry_eD1p5: 6.8948e+08, Fbry_eD2p0: 8.1358e+08}
+      elongation_min: 0.09
+    t_12p7_to_25p4mm:
+      A_basis_Pa: {Ftu_L: 5.3090e+08, Ftu_LT: 5.3779e+08, Fty_L: 4.8263e+08, Fty_LT: 4.6884e+08, Fcy_L: 4.6884e+08, Fcy_LT: 4.9642e+08, Fsu: 3.0337e+08, Fbru_eD1p5: 8.0669e+08, Fbru_eD2p0: 9.9974e+08, Fbry_eD1p5: 6.8948e+08, Fbry_eD2p0: 8.0669e+08}
+      B_basis_Pa: {Ftu_L: 5.4469e+08, Ftu_LT: 5.5158e+08, Fty_L: 4.9642e+08, Fty_LT: 4.8263e+08, Fcy_L: 4.8263e+08, Fcy_LT: 5.1021e+08, Fsu: 3.1026e+08, Fbru_eD1p5: 8.2737e+08, Fbru_eD2p0: 1.0204e+09, Fbry_eD1p5: 7.1016e+08, Fbry_eD2p0: 8.2737e+08}
+      elongation_min: 0.07
+    notes: Standard material for machined fittings (wing attach, gear and engine-mount brackets). ST properties are lower for thick plate (>51 mm); not needed here.
+  al_2024_t3_sheet:
+    name: Aluminium 2024-T3 bare sheet, 0.25-3.25 mm (0.010-0.128 in), AMS 4037 / QQ-A-250/4
+    kind: metal
+    source: *u_h5v1
+    tag: standard
+    table: MIL-HDBK-5G Table 3.2.3.0(b1)
+    density_kg_per_m3: 2796.0
+    E_Pa: 7.2395e+10
+    E_c_Pa: 7.3774e+10
+    G_Pa: 2.7579e+10
+    nu: 0.33
+    A_basis_Pa: {Ftu_L: 4.4126e+08, Ftu_LT: 4.3437e+08, Fty_L: 3.2405e+08, Fty_LT: 2.8958e+08, Fcy_L: 2.6890e+08, Fcy_LT: 3.1026e+08, Fsu: 2.6890e+08, Fbru_eD1p5: 7.1705e+08, Fbru_eD2p0: 8.8942e+08, Fbry_eD1p5: 5.0332e+08, Fbry_eD2p0: 6.0674e+08}
+    B_basis_Pa: {Ftu_L: 4.4816e+08, Ftu_LT: 4.4126e+08, Fty_L: 3.3095e+08, Fty_LT: 2.9647e+08, Fcy_L: 2.7579e+08, Fcy_LT: 3.1716e+08, Fsu: 2.7579e+08, Fbru_eD1p5: 7.3084e+08, Fbru_eD2p0: 9.0321e+08, Fbry_eD1p5: 5.1711e+08, Fbry_eD2p0: 6.2053e+08}
+    notes: Best fatigue/damage tolerance of the aluminium alloys here. Clad (Alclad) sheet has lower allowables (Table 3.2.3.0(c), not read). Do not heat above 100 degC (AC 43.13-1B 4-54b) - limits paint/adhesive cures on 2024 parts.
+  al_6061_t6_sheet:
+    name: Aluminium 6061-T6 (and T62) sheet, 0.25-6.32 mm (0.010-0.249 in), AMS 4025/4027 / QQ-A-250/11
+    kind: metal
+    source: *u_h5v1
+    tag: standard
+    table: MIL-HDBK-5G Table 3.6.2.0(b1)
+    density_kg_per_m3: 2713.0
+    E_Pa: 6.8258e+10
+    E_c_Pa: 6.9637e+10
+    G_Pa: 2.6200e+10
+    nu: 0.33
+    A_basis_Pa: {Ftu_L: 2.8958e+08, Ftu_LT: 2.8958e+08, Fty_L: 2.4821e+08, Fty_LT: 2.4132e+08, Fcy_L: 2.4132e+08, Fcy_LT: 2.4821e+08, Fsu: 1.8616e+08, Fbru_eD1p5: 4.6195e+08, Fbru_eD2p0: 6.0674e+08, Fbry_eD1p5: 3.4474e+08, Fbry_eD2p0: 3.9990e+08}
+    B_basis_Pa: {Ftu_L: 2.9647e+08, Ftu_LT: 2.9647e+08, Fty_L: 2.6200e+08, Fty_LT: 2.5511e+08, Fcy_L: 2.5511e+08, Fcy_LT: 2.6200e+08, Fsu: 1.9305e+08, Fbru_eD1p5: 4.7574e+08, Fbru_eD2p0: 6.2053e+08, Fbry_eD1p5: 3.6542e+08, Fbry_eD2p0: 4.2058e+08}
+    notes: Weldable, good corrosion resistance, good formability in T4/T6 (bend radii section). Use for brackets, trays, equipment shelves, bent sheet parts.
+  al_5052_h32_sheet:
+    name: Aluminium 5052-H32 sheet and plate, 0.43-50.8 mm (0.017-2.000 in), AMS 4016
+    kind: metal
+    source: *u_h5v1
+    tag: standard
+    table: MIL-HDBK-5G Table 3.5.1.0(b1)
+    basis: S
+    density_kg_per_m3: 2685.0
+    E_Pa: 6.9637e+10
+    E_c_Pa: 7.0327e+10
+    G_Pa: 2.6545e+10
+    nu: 0.33
+    S_basis_Pa: {Ftu_L: 2.1374e+08, Ftu_LT: 2.1374e+08, Fty_L: 1.5858e+08, Fty_LT: 1.5168e+08, Fcy_L: 1.5168e+08, Fcy_LT: 1.5858e+08, Fsu: 1.3100e+08, Fbru_eD1p5: 3.4474e+08, Fbru_eD2p0: 4.4816e+08, Fbry_eD1p5: 2.2063e+08, Fbry_eD2p0: 2.5511e+08}
+    notes: Non-heat-treatable; the most formable sheet here (near-zero bend radius). For fuel tanks (weldable, fuel-compatible), fairing brackets, cable trays, heat shields away from exhaust.
+  steel_4130_normalized:
+    name: AISI 4130 (and 4135, 8630, 8735) steel, normalised (condition N), sheet, strip, plate and tubing
+    kind: metal
+    source: *u_h5v1
+    tag: standard
+    table: MIL-HDBK-5G Table 2.3.1.0(c)
+    basis: S
+    density_kg_per_m3: 7833.0
+    E_Pa: 1.9995e+11
+    E_c_Pa: 1.9995e+11
+    G_Pa: 7.5842e+10
+    nu: 0.32
+    t_le_4p75mm:
+      S_basis_Pa: {Ftu: 6.5500e+08, Fty: 5.1711e+08, Fcy: 5.1711e+08, Fsu: 3.9300e+08, Fbru_eD2p0: 1.3790e+09, Fbry_eD2p0: 8.8942e+08}
+    t_gt_4p75mm:
+      S_basis_Pa: {Ftu: 6.2053e+08, Fty: 4.8263e+08, Fcy: 4.8263e+08, Fsu: 3.7232e+08, Fbru_eD2p0: 1.3100e+09, Fbry_eD2p0: 8.2737e+08}
+    notes: Engine mount and landing gear tube structures (welded). e/D = 1.5 bearing values are not given for condition N. Heat-treated (quenched and tempered) levels Ftu 125-200 ksi are in the same table but are not weld-friendly.
+  ti_6al_4v_annealed:
+    name: Ti-6Al-4V, annealed, sheet (<= 4.76 mm) and plate (4.76-50.8 mm), AMS 4911 / MIL-T-9046 AB-1
+    kind: metal
+    source: *u_h5v2
+    tag: standard
+    table: MIL-HDBK-5G Table 5.4.1.0(b)
+    density_kg_per_m3: 4429.0
+    E_Pa: 1.1032e+11
+    E_c_Pa: 1.1307e+11
+    G_Pa: 4.2747e+10
+    nu: 0.31
+    sheet_t_le_4p76mm:
+      A_basis_Pa: {Ftu_L: 9.2390e+08, Ftu_LT: 9.2390e+08, Fty_L: 8.6874e+08, Fty_LT: 8.6874e+08, Fcy_L: 9.1700e+08, Fcy_LT: 9.3079e+08, Fsu: 5.9984e+08, Fbru_eD1p5: 1.4686e+09, Fbru_eD2p0: 1.8754e+09, Fbry_eD1p5: 1.1790e+09, Fbry_eD2p0: 1.4341e+09}
+      B_basis_Pa: {Ftu_L: 9.5837e+08, Ftu_LT: 9.5837e+08, Fty_L: 9.0321e+08, Fty_LT: 9.0321e+08, Fcy_L: 9.5148e+08, Fcy_LT: 9.7216e+08, Fsu: 6.2053e+08, Fbru_eD1p5: 1.5237e+09, Fbru_eD2p0: 1.9512e+09, Fbry_eD1p5: 1.2273e+09, Fbry_eD2p0: 1.4962e+09}
+      elongation_min: 0.08
+    plate_t_4p76_to_50p8mm:
+      A_basis_Pa: {Ftu_L: 8.9632e+08, Ftu_LT: 8.9632e+08, Fty_L: 8.2737e+08, Fty_LT: 8.2737e+08, Fcy_L: 8.5495e+08, Fcy_LT: 8.9632e+08, Fsu: 5.4469e+08, Fbru_eD1p5: 1.4203e+09, Fbru_eD2p0: 1.7926e+09, Fbry_eD1p5: 1.1307e+09, Fbry_eD2p0: 1.3376e+09}
+      B_basis_Pa: {Ftu_L: 9.3079e+08, Ftu_LT: 9.5148e+08, Fty_L: 8.6184e+08, Fty_LT: 9.0321e+08, Fcy_L: 8.8942e+08, Fcy_LT: 9.7906e+08, Fsu: 5.7916e+08, Fbru_eD1p5: 1.4755e+09, Fbru_eD2p0: 1.9030e+09, Fbry_eD1p5: 1.2342e+09, Fbry_eD2p0: 1.4617e+09}
+      elongation_min: 0.10
+      note: "Plate A values are higher than spec minimum (footnote a: spec Ftu(L) 131, Ftu(LT) 132, Fty(LT) 123 ksi)."
+    notes: Galvanically compatible with carbon/epoxy; use for fittings bolted to CFRP, exhaust-side brackets, firewall hardware. Expensive to machine.
+  ss_304_annealed:
+    name: AISI 304 stainless steel, annealed sheet/strip <= 4.75 mm (values of Table 2.7.1.0(b) column "Annealed", footnote a extends them to 302, 303, 304, 321, 347)
+    kind: metal
+    source: *u_h5v1
+    tag: standard
+    table: MIL-HDBK-5G Table 2.7.1.0(b)
+    basis: S
+    density_kg_per_m3: 7916.0
+    E_Pa: 1.9995e+11
+    E_c_Pa: 1.9305e+11
+    G_Pa: 7.7221e+10
+    nu: 0.27
+    S_basis_Pa: {Ftu_L: 5.0332e+08, Ftu_LT: 5.1711e+08, Fty_L: 1.7926e+08, Fty_LT: 2.0684e+08, Fcy_L: 1.5858e+08, Fcy_LT: 1.9995e+08, Fsu: 3.4474e+08, Fbru_eD2p0: 1.1170e+09, Fbry_eD2p0: 3.7921e+08}
+    elongation_min_LT: 0.40
+    notes: Low yield in the annealed condition. For firewall sheet, exhaust heat shields, safety wire, clamps. 1/4-hard to full-hard tempers (same table) have Fty 69-153 ksi but poor formability.
+
+  welded_4130_joints:
+    source: *u_h5v2
+    tag: standard
+    table: MIL-HDBK-5G CN1 Tables 8.2.2.1.1(a), (b), (c)
+    near_weld_allowable_ultimate_tensile_Pa:
+      condition: 4130, 4140 or 8630 welded after heat treatment or normalised after weld; section thickness <= 6.35 mm (1/4 in)
+      tapered_joint_le_30deg: 6.2053e+08
+      all_other_joints: 5.5158e+08
+      note: Gussets or plate inserts count as 0 deg taper with the centreline (i.e. "tapered").
+    near_weld_bending_modulus_of_rupture:
+      tapered_joint_le_30deg: "Fb from MIL-HDBK-5 Figure 2.8.1.1 for Ftu = 90 ksi"
+      all_other_joints: "0.9 x Fb from Figure 2.8.1.1 for Ftu = 90 ksi"
+    weld_metal_allowables_Pa:
+      no_post_weld_heat_treatment_AMS6457_rod_or_E6010_E6013: {Fsu: 2.2063e+08, Ftu: 3.5163e+08}
+      no_post_weld_heat_treatment_AMS6452_rod: {Fsu: 2.9647e+08, Ftu: 4.9642e+08}
+      stress_relieved_E10013_or_MIL_10018_M1: {Fsu: 3.4474e+08, Ftu: 5.8605e+08}
+    note: >-
+      Weld-metal allowables are 85 % of the minimum ultimate test values. For parts heat treated
+      after welding, the parent metal near the weld may use the heat-treated allowables, but the
+      weld metal stays at 85 %. A typical normalised 4130 cluster joint therefore designs to
+      80 ksi (552 MPa) near the weld instead of 95 ksi in the parent tube.
+
+# =====================================================================================================
+# 3. PROCESS DESIGN RULES
+# =====================================================================================================
+processes:
+  # -------------------------------------------------------------------------------------------
+  composite_moulding:
+    laminate_stacking_rules:
+      source: *u_dlr
+      tag: paper
+      origin: Niu 1992, MIL-HDBK-17-3F (2002), Airbus training (as summarised in DLR IB-FA-BS-2016-173 Tables 2-1 and 2-2)
+      symmetric: "Stacking sequence symmetric about the mid-plane (no warp, no bending-extension coupling)."
+      balanced: "Every +theta ply has a -theta ply (fabrics: a 0/90 fabric is balanced by itself; +-45 fabric plies count as balanced)."
+      outer_plies: "+-45 deg plies on both surfaces (damage tolerance, buckling via D66); no 0 deg ply on a surface."
+      max_contiguous_same_orientation_plies: 4
+      max_contiguous_same_orientation_thickness_m: 5.0800e-04
+      max_contiguous_note: "4 plies of 0.127 mm; for thicker plies max 2. For 0.20 mm fabric and 0.14 mm UD tape this means <= 2 fabric plies or <= 3 tape plies of one orientation (rounded from 0.508 mm)."
+      ten_percent_rule: "At least 10 % of plies in each of 0, +45, -45 and 90 deg."
+      taper_slope_main_load_direction: 0.05
+      taper_slope_main_load_direction_note: "1:20 minimum (rise:run)"
+      taper_slope_other_directions: 0.10
+      taper_slope_other_note: "1:10 (also for stiffener and flange run-outs)"
+      max_single_thickness_step_m: 5.0800e-04
+      ply_drop_spacing: "next drop not before 20 x (dropped thickness) along the load direction, e.g. 20 x 0.508 mm = 10.2 mm"
+      ply_drop_layout: "drops symmetric about the mid-plane; first drops near the neutral axis; +-theta plies dropped in pairs; continuous covering plies over drops; outer covering plies never dropped; at most 2 plies dropped at one station"
+      ply_continuity: "plies of the thinner panel run continuously through the thicker panel; no orientation mismatch across a panel boundary"
+    draft_angle_deg:
+      min: 1.0
+      preferred: 2.0
+      max_typical: 3.0
+      tag: estimate
+      basis: >-
+        Rigid single-sided tools (aluminium, steel, carbon tooling prepreg). 1 deg is enough on
+        polished tools with release film/semi-permanent release for shallow walls (< 50 mm); use 2-3
+        deg for deep walls, textured surfaces, wet lay-up/infusion and male plugs, because the part
+        shrinks onto male features and aluminium tools shrink more than CFRP when cooling.
+        Undercuts need split tools or flexible cauls.
+    min_inside_radius_m:
+      tag: estimate
+      female_tool_corner: {value: 3.0e-3, rule: "max(3 mm, 1.5 x laminate thickness)"}
+      male_tool_corner: {value: 1.5e-3, rule: "max(1.5 mm, 1.0 x laminate thickness)"}
+      ud_tape_any_corner: {value: 5.0e-3, rule: "max(5 mm, 2 x laminate thickness)"}
+      basis: >-
+        With vacuum-bag (1 bar) consolidation, fabric bridges in female corners (resin-rich,
+        porous, thin radius) and thins on male corners. These are common shop limits, not a
+        published allowable; the NCAMP data assume flat panels. Larger radii also reduce
+        interlaminar (unfolding) tension in L-sections - check curved-beam strength (CBS values
+        in the NCAMP laminate tables) for loaded corners.
+    min_laminate_thickness_m:
+      tag: estimate
+      external_monolithic_skin: {value: 0.6e-3, rule: ">= 3 plies of 193-200 g/m2 carbon fabric, e.g. [+-45/0,90/+-45]"}
+      sandwich_face_primary: {value: 0.6e-3, rule: ">= 3 fabric plies per face (wing and tail skins)"}
+      sandwich_face_secondary: {value: 0.4e-3, rule: ">= 2 fabric plies per face (fairings, hatches) with +-45 outer"}
+      at_fasteners: {rule: "t >= 0.5 D and t >= 1.0 mm; countersink depth <= 0.67 t (no knife edge)"}
+      basis: >-
+        Handling, hail, tool-drop and ground-impact damage resistance, and the 10 % rule with
+        symmetric balanced fabric layups (a symmetric balanced fabric skin with +-45 outer plies
+        needs at least 3 plies). The countersink rule is the metal knife-edge rule applied to
+        laminates (open item: confirm with fastener-supplier data for CFRP).
+    flanges:
+      tag: estimate
+      bolted_flange_width_rule: "w >= 2 x e_min + tolerance + bend tangent offset; one fastener row with e = 3 D -> w >= 6 D + 2 mm + R + t"
+      bolted_flange_width_M5_m: 0.035
+      bonded_flange_width_rule: "w >= max(15 mm, required bond overlap + 3 mm trim tolerance)"
+      flange_taper: "run flanges out at 1:10 or more; never end a flange at a fastener row"
+      basis: Edge-distance rules of the fasteners section and Hart-Smith bonded-overlap guidance.
+    bonded_joints:
+      design_method:
+        source: *u_hartsmith
+        tag: paper
+        text: >-
+          Hart-Smith (NASA CR-112235): design bonded joints for the running load (N/m of width)
+          at the plateau strength of a long overlap, not with an average shear stress; the
+          practical design overlap is the plastic end zones plus an elastic trough (about 3/lambda)
+          plus a tolerance for manufacture and environmental degradation of the bond edge. Longer
+          overlaps add no strength. For all but thin composite adherends, scarf/taper the ends of
+          the outer adherends to limit peel stresses.
+      elastic_trough_parameter:
+        formula: "lambda^2 = (G_a / eta) * (1/(E_i t_i) + 2/(E_o t_o)) for a double-lap joint (t_i = inner adherend, t_o = each outer adherend, eta = bondline thickness)"
+        tag: estimate
+        basis: Classical Volkersen/Hart-Smith shear-lag parameter; the OCR of the equation in CR-112235 could not be read, so the formula is stated from the standard derivation.
+      overlap_rules_of_thumb:
+        tag: estimate
+        double_lap_or_doubler: "overlap >= 30 x thickness of the thinner adherend (each side)"
+        single_lap_supported: "overlap >= 80 x adherend thickness (single-lap, laterally supported), otherwise avoid single-lap for primary loads"
+        minimum_any_structural_bond_m: 0.0125
+        basis: Rules commonly attributed to Hart-Smith for metal/composite adherends; equivalent to the plateau-strength design above for typical paste adhesives. Verify with a joint analysis (lambda) for every primary bond.
+      bondline_thickness_m:
+        paste_adhesives: [0.10e-3, 0.30e-3]
+        araldite_2015_1_optimum: [0.05e-3, 0.10e-3]
+        tag: estimate
+        basis: Araldite optimum from its TDS; 0.1-0.3 mm (glass beads or scrim) is common practice for toughened pastes such as DP490 and EA 9394.
+    potted_inserts:
+      source: *u_ecss_ins
+      tag: standard
+      effective_potting_radius:
+        non_perforated_core_min: "b_p,min = 0.9 b_i + 0.7 S_c"
+        non_perforated_core_typ: "b_p,typ = b_i + 0.8 S_c"
+        perforated_core_min: "b_p,min = 0.93192 b_i + 0.874 S_c - 0.66151 (mm)"
+        perforated_core_typ: "b_p,typ = 1.002064 b_i + 0.940375 S_c - 0.7113 (mm)"
+        symbols: "b_i = insert radius, S_c = core cell size (3.2 mm for HRH-10-3.2-48)"
+      real_potting_radius:
+        min: "b_R = b_i + 0.35 S_c"
+        typ: "b_R = b_i + 0.5 S_c"
+      potting_height:
+        full_potting: "h_p = core height c if c - 7 mm <= h_i <= c"
+        partial_potting_min: "h_p,min = h_i + 7 mm (bore 3-4 mm deeper than the insert, >= 3 mm of resin below it)"
+      free_edge_coefficient:
+        formula: "eta_EN = 0.55 sqrt(e/b_p) - 0.05 (e/b_p) for e <= 5 b_p; eta_EN = 1 for e > 5 b_p or a closed-out edge"
+        min_edge_distance: "e >= b_p (never less)"
+        recommended_edge_distance: "e >= 5 b_p for full capability"
+      spacing: "inserts closer than about 2 b_p act as one insert (shared potting) - space >= 2 x (b_p) between centres, preferably >= 4 b_p, or design them as a group"
+      safety_factor_on_limit_load: 1.5
+      safety_factor_note: ESA default when no programme value is defined; YK-250 uses its own factors from standards.yaml.
+      potting_compound: "Paste epoxy (e.g. EA 9394 or EA 9396 class), filled, degassed; Nomex HRH-10 requires potting for any insert"
+    sandwich_closeouts:
+      tag: estimate
+      core_ramp_angle_max_deg: 30.0
+      basis: Common practice for vacuum-bag cured honeycomb (core crush/slip at steeper ramps); foam cores tolerate up to 45 deg. Close out all free edges that carry inserts or fasteners (eta_EN = 1 per ESA).
+
+  # -------------------------------------------------------------------------------------------
+  cnc_milling:
+    source: *u_hubs
+    tag: vendor
+    min_wall_thickness_metal_m: {recommended: 0.8e-3, feasible: 0.5e-3}
+    min_wall_thickness_plastic_m: {recommended: 1.5e-3, feasible: 1.0e-3}
+    pocket_depth_max: "4 x pocket width recommended; 10 x tool diameter feasible"
+    internal_vertical_corner_radius: "> 1/3 x pocket depth recommended (larger is better); floor edges sharp or 0.1 mm / 1 mm radius"
+    hole_depth: {recommended: "4 x D", max: "6 x D", note: standard drill sizes; drilled blind holes have a conical floor}
+    thread: {useful_length: "<= 3 x D", recommended_min_size: M6, feasible_min_size: M2}
+    tall_features_height_to_width_max: 4.0
+    tolerance_m: {standard: 1.25e-4, tight: 5.0e-5, feasible: 2.5e-5}
+    tolerance_note: "+/- values; +/-0.125 mm is held where no tolerance is given"
+    surface_roughness_Ra_m: {as_machined: 3.2e-6, finest_with_extra_operations: 0.4e-6}
+    yk250_rules:
+      tag: estimate
+      min_wall_aluminium_structural_m: 1.5e-3
+      min_web_floor_aluminium_m: 1.5e-3
+      min_internal_corner_radius_m: 3.0e-3
+      basis: >-
+        Vendor feasible values are for cosmetic parts. Structural fittings of a 100-150 kg UAV use
+        1.5 mm minimum web/wall (handling damage, fastener seating, chatter control) and R >= 3 mm
+        internal corners (6 mm cutter, fatigue notch). Wall/pocket rules above still apply.
+
+  # -------------------------------------------------------------------------------------------
+  sheet_metal:
+    min_bend_radius_over_t:
+      source: *u_ac43
+      tag: standard
+      table: FAA AC 43.13-1B Table 4-6, recommended radii for 90 deg cold bends in aluminium alloys (inside radius / thickness, [min, max] of the recommended range)
+      thickness_m: [4.0640e-04, 8.1280e-04, 1.6256e-03, 3.2512e-03, 4.6228e-03, 6.5532e-03]
+      alloys:
+        al_2024_O:    [[0, 0], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]
+        al_2024_T3:   [[1.5, 3], [2, 4], [3, 5], [4, 6], [4, 6], [5, 7]]
+        al_2024_T61:  [[2, 4], [3, 5], [3, 5], [4, 6], [5, 7], [6, 10]]
+        al_5052_O:    [[0, 0], [0, 0], [0, 1], [0, 1], [0, 1], [0, 1]]
+        al_5052_H32:  [[0, 0], [0, 0], [0.5, 1], [0.5, 1.5], [0.5, 1.5], [0.5, 1.5]]
+        al_5052_H34:  [[0, 0], [0, 0], [0.5, 1.5], [1.5, 2.5], [1.5, 2.5], [2, 3]]
+        al_5052_H36:  [[0, 1], [0.5, 1.5], [1, 2], [1.5, 3], [2, 4], [2, 4]]
+        al_5052_H38:  [[0.5, 1.5], [1, 2], [1.5, 3], [2, 4], [3, 5], [4, 6]]
+        al_6061_O:    [[0, 0], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]
+        al_6061_T4:   [[0, 1], [0, 1], [0.5, 1.5], [1, 2], [1.5, 3], [2.5, 4]]
+        al_6061_T6:   [[0, 1], [0.5, 1.5], [1, 2], [1.5, 3], [2, 4], [3, 4]]
+        al_7075_O:    [[0, 0], [0, 1], [0, 1], [0.5, 1.5], [1, 2], [1.5, 3]]
+        al_7075_T6:   [[2, 4], [3, 5], [4, 6], [5, 7], [5, 7], [6, 10]]
+      footnotes: "Alclad sheet may be bent over slightly smaller radii than bare sheet. 2024-T3 immediately after quenching (W temper) may be formed over appreciably smaller radii. Bend lines preferably at 90 deg to the rolling direction; drill relief holes at the ends of bend lines."
+      design_rule:
+        tag: estimate
+        text: "Use the upper value of the range (conservative), interpolate linearly in thickness. 7075-T6 and 2024-T3 brackets: prefer machined parts or 6061-T6/5052-H32 bent parts."
+    steel_titanium_bend_radius_over_t:
+      tag: estimate
+      steel_4130_N: 1.5
+      ss_304_annealed: 0.5
+      ti_6al_4v_annealed_cold: 5.0
+      basis: Not in AC 43.13-1B Table 4-6. Typical shop limits for 90 deg cold bends; Ti-6Al-4V is normally hot-formed (open item - confirm with supplier).
+    setback:
+      source: *u_ac43
+      tag: standard
+      formula: "SB = K_sb (R + t), K_sb = tan(theta/2) (AC 43.13-1B Table 4-7, e.g. 45 deg -> 0.41421, 90 deg -> 1.0, 135 deg -> 2.4142)"
+      note: theta = angle through which the metal is bent; R = inside bend radius; t = thickness.
+    k_factor:
+      tag: estimate
+      bend_allowance: "BA = theta_rad (R + K t)"
+      values: {R_over_t_lt_1: 0.33, R_over_t_1_to_3: 0.40, R_over_t_gt_3: 0.50}
+      basis: Neutral-axis position used by common CAD sheet-metal defaults (DIN 6935 correction trend). Calibrate with a test bend on the actual brake/tooling (SendCutSend publishes per-material values in its calculator).
+      vendor_reference: *u_scs
+    hole_to_bend_distance:
+      tag: estimate
+      min: "edge of hole >= 2 t + R from the bend line (inside tangent)"
+      recommended: "edge of hole >= 2.5 t + R"
+      vendor_rule: "SendCutSend: keep cut features at least 1/2 die width from the bend centreline"
+      vendor_source: *u_scs
+      basis: Hole distortion during bending; standard press-brake practice.
+    flange_min_length:
+      tag: estimate
+      rule: ">= 4 t + R (press-brake support); SendCutSend: flanges must meet the minimum length over >= 50-60 % of the bend length; U-channel base >= 2 x flange length"
+      vendor_source: *u_scs
+    rivet_edge_distance_and_spacing:
+      source: *u_ac43
+      tag: standard
+      single_row_edge_distance_min_D: 2.0
+      single_row_spacing_min_D: 3.0
+      note: AC 43.13-1B 4-58c(1); double and triple rows per its Figure 4-5.
+
+  # -------------------------------------------------------------------------------------------
+  tube_welding_4130:
+    process:
+      source: *u_ac43
+      tag: standard
+      method: GTAW (TIG) preferred; oxy-acetylene and GMAW acceptable per AC 43.13-1B 4-74
+      welder_qualification: Group 1 (4130 steel) per MIL-STD-1595A (AC 43.13-1B 4-74f)
+      filler: "4130 welding rod AMS 6457 / AWS A5.18 for 4130 (AC 43.13-1B Table 4-15); 4140 rod AMS 6452 / AWS A5.28 for higher weld-metal strength"
+      tubing_specs: "MIL-T-6731 (welded) or MIL-T-6736 (seamless) 4130 tubing, condition N"
+      post_weld: "If the drawing stress-relieves the mount after welding, every repair must be stress-relieved again (AC 43.13-1B 4-99f)"
+      inspection: "smooth seam of uniform thickness, no undercut, weld tapered smoothly into the base metal, no oxide on the base metal more than 13 mm (1/2 in) from the weld, no blowholes/porosity/projecting globules, no pitting, burning, cracking or distortion of the base metal, full fusion, scale removed (AC 43.13-1B 4-78)"
+    allowables_reference: "metals.welded_4130_joints (80 ksi near weld, 90 ksi tapered joints <= 30 deg)"
+    design_rules:
+      tag: estimate
+      min_wall_thickness_m: 0.89e-3
+      min_wall_note: "0.035 in; thinner walls burn through with manual TIG"
+      cluster_joints: "fish-mouth fit-up, gap < 0.5 mm; finger patches or gussets at highly loaded clusters (AC 43.13-1B Figure 4-34); tube axes meet at one work point"
+      engine_mount: "isolate the engine with elastomer mounts; avoid welds at the engine attach lugs' highest-stress section; provide drain holes and internal corrosion protection (linseed oil or equivalent)"
+      fatigue_note: "Piston-engine vibration: design welded cluster joints to the near-weld allowable reduced by a fatigue knock-down (open item - use MIL-HDBK-5 fatigue data or test)."
+
+  # -------------------------------------------------------------------------------------------
+  additive_manufacturing:
+    sls_pa12:
+      name: SLS polyamide 12, EOS PA 2200 (Balance 1.0, 120 um layers)
+      kind: polymer
+      source: *u_pa2200
+      tag: manufacturer
+      density_kg_per_m3: 930.0
+      tensile_modulus_Pa: {x: 1.6500e+09, y: 1.6500e+09, z: 1.6500e+09}
+      tensile_strength_Pa: {x: 4.8000e+07, y: 4.8000e+07, z: 4.2000e+07}
+      strain_at_break: {x: 0.18, y: 0.18, z: 0.04}
+      flexural_modulus_Pa: 1.5000e+09
+      charpy_impact_J_per_m2: {unnotched: 53000.0, notched: 4800.0}
+      melting_temperature_degC: 176.0
+      vicat_softening_degC: 163.0
+      flammability: UL94 HB (0.5, 1.6, 3.2 mm)
+    fdm_pa_cf_onyx:
+      name: FDM/FFF chopped-carbon-fibre nylon, Markforged Onyx (representative PA-CF)
+      kind: polymer
+      source: *u_markforged
+      tag: manufacturer
+      density_kg_per_m3: 1200.0
+      tensile_modulus_Pa: 2.4000e+09
+      tensile_yield_Pa: 4.0000e+07
+      tensile_strength_at_break_Pa: 3.7000e+07
+      strain_at_break: 0.25
+      flexural_strength_Pa: 7.1000e+07
+      flexural_modulus_Pa: 3.0000e+09
+      hdt_0p45MPa_degC: 145.0
+      notes: "XY in-plane values of fully filled plaques (Markforged test plaques 'maximize test performance'). Z (inter-layer) values not published."
+    design_allowables:
+      tag: estimate
+      basis: >-
+        No statistically based allowables exist for these materials as printed by an arbitrary
+        machine. Knock-downs: process/scatter 0.6 (machine-to-machine and build-to-build), moisture
+        conditioning 0.8 (PA12 ~0.5-1 % water, PA6-based Onyx more), temperature at 60 degC 0.7,
+        Z direction 0.5 of XY for FDM (EOS gives 0.875 for SLS). Product ~0.34 (XY) / 0.17 (FDM Z)
+        of the datasheet strength. Validate any load-bearing printed part by test.
+      sls_pa12_design_strength_Pa: {xy: 1.6000e+07, z: 1.4000e+07}
+      fdm_pa_cf_design_strength_Pa: {xy: 1.2500e+07, z: 6.3000e+06}
+      max_service_temperature_degC: {sls_pa12: 80.0, fdm_pa_cf: 100.0}
+      max_service_basis: "well below Vicat 163 degC (PA12) / HDT 145 degC (Onyx); creep of nylons above ~80 degC under load"
+    acceptable_use_on_yk250:
+      tag: estimate
+      allowed: "non-structural and secondary parts whose failure is not hazardous: fairing ribs and fillets, cable clips and harness guides, cooling ducts and baffles (outside the exhaust zone), connector and antenna mounts, sensor covers, jigs, drill and trim templates, masking tools"
+      allowed_with_test: "lightly loaded brackets (avionics, servo) with a printed-part factor >= 2 on top of 1.5 ultimate and a proof test of every production batch"
+      not_allowed: "primary structure, flight-control load path (horns, pushrod ends, hinges), engine mount, landing gear, fuel-system parts, parts within the exhaust/cylinder heat zone, bonded primary joints to printed parts"
+      basis: CS-LUAS / CS-VLA 613 require statistically based design values for primary structure (standards.yaml); printed polymer parts do not have them. Matches the YK-38 heat-zone rule (low-Tg parts away from the exhaust).
+
+# =====================================================================================================
+# 4. FASTENERS
+# =====================================================================================================
+fasteners:
+  property_classes:
+    source: *u_wiki_screw
+    tag: standard
+    note: ISO 898-1 (carbon/alloy steel) and ISO 3506-1 (stainless) minimum values, secondary reproduction; nominal sizes up to M16 for 8.8.
+    steel_8_8: {proof_stress_Pa: 5.8000e+08, yield_Rp02_min_Pa: 6.4000e+08, tensile_Rm_min_Pa: 8.0000e+08, size_range: "up to M16"}
+    steel_10_9: {proof_stress_Pa: 8.3000e+08, yield_Rp02_min_Pa: 9.4000e+08, tensile_Rm_min_Pa: 1.0400e+09}
+    steel_12_9: {proof_stress_Pa: 9.7000e+08, yield_Rp02_min_Pa: 1.1000e+09, tensile_Rm_min_Pa: 1.2200e+09}
+    stainless_A2_50: {yield_Rp02_min_Pa: 2.1000e+08, tensile_Rm_min_Pa: 5.0000e+08}
+    stainless_A2_70: {yield_Rp02_min_Pa: 4.5000e+08, tensile_Rm_min_Pa: 7.0000e+08}
+    stainless_A2_80: {yield_Rp02_min_Pa: 6.0000e+08, tensile_Rm_min_Pa: 8.0000e+08}
+    shear_strength_of_bolt_material:
+      tag: estimate
+      rule: "tau_u ~ 0.6 x Rm for single shear through the unthreaded shank; use the minor (core) area if threads are in the shear plane"
+      basis: Common steel ratio (MIL-HDBK-5 4130 Fsu/Ftu = 57/95 = 0.60). ISO 898-1 does not give shear values.
+    stress_area:
+      formula: "A_s = pi/4 (d - 0.9382 p)^2 (ISO 898-1 definition)"
+      tag: standard
+      source: *u_ecss_fst
+      coarse_pitch_m: {M3: 0.5e-3, M4: 0.7e-3, M5: 0.8e-3, M6: 1.0e-3, M8: 1.25e-3, M10: 1.5e-3, M12: 1.75e-3}
+      A_s_m2: {M3: 5.03e-6, M4: 8.78e-6, M5: 14.2e-6, M6: 20.1e-6, M8: 36.6e-6, M10: 58.0e-6, M12: 84.3e-6}
+      note: Pitches M3-M10 from ECSS-E-HB-32-23A Table 12-1 (M12 coarse 1.75 mm). A_s from the formula, rounded as in ISO tables. MJ (aerospace) threads use finer pitches for M8 (1.0) and M10 (1.25).
+  screw_types:
+    iso_4762_socket_head_cap_screw:
+      use: default structural screw (fittings, gear, engine mount, wing attach)
+      classes_available: [8.8, 10.9, 12.9, A2-70, A4-70, A4-80]
+      tag: estimate
+      basis: Classes as listed in common supplier catalogues; ISO 4762 text not read. Head dimensions in design/fastener_catalog.py.
+    iso_7380_button_head:
+      use: fairings, covers, access panels into nutplates (low head, no full-strength preload)
+      classes_available: ["010.9 (reduced loadability marking)", A2-70, A4-70]
+      load_reduction: "treat tensile capacity as 0.8 x the class value and do not torque above 80 % of the ISO 4762 value of the same class"
+      tag: estimate
+      basis: Button heads have a shallow socket and small head height; reduced-loadability marking "0" per ISO 898-1 practice. Not verified against the standard text.
+    iso_4017_and_4014_hex_head:
+      use: "4017 full thread for general/adjustable joints; 4014 part-thread (plain shank in the shear plane) for shear joints (gear, engine mount, wing attach bolts)"
+      classes_available: [5.6, 8.8, 10.9, A2-70, A4-70]
+      tag: estimate
+      basis: Common supplier catalogue ranges; standards not read.
+    aerospace_alternatives:
+      tag: estimate
+      text: For primary composite joints consider NAS/EN aerospace bolts (Ti-6Al-4V or A286, close-tolerance shank, MJ threads) with h8/H9-class hole fits; they have certified shear allowables and are galvanically compatible with CFRP.
+  tightening_torque_N_m:
+    method:
+      source: *u_ecss_fst
+      tag: standard
+      text: >-
+        ECSS-E-HB-32-23A 6.2: nominal preload F_V = nu * sigma_y * A_s with coefficient of
+        utilisation nu = 0.5-0.8, recommended starting value 0.65. Tightening torque from the
+        standard VDI 2230 relation M_A = F_V (0.16 p + 0.58 d_2 mu_G + mu_K D_Km / 2).
+    computed:
+      tag: estimate
+      basis: "nu = 0.65, mu_G = mu_K = 0.12 (zinc-plated or lightly oiled), D_Km = (d_k(ISO 4762) + d_h(ISO 273 medium))/2, d_2 = d - 0.6495 p. Computed values (not catalogue values). VDI 2230 catalogue tables (90 % utilisation, used in design/fastener_catalog.py) are ~15-20 % higher. Torque scatter of a click wrench is about +/-20 % (ECSS Table 6-1); allow for it in the preload range."
+      preload_N:
+        "8.8": {M3: 2092, M4: 3652, M5: 5907, M6: 8362, M8: 15226, M10: 24128, M12: 35069}
+        "10.9": {M3: 3073, M4: 5365, M5: 8676, M6: 12281, M8: 22363, M10: 35438, M12: 51507}
+        "12.9": {M3: 3596, M4: 6278, M5: 10153, M6: 14372, M8: 26169, M10: 41470, M12: 60274}
+        "A2-70": {M3: 1471, M4: 2568, M5: 4154, M6: 5879, M8: 10706, M10: 16965, M12: 24658}
+      torque_N_m:
+        "8.8": {M3: 1.12, M4: 2.57, M5: 5.08, M6: 8.62, M8: 20.7, M10: 40.5, M12: 69.5}
+        "10.9": {M3: 1.64, M4: 3.78, M5: 7.46, M6: 12.7, M8: 30.4, M10: 59.5, M12: 102.0}
+        "12.9": {M3: 1.92, M4: 4.42, M5: 8.73, M6: 14.8, M8: 35.6, M10: 69.6, M12: 119.4}
+        "A2-70": {M3: 0.78, M4: 1.81, M5: 3.57, M6: 6.06, M8: 14.6, M10: 28.5, M12: 48.9}
+    composite_joints:
+      tag: estimate
+      rules:
+        - "Use nu = 0.5 (torque = 0.77 x the table) for bolts clamping CFRP laminates, to limit through-thickness crushing and creep of the matrix."
+        - "Always use a washer under head and nut on composite; prefer large-OD washers (ISO 7093) - an M5 10.9 at nu 0.65 gives ~154 MPa under an ISO 7089 washer (OD 10 mm) but ~56 MPa under an ISO 7093 washer (OD 15 mm)."
+        - "Limit the mean clamp pressure on carbon/epoxy to about 100 MPa and re-torque after the first thermal cycle only if the design allows it."
+        - "Sandwich panels: never clamp through bare core - use potted inserts or solid laminate/edge close-outs at every fastener."
+      basis: Clamp pressure = F_V / (pi/4 (D_w^2 - d_h^2)); 100 MPa limit is engineering judgement (well below the ~200+ MPa through-thickness compressive strength of CFRP, allows for ETW and creep).
+    locking:
+      tag: estimate
+      text: All-metal self-locking nuts or nutplates, or safety wire, in the engine bay and near the exhaust (no nylon-insert nuts, standards.yaml AMC LUAS.607(b) note). Nylon-insert (ISO 7040) only below ~120 degC.
+  nutplates:
+    ms21047:
+      description: Two-lug fixed anchor nut, all-metal self-locking (MS21047, cross-reference K1000, NAS680, NAS1023A)
+      inch_threads: [6-32, 8-32, 10-32, 1/4-28, 5/16-24, 3/8-24]
+      source: *u_acs_k1000
+      tag: vendor
+      general_source: *u_wiki_nutplate
+    floating_two_lug:
+      description: Two-lug floating anchor nut (nut floats in a cage to absorb hole misalignment); specified for access panels with many fasteners.
+      source: *u_wiki_nutplate
+      tag: paper
+      nas1068_note:
+        tag: estimate
+        text: NAS1068 is listed by the task as a nutplate type; its exact configuration (floating/low-height) was not verified from a primary source in this session.
+    metric_equivalent:
+      description: "LN 29693 floating anchor nut (M5, M6) used with LN 29949 A286 screws in the ESA fastener handbook examples"
+      source: *u_ecss_fst
+      tag: standard
+      friction_data: "ESA Table: LN 29949 M5 into LN 29693, mu_thread 0.226 / mu_head 0.129 (first tightening), M6 0.306 / 0.144"
+    bonded_nutplates_for_composites:
+      description: Adhesive-bonded rivetless nutplates (no rivet holes in the laminate, floating nut, disposable alignment fixture)
+      source: *u_clickbond
+      tag: manufacturer
+      use: preferred nutplate type on CFRP skins and spars of the YK-250 (avoids two extra holes per fastener)
+    dimensions_note:
+      tag: estimate
+      text: Envelope dimensions used by code are in design/fastener_catalog.py (NUTPLATE, metric approximations). Replace by the selected supplier drawing before release.
+  quarter_turn_fasteners:
+    camloc_2600_equivalent_skybolt_sk2600:
+      description: Light-duty 3-piece quarter-turn (stud/retainer + locking receptacle), Camloc 2600 grip charts and dimensions identical
+      source: *u_skybolt
+      tag: manufacturer
+      load_N: {working: 889.6, ultimate: 1334.5, note: "tensile/shear; stainless CLoc tested to 600 lbf"}
+      head_diameter_m: {standard_slot: 7.6708e-03, collared_slot: 9.5250e-03}
+      grip_table_combined_panel_thickness_m:
+        fixed_depth_receptacle_SK212:
+          dash_1: [7.6200e-04, 1.4986e-03]
+          dash_2: [1.5240e-03, 2.2606e-03]
+          dash_3: [2.2860e-03, 3.0226e-03]
+          dash_4: [3.0480e-03, 3.7846e-03]
+          dash_5: [3.8100e-03, 4.5466e-03]
+          dash_6: [4.5720e-03, 5.3086e-03]
+          dash_8: [6.0960e-03, 6.8326e-03]
+          dash_10: [7.6200e-03, 8.3566e-03]
+          dash_15: [1.1430e-02, 1.2167e-02]
+          rule: "each dash number adds 0.030 in (0.762 mm) of grip"
+        adjustable_depth_receptacle_SK213_2: {dash_1: [5.0800e-04, 8.1280e-03], dash_15: [1.0414e-02, 1.8796e-02]}
+      stud_length_m: {dash_1: 1.9304e-02, dash_15: 2.9972e-02}
+      use: YK-250 fairings, hatches and access covers (1-6 mm combined panel thickness)
+    camloc_4002_equivalent_skybolt_sk4002:
+      description: Heavy-duty 4-piece quarter-turn (stud/retainer, grommet, locking receptacle), Camloc 4002 replacement, TSO-C148, designed to exceed NASM5591 Table II
+      source: *u_skybolt
+      tag: manufacturer
+      load_N: {working: 3113.8, ultimate: 4670.6}
+      head_diameter_m: 9.5250e-03
+      grip_table_combined_panel_thickness_m:
+        fixed_depth_receptacle_SK214_with_flush_grommet:
+          dash_2: [2.0574e-03, 2.7940e-03]
+          dash_3: [2.8194e-03, 3.5560e-03]
+          dash_4: [3.5814e-03, 4.3180e-03]
+          dash_5: [4.3434e-03, 5.0800e-03]
+          dash_6: [5.0800e-03, 5.8420e-03]
+          dash_8: [6.6294e-03, 7.3660e-03]
+          dash_10: [8.1534e-03, 8.8900e-03]
+          dash_15: [1.1963e-02, 1.2700e-02]
+          dash_20: [1.5773e-02, 1.6510e-02]
+          rule: "each dash adds 0.030 in; floating (SK244) receptacles and grommets other than G/H add 0.030 in to the total thickness"
+        adjustable_depth_receptacle_SK215_SK245: {dash_2: [2.5400e-04, 7.8740e-03], dash_20: [1.3970e-02, 2.1590e-02]}
+      stud_length_m: {dash_2: 1.7526e-02, dash_20: 3.1242e-02}
+      use: engine cowlings and structural access panels that carry pressure/air loads
+    dzus:
+      description: Dzus (Southco) quarter-turn spiral-cam fastener for aircraft skin panels
+      source: *u_wiki_dzus
+      tag: paper
+      note: Sizes and grip ranges to be taken from the Southco catalogue (not read; Southco site blocked automated access).
+    panel_rules:
+      tag: estimate
+      edge_distance: ">= 2 x receptacle/grommet hole diameter from the panel edge on the removable panel; >= 2.5 D on composite"
+      pitch: "100-150 mm on fairings; 60-90 mm on engine cowls (pressure loads, flutter of panel edges)"
+      composite_panels: "use grommets (load spreading) and receptacles bonded or riveted to a laminate land (no core); glass/aramid wear ply under the stud head on carbon panels"
+  composite_inserts:
+    potted_inserts:
+      reference: processes.composite_moulding.potted_inserts (ESA formulas)
+      source: *u_ecss_ins
+      tag: standard
+    rivet_nuts:
+      description: Blind rivet nuts (Rivnut/Nutsert), installable from one side, usable in composites and fibreglass
+      source: *u_wiki_rivnut
+      tag: paper
+      design_rules:
+        tag: estimate
+        text: >-
+          On CFRP use stainless or titanium (never aluminium or zinc-plated steel) rivet nuts with
+          a large flat flange; install wet with sealant or adhesive (galvanic and moisture
+          protection); the bulge on the blind side must bear on solid laminate >= 1.5 mm or a
+          bonded doubler - never on a sandwich face sheet over core. Rated torque of the rivet
+          nut, not the screw class, limits the preload; for structural loads prefer potted or
+          bonded inserts or through-bolts.
+    bonded_nutplates:
+      reference: fasteners.nutplates.bonded_nutplates_for_composites
+  joint_geometry_rules:
+    metals:
+      source: *u_h5v1
+      tag: standard
+      edge_distance_bolts: "e/D >= 2.0 to use the e/D = 2.0 bearing allowables; 1.5 <= e/D < 2.0 interpolate; e/D < 1.5 not allowed"
+      rivets: "edge distance >= 2 D, spacing >= 3 D (AC 43.13-1B 4-58c, single row)"
+      rivets_source: *u_ac43
+    composites:
+      edge_distance:
+        min_secondary_D: 2.0
+        standard_D: 2.5
+        full_bearing_D: 3.0
+        manufacturing_tolerance_m: 1.3e-3
+        source: *u_cr198266
+        tag: estimate
+        basis: >-
+          NASA CR-198266 recommends e/D >= 3 and W/D >= 6 so that the laminate fails in bearing (the
+          NCAMP bearing allowables apply only then). 2.5 D (+ about 1.3 mm hole-position tolerance)
+          is common aircraft practice for primary joints; 2.0 D is an absolute minimum for lightly
+          loaded secondary joints (fairings, quarter-turns), with the bearing allowable reduced by
+          test. Anything below 2.5 D risks shear-out/cleavage and hole wear in fatigue.
+      fastener_pitch:
+        along_load_row_spacing_min_D: 4.0
+        across_load_pitch_D: [5.0, 6.0]
+        source: *u_cr198266
+        tag: estimate
+        basis: Width per fastener W/D >= 6 (NASA CR-198266) avoids net-tension/bearing interaction; 4 D between rows is common practice. Use 4-6 D overall as the task brief states.
+      laminate: "quasi-isotropic or near-QI at fastener zones (>= 40 % +-45 plies recommended for bearing/shear-out, never < 25 %); D/t between 1 and 2 preferred"
+      laminate_tag: estimate
+      hole_quality: "drill with carbide/PCD, back-up block, < 0.05 mm oversize; clearance fit (H9-H10) for removable joints; no interference fits in CFRP without supplier data"
+      hole_quality_tag: estimate
+    bearing_design_allowables:
+      cfrp_qi_design_bearing_Pa: 4.1596e+08
+      cfrp_qi_design_bearing_basis: "composites.laminates.design_values_for_code.bearing (ETW2, 2 % offset, e/D 3)"
+      fitting_and_bearing_factors: "apply the fitting factor 1.15 and, for rotating/removable joints, the bearing factor of standards.yaml"
+      source: *u_ncamp_pw
+      tag: standard
+    galvanic_compatibility:
+      source: *u_ecss_fst
+      tag: standard
+      text: >-
+        ECSS-E-HB-32-23A 13.2: protect the anodic member of a dissimilar couple by electrical
+        insulation (washer, gasket) or by excluding the electrolyte; jointing compounds do not
+        insulate but keep water out. Graphite (carbon) is at the cathodic end of the galvanic series,
+        aluminium near the anodic end.
+      yk250_rules:
+        tag: estimate
+        text: >-
+          Fasteners in CFRP: titanium (Ti-6Al-4V), A286 or passivated stainless (A2/A4) only; no
+          aluminium, cadmium- or zinc-plated fasteners in contact with carbon. Aluminium parts
+          bonded or bolted to CFRP: one ply of E-glass (0.1-0.25 mm) as isolation layer at the
+          faying surface, primer on the aluminium, wet-installed fasteners with sealant.
+
+# =====================================================================================================
+# 5. TOLERANCES AND SURFACE FINISH
+# =====================================================================================================
+tolerances:
+  iso_2768_1_linear:
+    source: *u_iso2768
+    tag: standard
+    note: "General tolerances for linear dimensions without individual tolerance (+/- value, m). Rows: [lower_bound_m, upper_bound_m, f, m, c, v]; null = not defined. Drawing note for YK-250: 'ISO 2768-mK'."
+    rows:
+      - [0.5e-3, 3.0e-3, 0.05e-3, 0.1e-3, 0.2e-3, null]
+      - [3.0e-3, 6.0e-3, 0.05e-3, 0.1e-3, 0.3e-3, 0.5e-3]
+      - [6.0e-3, 30.0e-3, 0.1e-3, 0.2e-3, 0.5e-3, 1.0e-3]
+      - [30.0e-3, 120.0e-3, 0.15e-3, 0.3e-3, 0.8e-3, 1.5e-3]
+      - [120.0e-3, 400.0e-3, 0.2e-3, 0.5e-3, 1.2e-3, 2.5e-3]
+      - [400.0e-3, 1000.0e-3, 0.3e-3, 0.8e-3, 2.0e-3, 4.0e-3]
+      - [1000.0e-3, 2000.0e-3, 0.5e-3, 1.2e-3, 3.0e-3, 6.0e-3]
+      - [2000.0e-3, 4000.0e-3, null, 2.0e-3, 4.0e-3, 8.0e-3]
+  iso_2768_1_radius_and_chamfer:
+    source: *u_iso2768
+    tag: standard
+    note: "Rows: [lower_m, upper_m, f_and_m, c_and_v] (+/- m); last row has no upper bound."
+    rows:
+      - [0.5e-3, 3.0e-3, 0.2e-3, 0.4e-3]
+      - [3.0e-3, 6.0e-3, 0.5e-3, 1.0e-3]
+      - [6.0e-3, null, 1.0e-3, 2.0e-3]
+  iso_2768_1_angular:
+    source: *u_iso2768
+    tag: standard
+    note: "By length of the shorter leg. Rows: [lower_m, upper_m, f_and_m_deg, c_deg, v_deg] (+/- degrees)."
+    rows:
+      - [0.0, 10.0e-3, 1.0, 1.5, 3.0]
+      - [10.0e-3, 50.0e-3, 0.5, 1.0, 2.0]
+      - [50.0e-3, 120.0e-3, 0.3333, 0.5, 1.0]
+      - [120.0e-3, 400.0e-3, 0.1667, 0.25, 0.5]
+      - [400.0e-3, null, 0.0833, 0.1667, 0.3333]
+  iso_2768_2_geometric:
+    source: *u_iso2768
+    tag: standard
+    straightness_flatness_m:
+      note: "Rows: [lower_m, upper_m, H, K, L] (tolerance zone width, m)"
+      rows:
+        - [0.0, 10.0e-3, 0.02e-3, 0.05e-3, 0.10e-3]
+        - [10.0e-3, 30.0e-3, 0.05e-3, 0.10e-3, 0.20e-3]
+        - [30.0e-3, 100.0e-3, 0.10e-3, 0.20e-3, 0.40e-3]
+        - [100.0e-3, 300.0e-3, 0.20e-3, 0.40e-3, 0.80e-3]
+      note_above_300mm: Values above 300 mm were not in the source extract; take them from the standard (open item).
+    perpendicularity_m:
+      note: "By length of the shorter side. Rows: [lower_m, upper_m, H, K, L]"
+      rows:
+        - [0.0, 100.0e-3, 0.20e-3, 0.40e-3, 0.60e-3]
+        - [100.0e-3, 300.0e-3, 0.30e-3, 0.60e-3, 1.00e-3]
+        - [300.0e-3, 1000.0e-3, 0.50e-3, 0.80e-3, 1.50e-3]
+  iso_286_limit_deviations_m:
+    source: *u_wiki_fit
+    tag: standard
+    note: "Upper and lower deviations [upper, lower] in m from nominal, by nominal diameter range (over lower_m up to and including upper_m). H = hole, lower-case = shaft."
+    ranges_m: [[0.0, 3.0e-3], [3.0e-3, 6.0e-3], [6.0e-3, 10.0e-3], [10.0e-3, 18.0e-3], [18.0e-3, 30.0e-3], [30.0e-3, 50.0e-3], [50.0e-3, 80.0e-3]]
+    H7: [[10.0e-6, 0.0], [12.0e-6, 0.0], [15.0e-6, 0.0], [18.0e-6, 0.0], [21.0e-6, 0.0], [25.0e-6, 0.0], [30.0e-6, 0.0]]
+    g6: [[-2.0e-6, -8.0e-6], [-4.0e-6, -12.0e-6], [-5.0e-6, -14.0e-6], [-6.0e-6, -17.0e-6], [-7.0e-6, -20.0e-6], [-9.0e-6, -25.0e-6], [-10.0e-6, -29.0e-6]]
+    h6: [[0.0, -6.0e-6], [0.0, -8.0e-6], [0.0, -9.0e-6], [0.0, -11.0e-6], [0.0, -13.0e-6], [0.0, -16.0e-6], [0.0, -19.0e-6]]
+    p6: [[12.0e-6, 6.0e-6], [20.0e-6, 12.0e-6], [24.0e-6, 15.0e-6], [29.0e-6, 18.0e-6], [35.0e-6, 22.0e-6], [42.0e-6, 26.0e-6], [51.0e-6, 32.0e-6]]
+    k6: [[6.0e-6, 0.0], [9.0e-6, 1.0e-6], [10.0e-6, 1.0e-6], [12.0e-6, 1.0e-6], [15.0e-6, 2.0e-6], [18.0e-6, 2.0e-6], [21.0e-6, 2.0e-6]]
+    f7: [[-6.0e-6, -16.0e-6], [-10.0e-6, -22.0e-6], [-13.0e-6, -28.0e-6], [-16.0e-6, -34.0e-6], [-20.0e-6, -41.0e-6], [-25.0e-6, -50.0e-6], [-30.0e-6, -60.0e-6]]
+    H8: [[14.0e-6, 0.0], [18.0e-6, 0.0], [22.0e-6, 0.0], [27.0e-6, 0.0], [33.0e-6, 0.0], [39.0e-6, 0.0], [46.0e-6, 0.0]]
+    fit_formulas: "clearance_max = ES(hole) - ei(shaft); clearance_min = EI(hole) - es(shaft); negative clearance = interference"
+    check: "IT6 and IT7 widths agree with ISO 286-1 i = 0.45 D^(1/3) + 0.001 D (um) for every range (IT6 ~ 10 i, IT7 ~ 16 i, rounded)."
+  fits_for_pins_and_bushings:
+    source: *u_wiki_fit
+    tag: standard
+    H7_g6: "sliding fit - hinge pins turning in bushings, clevis pins, control-surface hinge bolts (assemble by hand, turn freely)"
+    H7_h6: "location fit - removable dowels and spigots, assembled without force, slide when lubricated"
+    H7_p6: "press fit - bushings and bearings pressed into metal fittings (cold press), not removed in service"
+    H8_f7: "close running fit - slower pivots, actuator rod ends with some misalignment"
+    H7_k6: "transition fit - gears/hubs on shafts, assembly with a mallet"
+    yk250_rules:
+      tag: estimate
+      text: >-
+        Press fits (H7/p6) only in metal housings (Al, steel, Ti); in carbon/epoxy laminates bond
+        bushings with EA 9394 using a clearance of 0.05-0.15 mm on diameter (H8/f7-like) - an
+        interference fit splits the laminate. Bronze or stainless bushings in aluminium fittings for
+        all rotating joints; steel pins (4130/17-4PH/Ti) with H7/g6.
+    example_10_to_18mm:
+      H7_g6_clearance_m: [6.0e-6, 35.0e-6]
+      H7_h6_clearance_m: [0.0, 29.0e-6]
+      H7_p6_interference_m: [0.0, 29.0e-6]
+      note: "computed with the fit formulas above (min, max)"
+  surface_finish:
+    iso_roughness_grades_Ra_m:
+      source: *u_wiki_ra
+      tag: standard
+      N12: 50.0e-6
+      N11: 25.0e-6
+      N10: 12.5e-6
+      N9: 6.3e-6
+      N8: 3.2e-6
+      N7: 1.6e-6
+      N6: 0.8e-6
+      N5: 0.4e-6
+      N4: 0.2e-6
+      N3: 0.1e-6
+      N2: 0.05e-6
+      N1: 0.025e-6
+    as_machined_standard_Ra_m: {value: 3.2e-6, source: *u_hubs, tag: vendor, note: "reducible to 0.4 um with extra operations"}
+    recommended_Ra_m:
+      tag: estimate
+      general_machined_surfaces: 3.2e-6
+      mating_and_sealing_faces: 1.6e-6
+      bushing_bores_and_press_fit_seats: 0.8e-6
+      hinge_pins_and_shaft_journals: 0.4e-6
+      adhesive_bond_metal_surfaces_after_grit_blast: [2.0e-6, 6.0e-6]
+      composite_tool_surface_for_painted_aero_skin: 0.4e-6
+      basis: Common drawing practice for the listed functions; bond surfaces per adhesive supplier surface-prep instructions (DP490 TDS gives grit-blast/etch procedures, no Ra value).
+
+# =====================================================================================================
+# 6. SPEC-READY DESIGN VALUES (schema of ARCHITECTURE.md: materials / processes)
+# =====================================================================================================
+spec_ready:
+  notes: >-
+    Values for code. Composites: lamina E/E2/G12 for laminate analysis, design strengths =
+    B-basis ETW (hot/wet covered) unless the entry says otherwise; Fbru = QI laminate bearing
+    design value. Metals: A-basis (or S-basis) minimum of L and LT, Fbru/Fbry at e/D = 2.0.
+    Cores: minimum values. Every entry points to the full data above via "ref".
+  materials:
+    cfrp_ud_mtm45_as4:
+      name: CFRP UD tape MTM45-1/AS4-145 (OOA prepreg)
+      kind: composite
+      ref: composites.laminae.cfrp_ud_ooa_prepreg_as4_145
+      basis: B-basis ETW 93 degC (NCAMP), Yt = 0.8 x ETW mean
+      density: 1542.0
+      E: 1.2762e+11
+      E2: 7.9290e+09
+      G12: 2.9647e+09
+      nu12: 0.31
+      Ftu: 1.5567e+09
+      Fcu: 7.7173e+08
+      F2tu: 2.1994e+07
+      F2cu: 9.0666e+07
+      Fsu: 2.5580e+07
+      Fbru: 4.1596e+08
+      estimated_fields: [F2tu, Fbru]
+      ply_t: 1.3970e-04
+      Tg_C: 170.8
+      source: *u_ncamp_ud
+      tag: standard
+    cfrp_pw_mtm45_as4:
+      name: CFRP 3K plain weave MTM45-1/AS4 193 g/m2 (OOA prepreg)
+      kind: composite
+      ref: composites.laminae.cfrp_pw_ooa_prepreg_as4_193
+      basis: "B-basis ETW: Ftu = fill ETW mean x warp (B/mean) = 119.65 x 0.865 (covers both directions); Fcu = fill ETW B (both directions); Fsu = S_0p2 ETW B"
+      density: 1517.0
+      E: 6.4190e+10
+      E2: 6.1019e+10
+      G12: 2.5511e+09
+      nu12: 0.05
+      Ftu: 7.1361e+08
+      Fcu: 2.8427e+08
+      Fsu: 1.9167e+07
+      Fbru: 4.1596e+08
+      estimated_fields: [Ftu, Fbru]
+      ply_t: 2.0066e-04
+      Tg_C: 156.3
+      source: *u_ncamp_pw
+      tag: standard
+    gfrp_7781_mtm45:
+      name: GFRP 7781 E-glass MTM45-1 (OOA prepreg)
+      kind: composite
+      ref: composites.laminae.gfrp_7781_ooa_prepreg
+      basis: B-basis ETW, lower of warp/fill
+      density: 1813.0
+      E: 2.4890e+10
+      E2: 2.2960e+10
+      G12: 2.3442e+09
+      nu12: 0.123
+      Ftu: 2.3559e+08
+      Fcu: 2.4318e+08
+      Fsu: 1.4617e+07
+      Fbru: null
+      ply_t: 2.5400e-04
+      Tg_C: 160.0
+      source: *u_ncamp_7781
+      tag: standard
+    cfrp_twill_se84lv_rc200t:
+      name: CFRP 2x2 twill 200 g/m2 Gurit SE 84LV RC200T (LT prepreg)
+      kind: composite
+      ref: composites.laminae.cfrp_twill_prepreg_se84lv_rc200t
+      basis: estimated RTD design value from manufacturer mean; apply hot/wet factor 2.0 (CMP-003b); light-coloured or secondary parts only
+      density: 1500.0
+      E: 6.0600e+10
+      E2: 6.1600e+10
+      G12: 3.8000e+09
+      nu12: 0.05
+      Ftu: 4.7700e+08
+      Fcu: 5.2600e+08
+      Fsu: 3.6335e+07
+      Fbru: null
+      ply_t: 2.3000e-04
+      Tg_C: 125.0
+      source: *u_se84lv
+      tag: estimate
+    cfrp_twill_wet_layup:
+      name: CFRP twill wet lay-up + vacuum bag
+      kind: composite
+      ref: composites.laminae.cfrp_twill_wet_layup_vacbag
+      basis: estimate, RTD; apply hot/wet 2.0 and manufacturing 1.2 (CMP-003b)
+      density: 1420.0
+      E: 4.6300e+10
+      E2: 4.6300e+10
+      G12: 3.0000e+09
+      nu12: 0.05
+      Ftu: 3.9200e+08
+      Fcu: 3.7000e+08
+      Fsu: 3.1500e+07
+      Fbru: null
+      ply_t: 2.6600e-04
+      Tg_C: 80.0
+      source: *u_se84lv
+      tag: estimate
+    cfrp_infusion:
+      name: CFRP twill/NCF vacuum infusion
+      kind: composite
+      ref: composites.laminae.cfrp_twill_infusion
+      basis: estimate, RTD; apply hot/wet and manufacturing factors
+      density: 1470.0
+      E: 5.5100e+10
+      E2: 5.5100e+10
+      G12: 3.5000e+09
+      nu12: 0.05
+      Ftu: 5.2300e+08
+      Fcu: 4.9700e+08
+      Fsu: 3.8400e+07
+      Fbru: null
+      ply_t: 2.2300e-04
+      Tg_C: 90.0
+      source: *u_se84lv
+      tag: estimate
+    gfrp_wet_layup:
+      name: GFRP woven wet lay-up + vacuum bag
+      kind: composite
+      ref: composites.laminae.gfrp_woven_wet_layup
+      basis: estimate, RTD
+      density: 1714.0
+      E: 2.2100e+10
+      E2: 2.0400e+10
+      G12: 3.0000e+09
+      nu12: 0.13
+      Ftu: 2.9700e+08
+      Fcu: 3.1600e+08
+      Fsu: 2.4800e+07
+      Fbru: null
+      ply_t: 2.8600e-04
+      Tg_C: 80.0
+      source: *u_ncamp_7781
+      tag: estimate
+    afrp_kevlar_epoxy:
+      name: Aramid (Kevlar 49) fabric/epoxy
+      kind: composite
+      ref: composites.laminae.afrp_kevlar49_fabric_epoxy
+      basis: "estimate: 0.7 x typical vendor values"
+      density: 1400.0
+      E: 3.0000e+10
+      E2: 3.0000e+10
+      G12: 5.0000e+09
+      nu12: 0.20
+      Ftu: 3.3600e+08
+      Fcu: 1.3300e+08
+      Fsu: 3.5000e+07
+      Fbru: null
+      ply_t: 2.5000e-04
+      ply_t_basis: "170 g/m2 style 285 / (1440 kg/m3 x Vf 0.5) ~ 0.24 mm, rounded (estimate)"
+      Tg_C: 120.0
+      source: *u_pc
+      tag: estimate
+    core_rohacell_51wf:
+      name: ROHACELL 51 WF
+      kind: core
+      ref: composites.cores.rohacell_51_wf
+      basis: manufacturer minimum values
+      density: 52.0
+      E: 4.5000e+07
+      G: 1.4000e+07
+      Fsu: 5.0000e+05
+      Fcu: 4.0000e+05
+      Ftu: 8.8000e+05
+      max_process_temperature_C: 130.0
+      source: *u_rohacell
+      tag: manufacturer
+    core_rohacell_71wf:
+      name: ROHACELL 71 WF
+      kind: core
+      ref: composites.cores.rohacell_71_wf
+      basis: manufacturer minimum values
+      density: 75.0
+      E: 7.5000e+07
+      G: 2.4100e+07
+      Fsu: 1.0000e+06
+      Fcu: 1.0500e+06
+      Ftu: 1.5600e+06
+      max_process_temperature_C: 130.0
+      source: *u_rohacell
+      tag: manufacturer
+    core_airex_c70_75:
+      name: AIREX C70.75
+      kind: core
+      ref: composites.cores.airex_c70_75
+      basis: DNV-GL minimum values
+      density: 80.0
+      E: 8.0000e+07
+      G: 2.4000e+07
+      Fsu: 1.0000e+06
+      Fcu: 1.1000e+06
+      Ftu: 1.6000e+06
+      max_process_temperature_C: null
+      source: *u_airex
+      tag: manufacturer
+    core_nomex_48:
+      name: HexWeb HRH-10-3.2-48 (1/8-3.0) Nomex honeycomb
+      kind: core
+      ref: composites.cores.nomex_hrh10_3p2_48
+      basis: "minimum strengths (US sheet), typical moduli; L = ribbon direction"
+      density: 48.0
+      E: 1.3800e+08
+      G_L: 4.1000e+07
+      G_W: 2.4000e+07
+      Fsu_L: 1.0687e+06
+      Fsu_W: 5.8605e+05
+      Fcu: 1.8616e+06
+      source: *u_hrh10_us
+      tag: manufacturer
+    al_7075_t6_sheet:
+      name: Al 7075-T6 sheet 1.0-3.2 mm
+      kind: metal
+      ref: metals.al_7075_t6_sheet
+      basis: A-basis, min(L, LT)
+      density: 2796.0
+      E: 7.1016e+10
+      Ftu: 5.3779e+08
+      Fty: 4.6884e+08
+      Fcy: 4.7574e+08
+      Fsu: 3.2405e+08
+      Fbru: 1.0756e+09
+      Fbry: 8.2048e+08
+      source: *u_h5v1
+      tag: standard
+    al_7075_t651_plate:
+      name: Al 7075-T651 plate 6.35-12.7 mm
+      kind: metal
+      ref: metals.al_7075_t651_plate
+      basis: A-basis, min(L, LT)
+      density: 2796.0
+      E: 7.1016e+10
+      Ftu: 5.3090e+08
+      Fty: 4.6195e+08
+      Fcy: 4.6195e+08
+      Fsu: 2.9647e+08
+      Fbru: 9.9974e+08
+      Fbry: 7.8600e+08
+      source: *u_h5v1
+      tag: standard
+    al_2024_t3_sheet:
+      name: Al 2024-T3 bare sheet 0.25-3.25 mm
+      kind: metal
+      ref: metals.al_2024_t3_sheet
+      basis: A-basis, min(L, LT)
+      density: 2796.0
+      E: 7.2395e+10
+      Ftu: 4.3437e+08
+      Fty: 2.8958e+08
+      Fcy: 2.6890e+08
+      Fsu: 2.6890e+08
+      Fbru: 8.8942e+08
+      Fbry: 6.0674e+08
+      source: *u_h5v1
+      tag: standard
+    al_6061_t6_sheet:
+      name: Al 6061-T6 sheet 0.25-6.3 mm
+      kind: metal
+      ref: metals.al_6061_t6_sheet
+      basis: A-basis, min(L, LT)
+      density: 2713.0
+      E: 6.8258e+10
+      Ftu: 2.8958e+08
+      Fty: 2.4132e+08
+      Fcy: 2.4132e+08
+      Fsu: 1.8616e+08
+      Fbru: 6.0674e+08
+      Fbry: 3.9990e+08
+      source: *u_h5v1
+      tag: standard
+    al_5052_h32_sheet:
+      name: Al 5052-H32 sheet
+      kind: metal
+      ref: metals.al_5052_h32_sheet
+      basis: S-basis, min(L, LT)
+      density: 2685.0
+      E: 6.9637e+10
+      Ftu: 2.1374e+08
+      Fty: 1.5168e+08
+      Fcy: 1.5168e+08
+      Fsu: 1.3100e+08
+      Fbru: 4.4816e+08
+      Fbry: 2.5511e+08
+      source: *u_h5v1
+      tag: standard
+    steel_4130_n:
+      name: Steel 4130 normalised, t <= 4.75 mm (tube, sheet)
+      kind: metal
+      ref: metals.steel_4130_normalized
+      basis: S-basis; near welds use Ftu_weld
+      density: 7833.0
+      E: 1.9995e+11
+      Ftu: 6.5500e+08
+      Fty: 5.1711e+08
+      Fcy: 5.1711e+08
+      Fsu: 3.9300e+08
+      Fbru: 1.3790e+09
+      Fbry: 8.8942e+08
+      Ftu_weld: 5.5158e+08
+      Ftu_weld_tapered: 6.2053e+08
+      source: *u_h5v1
+      tag: standard
+    ti_6al_4v_annealed_sheet:
+      name: Ti-6Al-4V annealed sheet <= 4.76 mm
+      kind: metal
+      ref: metals.ti_6al_4v_annealed
+      basis: A-basis, min(L, LT)
+      density: 4429.0
+      E: 1.1032e+11
+      Ftu: 9.2390e+08
+      Fty: 8.6874e+08
+      Fcy: 9.1700e+08
+      Fsu: 5.9984e+08
+      Fbru: 1.8754e+09
+      Fbry: 1.4341e+09
+      source: *u_h5v2
+      tag: standard
+    ss_304_annealed:
+      name: Stainless 304 annealed sheet
+      kind: metal
+      ref: metals.ss_304_annealed
+      basis: S-basis, min(L, LT)
+      density: 7916.0
+      E: 1.9995e+11
+      Ftu: 5.0332e+08
+      Fty: 1.7926e+08
+      Fcy: 1.5858e+08
+      Fsu: 3.4474e+08
+      Fbru: 1.1170e+09
+      Fbry: 3.7921e+08
+      source: *u_h5v1
+      tag: standard
+    pa12_sls:
+      name: PA12 SLS (EOS PA 2200)
+      kind: polymer
+      ref: processes.additive_manufacturing.sls_pa12
+      basis: "design strength = datasheet x 0.34 (estimate, processes.additive_manufacturing.design_allowables)"
+      density: 930.0
+      E: 1.6500e+09
+      Ftu: 1.6000e+07
+      Ftu_z: 1.4000e+07
+      HDT_C: null
+      vicat_C: 163.0
+      max_service_C: 80.0
+      source: *u_pa2200
+      tag: estimate
+    pa_cf_fdm:
+      name: PA-CF FDM (Markforged Onyx)
+      kind: polymer
+      ref: processes.additive_manufacturing.fdm_pa_cf_onyx
+      basis: "design strength = datasheet x 0.34 (XY) / 0.17 (Z) (estimate)"
+      density: 1200.0
+      E: 2.4000e+09
+      Ftu: 1.2500e+07
+      Ftu_z: 6.3000e+06
+      HDT_C: 145.0
+      max_service_C: 100.0
+      source: *u_markforged
+      tag: estimate
+  adhesives:
+    ea9394: {ref: composites.adhesives.henkel_ea9394, lap_shear_23C: 2.8958e+07, lap_shear_82C: 2.0684e+07, max_service_C: 177.0, source: *u_ea9394, tag: manufacturer}
+    dp490: {ref: composites.adhesives.threem_dp490, lap_shear_23C: 2.3000e+07, lap_shear_82C: 9.5000e+06, max_service_C: 80.0, source: *u_dp490, tag: manufacturer}
+    araldite_2015_1: {ref: composites.adhesives.huntsman_araldite_2015_1, lap_shear_25C: 1.8202e+07, max_service_C: 60.0, source: *u_ar2015, tag: manufacturer}
+  processes:
+    prepreg_ooa_vacbag:
+      name: OOA prepreg, oven vacuum-bag cure
+      name_tr: Otoklav disi prepreg, vakum torbasi ve firin kurlama
+      min_thickness: 0.6e-3
+      tolerance: "ISO 2768-mK for trimmed/machined edges and holes; laminate thickness +/-10 % (estimate); tool-side surface profile +/-0.3 mm (estimate)"
+      draft_deg: 2.0
+      min_inside_radius: {female: 3.0e-3, male: 1.5e-3}
+      min_bend_radius_t: null
+      edge_distance_D: 3.0
+      edge_distance_D_min: 2.5
+      notes: "stacking rules in processes.composite_moulding; ply drop 1:20; MH cure per NPS 81451"
+      tag: estimate
+      source: *u_dlr
+    wet_layup_vacbag:
+      name: Wet lay-up with vacuum-bag consolidation
+      name_tr: Islak yatirma ve vakum torbasi
+      min_thickness: 0.6e-3
+      tolerance: "ISO 2768-c on moulded features, ISO 2768-m after CNC trim (estimate)"
+      draft_deg: 2.0
+      min_inside_radius: {female: 4.0e-3, male: 2.0e-3}
+      min_bend_radius_t: null
+      edge_distance_D: 3.0
+      notes: secondary structure and fairings only, unless qualified by coupon tests
+      tag: estimate
+      source: *u_process_cmp
+    vacuum_infusion:
+      name: Vacuum infusion
+      name_tr: Vakum infuzyon
+      min_thickness: 0.8e-3
+      tolerance: "ISO 2768-m after CNC trim; thickness +/-10 % (estimate)"
+      draft_deg: 2.0
+      min_inside_radius: {female: 3.0e-3, male: 2.0e-3}
+      min_bend_radius_t: null
+      edge_distance_D: 3.0
+      notes: large panels, foam-core sandwich (Airex C70); needs flow-media design and witness panels
+      tag: estimate
+      source: *u_process_cmp
+    cnc_milling_metal:
+      name: CNC milling (aluminium, steel, titanium)
+      name_tr: CNC frezeleme
+      min_thickness: 1.5e-3
+      tolerance: "ISO 2768-mK general; +/-0.125 mm default, +/-0.025 mm on fits (ISO 286)"
+      draft_deg: 0.0
+      min_inside_radius: 3.0e-3
+      min_bend_radius_t: null
+      edge_distance_D: 2.0
+      notes: "pocket depth <= 4 x width; internal radius > depth/3; threads <= 3 D engaged; Ra 3.2 um as machined"
+      tag: vendor
+      source: *u_hubs
+    sheet_metal_aluminium:
+      name: Sheet-metal cutting and press-brake bending (aluminium)
+      name_tr: Sac kesme ve abkant bukum (aluminyum)
+      min_thickness: 0.5e-3
+      tolerance: "ISO 2768-mK linear; bend angle +/-1 deg for bends up to 610 mm (SendCutSend)"
+      draft_deg: 0.0
+      min_bend_radius_t: {al_5052_H32: 1.5, al_6061_T6: 3.0, al_2024_T3: 6.0, al_7075_T6: 7.0, al_6061_T4: 2.0}
+      min_bend_radius_note: "upper end of AC 43.13-1B Table 4-6 at 3.25 mm (0.128 in) thickness; use the table for other thicknesses"
+      edge_distance_D: 2.0
+      hole_to_bend: "2.5 t + R"
+      notes: K-factor 0.33-0.5 by R/t (estimate)
+      tag: standard
+      source: *u_ac43
+    tig_welding_4130:
+      name: TIG welding of 4130 normalised tube (engine mount, gear frames)
+      name_tr: 4130 boru TIG kaynagi
+      min_thickness: 0.89e-3
+      tolerance: "jig-located, ISO 2768-c on the weldment; machine attachment pads/bores after welding to ISO 2768-m and ISO 286 fits (estimate)"
+      draft_deg: null
+      min_bend_radius_t: null
+      edge_distance_D: 2.0
+      notes: "design near-weld Ftu 80 ksi (552 MPa); filler AMS 6457; Group 1 welder"
+      tag: standard
+      source: *u_ac43
+    sls_pa12:
+      name: SLS printing PA12
+      name_tr: SLS baski (PA12)
+      min_thickness: 1.0e-3
+      tolerance: "+/-0.3 % with lower limit +/-0.3 mm (estimate)"
+      draft_deg: 0.0
+      min_bend_radius_t: null
+      edge_distance_D: 3.0
+      notes: non-structural / secondary parts only (processes.additive_manufacturing.acceptable_use_on_yk250)
+      tag: estimate
+      source: *u_pa2200
+    fdm_pa_cf:
+      name: FDM printing PA-CF
+      name_tr: FDM baski (karbon katkili PA)
+      min_thickness: 1.2e-3
+      tolerance: "+/-0.2 mm (estimate)"
+      draft_deg: 0.0
+      min_bend_radius_t: null
+      edge_distance_D: 3.0
+      notes: "min wall = 3 perimeters of 0.4 mm; dry filament; anneal per supplier; jigs, ducts, clips"
+      tag: estimate
+      source: *u_markforged
+
+# =====================================================================================================
+# 7. OPEN ITEMS
+# =====================================================================================================
+open_items:
+  - "AGATE (agate.niar.wichita.edu) was unreachable (503 / TLS) - the Toray T700G/2510 UD and 7781/2510 B-basis reports could not be read; only the 2510 PW report (ORNL mirror) was used as a cross-check."
+  - "MIL-HDBK-5G (1994) values used; confirm against the current MMPDS edition before certification (paywalled)."
+  - "MTM45-1 cured resin density is not published in the documents read; laminate densities assume 1200 kg/m3 (+/-25 kg/m3 on laminate density)."
+  - "MTM45-1 free-standing post-cure at 177 degC exceeds the ROHACELL WF limit (130 degC): use WF-HT, post-cure before core bonding, or co-cure with the MH 121 degC step only and qualify the reduced Tg."
+  - "AIREX C70 maximum processing temperature not found in the TDS read; get the 3A processing guide before using it with 121 degC prepreg cures."
+  - "Wet lay-up and infusion allowables are estimates scaled from prepreg data; run a coupon programme (ASTM D3039/D6641/D3518/D2344, 3 batches) for the chosen resin before using them in primary structure."
+  - "Hart-Smith elastic-trough formula stated from the standard derivation (OCR of CR-112235 equations unreadable); verify before using it for primary bonds."
+  - "ISO 898-1, ISO 3506-1, ISO 286 and ISO 2768 values come from secondary reproductions (Wikipedia, RapidDirect); confirm against purchased standards."
+  - "Screw property classes available per ISO 4762/7380/4014/4017 and the NAS1068 configuration were not verified from primary sources."
+  - "Bearing allowables are NCAMP pin-bearing values (e/D 3, QI); bolt-bearing with clamp-up and countersunk heads need joint-specific data or tests."
+  - "Composite pin-bearing B-basis for 7781 glass not extracted (Table 5.8 of the 7781 report) - add if glass laminates carry bolted loads."
+  - "Fatigue data (S-N) for 4130 welded clusters and composite bolted joints under piston-engine vibration not collected here."

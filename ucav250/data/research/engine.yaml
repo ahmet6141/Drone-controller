@@ -782,6 +782,12 @@ recommended:
         source: *u_moulton_2007
         tag: estimate
         basis: "Light-load penalty of about +15 % over the 50 % point (throttled two-stroke). Moulton shows BSFC rising again below 1/4 throttle. Treat as a conservative loiter value."
+    below_lowest_point_note: >-
+      Added in the synthesis cross-check (C-ENG-02). The 30 m/s sea-level loiter of the comparables/aero design
+      point needs about 4.0 kW propeller shaft power plus about 0.35-0.45 kW for the generator, i.e. about
+      24-25 % of 18 kW, which is below the lowest tabulated point. No data exist below 30 %. baseline.yaml
+      therefore adds a flagged extrapolation point (0.20 -> 600 g/kWh, estimate) and asks the sizing phase to
+      report loiter fuel flow with the +12 % band.
   propeller:
     tag: estimate
     source: *u_w3_annex_a
@@ -843,6 +849,16 @@ recommended:
       tag: estimate
       source: *u_ust048
       basis: "PM generator output roughly proportional to rpm when voltage-limited: 800 x 5200/7500. Confirm with the ePropelled curve."
+    generator_output_at_loiter_W:
+      value: 405
+      rpm: 3800
+      tag: estimate
+      source: *u_ust048
+      basis: >-
+        Added in the synthesis cross-check (C-ENG-01). aero.yaml finds that the recommended Mejzlik 32x18 2B
+        turns about 3800 rpm in a 30 m/s sea-level loiter (below the 5200 rpm assumed above). Same scaling:
+        800 W x 3800/7500 = 405 W. The 3-phase voltage scales the same way (about 25 V AC, about 34 V
+        rectified), so the generator controller must boost to the DC bus. Confirm with the ePropelled curve.
     engine_own_consumption_W:
       value: 70
       tag: estimate
@@ -1008,3 +1024,42 @@ open_items:
   - Request a quote and lead time (price not public).
   - In parallel, request the Sky Power SP-275 FI TS ROS 3D model, SFC map and starter-generator data as the backup.
   - Propeller final selection by performance model (sizing phase); candidate suppliers to be researched separately.
+
+# -----------------------------------------------------------------------------------------------------
+# CORRECTIONS (synthesis cross-check, 2026-10-05; see ucav250/data/research/baseline.yaml)
+# Re-checked against the sources: limflug.de product page (18 kW / 7500 rpm, 7 kg, starter set 2.3 kg,
+# alternators 5.2 kg) and UST 048 (SG750: "800 W over 50 V AC at 7500 rpm", 1 kW for 3 min, 440 g,
+# 101 x 28.6 mm, L 275 EF "will integrate an SG750"). All confirmed as recorded above.
+# -----------------------------------------------------------------------------------------------------
+corrections:
+  - id: C-ENG-01
+    date: "2026-10-05"
+    location: recommended.electrical
+    issue: >-
+      generator_output_at_cruise_W (550 W) assumes 5200 rpm. aero.yaml (propellers.recommendation.pusher_primary)
+      shows the recommended 32x18 2B propeller loiters at about 3800 rpm at 30 m/s sea level, so the electrical
+      margin at loiter is smaller than this file implied, and the generator voltage halves.
+    fix: >-
+      Added recommended.electrical.generator_output_at_loiter_W (405 W at 3800 rpm, estimate, same scaling).
+      The 550 W cruise value is kept for 5200 rpm. Generator controller must boost at loiter rpm (open item).
+    source: "https://www.uncrewed-systems.com/?p=9652"
+    tag: estimate
+  - id: C-ENG-02
+    date: "2026-10-05"
+    location: recommended.fuel_flow
+    issue: The design-point loiter (about 24-25 % of 18 kW incl. generator load) lies below the lowest tabulated point (30 %).
+    fix: >-
+      Note added (recommended.fuel_flow.below_lowest_point_note). No value in this file was changed; the flagged
+      extrapolation point is held in baseline.yaml.
+    source: "https://drum.lib.umd.edu/handle/1903/6905"
+    tag: estimate
+  - id: C-ENG-03
+    date: "2026-10-05"
+    location: recommended.propeller
+    issue: Cross-reference only - the 0.81 x 0.46 m 2-blade estimate here is the Mejzlik 32x18 2B selected in aero.yaml.
+    fix: >-
+      No value changed. Use aero.yaml for the propeller: 0.8128 m x 0.4572 m, 0.334 kg, static thrust 460 N for
+      sizing (500 N from the Mejzlik tables x 0.92, after aero.yaml correction C-AERO-01), consistent with the
+      400-480 N estimated here.
+    source: "https://www.mejzlik.eu/files/0161-zanzottera-motor-305hs-mejzlik-32x18-2b.pdf"
+    tag: estimate

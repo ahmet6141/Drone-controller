@@ -1,0 +1,1656 @@
+# =====================================================================================================
+# YK-250 (ucav250) - RESEARCH PHASE - PURCHASABLE SUBSYSTEMS (COMPONENTS)
+# Civil surveillance / research UAV, about 100-150 kg MTOW, one ~250 cc piston engine (engine.yaml).
+# Payload: EO/IR sensors and mission equipment only. No weapons, hardpoints, pylons or release
+# mechanisms are considered anywhere in this file.
+#
+# Conventions
+#   - SI units, named in the key suffix: _m, _m2, _m3, _kg, _N, _Nm, _Pa, _W, _V, _A, _J, _C, _Hz,
+#     _bit_per_s, _kg_per_s, _degC, _deg (angles, per ARCHITECTURE.md), _deg_per_s (angular speed).
+#     Non-SI catalogue units (lb, in, oz, Ah, Wh, kgf.cm, km/h, psi) are kept only inside "note" text.
+#   - Every number carries "source" (URL, via YAML alias to the sources list) and "tag":
+#       manufacturer | datasheet | standard | paper | vendor | estimate
+#     "paper" also covers trade-journal articles (UST, Inside Unmanned Systems, Shephard).
+#     Values tagged "estimate" carry a "basis".
+#   - "read_from_drawing": the value was read from a datasheet drawing, not from a table.
+#   - "via_search_excerpt": the page refused automated fetching (HTTP 403/404); the value was read from
+#     the search-engine excerpt of that page. Treat with lower confidence and confirm before freeze.
+#   - null = not published / not found. Each item has a "missing" list where relevant.
+#   - Prices: only where public. Currency is named; most aerospace items are "price on request".
+# Accessed: 2026-10-05
+# =====================================================================================================
+
+meta:
+  project: YK-250 (ucav250)
+  topic: components
+  phase: research
+  date: "2026-10-05"
+  scope: >-
+    Purchasable subsystems for a 100-150 kg civil EO/IR surveillance UAV: control-surface
+    actuators, landing gear, EO/IR gimbals (1-5 kg), avionics (autopilot, air data, GNSS, datalink,
+    ADS-B/transponder, Remote ID), electrical system, fuel system, recovery and safety (parachute,
+    flight termination, lights). One recommended item per category, with reasons.
+  design_point_assumed:
+    note: >-
+      Used only for the screening checks in this file. Taken from comparables.yaml
+      (recommended_ranges) and engine.yaml (recommended engine). The sizing phase must redo the
+      checks with its own numbers.
+    mtow_kg: {value: 150.0, source: "ucav250/data/research/comparables.yaml#recommended_ranges.mtow_kg", tag: estimate, basis: "nominal of 125-180 kg range"}
+    wing_area_m2: {value: 3.0, source: "ucav250/data/research/comparables.yaml#recommended_ranges.wing_area_m2", tag: estimate, basis: "W/S 50 kg/m2"}
+    span_m: {value: 6.0, source: "ucav250/data/research/comparables.yaml#recommended_ranges.span_m", tag: estimate, basis: "AR 12"}
+    cruise_speed_m_s: {value: 30.0, source: "ucav250/data/research/comparables.yaml#recommended_ranges.cruise_speed_m_s", tag: estimate, basis: "best-endurance speed band 28-30 m/s"}
+    engine: {value: "Limbach L 275 EF + ePropelled SG750 starter/generator", source: "ucav250/data/research/engine.yaml#recommended", tag: estimate, basis: "engine research recommendation"}
+    landing_sink_speed_m_s:
+      value: 2.40
+      source: "http://jarus-rpas.org/wp-content/uploads/2023/06/jar_07_doc_CS_LUAS.pdf"
+      tag: standard
+      basis: "CS-LUAS App. H H.2(b): V = 0.51 (M g / S)^0.25 = 2.40 m/s at 50 kg/m2 (standards.yaml LDG-001)"
+
+# -----------------------------------------------------------------------------------------------------
+# SOURCES (anchors are reused as per-item "source" URLs below)
+# -----------------------------------------------------------------------------------------------------
+sources:
+  # --- standards (shared with standards.yaml) ---
+  - id: csluas
+    url: &u_csluas_meta "http://jarus-rpas.org/wp-content/uploads/2023/06/jar_07_doc_CS_LUAS.pdf"
+    title: JARUS CS-LUAS Edition 0.3 (2016) - sink speed (App. H), fuel flow margin (CS-LUAS.955), emergency recovery (CS-LUAS.1412)
+    tag: standard
+  - id: shtiha
+    url: &u_shtiha "https://web.shgm.gov.tr/documents/sivilhavacilik/files/mevzuat/sektorel/talimatlar/SHT-IHA(1).pdf"
+    title: SHGM SHT-IHA (Turkey) - Madde 18(1) C2-loss behaviour (recovery area or flight termination)
+    tag: standard
+  # --- 1. actuators ---
+  - id: volz_std
+    url: &u_volz_std "https://www.volz-servos.com/actuators/standard-actuators/"
+    title: Volz Servos - Standard actuators overview (peak torque, rated voltage, width per series)
+    tag: manufacturer
+  - id: volz_ds
+    url: &u_volz_ds "https://www.volz-servos.com/downloads/datasheets/"
+    title: Volz Servos - datasheet download index
+    tag: manufacturer
+  - id: volz_da26
+    url: &u_volz_da26 "https://www.volz-servos.com/fileadmin/user_upload/Downloads/Datasheets/DA-26_Datasheet_uni.pdf"
+    title: Volz DA 26 Technical Specification, DA 26-30-5024, Revision B (27 pages, incl. installation drawing p.11)
+    tag: datasheet
+  - id: volz_da26d
+    url: &u_volz_da26d "https://www.volz-servos.com/fileadmin/user_upload/Downloads/Datasheets/DA-26-Duplex_Datasheet_uni.pdf"
+    title: Volz DA 26-D (duplex redundant) Technical Specification, Revision B
+    tag: datasheet
+  - id: volz_da30
+    url: &u_volz_da30 "https://www.volz-servos.com/fileadmin/user_upload/Downloads/Datasheets/DA-30_Datasheet_RevI.pdf"
+    title: Volz DA 30 Technical Specification, Revision I (08/2025), incl. installation drawing p.7 and MIL-STD-810G environmental table
+    tag: datasheet
+  - id: volz_da30d
+    url: &u_volz_da30d "https://www.volz-servos.com/fileadmin/user_upload/Downloads/Datasheets/DA-30-D_Datasheet_Rev_F.pdf"
+    title: Volz DA 30-D (duplex redundant) Technical Specification, Revision F
+    tag: datasheet
+  - id: volz_da30ht
+    url: &u_volz_da30ht "https://www.volz-servos.com/fileadmin/user_upload/Downloads/Datasheets/DA-30-HT_Datasheet_Rev_H.pdf"
+    title: Volz DA 30-HT Technical Specification, Revision H (02/2026)
+    tag: datasheet
+  - id: volz_da22
+    url: &u_volz_da22 "https://www.volz-servos.com/fileadmin/user_upload/Downloads/Datasheets/DA-22_Datasheet_Rev_D.pdf"
+    title: Volz DA 22 Technical Specification, Revision D (12 V and 28 V versions)
+    tag: datasheet
+  - id: volz_da22bldc
+    url: &u_volz_da22bldc "https://www.volz-servos.com/fileadmin/user_upload/Downloads/Datasheets/DA-22-BLDC-Datenblatt_Rev_H.pdf"
+    title: Volz DA 22-BLDC Technical Specification, Revision H
+    tag: datasheet
+  - id: ardupilot_volz
+    url: &u_ardupilot_volz "https://ardupilot.org/plane/docs/common-servo-volz.html"
+    title: ArduPilot documentation - Volz servos (PWM or Volz serial protocol supported)
+    tag: manufacturer
+    notes: Autopilot-software documentation. Read via search excerpt only.
+  - id: mpx_ind_2025
+    url: &u_mpx_ind "https://www.multiplex-rc.de/userdata/files/MPX-Industriekatalog-2025--V09-EN.pdf"
+    title: MULTIPLEX / Hitec industrial actuator catalogue 2025 V09 (SG-series BLDC CAN actuators, MDB/MD series, HLS linear actuators)
+    tag: datasheet
+  - id: mks_hbl3850_dronecan
+    url: &u_mks_hbl3850 "https://servodatabase.com/servo/mks/hbl3850-dronecan"
+    title: ServoDatabase - MKS HBL3850-DroneCAN specification page
+    tag: vendor
+  - id: mks_hbl3850_price
+    url: &u_mks_hbl3850_price "https://extremeflightrc.com/products/mks-x8-hbl3850-hv-brushless-servo"
+    title: Extreme Flight RC - MKS X8 HBL3850 HV brushless servo (retail price)
+    tag: vendor
+    notes: HTTP 429 on direct fetch; price read via search excerpt.
+  - id: mks_hbl6625_dronecan
+    url: &u_mks_hbl6625 "https://servodatabase.com/servo/mks/hbl6625-dronecan"
+    title: ServoDatabase - MKS HBL6625-DroneCAN specification page
+    tag: vendor
+  # --- 2. landing gear ---
+  - id: sagitta_lg
+    url: &u_sagitta "https://elib.dlr.de/114590/1/DLRK_2017_LDG_Design_Sagitta_UAV.pdf"
+    title: "F. Nikodem et al., Design of a retractable landing gear for the SAGITTA demonstrator UAV, DLRK 2017 (DLR) - 150 kg MTOW UAV"
+    tag: paper
+  - id: ilot_ecms2010
+    url: &u_ilot "https://www.scs-europe.net/conf/ecms2010/2010%20accepted%20papers/ese_ECMS2010_0048.pdf"
+    title: "Z. Skorupka, W. Kowalski, R. Kajka (Institute of Aviation, Warsaw), Electrically driven and controlled landing gear for UAV up to 100 kg of take off mass, ECMS 2010"
+    tag: paper
+  - id: aerotelemetry_lg
+    url: &u_aerotel "https://www.aerotelemetry.com/light-weight-uav-landing-gear"
+    title: Aero Telemetry - Light weight UAV landing gear systems (hydraulic retractable main and steerable nose, UAV up to 225 kg)
+    tag: manufacturer
+  - id: tost_cat_2026
+    url: &u_tost "https://www.tost.de/wp-content/uploads/2026/03/tost_katalog_dt_2026-3_download.pdf"
+    title: TOST GmbH Flugzeuggeraetebau, Katalog 2026-3 (German) - wheels, disc-brake wheels, tyres, calipers, master cylinders
+    tag: manufacturer
+  - id: matco_w40b
+    url: &u_matco_w40b "https://www.aircraftspruce.com/catalog/lgpages/matcoW40B.php"
+    title: Aircraft Spruce - Matco W40B / W40-BDXT 4 in wheel and brake assembly (specs and price per pair)
+    tag: vendor
+  - id: matco_w51lxt
+    url: &u_matco_w51lxt "https://www.aircraftspruce.com/catalog/lgpages/matcoW51LXT.php"
+    title: Aircraft Spruce - Matco W51LXT 5 in wheel and brake assembly
+    tag: vendor
+  - id: grove_legs
+    url: &u_grove "https://www.aircraftspruce.com/catalog/lgpages/groveLandinggears.php"
+    title: Aircraft Spruce - Grove Aircraft 7075-T6 aluminium spring landing gear legs (catalogue masses)
+    tag: vendor
+  # --- 3. EO/IR gimbals ---
+  - id: trillium_hd45_page
+    url: &u_tr_hd45_page "https://www.trilliumeng.com/gimbals/hd45-lv-cz-gs"
+    title: Trillium Engineering HD45-LV-CZ product page
+    tag: manufacturer
+  - id: trillium_hd45_ds
+    url: &u_tr_hd45 "https://www.trilliumeng.com/uploads/documents/Trillium-HD45-2026_2026-08-11-203139_irnh.pdf"
+    title: Trillium HD45 datasheet 2026
+    tag: datasheet
+  - id: trillium_hd59_page
+    url: &u_tr_hd59_page "https://www.trilliumeng.com/gimbals/hd59-mlvv"
+    title: Trillium Engineering HD59-MLVV product page
+    tag: manufacturer
+  - id: trillium_hd59_ds
+    url: &u_tr_hd59 "https://www.trilliumeng.com/uploads/documents/Trillium-HD59-2026.pdf"
+    title: Trillium HD59 datasheet 2026 (LLVV, MVV, MLVV configurations)
+    tag: datasheet
+  - id: nextvision_raptor
+    url: &u_nv_raptor "https://nextvision-sys.com/cameras-cpt/raptor/"
+    title: NextVision RAPTOR product page (Raptor, Raptor-360, Raptor-360-Sealed)
+    tag: manufacturer
+  - id: deltaquad_raptor360
+    url: &u_dq_raptor360 "https://docs.deltaquad.com/gov/deltaquad-evo-payloads/nextvision-isr-payloads/raptor-360.md"
+    title: DeltaQuad Evo GOV documentation - NextVision Raptor 360 payload (integrator data)
+    tag: vendor
+  - id: deltaquad_raptor
+    url: &u_dq_raptor "https://deltaquad.com/payloads/surveillance/nextvision-raptor"
+    title: DeltaQuad payload page - NextVision Raptor (supply voltage)
+    tag: vendor
+    notes: Read via search excerpt.
+  - id: redwire_e180
+    url: &u_rdw_e180 "https://rdw.com/product-archive/octopus-isr-and-optics-payloads/e180/"
+    title: Redwire (ex Octopus ISR Systems / Edge Autonomy) - Octopus E180 / E180MG product archive page
+    tag: manufacturer
+  - id: redwire_e140mwir
+    url: &u_rdw_e140 "https://rdw.com/product-archive/octopus-isr-and-optics-payloads/e140-mwir/"
+    title: Redwire - Octopus E140 MWIR product archive page
+    tag: manufacturer
+  - id: octopus_e180_launch
+    url: &u_e180_launch "https://insideunmannedsystems.com/octopus-isr-systems-launches-epsilon-180/"
+    title: Inside Unmanned Systems (2020) - Octopus ISR Systems launches Epsilon 180 (power 40 W normal / 160 W peak at 24 V)
+    tag: paper
+    notes: Read via search excerpt (site returns HTTP 403).
+  - id: avt_cm142
+    url: &u_avt_cm142 "https://www.ascentvision.com.au/cm142-1"
+    title: AVT Australia (ex UAV Vision) CM142 gimbal page
+    tag: manufacturer
+  - id: caci_cm142_ds
+    url: &u_cm142_ds "https://www.caci.com/sites/default/files/2020-10/cm142a_cm142_datasheet_3-2-0_1.pdf"
+    title: UAV Vision / CACI CM142 datasheet 3.2.0
+    tag: datasheet
+    notes: HTTP 404 on direct fetch; values read via search excerpt of this PDF.
+  # --- 4. avionics ---
+  - id: veronte_tech
+    url: &u_veronte_tech "https://manuals.embention.com/1x/en/4.5/technical/index.html"
+    title: Embention Veronte Autopilot 1x manual 4.5 - technical specifications
+    tag: manufacturer
+  - id: veronte_changelog
+    url: &u_veronte_cl "https://manuals.embention.com/1x/en/4.12⧸1.8/changelog/index.md"
+    title: Embention Veronte Autopilot 1x hardware changelog (4.8 / 4.12 variants, 76 x 65 x 40 mm, 8-54 V)
+    tag: manufacturer
+  - id: veronte_ust
+    url: &u_veronte_ust "https://www.unmannedsystemstechnology.com/company/embention/veronte-autopilot-1x/"
+    title: Embention profile on Unmanned Systems Technology - Veronte Autopilot 1x (DO-178C/DO-254/DO-160, dissimilar supervisor and FTS, power 5-15 W)
+    tag: manufacturer
+    notes: Read via search excerpt (HTTP 403).
+  - id: cube_red_specs
+    url: &u_cube_red "https://docs.cubepilot.org/autopilot/cube-red/specifications.md"
+    title: CubePilot documentation - Cube Red specifications
+    tag: manufacturer
+  - id: cube_red_operating
+    url: &u_cube_red_op "https://docs.cubepilot.org/autopilot/cube-red/operating-conditions-and-performance.md"
+    title: CubePilot documentation - Cube Red operating conditions
+    tag: manufacturer
+  - id: cube_red_arch
+    url: &u_cube_red_arch "https://docs.cubepilot.org/autopilot/cube-red/system-architecture.md"
+    title: CubePilot documentation - Cube Red system architecture (PWM outputs, power sources)
+    tag: manufacturer
+  - id: px4_cube_orangeplus
+    url: &u_px4_cubeop "https://docs.px4.io/main/en/flight_controller/cubepilot_cube_orangeplus"
+    title: PX4 documentation - CubePilot Cube Orange+ (processor, sensors, power, dimensions)
+    tag: vendor
+  - id: getfpv_cubeop
+    url: &u_getfpv_cubeop "https://www.getfpv.com/hex-the-cube-orange-standard-set-ads-b-imu-v8.html"
+    title: GetFPV - Cube Orange+ Standard Set ADS-B (total weight 73 g)
+    tag: vendor
+    notes: HTTP 403 on direct fetch; read via search excerpt.
+  - id: micropilot_mp2128g2
+    url: &u_mp2128 "https://www.shephardmedia.com/news/uv-online/micropilot-rolls-out-mp2128g2"
+    title: Shephard (trade press) - MicroPilot rolls out MP2128g2 (24 g, 180 Hz loops)
+    tag: paper
+    notes: Read via search excerpt.
+  - id: powerbox_hasa
+    url: &u_hasa "https://www.powerbox-systems.com/data/dokumente/00002088/EN/Downloads/Bedienungsanleitung/Datasheet%20Pitot%20HASA.pdf"
+    title: PowerBox Systems - Pitot HASA heated pitot-static measurement system datasheet (DroneCAN)
+    tag: datasheet
+  - id: aeroprobe_pitot
+    url: &u_aeroprobe "https://www.unmannedsystemstechnology.com/company/aeroprobe/pitot-pitot-static-probes/"
+    title: Aeroprobe profile - pitot and pitot-static probes (heater options, mass)
+    tag: manufacturer
+    notes: Read via search excerpt (HTTP 403).
+  - id: calian_hc977exf
+    url: &u_hc977 "https://sites.calian.com/app/uploads/sites/8/2024/06/Calian%C2%AE-HC977EXF-Datasheet-Rev.-202203.pdf"
+    title: Calian (Tallysman) HC977EXF triple-band helical GNSS antenna datasheet Rev. 202203
+    tag: datasheet
+  - id: silvus_sc4200ep
+    url: &u_silvus "https://silvustechnologies.com/wp-content/uploads/2026/03/StreamCaster-4200-SC4200EP-Enhanced-Plus-Datasheet.pdf"
+    title: Silvus Technologies StreamCaster 4200 Enhanced Plus (SC4200EP) datasheet, 2x2 MIMO (also lists a 122 g module variant)
+    tag: datasheet
+  - id: doodle_products
+    url: &u_doodle "https://doodlelabs.com/?p=2905"
+    title: Doodle Labs - Mesh Rider radio product line (Nano2, Mini, OEM, Boost, Wearable)
+    tag: manufacturer
+  - id: microhard_pddl2450
+    url: &u_microhard "https://microhardcorp.com/brochures/pDDL2450.Brochure.Rev.1.4.1.pdf"
+    title: Microhard pDDL2450 2.4 GHz digital data link brochure Rev 1.4.1
+    tag: datasheet
+  - id: swa_1001_202
+    url: &u_swa "https://www.rfmw.com/datasheets/southwest/217-0001-929_Rev_0_Data_Sheet_for_1001-202.pdf"
+    title: Southwest Antennas 1001-202 omni half-wave dipole 2.1-2.5 GHz datasheet
+    tag: datasheet
+  - id: ping200x_ds
+    url: &u_ping200x "https://uavionix.com/wp-content/uploads/2019/04/Ping200X-Datasheet-Rev-B.pdf"
+    title: uAvionix ping200X datasheet (Rev B; Rev F at https://uavionix.com/downloads/ping200X/ping200X-DataSheet-Rev-F.pdf)
+    tag: datasheet
+    notes: uavionix.com returns HTTP 403 to automated fetches; values read via search excerpts of the Rev B and Rev F datasheets.
+  - id: pingrx_pro
+    url: &u_pingrxpro "https://www.unmannedsystemstechnology.com/company/uavionix-corporation/pingrx-pro-detect-and-avoid-ads-b-uav-receiver/"
+    title: uAvionix profile - pingRX Pro dual-band ADS-B receiver
+    tag: manufacturer
+    notes: Read via search excerpt.
+  - id: sagetech_mxs
+    url: &u_mxs "https://www.unmannedsystemstechnology.com/2022/06/faa-certifies-sagetechs-mxs-mode-s-micro-transponder/"
+    title: UST news (2022) - FAA certifies Sagetech MXS Mode S micro transponder with ADS-B In/Out (150 g)
+    tag: paper
+    notes: Read via search excerpt.
+  - id: dronetag_beacon
+    url: &u_dronetag "https://dronetag.com/products/beacon/"
+    title: Dronetag Beacon - broadcast Remote ID module (specifications and price)
+    tag: manufacturer
+  - id: pingrid
+    url: &u_pingrid "https://www.unmannedsystemstechnology.com/company/uavionix-corporation/pingrid-faa-compliant-remote-id-broadcast-module/"
+    title: uAvionix profile - pingRID Remote ID broadcast module (21 g, ASTM F3411-22a)
+    tag: manufacturer
+    notes: Read via search excerpt.
+  # --- 5. electrical ---
+  - id: lim_web
+    url: &u_lim_web "https://www.limflug.de/en/products/engines-15kw-40kw.php"
+    title: Limbach Flugmotoren - L 275 EF alternator and starter options (see engine.yaml)
+    tag: manufacturer
+  - id: ust048
+    url: &u_ust048 "https://www.uncrewed-systems.com/?p=9652"
+    title: "UST 048 (2023): Limbach - ePropelled SG750 starter/generator for the L 275 EF (see engine.yaml)"
+    tag: paper
+  - id: epropelled_apus
+    url: &u_ep_apus "https://www.unmannedsystemstechnology.com/2022/04/epropelled-starter-generators-intelligent-power-systems-selected-for-apus-15-quadcopter/"
+    title: UST news (2022) - ePropelled SG750 starter generator and iPS750 intelligent power system on the Apus 15
+    tag: paper
+    notes: Read via search excerpt. iPS750 output voltage not published.
+  - id: vat_1000w
+    url: &u_vat1000 "https://vat.aero/1000w-power-distribution-unit-3/"
+    title: VISIONAIRtronics 1000 W Power Distribution Unit (redundant avionics/servo outputs, IP67, 1600 g)
+    tag: manufacturer
+  - id: vat_1800w
+    url: &u_vat1800 "https://www.unmannedsystemstechnology.com/wp-content/uploads/2023/05/1800W-dual-PDU-product-brief-V1-0.pdf"
+    title: VISIONAIRtronics 1800 W PDU product brief V1.0
+    tag: manufacturer
+  - id: esensi_pmu
+    url: &u_esensi "https://www.esensi.com.tr/storage/app/uploads/public/68e/8b8/423/68e8b8423ea28215073027.pdf"
+    title: Esensi (Ankara, Turkey) PMU - Power Management Unit datasheet (1.5 kW, 40-60 V inputs)
+    tag: datasheet
+  - id: cuav_can_pmu
+    url: &u_cuav_pmu "https://www.unmannedsystemstechnology.com/company/eroot-electronics/cuav-can-pmu/"
+    title: CUAV CAN PMU (power monitor) profile
+    tag: manufacturer
+    notes: Read via search excerpt.
+  - id: a123_anr26650
+    url: &u_a123 "https://www.nkon.nl/novat/amfile/file/download/file/169/product/1793"
+    title: A123 / Lithium Werks ANR26650M1-B LiFePO4 cell datasheet (distributor copy)
+    tag: datasheet
+    notes: Read via search excerpt of the datasheet.
+  - id: molicel_p45b
+    url: &u_p45b "https://www.imrbatteries.com/content/molicel_p45b.pdf"
+    title: Molicel INR-21700-P45B Li-ion cell datasheet (distributor copy)
+    tag: datasheet
+    notes: Read via search excerpt of the datasheet.
+  - id: earthx_table
+    url: &u_earthx "https://aircraftspruce.com/catalog/elpages/earthxbatteries.php"
+    title: Aircraft Spruce - EarthX LiFePO4 aircraft batteries table (ETX680C, ETX900-24)
+    tag: vendor
+    notes: Read via search excerpt.
+  # --- 6. fuel ---
+  - id: atl_bladders
+    url: &u_atl "https://www.unmannedsystemstechnology.com/2024/03/custom-uav-fuel-bladders-fluid-containment-solutions/"
+    title: Aero Tec Laboratories (ATL) - custom UAV fuel bladders (material thicknesses, temperature and altitude range)
+    tag: manufacturer
+    notes: Read via search excerpt.
+  - id: ust018_p61
+    url: &u_ust018_p61 "https://www.ust-media.com/ust-magazine/UST018/61/"
+    title: "UST 018 Dossier Limbach L 275 EF p.61 - fuel system (inline pump, 2.5 bar regulator, return line)"
+    tag: paper
+  - id: ust050_pumps
+    url: &u_ust050 "https://www.uncrewed-systems.com/content/uploads/magazines/Issue%20050/98/"
+    title: "UST 050 p.98 - UAV fuel pumps (efficiency about 45 %, life 700-1500 h, 10-20 W, run-dry capability)"
+    tag: paper
+  - id: ust_twostroke_fuel
+    url: &u_ust_2s_fuel "https://www.unmannedsystemstechnology.com/feature/fuel-preparation-in-high-performance-two-stroke-uav-engines/"
+    title: UST feature - Fuel preparation in high performance two-stroke UAV engines (65 g piston EFI pump, 4 bar, about 2 W)
+    tag: paper
+    notes: Read via search excerpt; the pump supplier is not named in the excerpt.
+  - id: nwuav_components
+    url: &u_nwuav "https://nwuav.com/products-components.html"
+    title: Northwest UAV - UAV components (EFI fuel delivery system description)
+    tag: manufacturer
+    notes: Read via search excerpt; no masses given.
+  - id: andair_gas10
+    url: &u_andair_gas10 "https://www.andair.co.uk/product/gascolator-gas10-70"
+    title: Andair GAS10-70 dual-filter gascolator (100 + 70 micron), price
+    tag: manufacturer
+  - id: andair_gascolators
+    url: &u_andair_gas "https://www.andair.co.uk/category/gascolators/"
+    title: Andair gascolators (GAS375 152 g, GAS500 287 g) and check valves
+    tag: manufacturer
+    notes: Read via search excerpt.
+  - id: obp_drybreak
+    url: &u_obp "https://www.obpltd.com/product/fuel-line-quick-release-dry-break-coupling/"
+    title: obp Motorsport - aluminium dry-break quick-release fuel coupling AN6/AN8/AN10 (masses, price)
+    tag: manufacturer
+  - id: gill_level
+    url: &u_gill "https://www.unmannedsystemstechnology.com/2012/04/new-miniature-fuel-and-oil-level-sensors-for-unmanned-aerial-vehicles/"
+    title: Gill Sensors - miniature capacitive fuel level sensors for UAVs (60 g, 0-5 V, IP68)
+    tag: manufacturer
+    notes: Read via search excerpt.
+  - id: reventec_ls100
+    url: &u_reventec "https://www.unmannedsystemstechnology.com/company/reventec/ls100-drone-fuel-level-sensor/"
+    title: Reventec LS100 drone fuel level sensor (capacitive, custom length up to 450 mm)
+    tag: manufacturer
+    notes: Read via search excerpt.
+  # --- 7. recovery and safety ---
+  - id: galaxy_grs4_240
+    url: &u_grs4240 "https://galaxysky.cz/grs-4-240-40m2-p30-en"
+    title: Galaxy GRS 4/240 rocket-deployed rescue system (MTOW 240 kg, VNE 240 km/h, 43 m2 canopy) - full data table
+    tag: manufacturer
+  - id: galaxy_gbs10
+    url: &u_gbs10 "https://www.galaxysky.cz/manuals/general_info.pdf"
+    title: Galaxy GBS 10 UAV ballistic rescue systems general info (up to 35 kg)
+    tag: manufacturer
+  - id: uavos_ers
+    url: &u_uavos "https://www.uavos.com/products/emergency-rescue-systems/emergency-rescue-system-ers-75/"
+    title: UAVOS drone parachute systems specification tables (10 ... 1000 kg classes)
+    tag: manufacturer
+  - id: fruity_peregrine
+    url: &u_peregrine "https://fruitychutes.com/uav_rpv_drone_recovery_parachutes/peregrine_uav_ballistic_parachute_system"
+    title: Fruity Chutes Peregrine UAV CO2 ballistic parachute system (6.3-104 kg bundles)
+    tag: manufacturer
+  - id: aveo_lsa
+    url: &u_aveo "https://www.aircraftspruce.eu/catalog/pdf/11-07360.pdf"
+    title: Aveo Engineering AveoFlashLP LSA position/nav/strobe light - installation manual with technical specification
+    tag: datasheet
+  - id: firehouse_arcv
+    url: &u_arcv "https://volatusdrones.com/products/firehouse-technology-arc-v-drone-strobe-anti-collision-light"
+    title: Firehouse Technology ARC V drone anti-collision strobe (13 g, 4 statute miles)
+    tag: vendor
+    notes: Read via search excerpt.
+  - id: rotorama_fts
+    url: &u_rotorama "https://www.rotorama.com/product/rotorama-flight-termination-system"
+    title: Rotorama FTS - independent battery-disconnect flight termination switch (multirotor; architecture reference only)
+    tag: manufacturer
+
+# -----------------------------------------------------------------------------------------------------
+# CATEGORIES
+# Common item shape: {value, source, tag, [note], [basis]}
+# -----------------------------------------------------------------------------------------------------
+categories:
+
+  # ===================================================================================== 1
+  control_surface_actuators:
+    summary: >-
+      UAV-grade electromechanical rotary actuators. Industrial units (Volz DA series, Hitec/MPX SG-BL
+      CAN series) run on a 24-28 V rail, have brushless motors, contactless position sensors,
+      sealed metal cases and serial feedback. Hobby-derived HV servos (MKS, Hitec D-series) are
+      light and cheap but run on 6-8.4 V and are rated only to about -10..+60 degC.
+    hinge_moment_screening:
+      tag: estimate
+      source: "ucav250/data/research/comparables.yaml#recommended_ranges"
+      basis: >-
+        H = Ch q S_cs c_cs. Wing 3.0 m2, span 6.0 m, taper 0.5 (root 0.667 m, tip 0.333 m).
+        Aileron 40 % semispan outboard, cf/c 0.25 (c 0.104 m, S 0.125 m2 per side). Flap 42 %
+        semispan inboard, cf/c 0.28 (c 0.160 m, S 0.201 m2 per side). Ruddervator 0.9 m x 0.105 m
+        (S 0.0945 m2 per side). |Ch| 0.30 at full deflection (plain unbalanced surface,
+        Ch_delta about -0.6/rad, plus Ch_alpha term), 0.12 at 1/3 deflection, 0.50-0.55 for flaps
+        at 30-40 deg. VA 38 m/s, VD 55 m/s, flap speed 30-33 m/s (assumed, sizing phase decides).
+        Sea-level density 1.225 kg/m3. Accuracy about +/-50 %; replace with VLM/NeuralFoil
+        hinge-moment data in sizing.
+      aileron_full_deflection_at_VA_Nm: 3.45
+      aileron_one_third_deflection_at_VD_Nm: 2.9
+      ruddervator_full_deflection_at_VA_Nm: 2.63
+      flap_35deg_at_30_m_s_Nm: 8.85
+      flap_35deg_at_33_m_s_Nm: 11.8
+      conclusion: >-
+        Ailerons and tail surfaces need about 3-4 Nm at the surface, flaps about 9-12 Nm. With the
+        CS-LUAS.395 system-load factor of 1.25 (standards.yaml CTL-001) and a 1.5 margin on the
+        screening value, primary surfaces want at least about 5 Nm available and flaps at least
+        about 15 Nm (peak). DA 26 (2.7 Nm rated, 5.0 Nm peak) suits primary surfaces with a 1.5:1
+        to 2:1 horn ratio; DA 30 (8 Nm rated, 16 Nm peak) suits flaps directly.
+    items:
+      - id: volz_da26
+        manufacturer: Volz Servos GmbH & Co. KG (Offenbach, Germany)
+        model: DA 26 (DA 26-30-5024)
+        status: in production (catalogue 2026)
+        type: rotary EMA, brushless DC motor, 6-stage ball-bearing hardened-steel gear train, contactless position sensor
+        supply_voltage_rated_V: {value: 28.0, source: *u_volz_da26, tag: datasheet}
+        supply_voltage_range_V: {value: [12.0, 32.0], source: *u_volz_da26, tag: datasheet}
+        current_standby_A: {value: 0.04, bound: max, source: *u_volz_da26, tag: datasheet}
+        current_rated_A: {value: 0.8, source: *u_volz_da26, tag: datasheet, note: "tolerance +/-10 %"}
+        current_peak_A: {value: 1.3, source: *u_volz_da26, tag: datasheet}
+        power_rated_W: {value: 22.4, source: *u_volz_da26, tag: estimate, basis: "28 V x 0.8 A"}
+        power_peak_W: {value: 36.4, source: *u_volz_da26, tag: estimate, basis: "28 V x 1.3 A"}
+        torque_rated_Nm: {value: 2.7, source: *u_volz_da26, tag: datasheet, note: "at rated speed; 23.9 lbf-in"}
+        torque_peak_Nm: {value: 5.0, source: *u_volz_da26, tag: datasheet, note: "44.3 lbf-in; short-time duty < 10 s with 60 s cool-down, overload < 1 s"}
+        speed_no_load_deg_per_s: {value: 290.0, source: *u_volz_da26, tag: datasheet}
+        speed_rated_deg_per_s: {value: 200.0, source: *u_volz_da26, tag: datasheet, note: "at rated torque"}
+        travel_default_deg: {value: [-45.0, 45.0], source: *u_volz_da26, tag: datasheet}
+        travel_max_standard_deg: {value: [-50.0, 50.0], source: *u_volz_da26, tag: datasheet}
+        travel_extended_option_deg: {value: [-85.0, 85.0], source: *u_volz_da26, tag: datasheet}
+        backlash_deg: {value: 0.5, bound: max, source: *u_volz_da26, tag: datasheet}
+        position_error_over_temperature_deg: {value: 1.0, bound: max_abs, source: *u_volz_da26, tag: datasheet}
+        operating_temperature_degC: {value: [-30.0, 70.0], source: *u_volz_da26, tag: datasheet, note: "-70 degC modification on request"}
+        storage_temperature_degC: {value: [-55.0, 85.0], source: *u_volz_da26, tag: datasheet}
+        case_dimensions_m: {value: [0.054, 0.1028, 0.026], source: *u_volz_da26, tag: datasheet, note: "L x H x W, +/-0.2 mm, without output arm"}
+        height_with_output_arm_m: {value: 0.1127, source: *u_volz_da26, tag: datasheet, read_from_drawing: true}
+        mass_kg: {value: 0.270, source: *u_volz_da26, tag: datasheet, note: "+/-10 %"}
+        protection: {value: "IP67 (1 m), HART-coat salt-water resistant aluminium case, >100 h salt spray, case EMI shielding", source: *u_volz_da26, tag: datasheet}
+        qualification: {value: "endurance > 3 million cycles (> 2000 h); MIL-STD-810F vibration and 810G acceleration/shock tests passed; used in Schiebel Camcopter S-100", source: *u_volz_da26, tag: datasheet}
+        interfaces:
+          value: "PWM-OPTO, PWM-TTL, RS-422/TTL differential PWM, RS-485 2-wire, RS-485 redundant (dual interface + dual power supply), RS-485 4-wire. RS-485 versions report position, supply voltage, current, motor and PCB temperature (humidity optional)."
+          source: *u_volz_da26
+          tag: datasheet
+        connector: {value: "integrated Sub-D; MIL circular connector or cable gland on request", source: *u_volz_da26, tag: datasheet}
+        output_shaft: {value: "ANSI multi-tooth spline (square shaft option .SQ)", source: *u_volz_da26, tag: datasheet}
+        mounting:
+          description: "Brackets integrated in the housing for horizontal and vertical installation; Volz aluminium mounting frames LH 1821.30 / RH 1821.31 (incl. hardware)."
+          hole_diameter_m: {value: 0.0041, source: *u_volz_da26, tag: datasheet, read_from_drawing: true}
+          flange_hole_pattern_m: {value: [0.0612, 0.016], source: *u_volz_da26, tag: datasheet, read_from_drawing: true, note: "4 holes, 61.2 +/-0.1 mm x 16.0 +/-0.1 mm (bottom view of drawing 6.1)"}
+          side_lug_vertical_spacing_m: {value: 0.0895, source: *u_volz_da26, tag: datasheet, read_from_drawing: true, note: "89.5 +/-0.2 mm from lower lug to upper lugs"}
+          output_axis_from_case_edge_m: {value: 0.0177, source: *u_volz_da26, tag: datasheet, read_from_drawing: true}
+        autopilot_support: {value: "ArduPilot supports Volz servos by PWM and Volz serial protocol; Veronte 1x 4.12 has dual RS-485 buses", source: *u_ardupilot_volz, tag: manufacturer, note: "via_search_excerpt for ArduPilot; Veronte bus count from veronte_changelog"}
+        price: {value: null, note: "price on request (not public)"}
+        missing: [price and lead time, STEP model (Volz offers STEP downloads), RS-485 ICD]
+      - id: volz_da26d
+        manufacturer: Volz Servos
+        model: DA 26-D (duplex redundant)
+        type: two-channel EMA, command-monitor architecture, two motors, dual electronics and power inputs, 3-channel position sensor with 2-out-of-3 voting
+        supply_voltage_range_V: {value: [12.0, 32.0], source: *u_volz_da26d, tag: datasheet}
+        current_rated_A: {value: 1.7, source: *u_volz_da26d, tag: datasheet, note: "standard mode; 1.0 A degraded mode"}
+        current_peak_A: {value: 3.3, source: *u_volz_da26d, tag: datasheet}
+        torque_rated_Nm: {value: 5.0, source: *u_volz_da26d, tag: datasheet, note: "degraded (one channel): 2 Nm"}
+        torque_peak_Nm: {value: 12.0, source: *u_volz_da26d, tag: datasheet, note: "degraded: 4 Nm"}
+        speed_no_load_deg_per_s: {value: 250.0, source: *u_volz_da26d, tag: datasheet, note: "degraded < 150 deg/s"}
+        speed_rated_deg_per_s: {value: 170.0, source: *u_volz_da26d, tag: datasheet, note: "degraded < 100 deg/s"}
+        case_dimensions_m: {value: [0.124, 0.118, 0.026], source: *u_volz_da26d, tag: datasheet}
+        mass_kg: {value: 0.640, source: *u_volz_da26d, tag: datasheet}
+        interfaces: {value: "RS-485 redundant; diagnostics: current, motor/PCB temperature, humidity, operating-time and load-level counters", source: *u_volz_da26d, tag: datasheet}
+        protection: {value: IP67, source: *u_volz_da26d, tag: datasheet}
+        note: Degraded mode gives about 40 % of rated torque (failed gear train is back-drivable). Different case from the simplex DA 26; not a drop-in.
+        price: {value: null, note: "price on request"}
+      - id: volz_da30
+        manufacturer: Volz Servos
+        model: DA 30 (DA 30.30.x)
+        type: rotary EMA, BLDC, hardened-steel gears, contactless Hall position sensor
+        supply_voltage_rated_V: {value: 28.0, source: *u_volz_da30, tag: datasheet}
+        supply_voltage_range_V: {value: [24.0, 32.0], source: *u_volz_da30, tag: datasheet}
+        current_standby_A: {value: 0.04, bound: max, source: *u_volz_da30, tag: datasheet}
+        current_rated_A: {value: 1.3, source: *u_volz_da30, tag: datasheet}
+        current_peak_A: {value: 2.6, source: *u_volz_da30, tag: datasheet}
+        power_rated_W: {value: 36.4, source: *u_volz_da30, tag: estimate, basis: "28 V x 1.3 A"}
+        torque_rated_Nm: {value: 8.0, source: *u_volz_da30, tag: datasheet, note: "70.8 lbf-in"}
+        torque_peak_Nm: {value: 16.0, source: *u_volz_da30, tag: datasheet, note: "141.6 lbf-in"}
+        speed_no_load_deg_per_s: {value: 230.0, source: *u_volz_da30, tag: datasheet}
+        speed_rated_deg_per_s: {value: 150.0, source: *u_volz_da30, tag: datasheet}
+        travel_default_deg: {value: [-45.0, 45.0], source: *u_volz_da30, tag: datasheet}
+        travel_max_deg: {value: [-85.0, 85.0], source: *u_volz_da30, tag: datasheet}
+        backlash_deg: {value: 0.5, bound: max, source: *u_volz_da30, tag: datasheet}
+        operating_temperature_degC: {value: [-30.0, 70.0], source: *u_volz_da30, tag: datasheet, note: "environmental table lists -55 degC (MIL-810G 502.5) with low-temperature modification"}
+        envelope_dimensions_m: {value: [0.1585, 0.085, 0.030], source: *u_volz_da30, tag: datasheet, note: "with D-Sub connector (.S9); 195.29 x 85 x 30 mm with MIL D38999 connectors (.MIL13)"}
+        mass_kg: {value: 0.630, source: *u_volz_da30, tag: datasheet, note: "D-Sub; 0.680 kg with MIL D38999 connectors; +/-10 %"}
+        environmental: {value: "MIL-810G: altitude 12192 m (500.5), humidity 95 % 240 h (507.5), vibration Cat. 13 (514.6), functional shock 15 g 11 ms (516.6), salt fog 24 h, IP67 (30 min at 1 m)", source: *u_volz_da30, tag: datasheet}
+        interfaces: {value: "PWM with optocoupler (.1), PWM RS-422 (.2), RS-485 2-wire (.3), RS-485 redundant comm + redundant power (.4), RS-485 4-wire (.5); RS-485 at 115200 bit/s, 6-byte frame with 2-byte CRC", source: *u_volz_da30, tag: datasheet}
+        mounting:
+          description: "Integrated lugs for horizontal and vertical assembly; output shaft spline or square (.SQ)."
+          hole_diameter_m: {value: 0.0041, source: *u_volz_da30, tag: datasheet, read_from_drawing: true}
+          flange_hole_pattern_m: {value: [0.077, 0.018], source: *u_volz_da30, tag: datasheet, read_from_drawing: true, note: "77 +/-0.1 mm x 18 +/-0.1 mm (drawing 7.1)"}
+          output_axis_offset_m: {value: 0.0216, source: *u_volz_da30, tag: datasheet, read_from_drawing: true, note: "21.6 +/-0.1 mm from mounting-hole line"}
+          lug_height_above_case_m: {value: 0.0040, source: *u_volz_da30, tag: datasheet, read_from_drawing: true}
+        price: {value: null, note: "price on request"}
+      - id: volz_da30d
+        manufacturer: Volz Servos
+        model: DA 30-D (duplex redundant)
+        supply_voltage_range_V: {value: [12.0, 32.0], source: *u_volz_da30d, tag: datasheet}
+        current_rated_A: {value: 3.2, source: *u_volz_da30d, tag: datasheet, note: "1.9 A degraded"}
+        current_peak_A: {value: 5.2, source: *u_volz_da30d, tag: datasheet}
+        torque_rated_Nm: {value: 20.0, source: *u_volz_da30d, tag: datasheet, note: "8 Nm degraded"}
+        torque_peak_Nm: {value: 32.0, bound: min, source: *u_volz_da30d, tag: datasheet, note: "> 32 Nm; 12 Nm degraded"}
+        speed_no_load_deg_per_s: {value: 200.0, source: *u_volz_da30d, tag: datasheet}
+        speed_rated_deg_per_s: {value: 110.0, source: *u_volz_da30d, tag: datasheet}
+        envelope_dimensions_m: {value: [0.1915, 0.130, 0.030], source: *u_volz_da30d, tag: datasheet, note: "D-Sub; 218.29 x 130 x 30 mm with MIL connectors"}
+        mass_kg: {value: 1.150, source: *u_volz_da30d, tag: datasheet, note: "1.200 kg with MIL D38999 connectors"}
+        price: {value: null, note: "price on request"}
+      - id: volz_da30ht
+        manufacturer: Volz Servos
+        model: DA 30-HT
+        note: Oversized for this class; listed as the next step if flap hinge moments grow.
+        supply_voltage_range_V: {value: [24.0, 32.0], source: *u_volz_da30ht, tag: datasheet}
+        current_rated_A: {value: 2.0, source: *u_volz_da30ht, tag: datasheet}
+        current_peak_A: {value: 3.6, source: *u_volz_da30ht, tag: datasheet}
+        torque_rated_Nm: {value: 18.0, source: *u_volz_da30ht, tag: datasheet}
+        torque_peak_Nm: {value: 32.0, source: *u_volz_da30ht, tag: datasheet}
+        speed_no_load_deg_per_s: {value: 165.0, source: *u_volz_da30ht, tag: datasheet}
+        speed_rated_deg_per_s: {value: 100.0, source: *u_volz_da30ht, tag: datasheet}
+        envelope_dimensions_m: {value: [0.1695, 0.095, 0.045], source: *u_volz_da30ht, tag: datasheet}
+        mass_kg: {value: 1.100, source: *u_volz_da30ht, tag: datasheet, note: "1.150 kg with MIL connectors"}
+      - id: volz_da22_28v
+        manufacturer: Volz Servos
+        model: DA 22-30-4128 (28 V, long case)
+        note: Brushed-motor 22 mm series; suitable for low-load duties (throttle, cowl flap, fuel valve), not for primary surfaces.
+        supply_voltage_range_V: {value: [20.0, 30.0], source: *u_volz_da22, tag: datasheet}
+        current_rated_A: {value: 0.35, source: *u_volz_da22, tag: datasheet}
+        current_peak_A: {value: 0.6, source: *u_volz_da22, tag: datasheet}
+        torque_rated_Nm: {value: 1.8, source: *u_volz_da22, tag: datasheet}
+        torque_peak_Nm: {value: 3.0, source: *u_volz_da22, tag: datasheet}
+        speed_no_load_deg_per_s: {value: 180.0, source: *u_volz_da22, tag: datasheet}
+        speed_rated_deg_per_s: {value: 110.0, source: *u_volz_da22, tag: datasheet}
+        case_dimensions_m: {value: [0.0415, 0.0659, 0.022], source: *u_volz_da22, tag: datasheet}
+        mass_kg: {value: 0.132, source: *u_volz_da22, tag: datasheet}
+      - id: volz_da22_bldc_28v
+        manufacturer: Volz Servos
+        model: DA 22-BLDC (28 V)
+        supply_voltage_range_V: {value: [20.0, 32.0], source: *u_volz_da22bldc, tag: datasheet}
+        current_rated_A: {value: 0.5, source: *u_volz_da22bldc, tag: datasheet}
+        current_peak_A: {value: 1.1, source: *u_volz_da22bldc, tag: datasheet}
+        torque_rated_Nm: {value: 1.5, source: *u_volz_da22bldc, tag: datasheet}
+        torque_peak_Nm: {value: 3.5, source: *u_volz_da22bldc, tag: datasheet}
+        speed_no_load_deg_per_s: {value: 320.0, source: *u_volz_da22bldc, tag: datasheet}
+        speed_rated_deg_per_s: {value: 210.0, source: *u_volz_da22bldc, tag: datasheet}
+        overall_dimensions_m: {value: [0.067, 0.0535, 0.022], source: *u_volz_da22bldc, tag: datasheet, note: "case design A"}
+        mass_kg: {value: 0.141, source: *u_volz_da22bldc, tag: datasheet}
+      - id: hitec_sg33bl_t_can_24v
+        manufacturer: Hitec / MULTIPLEX (industrial line)
+        model: SG33BL-T-CAN-24V (circular connector), p/n 1-02465
+        type: BLDC rotary actuator, contactless magnetic encoder, 32-bit MCU, CAN 2.0A/B and DroneCAN
+        supply_voltage_range_V: {value: [18.0, 32.0], source: *u_mpx_ind, tag: datasheet}
+        torque_stall_Nm: {value: 14.42, source: *u_mpx_ind, tag: datasheet, note: "147.0 kgf.cm at 24 V"}
+        speed_no_load_deg_per_s: {value: 324.0, source: *u_mpx_ind, tag: datasheet, note: "at 24 V"}
+        current_rest_A: {value: 0.020, source: *u_mpx_ind, tag: datasheet}
+        current_no_load_A: {value: 0.230, source: *u_mpx_ind, tag: datasheet}
+        current_stall_A: {value: 6.4, source: *u_mpx_ind, tag: datasheet}
+        dimensions_m: {value: [0.064, 0.033, 0.090], source: *u_mpx_ind, tag: datasheet}
+        mass_kg: {value: 0.480, source: *u_mpx_ind, tag: datasheet, note: "servo only, without horn and accessories"}
+        output: {value: "square 6.5 x 6.5 mm spline; travel 90 deg per 4096 counts, servo mode +/-150 deg", source: *u_mpx_ind, tag: datasheet}
+        protection: {value: "IP68, hard-anodised aluminium case, 6 ball + 2 needle bearings, 4 hardened steel gears, backlash max 0.5 deg, MTTF > 1000 h, MIL-STD-810G 514.6C-VII vibration", source: *u_mpx_ind, tag: datasheet}
+        operating_temperature_degC: {value: [-30.0, 70.0], source: *u_mpx_ind, tag: datasheet}
+        note: Strong, low-cost alternative to the DA 30 for flaps, but MTTF is only > 1000 h and rated (continuous) torque is not published, only stall torque.
+        price: {value: null, note: "not public"}
+      - id: hitec_sg50bl_can_24v
+        manufacturer: Hitec / MULTIPLEX
+        model: SG50BL-CAN-24V (circular), p/n 1-02412
+        supply_voltage_range_V: {value: [18.0, 32.0], source: *u_mpx_ind, tag: datasheet}
+        torque_stall_Nm: {value: 51.0, source: *u_mpx_ind, tag: datasheet, note: "520 kgf.cm at 24 V"}
+        speed_no_load_deg_per_s: {value: 120.0, source: *u_mpx_ind, tag: datasheet}
+        current_stall_A: {value: 10.0, source: *u_mpx_ind, tag: datasheet}
+        dimensions_m: {value: [0.100, 0.050, 0.105], source: *u_mpx_ind, tag: datasheet}
+        mass_kg: {value: 1.450, source: *u_mpx_ind, tag: datasheet}
+        note: Oversized; candidate for a retraction or steering drive only.
+      - id: hitec_mdb961wp_can_28v
+        manufacturer: Hitec / MULTIPLEX
+        model: MDB961WP-CAN 28V
+        note: Standard-size (40 x 20 mm) BLDC servo with CAN. The catalogue page mixes a 28 V performance table with a 4.0-8.4 V general specification; values below are the 28 V table.
+        torque_stall_Nm: {value: 5.89, source: *u_mpx_ind, tag: datasheet, note: "60 kgf.cm / 588.6 N.cm at 28 V"}
+        torque_peak_efficiency_Nm: {value: 0.69, source: *u_mpx_ind, tag: datasheet}
+        speed_no_load_deg_per_s: {value: 429.0, source: *u_mpx_ind, tag: datasheet}
+        current_stall_A: {value: 3.0, source: *u_mpx_ind, tag: datasheet}
+        dimensions_m: {value: [0.040, 0.020, 0.039], source: *u_mpx_ind, tag: datasheet}
+        mass_kg: {value: 0.090, source: *u_mpx_ind, tag: datasheet}
+        protection: {value: "IP67, aluminium case, 5 hardened steel gears, 25T spline", source: *u_mpx_ind, tag: datasheet}
+        missing: [confirmation of 28 V rated (continuous) torque, operating temperature for the 28 V version]
+      - id: mks_hbl3850_dronecan
+        manufacturer: MKS (Taiwan)
+        model: HBL3850-DroneCAN (X8 series)
+        type: hobby-derived HV brushless servo with DroneCAN
+        supply_voltage_range_V: {value: [6.0, 8.4], source: *u_mks_hbl3850, tag: vendor}
+        torque_stall_Nm: {value: 5.6, source: *u_mks_hbl3850, tag: vendor, note: "56.99 kgf.cm at 8.4 V; 4.1 Nm at 6.0 V"}
+        speed_no_load_deg_per_s: {value: 576.9, source: *u_mks_hbl3850, tag: vendor, note: "0.104 s/60 deg at 8.4 V"}
+        dimensions_m: {value: [0.040, 0.020, 0.0385], source: *u_mks_hbl3850, tag: vendor}
+        mass_kg: {value: 0.074, source: *u_mks_hbl3850, tag: vendor}
+        operating_temperature_degC: {value: [-10.0, 60.0], source: *u_mks_hbl3850, tag: vendor, note: "via_search_excerpt"}
+        output: {value: "8 mm 25T X8 spline", source: *u_mks_hbl3850, tag: vendor}
+        price: {value: 224.99, currency: USD, source: *u_mks_hbl3850_price, tag: vendor, note: "PWM HBL3850 retail price, via_search_excerpt; DroneCAN version price not found"}
+        note: >-
+          Very high torque-to-mass, but the stall rating is not a continuous rating, there is no
+          sealing rating, the temperature range does not cover -30 degC, and it needs an 8.4 V rail.
+          Suitable for prototypes and ground tests, not recommended for the production aircraft.
+      - id: mks_hbl6625_dronecan
+        manufacturer: MKS
+        model: HBL6625-DroneCAN (10 mm wing servo)
+        torque_stall_Nm: {value: 1.0, source: *u_mks_hbl6625, tag: vendor, note: "10.4 kgf.cm at 8.4 V"}
+        speed_no_load_deg_per_s: {value: 545.5, source: *u_mks_hbl6625, tag: vendor}
+        dimensions_m: {value: [0.030, 0.010, 0.0355], source: *u_mks_hbl6625, tag: vendor}
+        mass_kg: {value: 0.0279, source: *u_mks_hbl6625, tag: vendor}
+        note: Too weak for this class; only for small auxiliary functions (e.g., camera door, cooling flap).
+    recommended:
+      item_id: volz_da26
+      companion_item_id: volz_da30
+      allocation:
+        - {function: "aileron, 1 per side", item: volz_da26, quantity: 2, note: "1.5:1-2:1 horn ratio for about 4-5 Nm continuous at the surface"}
+        - {function: "ruddervator / elevator + rudder", item: volz_da26, quantity: 2}
+        - {function: "nose-wheel steering", item: volz_da26, quantity: 1, note: "SAGITTA (150 kg) used the DA-26 class for steering, retraction and brakes"}
+        - {function: "wheel-brake master-cylinder actuator", item: volz_da26, quantity: 1, note: "SAGITTA: 5 Nm on a 20 mm lever = 250 N vs 132 N required"}
+        - {function: "flap, 1 per side", item: volz_da30, quantity: 2, note: "screening hinge moment 9-12 Nm vs 8 Nm rated / 16 Nm peak"}
+      mass_installed_kg:
+        value: 3.28
+        source: *u_volz_da26
+        tag: estimate
+        basis: "6 x 0.270 (DA 26) + 2 x 0.630 (DA 30) = 2.88 kg datasheet + 0.40 kg horns, pushrods, frames (estimate)"
+      reasons:
+        - Industrial UAV-grade actuator - brushless, contactless sensor, IP67, MIL-STD-810 tested, > 3 million cycles - with a published, complete datasheet and installation drawing.
+        - Runs directly on the 28 V servo rail (12-32 V), so no 8.4 V conversion is needed.
+        - RS-485 versions report position, current, voltage and temperatures; the redundant-interface option takes two power feeds. Health monitoring supports a civil safety case (SORA / CS-LUAS).
+        - In service on aircraft of this mass class - Schiebel Camcopter S-100 (datasheet) and the 150 kg DLR SAGITTA demonstrator (brakes, steering, retraction).
+        - The same family offers a duplex DA 26-D (5 Nm rated, 12 Nm peak) and DA 30-D. A later move to fault-tolerant primary controls needs no supplier change.
+        - "Commonality: one actuator type for 6 of 8 functions; the DA 30 adds flap torque."
+      risks:
+        - Price and lead time are not public. Ask for a quote early.
+        - The DA 26 rated torque (2.7 Nm) is below the screening aileron hinge moment at VA (3.45 Nm). A horn ratio of at least 1.5 is required; recheck when the hinge moments are known.
+        - "Flutter: with one actuator per surface, a disconnected actuator leaves a free-floating surface (standards.yaml FLU-003, CS-LUAS.629(f)). Mass balance or dual actuators must be decided in the structures phase."
+
+  # ===================================================================================== 2
+  landing_gear:
+    summary: >-
+      No catalogue landing-gear set exists for a 100-200 kg fixed-wing UAV; both DLR (SAGITTA,
+      150 kg) and the Warsaw Institute of Aviation (<= 100 kg) had to design their own. The
+      purchasable parts are the wheels, tyres, brakes, master cylinders and dampers (sailplane,
+      ultralight and LSA suppliers), plus actuators. Legs and attachment fittings are made in house.
+    design_loads_screening:
+      tag: estimate
+      source: *u_csluas_meta
+      basis: >-
+        MTOW 150 kg, 85 % on mains (SAGITTA static split 85/15), sink 2.40 m/s (CS-LUAS),
+        lift = 2/3 W during impact. Energy into main gear E = 0.5 m_main v^2 + (1 - 2/3) m_main g d.
+        A linear spring gear needs d = 0.12-0.15 m deflection for a main-gear load factor of about 4.6-5.6.
+        An oleo (efficiency 0.8) needs about 0.07 m stroke (SAGITTA used 70 mm).
+      static_load_per_main_tyre_N: 625.0
+      static_load_nose_tyre_N: 221.0
+      main_impact_energy_J: {value: 417.0, source: *u_csluas_meta, tag: estimate, basis: "0.5 x 127.5 kg x 2.40^2 + (1/3) x 127.5 kg x 9.81 x 0.12 m"}
+      main_peak_force_spring_gear_N: {value: 6950.0, source: *u_csluas_meta, tag: estimate, basis: "linear spring, F = 2 E / d with d = 0.12 m (both legs together)"}
+      braking_force_total_N: {value: 388.0, source: *u_sagitta, tag: paper, note: "SAGITTA value at 150 kg (mu 0.8, safety 1.5); 18 Nm per wheel at r = 0.095 m"}
+      landing_kinetic_energy_J: {value: 67500.0, source: *u_sagitta, tag: estimate, basis: "0.5 x 150 kg x (30 m/s)^2; SAGITTA sized its brake disc for 150 kJ at 49 m/s"}
+      gfrp_spring_bow_mass_kg:
+        value: [0.8, 2.5]
+        source: *u_csluas_meta
+        tag: estimate
+        basis: >-
+          Ideal strain-energy mass for a width-tapered E-glass UD bow (600 MPa, 40 GPa, 1/3
+          volume efficiency, FoS 1.5) is 0.8 kg; constant section 3.5 kg. Practical 1.5-2.5 kg
+          incl. axle fittings.
+    items:
+      # ---- reference systems (complete gear designs in this mass class) ----
+      - id: sagitta_retractable_gear
+        kind: reference_design (not for sale)
+        description: >-
+          DLR / Airbus SAGITTA demonstrator, MTOW 150 kg, landing mass 125 kg. Electric retractable
+          tricycle. Telescopic spring/oil damper legs (Zimmer Group industrial damper + coil spring),
+          anodised aluminium with steel sliding parts. Over-centre side-strut locks. EMA retraction.
+          Steerable nose wheel via EMA and toothed belt.
+        mtow_kg: {value: 150.0, source: *u_sagitta, tag: paper}
+        main_leg_mass_kg: {value: 4.0, source: *u_sagitta, tag: paper, note: "each, flight version"}
+        nose_leg_mass_kg: {value: 3.5, source: *u_sagitta, tag: paper}
+        total_gear_mass_kg: {value: 11.5, source: *u_sagitta, tag: estimate, basis: "2 x 4.0 + 3.5"}
+        static_split: {value: "about 85 % main / 15 % nose; static CG 143 mm ahead of MLG", source: *u_sagitta, tag: paper}
+        design_sink_speed_m_s: {value: 2.5, source: *u_sagitta, tag: paper}
+        max_horizontal_speed_m_s: {value: 49.0, source: *u_sagitta, tag: paper}
+        max_drop_force_N: {value: 5000.0, source: *u_sagitta, tag: paper, note: "design limit; measured 4500 N max at 2.5 m/s and 0-49 m/s"}
+        shock_stroke_m: {value: 0.070, source: *u_sagitta, tag: paper, note: "calculated 67.5 mm + 2.5 mm margin"}
+        spring_rate_N_per_m: {value: {main: 12400.0, nose: 3300.0}, source: *u_sagitta, tag: paper}
+        nose_steering_range_deg: {value: {right: 23.0, left: 90.0}, source: *u_sagitta, tag: paper, note: "90 deg left is used for retraction stowage"}
+        tyre: {value: "200 mm OD on 88.9 mm (3.5 in) rim; TOST Aero Max II 3.5 in or Aero Mini 150 sailplane wheels; static 2.5 kN, peak 4 kN; manufacturer speed rating 36 m/s, qualified to 49 m/s on DLR drum", source: *u_sagitta, tag: paper}
+        brakes: {value: "steel disc 120 mm OD x 4 mm, floating caliper, hydraulic, one master cylinder for both mains pushed by a Volz DA-26 class EMA (PWM 1000-2000 us = brake torque)", source: *u_sagitta, tag: paper}
+        brake_disc_diameter_m: {value: 0.120, source: *u_sagitta, tag: paper}
+        brake_force_required_N: {value: 132.0, source: *u_sagitta, tag: paper, note: "at actuator; DA-26 gives 250 N on a 20 mm lever"}
+        lessons: >-
+          The first aluminium flight legs bent aft under spin-up and gave 11.6 kN peaks vs 5.8 kN
+          for the steel engineering legs. Stiffness of the leg (not only the damper) governs landing loads.
+        source: *u_sagitta
+        tag: paper
+      - id: ilot_electric_retractable_gear
+        kind: reference_design (Institute of Aviation, Warsaw; NACRE project UAV)
+        description: Electric retractable tricycle for UAV up to 100 kg take-off mass, oleo-pneumatic shock absorbers, gas-spring assisted retraction, hobby-grade titanium-gear servos (Hitec HSR-5990TG) for retraction, steering and brakes.
+        mtow_kg: {value: 100.0, source: *u_ilot, tag: paper}
+        nose_leg_mass_kg: {value: 4.8, source: *u_ilot, tag: paper}
+        main_leg_mass_kg: {value: 4.1, source: *u_ilot, tag: paper, note: "each"}
+        total_gear_mass_kg: {value: 13.0, source: *u_ilot, tag: estimate, basis: "4.8 + 2 x 4.1"}
+        wheel: {value: "200 x 50 mm; main with 100 mm mechanical disc brake (servo-actuated, spring-held)", source: *u_ilot, tag: paper}
+        design_sink_speed_m_s: {value: 3.05, source: *u_ilot, tag: paper}
+        servo_example: {value: "HSR-5990TG: 30 kgf.cm (2.94 Nm) stall at 7.4 V, 62 g, 40 x 20 x 37 mm", source: *u_ilot, tag: paper}
+        source: *u_ilot
+        tag: paper
+      # ---- purchasable retractable gear ----
+      - id: aerotelemetry_hydraulic_retract
+        manufacturer: Aero Telemetry (USA)
+        model: Hydraulic retractable UAV main gear + steerable nose gear
+        mtow_class_kg: {value: 225.0, bound: max, source: *u_aerotel, tag: manufacturer, note: "UAVs up to 500 lb"}
+        main_strut_mass_kg: {value: 9.07, source: *u_aerotel, tag: manufacturer, note: "20 lb each side"}
+        nose_strut_mass_kg: {value: 9.07, source: *u_aerotel, tag: manufacturer, note: "20 lb"}
+        max_load_per_strut_N: {value: 1334.0, source: *u_aerotel, tag: manufacturer, note: "300 lb"}
+        main_pivot_to_axle_m: {value: 0.470, source: *u_aerotel, tag: manufacturer, note: "18.50 in; 23.25 in (0.591 m) to tyre bottom"}
+        nose_pivot_to_axle_m: {value: 0.622, source: *u_aerotel, tag: manufacturer, note: "24.50 in; 29.50 in (0.749 m) to tyre bottom"}
+        tyre: {value: "10 in x 3.5 in pneumatic ribbed with tube on 4 in nylon wheel", source: *u_aerotel, tag: manufacturer}
+        tyre_diameter_m: {value: 0.254, source: *u_aerotel, tag: manufacturer}
+        actuation: {value: "1000 psi (6.9 MPa) hydraulic actuator, 3.22 in (0.082 m) stroke; nose steering by electromechanical servo (PWM)", source: *u_aerotel, tag: manufacturer}
+        options: {value: "disc brakes main and nose; 24 V DC battery system with enclosure", source: *u_aerotel, tag: manufacturer}
+        total_gear_mass_kg: {value: 27.2, source: *u_aerotel, tag: estimate, basis: "3 x 20 lb; excludes hydraulic power pack"}
+        price: {value: null, note: "contact for pricing"}
+        assessment: About 18 % of a 150 kg MTOW. Far too heavy; not suitable.
+      - id: hobby_jet_electric_retracts
+        kind: market_check
+        note: >-
+          RC-jet electric retracts (JP Hobby ER-150 controller rated for aircraft up to 20 kg, Tarot,
+          SparkHobby 3-5 kg units) are rated for aircraft one order of magnitude lighter. None was found
+          rated above about 30 kg. Not suitable.
+        source: "https://www.gator-rc.com/products/jp-hobby-er-150-v1b-tricycle-retract-controller-brake-module"
+        tag: vendor
+      # ---- fixed spring legs ----
+      - id: grove_aluminium_spring_legs
+        manufacturer: Grove Aircraft Landing Gear Systems (USA)
+        model: 7075-T6 aluminium spring gear legs (catalogue sets for light aircraft; custom gear on request)
+        examples_mass_kg:
+          value: {VP-1_cable_braced: 5.67, Baby_Lakes: 7.35, Zenair_CH701: 8.21, Kitfox_3_4: 11.02}
+          source: *u_grove
+          tag: vendor
+          note: "12.5, 16.2, 18.1, 24.3 lb per main-gear set for these light aircraft types"
+        material: {value: 7075-T6 aluminium, source: *u_grove, tag: vendor}
+        custom_option: {value: "complete custom bolt-on gear designed for an individual aircraft", source: *u_grove, tag: vendor}
+        price: {value: null, note: "not listed"}
+        assessment: >-
+          The catalogue sets are for manned light aircraft (5.7-11 kg per set). A Grove custom set,
+          or an in-house aluminium/GFRP bow sized to the 0.4 kJ landing energy, is the realistic route.
+      - id: custom_gfrp_main_bow
+        kind: make (in-house or composite subcontractor)
+        description: One-piece GFRP (E- or S-glass UD + +/-45 overwrap) cross-fuselage spring bow, width-tapered, with bonded/bolted aluminium axle fittings for TOST 3.5 in disc-brake wheels.
+        mass_kg: {value: 2.0, source: *u_csluas_meta, tag: estimate, basis: "design_loads_screening.gfrp_spring_bow_mass_kg (practical 1.5-2.5 kg) incl. axle fittings"}
+        deflection_at_limit_m: {value: 0.13, source: *u_csluas_meta, tag: estimate, basis: "0.12-0.15 m for n about 5"}
+        note: Most-used solution in ultralight/LSA tricycles; no moving parts, low maintenance. Damping comes only from the tyres and laminate, so bounce must be checked.
+      # ---- nose gear with steering ----
+      - id: nose_leg_steerable
+        kind: make + buy (damper, wheel, actuator purchased)
+        description: >-
+          Trailing-link or telescopic steerable nose leg on an aluminium fork. Damper purchased as an
+          industrial hydraulic shock absorber (SAGITTA used a Zimmer Group unit tuned to a landing-gear
+          curve) plus a coil spring. Steering by a Volz DA 26 through a toothed belt or pushrods
+          (SAGITTA solution). TOST 3.5 in Max II wheel with 200 x 50 tyre.
+        mass_kg: {value: 2.0, source: *u_sagitta, tag: estimate, basis: "leg, fork, damper, spring and steering linkage, excl. wheel, tyre and steering EMA. SAGITTA retractable NLG is 3.5 kg incl. wheel and retraction linkage; a fixed leg drops the retraction parts"}
+        steering_range_deg: {value: [-25.0, 25.0], source: *u_sagitta, tag: estimate, basis: "SAGITTA 23 deg right; taxi needs about +/-20-30 deg"}
+        stroke_m: {value: 0.070, source: *u_sagitta, tag: paper}
+        spring_rate_N_per_m: {value: 3300.0, source: *u_sagitta, tag: paper, note: "SAGITTA NLG value"}
+      # ---- wheels, tyres, brakes ----
+      - id: tost_sb_max2_70_50_20
+        manufacturer: TOST GmbH (Munich, Germany)
+        model: "3.5 in disc-brake wheel SB Max II 70-50-20, art. 053030"
+        type: two-piece wheel with flanged brake disc, for BZT M hydraulic caliper
+        rim: {value: "3.5 in, 200 x 50 tyre", source: *u_tost, tag: manufacturer}
+        installation_width_m: {value: 0.050, source: *u_tost, tag: manufacturer}
+        overall_width_m: {value: 0.070, source: *u_tost, tag: manufacturer}
+        bearing_bore_m: {value: 0.020, source: *u_tost, tag: manufacturer, note: "12 mm version art. 053032 (870 g)"}
+        mass_kg: {value: 0.860, source: *u_tost, tag: manufacturer, note: "hub with bearings and brake disc, without tyre and caliper"}
+        brake_torque_max_Nm: {value: 100.0, source: *u_tost, tag: manufacturer}
+        brake_disc_thickness_m: {value: 0.0035, source: *u_tost, tag: manufacturer}
+        caliper:
+          model: {value: "BZT M, 3-piston floating caliper, M10x1 port, DOT 4 (080110) or mineral fluid (080111)", source: *u_tost, tag: manufacturer}
+          mass_kg: {value: 0.400, source: *u_tost, tag: manufacturer}
+          brake_torque_Nm: {value: 100.0, source: *u_tost, tag: manufacturer}
+        tyre:
+          model: {value: "TOST 200x50 6 PR, art. 063191 (fits Max and Max II)", source: *u_tost, tag: manufacturer}
+          outer_diameter_mounted_m: {value: 0.190, source: *u_tost, tag: manufacturer}
+          width_m: {value: 0.054, source: *u_tost, tag: manufacturer}
+          mass_kg: {value: 0.450, source: *u_tost, tag: manufacturer}
+          static_capacity_kg: {value: 200.0, source: *u_tost, tag: manufacturer, note: "SAGITTA paper and a US dealer quote 2.5 kN; catalogue gives 200 kg"}
+          tube_mass_kg: {value: 0.080, source: *u_tost, tag: manufacturer, note: "063192 tube for two-piece Max II"}
+        assembly_mass_kg: {value: 1.79, source: *u_tost, tag: estimate, basis: "0.860 wheel + 0.400 caliper + 0.450 tyre + 0.080 tube"}
+        check_vs_design: >-
+          Static 625 N per main tyre vs 1960 N tyre capacity (factor 3.1). Brake 100 Nm vs about 18 Nm
+          needed. The tyre speed rating (36 m/s by TOST, per SAGITTA) is above the expected 28-33 m/s
+          touchdown/abort speeds.
+        price: {value: null, note: "catalogue has no prices; order via tost.de"}
+      - id: tost_sb_max2_62_50_12_bzm
+        manufacturer: TOST
+        model: "3.5 in disc-brake wheel SB Max II 62-50-12, art. 053012 (BZM mini caliper)"
+        mass_kg: {value: 0.460, source: *u_tost, tag: manufacturer}
+        brake_torque_max_Nm: {value: 15.0, source: *u_tost, tag: manufacturer}
+        note: The BZM caliper (15 Nm) is below the about 18 Nm braking need; use only for the nose wheel or as a parking brake.
+      - id: tost_lr_max2_nose
+        manufacturer: TOST
+        model: "3.5 in plain wheel LR Max II, art. 033120 (nose wheel)"
+        mass_kg: {value: 0.365, source: *u_tost, tag: manufacturer, note: "20 mm bearing; 375 g with 12 mm bearing"}
+        installation_width_m: {value: 0.050, source: *u_tost, tag: manufacturer}
+        tyre: {value: "200x50 6 PR (0.450 kg, 200 kg static)", source: *u_tost, tag: manufacturer}
+      - id: tost_srt_tria_110_60_20
+        manufacturer: TOST
+        model: "4 in disc-brake wheel SRT Tria 110-60-20, art. 054482 (CNC aluminium)"
+        mass_kg: {value: 1.320, source: *u_tost, tag: manufacturer}
+        installation_width_m: {value: 0.060, source: *u_tost, tag: manufacturer}
+        overall_width_m: {value: 0.110, source: *u_tost, tag: manufacturer}
+        brake_torque_max_Nm: {value: 370.0, source: *u_tost, tag: manufacturer}
+        caliper: {value: "BZT 3-piston, 440 g, 250 Nm", source: *u_tost, tag: manufacturer}
+        tyre_options:
+          - {model: "TOST 260x85 6 PR", outer_diameter_m: 0.260, width_m: 0.083, mass_kg: 0.880, static_capacity_kg: 400.0, source: *u_tost, tag: manufacturer}
+          - {model: "TOST 4.00-4 8 PR", outer_diameter_m: 0.300, width_m: 0.100, mass_kg: 1.380, static_capacity_kg: 600.0, source: *u_tost, tag: manufacturer}
+        note: Use if rough-field operation needs a larger tyre; about 1.0 kg more per main wheel than the Max II.
+      - id: matco_w40b
+        manufacturer: Matco mfg (USA)
+        model: W40B 4 in wheel and brake assembly
+        mass_kg: {value: 1.837, source: *u_matco_w40b, tag: vendor, note: "4.05 lb, wheel + brake"}
+        wheel_width_m: {value: 0.0959, source: *u_matco_w40b, tag: vendor, note: "3.775 in; caliper spacing 1.24 in"}
+        bearing_spacing_m: {value: 0.0678, source: *u_matco_w40b, tag: vendor}
+        axle_diameter_m: {value: 0.0159, source: *u_matco_w40b, tag: vendor, note: "0.625 in ball bearings"}
+        static_capacity_N: {value: 2936.0, source: *u_matco_w40b, tag: vendor, note: "660 lb per wheel"}
+        load_limit_N: {value: 8896.0, source: *u_matco_w40b, tag: vendor, note: "2000 lb"}
+        kinetic_energy_max_J: {value: 126700.0, source: *u_matco_w40b, tag: vendor, note: "93441 ft-lb accelerate/stop"}
+        brake_torque_Nm: {value: 174.0, source: *u_matco_w40b, tag: vendor, note: "1540 in-lb at 450 psi"}
+        price: {value: 890.0, currency: USD, source: *u_matco_w40b, tag: vendor, note: "per pair (2 wheels + 2 brakes); W40-BDXT USD 916"}
+      - id: matco_w51lxt
+        manufacturer: Matco mfg
+        model: W51LXT 5 in wheel and brake (5.00-5 tyre)
+        mass_kg: {value: 4.173, source: *u_matco_w51lxt, tag: vendor, note: "9.2 lb"}
+        static_capacity_N: {value: 6317.0, source: *u_matco_w51lxt, tag: vendor, note: "1420 lb"}
+        brake_torque_Nm: {value: 694.0, source: *u_matco_w51lxt, tag: vendor}
+        price: {value: 1211.0, currency: USD, source: *u_matco_w51lxt, tag: vendor, note: "kit p/n 06-00412"}
+        assessment: Light-aircraft size; about 2.3x heavier than needed.
+    recommended:
+      item_id: tost_sb_max2_70_50_20
+      configuration: >-
+        Fixed tricycle. Main gear: one GFRP spring bow (custom_gfrp_main_bow) with two TOST 3.5 in
+        SB Max II 70-50-20 disc-brake wheels, BZT M calipers and 200x50 6 PR tyres; one master
+        cylinder pushed by a Volz DA 26 (SAGITTA brake concept). Nose gear: steerable leg with
+        industrial damper + coil spring, TOST LR Max II wheel, Volz DA 26 steering.
+      mass_estimate_kg:
+        value: 9.1
+        source: *u_tost
+        tag: estimate
+        basis: "main: GFRP bow 2.0 + 2 x 1.79 (wheel 0.86 + BZT M 0.40 + tyre 0.45 + tube 0.08) + axles/brackets 0.40 + master cylinder and lines 0.20 = 6.18; nose: leg 2.0 + LR Max II 0.365 + tyre 0.45 + tube 0.08 = 2.90; total 9.08 kg. Brake and steering EMAs (2 x 0.27 kg) are counted under control_surface_actuators."
+      reasons:
+        - The only wheel/tyre/brake set with a documented flight history on a 150 kg UAV (DLR SAGITTA), and with complete catalogue masses.
+        - Tyre static capacity is about 3x the static main-wheel load; brake torque (100 Nm) is about 5x the need. The parts are sailplane-certified (EASA Form 1 available from TOST).
+        - About 1.8 kg per braked wheel. The Matco W40B is 1.84 kg without tyre; the Matco W51LXT is 4.2 kg.
+        - A fixed bow with this wheel set (about 9.1 kg total, or 9.6 kg with its two EMAs) is about 2 kg lighter than SAGITTA's retractable gear (11.5 kg incl. EMAs) and has no retraction failure mode or gear bays. Comparables show no retractable gear in this class.
+      retractable_option:
+        verdict: not recommended for the baseline
+        reasons:
+          - No purchasable retractable system exists for 100-200 kg; the only catalogue system (Aero Telemetry) weighs about 27 kg.
+          - "Custom electric retraction (SAGITTA, ILot) costs about 11.5-13 kg total, i.e. about +2 to +3.5 kg vs fixed, plus bays, doors and their structure in the fuselage."
+          - Keep a retractable variant only if the MALE look/drag trade study shows a clear endurance gain; then copy the SAGITTA architecture (TOST wheels, Zimmer damper, over-centre lock, Volz DA 26 drives).
+      risks:
+        - TOST speed rating 36 m/s; if the sizing phase pushes VLOF/VTD above about 33 m/s, qualify the tyres on a drum (as DLR did) or move to the 4 in Tria wheel.
+        - Spring bows have little damping; check bounce and shimmy (nose) in the structures/dynamics phase.
+
+  # ===================================================================================== 3
+  eo_ir_gimbals:
+    summary: >-
+      Stabilised EO/IR turrets in the 0.6-4 kg class, all with Ethernet/IP video. The bay should be
+      sized for the largest growth option (Octopus E180 class, 180 mm x 227 mm, 3.75 kg). Only
+      surveillance optics (EO, LWIR/MWIR, range finding for geolocation) are considered.
+    items:
+      - id: trillium_hd45_lv_cz
+        manufacturer: Trillium Engineering (Hood River, OR, USA)
+        model: HD45-LV-CZ(-GS)
+        sensors: {value: "EO 1280 x 720 global shutter, 46.8-4.9-1.2 deg FOV, 40x (10x optical + 4x digital); LWIR 640 x 512, 29-5.9-3 deg, 10x (5x + 2x)", source: *u_tr_hd45, tag: datasheet}
+        diameter_m: {value: 0.133, source: *u_tr_hd45, tag: datasheet, note: "width"}
+        height_m: {value: 0.197, source: *u_tr_hd45, tag: datasheet}
+        mass_kg: {value: 1.375, source: *u_tr_hd45, tag: datasheet, note: "product page also shows 1350 g"}
+        power_average_W: {value: 15.0, source: *u_tr_hd45, tag: datasheet}
+        power_peak_W: {value: 75.0, source: *u_tr_hd45, tag: datasheet}
+        supply_voltage: {value: "24 V DC regulated input; external regulation accepting 10-30 V available", source: *u_tr_hd45, tag: datasheet}
+        field_of_regard: {value: "pan 360 deg continuous; tilt -80 to +42 deg; 0.02 deg encoder resolution", source: *u_tr_hd45, tag: datasheet}
+        pan_range_deg: {value: [-180.0, 180.0], source: *u_tr_hd45, tag: datasheet, note: "continuous"}
+        tilt_range_deg: {value: [-80.0, 42.0], source: *u_tr_hd45, tag: datasheet}
+        interfaces: {value: "control over Ethernet or serial; Ethernet video, onboard H.264, MISB KLV metadata; onboard GPS/INS (IMU co-located with cameras, 1.5 deg typical geolocation accuracy)", source: *u_tr_hd45, tag: datasheet}
+        protection: {value: "IP65; ITAR-free non-controlled configurations", source: *u_tr_hd45, tag: datasheet}
+        mounting_interface: {value: null, note: "top-plate bolt pattern not published; request ICD/STEP"}
+        price: {value: null, note: "price on request"}
+      - id: trillium_hd59_llvv
+        manufacturer: Trillium Engineering
+        model: HD59-LLVV (also MVV, MLVV with MWIR)
+        sensors: {value: "LLVV: LWIR 640x512 29-5.9-3 deg 10x + wide LWIR 640x512 32-16 deg 2x + EO 1920x1080 45-1.5-0.3 deg 180x (30x optical + 6x digital). MLVV: MWIR 640x512 21.7-2.2-1.1 deg 20x + wide LWIR + EO 180x", source: *u_tr_hd59, tag: datasheet}
+        diameter_m: {value: 0.147, source: *u_tr_hd59, tag: datasheet}
+        height_m: {value: 0.202, source: *u_tr_hd59, tag: datasheet}
+        mass_kg: {value: 1.550, source: *u_tr_hd59, tag: datasheet, note: "LLVV; MVV and MLVV 1.900 kg"}
+        power_average_W: {value: 20.0, source: *u_tr_hd59, tag: datasheet, note: "datasheet figure is quoted for the most equipped configuration; LLVV likely lower"}
+        power_peak_W: {value: 100.0, source: *u_tr_hd59, tag: datasheet}
+        supply_voltage: {value: "24 V DC regulated input; external regulation accepting 10-30 V available", source: *u_tr_hd59, tag: datasheet}
+        pan_range_deg: {value: [-180.0, 180.0], source: *u_tr_hd59, tag: datasheet, note: "continuous"}
+        tilt_range_deg: {value: [-80.0, 35.0], source: *u_tr_hd59, tag: datasheet}
+        interfaces: {value: "control over Ethernet or serial, Ethernet video, onboard H.264/H.265, MISB KLV; onboard GPS/INS, 0.5 deg typical geolocation accuracy; integrated AI processing and onboard object tracking", source: *u_tr_hd59, tag: datasheet}
+        protection: {value: "IP65; ITAR-free non-controlled configurations available", source: *u_tr_hd59, tag: datasheet}
+        mounting_interface: {value: null, note: "request ICD/STEP"}
+        price: {value: null, note: "price on request"}
+      - id: nextvision_raptor
+        manufacturer: NextVision Stabilized Systems (Israel)
+        model: RAPTOR (Raptor-360, Raptor-360-Sealed)
+        sensors: {value: "EO 80x total zoom (40x optical + 2x digital), 60 deg WFOV to 1.5 deg NFOV (0.75 deg with digital); thermal 1280 x 720 with 8x digital zoom", source: *u_nv_raptor, tag: manufacturer, note: "FOV values from DeltaQuad integrator page"}
+        dimensions_m: {value: [0.090, 0.120, 0.196], source: *u_nv_raptor, tag: manufacturer, note: "L x W x H as published (page also labels it D x H)"}
+        mass_kg: {value: 0.640, source: *u_nv_raptor, tag: manufacturer, note: "Raptor-360 complete payload 0.850 kg (DeltaQuad)"}
+        supply_voltage_range_V: {value: [15.0, 32.0], source: *u_dq_raptor, tag: vendor, note: "via_search_excerpt"}
+        power_W: {value: null, note: "not published"}
+        field_of_regard: {value: "Raptor-360: yaw/roll 360 deg continuous; pitch -45 to +80 deg (DeltaQuad)", source: *u_dq_raptor360, tag: vendor}
+        protection: {value: "IP54 (Raptor-360-Sealed)", source: *u_nv_raptor, tag: manufacturer}
+        price: {value: null, note: "price on request"}
+        assessment: Below the 1 kg lower end of the class; lightest high-zoom option, but the IP54 sealing and unpublished power are weaker than Trillium.
+      - id: avt_cm142
+        manufacturer: AVT Australia (ex UAV Vision; CACI)
+        model: CM142
+        sensors: {value: "HD EO 30x continuous optical zoom; LWIR with digital zoom", source: *u_avt_cm142, tag: manufacturer}
+        mass_kg: {value: 1.270, source: *u_avt_cm142, tag: manufacturer}
+        diameter_m: {value: 0.135, source: *u_cm142_ds, tag: datasheet, note: "via_search_excerpt"}
+        height_m: {value: 0.167, source: *u_cm142_ds, tag: datasheet, note: "via_search_excerpt"}
+        power_idle_W: {value: 15.0, source: *u_cm142_ds, tag: datasheet, note: "via_search_excerpt"}
+        power_peak_W: {value: 80.0, source: *u_cm142_ds, tag: datasheet, note: "via_search_excerpt"}
+        supply_voltage_range_V: {value: [18.0, 24.0], source: *u_cm142_ds, tag: datasheet, note: "via_search_excerpt"}
+        field_of_regard: {value: "2 mechanical axes; azimuth 360 deg continuous; elevation +/-120 deg; slew 300 deg/s; position accuracy 80 urad", source: *u_cm142_ds, tag: datasheet, note: "via_search_excerpt"}
+        tilt_range_deg: {value: [-120.0, 120.0], source: *u_cm142_ds, tag: datasheet, note: "via_search_excerpt"}
+        operating_temperature_degC: {value: [-10.0, 50.0], source: *u_cm142_ds, tag: datasheet, note: "14-122 degF; via_search_excerpt"}
+        protection: {value: IP66, source: *u_avt_cm142, tag: manufacturer}
+        price: {value: null, note: "price on request"}
+        missing: [current datasheet (CACI 2020 PDF returns 404), interface and mounting ICD]
+      - id: octopus_e140_mwir
+        manufacturer: Redwire (ex Octopus ISR Systems / Edge Autonomy)
+        model: Octopus E140 MWIR
+        sensors: {value: "EO 1920x1080, 62-2.3 deg (h); cooled MWIR 640x512 3.4-5.1 um, NETD < 30 mK (25 mK typ.), 26.3-2.0 deg (h), 13.7x optical + 4x digital; GPS/INS; laser range finder for geolocation", source: *u_rdw_e140, tag: manufacturer}
+        diameter_m: {value: 0.140, source: *u_rdw_e140, tag: manufacturer}
+        height_m: {value: 0.212, source: *u_rdw_e140, tag: manufacturer}
+        mass_kg: {value: 2.2, source: *u_rdw_e140, tag: manufacturer}
+        power_W: {value: null, note: "not published on the archive page"}
+        interfaces: {value: "IP video H.264/H.265, unicast/multicast, DHCP or static IP, onboard tracking and 32 GB recording", source: *u_rdw_e140, tag: manufacturer}
+        price: {value: null, note: "price on request; product listed under 'product archive'"}
+      - id: octopus_e180
+        manufacturer: Redwire (ex Octopus ISR Systems)
+        model: Octopus E180 / E180MG
+        sensors: {value: "4K colour EO 3840x2160, 59.9-7.1 deg (h), 20x super-resolution + 12x digital; cooled MWIR 640x512 3.4-5.1 um, 26.3-2.0 deg (h), 13.7x optical; built-in laser range finder; 3-axis mechanical + electronic stabilisation", source: *u_rdw_e180, tag: manufacturer}
+        diameter_m: {value: 0.180, source: *u_rdw_e180, tag: manufacturer}
+        height_m: {value: 0.227, source: *u_rdw_e180, tag: manufacturer, note: "2020 launch configuration: 215 mm"}
+        mass_kg: {value: 3.75, source: *u_rdw_e180, tag: manufacturer, note: "E180MG 3.25 kg; 2020 launch figure 3.9 kg"}
+        power_normal_W: {value: 40.0, source: *u_e180_launch, tag: paper, note: "via_search_excerpt; 2020 Epsilon 180"}
+        power_peak_W: {value: 160.0, source: *u_e180_launch, tag: paper, note: "via_search_excerpt"}
+        supply_voltage_V: {value: 24.0, source: *u_e180_launch, tag: paper, note: "via_search_excerpt"}
+        protection: {value: "IP64, magnesium structure, sealed dry-gas fill", source: *u_rdw_e180, tag: manufacturer}
+        interfaces: {value: "IP video H.264/H.265, onboard object tracking, moving-object indication, 32 GB recording", source: *u_rdw_e180, tag: manufacturer}
+        price: {value: null, note: "price on request"}
+        assessment: Use its envelope (0.180 m x 0.227 m, 3.75 kg, 160 W peak) as the bay and power growth allowance.
+    recommended:
+      item_id: trillium_hd59_llvv
+      reasons:
+        - 1.55 kg with a 180x EO zoom and dual-FOV LWIR covers day/night civil surveillance (border, pipeline, SAR, wildfire) at the range a 4-5 km altitude UAV needs.
+        - Complete public datasheet (mass, size, power, field of regard, interfaces). ITAR-free configurations ease export to and operation in Turkey.
+        - Runs on the 24 V payload rail (10-30 V with external regulation); 20 W average / 100 W peak fits the electrical budget.
+        - The same family offers an MWIR upgrade (MLVV, 1.9 kg) in the same 147 x 202 mm envelope, so the bay does not change.
+        - Ethernet video with MISB KLV and onboard GPS/INS integrates directly with an IP datalink (Silvus) and the ground station.
+      bay_allowance:
+        diameter_m: {value: 0.180, source: *u_rdw_e180, tag: manufacturer, note: "Octopus E180 growth envelope"}
+        height_m: {value: 0.230, source: *u_rdw_e180, tag: estimate, basis: "E180 227 mm + 3 mm"}
+        mass_kg: {value: 4.0, source: *u_rdw_e180, tag: estimate, basis: "E180 3.75 kg + damper/mount"}
+        power_peak_W: {value: 160.0, source: *u_e180_launch, tag: paper}
+      risks:
+        - Mounting bolt pattern and isolator design are not public. Request the ICD/STEP before the payload-bay design.
+        - Average power for the LLVV is not separately stated; plan on the 20 W figure.
+
+  # ===================================================================================== 4
+  avionics:
+    summary: >-
+      Flight control, air data, navigation, C2/video link, cooperative surveillance (transponder,
+      ADS-B) and Remote ID. A production civil aircraft needs a development-assured autopilot and
+      certified transponder; prototypes can use open-source autopilots.
+    autopilots:
+      - id: veronte_autopilot_1x
+        manufacturer: Embention (Alicante, Spain)
+        model: Veronte Autopilot 1x (hardware 4.12)
+        development_assurance: {value: "developed to DO-178C / ED-12C and DO-254 / ED-80, environmental DO-160; sensor-redundant; dissimilar supervisor with FTS (failsafe) capability", source: *u_veronte_ust, tag: manufacturer, note: "via_search_excerpt"}
+        dimensions_m: {value: [0.076, 0.065, 0.040], source: *u_veronte_cl, tag: manufacturer, note: "all variants, 4.8 and later"}
+        mass_kg: {value: 0.198, source: *u_veronte_cl, tag: manufacturer, note: "standard; Remote ID variant 0.208 kg, ADS-B variant 0.209 kg (4.12); OEM board 0.090 kg (manual 4.5)"}
+        supply_voltage_range_V: {value: [8.0, 54.0], source: *u_veronte_cl, tag: manufacturer, note: "4.12 on both main (redundant) inputs; 6.5-36 V before 4.12"}
+        power_W: {value: [5.0, 15.0], source: *u_veronte_ust, tag: manufacturer, note: "via_search_excerpt; 5 W without comms module"}
+        operating_temperature_degC: {value: [-40.0, 65.0], source: *u_veronte_cl, tag: manufacturer, note: "manual 4.5: -40..+55 standard, 71 on request"}
+        protection: {value: "IP67 anodised aluminium enclosure; M3 mounting screws", source: *u_veronte_cl, tag: manufacturer}
+        interfaces: {value: "68-pin main connector; 4 SSMA RF ports (LOS radio, GNSS x2, M2M, transponder); Ethernet, dual RS-485, CAN FD (4.12)", source: *u_veronte_tech, tag: manufacturer}
+        air_data: {value: "3 pressure ports (2 static, 1 pitot); dynamic pressure 6 kPa standard (up to 50 kPa); static 0-104 kPa", source: *u_veronte_tech, tag: manufacturer}
+        gnss: {value: "internal 72-channel, GPS L1C/A, GLONASS L1OF, BeiDou B1I; 2 antenna ports", source: *u_veronte_tech, tag: manufacturer}
+        variants: {value: "standard, Remote ID, ADS-B (detect-and-avoid inputs ADS-B, radar, LIDAR)", source: *u_veronte_cl, tag: manufacturer}
+        price: {value: null, note: "price on request"}
+      - id: cubepilot_cube_red
+        manufacturer: CubePilot (Hex)
+        model: Cube Red (dual FMU)
+        architecture: {value: "2 x STM32H7 dual-core FMUs (primary + secondary); 4 IMUs (3 on primary, 1 on secondary); 3 barometers; 3 CAN FD ports (one shared as backup); 10/100 Ethernet", source: *u_cube_red, tag: manufacturer}
+        pwm_outputs: {value: "14 (6 primary FMU, 8 secondary/IO)", source: *u_cube_red_arch, tag: manufacturer}
+        supply_voltage_range_V: {value: [4.1, 5.5], source: *u_cube_red_op, tag: manufacturer, note: "350 mA at 5 V; needs regulated 5 V bricks; servo rail fail-over up to 10 V for the IO processor only"}
+        operating_temperature_degC: {value: [-10.0, 55.0], source: *u_cube_red_op, tag: manufacturer, note: "ideal range; not waterproof"}
+        mass_kg: {value: null, note: "not published in the CubePilot docs"}
+        software: {value: "ArduPilot / PX4 (open source); ArduPilot supports Volz servos", source: *u_ardupilot_volz, tag: manufacturer}
+        price: {value: null, note: "not checked"}
+      - id: cubepilot_cube_orange_plus
+        manufacturer: CubePilot (Hex)
+        model: Cube Orange+ Standard Set (ADS-B carrier board)
+        architecture: {value: "STM32H757 400 MHz + STM32F103 failsafe IO co-processor; 3 IMUs (ICM42688p, ICM20948, ICM20649); 2 MS5611 barometers; 14 PWM, 5 UART, 2 CAN", source: *u_px4_cubeop, tag: vendor}
+        dimensions_m: {value: {cube: [0.03825, 0.03825, 0.0223], carrier: [0.0945, 0.0443, 0.0173]}, source: *u_px4_cubeop, tag: vendor}
+        mass_kg: {value: 0.073, source: *u_getfpv_cubeop, tag: vendor, note: "total with carrier; via_search_excerpt"}
+        supply_voltage_range_V: {value: [4.1, 5.7], source: *u_px4_cubeop, tag: vendor, note: "2.5 A rated"}
+        operating_temperature_degC: {value: [-10.0, 55.0], source: *u_px4_cubeop, tag: vendor}
+        adsb_in: {value: "carrier board with uAvionix 1090 MHz ADS-B In receiver", source: *u_getfpv_cubeop, tag: vendor}
+        assessment: Prototype / iron-bird autopilot. The -10 degC lower limit and the lack of development assurance rule it out for the production aircraft.
+      - id: micropilot_mp2128g2
+        manufacturer: MicroPilot (Canada)
+        model: MP2128g2
+        mass_kg: {value: 0.024, source: *u_mp2128, tag: paper, note: "via_search_excerpt"}
+        features: {value: "integrated 4 Hz GPS; 180 Hz control loops; 16 MB RAM; triple-redundant MP2128 3X variant exists", source: *u_mp2128, tag: paper}
+        assessment: Very light, but proprietary toolchain and limited public data for interfaces and environmental qualification.
+    air_data:
+      - id: powerbox_pitot_hasa
+        manufacturer: PowerBox Systems (Germany)
+        model: Pitot HASA (heated airspeed/altitude)
+        description: Probe with 2 MEMS pressure sensors, ceramic thermostatic heater (30-50 degC head temperature) and temperature sensor; DroneCAN RawAir/IAS/TAS output; push-pull mechanical/electrical connector.
+        dimensions_m: {value: [0.010, 0.163], source: *u_hasa, tag: datasheet, note: "diameter x length"}
+        mass_kg: {value: 0.048, source: *u_hasa, tag: datasheet, note: "incl. interface"}
+        supply_voltage_control_V: {value: [4.0, 9.0], source: *u_hasa, tag: datasheet, note: "35 mA max"}
+        supply_voltage_heater_V: {value: [6.0, 28.0], source: *u_hasa, tag: datasheet, note: "galvanically isolated"}
+        heater_resistance_ohm: {value: 9.0, source: *u_hasa, tag: datasheet, note: "current = V / 9 ohm; at 24 V that is 2.7 A (64 W) while heating, thermostatic"}
+        heat_up_time_s: {value: 10.0, source: *u_hasa, tag: datasheet, note: "at 24 V, -40 to +40 degC; 120 s at 6 V"}
+        speed_range_m_s: {value: [2.8, 236.0], source: *u_hasa, tag: datasheet, note: "max 850 km/h; 1 km/h resolution from 10 km/h"}
+        operating_temperature_degC: {value: [-40.0, 85.0], source: *u_hasa, tag: datasheet}
+      - id: aeroprobe_heated_pitot_static
+        manufacturer: Aeroprobe (USA)
+        model: heated pitot-static probes
+        heater_options: {value: "12 V / 18 W, 15 V / 23 W, 28 V / 42 W", source: *u_aeroprobe, tag: manufacturer, note: "via_search_excerpt"}
+        mass_kg: {value: 0.020, bound: min, source: *u_aeroprobe, tag: manufacturer, note: "'as low as 20 g heated'; via_search_excerpt"}
+        note: Analogue pneumatic probe; pairs with the Veronte 1x internal pitot/static sensors.
+    gnss_antennas:
+      - id: calian_hc977exf
+        manufacturer: Calian (Tallysman)
+        model: HC977EXF embedded triple-band helical
+        bands: {value: "GPS L1/L2/L5, Galileo E1/E5a/E5b, BeiDou B1/B2a/B2b, GLONASS G1/G2/G3, NavIC L5, L-band", source: *u_hc977, tag: datasheet}
+        dimensions_m: {value: [0.0387, 0.0497], source: *u_hc977, tag: datasheet, note: "diameter x height"}
+        mass_kg: {value: 0.008, source: *u_hc977, tag: datasheet}
+        supply_voltage_range_V: {value: [2.5, 16.0], source: *u_hc977, tag: datasheet}
+        supply_current_A: {value: 0.026, source: *u_hc977, tag: datasheet, note: "28 dB LNA; 32 mA with 35 dB LNA"}
+        lna_gain_dB: {value: 28.0, source: *u_hc977, tag: datasheet, note: "or 35 dB"}
+        connector: {value: "MCX female", source: *u_hc977, tag: datasheet}
+        operating_temperature_degC: {value: [-40.0, 85.0], source: *u_hc977, tag: datasheet}
+        note: No ground plane needed; mount under a non-conductive (GFRP) skin. Two units give dual-antenna GNSS heading.
+    datalinks:
+      - id: silvus_sc4200ep
+        manufacturer: Silvus Technologies (USA)
+        model: StreamCaster 4200 Enhanced Plus (SC4200EP), 2x2 MIMO MN-MIMO waveform
+        tx_power_W: {value: [0.001, 4.0], source: *u_silvus, tag: datasheet, note: "SC4240; up to 8 W effective with beamforming; SC42A0 1 mW-10 W (20 W effective)"}
+        data_rate_bit_per_s: {value: 100.0e+6, bound: max, source: *u_silvus, tag: datasheet, note: "adaptive"}
+        latency_s: {value: 0.007, source: *u_silvus, tag: datasheet, note: "average at 20 MHz bandwidth"}
+        bands: {value: "300 MHz-6 GHz options incl. 900 MHz ISM (902-928), 2.4 GHz ISM (2400-2500), L 1350-1390, C 4400-4940; dual-band available", source: *u_silvus, tag: datasheet}
+        channel_bandwidth_Hz: {value: [5.0e+6, 10.0e+6, 20.0e+6], source: *u_silvus, tag: datasheet, note: "1.25/2.5 MHz optional"}
+        supply_voltage_range_V: {value: [9.0, 20.0], source: *u_silvus, tag: datasheet}
+        power_W: {value: [5.0, 24.0], source: *u_silvus, tag: datasheet, note: "at 4 W TX (5-16 W at 1 W TX; 5-48 W at 10 W TX)"}
+        dimensions_m: {value: [0.1016, 0.0668, 0.03835], source: *u_silvus, tag: datasheet, note: "handheld-style EP unit without RF connectors"}
+        mass_kg: {value: 0.425, source: *u_silvus, tag: datasheet}
+        module_variant: {value: "datasheet also lists a 91.7 x 54.61 x 18.03 mm, 0.122 kg (0.137 kg dual-band) unit with SMP(m) RF connectors", source: *u_silvus, tag: datasheet}
+        protection: {value: "IP68 (20 m, 30 min); -40 to +85 degC", source: *u_silvus, tag: datasheet}
+        encryption: {value: "DES56 standard, AES256 optional", source: *u_silvus, tag: datasheet}
+        price: {value: null, note: "price on request"}
+      - id: doodle_labs_mesh_rider
+        manufacturer: Doodle Labs (Singapore/USA)
+        model: Helix Mesh Rider Mini / OEM / Boost
+        mass_kg: {value: {mini: 0.034, nano2: 0.0483, oem: 0.102}, source: *u_doodle, tag: manufacturer}
+        dimensions_m: {value: {mini: [0.0469, 0.035, 0.0207], oem: [0.057, 0.086, 0.013]}, source: *u_doodle, tag: manufacturer}
+        boost_rf_output_W: {value: 4.0, source: *u_doodle, tag: manufacturer, note: "Boost amplifier; operating range 100 km"}
+        range_m: {value: 100000.0, source: *u_doodle, tag: manufacturer, note: "with Boost"}
+        power_W: {value: null, note: "not on product overview"}
+        note: Low SWaP mesh radios; multiband. Data rate and power consumption must come from the per-model datasheets (kb.doodlelabs.com).
+      - id: microhard_pddl2450
+        manufacturer: Microhard Systems (Canada)
+        model: pDDL2450 (2.4 GHz, up to 25 Mbit/s)
+        tx_power_W: {value: 1.0, bound: max, source: *u_microhard, tag: datasheet, note: "30 dBm at BPSK/QPSK, 27 dBm at 64QAM"}
+        data_rate_bit_per_s: {value: 25.0e+6, bound: max, source: *u_microhard, tag: datasheet, note: "8 MHz channel, -78 dBm sensitivity"}
+        frequency_Hz: {value: [2.402e+9, 2.478e+9], source: *u_microhard, tag: datasheet}
+        mass_kg: {value: 0.005, source: *u_microhard, tag: datasheet, note: "OEM; motherboard 0.050 kg; enclosed 0.165 kg"}
+        dimensions_m: {value: [0.027, 0.033, 0.004], source: *u_microhard, tag: datasheet, note: "OEM; enclosed 77 x 55 x 28 mm"}
+        supply_voltage: {value: "OEM 3.3 V digital / 5 V RF", source: *u_microhard, tag: datasheet}
+        antenna_ports: {value: "OEM: 2 x U.FL (main, diversity)", source: *u_microhard, tag: datasheet}
+        operating_temperature_degC: {value: [-40.0, 85.0], source: *u_microhard, tag: datasheet}
+        role: Low-cost backup C2 link.
+    datalink_antennas:
+      - id: southwest_antennas_1001_202
+        manufacturer: Southwest Antennas (USA)
+        model: 1001-202 omni half-wave dipole, 2.1-2.5 GHz
+        gain_dBi: {value: 2.15, source: *u_swa, tag: datasheet}
+        frequency_Hz: {value: [2.1e+9, 2.5e+9], source: *u_swa, tag: datasheet}
+        height_m: {value: 0.109, source: *u_swa, tag: datasheet, note: "4.29 in"}
+        mass_kg: {value: 0.0227, source: *u_swa, tag: datasheet, note: "0.8 oz"}
+        power_handling_W: {value: 50.0, source: *u_swa, tag: datasheet}
+        connector: {value: "TNC(m) non-rotating", source: *u_swa, tag: datasheet}
+        note: >-
+          For a 2x2 MIMO link, two vertically polarised omnis (belly and top, or spaced
+          wingtip/fin pair) avoid fuselage shadowing. The same supplier offers S-band blades
+          (1073-001, 5.6 dBi) and L/S dual-band (1073-004) per its catalogue; masses not verified here.
+    surveillance_transponders:
+      - id: uavionix_ping200x
+        manufacturer: uAvionix (USA)
+        model: ping200X Mode S ES transponder
+        certification: {value: "FAA TSO-C112e Level 2els Class 1 Mode S transponder; TSO-C166b Class B1S 1090ES ADS-B Out; TSO-C88b internal altitude encoder", source: *u_ping200x, tag: datasheet, note: "via_search_excerpt"}
+        dimensions_m: {value: [0.047, 0.054, 0.013], source: *u_ping200x, tag: datasheet, note: "Rev B; one excerpt lists 9 mm height; via_search_excerpt"}
+        mass_kg: {value: 0.050, source: *u_ping200x, tag: datasheet, note: "via_search_excerpt"}
+        supply_voltage_range_V: {value: [11.0, 34.0], source: *u_ping200x, tag: datasheet, note: "via_search_excerpt"}
+        power_W: {value: 1.5, source: *u_ping200x, tag: datasheet, note: "continuous, peaks 4 W; via_search_excerpt"}
+        tx_power_W: {value: 250.0, source: *u_ping200x, tag: datasheet, note: "nominal at 1090 MHz"}
+        operating_temperature_degC: {value: [-45.0, 70.0], source: *u_ping200x, tag: datasheet, note: "via_search_excerpt"}
+        price: {value: null, note: "not checked (site blocks fetches)"}
+      - id: uavionix_pingrx_pro
+        manufacturer: uAvionix
+        model: pingRX Pro (ADS-B In, 978 + 1090 MHz)
+        dimensions_m: {value: [0.032, 0.031, 0.009], source: *u_pingrxpro, tag: manufacturer, note: "via_search_excerpt"}
+        mass_kg: {value: 0.008, source: *u_pingrxpro, tag: manufacturer, note: "via_search_excerpt"}
+        power_W: {value: 0.15, source: *u_pingrxpro, tag: manufacturer, note: "via_search_excerpt"}
+        sensitivity: {value: "-84 dBm (1090 MHz), -93 dBm (978 MHz)", source: *u_pingrxpro, tag: manufacturer}
+        interfaces: {value: "MAVLink / UCP; Pixhawk/ArduPilot compatible; detachable antenna", source: *u_pingrxpro, tag: manufacturer}
+      - id: sagetech_mxs
+        manufacturer: Sagetech Avionics (USA)
+        model: MXS Mode S transponder with ADS-B In/Out
+        certification: {value: "FAA TSO (May 2022); Modes A, C, S and 1090 MHz ADS-B In/Out; integral pressure sensor; top/bottom antenna diversity option", source: *u_mxs, tag: paper, note: "via_search_excerpt"}
+        mass_kg: {value: 0.150, source: *u_mxs, tag: paper, note: "via_search_excerpt"}
+        power_W: {value: null, note: "not found"}
+        dimensions_m: {value: null, note: "not found"}
+    remote_id:
+      - id: dronetag_beacon
+        manufacturer: Dronetag (Czech Republic)
+        model: Beacon (broadcast / direct Remote ID)
+        standards: {value: "ASD-STAN EN 4709-002 (EU, UK, Singapore), ASTM F3411-22a (USA, Japan)", source: *u_dronetag, tag: manufacturer}
+        dimensions_m: {value: [0.037, 0.026, 0.016], source: *u_dronetag, tag: manufacturer}
+        mass_kg: {value: 0.016, source: *u_dronetag, tag: manufacturer}
+        broadcast: {value: "Bluetooth 2.4 GHz, up to 3 km; internal GNSS and BT antennas, external BT via MMCX", source: *u_dronetag, tag: manufacturer}
+        power: {value: "internal Li-Po 3.7 V 200 mAh (8-18 h) or 5 V micro-USB / 3.3 V EXT header", source: *u_dronetag, tag: manufacturer}
+        protection: {value: "IP43, -20 to +60 degC", source: *u_dronetag, tag: manufacturer}
+        price: {value: 139.0, currency: EUR, source: *u_dronetag, tag: manufacturer, note: "USD 149"}
+      - id: uavionix_pingrid
+        manufacturer: uAvionix
+        model: pingRID
+        mass_kg: {value: 0.021, source: *u_pingrid, tag: manufacturer, note: "via_search_excerpt"}
+        standards: {value: "ASTM F3411-22a", source: *u_pingrid, tag: manufacturer}
+      - id: veronte_rid_variant
+        note: The Veronte 1x Remote ID variant (0.208 kg) integrates Remote ID in the autopilot (see autopilots).
+        source: *u_veronte_cl
+        tag: manufacturer
+    recommended:
+      item_id: veronte_autopilot_1x
+      reasons:
+        - Developed to DO-178C/DO-254 with a dissimilar supervisor and built-in flight-termination logic. That matches CS-LUAS.1412 / SHT-IHA Madde 18 emergency-recovery requirements (standards.yaml CRASH-005), which an open-source autopilot does not document.
+        - 8-54 V redundant power inputs. It runs from the 28 V avionics rail or directly from a 48 V-class bus with no extra regulator; IP67, -40 to +65 degC.
+        - Integrated pitot/static sensors, dual GNSS ports, transponder RF port, Ethernet, dual RS-485 (Volz actuators) and CAN FD in 0.2 kg.
+        - Factory variants with ADS-B In or Remote ID reduce the box count. Embention partners with VISIONAIRtronics (recommended PDU).
+      recommended_set:
+        autopilot: {item_id: veronte_autopilot_1x, variant: ADS-B, mass_kg: 0.209}
+        prototype_autopilot: {item_id: cubepilot_cube_orange_plus, note: "iron bird and early flight tests with ArduPilot"}
+        air_data: {item_id: aeroprobe_heated_pitot_static, note: "28 V / 42 W heater, pneumatic to Veronte; PowerBox Pitot HASA (DroneCAN) as a second, dissimilar airspeed source"}
+        gnss_antennas: {item_id: calian_hc977exf, quantity: 2}
+        primary_datalink: {item_id: silvus_sc4200ep, note: "module variant 0.137 kg dual-band; 2x2 MIMO C2 + IP video; needs a 12 V rail (9-20 V input)"}
+        backup_c2_link: {item_id: microhard_pddl2450, note: "or 900 MHz pDDL900; independent C2 path"}
+        datalink_antennas: {item_id: southwest_antennas_1001_202, quantity: 2}
+        transponder: {item_id: uavionix_ping200x, note: "TSO'd Mode S ES ADS-B Out, 50 g; ADS-B In from the Veronte ADS-B variant or pingRX Pro"}
+        remote_id: {item_id: dronetag_beacon, note: "or Veronte RID variant; Turkish SHGM Remote ID rules to be confirmed"}
+      mass_estimate_kg:
+        value: 0.62
+        source: *u_veronte_cl
+        tag: estimate
+        basis: "0.209 Veronte + 0.020 Aeroprobe probe + 0.048 HASA + 2 x 0.008 GNSS + 0.137 Silvus module + 0.050 Microhard enclosed-board est. + 2 x 0.023 antennas + 0.050 ping200X + 0.016 Dronetag + 0.03 transponder antenna est. = 0.62 kg; excludes harness and coax (sizing allowance)"
+      risks:
+        - Veronte and Silvus prices are on request and may dominate the avionics cost.
+        - "Spectrum: Silvus band choice must follow Turkish BTK allocations (2.4 GHz ISM is the safe default)."
+        - The ping200X and pingRX values come from search excerpts; get the current datasheets from uAvionix.
+
+  # ===================================================================================== 5
+  electrical:
+    summary: >-
+      Engine-driven generation (engine.yaml), a buffer battery that also starts the engine through
+      the starter/generator, a redundant PDU with separate avionics, servo and payload rails, and
+      monitoring over CAN.
+    generator_integration:
+      - id: epropelled_sg750
+        reference: "engine.yaml - recommended.configuration / installation_items.sg750_starter_generator_kg"
+        power_continuous_W: {value: 800.0, source: *u_ust048, tag: paper}
+        power_peak_W: {value: 1000.0, source: *u_ust048, tag: paper, note: "for 180 s"}
+        output: {value: "50 V AC 3-phase at 7500 rpm; needs a rectifier/regulator (ePropelled iPS-class controller)", source: *u_ust048, tag: paper}
+        mass_kg: {value: 0.44, source: *u_ust048, tag: paper, note: "101 mm dia x 28.6 mm"}
+        power_electronics: {value: "ePropelled iPS750 takes the 3-phase starter/generator output and provides a DC output with battery back-up (used on the Apus 15 with the SG750)", source: *u_ep_apus, tag: paper}
+        power_electronics_mass_kg: {value: 0.40, source: *u_ust048, tag: estimate, basis: "engine.yaml generator_power_electronics estimate; iPS750 mass not published"}
+        dc_bus_voltage_V: {value: null, note: "iPS750 output voltage not published; a 48 V-class bus is assumed (rectified 50 V AC 3-phase about 45-67 V depending on rpm)"}
+      - id: limbach_alternator_28v
+        reference: "engine.yaml - generator.options (fallback)"
+        output_V: {value: 28.0, source: *u_lim_web, tag: manufacturer}
+        output_current_A: {value: 45.0, source: *u_lim_web, tag: manufacturer}
+        power_W: {value: 1260.0, source: *u_lim_web, tag: estimate, basis: "28 V x 45 A"}
+        mass_kg: {value: 5.2, source: *u_lim_web, tag: manufacturer, note: "incl. voltage transformer; plus 2.3 kg 12 V starter set"}
+    buffer_batteries:
+      - id: lifepo4_14s2p_a123
+        kind: custom pack from purchasable cells (pack built by a battery integrator)
+        cell: {value: "A123 / Lithium Werks ANR26650M1-B, LiFePO4, 26 x 65 mm, 3.3 V, 2.5 Ah, 50 A continuous, 120 A 10 s pulse, -30 to +55 degC, > 1000 cycles at 100 % DoD", source: *u_a123, tag: datasheet}
+        cell_mass_kg: {value: 0.076, source: *u_a123, tag: datasheet}
+        configuration: 14S2P (48 V class)
+        voltage_nominal_V: {value: 46.2, source: *u_a123, tag: estimate, basis: "14 x 3.3 V"}
+        capacity_C: {value: 18000.0, source: *u_a123, tag: estimate, basis: "2 x 2.5 Ah = 5.0 Ah"}
+        energy_J: {value: 831600.0, source: *u_a123, tag: estimate, basis: "5.0 Ah x 46.2 V = 231 Wh"}
+        current_continuous_A: {value: 100.0, source: *u_a123, tag: estimate, basis: "2 x 50 A"}
+        mass_kg: {value: 2.43, source: *u_a123, tag: estimate, basis: "28 cells x 0.076 = 2.13 kg + 0.30 kg BMS, case, wiring"}
+        hold_up_time_s: {value: 1660.0, source: *u_a123, tag: estimate, basis: "231 Wh x 0.8 / 400 W = 27.7 min after generator loss"}
+      - id: lifepo4_8s2p_a123
+        kind: custom pack (28 V class; for the Limbach 28 V alternator fallback)
+        voltage_nominal_V: {value: 26.4, source: *u_a123, tag: estimate, basis: "8 x 3.3 V; 28.8 V at 3.6 V/cell"}
+        energy_J: {value: 475200.0, source: *u_a123, tag: estimate, basis: "5.0 Ah x 26.4 V = 132 Wh"}
+        mass_kg: {value: 1.47, source: *u_a123, tag: estimate, basis: "16 x 0.076 + 0.25"}
+        hold_up_time_s: {value: 950.0, source: *u_a123, tag: estimate, basis: "132 Wh x 0.8 / 400 W"}
+      - id: liion_12s2p_molicel_p45b
+        kind: custom pack, higher energy alternative
+        cell: {value: "Molicel INR-21700-P45B, 3.6 V, 4.5 Ah (16.2 Wh), 45 A continuous, 70 g max", source: *u_p45b, tag: datasheet}
+        voltage_nominal_V: {value: 43.2, source: *u_p45b, tag: estimate, basis: "12 x 3.6 V"}
+        energy_J: {value: 1400400.0, source: *u_p45b, tag: estimate, basis: "9.0 Ah x 43.2 V = 389 Wh"}
+        mass_kg: {value: 1.98, source: *u_p45b, tag: estimate, basis: "24 x 0.070 + 0.30"}
+        note: About 2x the energy per kg of LiFePO4, but lower thermal-runaway margin; needs cell-level fusing and venting in the bay.
+      - id: earthx_etx680c
+        manufacturer: EarthX (USA)
+        model: ETX680C LiFePO4 aircraft battery (12 V)
+        voltage_nominal_V: {value: 13.2, source: *u_earthx, tag: vendor, note: "via_search_excerpt"}
+        capacity_C: {value: 44640.0, source: *u_earthx, tag: vendor, note: "12.4 Ah at 1C"}
+        dimensions_m: {value: [0.150, 0.086, 0.115], source: *u_earthx, tag: vendor}
+        mass_kg: {value: 1.77, source: *u_earthx, tag: vendor, note: "3.9 lb; 24 V ETX900-24 is 4.04 kg (8.9 lb)"}
+        assessment: Off-the-shelf with built-in BMS, but 12 V only; the 24 V version is heavy.
+    power_distribution:
+      - id: vat_1000w_pdu
+        manufacturer: VISIONAIRtronics GmbH (Austria)
+        model: 1000 W Power Distribution Unit
+        battery_inputs_V: {value: [24.0, 55.0], source: *u_vat1000, tag: manufacturer, note: "two inputs with automatic lossless switch-over"}
+        umbilical_input_V: {value: [28.0, 60.0], source: *u_vat1000, tag: manufacturer}
+        outputs:
+          - {name: "output 1 (avionics)", voltage_V: [12.0, 28.0], current_A: 5.5, power_W: 150.0, redundant: true, source: *u_vat1000, tag: manufacturer}
+          - {name: "output 2 (servo)", voltage_V: [6.0, 28.0], current_A: 25.0, power_W: 500.0, redundant: true, source: *u_vat1000, tag: manufacturer}
+          - {name: "output 3 (payload)", voltage_V: [12.0, 28.0], current_A: 18.0, power_W: 500.0, redundant: false, source: *u_vat1000, tag: manufacturer}
+          - {name: "low power", voltage_V: 5.0, redundant: true, source: *u_vat1000, tag: manufacturer}
+        redundancy: {value: "avionics, servo and 5 V outputs each from two independent supplies, each able to carry 100 % load", source: *u_vat1000, tag: manufacturer}
+        monitoring: {value: "RS-232 (57600 8N1) and CAN (1 Mbit/s): voltages, currents, internal temperature", source: *u_vat1000, tag: manufacturer}
+        mass_kg: {value: 1.600, source: *u_vat1000, tag: manufacturer}
+        dimensions_m: {value: [0.235, 0.195, 0.0545], source: *u_vat1000, tag: manufacturer, note: "example"}
+        protection: {value: "IP67, MIL-DTL-38999 connectors, thermostatic redundant fan outputs, -40 to +55 degC", source: *u_vat1000, tag: manufacturer}
+        price: {value: null, note: "price on request"}
+      - id: vat_1800w_pdu
+        manufacturer: VISIONAIRtronics
+        model: 1800 W PDU
+        battery_inputs_V: {value: [24.0, 60.0], source: *u_vat1800, tag: manufacturer, note: "LiPo 10-14S, LiFe 10-14S"}
+        outputs: {value: "2x avionics 12-28 V, 2x servo 6-28 V, 2x payload 12-28 V, 2x 5 V", source: *u_vat1800, tag: manufacturer}
+        mass_kg: {value: 2.5, source: *u_vat1800, tag: manufacturer, note: "about"}
+        dimensions_m: {value: [0.235, 0.260, 0.055], source: *u_vat1800, tag: manufacturer, note: "about"}
+      - id: esensi_pmu
+        manufacturer: Esensi (ODTU Teknokent, Ankara, Turkey)
+        model: PMU Power Management Unit
+        inputs_V: {value: [40.0, 60.0], source: *u_esensi, tag: datasheet, note: "battery and shore inputs"}
+        total_power_W: {value: 1500.0, source: *u_esensi, tag: datasheet}
+        outputs: {value: "4 x 7 V 100 W; 6 x 14 V 100 W; 2 x 14 V 50 W; 8 x 28 V 20 W; 8 x 28 V 50 W; 10 x 28 V 100 W; 2 x 28 V 300 W; each switchable, V/I/T monitored, soft current limits", source: *u_esensi, tag: datasheet}
+        interfaces: {value: "2 x CAN, 2 x K-type thermocouple inputs, analogue inputs", source: *u_esensi, tag: datasheet}
+        mass_kg: {value: 2.5, source: *u_esensi, tag: datasheet}
+        dimensions_m: {value: [0.360, 0.190, 0.070], source: *u_esensi, tag: datasheet}
+        operating_temperature_degC: {value: [-30.0, 55.0], source: *u_esensi, tag: datasheet}
+        assessment: Domestic (Turkish) supplier with many switched channels; heavier and larger than the VAT 1000 W.
+      - id: cuav_can_pmu
+        manufacturer: CUAV
+        model: CAN PMU (power monitor, not a distributor)
+        mass_kg: {value: 0.076, source: *u_cuav_pmu, tag: manufacturer, note: "via_search_excerpt"}
+        input_V: {value: [6.0, 62.0], source: *u_cuav_pmu, tag: manufacturer}
+        current_measurement_A: {value: 110.0, bound: max, source: *u_cuav_pmu, tag: manufacturer}
+        role: Prototype current/voltage sensing only.
+    servo_power_rails:
+      voltage_V: {value: 28.0, source: *u_volz_da26, tag: estimate, basis: "Volz DA 26 rated 28 V (12-32 V), DA 30 rated 28 V (24-32 V); PDU servo output 6-28 V set to 28 V"}
+      peak_current_A:
+        value: 13.0
+        source: *u_volz_da26
+        tag: estimate
+        basis: "6 x DA 26 peak 1.3 A + 2 x DA 30 peak 2.6 A = 13.0 A (all at once, conservative) vs 25 A PDU servo output"
+      average_power_W:
+        value: 60.0
+        source: *u_volz_da26
+        tag: estimate
+        basis: "about 25 % of rated current on average in turbulence: 0.25 x (6 x 22.4 + 2 x 36.4) = 52 W, rounded up"
+      architecture: Two independent servo feeds from the redundant PDU output; left and right wing surfaces on different feeds so that one feed failure leaves symmetric partial control. RS-485 bus split the same way.
+    load_budget_estimate:
+      tag: estimate
+      source: *u_vat1000
+      basis: "sum of recommended items, continuous; sizing phase owns the final budget"
+      autopilot_W: 15.0
+      datalink_primary_W: 24.0
+      backup_link_ecu_misc_W: 25.0
+      transponder_rid_W: 2.0
+      gimbal_average_W: 20.0
+      servos_average_W: 60.0
+      lights_W: 15.0
+      pitot_heater_W: 42.0
+      engine_ecu_pump_ignition_W: 70.0
+      total_continuous_W: 273.0
+      total_with_gimbal_peak_W: 353.0
+      generator_margin_note: "SG750 800 W continuous gives about 2.3-2.9x margin; battery charging uses part of it."
+    recommended:
+      item_id: vat_1000w_pdu
+      architecture: >-
+        48 V-class primary DC bus fed by SG750 + iPS-class rectifier/regulator, buffered by a
+        14S2P LiFePO4 pack (also the starting source). VISIONAIRtronics 1000 W PDU makes a
+        redundant 28 V servo rail, a redundant 28 V avionics rail and a 24 V payload rail; a small
+        28-to-12 V DC-DC module (estimate 0.1 kg) feeds the Silvus radio and lights. Fallback
+        with the Limbach 28 V alternator: 28 V primary bus and 8S2P LiFePO4; the PDU accepts it
+        (24-55 V input) but with small margin at low state of charge.
+      reasons:
+        - Redundant avionics and servo outputs from two independent supplies, dual battery inputs with lossless switch-over and an umbilical input - the failure tolerance a civil SORA/CS-LUAS safety case needs - in 1.6 kg, about 0.9 kg less than the 1800 W unit or the Esensi PMU.
+        - Its 24-55 V input range matches both the 48 V-class SG750 bus and the 28 V alternator fallback.
+        - CAN and RS-232 health telemetry; IP67, MIL-DTL-38999 connectors, -40 to +55 degC.
+        - Partnership with Embention (Veronte) shortens integration.
+      buffer_battery_choice: {item_id: lifepo4_14s2p_a123, reason: "LiFePO4 thermal stability for a pack carried for 10+ h next to fuel; 28 min hold-up at 400 W after generator loss; 100 A for engine starting"}
+      mass_estimate_kg:
+        value: 4.53
+        source: *u_vat1000
+        tag: estimate
+        basis: "PDU 1.60 + battery 2.43 + 12 V DC-DC 0.10 + main fuses/contactor 0.40 (generator and power electronics counted in engine.yaml)"
+      risks:
+        - iPS750 output voltage and its compatibility with the 14S LiFePO4 float voltage (about 50 V) must be confirmed with ePropelled.
+        - 1.6 kg PDU plus 2.4 kg battery is about 2.7 % of MTOW; a custom eFuse PDU could save about 1 kg but needs qualification work.
+
+  # ===================================================================================== 6
+  fuel_system:
+    summary: >-
+      Gasoline/oil 50:1 (engine.yaml, 740 kg/m3). Nominal 33 kg of fuel (comparables.yaml) is
+      about 0.045 m3 (45 L). EFI supply with return line: inline pump to the injector rail,
+      mechanical 2.5 bar regulator, excess back to the tank (UST 018 p.61).
+    requirements_screening:
+      fuel_volume_m3: {value: 0.0446, source: "ucav250/data/research/comparables.yaml#recommended_ranges.fuel_fraction", tag: estimate, basis: "0.22 x 150 kg = 33 kg / 740 kg/m3"}
+      max_fuel_flow_kg_per_s: {value: 0.00215, source: "ucav250/data/research/engine.yaml#recommended.fuel_flow", tag: estimate, basis: "18 kW x 430 g/kWh = 7.74 kg/h (10.5 L/h)"}
+      required_pump_capacity_kg_per_s:
+        value: 0.00269
+        source: *u_csluas_meta
+        tag: standard
+        basis: "CS-LUAS fuel flow >= 1.25 x take-off consumption for pump systems (standards.yaml FUEL-002): 9.7 kg/h (13.1 L/h), plus the return flow the regulator needs"
+      rail_pressure_Pa: {value: 2.5e+5, source: *u_ust018_p61, tag: paper, note: "Limbach L 275 EF mechanical regulator, gauge"}
+    tanks:
+      - id: atl_ultralight_bladder
+        manufacturer: Aero Tec Laboratories (ATL, USA)
+        model: custom UAV fuel bladder (flexible)
+        wall_thickness_m: {value: {ultralight: 0.00025, crashworthy: 0.00102, self_sealing: 0.00216}, source: *u_atl, tag: manufacturer, note: "0.010 in, 0.040 in, 0.085 in; via_search_excerpt"}
+        temperature_range_degC: {value: [-50.0, 95.0], source: *u_atl, tag: manufacturer}
+        altitude_max_m: {value: 18288.0, source: *u_atl, tag: manufacturer, note: "60,000 ft"}
+        fuels: {value: "motor gasoline, diesel, avgas, JP-8/JP-10/JP-TS", source: *u_atl, tag: manufacturer}
+        mass_kg:
+          value: 0.6
+          source: *u_atl
+          tag: estimate
+          basis: "45 L box 0.60 x 0.32 x 0.24 m has 0.83 m2 surface; 0.25 mm coated-fabric wall at about 1300 kg/m3 = 0.33 kg/m2 -> 0.27 kg wall + about 0.3 kg fittings/flanges"
+        note: Needs a smooth, fully supporting composite cavity with no sharp edges, and tie-down tabs. Custom geometry is made to the fuselage bay shape.
+        price: {value: null, note: "custom quote"}
+      - id: rigid_aluminium_tank
+        kind: make (welded 5052-H32 aluminium)
+        mass_kg: {value: 2.8, source: *u_atl, tag: estimate, basis: "0.83 m2 x 1.0 mm x 2680 kg/m3 = 2.2 kg + baffles, bosses and welds about 0.6 kg"}
+        note: Robust and easy to certify for leaks, but about 2 kg heavier and must fit through access panels.
+      - id: integral_composite_tank
+        kind: make (fuselage/wing structure as tank)
+        mass_kg: {value: 1.4, source: *u_atl, tag: estimate, basis: "fuel-resistant liner/sealant 0.5-1.0 kg over 0.83 m2 + fittings; no separate shell"}
+        note: Lightest structurally, but sealing a composite sandwich structure against gasoline over a long life is a known problem; not recommended.
+    pumps_and_regulation:
+      - id: limbach_efi_supply_kit
+        description: Inline 12 V electric pump + mechanical 2.5 bar regulator at the rail end + filter; supplied with / specified by the engine maker.
+        mass_kg: {value: 0.35, source: *u_ust018_p61, tag: estimate, basis: "engine.yaml installation_items.fuel_pump_regulator_filter_kg"}
+        power_W: {value: [10.0, 20.0], source: *u_ust050, tag: paper, note: "typical UAV electric fuel pump draw"}
+        life_s: {value: [2.52e+6, 5.4e+6], source: *u_ust050, tag: paper, note: "700-1500 h for a good UAV pump"}
+        requirements: {value: "positive displacement preferred; must tolerate running dry and sand ingress", source: *u_ust050, tag: paper}
+      - id: micro_piston_efi_pump
+        description: Self-priming single-cylinder positive-displacement piston pump for small EFI engines (supplier not named in the source).
+        flow_kg_per_s: {value: [3.3e-4, 5.8e-4], source: *u_ust_2s_fuel, tag: paper, note: "20-35 g/min; via_search_excerpt"}
+        pressure_Pa: {value: 4.0e+5, source: *u_ust_2s_fuel, tag: paper}
+        supply_voltage_range_V: {value: [8.0, 20.0], source: *u_ust_2s_fuel, tag: paper}
+        power_W: {value: 2.0, source: *u_ust_2s_fuel, tag: paper}
+        mass_kg: {value: 0.065, source: *u_ust_2s_fuel, tag: paper}
+        assessment: 20-35 g/min (1.2-2.1 kg/h) is well below the 7.7 kg/h needed at full power of the L 275 EF; sized for 25-50 cc engines. Not suitable.
+      - id: nwuav_fuel_delivery
+        manufacturer: Northwest UAV (USA)
+        description: "UAV EFI fuel delivery system: self-priming, acrobatic pickup, serviceable filter, high-pressure output, bingo-level and pressure sensing; gasoline or heavy fuel"
+        source: *u_nwuav
+        tag: manufacturer
+        mass_kg: {value: null, note: "not published; sized for NW-44/NW-88 engines (3.5-7.3 hp)"}
+    filters:
+      - id: andair_gas10_70
+        manufacturer: Andair (UK)
+        model: GAS10-70 dual-filter gascolator
+        filtration: {value: "100 micron bowl screen + 70 micron outlet screen, removable/washable; Viton O-rings", source: *u_andair_gas10, tag: manufacturer}
+        ports: {value: "inlet 1/8 in NPT female; outlet barb for 1/4 in hose; two 8-32 UNC mounting holes", source: *u_andair_gas10, tag: manufacturer}
+        material: {value: "machined aluminium", source: *u_andair_gas10, tag: manufacturer}
+        mass_kg: {value: null, note: "not published; GAS375 (3/8 in lines) is 0.152 kg"}
+        price: {value: 151.86, currency: GBP, source: *u_andair_gas10, tag: manufacturer, note: "ex UK VAT"}
+      - id: andair_gas375
+        manufacturer: Andair
+        model: GAS375 gascolator (3/8 in lines)
+        mass_kg: {value: 0.152, source: *u_andair_gas, tag: manufacturer, note: "excluding fittings; via_search_excerpt"}
+        filtration: {value: "PTFE-coated 70 micron washable screen; 100 psi (0.69 MPa) safe working pressure", source: *u_andair_gas, tag: manufacturer}
+    vents:
+      - id: andair_check_valve
+        manufacturer: Andair
+        description: AN-6 check valve with light internal shuttle for tank vents and pump bypass lines, up to 50 psi
+        working_pressure_Pa: {value: 3.45e+5, source: *u_andair_gas, tag: manufacturer, note: "50 psi; via_search_excerpt"}
+        dimensions: {value: "5/16 in dia x 2.75 in long (7.9 x 70 mm)", source: *u_andair_gas, tag: manufacturer}
+      - id: rollover_vent_valve
+        description: Motorsport roll-over vent valve (gravity ball/float) at the tank high point, vent line routed to an overboard scoop with a check valve; keeps fuel in at high bank angles and in a crash.
+        mass_kg: {value: 0.05, source: *u_obp, tag: estimate, basis: "small aluminium roll-over valves are typically 30-80 g; obp lists roll-over valves without masses"}
+    refuel_couplings:
+      - id: obp_dry_break_an6
+        manufacturer: obp Motorsport (UK)
+        model: Dry-break quick-release coupling OBP-DRYBC-6A (AN6)
+        mass_kg: {value: 0.067, source: *u_obp, tag: manufacturer, note: "AN8 0.076 kg, AN10 0.206 kg"}
+        pressure_max_Pa: {value: 8.62e+6, source: *u_obp, tag: manufacturer, note: "1250 psi"}
+        features: {value: "double shut-off, bayonet lock, swivel; CNC aluminium, black anodised; FPM (fluorocarbon) seals", source: *u_obp, tag: manufacturer}
+        price: {value: 78.99, currency: GBP, source: *u_obp, tag: manufacturer, note: "ex VAT"}
+        note: Mount the airframe half flush in a small access door; ground cart uses the mating half. Also usable as defuel point.
+    level_sensing:
+      - id: gill_micro_level_sensor
+        manufacturer: Gill Sensors & Controls (UK)
+        model: miniature capacitive fuel/oil level sensor (custom length)
+        mass_kg: {value: 0.060, source: *u_gill, tag: manufacturer, note: "via_search_excerpt"}
+        output: {value: "configurable 0-5 V analogue, accuracy 0.25 % of tank depth", source: *u_gill, tag: manufacturer}
+        protection: {value: "IP68, -40 to +125 degC, aluminium/titanium/carbon construction, designed to stringent (MIL-grade) EMC requirements", source: *u_gill, tag: manufacturer}
+        heritage: {value: "used on a record-breaking unmanned aircraft flight (2012)", source: *u_gill, tag: manufacturer}
+      - id: reventec_ls100
+        manufacturer: Reventec (UK)
+        model: LS100 drone fuel level sensor
+        description: Capacitive probe, 1-bolt flange or side mount, custom length up to 0.45 m; gasoline, heavy fuel, avgas, bio blends; LSM100-micro sibling offers 0-5 V, CAN or dual-channel output.
+        max_length_m: {value: 0.450, source: *u_reventec, tag: manufacturer}
+        mass_kg: {value: null, note: "not published"}
+        heritage: {value: "used on the V-BAT UAS", source: *u_reventec, tag: manufacturer}
+    recommended:
+      item_id: atl_ultralight_bladder
+      system: >-
+        One ATL ultralight (0.25 mm) bladder of about 45 L in a composite fuselage bay near the
+        CG; small rigid header/collector tank (about 0.3 L, flop pickup) feeding the Limbach EFI
+        pump kit with return line to the header; Andair GAS10-70 or GAS375 gascolator before the
+        pump; Gill capacitive level probe in the main bladder plus a low-level switch in the header;
+        roll-over valve + check valve on the vent; obp AN6 dry-break coupling for refuel/defuel.
+      reasons:
+        - About 2 kg lighter than a welded aluminium tank of the same volume, and it conforms to the fuselage bay; ATL bladders are a standard UAV solution with documented fuel compatibility, -50 to +95 degC and 18 km altitude rating.
+        - A flexible bladder does not crack from engine vibration and has better crash survivability; the crashworthy 1.02 mm material is an upgrade path if the safety case needs it.
+        - The header tank keeps the pickup submerged in manoeuvres and gives the CS-LUAS unusable-fuel/feed checks a small, testable volume.
+      mass_estimate_kg:
+        value: 1.73
+        source: *u_atl
+        tag: estimate
+        basis: "bladder 0.60 + header tank 0.15 + gascolator 0.15 + dry-break 0.067 + vent valves 0.10 + level sensor 0.06 + lines/fittings 0.30 + low-level switch 0.03 + tank straps 0.27 = 1.73 kg (EFI pump/regulator 0.35 kg counted in engine.yaml)"
+      risks:
+        - Bladder price and lead time (custom tooling) unknown; ask ATL early.
+        - The fuel CG travel and slosh must be checked in the packaging phase; baffles are not possible in a bladder, so use foam or a segmented bladder if needed.
+
+  # ===================================================================================== 7
+  recovery_and_safety:
+    summary: >-
+      Emergency parachute (ultimate-load case, standards.yaml CRASH-004), flight termination
+      independent of failed systems (CRASH-005, SHT-IHA Madde 18), and navigation/anti-collision
+      lights. With a pusher propeller, the termination sequence must stop the engine before the
+      parachute deploys, and the canopy must leave the fuselage forward of the propeller disc.
+    parachutes:
+      - id: galaxy_grs_4_240
+        manufacturer: Galaxy GRS s.r.o. (Liberec, Czech Republic)
+        model: GRS 4/240 SOFT (rocket-deployed ultralight rescue system, 43 m2)
+        mtow_max_kg: {value: 240.0, source: *u_grs4240, tag: manufacturer, note: "260 kg at 200 km/h"}
+        vne_m_s: {value: 66.7, source: *u_grs4240, tag: manufacturer, note: "240 km/h"}
+        opening_shock_N: {value: 13100.0, source: *u_grs4240, tag: manufacturer, note: "at VNE and MTOW; about 8.9 g at 150 kg"}
+        full_canopy_time_at_vne_s: {value: 3.0, source: *u_grs4240, tag: manufacturer}
+        full_canopy_time_at_45_km_h_s: {value: 4.0, source: *u_grs4240, tag: manufacturer}
+        min_rescue_height_m: {value: 70.0, source: *u_grs4240, tag: manufacturer, note: "horizontal flight at 45 km/h"}
+        descent_rate_m_s: {value: 6.9, source: *u_grs4240, tag: manufacturer, note: "at MTOW, 1500 m AMSL; about 5.5 m/s at 150 kg by sqrt(m) scaling (estimate)"}
+        canopy_area_m2: {value: 43.0, source: *u_grs4240, tag: manufacturer}
+        canopy_nominal_diameter_m: {value: 5.9, source: *u_grs4240, tag: manufacturer, note: "18 lines/panels, slots and slider"}
+        rocket: {value: "rocket engine 120, dual primer mechanical igniter, 480 N stationary / 750 N maximum pull, burn 1.0 +/- 0.2 s (-40 to +60 degC), exchange every 6 years", source: *u_grs4240, tag: manufacturer}
+        mass_kg: {value: 5.9, source: *u_grs4240, tag: manufacturer, note: "total GRS Soft +/-4 %; unit 5.3 kg, ballistic device 2.0 kg"}
+        container_dimensions_m: {value: [0.205, 0.110, 0.375], source: *u_grs4240, tag: manufacturer, note: "B8 soft container; 12 shapes B1-B12 from 0.200 x 0.120 x 0.330 to 0.270 x 0.130 x 0.310 m"}
+        container_volume_m3: {value: 0.00846, source: *u_grs4240, tag: estimate, basis: "B8 box 0.205 x 0.110 x 0.375 m"}
+        test_basis: {value: "canopy safety coefficient per ASTM F2316-12; DULV R31-11 test", source: *u_grs4240, tag: manufacturer}
+        bridle_length_m: {value: 4.5, source: *u_grs4240, tag: manufacturer, note: "drawing sling, 0.6 kg"}
+        price: {value: null, note: "price list on the manufacturer site, not read"}
+      - id: uavos_200_parachute_system
+        manufacturer: UAVOS (USA/Bulgaria)
+        model: 200 Parachute System (emergency, ballistic)
+        max_load_kg: {value: 220.0, source: *u_uavos, tag: manufacturer}
+        max_deploy_speed_m_s: {value: 97.0, source: *u_uavos, tag: manufacturer}
+        min_response_time_s: {value: 3.0, source: *u_uavos, tag: manufacturer}
+        min_altitude_m: {value: 50.0, source: *u_uavos, tag: manufacturer, note: "at minimum speed"}
+        compartment_dimensions_m: {value: [0.300, 0.300, 0.275], source: *u_uavos, tag: manufacturer}
+        compartment_volume_m3: {value: 0.02475, source: *u_uavos, tag: estimate, basis: "0.300 x 0.300 x 0.275 m"}
+        mass_kg: {value: 4.5, source: *u_uavos, tag: manufacturer}
+        max_load_factor_g: {value: 5.0, source: *u_uavos, tag: manufacturer}
+        descent_rate_m_s: {value: 6.0, bound: max, source: *u_uavos, tag: manufacturer}
+        operating_temperature_degC: {value: [-40.0, 50.0], source: *u_uavos, tag: manufacturer}
+        service: {value: "parachute 10 applications, charge single use, 12-month service life", source: *u_uavos, tag: manufacturer}
+      - id: uavos_100_parachute_system
+        manufacturer: UAVOS
+        model: 100 Parachute Systems (emergency, ballistic-exhaust, braking pilot chute)
+        max_load_kg: {value: 120.0, source: *u_uavos, tag: manufacturer}
+        max_deploy_speed_m_s: {value: 110.0, source: *u_uavos, tag: manufacturer, note: "with braking parachute; 33.3 m/s without"}
+        compartment_dimensions_m: {value: [0.350, 0.300, 0.100], source: *u_uavos, tag: manufacturer, note: "+ ballistic compartment 0.214 x 0.080 x 0.070 m"}
+        mass_kg: {value: 3.5, source: *u_uavos, tag: manufacturer}
+        max_load_factor_g: {value: 10.0, source: *u_uavos, tag: manufacturer}
+        min_altitude_m: {value: 80.0, source: *u_uavos, tag: manufacturer}
+        assessment: Rated below the 150 kg nominal MTOW; only for a 100-120 kg variant.
+      - id: fruity_chutes_peregrine
+        manufacturer: Fruity Chutes (USA)
+        model: Peregrine UAV Light / Ultralight (CO2 ejection, Hawk CO2 release)
+        rated_uav_mass_kg: {value: [6.3, 104.0], source: *u_peregrine, tag: manufacturer, note: "11 models; 'compatible half to double the nominal weight rating'"}
+        mass_kg: {value: 1.0, source: *u_peregrine, tag: manufacturer, note: "about 1 kg incl. CO2 release, parachute and rigging (smaller sizes)"}
+        canister_diameters_m: {value: [0.1016, 0.127, 0.1524], source: *u_peregrine, tag: manufacturer, note: "4, 5, 6 in units on a common 4 in base"}
+        trigger: {value: "servo-triggered CO2 cartridge, no pyrotechnics", source: *u_peregrine, tag: manufacturer}
+        max_deploy_speed_m_s: {value: null, note: "not published on the page"}
+        assessment: Non-pyrotechnic and light, but nominal ratings stop at 104 kg and the deployment-speed limit is unpublished.
+      - id: galaxy_gbs10_350
+        manufacturer: Galaxy GRS
+        model: GBS 10/350 (UAV ballistic)
+        rated_uav_mass_kg: {value: [15.0, 35.0], source: *u_gbs10, tag: manufacturer}
+        mass_kg: {value: 0.725, source: *u_gbs10, tag: manufacturer}
+        assessment: Market check; too small for this class.
+    flight_termination:
+      - id: veronte_integrated_fts
+        description: Veronte 1x dissimilar supervisor with FTS function; commands engine kill and parachute deployment on geofence breach, C2 loss (after the SHT-IHA recovery-area logic) or autopilot failure.
+        source: *u_veronte_ust
+        tag: manufacturer
+        note: via_search_excerpt
+      - id: independent_fts_channel
+        kind: architecture (make from purchased parts)
+        description: >-
+          Independent FTS receiver on its own power (backup cell) driving two solid-state switches:
+          (1) ECU/ignition and fuel-pump power cut, (2) parachute igniter. No wiring to the
+          autopilot except a status line, as in the Rotorama FTS concept (own MCU, own receiver,
+          only the power path shared). Arming via a guarded command; inadvertent-activation
+          protection as CS-LUAS.1412 requires.
+        reference_product: {value: "Rotorama FTS: own MCU and receiver input, 50 A continuous / 200 A peak switch, 36 x 36 mm, EUR 20.59 (multirotor battery cut-off)", source: *u_rotorama, tag: manufacturer}
+        mass_kg: {value: 0.15, source: *u_rotorama, tag: estimate, basis: "receiver 0.02 + controller/switch board 0.03 + backup cell 0.05 + wiring 0.05"}
+    lights:
+      - id: aveoflash_lp_lsa
+        manufacturer: Aveo Engineering (Czech Republic)
+        model: AveoFlashLP LSA (3-in-1 position/nav/strobe)
+        dimensions_m: {value: [0.100, 0.045, 0.030], source: *u_aveo, tag: datasheet}
+        mass_kg: {value: 0.083, source: *u_aveo, tag: datasheet}
+        supply_voltage_range_V: {value: [9.0, 32.0], source: *u_aveo, tag: datasheet}
+        power_position_W: {value: 3.3, source: *u_aveo, tag: datasheet}
+        power_strobe_W: {value: 5.3, source: *u_aveo, tag: datasheet, note: "26.5 W peak; 50 flashes/min; synchronised between units"}
+        mounting: {value: "M5 stainless screws, wingtip; adapters and composite fairings available", source: *u_aveo, tag: datasheet}
+        price: {value: null, note: "not checked"}
+      - id: firehouse_arc_v
+        manufacturer: Firehouse Technology (USA)
+        model: ARC V drone anti-collision strobe
+        mass_kg: {value: 0.013, source: *u_arcv, tag: vendor, note: "via_search_excerpt"}
+        output: {value: "1100 lm, visible 4 statute miles (6.4 km)", source: *u_arcv, tag: vendor}
+        note: Battery-powered add-on; a backup or ground-crew visibility aid, not a 28 V installed light.
+    recommended:
+      item_id: galaxy_grs_4_240
+      reasons:
+        - Rated 240 kg / 240 km/h (66.7 m/s); 150 kg gives a 1.6 mass margin and covers the expected VD of about 55 m/s.
+        - The only candidate with a complete public data table - opening shock (13.1 kN), canopy timing, minimum rescue height, descent rate, container shapes - and a manned-aviation test basis (ASTM F2316-12 canopy, DULV).
+        - Rocket extraction pulls the canopy clear of a tumbling airframe and of the pusher propeller disc, and works from 70 m at low speed.
+        - "Mass 5.9 kg (3.9 % of MTOW) and about 0.008 m3: similar to the UAVOS 200 (4.5 kg, 0.025 m3 compartment) but with better-documented performance."
+      recommended_set:
+        parachute: {item_id: galaxy_grs_4_240}
+        flight_termination: {item_ids: [veronte_integrated_fts, independent_fts_channel]}
+        lights: {item_id: aveoflash_lp_lsa, quantity: 3, note: "two wingtip units (red/green + strobe) and one tail/top unit (white + strobe)"}
+      mass_estimate_kg:
+        value: 6.30
+        source: *u_grs4240
+        tag: estimate
+        basis: "GRS 4/240 5.90 + 3 x AveoFlash 0.083 + independent FTS 0.15 = 6.30 kg"
+      risks:
+        - Opening shock about 8.9 g at 150 kg means a dedicated hard point and bridle routing in the fuselage structure (ultimate case, CRASH-004).
+        - The rocket is a pyrotechnic; storage, transport (dangerous goods) and 6-year exchange add operating cost. UAVOS 200 (ballistic) has similar handling; the non-pyrotechnic Fruity Chutes option is not rated for this mass.
+        - Descent 5.5-6.9 m/s will damage the airframe on landing; the parachute is an emergency (ultimate-load) system, not a recovery method for routine use.
+
+# -----------------------------------------------------------------------------------------------------
+# RECOMMENDED SET - MASS SUMMARY (purchased subsystems only; harness, structure and engine excluded)
+# -----------------------------------------------------------------------------------------------------
+recommended_mass_summary:
+  tag: estimate
+  source: "this file, categories.*.recommended"
+  note: Sums the recommended items' masses as estimated above. The sizing phase owns the mass budget.
+  control_surface_actuators_kg: 3.28
+  landing_gear_fixed_tricycle_kg: 9.1
+  eo_ir_gimbal_kg: {value: 1.75, source: *u_tr_hd59, tag: estimate, basis: "HD59-LLVV 1.55 (datasheet) + isolator/mount 0.20 (estimate); bay allowance 4.0 kg"}
+  avionics_kg: 0.62
+  electrical_kg: 4.53
+  fuel_system_kg: 1.73
+  recovery_and_safety_kg: 6.30
+  total_kg: 27.31
+  total_fraction_of_mtow: {value: 0.182, source: "ucav250/data/research/comparables.yaml#recommended_ranges.mtow_kg", tag: estimate, basis: "27.31 kg / 150 kg nominal MTOW"}
+
+open_items:
+  - Quotes and lead times for Volz DA 26/DA 30, Veronte 1x, Silvus, Trillium HD59, Galaxy GRS 4/240, TOST wheels and ATL bladder (none publish prices).
+  - Trillium gimbal mounting ICD/STEP and isolator recommendation.
+  - ePropelled iPS750 output voltage, mass and starter-mode current; compatibility with a 14S LiFePO4 float voltage.
+  - Current uAvionix ping200X / pingRX Pro datasheets (site blocked automated access).
+  - Turkish rules for Remote ID, transponder carriage and datalink frequencies (SHGM, BTK).
+  - Hinge-moment coefficients from the aero phase to confirm DA 26 horn ratios and DA 30 flap sizing.
+  - Galaxy GRS 4/240 container choice (B1-B12) against the fuselage packaging and the pusher-propeller exclusion zone.
+
+uncertainties:
+  - Several manufacturer pages (uAvionix, Embention, Aeroprobe, Fruity Chutes bundle list, CACI) refused automated access; their numbers were taken from search-engine excerpts and are flagged "via_search_excerpt".
+  - Volz mounting-hole patterns were read from datasheet drawings (+/-0.1 mm as labelled); confirm against the Volz STEP files.
+  - The HD59 power figure (20 W average) is published for the family; the LLVV may draw less.
+  - Hinge moments, landing-gear loads, bow mass, battery and bladder masses are screening estimates (+/-30-50 %); they size the selection only, not the parts.
+  - The TOST 200x50 tyre static capacity is 200 kg in the 2026 catalogue but 2.5 kN (255 kg) in the SAGITTA paper and a US dealer listing; the lower value is used.

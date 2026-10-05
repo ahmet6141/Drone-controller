@@ -44,10 +44,13 @@ class Fastener:
     position: np.ndarray
     axis: np.ndarray
     joins: tuple[str, ...]
-    nut: str = ""               # e.g. "ISO 10511 M6 (nyloc)", "nutplate NAS1068-3", "potted insert M5"
+    nut: str = ""               # e.g. "ISO 7040 M6 (nyloc)", "nutplate NAS1068-3", "potted insert M5"
     torque_nm: float | None = None
     step: int = 0
     notes: str = ""
+    grip: float | None = None   # clamped stack thickness (m): nut/nutplate sits at position + grip * axis
+    washer_head: bool = False   # ISO 7089 washer under the head
+    washer_nut: bool = True     # ISO 7089 washer under the nut (ignored for nutplates/inserts)
 
     def __post_init__(self):
         self.position = np.asarray(self.position, float)

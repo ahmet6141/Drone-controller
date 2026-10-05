@@ -375,7 +375,10 @@ def revolve(profile_rz, n: int = 48, axis_origin=(0.0, 0.0, 0.0), axis=(1.0, 0.0
         raise NotImplementedError("revolve: only full revolutions")
     P = _ring(profile_rz)
     ax = unit(axis)
-    r0 = unit(np.asarray(ref, float) - np.dot(ref, ax) * ax)
+    ref = np.asarray(ref, float)
+    if abs(float(np.dot(unit(ref), ax))) > 0.99:            # reference parallel to the axis: pick another one
+        ref = np.array([1.0, 0.0, 0.0]) if abs(ax[0]) < 0.9 else np.array([0.0, 1.0, 0.0])
+    r0 = unit(ref - np.dot(ref, ax) * ax)
     r1 = np.cross(ax, r0)
     th = np.linspace(0.0, 2 * math.pi, n, endpoint=False)
     V, idx = [], []

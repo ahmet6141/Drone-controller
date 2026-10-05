@@ -449,7 +449,10 @@ TR = {"mesh": "Ağ geçerliliği", "static": "Durağan girişim", "swept": "Hare
       "thickness": "Et kalınlığı", "fastener": "Bağlantı elemanları", "attachment": "Bağlantı grafiği"}
 
 
-def run_all(reg: Registry, quick: bool = False, only: list[str] | None = None, write: bool = True) -> dict:
+def run_all(reg: Registry, quick: bool = False, only: list[str] | None = None, write: bool = True,
+            focus: set[str] | None = None) -> dict:
+    """Run the checks. ``focus`` (part ids) keeps only violations that involve at least one focus part (a module
+    author checks their own parts against everything built so far)."""
     cache = _ManCache(reg)
     res, times = {}, {}
     for name, fn in CHECKS.items():
@@ -457,6 +460,10 @@ def run_all(reg: Registry, quick: bool = False, only: list[str] | None = None, w
             continue
         t0 = time.time()
         res[name] = fn(reg, cache, quick)
+        if focus is not None:
+            res[name] = [v for v in res[name] if any(pid in focus for pid in v["parts"]) or
+                         any(isinstance(pid, str) and pid.startswith("YK250-HW-") and any(f in pid for f in focus)
+                             for pid in v["parts"])]
         times[name] = round(time.time() - t0, 1)
     summary = {"parts": len(reg.parts), "joints": len(reg.joints), "fasteners": len(reg.fasteners()),
                "violations": {k: len(v) for k, v in res.items()}, "seconds": times, "details": res,
@@ -491,10 +498,23 @@ def main(argv=None) -> int:
     ap.add_argument("--quick", action="store_true", help="skip self-intersection and thickness sampling, 5 sweep "
                                                           "samples")
     ap.add_argument("--only", default="", help="comma list of: " + ",".join(CHECKS))
+    ap.add_argument("--modules", default="", help="build only these producer modules (comma list, hardware is "
+                                                  "appended), e.g. chassis,wing")
+    ap.add_argument("--focus", default="", help="report only violations involving parts whose id starts with one of "
+                                                "these comma-separated prefixes, e.g. YK250-WG,YK250-FC")
+    ap.add_argument("--no-write", action="store_true", help="do not overwrite out/checks.md|json")
     a = ap.parse_args(argv)
     from ..core.assemble import build_registry
-    reg = build_registry()
-    S = run_all(reg, quick=a.quick, only=[x for x in a.only.split(",") if x] or None)
+    mods = [m for m in a.modules.split(",") if m]
+    if mods and "hardware" not in mods:
+        mods.append("hardware")
+    reg = build_registry(modules=mods or None, strict=not mods)
+    focus = None
+    if a.focus:
+        pre = tuple(x for x in a.focus.split(",") if x)
+        focus = {pid for pid in reg.parts if pid.startswith(pre)}
+    S = run_all(reg, quick=a.quick, only=[x for x in a.only.split(",") if x] or None, write=not a.no_write,
+                focus=focus)
     print(json.dumps({"ok": S["ok"], "violations": S["violations"], "seconds": S["seconds"]}))
     return 0 if S["ok"] else 1
 

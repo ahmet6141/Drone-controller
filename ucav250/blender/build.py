@@ -377,18 +377,25 @@ def main(argv=None) -> int:
     ap.add_argument("--previews", action="store_true")
     ap.add_argument("--no-blend", action="store_true")
     ap.add_argument("--glb", action="store_true")
+    ap.add_argument("--modules", default="", help="build only these producer modules (comma list; hardware appended)")
+    ap.add_argument("--out", default="", help="output folder (default ucav250/out); previews go to <out>/previews")
     a = ap.parse_args(argv)
     from ..core.assemble import build_registry
     from ..core.spec import OUT_DIR
+    out_dir = Path(a.out) if a.out else OUT_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    mods = [m for m in a.modules.split(",") if m]
+    if mods and "hardware" not in mods:
+        mods.append("hardware")
     reset_scene()
-    reg = build_registry()
+    reg = build_registry(modules=mods or None, strict=not mods)
     info = build_scene(reg)
     if a.previews:
-        info["previews"] = render_previews(reg.spec, OUT_DIR / "previews")
+        info["previews"] = render_previews(reg.spec, out_dir / "previews")
     if not a.no_blend:
-        bpy.ops.wm.save_as_mainfile(filepath=str(OUT_DIR / "yk250.blend"), compress=True)
+        bpy.ops.wm.save_as_mainfile(filepath=str(out_dir / "yk250.blend"), compress=True)
     if a.glb:
-        bpy.ops.export_scene.gltf(filepath=str(OUT_DIR / "yk250.glb"), export_format="GLB", use_selection=False)
+        bpy.ops.export_scene.gltf(filepath=str(out_dir / "yk250.glb"), export_format="GLB", use_selection=False)
     print(info)
     return 0
 

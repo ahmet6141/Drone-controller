@@ -173,3 +173,31 @@ verifies the spec value against the computed one within a stated tolerance).
 | `display` | `colors` per group, `drawing.dimensions`, `preview_states` |
 | `layout` | datum, `ground_z`, `root_part`, stations/frames, interface points, keep-out envelopes, `part_numbers` ranges, `clearances` rules |
 | `assembly` | `general` notes and `steps` (`step`, `title_tr`, `subassembly`, `text`, `tools`, `checks`) |
+
+## 10. Writing a producer module (pattern every `design/<module>.py` follows)
+
+```python
+"""<Module> producer: what it builds, its interfaces (spec.layout keys it reads) and its manufacturing notes."""
+from ..core.parts import Joint, Part, Registry, mirror_part, part_number
+from . import joints as J, structgen as SG          # actuation as A, oml as O when needed
+
+def register(reg: Registry, spec: dict) -> None:
+    L = spec["layout"]                               # interfaces only — never another module's geometry
+    n0 = L["part_numbers"]["<module>"][0]            # allocated number range
+    pid = part_number("<group>", n0 + 1, side="R")   # YK250-<CODE>-NNN-R
+    reg.add(Part(id=pid, name="...", name_tr="...", group="<group>", material="<spec.materials key>",
+                 process="<spec.processes key>", layup="<spec.layups key>" or thickness=<m>,
+                 mesh_fn=lambda: SG.rib(...), parent="<part it mounts on>", step=<assembly step>,
+                 explode=(dx, dy, dz), contacts=("<bonded/fastened neighbours>",), side="R"))
+    J.bolt_through(reg, f"{pid}-B1", 5, point, axis, [pid, "<mating part>"], nut="nutplate", step=<step>)
+    reg.add(mirror_part(reg.parts[pid], pid[:-1] + "L", id_map={...}))   # port copy (holes/fasteners mirrored)
+```
+
+Rules: (1) read positions, sizes and part numbers from `spec.layout`; (2) every part has material + process +
+thickness/layup, a parent and an assembly step; (3) joints via `design/joints.py`, hinges via `design/actuation.py`,
+OML-fitted parts via `design/structgen.py`; (4) moving parts reference a `Joint` (radians/metres, rest pose = 0);
+(5) `tests/test_ucav250_<module>.py` builds `build_registry(modules=[...dependencies, "<module>", "hardware"],
+strict=False)` and asserts zero mesh / static / swept / clearance / thickness / fastener / attachment violations for
+the module's parts: `python3 -m ucav250.analysis.checks --modules chassis,<module> --focus YK250-<CODE> --no-write`;
+(6) look at the parts: `python3 -m ucav250.blender.build --modules chassis,<module> --previews --no-blend
+--out /tmp/<module>` and Read the PNGs.

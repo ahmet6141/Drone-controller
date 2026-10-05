@@ -312,9 +312,55 @@ def _edge_distance(f, outline_list) -> float:
     return best
 
 
+def _perp_basis(a):
+    ref = np.array([0.0, 0.0, 1.0]) if abs(a[2]) < 0.9 else np.array([1.0, 0.0, 0.0])
+    e1 = np.cross(a, ref)
+    e1 /= np.linalg.norm(e1)
+    return e1, np.cross(a, e1)
+
+
+def _edge_distance_mesh(f, man, extent: float, n_dir: int = 36):
+    """Edge distance measured on the geometry: radial rays from the fastener axis at the mid-plane of the part's
+    material (found with four probe lines parallel to the axis just outside the hole). The first crossing is the hole
+    wall (if the hole was cut), the next one the nearest edge/cut-out of the part. Returns (edge distance, pierced);
+    pierced is False when the fastener does not pass through the part's material near its axis."""
+    from ..core.geom import ray_hits
+    from ..design.fastener_catalog import clearance, size_from_spec
+    a = f.axis
+    c = f.position
+    size = size_from_spec(f.spec) or round(f.d * 1000)
+    r_h = 0.5 * clearance(size) if f.kind not in ("pin", "clevis_pin") else 0.5 * f.d * 1.02
+    e1, e2 = _perp_basis(a)
+    lo = -0.02 - 2 * f.d
+    hi = (f.grip if f.grip is not None else f.length) + 0.02 + 2 * f.d
+    mids = []
+    for d in (e1, -e1, e2, -e2):
+        o = c + 1.6 * r_h * d
+        h = ray_hits(man, o + lo * a, o + hi * a) + lo
+        for i in range(0, len(h) - 1, 2):                      # (enter, exit) pairs along the probe line
+            mids.append(0.5 * (h[i] + h[i + 1]))
+    if not mids:
+        return math.inf, False
+    t_mid = float(np.median(mids))
+    p0 = c + t_mid * a
+    best = math.inf
+    for th in np.linspace(0.0, 2 * math.pi, n_dir, endpoint=False):
+        d = math.cos(th) * e1 + math.sin(th) * e2
+        h = ray_hits(man, p0, p0 + extent * d)
+        if not len(h):
+            continue
+        ed = h[1] if (h[0] < 1.6 * r_h and len(h) > 1) else (math.inf if h[0] < 1.6 * r_h else h[0])
+        best = min(best, float(ed))
+    return best, True
+
+
 def check_fasteners(reg: Registry) -> list[dict]:
+    """Edge distance (>= 2.0 D metal, >= 2.5 D composite) for every fastener in every joined part — from the part
+    ``outline`` if given, otherwise measured on the mesh — that the fastener actually pierces each joined part, and
+    the minimum pitch (3 D) between neighbouring fasteners in a part."""
     out = []
     by_part = defaultdict(list)
+    mans = {}
     for f in reg.fasteners():
         for pid in f.joins:
             if pid not in reg.parts:
@@ -322,10 +368,19 @@ def check_fasteners(reg: Registry) -> list[dict]:
                 continue
             by_part[pid].append(f)
             p = reg.parts[pid]
-            if not p.outline:
-                continue
             k = COMPOSITE_EDGE if _material_kind(reg, p) == "composite" else METAL_EDGE
-            ed = _edge_distance(f, p.outline)
+            if p.outline:
+                ed = _edge_distance(f, p.outline)
+            else:
+                if pid not in mans:
+                    lo, hi = p.mesh.bounds()
+                    mans[pid] = (p.mesh.to_manifold(), float(np.linalg.norm(hi - lo)) + 0.01)
+                man, ext = mans[pid]
+                ed, pierced = _edge_distance_mesh(f, man, ext)
+                if not pierced:
+                    out.append(_violation("fastener_miss", [f.id, pid], None, "fastener passes through the part",
+                                          f.spec))
+                    continue
             if ed < k * f.d - 1e-6:
                 out.append(_violation("edge_distance", [f.id, pid], round(ed * 1000, 2),
                                       f">= {k:.1f} D = {k*f.d*1000:.1f} mm", f.spec))

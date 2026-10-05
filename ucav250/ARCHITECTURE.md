@@ -95,6 +95,10 @@ Run everything from the repo root: `python3 -m ucav250.analysis.sizing --check`,
 
 * Use `core.geom` generators (extrude, revolve, loft, shell_from_grid, sweep_circle, box/cylinder/tube, booleans).
   Every returned mesh must pass `Mesh.check(self_intersect=True)["ok"]`.
+* Fastened joints are made with `design/joints.py` (`bolt`, `bolt_through`, `pin`, `quarter_turn`): one call creates the
+  `Fastener` with a standard length and grip, cuts the clearance hole in every clamped part (`Part.add_hole`; holes
+  are subtracted lazily, so a later module may drill a part registered earlier), and the insert bore / tap-drill
+  where used. `checks.py` measures edge distance and pierce on the geometry when a part has no `outline`.
 * Model real features that matter for fit and function: holes for every fastener (clearance per ISO 273 medium,
   e.g. M5 → Ø5.5), flanges where panels fasten, hinge lugs and bores, pin clearances (ISO 286 fits), cut-outs for
   pass-throughs. Cosmetic micro-detail is not required.

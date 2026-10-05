@@ -597,9 +597,21 @@ def hull(points) -> Mesh:
 # =====================================================================================================================
 # Thickness probe
 # =====================================================================================================================
+def ray_hits(man, origin, end) -> np.ndarray:
+    """All surface crossings of the segment origin->end on a manifold (or Mesh), as distances in metres from
+    ``origin``, sorted. manifold3d returns every crossing with the distance normalised to the segment length."""
+    if isinstance(man, Mesh):
+        man = man.to_manifold()
+    o = np.asarray(origin, float)
+    e = np.asarray(end, float)
+    L = float(np.linalg.norm(e - o))
+    hits = man.ray_cast(tuple(o), tuple(e))
+    return np.sort(np.array([float(h.distance) * L for h in hits], float))
+
+
 def wall_thickness_samples(mesh: Mesh, n: int = 400, seed: int = 0) -> np.ndarray:
     """Ray-cast wall thickness at ``n`` area-weighted surface samples: distance from each sample (just inside the
-    surface) along the inward normal to the next surface hit. Uses manifold3d ray casting."""
+    surface) along the inward normal to the next surface hit. Uses manifold3d ray casting (one call per ray)."""
     rng = np.random.default_rng(seed)
     tri = mesh.triangles()
     nrm = mesh.face_normals()
@@ -615,14 +627,12 @@ def wall_thickness_samples(mesh: Mesh, n: int = 400, seed: int = 0) -> np.ndarra
     man = mesh.to_manifold()
     out = np.full(n, np.nan)
     try:
-        hits = man.ray_cast(np.ascontiguousarray(np.column_stack([start, end]).reshape(-1, 2, 3)))
+        for i in range(n):
+            h = ray_hits(man, start[i], end[i])
+            if len(h):
+                out[i] = h[0]
     except Exception:  # pragma: no cover - API mismatch fallback
         return _thickness_bvh(mesh, start, d)
-    for h in hits:
-        i = int(getattr(h, "ray_index", getattr(h, "ray", -1)))
-        dist = float(getattr(h, "distance", np.nan))
-        if 0 <= i < n and (np.isnan(out[i]) or dist < out[i]):
-            out[i] = dist
     return out
 
 

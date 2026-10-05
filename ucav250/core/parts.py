@@ -117,7 +117,10 @@ class Part:
     outline: list = field(default_factory=list)   # mid-surface boundary polylines (k, 3) for edge-distance checks
     color: str = ""                          # display colour key (spec["display"]["colors"])
     notes: str = ""
+    holes: list = field(default_factory=list)  # cutters subtracted from the mesh: (p0, p1, radius) cylinders or Mesh
+    _base: Mesh | None = field(default=None, repr=False)
     _mesh: Mesh | None = field(default=None, repr=False)
+    _n_holes: int = field(default=-1, repr=False)
 
     def __post_init__(self):
         if self.group not in GROUPS:
@@ -126,12 +129,31 @@ class Part:
             raise ValueError(f"{self.id}: side must be one of {SIDES}")
 
     @property
-    def mesh(self) -> Mesh:
-        if self._mesh is None:
+    def base_mesh(self) -> Mesh:
+        """Geometry from ``mesh_fn`` before the registered holes are cut."""
+        if self._base is None:
             if self.mesh_fn is None:
                 raise ValueError(f"{self.id}: no geometry")
-            self._mesh = self.mesh_fn()
+            self._base = self.mesh_fn()
+        return self._base
+
+    @property
+    def mesh(self) -> Mesh:
+        """Final geometry: base mesh minus every entry of ``holes`` (re-evaluated when holes are added)."""
+        if self._mesh is None or self._n_holes != len(self.holes):
+            base = self.base_mesh
+            if self.holes:
+                from .geom import cylinder, difference
+                cut = [h if isinstance(h, Mesh) else cylinder(float(h[2]), h[0], h[1], n=24) for h in self.holes]
+                self._mesh = difference(base, cut)
+            else:
+                self._mesh = base
+            self._n_holes = len(self.holes)
         return self._mesh
+
+    def add_hole(self, p0, p1, radius: float) -> None:
+        """Cylindrical hole (fastener clearance, pin bore, pass-through) from p0 to p1."""
+        self.holes.append((np.asarray(p0, float), np.asarray(p1, float), float(radius)))
 
 
 class Registry:
@@ -252,7 +274,8 @@ def part_number(group: str, number: int, side: str = "C", prefix: str = "YK250")
 
 
 def mirror_part(p: Part, new_id: str, joint: str | None = None, id_map: dict[str, str] | None = None) -> Part:
-    """Port copy of a starboard part (BL -> -BL): mesh, outlines, fasteners and explode vector mirrored, side R -> L.
+    """Port copy of a starboard part (BL -> -BL): mesh, outlines, fasteners, holes and explode vector mirrored, side
+    R -> L. Holes present at mirror time are copied; holes added to either side later stay on that side.
     ``joint`` is the (already mirrored) port joint name, if the part moves. ``id_map`` maps starboard part ids to
     port ids for ``contacts`` and fastener ``joins`` (ids not in the map are kept, e.g. centre-line parts)."""
     id_map = dict(id_map or {})
@@ -260,7 +283,7 @@ def mirror_part(p: Part, new_id: str, joint: str | None = None, id_map: dict[str
     from .geom import Mesh as _Mesh  # noqa: F401
 
     def mfn(src=p):
-        return src.mesh.mirrored_y()
+        return src.base_mesh.mirrored_y()
 
     def mvec(v):
         v = np.asarray(v, float).copy()
@@ -270,14 +293,21 @@ def mirror_part(p: Part, new_id: str, joint: str | None = None, id_map: dict[str
     fs = [Fastener(id=f.id.replace(p.id, new_id), spec=f.spec, kind=f.kind, d=f.d, length=f.length,
                    position=mvec(f.position), axis=mvec(f.axis),
                    joins=tuple(id_map.get(j, j) for j in f.joins), nut=f.nut, torque_nm=f.torque_nm,
-                   step=f.step, notes=f.notes) for f in p.fasteners]
+                   step=f.step, notes=f.notes, grip=f.grip, washer_head=f.washer_head, washer_nut=f.washer_nut)
+          for f in p.fasteners]
+
+    def mhole(h):
+        if isinstance(h, _Mesh):
+            return h.mirrored_y()
+        return (mvec(h[0]), mvec(h[1]), float(h[2]))
     return Part(id=new_id, name=p.name.replace("starboard", "port").replace("RH", "LH"),
                 name_tr=p.name_tr.replace("sağ", "sol").replace("Sağ", "Sol"), group=p.group,
                 material=p.material, process=p.process, mesh_fn=mfn, thickness=p.thickness, layup=p.layup,
                 purchased=p.purchased, vendor=p.vendor, mass_kg=p.mass_kg, side="L" if p.side == "R" else p.side,
                 joint=joint, parent=id_map.get(p.parent, p.parent) if p.parent else None, step=p.step,
                 explode=tuple(mvec(p.explode)), fasteners=fs, contacts=tuple(id_map.get(c, c) for c in p.contacts),
-                outline=[mvec(o) for o in p.outline], color=p.color, notes=p.notes)
+                outline=[mvec(o) for o in p.outline], color=p.color, notes=p.notes,
+                holes=[mhole(h) for h in p.holes])
 
 
 def iter_pairs(parts: Iterable[Part]):

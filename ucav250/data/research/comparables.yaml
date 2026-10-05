@@ -1,0 +1,2601 @@
+# =====================================================================================================
+# YK-250 (ucav250) - RESEARCH PHASE - COMPARABLE AIRCRAFT
+# Civil surveillance / research UAV with a UCAV/MALE look, sole powerplant ~250 cc piston (18-20 kW).
+# Payload: EO/IR sensors and mission equipment only. No weapons-related data are recorded here.
+#
+# Conventions
+#   - SI units, explicit in key names (m, m2, m3, kg, s, W, m/s, Pa). Endurance also as value_h for reading.
+#   - Every number carries "source" (URL, via YAML alias to the sources list) and "tag":
+#       manufacturer | datasheet | standard | paper | vendor | estimate
+#     "paper" = third-party published document: government article, thesis-derived model, reference directory,
+#     trade press or encyclopedia. The exact kind is in sources[].kind; "confidence" (high/medium/low) grades it.
+#     "estimate" values carry a "basis". "as_published" keeps the original wording/units for traceability.
+#   - Conversions: 1 lb = 0.45359237 kg, 1 ft = 0.3048 m, 1 kt = 0.514444 m/s, 1 hp = 745.7 W, g0 = 9.80665 m/s2.
+#     Published fuel volumes are converted with 720 kg/m3 (gasoline/avgas) unless stated otherwise.
+#   - Derived ratios, statistics and recommended ranges are computed (formulas in statistics.formulas).
+# Accessed: 2026-10-05
+# =====================================================================================================
+
+meta:
+  project: YK-250 (ucav250)
+  topic: comparable aircraft
+  phase: research
+  date: '2026-10-05'
+  scope: >-
+    Fixed-wing piston UAVs of about 50-285 kg MTOW (core power class 12-40 kW) used to set target ranges for an
+    18-20 kW (Limbach L 275 class) civil surveillance UAV. Helicopters, electric and jet aircraft excluded.
+    Penguin B (21.5 kg) included for scaling only.
+  counts:
+    aircraft_listed: 19
+    core_set: 16
+    power_class_12_40kW: 10
+  related_files: [ucav250/data/research/engine.yaml]
+
+# -----------------------------------------------------------------------------------------------------
+# SOURCES (anchors u_<id> are reused as per-item "source" URLs below)
+# -----------------------------------------------------------------------------------------------------
+sources:
+  - id: aai_ndia2007
+    url: &u_aai_ndia2007 https://ndia.dtic.mil/wp-content/uploads/2007/logistics/LogWedPM/Ostheller.pdf
+    title: AAI Corporation briefing 'AAI UAS Warfighter Support' (Ostheller), NDIA Logistics Conference 2007 - max GW, max payload and endurance of Pioneer, Shadow 200/400/600
+    tag: manufacturer
+    kind: manufacturer_briefing
+    accessed: '2026-10-05'
+    notes: Read as PDF text. AAI was the Shadow/Pioneer prime; figures are the company's own.
+  - id: armymil_rq7b
+    url: &u_armymil_rq7b https://www.army.mil/article/137609
+    title: 'U.S. Army: RQ-7B Shadow Tactical Unmanned Aircraft System (TUAS) fact article'
+    tag: paper
+    kind: government
+    accessed: '2026-10-05'
+    notes: 'Describes the current (v2, extended wing) RQ-7B: 20 ft span, >460 lb gross, ~60 lb payload, 9 h.'
+  - id: desig_q7
+    url: &u_desig_q7 https://www.designation-systems.net/dusrm/app2/q-7.html
+    title: 'Designation-Systems.net (A. Parsch), Appendix 2 - UAVs: RQ-7 Shadow 200'
+    tag: paper
+    kind: reference_directory
+    accessed: '2026-10-05'
+  - id: armytech_shadow
+    url: &u_armytech_shadow https://www.army-technology.com/projects/shadow-200-uav/
+    title: 'Army Technology: Shadow 200 RQ-7 Tactical UAV'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+    notes: Mixes RQ-7A and RQ-7B values (e.g. 4.27 m span with 127.3 kg 'MTOW' and 170 kg 'max gross weight').
+  - id: wiki_shadow
+    url: &u_wiki_shadow https://en.wikipedia.org/wiki/AAI_RQ-7_Shadow
+    title: 'Wikipedia: AAI RQ-7 Shadow'
+    tag: paper
+    kind: encyclopedia
+    accessed: '2026-10-05'
+    notes: >-
+      Spec table is internally inconsistent (14 ft given as 3.87 m; 186 lb given as 77 kg). Used for
+      configuration text only where possible.
+  - id: barnard_shadow
+    url: &u_barnard_shadow https://barnardmicrosystems.com/UAV/uav_list/shadow_200.html
+    title: 'Barnard Microsystems UAV list: AAI RQ-7 Shadow 200 (mass breakdown)'
+    tag: paper
+    kind: consultant_compilation
+    accessed: '2026-10-05'
+    notes: Lists frame 95.8 kg, fuel 33 kg, payload 27.2 kg, avionics 3.3 kg, TOW 170 kg, engine 208 cc.
+  - id: ain_shadow2011
+    url: &u_ain_shadow2011 https://backend.ainonline.com/aviation-news/defense/2011-10-24/aai-unveils-larger-more-capable-shadow
+    title: 'AIN Online 2011-10-24: AAI unveils larger, more capable Shadow (M2)'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+    notes: >-
+      Shadow M2 span 25 ft is '4.6 feet more than the RQ-7B with wing extension' -> RQ-7B extended wing = 20.4
+      ft (6.22 m).
+  - id: tensor_shadow
+    url: &u_tensor_shadow https://tensoraerospace.readthedocs.io/en/latest/model/aai_shadow_nonlinear/
+    title: 'TensorAeroSpace documentation: AAI Shadow nonlinear 6-DoF model (S = 4.42 m2, MAC 0.71 m, b = 6.22 m)'
+    tag: estimate
+    kind: simulation_model
+    accessed: '2026-10-05'
+    notes: >-
+      Third-party simulation model; claims 'FAS / AAI published spec' but the wing area could not be traced to
+      a primary source. Used only as a low-confidence chord estimate.
+  - id: armedconflicts_shadow600
+    url: &u_armedconflicts_shadow600 https://origin.armedconflicts.com/topic/view/255506
+    title: 'ArmedConflicts.com: AAI RQ-7 Shadow (mentions Shadow 600, 6.83 m span)'
+    tag: paper
+    kind: enthusiast_encyclopedia
+    accessed: '2026-10-05'
+    notes: Low confidence; only source found for the Shadow 600 span.
+  - id: strategypage_2002
+    url: &u_strategypage_2002 https://www.strategypage.com/htmw/htairfo/articles/20021230.aspx
+    title: 'StrategyPage Warplanes 2002-12-30 (Shadow 600: 585 lb, 85 lb payload, 14 h, 17,000 ft)'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+  - id: desig_q2
+    url: &u_desig_q2 https://www.designation-systems.net/dusrm/app2/q-2.html
+    title: 'Designation-Systems.net (A. Parsch), Appendix 2 - UAVs: RQ-2 Pioneer'
+    tag: paper
+    kind: reference_directory
+    accessed: '2026-10-05'
+    notes: >-
+      Lists empty weight 178 kg, which cannot be reconciled with 205 kg MTOW, 34 kg payload and 44-47 l fuel;
+      not used.
+  - id: wiki_pioneer
+    url: &u_wiki_pioneer https://en.wikipedia.org/wiki/AAI_RQ-2_Pioneer
+    title: 'Wikipedia: AAI RQ-2 Pioneer'
+    tag: paper
+    kind: encyclopedia
+    accessed: '2026-10-05'
+  - id: uiuc_pioneer
+    url: &u_uiuc_pioneer https://de3mirror.flightgear.org/fgdata/fgdata_2020_3/Aircraft-uiuc/models/pioneer/linear.html
+    title: UIUC Applied Aerodynamics Group / FlightGear 'Pioneer linear model' (geometry cited from Bray, NPS thesis, p.33; inertias from IAI MSS notes)
+    tag: paper
+    kind: thesis_derived_model
+    accessed: '2026-10-05'
+    notes: Wing area 30.42 ft2, span 16.9 ft, MAC 1.80 ft, GTOW 420 lb.
+  - id: commons_pioneer_nasm
+    url: &u_commons_pioneer_nasm https://commons.wikimedia.org/wiki/File:Pioneer_RQ-2A_UAV_-_DPLA_-_39ae1debb9104de2cf6865743a07d180_(page_1).jpg
+    title: Smithsonian NASM photograph of Pioneer RQ-2A (via Wikimedia Commons)
+    tag: estimate
+    kind: photograph
+    accessed: '2026-10-05'
+    notes: Used only for a visual check of tail layout (twin booms, horizontal tail between booms, two fins).
+  - id: wiki_scout
+    url: &u_wiki_scout https://en.wikipedia.org/wiki/IAI_Scout
+    title: 'Wikipedia: IAI Scout'
+    tag: paper
+    kind: encyclopedia
+    accessed: '2026-10-05'
+  - id: ruwiki_scout
+    url: &u_ruwiki_scout https://ru.wikipedia.org/wiki/IAI_Scout
+    title: 'Russian Wikipedia: IAI Scout (spec table incl. fuel 25 kg)'
+    tag: paper
+    kind: encyclopedia
+    accessed: '2026-10-05'
+  - id: wiki_ranger
+    url: &u_wiki_ranger https://en.wikipedia.org/wiki/RUAG_Ranger
+    title: 'Wikipedia: RUAG Ranger (cites Swiss Armament Programme 1995 documents)'
+    tag: paper
+    kind: encyclopedia
+    accessed: '2026-10-05'
+  - id: ruwiki_ranger
+    url: &u_ruwiki_ranger https://ru.wikipedia.org/wiki/IAI_RANGER
+    title: 'Russian Wikipedia: IAI RANGER (spec table incl. wing area 3.41 m2, fuel 40 + 20 l)'
+    tag: paper
+    kind: encyclopedia
+    accessed: '2026-10-05'
+    notes: Only source found for Ranger wing area; medium-low confidence.
+  - id: dronezine_ranger
+    url: &u_dronezine_ranger https://www.dronezine.it/?p=31661
+    title: 'Dronezine.it: ADS-95 Ranger technical data (empty 200 kg, MTOW 275 kg)'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+  - id: commons_ranger_ventral
+    url: &u_commons_ranger_ventral https://commons.wikimedia.org/wiki/File:RUAG_ADS-90_Ranger_ventral_view.jpg
+    title: 'Wikimedia Commons: RUAG ADS-95 Ranger ventral view (museum)'
+    tag: estimate
+    kind: photograph
+    accessed: '2026-10-05'
+    notes: 'Visual check: twin booms, horizontal tail with two fins, three landing skids, constant-chord wing.'
+  - id: aeronautics_aerostar
+    url: &u_aeronautics_aerostar https://aeronautics-sys.com/systems/aerostar/
+    title: 'Aeronautics Ltd: Aerostar product page (current production standard)'
+    tag: manufacturer
+    kind: manufacturer_web
+    accessed: '2026-10-05'
+    notes: >-
+      Direct fetch returned HTTP 403; values (MTOW 240 kg, span 8.7 m, payload 40 kg, endurance up to 12 h)
+      taken from the search-engine extract of this page.
+  - id: aft_aerostar
+    url: &u_aft_aerostar https://www.airforce-technology.com/projects/aerostaruav/
+    title: 'Airforce Technology: Aerostar Tactical UAV (baseline variant data table)'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+    notes: Complete, self-consistent data set for the original 7.5 m / 220 kg Aerostar.
+  - id: desig_q26
+    url: &u_desig_q26 https://designation-systems.net/dusrm/app2/q-26.html
+    title: 'Designation-Systems.net (A. Parsch), Appendix 2 - UAVs: Aeronautics RQ-26 Aerostar'
+    tag: paper
+    kind: reference_directory
+    accessed: '2026-10-05'
+  - id: armytech_phoenix
+    url: &u_armytech_phoenix https://www.army-technology.com/projects/phoenixuav/
+    title: 'Army Technology: Phoenix UAV (British Army)'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+  - id: wiki_phoenix
+    url: &u_wiki_phoenix https://en.wikipedia.org/wiki/BAE_Systems_Phoenix
+    title: 'Wikipedia: BAE Systems Phoenix'
+    tag: paper
+    kind: encyclopedia
+    accessed: '2026-10-05'
+  - id: fas_phoenix
+    url: &u_fas_phoenix https://man.fas.org/dod-101/sys/ac/row/phoenix.htm
+    title: 'FAS Military Analysis Network: Phoenix'
+    tag: paper
+    kind: reference_directory
+    accessed: '2026-10-05'
+  - id: primoco_mfr
+    url: &u_primoco_mfr https://uav-stol.com/?p=145
+    title: 'Primoco UAV SE (manufacturer web site, Czech): One 150 performance'
+    tag: manufacturer
+    kind: manufacturer_web
+    accessed: '2026-10-05'
+  - id: armytech_primoco
+    url: &u_armytech_primoco https://www.army-technology.com/?p=256194
+    title: 'Army Technology: Primoco UAV One 150'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+  - id: armedconflicts_primoco
+    url: &u_armedconflicts_primoco https://www.armedconflicts.com/17066-
+    title: 'ArmedConflicts.com: Primoco One 150 / 150M data sheet'
+    tag: paper
+    kind: enthusiast_encyclopedia
+    accessed: '2026-10-05'
+  - id: wiki_primoco
+    url: &u_wiki_primoco https://en.wikipedia.org/wiki/Primoco_UAV
+    title: 'Wikipedia: Primoco UAV'
+    tag: paper
+    kind: encyclopedia
+    accessed: '2026-10-05'
+  - id: armyrec_primoco
+    url: &u_armyrec_primoco https://www.armyrecognition.com/archives/archives-land-defense/land-defense-2019/idet-2019-primoco-uav-showcases-its-uav-model-one-150
+    title: 'Army Recognition 2019: IDET 2019 Primoco One 150'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+  - id: aft_hermes180
+    url: &u_aft_hermes180 https://www.airforce-technology.com/?p=2963
+    title: 'Airforce Technology: Elbit Hermes family page (Hermes 180 data: MTOW, payload, engine, endurance)'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+    notes: 'Gives Hermes 180 ''maximum speed 105km/h''; this is very probably 105 kt (see armsnet: 194.4 km/h).'
+  - id: armsnet_hermes180
+    url: &u_armsnet_hermes180 https://armsnet.duckdns.org/equipment/5431446f-27e2-4446-90b2-08decdca92d5
+    title: 'Armsnet equipment database: Elbit Hermes 180'
+    tag: paper
+    kind: aggregator
+    accessed: '2026-10-05'
+    notes: Low confidence aggregator; only source found for Hermes 180 span/length.
+  - id: aft_hermes90
+    url: &u_aft_hermes90 https://www.airforce-technology.com/?p=4392
+    title: 'Airforce Technology: Hermes 90 tactical UAS'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+  - id: ain_hermes90
+    url: &u_ain_hermes90 https://backend.ainonline.com/aviation-news/defense/2009-06-17/hermes-90-targets-us-forces
+    title: 'AIN Online 2009-06-17: Hermes 90 targets US forces'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+    notes: >-
+      2009 launch figures (187 lb MTOW, 55 lb payload, >18 h) differ from later 115 kg / 25 kg / 15 h figures.
+  - id: shephard_hermes90
+    url: &u_shephard_hermes90 https://www.shephardmedia.com/news/uv-online/elbit-systems-unveils-hermes-90-uas/
+    title: 'Shephard 2009: Elbit Systems unveils Hermes 90 UAS'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+  - id: wiki_hermes90
+    url: &u_wiki_hermes90 https://en.wikipedia.org/wiki/Elbit_Hermes_90
+    title: 'Wikipedia: Elbit Hermes 90 (cites Jane''s and Elbit Systems Australia)'
+    tag: paper
+    kind: encyclopedia
+    accessed: '2026-10-05'
+  - id: wiki_gozcu
+    url: &u_wiki_gozcu https://en.wikipedia.org/wiki/TAI_G%C3%B6zc%C3%BC
+    title: 'Wikipedia: TAI Gozcu (cites TR Defence, Defence Talk)'
+    tag: paper
+    kind: encyclopedia
+    accessed: '2026-10-05'
+  - id: dt_golge
+    url: &u_dt_golge https://www.defenceturkey.com/news/tusas-debuts-golge-stealth-uav-at-saha-2026
+    title: 'Defence Turkey 2026-05-08: TUSAS debuts GOLGE stealth UAV at SAHA 2026'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+  - id: edr_golge
+    url: &u_edr_golge https://www.edrmagazine.eu/?p=51704
+    title: 'EDR Magazine 2026: Saha Expo 2026 - TAI unveils Golge, a piston-engine ''baby Anka III'''
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+  - id: dh_golge
+    url: &u_dh_golge https://www.donanimhaber.com/tusas-tan-yeni-taktik-ucan-kanat-hamlesi-golge--205453
+    title: 'DonanimHaber 2026-05-09: TUSAS''tan yeni taktik ucan kanat hamlesi: GOLGE'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+  - id: tekever_ds2025
+    url: &u_tekever_ds2025 https://www.tekever.com/wp-content/uploads/2026/03/TEKEVER_AR5_2025_Maritime_Defence.pdf
+    title: TEKEVER AR5 2025 datasheet (Maritime / Defence)
+    tag: datasheet
+    kind: manufacturer_datasheet
+    accessed: '2026-10-05'
+  - id: tekever_ds2022
+    url: &u_tekever_ds2022 https://www.unmannedsystemstechnology.com/wp-content/uploads/2022/05/Datasheet_AR5_Print.pdf
+    title: TEKEVER AR5 datasheet (2022 print; 150 kg MTOW, 12 h)
+    tag: datasheet
+    kind: manufacturer_datasheet
+    accessed: '2026-10-05'
+  - id: navaltech_ar5
+    url: &u_navaltech_ar5 https://www.naval-technology.com/projects/tekever-ar5-life-ray-evolution-uas/
+    title: 'Naval Technology: Tekever AR5 Life Ray Evolution UAS'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+  - id: ust_ar5
+    url: &u_ust_ar5 https://www.unmannedsystemstechnology.com/company/tekever/ar5/
+    title: 'Unmanned Systems Technology supplier page: Tekever AR5 (''twin 150 cc engines'')'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+    notes: >-
+      Direct fetch returned HTTP 403; 'twin 150 cc engines' taken from the search-engine extract. Not
+      verified.
+  - id: rhm_luna
+    url: &u_rhm_luna https://www.rheinmetall.com/Rheinmetall%20Group/brochure-download/Uncrewed-Systems/B328e0522-LUNA-NG-airborne-reconnaissance-system.pdf
+    title: 'Rheinmetall brochure B328e05.22: LUNA NG airborne reconnaissance system'
+    tag: datasheet
+    kind: manufacturer_datasheet
+    accessed: '2026-10-05'
+  - id: edr_luna
+    url: &u_edr_luna https://www.edrmagazine.eu/rheinmetall-luna-ng-debuts-in-its-final-configuration
+    title: 'EDR Magazine (DSEI 2023): Rheinmetall Luna NG debuts in its final configuration'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+  - id: armytech_luna
+    url: &u_armytech_luna https://www.army-technology.com/projects/luna-ng-air-supported-reconnaissance-drone-germany/
+    title: 'Army Technology: LUNA NG'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+    notes: Describes an earlier configuration with a 10 kW two-stroke twin.
+  - id: av_t20_ds
+    url: &u_av_t20_ds https://www.avinc.com/wp/wp-content/uploads/2026/04/2025_T20_Datasheet_250424_v01-1-1.pdf
+    title: AeroVironment T-20 datasheet, version 250424
+    tag: datasheet
+    kind: manufacturer_datasheet
+    accessed: '2026-10-05'
+  - id: wiki_t20
+    url: &u_wiki_t20 https://en.wikipedia.org/wiki/AeroVironment_T-20
+    title: 'Wikipedia: AeroVironment (Arcturus) T-20'
+    tag: paper
+    kind: encyclopedia
+    accessed: '2026-10-05'
+  - id: insitu_rq21_card
+    url: &u_insitu_rq21_card https://c-853-20151211-www-insitu-com.i.icims.com/wp-content/uploads/2021/01/RQ-21A_Blackjack_ProductCard_DU011221.pdf
+    title: Insitu RQ-21A Blackjack product card DU011221 (NAVAIR Public Release 2021-7)
+    tag: datasheet
+    kind: manufacturer_datasheet
+    accessed: '2026-10-05'
+    notes: >-
+      Copy hosted on Insitu's careers-site mirror; same document as
+      insitu.com/wp-content/uploads/2021/01/RQ-21A_Blackjack_ProductCard_DU011221.pdf.
+  - id: navaltech_rq21
+    url: &u_navaltech_rq21 https://www.naval-technology.com/projects/rq-21a-blackjack-small-tactical-unmanned-air-system-stuas/
+    title: 'Naval Technology: RQ-21A Blackjack STUAS'
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+  - id: insitu_integrator_card
+    url: &u_insitu_integrator_card https://insitu.com/wp-content/uploads/2025/04/Integrator_ProductCard_DU040125.pdf
+    title: Insitu Integrator product card DU040125
+    tag: datasheet
+    kind: manufacturer_datasheet
+    accessed: '2026-10-05'
+  - id: penguinb_ds
+    url: &u_penguinb_ds https://www.unmannedsystemstechnology.com/wp-content/uploads/2014/11/Penguin-B-Datasheet.pdf
+    title: UAV Factory Penguin B UAV Platform datasheet v2.0
+    tag: datasheet
+    kind: manufacturer_datasheet
+    accessed: '2026-10-05'
+  - id: lim_web
+    url: &u_lim_web https://www.limflug.de/en/products/engines-15kw-40kw.php
+    title: 'Limbach Flugmotoren: engines 15-40 kW (L 275 E / L 275 EF)'
+    tag: manufacturer
+    kind: manufacturer_web
+    accessed: '2026-10-05'
+    notes: >-
+      Used only for the 18 kW maximum rating of the L 275 EF; full engine data are in
+      ucav250/data/research/engine.yaml.
+  - id: ust018_p66
+    url: &u_ust018_p66 https://www.ust-media.com/ust-magazine/UST018/66/
+    title: Unmanned Systems Technology 018, dossier Limbach L 275 EF, p.66 (mass, power, SFC)
+    tag: paper
+    kind: trade_press
+    accessed: '2026-10-05'
+
+# -----------------------------------------------------------------------------------------------------
+# AIRCRAFT
+# -----------------------------------------------------------------------------------------------------
+aircraft:
+  - id: shadow_200_rq7b
+    name: AAI (Textron Systems) RQ-7B Shadow 200 (14 ft wing, pre-v2)
+    manufacturer: AAI Corporation / Textron Systems
+    country: USA
+    entry_into_service: 2002 (RQ-7A), RQ-7B from ~2004
+    in_power_class_12_40kW: true
+    include_in_statistics: true
+    statistics_note: >-
+      Family representative for Shadow 200 (most complete, self-consistent mass data). The current extended-wing
+      v2 is listed separately and not counted twice.
+    geometry:
+      span_m: {value: 4.27, as_published: "4.27 m (14 ft) [RQ-7B]", source: *u_desig_q7, tag: paper, confidence: medium}
+      length_m: {value: 3.41, as_published: 11 ft 2 in (3.41 m), source: *u_wiki_shadow, tag: paper, confidence: medium, note: "RQ-7A: 3.40 m (designation-systems)"}
+      height_m: {value: 0.91, as_published: "0.91 m (3 ft 0 in) [RQ-7A]", source: *u_desig_q7, tag: paper, confidence: medium, note: Wikipedia 1.0 m; Army Technology 0.86 m}
+      wing_area_m2:
+        value: 3.032
+        source: *u_tensor_shadow
+        tag: estimate
+        confidence: low
+        basis: >-
+          S = b x c. Wing is constant-chord (Wikipedia: 'high-wing, constant chord'); c = 0.71 m taken from the
+          third-party 6-DoF model of the extended-wing RQ-7B (4.42 m2 / 6.22 m). Uncertainty +/-20 %.
+    mass:
+      mtow_kg: {value: 170.1, as_published: "Max GW: 375 lbs", source: *u_aai_ndia2007, tag: manufacturer, confidence: high}
+      empty_mass_kg:
+        value: 90.0
+        as_published: 'Empty Weight: 90kg'
+        source: *u_armytech_shadow
+        tag: paper
+        confidence: low
+        note: >-
+          Barnard: frame 95.8 kg + avionics 3.3 kg; Wikipedia 186 lb/77 kg (inconsistent). MTOW - payload - fuel =
+          99-108 kg is an upper bound.
+      payload_mass_kg:
+        value: 29.48
+        as_published: 'Max payload wt: 65 lbs'
+        source: *u_aai_ndia2007
+        tag: manufacturer
+        confidence: high
+        note: Barnard 27.2 kg, Army Technology 25.3 kg
+      fuel_volume_m3:
+        value: 0.057
+        as_published: RQ-7B - 57l
+        source: *u_armytech_shadow
+        tag: paper
+        confidence: medium
+        note: 'RQ-7A: 40 l; RQ-7B has wet wings (Wikipedia)'
+      fuel_mass_kg: {value: 41.04, source: *u_armytech_shadow, tag: estimate, confidence: medium, basis: 57 l x 720 kg/m3 (gasoline). Barnard lists fuel weight 33 kg.}
+    propulsion:
+      engine_model:
+        value: UAV Engines Ltd AR741 single-rotor Wankel, 208 cc
+        as_published: UEL AR-741 rotary engine; 28.3 kW (38 hp)
+        source: *u_desig_q7
+        tag: paper
+        confidence: high
+        note: 208 cc displacement from Barnard Microsystems
+      engine_type: rotary (Wankel), gasoline
+      max_power_W: {value: 28300.0, as_published: 28.3 kW (38 hp), source: *u_desig_q7, tag: paper, confidence: high}
+    performance:
+      endurance_s: {value: 25200.0, as_published: "Endurance: 7-8 hrs", value_h: 7.0, source: *u_aai_ndia2007, tag: manufacturer, confidence: high, note: lower bound used}
+      cruise_speed_m_s: {value: 36.01, as_published: "81 mph (130 km/h, 70 kn)", source: *u_wiki_shadow, tag: paper, confidence: medium}
+      loiter_speed_m_s: {value: 30.87, as_published: "111 km/h (60 knots) [RQ-7B]", source: *u_desig_q7, tag: paper, confidence: medium}
+      max_speed_m_s: {value: 54.02, as_published: "194 km/h (105 knots) [RQ-7B]", source: *u_desig_q7, tag: paper, confidence: medium}
+      service_ceiling_m: {value: 4572.0, as_published: "4,570 m (15,000 ft)", source: *u_desig_q7, tag: paper, confidence: high}
+    configuration:
+      propulsion_layout: {value: pusher, as_published: pusher configuration, source: *u_wiki_shadow, tag: paper, confidence: high}
+      tail: {value: twin_boom_inverted_v, as_published: twin-tailboom empennage and an inverted v-tail, source: *u_wiki_shadow, tag: paper, confidence: high}
+      wing: {value: "high wing, constant chord, wet wing (RQ-7B)", as_published: "high-wing, constant chord", source: *u_wiki_shadow, tag: paper, confidence: high}
+      landing_gear: {value: fixed_tricycle, as_published: non-retractable tricycle landing gear, source: *u_desig_q7, tag: paper, confidence: high}
+      launch: {value: "pneumatic_catapult (trailer-mounted, 70 kt in 40 ft); runway possible", source: *u_wiki_shadow, tag: paper, confidence: high}
+      recovery: {value: wheeled landing with tailhook + arresting wire (stops in < 52 m), source: *u_wiki_shadow, tag: paper, confidence: high}
+      materials: {value: composite airframe, as_published: The air vehicle is of composite structure, source: *u_armytech_shadow, tag: paper, confidence: medium}
+    derived:
+      mtow_per_kW: 6.011
+      specific_power_W_per_N: 16.97
+      wing_loading_kg_m2: 56.1
+      wing_loading_Pa: 550.2
+      aspect_ratio: 6.013
+      mean_chord_m: 0.71
+      wing_area_basis: estimate
+      empty_mass_fraction: 0.529
+      payload_fraction: 0.173
+      fuel_fraction: 0.241
+      fuel_fraction_basis: estimate
+      endurance_per_fuel_fraction_h: 29.01
+      breguet_endurance_constant_h: 25.35
+      hourly_fuel_fraction_per_h: 0.0345
+      length_to_span: 0.799
+      span_index_m_per_kg13: 0.7707
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: shadow_200_rq7b_v2
+    name: Textron Systems RQ-7B Shadow v2 / Block III (extended wing)
+    manufacturer: Textron Systems
+    country: USA
+    entry_into_service: ~2015 (v2), 2020 (Block III)
+    in_power_class_12_40kW: null
+    include_in_statistics: false
+    statistics_note: >-
+      Same airframe family as shadow_200_rq7b; kept out of statistics to avoid double counting. Shows the
+      endurance growth path: +43 % span, 7 h -> 9 h.
+    geometry:
+      span_m:
+        value: 6.096
+        as_published: 'Wingspan: 20 feet'
+        source: *u_armymil_rq7b
+        tag: paper
+        confidence: high
+        note: AIN 2011 implies 20.4 ft (6.22 m) with wing extension
+      wing_area_m2:
+        value: 4.42
+        as_published: 4.42 m2 (model)
+        source: *u_tensor_shadow
+        tag: estimate
+        confidence: low
+        basis: Third-party simulation model value; provenance not verifiable.
+    mass:
+      mtow_kg:
+        value: 208.7
+        as_published: 'Gross takeoff weight: exceeds 460 pounds'
+        source: *u_armymil_rq7b
+        tag: paper
+        confidence: medium
+        note: 'lower bound; Wikipedia: 450 lb (204 kg)'
+      payload_mass_kg: {value: 27.22, as_published: approximately 60 pounds, source: *u_armymil_rq7b, tag: paper, confidence: medium}
+    propulsion:
+      engine_model:
+        value: electronic-fuel-injection engine (v2); 'more reliable and powerful engine' (Block III)
+        source: *u_wiki_shadow
+        tag: paper
+        confidence: low
+        note: Power of the v2/Block III engine not found in a citable source.
+    performance:
+      endurance_s: {value: 32400.0, as_published: nine hours from take-off to landing, value_h: 9.0, source: *u_armymil_rq7b, tag: paper, confidence: high}
+    configuration:
+      tail: {value: twin_boom_inverted_v, source: *u_wiki_shadow, tag: paper, confidence: high}
+      landing_gear: {value: fixed_tricycle, source: *u_wiki_shadow, tag: paper, confidence: high}
+    derived:
+      wing_loading_kg_m2: 47.22
+      wing_loading_Pa: 463.0
+      aspect_ratio: 8.408
+      mean_chord_m: 0.725
+      wing_area_basis: estimate
+      payload_fraction: 0.13
+      span_index_m_per_kg13: 1.028
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: shadow_600
+    name: AAI Shadow 600
+    manufacturer: AAI Corporation
+    country: USA
+    entry_into_service: ~2000 (export, ~30 built)
+    in_power_class_12_40kW: true
+    include_in_statistics: true
+    statistics_note: Scaled-up Pioneer derivative; only mass/power/endurance/span known.
+    geometry:
+      span_m: {value: 6.83, as_published: 6.83m wingspan, source: *u_armedconflicts_shadow600, tag: paper, confidence: low}
+    mass:
+      mtow_kg: {value: 264.4, as_published: "Max GW: 583 lbs", source: *u_aai_ndia2007, tag: manufacturer, confidence: high, note: "StrategyPage: 585 lb"}
+      payload_mass_kg: {value: 41.28, as_published: "Max payload wt: 91 lbs", source: *u_aai_ndia2007, tag: manufacturer, confidence: high}
+    propulsion:
+      engine_model: {value: UAV Engines EL 801 Wankel, as_published: "UAV EL 801, with 52 hp (39 kW)", source: *u_wiki_shadow, tag: paper, confidence: medium}
+      engine_type: rotary (Wankel), gasoline
+      max_power_W: {value: 38776.4, as_published: 52 hp (39 kW), source: *u_wiki_shadow, tag: paper, confidence: medium}
+    performance:
+      endurance_s: {value: 43200.0, as_published: "Endurance: 12-14 hrs", value_h: 12.0, source: *u_aai_ndia2007, tag: manufacturer, confidence: high, note: lower bound used}
+      service_ceiling_m: {value: 5181.6, as_published: "17,000 feet", source: *u_strategypage_2002, tag: paper, confidence: low}
+    configuration:
+      propulsion_layout:
+        value: pusher
+        as_published: scaled-up Pioneer derivative
+        source: *u_wiki_shadow
+        tag: paper
+        confidence: medium
+        basis: Pioneer layout (twin-boom pusher)
+      tail: {value: twin_boom (Pioneer-type), source: *u_wiki_shadow, tag: paper, confidence: medium}
+      wing: {value: outer wing panels swept back, as_published: outer panels of the wings are distinctively swept back, source: *u_wiki_shadow, tag: paper, confidence: medium}
+    derived:
+      mtow_per_kW: 6.819
+      specific_power_W_per_N: 14.95
+      payload_fraction: 0.156
+      span_index_m_per_kg13: 1.064
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: pioneer_rq2a
+    name: AAI / IAI RQ-2A Pioneer
+    manufacturer: AAI Corporation / Israel Aircraft Industries
+    country: USA / Israel
+    entry_into_service: '1986'
+    in_power_class_12_40kW: true
+    include_in_statistics: true
+    statistics_note: Closest power match (19.4 kW). Only aircraft in the set with a thesis-sourced wing area.
+    geometry:
+      span_m: {value: 5.15, as_published: 5.15 m (16 ft 10.75 in), source: *u_desig_q2, tag: paper, confidence: high}
+      length_m: {value: 4.27, as_published: 4.27 m (14 ft 0 in), source: *u_desig_q2, tag: paper, confidence: high}
+      height_m: {value: 1.0, as_published: 1.00 m (3 ft 3.5 in), source: *u_desig_q2, tag: paper, confidence: high}
+      wing_area_m2: {value: 2.826, as_published: wing surface area ft2 30.42 (Bray pg 33), source: *u_uiuc_pioneer, tag: paper, confidence: medium}
+      mean_aerodynamic_chord_m: {value: 0.5486, as_published: wing mean aerodynamic chord ft 1.80, source: *u_uiuc_pioneer, tag: paper, confidence: medium}
+      airfoil: {value: NACA 4415, as_published: NACA 4415, source: *u_wiki_pioneer, tag: paper, confidence: medium}
+    mass:
+      mtow_kg:
+        value: 205.0
+        as_published: max 205 kg (450 lb)
+        source: *u_desig_q2
+        tag: paper
+        confidence: high
+        note: 'AAI 2007 briefing: 463 lb (210 kg); UIUC model GTOW 420 lb'
+      empty_mass_kg:
+        value: 138.2
+        source: *u_desig_q2
+        tag: estimate
+        confidence: low
+        basis: >-
+          MTOW - payload - fuel = 205 - 34 - 32.8. designation-systems lists 178 kg, which would leave 27 kg for
+          34 kg payload + 33 kg fuel; rejected as inconsistent.
+      payload_mass_kg:
+        value: 34.0
+        as_published: 75-pound (34 kg) payload
+        source: *u_wiki_pioneer
+        tag: paper
+        confidence: high
+        note: 'AAI 2007: max payload 100 lb (45 kg)'
+      fuel_volume_m3: {value: 0.0455, as_published: 44 to 47 L, source: *u_wiki_pioneer, tag: paper, confidence: medium, note: mid value}
+      fuel_mass_kg: {value: 32.76, source: *u_wiki_pioneer, tag: estimate, confidence: medium, basis: 0.0455 m3 x 720 kg/m3}
+    propulsion:
+      engine_model:
+        value: Sachs & Fichtel SF2-350 two-stroke flat twin
+        as_published: Sachs & Fichtel SF2-350 piston engine; 19.4 kW (26 hp)
+        source: *u_desig_q2
+        tag: paper
+        confidence: high
+        note: RQ-2C re-engined with UEL AR-741 (28.3 kW)
+      engine_type: two-stroke flat twin, gasoline
+      max_power_W: {value: 19400.0, as_published: 19.4 kW (26 hp), source: *u_desig_q2, tag: paper, confidence: high}
+    performance:
+      endurance_s: {value: 18000.0, as_published: 5 h, value_h: 5.0, source: *u_desig_q2, tag: paper, confidence: high}
+      cruise_speed_m_s: {value: 33.33, as_published: "cruise: 120 km/h (74 mph)", source: *u_desig_q2, tag: paper, confidence: high}
+      max_speed_m_s: {value: 56.67, as_published: "max: 204 km/h (127 mph)", source: *u_desig_q2, tag: paper, confidence: high}
+      service_ceiling_m: {value: 4570.0, as_published: 4570 m (15000 ft), source: *u_desig_q2, tag: paper, confidence: high}
+    configuration:
+      propulsion_layout: {value: pusher, as_published: Twin-boom pusher design, source: *u_desig_q2, tag: paper, confidence: high}
+      tail:
+        value: twin_boom_h (horizontal tail between booms, two fins)
+        source: *u_commons_pioneer_nasm
+        tag: estimate
+        confidence: high
+        basis: visual check of NASM photograph
+      landing_gear: {value: fixed_tricycle, as_published: non-retractable tricycle landing gear, source: *u_desig_q2, tag: paper, confidence: high}
+      launch: {value: "runway, catapult, or rocket booster (ship: Mk 125 RATO, 3.78 kN for 2 s)", source: *u_desig_q2, tag: paper, confidence: high}
+      recovery: {value: "tailhook + arresting wire, or recovery net (ship)", source: *u_desig_q2, tag: paper, confidence: high}
+      materials: {value: not verified, tag: estimate, basis: no construction data found in the sources consulted}
+    derived:
+      mtow_per_kW: 10.57
+      specific_power_W_per_N: 9.65
+      wing_loading_kg_m2: 72.54
+      wing_loading_Pa: 711.4
+      aspect_ratio: 9.385
+      mean_chord_m: 0.549
+      wing_area_basis: paper
+      empty_mass_fraction: 0.674
+      payload_fraction: 0.166
+      fuel_fraction: 0.16
+      fuel_fraction_basis: estimate
+      endurance_per_fuel_fraction_h: 31.29
+      breguet_endurance_constant_h: 28.72
+      hourly_fuel_fraction_per_h: 0.032
+      length_to_span: 0.829
+      span_index_m_per_kg13: 0.8734
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: iai_scout
+    name: IAI Scout
+    manufacturer: Israel Aircraft Industries (Tadiran)
+    country: Israel
+    entry_into_service: ~1979
+    in_power_class_12_40kW: true
+    include_in_statistics: true
+    statistics_note: Closest power match below 18 kW (16.4 kW). Parent design of the RUAG/IAI Ranger.
+    geometry:
+      span_m: {value: 4.96, as_published: 4.96 m (16 ft 3 in), source: *u_wiki_scout, tag: paper, confidence: medium}
+      length_m: {value: 3.68, as_published: 3.68 m (12 ft 1 in), source: *u_wiki_scout, tag: paper, confidence: medium}
+      height_m: {value: 0.94, as_published: 0.94 m (3 ft 1 in), source: *u_wiki_scout, tag: paper, confidence: medium}
+      wing_area_m2:
+        value: 2.962
+        source: *u_ruwiki_ranger
+        tag: estimate
+        confidence: low
+        basis: >-
+          Family scaling: Ranger (Scout derivative) mean chord 3.41 m2 / 5.71 m = 0.597 m applied to the Scout
+          span. Unverified assumption that the chord was kept.
+    mass:
+      mtow_kg: {value: 159.0, as_published: "Gross weight: 159 kg (350 lb)", source: *u_wiki_scout, tag: paper, confidence: medium}
+      empty_mass_kg: {value: 96.0, as_published: 96 kg (211 lb), source: *u_wiki_scout, tag: paper, confidence: medium}
+      payload_mass_kg: {value: 38.0, as_published: 38 kg (84 lb) payload, source: *u_wiki_scout, tag: paper, confidence: medium}
+      fuel_mass_kg: {value: 25.0, as_published: "Fuel capacity: 25 kg", source: *u_ruwiki_scout, tag: paper, confidence: medium, note: 96 + 38 + 25 = 159 kg (closes exactly)}
+    propulsion:
+      engine_model:
+        value: single piston engine (model not found in a citable source)
+        as_published: 1 x piston engine, 16 kW (22 hp)
+        source: *u_wiki_scout
+        tag: paper
+        confidence: medium
+      engine_type: piston, gasoline
+      max_power_W: {value: 16405.4, as_published: 16 kW (22 hp), source: *u_wiki_scout, tag: paper, confidence: medium}
+    performance:
+      endurance_s: {value: 27000.0, as_published: 7 hours 30 minutes, value_h: 7.5, source: *u_wiki_scout, tag: paper, confidence: medium, note: "ru.wikipedia: 7 h"}
+      cruise_speed_m_s: {value: 28.33, as_published: 102 km/h, source: *u_ruwiki_scout, tag: paper, confidence: medium}
+      max_speed_m_s: {value: 48.89, as_published: "176 km/h (109 mph, 95 kn)", source: *u_wiki_scout, tag: paper, confidence: medium}
+      service_ceiling_m: {value: 4600.0, as_published: "4,600 m (15,000 ft)", source: *u_wiki_scout, tag: paper, confidence: medium}
+    configuration:
+      propulsion_layout: {value: pusher, as_published: a pusher propeller and a twin-boom tail, source: *u_wiki_scout, tag: paper, confidence: high}
+      tail: {value: twin_boom, source: *u_wiki_scout, tag: paper, confidence: high}
+      wing: {value: high wing, source: *u_wiki_scout, tag: paper, confidence: medium}
+      landing_gear: {value: fixed_tricycle, source: *u_wiki_scout, tag: paper, confidence: medium}
+      launch: {value: "hydraulic catapult from truck, or runway", source: *u_wiki_scout, tag: paper, confidence: medium}
+      recovery: {value: "net, or short landing with arresting-wire hook", source: *u_wiki_scout, tag: paper, confidence: medium}
+    derived:
+      mtow_per_kW: 9.692
+      specific_power_W_per_N: 10.52
+      wing_loading_kg_m2: 53.68
+      wing_loading_Pa: 526.4
+      aspect_ratio: 8.306
+      mean_chord_m: 0.597
+      wing_area_basis: estimate
+      empty_mass_fraction: 0.604
+      payload_fraction: 0.239
+      fuel_fraction: 0.157
+      fuel_fraction_basis: paper
+      endurance_per_fuel_fraction_h: 47.7
+      breguet_endurance_constant_h: 43.84
+      hourly_fuel_fraction_per_h: 0.021
+      length_to_span: 0.742
+      span_index_m_per_kg13: 0.9156
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: ruag_ranger_ads95
+    name: RUAG / IAI Ranger (Swiss ADS 95)
+    manufacturer: RUAG Aerospace / Israel Aircraft Industries
+    country: Switzerland / Israel
+    entry_into_service: ~1999 (retired ~2019)
+    in_power_class_12_40kW: true
+    include_in_statistics: true
+    statistics_note: >-
+      Mass fractions use the self-consistent dronezine pair (empty 200 kg, MTOW 275 kg); MTOW-based ratios use 285
+      kg (Swiss figure).
+    mass_ratio_reference_mtow_kg: 275.0
+    geometry:
+      span_m: {value: 5.71, as_published: 5.71 m (18.7 ft), source: *u_wiki_ranger, tag: paper, confidence: high}
+      length_m: {value: 4.61, as_published: 4.61 m (15.1 ft), source: *u_wiki_ranger, tag: paper, confidence: high}
+      height_m: {value: 1.13, as_published: 1.13 m (3.7 ft), source: *u_wiki_ranger, tag: paper, confidence: high}
+      wing_area_m2: {value: 3.41, as_published: "Площадь крыла, м2 3.41", source: *u_ruwiki_ranger, tag: paper, confidence: medium}
+    mass:
+      mtow_kg: {value: 285.0, as_published: 285 kg (628 lb), source: *u_wiki_ranger, tag: paper, confidence: high, note: "dronezine: 275 kg"}
+      empty_mass_kg: {value: 200.0, as_published: "Peso a vuoto: 200 kg", source: *u_dronezine_ranger, tag: paper, confidence: medium}
+      payload_mass_kg: {value: 45.0, as_published: 45 kg (99 lb), source: *u_wiki_ranger, tag: paper, confidence: high, note: "dronezine: 40 kg"}
+      fuel_volume_m3:
+        value: 0.06
+        as_published: Топливо, л 40 + 20 (дополнительный бак)
+        source: *u_ruwiki_ranger
+        tag: paper
+        confidence: medium
+        note: 40 l main + 20 l auxiliary
+      fuel_mass_kg: {value: 43.2, source: *u_ruwiki_ranger, tag: estimate, confidence: medium, basis: 0.060 m3 x 720 kg/m3 (with auxiliary tank)}
+    propulsion:
+      engine_model:
+        value: Hirth two-cylinder two-stroke (F 31 per ru.wikipedia, not verified)
+        as_published: 2 cylinder 2 stroke, 31.5 kW (42.8 PS)
+        source: *u_wiki_ranger
+        tag: paper
+        confidence: medium
+      engine_type: two-stroke twin, gasoline
+      max_power_W: {value: 31500.0, as_published: 31.5 kW (42.8 PS), source: *u_wiki_ranger, tag: paper, confidence: medium, note: "ru.wikipedia: 38 hp; dronezine: 45 CV"}
+    performance:
+      endurance_s:
+        value: 32400.0
+        as_published: up to 9 hours
+        value_h: 9.0
+        source: *u_wiki_ranger
+        tag: paper
+        confidence: medium
+        note: 'dronezine: ''circa 4 ore'' operational'
+      cruise_speed_m_s: {value: 50.0, as_published: "Крейсерская скорость, км/ч 180", source: *u_ruwiki_ranger, tag: paper, confidence: low}
+      max_speed_m_s: {value: 61.11, as_published: 220 km/h (140 mph), source: *u_wiki_ranger, tag: paper, confidence: high}
+      service_ceiling_m: {value: 4500.0, as_published: "4,500 m (14,800 ft)", source: *u_wiki_ranger, tag: paper, confidence: high}
+    configuration:
+      propulsion_layout:
+        value: pusher
+        source: *u_commons_ranger_ventral
+        tag: estimate
+        confidence: high
+        basis: photograph + Wikipedia category 'single-engine pusher aircraft'
+      tail: {value: "twin_boom_h (horizontal tail between booms, two fins)", source: *u_commons_ranger_ventral, tag: estimate, confidence: high, basis: photograph}
+      landing_gear: {value: skids (three), as_published: a skid-based landing system, source: *u_wiki_ranger, tag: paper, confidence: high}
+      launch: {value: hydraulic catapult, as_published: a compact hydraulic launcher for takeoff, source: *u_wiki_ranger, tag: paper, confidence: high}
+      recovery: {value: "skid landing on grass, runway, snow or ice", source: *u_wiki_ranger, tag: paper, confidence: high}
+    derived:
+      mtow_per_kW: 9.048
+      specific_power_W_per_N: 11.27
+      wing_loading_kg_m2: 83.58
+      wing_loading_Pa: 819.6
+      aspect_ratio: 9.561
+      mean_chord_m: 0.597
+      wing_area_basis: paper
+      empty_mass_fraction: 0.727
+      payload_fraction: 0.158
+      fuel_fraction: 0.152
+      fuel_fraction_basis: estimate
+      endurance_per_fuel_fraction_h: 59.37
+      breguet_endurance_constant_h: 54.75
+      hourly_fuel_fraction_per_h: 0.0168
+      length_to_span: 0.807
+      span_index_m_per_kg13: 0.8677
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: aerostar
+    name: Aeronautics Aerostar (baseline; current standard noted)
+    manufacturer: Aeronautics Ltd (Israel)
+    country: Israel
+    entry_into_service: '2000'
+    in_power_class_12_40kW: true
+    include_in_statistics: true
+    statistics_note: >-
+      Baseline 7.5 m / 220 kg variant used (only fully self-consistent set). Current production (Aerostar / XP /
+      NG): 8.7 m span, 240 kg MTOW, 40 kg payload, up to 12 h.
+    current_variant:
+      span_m: {value: 8.7, as_published: 8.7 m, source: *u_aeronautics_aerostar, tag: manufacturer, confidence: medium, note: also designation-systems; ru.wikipedia 8.5 m}
+      mtow_kg: {value: 240.0, as_published: MTOW 240 kg, source: *u_aeronautics_aerostar, tag: manufacturer, confidence: medium}
+      payload_mass_kg: {value: 40.0, as_published: Maximum payload weight 40 kg, source: *u_aeronautics_aerostar, tag: manufacturer, confidence: medium}
+    geometry:
+      span_m: {value: 7.5, as_published: "Wingspan: 7.5m", source: *u_aft_aerostar, tag: paper, confidence: medium}
+      length_m: {value: 4.5, as_published: "Length: 4.5m", source: *u_aft_aerostar, tag: paper, confidence: high}
+      height_m: {value: 1.3, as_published: "Height: 1.3m", source: *u_aft_aerostar, tag: paper, confidence: high}
+      tailplane_span_m: {value: 1.6, as_published: "Tailplane span: 1.6m", source: *u_aft_aerostar, tag: paper, confidence: medium}
+      wheel_track_m: {value: 1.5, as_published: "Wheel Track: 1.5m", source: *u_aft_aerostar, tag: paper, confidence: medium}
+      wheel_base_m: {value: 1.1, as_published: "Wheel Base: 1.1m", source: *u_aft_aerostar, tag: paper, confidence: medium}
+      wing_area_m2:
+        value: 3.757
+        source: *u_aft_aerostar
+        tag: estimate
+        confidence: low
+        basis: >-
+          From published stall speed: S = 2 m g / (rho V_s^2 CLmax) with m = 220 kg, V_s = 90 km/h, rho = 1.225
+          kg/m3, CLmax = 1.5 +/- 0.15 (assumed). Range 3.4-4.2 m2.
+    mass:
+      mtow_kg: {value: 220.0, as_published: "Maximum Take-Off Weight: 220kg", source: *u_aft_aerostar, tag: paper, confidence: medium}
+      empty_mass_kg: {value: 100.0, as_published: "Empty Weight: 100kg", source: *u_aft_aerostar, tag: paper, confidence: medium}
+      payload_mass_kg: {value: 50.0, as_published: "Payload Weight: 50kg", source: *u_aft_aerostar, tag: paper, confidence: medium}
+      fuel_mass_kg:
+        value: 70.0
+        source: *u_aft_aerostar
+        tag: estimate
+        confidence: low
+        basis: MTOW - empty - payload = 220 - 100 - 50. Upper bound; the maximum fuel load is not published.
+    propulsion:
+      engine_model:
+        value: Zanzottera 498i two-stroke boxer, electronic fuel injection
+        as_published: Zanzottera 498i two stroke boxer engine
+        source: *u_aft_aerostar
+        tag: paper
+        confidence: high
+      engine_type: two-stroke boxer twin, gasoline, EFI
+      max_power_W: {value: 28000.0, as_published: 38hp (28kW), source: *u_aft_aerostar, tag: paper, confidence: high}
+    performance:
+      endurance_s: {value: 43200.0, as_published: "Endurance: 12 hours", value_h: 12.0, source: *u_aft_aerostar, tag: paper, confidence: high}
+      cruise_speed_m_s: {value: 31.67, as_published: "Cruise Speed: 114km/h", source: *u_aft_aerostar, tag: paper, confidence: medium}
+      max_speed_m_s: {value: 56.39, as_published: "Maximum Speed: 203km/h", source: *u_aft_aerostar, tag: paper, confidence: medium}
+      takeoff_speed_m_s: {value: 30.83, as_published: "Take-Off Speed: 111km/h", source: *u_aft_aerostar, tag: paper, confidence: medium}
+      landing_speed_m_s: {value: 25.56, as_published: "Landing Speed: 92km/h", source: *u_aft_aerostar, tag: paper, confidence: medium}
+      stall_speed_m_s: {value: 25.0, as_published: "Stall Speed: 90km/h", source: *u_aft_aerostar, tag: paper, confidence: medium}
+      rate_of_climb_m_s: {value: 5.067, as_published: "Rate of Climb: 304m/min", source: *u_aft_aerostar, tag: paper, confidence: medium}
+      takeoff_distance_m: {value: 300.0, as_published: "Take-Off Distance: 300m", source: *u_aft_aerostar, tag: paper, confidence: medium}
+      service_ceiling_m: {value: 5486.4, as_published: "18,000ft (5,486m)", source: *u_aft_aerostar, tag: paper, confidence: high}
+    configuration:
+      propulsion_layout:
+        value: pusher (centre body houses the propulsion system, twin booms)
+        source: *u_desig_q26
+        tag: paper
+        confidence: medium
+        basis: >-
+          designation-systems: 'center body housing the propulsion system and mission equipment, straight wings
+          and a twin-boom tail assembly'
+      tail: {value: twin_boom, as_published: twin-boom tail assembly, source: *u_desig_q26, tag: paper, confidence: high}
+      wing: {value: straight wing, as_published: straight wings, source: *u_desig_q26, tag: paper, confidence: high}
+      landing_gear:
+        value: >-
+          wheeled, tricycle (wheel track 1.5 m and wheelbase 1.1 m published; fixed gear per photographs, not
+          stated in text)
+        source: *u_aft_aerostar
+        tag: paper
+        confidence: medium
+      launch: {value: runway (take-off distance 300 m), as_published: uses a conventional runway, source: *u_desig_q26, tag: paper, confidence: high}
+      recovery: {value: runway landing, source: *u_desig_q26, tag: paper, confidence: high}
+    derived:
+      mtow_per_kW: 7.857
+      specific_power_W_per_N: 12.98
+      wing_loading_kg_m2: 58.56
+      wing_loading_Pa: 574.3
+      aspect_ratio: 14.97
+      mean_chord_m: 0.501
+      wing_area_basis: estimate
+      empty_mass_fraction: 0.455
+      payload_fraction: 0.227
+      fuel_fraction: 0.318
+      fuel_fraction_basis: estimate
+      endurance_per_fuel_fraction_h: 37.71
+      breguet_endurance_constant_h: 31.33
+      hourly_fuel_fraction_per_h: 0.0265
+      length_to_span: 0.6
+      span_index_m_per_kg13: 1.242
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: bae_phoenix
+    name: BAE Systems (GEC-Marconi) Phoenix
+    manufacturer: GEC-Marconi / BAE Systems
+    country: UK
+    entry_into_service: 1999 (retired 2008)
+    in_power_class_12_40kW: true
+    include_in_statistics: true
+    statistics_note: >-
+      Power match (19 kW). Parachute/airbag recovery, no landing gear; payload figure is the complete under-slung
+      pod.
+    geometry:
+      span_m: {value: 5.5, as_published: "Wingspan: 5.5m", source: *u_armytech_phoenix, tag: paper, confidence: medium, note: "Wikipedia: 5.6 m"}
+    mass:
+      mtow_kg: {value: 175.0, as_published: "Maximum Launch Weight: 175kg", source: *u_armytech_phoenix, tag: paper, confidence: high, note: "FAS: 177 kg"}
+      payload_mass_kg: {value: 50.0, as_published: "Mission Pod Weight: 50kg", source: *u_armytech_phoenix, tag: paper, confidence: high}
+    propulsion:
+      engine_model:
+        value: Weslake WAE 342 two-stroke flat twin, fuel injected
+        as_published: WAE 342, two-stroke, flat twin fuel injection, 19kw (25hp)
+        source: *u_armytech_phoenix
+        tag: paper
+        confidence: high
+      engine_type: two-stroke flat twin, gasoline, fuel injected
+      max_power_W: {value: 19000.0, as_published: 19kw (25hp), source: *u_armytech_phoenix, tag: paper, confidence: high}
+      propeller_diameter_m: {value: 0.78, as_published: "Two-blade fixed-pitch wooden propeller, 780mm", source: *u_armytech_phoenix, tag: paper, confidence: high}
+      generator_power_W: {value: 900.0, as_published: Plessey 900W generator, source: *u_armytech_phoenix, tag: paper, confidence: high}
+    performance:
+      endurance_s: {value: 14400.0, as_published: Over 4 hours, value_h: 4.0, source: *u_armytech_phoenix, tag: paper, confidence: medium, note: "Wikipedia: 5 h"}
+      max_speed_m_s: {value: 43.06, as_published: "85kt, 155km/h", source: *u_armytech_phoenix, tag: paper, confidence: medium, note: "Wikipedia: 166 km/h"}
+      service_ceiling_m: {value: 2750.0, as_published: "2,750m, 9,000ft", source: *u_armytech_phoenix, tag: paper, confidence: medium}
+    configuration:
+      propulsion_layout:
+        value: tractor
+        as_published: a 'tractor' aircraft, with the propeller in the front
+        source: *u_wiki_phoenix
+        tag: paper
+        confidence: high
+        note: Tractor forced the sensor into a pod slung well under the fuselage.
+      tail: {value: twin_boom (tail surface shape not verified), source: *u_wiki_phoenix, tag: paper, confidence: medium}
+      landing_gear: {value: none, source: *u_wiki_phoenix, tag: paper, confidence: high}
+      launch:
+        value: rail launcher on truck (zero-length / catapult)
+        as_published: projected into the air from a launch-rail mounted on the back of a truck
+        source: *u_wiki_phoenix
+        tag: paper
+        confidence: high
+      recovery: {value: drogue parachute in tail; lands inverted on crushable hump; airbag; frangible fin tips, source: *u_armytech_phoenix, tag: paper, confidence: high}
+      materials:
+        value: Kevlar, CF/GFRP sections, Nomex honeycomb panels
+        as_published: >-
+          composite materials including Kevlar and Carbon Fibre / Glass Fibre-Reinforced Plastic (CF/GFRP)
+          sections and Nomex honeycomb panels
+        source: *u_armytech_phoenix
+        tag: paper
+        confidence: high
+    derived:
+      mtow_per_kW: 9.211
+      specific_power_W_per_N: 11.07
+      payload_fraction: 0.286
+      span_index_m_per_kg13: 0.9833
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: primoco_one_150
+    name: Primoco UAV One 150
+    manufacturer: Primoco UAV SE
+    country: Czech Republic
+    entry_into_service: 2016-2019
+    in_power_class_12_40kW: true
+    include_in_statistics: true
+    statistics_note: >-
+      Closest modern civil-certifiable analogue (4-stroke EFI, runway, composite). Endurance published as 10 h
+      (manufacturer) or 15 h (secondary); 10 h used.
+    geometry:
+      span_m: {value: 4.85, as_published: wingspan of the UAV is of 4.85 m, source: *u_armyrec_primoco, tag: paper, confidence: high, note: "Wikipedia: 4.9 m"}
+      length_m: {value: 3.65, as_published: its length is of 3.65 m, source: *u_armyrec_primoco, tag: paper, confidence: high}
+      height_m: {value: 1.25, as_published: its height is of 1.25 m, source: *u_armyrec_primoco, tag: paper, confidence: high}
+    mass:
+      mtow_kg: {value: 150.0, as_published: "Max. vzletová hmotnost: 150 kg", source: *u_primoco_mfr, tag: manufacturer, confidence: high}
+      empty_mass_kg: {value: 90.0, as_published: "Empty weight: 90 kg", source: *u_armedconflicts_primoco, tag: paper, confidence: medium}
+      payload_mass_kg: {value: 30.0, as_published: "Užitečný náklad: 1-30 kg", source: *u_primoco_mfr, tag: manufacturer, confidence: high}
+      fuel_mass_kg: {value: 30.0, source: *u_primoco_mfr, tag: estimate, confidence: low, basis: MTOW - empty - max payload = 150 - 90 - 30; upper bound at maximum payload.}
+    propulsion:
+      engine_model:
+        value: 'Primoco 340: four-cylinder four-stroke, air-cooled, fuel injection, 340 cm3'
+        as_published: Primoco Engine 340 ... 18,4 kW
+        source: *u_armedconflicts_primoco
+        tag: paper
+        confidence: medium
+      engine_type: four-stroke flat four, gasoline, EFI
+      max_power_W:
+        value: 18400.0
+        as_published: 18,4 kW (24.7 bhp)
+        source: *u_armedconflicts_primoco
+        tag: paper
+        confidence: medium
+        note: 'Army Technology: 25 hp; Wikipedia: 20 hp; Army Recognition 2019: ''30 or 50 HP'' engine options'
+    performance:
+      endurance_s:
+        value: 36000.0
+        as_published: 'Vytrvalost: 10 hodin'
+        value_h: 10.0
+        source: *u_primoco_mfr
+        tag: manufacturer
+        confidence: high
+        note: 'Army Technology / ArmedConflicts: 15 h'
+      cruise_speed_m_s: {value: 33.33, as_published: "Cestovní rychlost: 120 km/h", source: *u_primoco_mfr, tag: manufacturer, confidence: high}
+      max_speed_m_s: {value: 55.56, as_published: 200 km/h v 2000 m, source: *u_armedconflicts_primoco, tag: paper, confidence: medium}
+      service_ceiling_m: {value: 3300.0, as_published: "Maximální dostup: 3 300 m", source: *u_primoco_mfr, tag: manufacturer, confidence: high}
+      takeoff_distance_m: {value: 300.0, as_published: needs less than 300 metres of runway for its take-off, source: *u_armyrec_primoco, tag: paper, confidence: medium}
+    configuration:
+      propulsion_layout: {value: pusher, as_published: propeller in a pusher arrangement, source: *u_wiki_primoco, tag: paper, confidence: high}
+      tail: {value: twin vertical tail surfaces, as_published: single-hull mid-wing with twin vertical tail surfaces, source: *u_wiki_primoco, tag: paper, confidence: medium}
+      wing: {value: mid wing, source: *u_wiki_primoco, tag: paper, confidence: medium}
+      landing_gear: {value: fixed_tricycle, as_published: fixed three-wheel nose landing gear, source: *u_wiki_primoco, tag: paper, confidence: high}
+      launch: {value: runway / unpaved strip (STOL), source: *u_wiki_primoco, tag: paper, confidence: high}
+      recovery: {value: runway landing, source: *u_wiki_primoco, tag: paper, confidence: high}
+      materials: {value: carbon and glass composites, as_published: mainly constructed of carbon and glass composites, source: *u_wiki_primoco, tag: paper, confidence: high}
+    derived:
+      mtow_per_kW: 8.152
+      specific_power_W_per_N: 12.51
+      empty_mass_fraction: 0.6
+      payload_fraction: 0.2
+      fuel_fraction: 0.2
+      fuel_fraction_basis: estimate
+      endurance_per_fuel_fraction_h: 50.0
+      breguet_endurance_constant_h: 44.81
+      hourly_fuel_fraction_per_h: 0.02
+      length_to_span: 0.753
+      span_index_m_per_kg13: 0.9128
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: elbit_hermes_180
+    name: Elbit Systems Hermes 180
+    manufacturer: Elbit Systems
+    country: Israel
+    entry_into_service: ~2002
+    in_power_class_12_40kW: true
+    include_in_statistics: true
+    statistics_note: Geometry from a low-confidence aggregator only.
+    geometry:
+      span_m: {value: 6.0, as_published: "Wingspan: 6 meters", source: *u_armsnet_hermes180, tag: paper, confidence: low}
+      length_m: {value: 4.4, as_published: "Length: 4.4 meters", source: *u_armsnet_hermes180, tag: paper, confidence: low}
+    mass:
+      mtow_kg: {value: 195.0, as_published: maximum take-off ... weights of the Hermes 180 are 195kg, source: *u_aft_hermes180, tag: paper, confidence: medium}
+      payload_mass_kg: {value: 32.0, as_published: payload weights ... 32kg, source: *u_aft_hermes180, tag: paper, confidence: medium}
+    propulsion:
+      engine_model: {value: "UEL rotary (Wankel), 38 hp", as_published: 38hp rotary UEL engine, source: *u_aft_hermes180, tag: paper, confidence: medium}
+      engine_type: rotary (Wankel), gasoline
+      max_power_W: {value: 28336.6, as_published: 38hp, source: *u_aft_hermes180, tag: paper, confidence: medium}
+    performance:
+      endurance_s: {value: 36000.0, as_published: endurance ... 10 hours, value_h: 10.0, source: *u_aft_hermes180, tag: paper, confidence: medium}
+      max_speed_m_s:
+        value: 54.02
+        as_published: 'Max Speed: 194.4 km/h'
+        source: *u_armsnet_hermes180
+        tag: paper
+        confidence: low
+        note: Airforce Technology prints '105km/h' (unit error, = 105 kt)
+      service_ceiling_m: {value: 4600.0, as_published: "Service Ceiling: 4,600 meters", source: *u_armsnet_hermes180, tag: paper, confidence: low}
+    configuration:
+      note: {value: configuration not verified from a citable source, tag: estimate, basis: no layout description found in the sources consulted}
+    derived:
+      mtow_per_kW: 6.882
+      specific_power_W_per_N: 14.82
+      payload_fraction: 0.164
+      length_to_span: 0.733
+      span_index_m_per_kg13: 1.035
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: tai_gozcu
+    name: TUSAS (TAI) Gozcu
+    manufacturer: TUSAS / Turkish Aerospace
+    country: Turkey
+    entry_into_service: first flight 2007
+    in_power_class_12_40kW: true
+    include_in_statistics: true
+    statistics_note: Turkish tactical design; short-endurance (2 h), very low power loading. Outlier for MTOW/kW.
+    geometry:
+      span_m: {value: 3.75, as_published: 3.75 m (12 ft 4 in), source: *u_wiki_gozcu, tag: paper, confidence: medium}
+      length_m: {value: 2.45, as_published: 2.45 m (8 ft 0 in), source: *u_wiki_gozcu, tag: paper, confidence: medium}
+      height_m: {value: 0.66, as_published: 0.66 m (2 ft 2 in), source: *u_wiki_gozcu, tag: paper, confidence: medium}
+    mass:
+      mtow_kg: {value: 85.0, as_published: 85 kg (187 lb), source: *u_wiki_gozcu, tag: paper, confidence: medium}
+      payload_mass_kg: {value: 8.0, as_published: 8 kg (18 lb), source: *u_wiki_gozcu, tag: paper, confidence: medium}
+    propulsion:
+      engine_model: {value: Wankel engine (model not stated), as_published: 1 x Wankel engine 28 kW, source: *u_wiki_gozcu, tag: paper, confidence: medium}
+      engine_type: rotary (Wankel)
+      max_power_W: {value: 28000.0, as_published: 28 kW (38 hp), source: *u_wiki_gozcu, tag: paper, confidence: medium}
+    performance:
+      endurance_s: {value: 7200.0, as_published: 120 min, value_h: 2.0, source: *u_wiki_gozcu, tag: paper, confidence: medium}
+      max_speed_m_s: {value: 47.22, as_published: "170 km/h (110 mph, 92 kn)", source: *u_wiki_gozcu, tag: paper, confidence: medium}
+      service_ceiling_m: {value: 3700.0, as_published: "3,700 m (12,100 ft)", source: *u_wiki_gozcu, tag: paper, confidence: medium}
+    configuration:
+      propulsion_layout: {value: pusher, source: *u_wiki_gozcu, tag: paper, confidence: medium}
+      tail: {value: delta wing + V-tail, as_published: delta wings and V-tail configuration, source: *u_wiki_gozcu, tag: paper, confidence: medium}
+      landing_gear: {value: none, source: *u_wiki_gozcu, tag: paper, confidence: medium}
+      launch: {value: catapult, source: *u_wiki_gozcu, tag: paper, confidence: medium}
+      recovery: {value: parachute, source: *u_wiki_gozcu, tag: paper, confidence: medium}
+      materials: {value: composite, as_published: Built of composite material, source: *u_wiki_gozcu, tag: paper, confidence: medium}
+    derived:
+      mtow_per_kW: 3.036
+      specific_power_W_per_N: 33.59
+      payload_fraction: 0.0941
+      length_to_span: 0.653
+      span_index_m_per_kg13: 0.8529
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: tekever_ar5
+    name: TEKEVER AR5 (Evolution)
+    manufacturer: TEKEVER
+    country: Portugal / UK
+    entry_into_service: ~2018 (EMSA), in production
+    in_power_class_12_40kW: null
+    include_in_statistics: true
+    statistics_note: >-
+      Twin wing-mounted engines; installed power not published (excluded from power statistics). Long-endurance,
+      high-span reference.
+    geometry:
+      span_m: {value: 7.3, as_published: Dimensions 7.3 m x 4.0 m, source: *u_tekever_ds2025, tag: datasheet, confidence: high}
+      length_m: {value: 4.0, as_published: Dimensions 7.3 m x 4.0 m, source: *u_tekever_ds2025, tag: datasheet, confidence: high, note: "2022 datasheet: 7.30 x 4.03 m"}
+    mass:
+      mtow_kg: {value: 180.0, as_published: MTOW 180 kg, source: *u_tekever_ds2025, tag: datasheet, confidence: high, note: "2022 datasheet: 150 kg"}
+      payload_mass_kg: {value: 50.0, as_published: Payload Capacity 50 kg, source: *u_tekever_ds2025, tag: datasheet, confidence: high}
+    propulsion:
+      engine_model: {value: "two wing-mounted piston engines, 150 cc each (not verified)", as_published: Twin 150 cc engines, source: *u_ust_ar5, tag: paper, confidence: low}
+      engine_type: 2 x piston (type not published)
+      max_power_W:
+        value: null
+        source: *u_ust_ar5
+        tag: estimate
+        confidence: low
+        basis: >-
+          Not published. 150 cc UAV piston engines deliver roughly 7 kW (four-stroke) to 12 kW (two-stroke) each,
+          so installed power is about 14-24 kW.
+    performance:
+      endurance_s:
+        value: 72000.0
+        as_published: Flight Endurance 16 - 20 hours depending on payload
+        value_h: 20.0
+        source: *u_tekever_ds2025
+        tag: datasheet
+        confidence: high
+        note: '2022 datasheet: 12 h at 150 kg'
+      cruise_speed_m_s: {value: 27.78, as_published: Cruise Speed 100 km/h, source: *u_tekever_ds2025, tag: datasheet, confidence: high}
+      service_ceiling_m: {value: 3600.0, as_published: Service Ceilling 3600 m, source: *u_tekever_ds2025, tag: datasheet, confidence: high}
+      takeoff_distance_m: {value: 300.0, as_published: Runway / Unprepared airstrip 200-300m, source: *u_tekever_ds2025, tag: datasheet, confidence: high}
+    configuration:
+      propulsion_layout:
+        value: twin tractor, wing-mounted, two-blade propellers
+        as_published: two engines mounted on the wings
+        source: *u_navaltech_ar5
+        tag: paper
+        confidence: high
+      tail:
+        value: twin fins in 'H' arrangement
+        as_published: Two vertical fins at the rear end of the vehicle are arranged in an 'H' shape
+        source: *u_navaltech_ar5
+        tag: paper
+        confidence: high
+      wing: {value: high wing, as_published: High-wing configuration, source: *u_navaltech_ar5, tag: paper, confidence: high}
+      landing_gear: {value: fixed_tricycle, as_published: fixed tricycle landing gear, source: *u_navaltech_ar5, tag: paper, confidence: high}
+      launch: {value: "runway or unprepared strip 200-300 m, automatic take-off", source: *u_tekever_ds2025, tag: datasheet, confidence: high}
+      recovery: {value: "runway / unprepared strip, automatic landing", source: *u_tekever_ds2025, tag: datasheet, confidence: high}
+      materials: {value: composite monocoque, as_published: monocoque airframe made of composite materials, source: *u_navaltech_ar5, tag: paper, confidence: high}
+    derived:
+      payload_fraction: 0.278
+      length_to_span: 0.548
+      span_index_m_per_kg13: 1.293
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: elbit_hermes_90
+    name: Elbit Systems Hermes 90
+    manufacturer: Elbit Systems
+    country: Israel
+    entry_into_service: first flight 2009
+    in_power_class_12_40kW: null
+    include_in_statistics: true
+    statistics_note: Engine power not published (heavy-fuel engine); excluded from power statistics.
+    geometry:
+      span_m: {value: 5.0, as_published: "Wing span: 5m", source: *u_aft_hermes90, tag: paper, confidence: medium}
+    mass:
+      mtow_kg:
+        value: 115.0
+        as_published: 'Maximum take-off weight: 115kg'
+        source: *u_aft_hermes90
+        tag: paper
+        confidence: medium
+        note: 'AIN 2009 launch figure: 187 lb (85 kg)'
+      payload_mass_kg: {value: 25.0, as_published: "Maximum payload: 25kg", source: *u_aft_hermes90, tag: paper, confidence: medium}
+    propulsion:
+      engine_model:
+        value: heavy-fuel engine (gasoline option offered)
+        as_published: available with either gasoline or heavy fuel engines
+        source: *u_ain_hermes90
+        tag: paper
+        confidence: medium
+      max_power_W: {value: null, source: *u_aft_hermes90, tag: estimate, basis: not published}
+    performance:
+      endurance_s: {value: 54000.0, as_published: up to 15 hours, value_h: 15.0, source: *u_aft_hermes90, tag: paper, confidence: medium, note: "AIN/Shephard 2009: >18 h"}
+      service_ceiling_m: {value: 4572.0, as_published: "Service ceiling: 15,000ft", source: *u_aft_hermes90, tag: paper, confidence: medium}
+    configuration:
+      propulsion_layout: {value: pusher, as_published: single-engined pusher (article categories), source: *u_wiki_hermes90, tag: paper, confidence: medium}
+      tail: {value: v_tail, as_published: V-tail (article categories), source: *u_wiki_hermes90, tag: paper, confidence: medium}
+      landing_gear: {value: skids or wheels, as_published: land on either skids or wheels, source: *u_ain_hermes90, tag: paper, confidence: medium}
+      launch: {value: integral launcher (point launch) or runway strip, source: *u_shephard_hermes90, tag: paper, confidence: medium}
+      recovery: {value: point recovery on unprepared surface or strip landing, source: *u_aft_hermes90, tag: paper, confidence: medium}
+    derived: {payload_fraction: 0.217, span_index_m_per_kg13: 1.028, tag: estimate, basis: computed with statistics.formulas F1-F13 from the cited values of this entry}
+  - id: rheinmetall_luna_ng
+    name: Rheinmetall LUNA NG (fixed-wing configuration)
+    manufacturer: Rheinmetall (formerly EMT)
+    country: Germany
+    entry_into_service: 2022-2023
+    in_power_class_12_40kW: false
+    include_in_statistics: true
+    statistics_note: Below the power class (11 kW) but same mass class; modern heavy-fuel Wankel.
+    geometry:
+      span_m: {value: 5.34, as_published: Wingspan 5.34 m, source: *u_rhm_luna, tag: datasheet, confidence: high, note: "VTOL kit: 6.68 m (EDR)"}
+      length_m: {value: 3.17, as_published: Length 3.17 m, source: *u_rhm_luna, tag: datasheet, confidence: high}
+      height_m: {value: 0.73, as_published: Height 0.73 m, source: *u_rhm_luna, tag: datasheet, confidence: high}
+    mass:
+      mtow_kg: {value: 110.0, as_published: Take-off weight 110 kg, source: *u_rhm_luna, tag: datasheet, confidence: high}
+      payload_mass_kg:
+        value: 30.0
+        as_published: 'Payload: 30 kg (fixed-wing)'
+        source: *u_edr_luna
+        tag: paper
+        confidence: medium
+        note: 'Army Technology: ''more than 30kg'''
+    propulsion:
+      engine_model:
+        value: heavy-fuel Wankel rotary, injection, liquid-cooled, starter/generator
+        as_published: Heavy fuel Wankel rotary engine with injection, liquid-cooled, starter/generator
+        source: *u_rhm_luna
+        tag: datasheet
+        confidence: high
+      engine_type: rotary (Wankel), heavy fuel
+      max_power_W:
+        value: 11000.0
+        as_published: provides 11 kW
+        source: *u_edr_luna
+        tag: paper
+        confidence: medium
+        note: 'Army Technology (earlier config): two-stroke twin, 10 kW'
+    performance:
+      endurance_s:
+        value: 43200.0
+        as_published: '>12 hours, depending on payload and application profile'
+        value_h: 12.0
+        source: *u_rhm_luna
+        tag: datasheet
+        confidence: high
+      cruise_speed_m_s: {value: 25.0, as_published: Typical reconnaissance speed 90km/h (IAS), source: *u_rhm_luna, tag: datasheet, confidence: high}
+      max_speed_m_s: {value: 36.11, as_published: Vmax 130km/h (IAS), source: *u_rhm_luna, tag: datasheet, confidence: high}
+      service_ceiling_m: {value: 5000.0, as_published: "service ceiling >5,000m (ISA)", source: *u_rhm_luna, tag: datasheet, confidence: high}
+    configuration:
+      propulsion_layout: {value: "pusher, two-blade", as_published: a two-blade pushing propeller, source: *u_edr_luna, tag: paper, confidence: high}
+      tail:
+        value: twin_boom_h (two tubular booms, all-moving horizontal stabilator, two fins)
+        as_published: >-
+          two tubular spars that carry at the far end the horizontal stabilator with two vertical fins at each end
+        source: *u_edr_luna
+        tag: paper
+        confidence: high
+      landing_gear: {value: none, source: *u_rhm_luna, tag: datasheet, confidence: high}
+      launch:
+        value: rope-hoist (bungee) catapult
+        as_published: launched from almost anywhere using a rope hoist catapult
+        source: *u_rhm_luna
+        tag: datasheet
+        confidence: high
+      recovery: {value: "autonomous DGPS net landing, or parachute", source: *u_rhm_luna, tag: datasheet, confidence: high}
+      materials:
+        value: CFRP fuselage structure
+        as_published: fuselage structure made of CFRP (carbon fibre reinforced plastic)
+        source: *u_rhm_luna
+        tag: datasheet
+        confidence: high
+    derived:
+      mtow_per_kW: 10.0
+      specific_power_W_per_N: 10.2
+      payload_fraction: 0.273
+      length_to_span: 0.594
+      span_index_m_per_kg13: 1.114
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: tusas_golge
+    name: TUSAS GOLGE (Shadow)
+    manufacturer: TUSAS / Turkish Aerospace
+    country: Turkey
+    entry_into_service: unveiled SAHA 2026, deliveries planned 2026
+    in_power_class_12_40kW: false
+    include_in_statistics: true
+    statistics_note: >-
+      Most relevant 'UCAV look' reference in this mass class: tailless low-observable delta ('baby Anka III') with
+      a piston pusher. Data are show figures from trade press.
+    geometry:
+      span_m: {value: 5.0, as_published: wingspan of 5 meters, source: *u_dt_golge, tag: paper, confidence: medium}
+    mass:
+      mtow_kg: {value: 100.0, as_published: maximum take-off weight of 100 kilograms, source: *u_dt_golge, tag: paper, confidence: medium}
+      payload_mass_kg: {value: 15.0, as_published: payload capacity of approximately 15 kilograms, source: *u_dt_golge, tag: paper, confidence: medium}
+    propulsion:
+      engine_model:
+        value: foreign-made two-cylinder piston engine, 14 hp (model not disclosed)
+        as_published: 14 hp two-cylinder engine propelling a two-blade pushing propeller
+        source: *u_edr_golge
+        tag: paper
+        confidence: medium
+      engine_type: two-cylinder piston
+      max_power_W: {value: 10439.8, as_published: 14 hp, source: *u_edr_golge, tag: paper, confidence: medium}
+    performance:
+      endurance_s: {value: 36000.0, as_published: Up to 10 hours, value_h: 10.0, source: *u_dt_golge, tag: paper, confidence: medium}
+      max_speed_m_s: {value: 45.83, as_published: maximum speed of around 165 km/h (90 knots), source: *u_edr_golge, tag: paper, confidence: medium}
+      service_ceiling_m: {value: 3657.6, as_published: "12,000 feet", source: *u_edr_golge, tag: paper, confidence: medium}
+    configuration:
+      propulsion_layout: {value: "pusher, two-blade", as_published: two-blade pushing propeller, source: *u_edr_golge, tag: paper, confidence: medium}
+      tail:
+        value: >-
+          tailless delta flying wing (Anka-3-like), low-observable shaping; three air intakes (two lateral, one
+          dorsal)
+        as_published: delta wing airframe
+        source: *u_edr_golge
+        tag: paper
+        confidence: medium
+      payload_installation:
+        value: EO/IR turret retracts into the fuselage
+        as_published: designed to retract into the fuselage
+        source: *u_dt_golge
+        tag: paper
+        confidence: medium
+      landing_gear: {value: none, source: *u_dt_golge, tag: paper, confidence: medium}
+      launch: {value: pneumatic vehicle-mounted catapult, as_published: Pneumatically from a vehicle-based launcher, source: *u_dt_golge, tag: paper, confidence: medium}
+      recovery: {value: parachute onto the fuselage; airbag under development, source: *u_dt_golge, tag: paper, confidence: medium}
+      materials: {value: not disclosed ('way less exotic' than Anka-3), source: *u_edr_golge, tag: paper, confidence: low}
+    derived:
+      mtow_per_kW: 9.579
+      specific_power_W_per_N: 10.65
+      payload_fraction: 0.15
+      span_index_m_per_kg13: 1.077
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: av_t20
+    name: AeroVironment (Arcturus UAV) T-20
+    manufacturer: Arcturus UAV / AeroVironment
+    country: USA
+    entry_into_service: ~2009, in production
+    in_power_class_12_40kW: false
+    include_in_statistics: true
+    statistics_note: >-
+      Long-endurance benchmark (24 h) with a 7.5 kW four-stroke. Mass fractions use the self-consistent Wikipedia
+      pair (empty 50 kg, gross 84 kg).
+    mass_ratio_reference_mtow_kg: 84.0
+    geometry:
+      span_m: {value: 5.7, as_published: WINGSPAN 18.8 ft (5.7 m), source: *u_av_t20_ds, tag: datasheet, confidence: high, note: "earlier: 17 ft 6 in (5.3 m)"}
+      length_m: {value: 2.9, as_published: LENGTH 9.5 ft (2.9 m), source: *u_av_t20_ds, tag: datasheet, confidence: high}
+      height_m: {value: 1.0, as_published: 3 ft 0 in (1.0 m), source: *u_wiki_t20, tag: paper, confidence: medium}
+    mass:
+      mtow_kg: {value: 102.1, as_published: 225 lb MGTOW Fuel & Payload (102 kg), source: *u_av_t20_ds, tag: datasheet, confidence: high}
+      empty_mass_kg:
+        value: 49.9
+        as_published: 110 lb (50 kg)
+        source: *u_wiki_t20
+        tag: paper
+        confidence: medium
+        note: paired with gross weight 185 lb (84 kg) on the same page
+      payload_mass_kg: {value: 22.68, as_published: Up to 50 lb (22.7 kg), source: *u_av_t20_ds, tag: datasheet, confidence: high}
+      fuel_mass_kg:
+        value: 21.84
+        source: *u_wiki_t20
+        tag: estimate
+        confidence: low
+        basis: >-
+          0.91 kg/h cruise burn ('burns 2 lb of fuel per hour at cruise') x 24 h endurance; tank size not
+          published
+    propulsion:
+      engine_model: {value: 190 cc four-stroke EFI (MOGAS), as_published: "MOGAS, 190 cc EFI Engine", source: *u_av_t20_ds, tag: datasheet, confidence: high}
+      engine_type: four-stroke single, gasoline, EFI
+      max_power_W: {value: 7457.0, as_published: "190cc, 10 hp (7.5 kW)", source: *u_wiki_t20, tag: paper, confidence: medium}
+      cruise_fuel_flow_kg_s: {value: 0.0002528, as_published: burns 2 lb (910 g) of fuel per hour at cruise, source: *u_wiki_t20, tag: paper, confidence: medium}
+    performance:
+      endurance_s: {value: 86400.0, as_published: 24+ hr, value_h: 24.0, source: *u_av_t20_ds, tag: datasheet, confidence: high}
+      cruise_speed_m_s: {value: 25.72, as_published: SPEED 58 mph (50 kts), source: *u_av_t20_ds, tag: datasheet, confidence: high}
+      max_speed_m_s: {value: 38.61, as_published: "86 mph (139 km/h, 75 kn)", source: *u_wiki_t20, tag: paper, confidence: medium}
+      service_ceiling_m:
+        value: 4572.0
+        as_published: 15,000 ft (4,600 m) (rated)
+        source: *u_wiki_t20
+        tag: paper
+        confidence: medium
+        note: 'datasheet: operating altitude 20,000 ft density altitude'
+    configuration:
+      landing_gear: {value: none (belly skid), as_published: Autonomous or manual skid landing, source: *u_av_t20_ds, tag: datasheet, confidence: high}
+      launch: {value: portable catapult, as_published: Catapult-launched, source: *u_av_t20_ds, tag: datasheet, confidence: high}
+      recovery: {value: skid (belly) landing on unimproved surface; shipboard landing system option, source: *u_wiki_t20, tag: paper, confidence: medium}
+      materials:
+        value: all-composite, wet wings tested to 10 g
+        as_published: entirely composite ... complex wet wings tested to stresses of 10 g
+        source: *u_wiki_t20
+        tag: paper
+        confidence: medium
+      propulsion_layout: {value: not verified, tag: estimate, basis: not stated in the datasheet or encyclopedia entry consulted}
+    derived:
+      mtow_per_kW: 13.69
+      specific_power_W_per_N: 7.448
+      empty_mass_fraction: 0.594
+      payload_fraction: 0.222
+      fuel_fraction: 0.214
+      fuel_fraction_basis: estimate
+      endurance_per_fuel_fraction_h: 112.2
+      breguet_endurance_constant_h: 99.72
+      hourly_fuel_fraction_per_h: 0.00891
+      length_to_span: 0.509
+      span_index_m_per_kg13: 1.22
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: insitu_rq21a
+    name: Insitu RQ-21A Blackjack (Integrator family)
+    manufacturer: Insitu (Boeing)
+    country: USA
+    entry_into_service: '2014'
+    in_power_class_12_40kW: false
+    include_in_statistics: true
+    statistics_note: Family representative for Integrator/RQ-21 (power and empty mass published). Heavy-fuel 8 hp.
+    geometry:
+      span_m: {value: 4.8, as_published: "Wingspan: 15.7 ft / 4.8 m", source: *u_insitu_rq21_card, tag: datasheet, confidence: high}
+      length_m: {value: 2.5, as_published: "Length: 8.2 ft / 2.5 m", source: *u_insitu_rq21_card, tag: datasheet, confidence: high}
+    mass:
+      mtow_kg: {value: 61.23, as_published: "Max takeoff weight: 135 lb / 61 kg", source: *u_insitu_rq21_card, tag: datasheet, confidence: high}
+      empty_mass_kg: {value: 36.74, as_published: empty structure weight of 81lb, source: *u_navaltech_rq21, tag: paper, confidence: medium}
+      payload_mass_kg: {value: 17.69, as_published: "Max payload weight: 39* lb / 17.7 kg (*Reduces endurance)", source: *u_insitu_rq21_card, tag: datasheet, confidence: high}
+    propulsion:
+      engine_model:
+        value: reciprocating engine with EFI, JP-5/JP-8
+        as_published: 'Engine: 8 HP reciprocating engine with EFI; JP-5, JP-8'
+        source: *u_insitu_rq21_card
+        tag: datasheet
+        confidence: high
+      engine_type: piston, heavy fuel (JP-5/JP-8), EFI
+      max_power_W: {value: 5965.6, as_published: 8 HP, source: *u_insitu_rq21_card, tag: datasheet, confidence: high}
+    performance:
+      endurance_s: {value: 57600.0, as_published: "Endurance: up to 16 hours", value_h: 16.0, source: *u_insitu_rq21_card, tag: datasheet, confidence: high}
+      cruise_speed_m_s: {value: 30.87, as_published: "Cruise speed: 60 knots", source: *u_insitu_rq21_card, tag: datasheet, confidence: high}
+      max_speed_m_s: {value: 46.3, as_published: "Max horizontal speed: 90+ knots / 46.3 m/s", source: *u_insitu_rq21_card, tag: datasheet, confidence: high}
+      service_ceiling_m: {value: 6096.0, as_published: "Ceiling: up to 20,000 ft", source: *u_insitu_rq21_card, tag: datasheet, confidence: high}
+    configuration:
+      tail: {value: twin-tailed, as_published: Twin-tailed configuration based on the Integrator platform, source: *u_navaltech_rq21, tag: paper, confidence: medium}
+      landing_gear: {value: none, as_published: no nets or runways are required, source: *u_insitu_integrator_card, tag: datasheet, confidence: medium}
+      launch: {value: runway-independent (launcher), source: *u_insitu_integrator_card, tag: datasheet, confidence: medium}
+      recovery: {value: "runway-independent, no net", as_published: no nets or runways are required, source: *u_insitu_integrator_card, tag: datasheet, confidence: medium}
+    derived:
+      mtow_per_kW: 10.26
+      specific_power_W_per_N: 9.935
+      empty_mass_fraction: 0.6
+      payload_fraction: 0.289
+      length_to_span: 0.521
+      span_index_m_per_kg13: 1.218
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: insitu_integrator
+    name: Insitu Integrator (current commercial/export)
+    manufacturer: Insitu (Boeing)
+    country: USA
+    entry_into_service: 2012, in production
+    in_power_class_12_40kW: false
+    include_in_statistics: false
+    statistics_note: Same family as insitu_rq21a; engine power not published. Shows growth to 79 kg MTOW and 27.5 h.
+    geometry:
+      span_m: {value: 4.8, as_published: "Wingspan: 15.7 ft / 4.8 m", source: *u_insitu_integrator_card, tag: datasheet, confidence: high}
+      length_m: {value: 2.5, as_published: "Length: 8.2 ft / 2.5 m", source: *u_insitu_integrator_card, tag: datasheet, confidence: high}
+    mass:
+      mtow_kg: {value: 79.38, as_published: "Max takeoff weight: 175 lb / 79 kg", source: *u_insitu_integrator_card, tag: datasheet, confidence: high}
+      payload_mass_kg: {value: 22.68, as_published: "Max payload weight: 50 lb / 22.7 kg", source: *u_insitu_integrator_card, tag: datasheet, confidence: high}
+    propulsion:
+      engine_model: {value: EFI engine using JP-5/JP-8, as_published: "Engine: EFI using JP-5/JP-8 fuel", source: *u_insitu_integrator_card, tag: datasheet, confidence: high}
+    performance:
+      endurance_s: {value: 99000.0, as_published: "Endurance: 27.5 hours", value_h: 27.5, source: *u_insitu_integrator_card, tag: datasheet, confidence: high}
+      cruise_speed_m_s: {value: 28.3, as_published: "Cruise speed: 55 knots / 28.3 m/s", source: *u_insitu_integrator_card, tag: datasheet, confidence: high}
+      max_speed_m_s: {value: 46.3, as_published: 90+ knots / 46.3 m/s, source: *u_insitu_integrator_card, tag: datasheet, confidence: high}
+      service_ceiling_m: {value: 5944.0, as_published: "Ceiling: >19,500 ft. / 5,944 m", source: *u_insitu_integrator_card, tag: datasheet, confidence: high}
+    derived:
+      payload_fraction: 0.286
+      length_to_span: 0.521
+      span_index_m_per_kg13: 1.117
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+  - id: penguin_b
+    name: UAV Factory (Edge Autonomy) Penguin B - scaling reference
+    manufacturer: UAV Factory / Edge Autonomy
+    country: Latvia / USA
+    entry_into_service: ~2010, in production
+    in_power_class_12_40kW: false
+    include_in_statistics: false
+    statistics_note: >-
+      21.5 kg class: outside the 50-250 kg band. Used only to anchor scaling trends and to calibrate the
+      stall-speed wing-area method (it publishes S, CLmax and Vs).
+    geometry:
+      span_m: {value: 3.3, as_published: Wing Span 3.3 m, source: *u_penguinb_ds, tag: datasheet, confidence: high}
+      length_m: {value: 2.27, as_published: Length 2.27 m, source: *u_penguinb_ds, tag: datasheet, confidence: high}
+      wing_area_m2: {value: 0.79, as_published: Wing Area 0.79 m2, source: *u_penguinb_ds, tag: datasheet, confidence: high}
+      cl_max_clean: {value: 1.3, as_published: CL max (clean wing) 1.3, source: *u_penguinb_ds, tag: datasheet, confidence: high}
+      cl_max_flap_45deg: {value: 1.7, as_published: CL max (45 deg flap deflection) 1.7, source: *u_penguinb_ds, tag: datasheet, confidence: high}
+    mass:
+      mtow_kg: {value: 21.5, as_published: MTOW 21.5 kg, source: *u_penguinb_ds, tag: datasheet, confidence: high}
+      empty_mass_kg:
+        value: 10.0
+        as_published: Empty Weight (excl fuel and payload) 10 kg (with engine and servo package)
+        source: *u_penguinb_ds
+        tag: datasheet
+        confidence: high
+      payload_mass_kg: {value: 10.0, as_published: Max Payload 10 kg, source: *u_penguinb_ds, tag: datasheet, confidence: high, note: 11.5 kg combined fuel + payload}
+      fuel_volume_m3: {value: 0.0075, as_published: 7500cc fuel tank, source: *u_penguinb_ds, tag: datasheet, confidence: high}
+      fuel_mass_kg: {value: 5.4, source: *u_penguinb_ds, tag: estimate, confidence: high, basis: 0.0075 m3 x 720 kg/m3}
+    propulsion:
+      engine_model: {value: fuel-injected engine option (Currawong Engineering), as_published: Powerplant 2.5 hp, source: *u_penguinb_ds, tag: datasheet, confidence: high}
+      engine_type: small two-stroke, fuel injected (option)
+      max_power_W: {value: 1864.2, as_published: 2.5 hp, source: *u_penguinb_ds, tag: datasheet, confidence: high}
+    performance:
+      endurance_s:
+        value: 72000.0
+        as_published: 20+ hours (FI engine, 7500cc tank); up to 26.5 h with 4 kg payload
+        value_h: 20.0
+        source: *u_penguinb_ds
+        tag: datasheet
+        confidence: high
+      cruise_speed_m_s: {value: 22.0, as_published: Cruise Speed 22 m/s, source: *u_penguinb_ds, tag: datasheet, confidence: high}
+      max_speed_m_s: {value: 36.0, as_published: Max Level Speed 36 m/s, source: *u_penguinb_ds, tag: datasheet, confidence: high}
+      stall_speed_m_s: {value: 13.0, as_published: "Stall Speed (with high lift system) 13 m/s (sea level, 15 kg)", source: *u_penguinb_ds, tag: datasheet, confidence: high}
+    configuration:
+      tail: {value: v_tail, as_published: well designed V-tail geometry, source: *u_penguinb_ds, tag: datasheet, confidence: high}
+      launch: {value: "catapult, runway or car-top", as_published: "Catapult, Runway or car top launch", source: *u_penguinb_ds, tag: datasheet, confidence: high}
+      materials: {value: modular composite structure, as_published: Modular composite structure, source: *u_penguinb_ds, tag: datasheet, confidence: high}
+    derived:
+      mtow_per_kW: 11.53
+      specific_power_W_per_N: 8.842
+      wing_loading_kg_m2: 27.22
+      wing_loading_Pa: 266.9
+      aspect_ratio: 13.78
+      mean_chord_m: 0.239
+      wing_area_basis: datasheet
+      empty_mass_fraction: 0.465
+      payload_fraction: 0.465
+      fuel_fraction: 0.251
+      fuel_fraction_basis: estimate
+      endurance_per_fuel_fraction_h: 79.63
+      breguet_endurance_constant_h: 69.15
+      hourly_fuel_fraction_per_h: 0.0126
+      length_to_span: 0.688
+      span_index_m_per_kg13: 1.187
+      tag: estimate
+      basis: computed with statistics.formulas F1-F13 from the cited values of this entry
+
+# -----------------------------------------------------------------------------------------------------
+# STATISTICS
+# -----------------------------------------------------------------------------------------------------
+statistics:
+  formulas:
+    F1_mtow_per_kW: m_TO / (P_max / 1000)   [kg/kW]  (power loading)
+    F2_specific_power: P_max / (m_TO * g0)     [W/N]   (g0 = 9.80665 m/s2)
+    F3_wing_loading: m_TO / S                [kg/m2] (multiply by g0 for N/m2 = Pa)
+    F4_aspect_ratio: b^2 / S
+    F5_mean_chord: S / b                   [m]
+    F6_empty_mass_fraction: m_empty / m_ref    (m_ref = MTOW of the same, self-consistent data set)
+    F7_payload_fraction: m_payload / m_TO
+    F8_fuel_fraction: >-
+      m_fuel / m_TO;  m_fuel = V_fuel * rho_fuel when only a volume is published (rho = 720 kg/m3 gasoline, 800
+      kg/m3 JP-8)
+    F9_endurance_per_fuel_fraction: E / ff                  [h]  (linear, crude)
+    F10_breguet_endurance_constant: 'K = E / ln(1 / (1 - ff))   [h]; prop-aircraft Breguet: K = eta_p (L/D) / (c g V) with c in kg/J'
+    F11_hourly_fuel_fraction: ff / E                  [1/h] (average fuel burn per hour as a share of MTOW)
+    F12_length_to_span: L / b
+    F13_span_cube_root_mass: b / m_TO^(1/3)          [m/kg^(1/3)] (geometric-similarity span index)
+    F14_power_law_fit: >-
+      y = a * x^n by least squares on ln(y) = ln(a) + n ln(x); sigma = RMS residual in ln space; band =
+      exp(+/-sigma)
+    F15_stall_speed: V_s = sqrt(2 (m g0 / S) / (rho CLmax)),  rho = 1.225 kg/m3
+  dataset_rules:
+    - >-
+      One entry per airframe family (variants of the same family are listed but include_in_statistics: false).
+    - 'core_set = all entries with include_in_statistics: true (piston, fixed-wing, MTOW 61-285 kg).'
+    - power_class_set = core_set entries with published P_max between 12 and 40 kW.
+    - >-
+      Percentiles use linear interpolation (numpy default). Values tagged estimate are included and flagged in
+      *_basis fields.
+    - >-
+      Penguin B (21.5 kg) is excluded from all class statistics; it is shown only in the span trend check and the
+      stall-method calibration.
+  core_set:
+    - shadow_200_rq7b
+    - shadow_600
+    - pioneer_rq2a
+    - iai_scout
+    - ruag_ranger_ads95
+    - aerostar
+    - bae_phoenix
+    - primoco_one_150
+    - elbit_hermes_180
+    - tai_gozcu
+    - tekever_ar5
+    - elbit_hermes_90
+    - rheinmetall_luna_ng
+    - tusas_golge
+    - av_t20
+    - insitu_rq21a
+  power_class_set:
+    - shadow_200_rq7b
+    - shadow_600
+    - pioneer_rq2a
+    - iai_scout
+    - ruag_ranger_ads95
+    - aerostar
+    - bae_phoenix
+    - primoco_one_150
+    - elbit_hermes_180
+    - tai_gozcu
+  tag: estimate
+  basis: computed from the per-aircraft values (each cited in its entry) with the formulas above
+  power_class_12_40kW:
+    mtow_kg:
+      n: 10
+      min: 85.0
+      p25: 161.8
+      median: 185.0
+      p75: 216.2
+      max: 285.0
+      mean: 190.8
+      values:
+        shadow_200_rq7b: 170.1
+        shadow_600: 264.4
+        pioneer_rq2a: 205.0
+        iai_scout: 159.0
+        ruag_ranger_ads95: 285.0
+        aerostar: 220.0
+        bae_phoenix: 175.0
+        primoco_one_150: 150.0
+        elbit_hermes_180: 195.0
+        tai_gozcu: 85.0
+    max_power_kW:
+      n: 10
+      min: 16.41
+      p25: 19.1
+      median: 28.0
+      p75: 28.33
+      max: 38.78
+      mean: 25.61
+      values:
+        shadow_200_rq7b: 28.3
+        shadow_600: 38.78
+        pioneer_rq2a: 19.4
+        iai_scout: 16.41
+        ruag_ranger_ads95: 31.5
+        aerostar: 28.0
+        bae_phoenix: 19.0
+        primoco_one_150: 18.4
+        elbit_hermes_180: 28.34
+        tai_gozcu: 28.0
+    mtow_per_kW:
+      n: 10
+      min: 3.036
+      p25: 6.835
+      median: 8.005
+      p75: 9.17
+      max: 10.57
+      mean: 7.728
+      values:
+        shadow_200_rq7b: 6.011
+        shadow_600: 6.819
+        pioneer_rq2a: 10.57
+        iai_scout: 9.692
+        ruag_ranger_ads95: 9.048
+        aerostar: 7.857
+        bae_phoenix: 9.211
+        primoco_one_150: 8.152
+        elbit_hermes_180: 6.882
+        tai_gozcu: 3.036
+    specific_power_W_per_N:
+      n: 10
+      min: 9.65
+      p25: 11.12
+      median: 12.75
+      p75: 14.92
+      max: 33.59
+      mean: 14.83
+      values:
+        shadow_200_rq7b: 16.97
+        shadow_600: 14.95
+        pioneer_rq2a: 9.65
+        iai_scout: 10.52
+        ruag_ranger_ads95: 11.27
+        aerostar: 12.98
+        bae_phoenix: 11.07
+        primoco_one_150: 12.51
+        elbit_hermes_180: 14.82
+        tai_gozcu: 33.59
+    span_m:
+      n: 10
+      min: 3.75
+      p25: 4.877
+      median: 5.325
+      p75: 5.928
+      max: 7.5
+      mean: 5.452
+      values:
+        shadow_200_rq7b: 4.27
+        shadow_600: 6.83
+        pioneer_rq2a: 5.15
+        iai_scout: 4.96
+        ruag_ranger_ads95: 5.71
+        aerostar: 7.5
+        bae_phoenix: 5.5
+        primoco_one_150: 4.85
+        elbit_hermes_180: 6.0
+        tai_gozcu: 3.75
+    endurance_h:
+      n: 10
+      min: 2.0
+      p25: 5.5
+      median: 8.25
+      p75: 10.0
+      max: 12.0
+      mean: 7.85
+      values:
+        shadow_200_rq7b: 7.0
+        shadow_600: 12.0
+        pioneer_rq2a: 5.0
+        iai_scout: 7.5
+        ruag_ranger_ads95: 9.0
+        aerostar: 12.0
+        bae_phoenix: 4.0
+        primoco_one_150: 10.0
+        elbit_hermes_180: 10.0
+        tai_gozcu: 2.0
+    empty_mass_fraction:
+      n: 6
+      min: 0.455
+      p25: 0.5468
+      median: 0.602
+      p75: 0.6565
+      max: 0.727
+      mean: 0.5982
+      values:
+        shadow_200_rq7b: 0.529
+        pioneer_rq2a: 0.674
+        iai_scout: 0.604
+        ruag_ranger_ads95: 0.727
+        aerostar: 0.455
+        primoco_one_150: 0.6
+    payload_fraction:
+      n: 10
+      min: 0.0941
+      p25: 0.1595
+      median: 0.1695
+      p75: 0.2203
+      max: 0.286
+      mean: 0.1863
+      values:
+        shadow_200_rq7b: 0.173
+        shadow_600: 0.156
+        pioneer_rq2a: 0.166
+        iai_scout: 0.239
+        ruag_ranger_ads95: 0.158
+        aerostar: 0.227
+        bae_phoenix: 0.286
+        primoco_one_150: 0.2
+        elbit_hermes_180: 0.164
+        tai_gozcu: 0.0941
+    note: >-
+      Gozcu (3.0 kg/kW, 2 h) is a fast short-endurance outlier; without it the MTOW/kW median is 8.152 kg/kW.
+  core_set_summary:
+    mtow_kg:
+      n: 16
+      min: 61.23
+      p25: 108.0
+      median: 164.6
+      p75: 197.5
+      max: 285.0
+      mean: 161.1
+      values:
+        shadow_200_rq7b: 170.1
+        shadow_600: 264.4
+        pioneer_rq2a: 205.0
+        iai_scout: 159.0
+        ruag_ranger_ads95: 285.0
+        aerostar: 220.0
+        bae_phoenix: 175.0
+        primoco_one_150: 150.0
+        elbit_hermes_180: 195.0
+        tai_gozcu: 85.0
+        tekever_ar5: 180.0
+        elbit_hermes_90: 115.0
+        rheinmetall_luna_ng: 110.0
+        tusas_golge: 100.0
+        av_t20: 102.1
+        insitu_rq21a: 61.23
+    mtow_per_kW:
+      n: 14
+      min: 3.036
+      p25: 7.126
+      median: 9.13
+      p75: 9.923
+      max: 13.69
+      mean: 8.629
+      values:
+        shadow_200_rq7b: 6.011
+        shadow_600: 6.819
+        pioneer_rq2a: 10.57
+        iai_scout: 9.692
+        ruag_ranger_ads95: 9.048
+        aerostar: 7.857
+        bae_phoenix: 9.211
+        primoco_one_150: 8.152
+        elbit_hermes_180: 6.882
+        tai_gozcu: 3.036
+        rheinmetall_luna_ng: 10.0
+        tusas_golge: 9.579
+        av_t20: 13.69
+        insitu_rq21a: 10.26
+    specific_power_W_per_N:
+      n: 14
+      min: 7.448
+      p25: 10.28
+      median: 11.17
+      p75: 14.36
+      max: 33.59
+      mean: 13.33
+      values:
+        shadow_200_rq7b: 16.97
+        shadow_600: 14.95
+        pioneer_rq2a: 9.65
+        iai_scout: 10.52
+        ruag_ranger_ads95: 11.27
+        aerostar: 12.98
+        bae_phoenix: 11.07
+        primoco_one_150: 12.51
+        elbit_hermes_180: 14.82
+        tai_gozcu: 33.59
+        rheinmetall_luna_ng: 10.2
+        tusas_golge: 10.65
+        av_t20: 7.448
+        insitu_rq21a: 9.935
+    wing_loading_kg_m2:
+      n: 5
+      min: 53.68
+      p25: 56.1
+      median: 58.56
+      p75: 72.54
+      max: 83.58
+      mean: 64.89
+      values:
+        shadow_200_rq7b: 56.1
+        pioneer_rq2a: 72.54
+        iai_scout: 53.68
+        ruag_ranger_ads95: 83.58
+        aerostar: 58.56
+      source_quality:
+        shadow_200_rq7b: estimate
+        pioneer_rq2a: paper
+        iai_scout: estimate
+        ruag_ranger_ads95: paper
+        aerostar: estimate
+      published_area_only:
+        pioneer_rq2a: 72.54
+        ruag_ranger_ads95: 83.58
+    aspect_ratio:
+      n: 5
+      min: 6.013
+      p25: 8.306
+      median: 9.385
+      p75: 9.561
+      max: 14.97
+      mean: 9.647
+      values:
+        shadow_200_rq7b: 6.013
+        pioneer_rq2a: 9.385
+        iai_scout: 8.306
+        ruag_ranger_ads95: 9.561
+        aerostar: 14.97
+    empty_mass_fraction:
+      n: 8
+      min: 0.455
+      p25: 0.5777
+      median: 0.6
+      p75: 0.6215
+      max: 0.727
+      mean: 0.5979
+      values:
+        shadow_200_rq7b: 0.529
+        pioneer_rq2a: 0.674
+        iai_scout: 0.604
+        ruag_ranger_ads95: 0.727
+        aerostar: 0.455
+        primoco_one_150: 0.6
+        av_t20: 0.594
+        insitu_rq21a: 0.6
+    payload_fraction:
+      n: 16
+      min: 0.0941
+      p25: 0.1625
+      median: 0.2085
+      p75: 0.2475
+      max: 0.289
+      mean: 0.2058
+      values:
+        shadow_200_rq7b: 0.173
+        shadow_600: 0.156
+        pioneer_rq2a: 0.166
+        iai_scout: 0.239
+        ruag_ranger_ads95: 0.158
+        aerostar: 0.227
+        bae_phoenix: 0.286
+        primoco_one_150: 0.2
+        elbit_hermes_180: 0.164
+        tai_gozcu: 0.0941
+        tekever_ar5: 0.278
+        elbit_hermes_90: 0.217
+        rheinmetall_luna_ng: 0.273
+        tusas_golge: 0.15
+        av_t20: 0.222
+        insitu_rq21a: 0.289
+    fuel_fraction:
+      n: 7
+      min: 0.152
+      p25: 0.1585
+      median: 0.2
+      p75: 0.2275
+      max: 0.318
+      mean: 0.206
+      values:
+        shadow_200_rq7b: 0.241
+        pioneer_rq2a: 0.16
+        iai_scout: 0.157
+        ruag_ranger_ads95: 0.152
+        aerostar: 0.318
+        primoco_one_150: 0.2
+        av_t20: 0.214
+      source_quality:
+        shadow_200_rq7b: estimate (volume x density)
+        pioneer_rq2a: estimate (volume x density)
+        iai_scout: paper (from published mass)
+        ruag_ranger_ads95: estimate (volume x density)
+        aerostar: estimate (mass balance / burn rate)
+        primoco_one_150: estimate (mass balance / burn rate)
+        av_t20: estimate (mass balance / burn rate)
+    endurance_h:
+      n: 16
+      min: 2.0
+      p25: 7.375
+      median: 10.0
+      p75: 12.75
+      max: 24.0
+      mean: 10.97
+      values:
+        shadow_200_rq7b: 7.0
+        shadow_600: 12.0
+        pioneer_rq2a: 5.0
+        iai_scout: 7.5
+        ruag_ranger_ads95: 9.0
+        aerostar: 12.0
+        bae_phoenix: 4.0
+        primoco_one_150: 10.0
+        elbit_hermes_180: 10.0
+        tai_gozcu: 2.0
+        tekever_ar5: 20.0
+        elbit_hermes_90: 15.0
+        rheinmetall_luna_ng: 12.0
+        tusas_golge: 10.0
+        av_t20: 24.0
+        insitu_rq21a: 16.0
+    length_to_span:
+      n: 12
+      min: 0.509
+      p25: 0.5825
+      median: 0.693
+      p75: 0.7645
+      max: 0.829
+      mean: 0.674
+      values:
+        shadow_200_rq7b: 0.799
+        pioneer_rq2a: 0.829
+        iai_scout: 0.742
+        ruag_ranger_ads95: 0.807
+        aerostar: 0.6
+        primoco_one_150: 0.753
+        elbit_hermes_180: 0.733
+        tai_gozcu: 0.653
+        tekever_ar5: 0.548
+        rheinmetall_luna_ng: 0.594
+        av_t20: 0.509
+        insitu_rq21a: 0.521
+    span_index_m_per_kg13:
+      n: 16
+      min: 0.7707
+      p25: 0.9029
+      median: 1.031
+      p75: 1.14
+      max: 1.293
+      mean: 1.029
+      values:
+        shadow_200_rq7b: 0.7707
+        shadow_600: 1.064
+        pioneer_rq2a: 0.8734
+        iai_scout: 0.9156
+        ruag_ranger_ads95: 0.8677
+        aerostar: 1.242
+        bae_phoenix: 0.9833
+        primoco_one_150: 0.9128
+        elbit_hermes_180: 1.035
+        tai_gozcu: 0.8529
+        tekever_ar5: 1.293
+        elbit_hermes_90: 1.028
+        rheinmetall_luna_ng: 1.114
+        tusas_golge: 1.077
+        av_t20: 1.22
+        insitu_rq21a: 1.218
+  span_vs_mtow:
+    fit_core_set:
+      a: 1.5549
+      n_exponent: 0.2486
+      r_squared: 0.333
+      sigma_ln: 0.1554
+      n_points: 16
+      aircraft:
+        - shadow_200_rq7b
+        - shadow_600
+        - pioneer_rq2a
+        - iai_scout
+        - ruag_ranger_ads95
+        - aerostar
+        - bae_phoenix
+        - primoco_one_150
+        - elbit_hermes_180
+        - tai_gozcu
+        - tekever_ar5
+        - elbit_hermes_90
+        - rheinmetall_luna_ng
+        - tusas_golge
+        - av_t20
+        - insitu_rq21a
+      equation: b [m] = 1.5549 * m_TO[kg]^0.2486
+      prediction_m:
+        130:
+          central: 5.22
+          minus_1sigma: 4.46
+          plus_1sigma: 6.09
+        150:
+          central: 5.4
+          minus_1sigma: 4.63
+          plus_1sigma: 6.31
+        170:
+          central: 5.57
+          minus_1sigma: 4.77
+          plus_1sigma: 6.51
+    fit_power_class_set:
+      a: 0.43104
+      n_exponent: 0.4839
+      r_squared: 0.629
+      sigma_ln: 0.1337
+      n_points: 10
+      aircraft:
+        - shadow_200_rq7b
+        - shadow_600
+        - pioneer_rq2a
+        - iai_scout
+        - ruag_ranger_ads95
+        - aerostar
+        - bae_phoenix
+        - primoco_one_150
+        - elbit_hermes_180
+        - tai_gozcu
+      equation: b [m] = 0.4310 * m_TO[kg]^0.4839
+      prediction_m:
+        130: 4.54
+        150: 4.87
+        170: 5.17
+      note: >-
+        Power-class subset is dominated by short/medium-endurance tactical designs (4-12 h); it predicts lower
+        spans.
+    fit_core_plus_penguin_b:
+      a: 1.5314
+      n_exponent: 0.2516
+      r_squared: 0.539
+      sigma_ln: 0.1501
+      n_points: 17
+      aircraft:
+        - shadow_200_rq7b
+        - shadow_600
+        - pioneer_rq2a
+        - iai_scout
+        - ruag_ranger_ads95
+        - aerostar
+        - bae_phoenix
+        - primoco_one_150
+        - elbit_hermes_180
+        - tai_gozcu
+        - tekever_ar5
+        - elbit_hermes_90
+        - rheinmetall_luna_ng
+        - tusas_golge
+        - av_t20
+        - insitu_rq21a
+        - penguin_b
+      equation: b [m] = 1.5314 * m_TO[kg]^0.2516
+      note: >-
+        Check with Penguin B (21.5 kg) added: exponent stays near 1/4, so the trend extrapolates consistently down
+        the scale.
+    span_index_by_endurance:
+      endurance_ge_10h:
+        n: 10
+        min: 0.9128
+        p25: 1.042
+        median: 1.095
+        p75: 1.22
+        max: 1.293
+        mean: 1.12
+        values:
+          shadow_600: 1.064
+          aerostar: 1.242
+          primoco_one_150: 0.9128
+          elbit_hermes_180: 1.035
+          tekever_ar5: 1.293
+          elbit_hermes_90: 1.028
+          rheinmetall_luna_ng: 1.114
+          tusas_golge: 1.077
+          av_t20: 1.22
+          insitu_rq21a: 1.218
+      endurance_lt_10h:
+        n: 6
+        min: 0.7707
+        p25: 0.8566
+        median: 0.8705
+        p75: 0.905
+        max: 0.9833
+        mean: 0.8773
+        values:
+          shadow_200_rq7b: 0.7707
+          pioneer_rq2a: 0.8734
+          iai_scout: 0.9156
+          ruag_ranger_ads95: 0.8677
+          bae_phoenix: 0.9833
+          tai_gozcu: 0.8529
+      note: >-
+        Span index b/m^(1/3) separates endurance-optimised designs (>= 10 h) from tactical designs (< 10 h) better
+        than MTOW alone.
+    observation: >-
+      The extended-wing RQ-7B v2 (+43 % span, 4.27 -> 6.1 m) raised endurance from 7 to 9 h at ~23 % higher MTOW:
+      span is the standard lever for endurance in this class.
+  mtow_vs_power:
+    a: 25.065
+    n_exponent: 0.6152
+    r_squared: 0.614
+    sigma_ln: 0.2905
+    n_points: 14
+    aircraft:
+      - shadow_200_rq7b
+      - shadow_600
+      - pioneer_rq2a
+      - iai_scout
+      - ruag_ranger_ads95
+      - aerostar
+      - bae_phoenix
+      - primoco_one_150
+      - elbit_hermes_180
+      - tai_gozcu
+      - rheinmetall_luna_ng
+      - tusas_golge
+      - av_t20
+      - insitu_rq21a
+    equation: m_TO [kg] = 25.065 * P_max[kW]^0.6152
+    prediction_kg:
+      18:
+        central: 148.0
+        minus_1sigma: 111.0
+        plus_1sigma: 198.0
+      19:
+        central: 153.0
+        minus_1sigma: 115.0
+        plus_1sigma: 205.0
+      20:
+        central: 158.0
+        minus_1sigma: 118.0
+        plus_1sigma: 212.0
+  endurance_vs_fuel_fraction:
+    table:
+      shadow_200_rq7b:
+        fuel_fraction: 0.241
+        endurance_h: 7.0
+        E_per_ff_h: 29.01
+        breguet_K_h: 25.35
+        hourly_fuel_fraction_per_h: 0.0345
+        fuel_basis: estimate
+        engine: rotary (Wankel), gasoline
+      pioneer_rq2a:
+        fuel_fraction: 0.16
+        endurance_h: 5.0
+        E_per_ff_h: 31.29
+        breguet_K_h: 28.72
+        hourly_fuel_fraction_per_h: 0.032
+        fuel_basis: estimate
+        engine: two-stroke flat twin, gasoline
+      iai_scout:
+        fuel_fraction: 0.157
+        endurance_h: 7.5
+        E_per_ff_h: 47.7
+        breguet_K_h: 43.84
+        hourly_fuel_fraction_per_h: 0.021
+        fuel_basis: paper
+        engine: piston, gasoline
+      ruag_ranger_ads95:
+        fuel_fraction: 0.152
+        endurance_h: 9.0
+        E_per_ff_h: 59.37
+        breguet_K_h: 54.75
+        hourly_fuel_fraction_per_h: 0.0168
+        fuel_basis: estimate
+        engine: two-stroke twin, gasoline
+      aerostar:
+        fuel_fraction: 0.318
+        endurance_h: 12.0
+        E_per_ff_h: 37.71
+        breguet_K_h: 31.33
+        hourly_fuel_fraction_per_h: 0.0265
+        fuel_basis: estimate
+        engine: two-stroke boxer twin, gasoline, EFI
+      primoco_one_150:
+        fuel_fraction: 0.2
+        endurance_h: 10.0
+        E_per_ff_h: 50.0
+        breguet_K_h: 44.81
+        hourly_fuel_fraction_per_h: 0.02
+        fuel_basis: estimate
+        engine: four-stroke flat four, gasoline, EFI
+      av_t20:
+        fuel_fraction: 0.214
+        endurance_h: 24.0
+        E_per_ff_h: 112.2
+        breguet_K_h: 99.72
+        hourly_fuel_fraction_per_h: 0.00891
+        fuel_basis: estimate
+        engine: four-stroke single, gasoline, EFI
+      penguin_b:
+        fuel_fraction: 0.251
+        endurance_h: 20.0
+        E_per_ff_h: 79.63
+        breguet_K_h: 69.15
+        hourly_fuel_fraction_per_h: 0.0126
+        fuel_basis: estimate
+        engine: small two-stroke, fuel injected (option)
+    groups:
+      two_stroke_or_wankel_tactical:
+        n: 5
+        min: 0.0168
+        p25: 0.021
+        median: 0.0265
+        p75: 0.032
+        max: 0.0345
+        mean: 0.02616
+        values:
+          shadow_200_rq7b: 0.0345
+          pioneer_rq2a: 0.032
+          iai_scout: 0.021
+          ruag_ranger_ads95: 0.0168
+          aerostar: 0.0265
+      four_stroke_or_efi_endurance:
+        n: 3
+        min: 0.00891
+        p25: 0.01076
+        median: 0.0126
+        p75: 0.0163
+        max: 0.02
+        mean: 0.01384
+        values:
+          primoco_one_150: 0.02
+          av_t20: 0.00891
+          penguin_b: 0.0126
+    interpretation: >-
+      Endurance is not a function of fuel fraction alone: at ff ~ 0.15-0.25 the set spans 5-24 h. The hourly fuel
+      fraction ff/E (0.017-0.035 /h for 1980-2000s two-stroke/Wankel tactical types, 0.009-0.020 /h for
+      four-stroke or EFI endurance types) captures engine SFC, L/D and cruise speed together. Use it with the
+      engine's own fuel-flow map (engine.yaml) rather than a single regression.
+  stall_method_calibration:
+    purpose: checks the F15 stall-speed method used to estimate the Aerostar wing area
+    penguin_b:
+      mass_kg: 15.0
+      stall_speed_m_s: 13.0
+      cl_max: 1.7
+      wing_area_from_method_m2: 0.836
+      wing_area_published_m2: 0.79
+      error_percent: 5.81
+    conclusion: >-
+      Method reproduces the published Penguin B area within about +6 %; applied to Aerostar with an assumed CLmax
+      it is good to roughly +/-15-20 %.
+    tag: estimate
+    basis: Penguin B datasheet values (stall 13 m/s at 15 kg with flaps, CLmax 1.7, S 0.79 m2)
+  configuration_census:
+    propulsion_layout: >-
+      pusher in 11 of 13 entries with a verified layout (Shadow 200/600, Pioneer, Scout, Ranger, Aerostar,
+      Primoco, Gozcu, Hermes 90, LUNA NG, GOLGE); tractor only Phoenix (single) and AR5 (twin, wing-mounted).
+      Pusher keeps the nose/belly free for the EO/IR turret and the prop out of the sensor view.
+    tail: >-
+      twin-boom (H or inverted-V) dominates 50-300 kg tactical designs; V-tail (Hermes 90, Gozcu) and tailless
+      delta (GOLGE) appear in newer or low-signature designs.
+    landing_gear: >-
+      No retractable landing gear in any aircraft of this set (all below 300 kg). Runway types use fixed tricycle
+      gear (Shadow, Pioneer, Scout, Aerostar, Primoco, AR5); others use skids (Ranger, Hermes 90, T-20) or none
+      (catapult + parachute/net: Phoenix, Gozcu, LUNA NG, GOLGE, RQ-21A).
+    launch_recovery: >-
+      Runway-only: Aerostar, Primoco, AR5. Catapult + arrested/wheeled landing: Shadow, Pioneer, Scout. Catapult +
+      skid: Ranger, T-20. Catapult + parachute/net: Phoenix, Gozcu, LUNA NG, GOLGE.
+    materials: >-
+      Composite airframes throughout (GFRP/CFRP, Kevlar, Nomex honeycomb; CFRP monocoque on newer types). No
+      metal-skinned airframe found in the class.
+    tag: estimate
+    basis: count of the configuration fields above
+
+# -----------------------------------------------------------------------------------------------------
+# RECOMMENDED TARGET RANGES for an 18-20 kW (Limbach L 275 class) YK-250
+# -----------------------------------------------------------------------------------------------------
+recommended_ranges:
+  basis_engine:
+    class: Limbach L 275 EF class two-stroke boxer twin, 18-20 kW maximum
+    max_power_W:
+      value: 18000.0
+      as_published: 18 kW
+      source: *u_lim_web
+      tag: manufacturer
+      confidence: high
+      note: see ucav250/data/research/engine.yaml; ~16.2 kW max continuous
+    bare_engine_mass_kg: {value: 7.0, as_published: 7 kg, source: *u_ust018_p66, tag: paper, confidence: high}
+    power_range_considered_W: {value: [18000.0, 20000.0], tag: estimate, basis: "task definition (~18-20 kW, L 275 class)"}
+  mtow_kg:
+    min: 125.0
+    nominal: 150.0
+    max: 180.0
+    tag: estimate
+    supporting_numbers:
+      class_median_W_per_N_at_18kW: 144.0
+      class_median_W_per_N_at_20kW: 160.0
+      class_p75_W_per_N_at_18kW: 123.0
+      class_p25_W_per_N_at_20kW: 183.0
+      power_law_fit_at_18_19_20kW:
+        18: 148.0
+        19: 153.0
+        20: 158.0
+    basis: >-
+      Power-class specific power median 12.75 W/N (IQR 11.12-14.92) gives 144.0 kg at 18 kW and 160.0 kg at 20 kW;
+      the MTOW-vs-power fit gives 148.0-158.0 kg. Direct power matches: Primoco 150 kg / 18.4 kW, Scout 159 kg /
+      16.4 kW, Phoenix 175 kg / 19 kW, Pioneer 205 kg / 19.4 kW (short-endurance, high wing loading). Nominal 150
+      kg = 8.3 kg/kW at 18 kW (matches engine.yaml). Above ~180 kg (>= 10 kg/kW) only short-endurance,
+      high-wing-loading 1980s designs exist; keep it as the hard ceiling.
+  span_m:
+    min: 5.5
+    nominal: 6.0
+    max: 6.8
+    tag: estimate
+    basis: >-
+      Core-set trend b = 1.555 m^0.249 gives 5.4 m at 150 kg (1-sigma 4.63-6.31 m). Endurance-optimised types (>=
+      10 h) have b/m^(1/3) = 1.042-1.22 (median 1.095), i.e. 5.54-6.48 m at 150 kg. A 10-14 h engine-limited
+      design belongs in that group; the MALE look also calls for a long slender wing. 6.0 m (index 1.13) is the
+      nominal; 6.8 m is the practical limit for one-piece-per-side transport panels.
+  wing_loading_kg_m2:
+    min: 45.0
+    nominal: 50.0
+    max: 60.0
+    tag: estimate
+    basis: >-
+      Core set 53.68-83.58 kg/m2 (median 58.56; only Pioneer 72.5 and Ranger 83.6 from published areas, the rest
+      estimated); Shadow v2 ~47 (est.). The high values belong to catapult/arrested or skid-landing tactical
+      types. For runway operation with fixed-pitch prop and an engine-limited endurance mission, keep stall speed
+      <= 24 m/s (86 km/h, below Aerostar's published 90 km/h): F15 with CLmax 1.4 (clean, no flap) gives W/S <=
+      50.4 kg/m2, CLmax 1.8 (plain/slotted flap) gives <= 64.8 kg/m2. Nominal 50 kg/m2 -> V_s = 23.1 m/s at CLmax
+      1.5.
+    stall_speed_check_m_s:
+      45_kg_m2:
+        CLmax_1.3: 23.5
+        CLmax_1.5: 21.9
+        CLmax_1.8: 20.0
+      50_kg_m2:
+        CLmax_1.3: 24.8
+        CLmax_1.5: 23.1
+        CLmax_1.8: 21.1
+      55_kg_m2:
+        CLmax_1.3: 26.0
+        CLmax_1.5: 24.2
+        CLmax_1.8: 22.1
+      60_kg_m2:
+        CLmax_1.3: 27.2
+        CLmax_1.5: 25.3
+        CLmax_1.8: 23.1
+  wing_area_m2:
+    min: 2.5
+    nominal: 3.0
+    max: 3.6
+    tag: estimate
+    basis: >-
+      S = MTOW / (W/S): 125 kg / 50 = 2.5 m2 ... 180 kg / 50 = 3.6 m2; nominal 150 / 50 = 3.0 m2. Comparables:
+      Pioneer 2.83, Ranger 3.41, Shadow RQ-7B ~3.0 (est.), Aerostar ~3.8 (est.).
+  aspect_ratio:
+    min: 10.0
+    nominal: 12.0
+    max: 13.0
+    tag: estimate
+    basis: >-
+      Tactical comparables AR 6-9.6 (Shadow RQ-7B ~6 est., Scout ~8.3 est., Pioneer 9.4, Ranger 9.6); endurance
+      types higher (Aerostar ~15 est., Penguin B 13.8). b = 6.0 m with S = 3.0 m2 gives AR 12 and a 0.50 m mean
+      chord (Re ~ 0.9-1.0e6 at 28-30 m/s, sea level). Above AR ~13 the 0.45 m chord makes spar depth, flap/aileron
+      hinge space and ground handling hard at this size.
+  fuel_fraction:
+    min: 0.18
+    nominal: 0.22
+    max: 0.26
+    tag: estimate
+    basis: >-
+      Comparables 0.15-0.32 (median 0.20, several from mass balance). Sanity check: at 150 kg, S = 3.0 m2, AR 12,
+      CD0 0.030-0.040, e 0.75, eta_p 0.72, cruise shaft power is 4.0-4.7 kW at 30 m/s (see consistency_check);
+      adding ~0.6 kW shaft for ~0.4 kW electrical load and using the engine.yaml light-load BSFC of ~540 g/kWh (30
+      % power point; may be worse below) gives ~2.5-3.0 kg/h. 0.22 x 150 = 33 kg (~44 l at 750 kg/m3) gives ~11-13
+      h before reserves.
+  payload_mass_kg:
+    min: 20.0
+    nominal: 27.0
+    max: 35.0
+    tag: estimate
+    basis: >-
+      Payload fraction: core set median 0.2085 (IQR 0.1625-0.2475), power class median 0.1695 -> 24-37 kg at 150
+      kg. Mass balance at 150 kg with empty fraction 0.60 and fuel fraction 0.18-0.26 leaves 21-33 kg, so 20-35 kg
+      is the usable band. Nominal 27 kg = 150 - 90 (empty) - 33 (fuel). Covers a 10-20 kg stabilised EO/IR gimbal
+      plus datalink/mission computer.
+  empty_mass_fraction:
+    min: 0.55
+    nominal: 0.6
+    max: 0.62
+    tag: estimate
+    basis: >-
+      Core-set median 0.6 (range 0.455-0.727). 0.60 x 150 = 90 kg (equal to Primoco One 150's published 90 kg
+      empty mass). Retractable gear (absent in all comparables) would cost ~2-4 % of MTOW and must be paid for
+      from this budget.
+  length_m:
+    min: 3.0
+    nominal: 3.4
+    max: 3.8
+    tag: estimate
+    basis: >-
+      Length/span: core median 0.693; short-span tactical types 0.73-0.83 (Shadow, Pioneer, Scout, Ranger,
+      Primoco, Hermes 180), long-span endurance types 0.51-0.60 (AR5, LUNA NG, T-20, RQ-21A, Aerostar). A
+      MALE-style single fuselage at b = 6.0 m with L/b 0.50-0.63 gives 3.0-3.8 m.
+  height_m: {min: 0.8, nominal: 1.0, max: 1.3, tag: estimate, basis: Comparables 0.66-1.30 m (on gear / skids).}
+  cruise_speed_m_s:
+    min: 25.0
+    nominal: 30.0
+    max: 36.0
+    tag: estimate
+    basis: >-
+      Comparables: 25 m/s (LUNA NG) to 50 m/s (Ranger); endurance types 25-33 m/s. Best-endurance CL ~0.9-1.0 at
+      W/S 50 kg/m2 occurs at 28-30 m/s.
+  endurance_h_expected:
+    min: 10.0
+    nominal: 11.0
+    max: 13.0
+    tag: estimate
+    basis: >-
+      ff 0.22 with hourly fuel fraction 0.017-0.020 /h (2.5-3.0 kg/h at 150 kg; between the tactical and
+      four-stroke endurance groups, appropriate for an EFI two-stroke at light load) -> 11-13 h; ~10 h with a 10 %
+      reserve.
+  service_ceiling_m: {min: 3600.0, nominal: 4500.0, max: 5500.0, tag: estimate, basis: "Comparables 2,750-5,944 m (median ~4,600 m); EFI keeps mixture correct with altitude."}
+  configuration_guidance:
+    - >-
+      Pusher propeller at the rear of a single fuselage keeps the nose/belly EO/IR turret field of view clear (11
+      of 13 comparables are pushers).
+    - >-
+      A V or inverted-V tail on a single fuselage, or a tailless delta (TUSAS GOLGE), gives the UCAV/MALE look;
+      twin booms give the tactical look and are the structurally proven choice in this class.
+    - >-
+      No aircraft in this comparable set (all below 300 kg) uses retractable gear. Fixed tricycle gear (runway) is
+      the class norm; retractable gear is a look/drag choice that must be justified by mass budget.
+    - Composite airframe (GFRP/CFRP with foam or Nomex sandwich) is universal in the class.
+  consistency_check:
+    design_point:
+      mtow_kg: 150.0
+      span_m: 6.0
+      wing_area_m2: 3.0
+      aspect_ratio: 12.0
+      oswald_e: 0.75
+      eta_prop: 0.72
+    cruise_shaft_power:
+      CD0_0.03_h0m_V28:
+        CL: 1.02
+        L_over_D: 15.3
+        shaft_power_W: 3746.6
+      CD0_0.03_h0m_V30:
+        CL: 0.889
+        L_over_D: 15.3
+        shaft_power_W: 3995.4
+      CD0_0.03_h0m_V34:
+        CL: 0.693
+        L_over_D: 14.7
+        shaft_power_W: 4710.6
+      CD0_0.03_h1500m_V28:
+        CL: 1.18
+        L_over_D: 14.9
+        shaft_power_W: 3843.5
+      CD0_0.03_h1500m_V30:
+        CL: 1.03
+        L_over_D: 15.3
+        shaft_power_W: 4017.9
+      CD0_0.03_h1500m_V34:
+        CL: 0.802
+        L_over_D: 15.2
+        shaft_power_W: 4568.9
+      CD0_0.04_h0m_V28:
+        CL: 1.02
+        L_over_D: 13.3
+        shaft_power_W: 4306.9
+      CD0_0.04_h0m_V30:
+        CL: 0.889
+        L_over_D: 13.1
+        shaft_power_W: 4684.4
+      CD0_0.04_h0m_V34:
+        CL: 0.693
+        L_over_D: 12.2
+        shaft_power_W: 5713.6
+      CD0_0.04_h1500m_V28:
+        CL: 1.18
+        L_over_D: 13.2
+        shaft_power_W: 4327.4
+      CD0_0.04_h1500m_V30:
+        CL: 1.03
+        L_over_D: 13.3
+        shaft_power_W: 4613.1
+      CD0_0.04_h1500m_V34:
+        CL: 0.802
+        L_over_D: 12.8
+        shaft_power_W: 5435.3
+    climb_estimate:
+      rate_of_climb_m_s: 4.91
+      basis: >-
+        (P_mcp * eta_climb - P_req * eta_cruise) / W with P_mcp = 16.2 kW (engine.yaml), eta_climb 0.65, P_req =
+        4.6 kW shaft at 30 m/s; sea level.
+    breguet_endurance_estimate_h:
+      V28: 15.7
+      V30: 14.6
+    breguet_basis: >-
+      E = eta_p (L/D) / (c g V) * ln(1/(1-ff)), eta_p 0.72, L/D 13, c = 540 g/kWh (engine.yaml 30 % power point),
+      ff 0.22; no climb, reserve or electrical load (upper bound).
+    conclusion: >-
+      At 150 kg the 18 kW engine runs at ~25-30 % power in cruise, leaving ample climb/hot-high margin; endurance
+      is limited by part-load BSFC and fuel volume, not by power. This supports MTOW up to ~170-180 kg if runway
+      length and climb are verified in sizing.
+    tag: estimate
+    basis: >-
+      parabolic-polar point performance at the nominal design point (inputs in design_point); a cross-check only,
+      not a substitute for the sizing phase
+
+uncertainties:
+  - >-
+    Wing areas are published for only two class members (Pioneer: NPS thesis via UIUC model; Ranger:
+    ru.wikipedia). Shadow RQ-7B (chord from a third-party model), Scout (Ranger chord) and Aerostar (stall-speed
+    method, CLmax assumed 1.5) are estimates (+/-20 %). Wing-loading and AR statistics therefore carry roughly
+    +/-15 % uncertainty.
+  - >-
+    Several manufacturer pages (Textron Systems, Aeronautics, MDPI statistics paper) returned HTTP 403 to
+    automated fetches; Aerostar current-standard values come from a search-engine extract of the manufacturer
+    page.
+  - >-
+    Secondary sources disagree for many types (e.g. Ranger MTOW 275/285 kg and 31.5 kW / 38 hp / 45 CV; Primoco
+    endurance 10/15 h and power 18.4 kW / 20 hp / 25 hp; Hermes 90 MTOW 85/115 kg). The value used is stated with
+    the alternatives in 'note'.
+  - >-
+    Fuel masses for Aerostar, Primoco and T-20 are mass-balance or burn-rate estimates (upper bounds); fuel
+    fraction statistics are therefore indicative.
+  - >-
+    Engine power is unpublished for Tekever AR5, Hermes 90, Integrator and Shadow v2/Block III; these are excluded
+    from power statistics.
+  - >-
+    Military types dominate the class; the YK-250 civil role (EO/IR only) does not change the airframe statistics,
+    but civil certification (e.g. EASA specific category / SORA) may push empty mass up.

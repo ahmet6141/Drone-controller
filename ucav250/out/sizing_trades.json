@@ -1,0 +1,168 @@
+{
+ "propeller": [
+  {
+   "propeller": "aero.yaml#propeller_tables_mejzlik.0164",
+   "model": "Mejzlik 31x12 3B",
+   "endurance_h": 9.58754,
+   "roc_sl_m_s": 4.62285,
+   "takeoff_roll_m": 190.975,
+   "landing_roll_m": 190.329,
+   "loiter_rpm_3000m": 4995.38,
+   "static_thrust_N": 493.083,
+   "static_tip_mach": 0.71214,
+   "ground_z_m": -0.43034,
+   "empty_kg": 101.816,
+   "generator_margin_loiter": 1.42853,
+   "requirements_failed": [
+    "R-02"
+   ],
+   "design": true
+  },
+  {
+   "propeller": "aero.yaml#propeller_tables_mejzlik.0161",
+   "model": "Mejzlik 32x18 2B",
+   "endurance_h": 9.92535,
+   "roc_sl_m_s": 3.90999,
+   "takeoff_roll_m": 215.694,
+   "landing_roll_m": 189.851,
+   "loiter_rpm_3000m": 4277.32,
+   "static_thrust_N": 447.131,
+   "static_tip_mach": 0.714046,
+   "ground_z_m": -0.44235,
+   "empty_kg": 101.735,
+   "generator_margin_loiter": 1.22318,
+   "requirements_failed": [
+    "R-02",
+    "R-05",
+    "R-06",
+    "R-21",
+    "R-26"
+   ],
+   "design": false
+  }
+ ],
+ "endurance_per_0p001_cd_h": -0.115222,
+ "landing_gear": {
+  "retractable": {
+   "mass_kg": 13.663,
+   "endurance_h": 9.58754
+  },
+  "fixed_faired": {
+   "mass_kg": 9.555,
+   "extra_Dq_m2": 0.00514955,
+   "endurance_h": 11.0923
+  },
+  "delta_h_retractable_minus_fixed": -1.50473,
+  "basis": "fixed: components.yaml landing_gear_fixed_tricycle_kg x growth and the faired fixed-gear D/q of the endurance concept study; retractable: SAGITTA legs + doors, residual gap drag (gear up)"
+ },
+ "turret": {
+  "retractable": {
+   "mechanism_kg": 2.1,
+   "endurance_h": 9.58754
+  },
+  "fixed_extended": {
+   "endurance_h": 10.2561,
+   "extra_Dq_transit_m2": 0.00532571
+  },
+  "delta_h_retractable_minus_fixed": -0.668607,
+  "other_reasons": "retracted turret: protected at take-off/landing (gravel, prop debris), clean belly on the ground and in transit, lower RCS/visual signature not claimed"
+ },
+ "wing_span_loading": [
+  {
+   "span_m": 7.2,
+   "stall_speed_target_m_s": 23.9,
+   "area_m2": 3.2259,
+   "aspect_ratio": 16.0699,
+   "wing_kg": 17.2694,
+   "empty_kg": 101.816,
+   "fuel_kg": 28.0843,
+   "ld_max": 16.9533,
+   "endurance_h": 9.58754,
+   "vs_m_s": 23.9063,
+   "takeoff_roll_m": 190.975,
+   "landing_roll_m": 190.329,
+   "outer_panel_m": 2.78,
+   "design": true
+  },
+  {
+   "span_m": 6.8,
+   "stall_speed_target_m_s": 23.9,
+   "area_m2": 3.2309,
+   "aspect_ratio": 14.3118,
+   "wing_kg": 16.648,
+   "empty_kg": 101.27,
+   "fuel_kg": 28.6302,
+   "ld_max": 16.1255,
+   "endurance_h": 9.55797,
+   "vs_m_s": 23.9066,
+   "takeoff_roll_m": 197.422,
+   "landing_roll_m": 186.512,
+   "outer_panel_m": 2.58
+  },
+  {
+   "span_m": 7.6,
+   "stall_speed_target_m_s": 23.9,
+   "area_m2": 3.2273,
+   "aspect_ratio": 17.8973,
+   "wing_kg": 17.9408,
+   "empty_kg": 102.46,
+   "fuel_kg": 27.4402,
+   "ld_max": 17.7216,
+   "endurance_h": 9.53117,
+   "vs_m_s": 23.889,
+   "takeoff_roll_m": 184.993,
+   "landing_roll_m": 193.609,
+   "outer_panel_m": 2.98
+  },
+  {
+   "span_m": 7.2,
+   "stall_speed_target_m_s": 23.0,
+   "area_m2": 3.4767,
+   "aspect_ratio": 14.9107,
+   "wing_kg": 18.0938,
+   "empty_kg": 103.367,
+   "fuel_kg": 26.5333,
+   "ld_max": 16.7639,
+   "endurance_h": 9.06592,
+   "vs_m_s": 22.999,
+   "takeoff_roll_m": 177.88,
+   "landing_roll_m": 178.187,
+   "outer_panel_m": 2.78
+  },
+  {
+   "span_m": 7.2,
+   "stall_speed_target_m_s": 24.5,
+   "area_m2": 3.0739,
+   "aspect_ratio": 16.8646,
+   "wing_kg": 16.7944,
+   "empty_kg": 101.097,
+   "fuel_kg": 28.8033,
+   "ld_max": 17.0292,
+   "endurance_h": 9.73051,
+   "vs_m_s": 24.4951,
+   "takeoff_roll_m": 198.798,
+   "landing_roll_m": 198.398,
+   "outer_panel_m": 2.78
+  }
+ ],
+ "tail_arm": [
+  {
+   "body_stretch_m": -0.1,
+   "body_length_m": 3.92,
+   "volume_h": 0.469347,
+   "empty_kg": 101.804,
+   "endurance_h": 9.57172,
+   "cn_beta": 0.0586376,
+   "static_margin_min": 0.101101
+  },
+  {
+   "body_stretch_m": 0.1,
+   "body_length_m": 4.12,
+   "volume_h": 0.483476,
+   "empty_kg": 101.862,
+   "endurance_h": 9.59467,
+   "cn_beta": 0.0576975,
+   "static_margin_min": 0.100898
+  }
+ ]
+}

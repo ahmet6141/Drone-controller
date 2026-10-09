@@ -430,7 +430,9 @@ def wing_joint() -> dict:
                        "geometry": "CFRP spar stub 30 mm wide x 61 mm high from the outer-panel root rib to y "
                                    f"{Y_TONGUE_TIP} (engagement {YJ - Y_TONGUE_TIP:.3f} m): UD flanges 30 x 10 mm "
                                    "(continuation of the outer-panel main caps, built up 1:20 over 0.10 m from the root "
-                                   "rib), +-45 PW web 5 mm (25 plies), solid [+-45/0/90] boss blocks 30 mm wide x 50 mm long around "
+                                   "rib) to the outer pin, ply drops on the web side to 3 mm at the inner pin and 3 mm "
+                                   "to the tip (outer faces stay on the 61 mm envelope; fix round 2), "
+                                   "+-45 PW web 5 mm (25 plies), solid [+-45/0/90] boss blocks 30 mm wide x 50 mm long around "
                                    "the two pin bores with bonded 4130 bushes 16 H8 x OD 22 x 30 mm; tip closure 3 x 30 "
                                    "deg chamfer (structures.sizing.wing_joint.tongue)",
                        "edge_distance_bush": {"tongue_tip_m": r3(e_tip), "e_over_D": r3(e_tip / BUSH_OD, 3)}},

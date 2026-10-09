@@ -521,7 +521,7 @@ def harness() -> dict:
          "text": "aft equipment bay -> FS3480 ring -> fin root (rudder actuator, fin-tip antenna coax, tail light); "
                  "stabilator actuator leads on the firewall forward face"},
         {"id": "H-ENGINE", "part": "YK250-SY-754", "name": "engine harness", "diameter": 0.020,
-         "path": P([3.280, -0.050, 0.010], [3.600, -0.095, 0.040], [3.700, -0.095, 0.040]),
+         "path": P([3.280, -0.050, 0.010], [3.600, -0.095, -0.0175], [3.700, -0.095, -0.0175]),
          "text": "ECU / generator PE -> firewall fireproof grommets (C-FW-HARN) -> injectors, coils, sensors, SG750 "
                  "(engine side in fire sleeve, >= 50 mm from the exhaust)"},
         {"id": "H-NOSE", "part": "YK250-SY-755", "name": "nose branch", "diameter": 0.012,

@@ -96,11 +96,11 @@ DESIGN = {
                              "across the body); a centre-line rib (rib_panel, solid lands) at y = 0 with the kink "
                              "fitting reacts the chevron kink couple of the main caps into the two spar webs",
                    "web": "frames FS-MS / FS-RS are the box webs inside the body (rib_panel sandwich)",
-                   "kink_fitting": {"material": "al_7075_t651_plate", "plate_t_m": 0.0025, "w_m": 0.040,
+                   "kink_fitting": {"material": "al_7075_t651_plate", "plate_t_m": 0.0020, "w_m": 0.040,
                                     "length_m": 0.10, "tab_h_m": 0.030, "tab_t_m": 0.003, "bolts": 5,
                                     "bolt_d_m": 0.006, "rib_land_plies": 16,
                                     "text": "fix round 2 (VS2-03): one machined 7075 chevron fitting per main cap "
-                                            "(upper and lower) at y = 0: 2.5 mm plate 40 x 100 mm bonded over the cap "
+                                            "(upper and lower) at y = 0: 2.0 mm plate 40 x 100 mm bonded over the cap "
                                             "kink (no fastener through the cap) with a 30 mm tab bolted 5 x M6 Ti "
                                             "through the 16-ply solid land of the centre-line rib; the opposite kink "
                                             "forces of the upper and lower caps form a couple carried by the rib in "
@@ -119,9 +119,17 @@ DESIGN = {
         "tongue": {"flange_material": "cfrp_ud_mtm45_as4", "web_material": "cfrp_pw_mtm45_as4", "width_m": 0.030,
                    "height_m": 0.061, "flange_t_m": 0.010, "web_plies": 25, "boss_length_m": 0.050,
                    "buildup_length_m": 0.10,
-                   "text": "CFRP spar stub 30 x 61 mm: UD flanges 30 x 10 mm (the outer-panel main caps built up 1:20 "
-                           "over 0.10 m from the root rib), +-45 PW web 25 plies (5.0 mm), solid [+-45/0/90] boss blocks "
-                           "30 x 41 x 50 mm (>= 40 % +-45) around the two pin bores with bonded 4130 bushes"},
+                   "flange_taper": {"t_min_m": 0.003,
+                                    "text": "fix round 2 (mass closure): the tongue moment falls linearly from the outer "
+                                            "pin to zero at the inner pin, so each UD flange drops plies linearly from "
+                                            "10 mm at the outer pin to 3 mm at the inner pin (internal ply drops on the "
+                                            "web side, outer flange faces stay on the 61 mm envelope) and stays 3 mm "
+                                            "to the tip; checked at the taper stations (J-TONGUE-TAPER) and against the "
+                                            "1:20 ply-drop rule"},
+                   "text": "CFRP spar stub 30 x 61 mm: UD flanges 30 x 10 mm from the root rib to the outer pin (the "
+                           "outer-panel main caps built up 1:20 over 0.10 m from the root rib), tapered to 3 mm at the "
+                           "inner pin, +-45 PW web 25 plies (5.0 mm), solid [+-45/0/90] boss blocks 30 x 41 x 50 mm "
+                           "(>= 40 % +-45) around the two pin bores with bonded 4130 bushes"},
         "transition": {"length_m": 0.10, "intro_length_m": 0.030, "root_rib_land_plies": 20,
                        "root_bay_skin_doubler_plies_per_face": 1, "root_bay_doubler_faces": "outer",
                        "root_bay_doubler_length_m": 0.12,
@@ -169,12 +177,12 @@ DESIGN = {
                                             "1.6 mm: fails the bumper load; a formed 7075 / thicker 2024 channel cannot "
                                             "meet the bend-radius rule at this width)"},
         "fs3738_lower_segment": {"material": "al_7075_t651_plate", "depth_m": 0.060, "flange_w_m": 0.020,
-                                 "flange_t_m": 0.002, "web_t_m": 0.0025, "span_y_m": 0.30, "keel_bolts": 4,
+                                 "flange_t_m": 0.0016, "web_t_m": 0.0020, "span_y_m": 0.30, "keel_bolts": 4,
                                  "keel_bolt_d_m": 0.005, "end_bolts": 3, "end_bolt_d_m": 0.005,
                                  "replaces": {"material": "al_2024_t3_sheet", "t_m": 0.002, "depth_m": 0.030,
                                               "flange_w_m": 0.020},
                                  "text": "fix round 2 (VS2-03): machined 7075-T651 lower segment of the FS3738 U-ring, "
-                                         "I-section 60 mm deep (flanges 20 x 2 mm, web 2.5 mm) between y +-0.15 (free "
+                                         "I-section 60 mm deep (flanges 20 x 1.6 mm, web 2.0 mm; >= the 1.5 mm CNC minimum) between y +-0.15 (free "
                                          "height to the engine envelope + 10 mm is 150-180 mm there), the aft keel beam "
                                          "bolted to its web (4 x M5 12.9), spliced to the 2024 ring legs at both ends "
                                          "(3 x M5 12.9 each): reacts the tail-bumper keel reaction at FS3738"},
@@ -254,14 +262,14 @@ DESIGN = {
         "core_insert": {"core": "core_rohacell_71wf", "area_m2": 0.12,
                         "text": "ROHACELL 71 WF core in the lower and outboard part of the firewall (y +-0.01..0.25, "
                                 "z 0.02..0.27: lower engine feet and stabilator-node bases), core splice to the 51 WF"},
-        "foot_land": {"core": "core_rohacell_71wf", "core_insert_m": 0.20, "land_plies": 24, "land_r_m": 0.085,
+        "foot_land": {"core": "core_rohacell_71wf", "core_insert_m": 0.20, "land_plies": 22, "land_r_m": 0.085,
                       "core_shear_peak_factor": 1.23,
                       "peak_basis": "fix round 2 (VS2-06): the core shear round the land is not uniform (the nearest "
                                     "edge support draws more of the foot load); peak / mean = 1.23 from the review's "
                                     "plate-shear distribution (structures-2 VS2-06; no own FE), applied to the mean "
                                     "tau = P / (2 pi r d); land radius 66 -> 85 mm to restore the margin",
                       "text": "lower engine-mount feet (F-EMOUNT-LO): the firewall sandwich gets a ROHACELL 71 WF core "
-                              "insert 200 x 200 mm and a solid PW land of 24 plies (4.8 mm, core ramped out 1:3) of radius "
+                              "insert 200 x 200 mm and a solid PW land of 22 plies (4.4 mm, core ramped out 1:3) of radius "
                               "85 mm around each foot; the out-of-plane (x) foot load is carried by plate bending and core "
                               "shear to the firewall perimeter (no longeron at the lower feet)"},
         "plate_support_m": "distance from the foot to the nearest firewall edge support (fuselage contour - inset)",
@@ -1354,6 +1362,33 @@ def check_wing_joint(c: Ctx, R: Rows, sized: dict) -> dict:
           "dış pimde dil UD başlığı, bası gerilmesi (tek yük yolu)", ct, ct_tr, eps * ud["E1"] / 1e6,
           c.f["a_basis"] * float(udm["Fcu"]) / 1e6, "MPa", total_factor(c, comp=True),
           "A-basis estimate 0.85 Fcu (CS-LUAS.613(b)); composite factor 1.2", part="YK250-WG-151")
+    TP = tg.get("flange_taper")
+    if TP:
+        # flange ply drop between the pins: the tongue moment falls linearly from the outer pin (M_t) to zero at the
+        # inner pin (tongue_moment), the flange thickness linearly from tf to t_min; strain at 21 stations + the
+        # 1:20 ply-drop slope (materials processes.composite_moulding)
+        t_min = float(TP["t_min_m"])
+        L_tp = (g["y_out"] - g["y_in"]) / math.cos(sw)
+        w_tp = (0.0, 0.0, 0.0)
+        for f_ in np.linspace(0.0, 0.95, 20):
+            t_q = tf - f_ * (tf - t_min)
+            F_q = (1.0 - f_) * r["M_t"] / (h - t_q) + 0.5 * abs(r["F_y"])
+            e_q = F_q / (ud["E1"] * t_tg * t_q)
+            if e_q > w_tp[0]:
+                w_tp = (e_q, f_, t_q)
+        R.add("J-TONGUE-TAPER", "wing joint", f"tongue UD flange ply drop {tf * 1000:.0f} -> {t_min * 1000:.0f} mm between "
+              f"the pins: compression strain at the taper stations (worst at {w_tp[1] * 100:.0f} % of the pin spacing, "
+              f"flange {w_tp[2] * 1000:.1f} mm)", f"pimler arasında dil UD başlığı kat düşürme {tf * 1000:.0f} -> "
+              f"{t_min * 1000:.0f} mm: inceltme istasyonlarında bası birim şekil değiştirmesi (en kötü pim aralığının "
+              f"%{w_tp[1] * 100:.0f}'inde, başlık {dec(w_tp[2] * 1000, 1)} mm)", ct, ct_tr, w_tp[0] * 1e6,
+              c.dt["cap_comp"] * 1e6, "µε", total_factor(c), "M(y) linear from the outer pin to zero at the inner pin "
+              "(tongue_moment) + F_y/2 axial; STANAG 4703 UL13.1.2 - fix round 2 (mass closure)", part="YK250-WG-151")
+        R.add("J-TONGUE-TAPER-DROP", "wing joint", "tongue flange ply-drop slope (rise / run along the spar) vs the 1:20 "
+              "rule", "dil başlığı kat düşürme eğimi (spar boyunca yükselme / uzunluk), 1:20 kuralı", "geometry",
+              "geometri", (tf - t_min) / L_tp, 1.0 / 20.0, "-", {"fos": 1.0, "special": 1.0, "total": 1.0,
+                                                                  "text": "geometric rule"},
+              "materials.yaml processes.composite_moulding taper_slope_main_load_direction (1:20 minimum)",
+              part="YK250-WG-151", kind="geometry")
     hw = h - 2 * tf
     nw = int(tg["web_plies"])
     crit = web_criteria(c, r["R_in"] / hw, hw, nw)
@@ -2975,6 +3010,20 @@ def firewall_edge_distance(c: Ctx, y: float, z: float) -> float:
     return max(min(y_e - abs(y), abs(z_e - z)) - inset, 0.01)
 
 
+def firewall_cut_fraction(c: Ctx, y0: float, z0: float, r: float) -> float:
+    """Share of the circle of radius r about (y0, z0) on the firewall that lies inside a declared FS3670 cut-out
+    (layout.stations FS3670 cutouts, mirrored ones on both sides): the interrupted part of a core-shear perimeter."""
+    st = [s_ for s_ in c.S["layout"]["stations"] if s_["id"] == "FS3670"][0]
+    th = np.linspace(0.0, 2.0 * math.pi, 1441)[:-1]
+    Y, Zc = y0 + r * np.cos(th), z0 + r * np.sin(th)
+    inside = np.zeros(len(th), bool)
+    for cu in st.get("cutouts", []):
+        for sg in ((1.0, -1.0) if cu.get("mirror") else (1.0,)):
+            ya, yb = sorted((sg * float(cu["y"][0]), sg * float(cu["y"][1])))
+            inside |= (Y >= ya) & (Y <= yb) & (Zc >= float(cu["z"][0])) & (Zc <= float(cu["z"][1]))
+    return float(inside.mean())
+
+
 def check_frames(c: Ctx, R: Rows, ct: dict, em: dict) -> dict:
     """Frames and bulkheads where concentrated loads enter (fix round 1, S1-06): FS-GEAR / FS-RS at the gear-beam ends
     (web shear at the end clips, clip bolts), the well-roof deck under the gear side load, FS-MS / FS-RS outside the CT
@@ -3083,12 +3132,15 @@ def check_frames(c: Ctx, R: Rows, ct: dict, em: dict) -> dict:
              f"E-FOOT), destek levhası {float(bp[0]) * 1000:.0f} x {float(bp[1]) * 1000:.0f} mm (c {c_bp * 1000:.0f} mm), "
              f"bant r {r_l * 1000:.0f} mm, kenar desteği {a_s * 1000:.0f} mm")
     kpk = float(fland.get("core_shear_peak_factor", 1.0))
+    # fix round 2: a firewall cut-out crossing the land-edge circle interrupts the core-shear perimeter
+    f_cut = firewall_cut_fraction(c, yf, zf, r_l)
     R.add("FW-FOOT-CORE", "frames", f"firewall sandwich at the lower foot: peak core shear at the land edge "
-          f"({core['name']} insert; peak / mean {kpk:.2f})", f"alt ayakta yangın perdesi sandviçi: bant kenarında en "
-          f"büyük çekirdek kesmesi ({core['name']} parçası; tepe / ortalama {dec(kpk)})", cs,
-          cs_tr, kpk * P / (2 * math.pi * r_l * d_s) / 1e6, float(core["Fsu"]) / 1e6, "MPa", fu,
-          "tau_peak = k P / (2 pi r d), k from the plate-shear distribution (fix round 2, VS2-06); core minimum value",
-          part="FS3670")
+          f"({core['name']} insert; peak / mean {kpk:.2f}; {f_cut * 100:.1f} % of the edge circle in cut-outs)",
+          f"alt ayakta yangın perdesi sandviçi: bant kenarında en büyük çekirdek kesmesi ({core['name']} parçası; "
+          f"tepe / ortalama {dec(kpk)}; kenar çemberinin %{dec(f_cut * 100, 1)}'i kesiklerde)", cs,
+          cs_tr, kpk * P / (2 * math.pi * r_l * (1.0 - f_cut) * d_s) / 1e6, float(core["Fsu"]) / 1e6, "MPa", fu,
+          "tau_peak = k P / (2 pi r (1 - f_cut) d), k from the plate-shear distribution (fix round 2, VS2-06), f_cut = "
+          "share of the land-edge circle inside the FS3670 cut-outs; core minimum value", part="FS3670")
     M_l = ST.plate_central_patch_moment(P, r_l, c_bp)
     R.add("FW-FOOT-LAND", "frames", f"firewall solid land ({int(fland['land_plies'])} plies, {t_l * 1000:.1f} mm) bending "
           "at the backing plate", f"yangın perdesi dolu bandı ({int(fland['land_plies'])} kat, {dec(t_l * 1000, 1)} mm) "
@@ -3941,7 +3993,14 @@ def mass_tally(c: Ctx, sized: dict) -> dict:
     bl = float(tg["boss_length_m"])
     OD, ID = float(bu["od_m"]), float(bu["id_m"])
     v_fl = 2 * wt * tf * L_eng
+    TPm = tg.get("flange_taper")
+    if TPm:                                     # flange ply drop between the pins (fix round 2, mass closure)
+        py_ = sorted(float(p_["position"][1]) for p_ in WJ["main_spar"]["pins"])
+        t_m = float(TPm["t_min_m"])
+        v_fl = 2 * wt * (tf * (yj - py_[-1]) + 0.5 * (tf + t_m) * (py_[-1] - py_[0]) + t_m * (py_[0] - y_tip))
     v_web = hw_ * t_web * L_eng
+    if TPm:                                     # the web fills the depth freed by the thinner flanges
+        v_web += 2 * t_web * (tf - t_m) * (0.5 * (py_[-1] - py_[0]) + (py_[0] - y_tip))
     v_boss = 2 * (wt - t_web) * hw_ * bl - 2 * math.pi / 4 * OD ** 2 * wt
     t_cap0 = cap_plies_at(caps, yj + 0.001) * t_ud
     v_bu = 2 * wt * max(tf - t_cap0, 0.0) / 2 * float(tg["buildup_length_m"])
@@ -4355,7 +4414,9 @@ def interface_checks(S: dict, D: dict) -> list:
     chk("I-TONGUE", "layout tongue: CFRP, flange and web thickness = structures.sizing.wing_joint.tongue",
         wj["main_spar"]["tongue"].get("material") == tg["flange_material"] and
         f"30 x {tg['flange_t_m'] * 1000:.0f} mm" in tg_txt and
-        f"web {int(tg['web_plies']) * 0.20066:.0f} mm" in tg_txt)
+        f"web {int(tg['web_plies']) * 0.20066:.0f} mm" in tg_txt and
+        (not tg.get("flange_taper") or
+         f"to {tg['flange_taper']['t_min_m'] * 1000:.0f} mm at the inner pin" in tg_txt))
     chk("I-FORK", "layout fork: CFRP prongs and pads = structures.sizing.wing_joint.fork",
         f"webs {int(fk['prong_plies']) * 0.20066:.0f} mm" in fk_txt and
         f"padded up to {fk['prong_pad_t_m'] * 1000:.0f} mm" in fk_txt and

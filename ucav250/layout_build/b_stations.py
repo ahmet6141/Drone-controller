@@ -182,8 +182,10 @@ def stations() -> list:
              "above it, keep-out KO-COOLING-DUCT exit_section)", [-0.090, 0.090], [0.238, 0.311]),
          cut("C-FW-FUEL", "fuel feed/return (fireproof bulkhead unions + fire sleeve)", [0.030, 0.060],
              [0.020, 0.050]),
-         cut("C-FW-HARN", "engine harness / SG750 power (fireproof grommets)", [0.080, 0.110], [0.020, 0.060],
-             mirror=True),
+         cut("C-FW-HARN", "engine harness / SG750 power (fireproof grommets; fix round 2: lowered below the "
+             "lower engine-mount feet so that the 85 mm solid land around each foot keeps an uninterrupted core-shear "
+             "perimeter, structures FW-FOOT-CORE; corners >= inset + 20 mm edge band)", [0.080, 0.110],
+             [-0.035, 0.000], mirror=True),
          cut("C-FW-PUSHROD", "stabilator pushrods (fireproof bellows boots)", [0.165, 0.195], [0.215, 0.262],
              mirror=True)],
         mat={"material": "cfrp_pw_mtm45_as4", "process": "prepreg_ooa_vacbag", "layup": "rib_panel", "t": 0.0148,
@@ -204,8 +206,8 @@ def stations() -> list:
                              "processes.sheet_metal_aluminium: the flat part of each flange is 6 mm, so the lower "
                              "cowl Camloc receptacles are on separate 7075 land clips riveted to the web); no "
                              "composite inside the engine-bay hot-zone keep-out; fix round 2 (VS2-03): the bottom of "
-                             "the U between y -0.15 and +0.15 is a machined 7075-T651 lower segment (I 60 x 20 x 3 / "
-                             "2.5 mm, structures.sizing.body.fs3738_lower_segment; 150-180 mm free height to the engine "
+                             "the U between y -0.15 and +0.15 is a machined 7075-T651 lower segment (I 60 x 20 x 1.6 / "
+                             "2.0 mm, structures.sizing.body.fs3738_lower_segment; 150-180 mm free height to the engine "
                              "envelope + 10 mm there) carrying the tail-bumper keel reaction; the aft keel beam is "
                              "bolted to its web (4 x M5), the 2024 legs are spliced to its ends (3 x M5 each)",
              "lower_segment": {"y": [-0.150, 0.150], "depth_m": 0.060, "material": "al_7075_t651_plate",

@@ -1165,6 +1165,16 @@ def wing_structure(S: dict, af: Airframe, m0: float, n_lim: float) -> dict:
     S_wet = 2 * af.exposed_area(af.wing_mesh)
     skins = S_wet * am["wing_skin"]
     joints = 2 * float(S["structures"]["outer_panel_joint_kg"])
+    # structures phase: the bottom-up masses of the sized spar caps, webs, rear spar and outer-panel joint hardware
+    # (and the thicker upper box-skin core) replace the concept-model terms (spec.structures.sizing.mass.wing,
+    # ucav250.analysis.structures)
+    smw = ((S["structures"].get("sizing") or {}).get("mass") or {}).get("wing")
+    basis = "concept model"
+    if smw:
+        caps, webs, rear = float(smw["caps_kg"]), float(smw["webs_kg"]), float(smw["rear_spar_kg"])
+        joints = float(smw["joints_kg"])
+        skins += float(smw.get("skins_add_kg", 0.0))
+        basis = "structures phase (structures.sizing.mass.wing)"
     sub = caps + webs + rear + ribs + skins + joints
     total = sub * 1.05
     i_g = int(np.argmin(np.where((y >= y_p[0]) & (y < yj), h_eff, np.inf)))
@@ -1173,7 +1183,8 @@ def wing_structure(S: dict, af: Airframe, m0: float, n_lim: float) -> dict:
             "M_junction_ult_Nm": float(np.interp(yj, y, Ms)), "A_cap_root_mm2": float(A_cap[0] * 1e6),
             "h_eff_root_m": float(h_eff[0]), "h_eff_glove_min_m": float(h_eff[i_g]),
             "A_cap_glove_max_mm2": float(A_cap[i_g] * 1e6), "y_glove_min_depth": float(y[i_g]),
-            "n_ult": fos * n_lim, "spar_cap_allowable_Pa": alw["spar_cap_Pa"], "schrenk_basis": "reference trapezoid"}
+            "n_ult": fos * n_lim, "spar_cap_allowable_Pa": alw["spar_cap_Pa"], "schrenk_basis": "reference trapezoid",
+            "mass_basis": basis}
 
 
 def tail_structure(S: dict, af: Airframe) -> dict:
@@ -1187,6 +1198,9 @@ def tail_structure(S: dict, af: Airframe) -> dict:
         spar = n * pp["span"] * (2 * 30e-6 * alw["rho_ud"] + 0.6e-3 * 0.05 * alw["rho_pw"])
         ribs = n * 5 * 0.004 * am["rib"]
         fit = n * float(v["fittings_kg"])
+        smt = ((S["structures"].get("sizing") or {}).get("mass") or {}).get("tail") or {}
+        if k == "stabilator" and "stabilator_fittings_kg_each" in smt:
+            fit = n * float(smt["stabilator_fittings_kg_each"])     # structures phase: spindle + root socket
         tot = (S_wet * am["tail_skin"] + spar + ribs + fit) * 1.05
         out[k] = {"total": tot, "S_wet": S_wet, "skins": S_wet * am["tail_skin"], "spar": spar, "fittings": fit}
     return out
@@ -1490,7 +1504,7 @@ def drag_items(S: dict, af: Airframe, V: float, h: float, cfg: dict, ff_ratio: f
         f_exp = min(max((zs - (P["ball_center_extended_z"] - d_b / 2)) / d_b, 0.0), 1.0)
         a_ball = math.pi / 4 * d_b ** 2 * (0.5 * (1 - math.cos(math.pi * f_exp)))    # exposed share of the disc
         base = max(zs - (P["ball_center_extended_z"] + d_b / 2), 0.0)
-        # open bay around the lowered ball (doors folded inward): cavity drag on the open area at the skin plane;
+        # open bay around the lowered ball (doors slid open inside the belly): cavity drag on the open area at the skin plane;
         # with the aperture ring (payload.turret.bay.aperture_ring) only the annulus between the ring and the ball
         # section at the skin plane is open
         hw = P["growth_envelope"]["diameter"] / 2 + 0.01
@@ -2556,13 +2570,15 @@ class Flight:
                         lo_, hi_ = (mid, hi_) if state(V, T, mid, rot_download(V, T, mid, thdd), thdd)[0] > 0.0 \
                             else (lo_, mid)
                     th_l = hi_
+                    # V5-03: lift-off time inside the step (attitude linear in time over the step)
+                    f_step = min(max((th_l - th) / (th_cmd - th), 0.0), 1.0) if th_cmd - th > 1e-12 else 1.0
                     Ft_l = rot_download(V, T, th_l, thdd)
                     N_l, M_l, L_l, q_l = state(V, T, th_l, Ft_l, thdd)
                     Ft_trim = trim_download(V, T, th_l, thdd)
                     rot["download_margin_min_N"] = min(rot["download_margin_min_N"], Ft_cap - Ft_l)
                     lof = {"V": V, "theta": th_l, "Ft": Ft_l, "CL": CL0 + CLa * th_l, "T": T, "N": N_l, "M": M_l,
                            "Ft_trim": Ft_trim, "L": L_l, "thdd": thdd, "thd": thd_new, "I_eff": I_eff(th_l),
-                           "residual": abs(M_l - I_eff(th_l) * thdd)}
+                           "residual": abs(M_l - I_eff(th_l) * thdd), "t_from_V_R": t - t_r + f_step * dt}
                     break
                 th, thd = th_cmd, thd_new
                 rot["download_margin_min_N"] = min(rot["download_margin_min_N"], margin)
@@ -2605,7 +2621,7 @@ class Flight:
                 "CL_wb_lof": CL_wb, "CL_available_lof": lof["CL"], "T_static_N": self.prop.wot(0.0, h)["T"],
                 "T_lof_N": lof["T"], "air_distance_15m_m": s_air, "distance_15m_m": s + s_air,
                 "climb_gradient": math.sin(gam), "CL_ground": CLg, "flap_deg": fl["delta_deg"], "x_cg": x_cg,
-                "z_cg": z_cg, "mass_kg": m, "rotation_time_s": t - t_r, "rotation_rate_deg_s": D_(th_rate),
+                "z_cg": z_cg, "mass_kg": m, "rotation_time_s": lof["t_from_V_R"], "rotation_rate_deg_s": D_(th_rate),
                 "rotation": {"download_at_V_R_N": Ft_R, "download_max_at_V_R_N": Ft_R,
                              "download_at_lof_N": lof["Ft"], "trim_download_at_lof_N": lof["Ft_trim"],
                              "download_continuity_at_lof_N": lof["Ft"] - lof["Ft_trim"],
@@ -2618,6 +2634,8 @@ class Flight:
                              "nose_wheel_recontact_steps": rot["nose_wheel_recontact_steps"],
                              "pitch_inertia_I_yy_kg_m2": I_cg, "pitch_inertia_about_C_eff_at_V_R_kg_m2": I_eff(th_g),
                              "spin_up_time_s": t_sp if dynamic else 0.0, "spin_up_pitch_accel_deg_s2": D_(thdd_s),
+                             "time_step_s": dt,
+                             "spin_up_complete_before_lof": bool(dynamic and lof["t_from_V_R"] >= t_sp - 1e-9),
                              "spin_up_moment_at_V_R_Nm": I_eff(th_g) * thdd_s,
                              "pitch_rate_at_lof_deg_s": D_(lof["thd"]), "pitch_accel_at_lof_deg_s2": D_(lof["thdd"]),
                              "V_R_without_pitch_inertia_m_s": V_R_qs},
@@ -3105,7 +3123,7 @@ def turret_checks(S: dict, af: Airframe, fov: bool = True) -> dict:
     payload.turret.aperture_radius) are traced along the line of sight; a direction counts as clear only if every ray
     clears the body OML (the open bay cavity is not solid; its walls are), the wing incl. the LERX (both sides), the
     tail surfaces incl. the ventral fin and bumper, the propeller disc and the retracted gear (inside the OML). The bay
-    doors fold inward along the bay walls (no obstruction below the skin)."""
+    doors slide sideways inside the belly, outboard of the bay walls (layout phase; no obstruction below the skin)."""
     P = S["payload"]["turret"]
     xc = float(P["bay_center_x"])
     z_ret = float(P["ball_center_retracted_z"])
@@ -4006,6 +4024,9 @@ def packaging(S: dict, af: Airframe, mass_c: list) -> dict:
     return out
 
 
+SPINDLE_ROUNDING_GUARD = 1e-5   # m, spec storage resolution at the spindle station (see stab placement)
+
+
 def stab_spindle_check(S: dict, af: Airframe) -> dict:
     """Stabilator stub spindles (bearing housings of radius spindle_housing_radius), starboard (port mirrored):
     ahead of the cylinder/head envelope with the clearance, inboard end clear of the crankcase/SG750 envelope, the
@@ -4212,11 +4233,14 @@ def build_geometry(S: dict) -> None:
     C["ac_mac_fraction_range"] = band
     hp["pivot_mac_fraction"] = band[0]
     # (2) two stub spindles (no cross-tube: the crankcase/SG750 fills the centre of the bay behind the firewall),
-    #     each in an inboard bearing in an engine-bay ring frame beside the SG750 and an outboard bearing in the fixed
+    #     each in an inboard bearing in the firewall-mounted node fitting (layout) and an outboard bearing in the fixed
     #     root stub; the spindle station is as far aft as the cylinders allow (longest tail arm) and the panel root
     #     leading edge follows from it
+    #     (+ SPINDLE_ROUNDING_GUARD: the spec stores 6 significant digits, i.e. 10 um at x ~ 3.7 m, so a spindle placed
+    #     exactly at the clearance could read up to ~5 um short after the spec round trip; layout phase)
     x_piv_max = engine_cylinder_front_x(S, float(TS["stabilator"]["pivot"][2])) - \
-        (float(hp["spindle_housing_radius"]) + float(hp["spindle_engine_clearance"])) / math.cos(_cyl_eps(S))
+        (float(hp["spindle_housing_radius"]) + float(hp["spindle_engine_clearance"]) + SPINDLE_ROUNDING_GUARD) / \
+        math.cos(_cyl_eps(S))
     hp["x_le_root"] = round(float(hp["x_le_root"]) + x_piv_max - stab_panel(hp)["x_pivot"], 5)
     sp = stab_panel(hp)
     x_piv = sp["x_pivot"]
@@ -4440,9 +4464,9 @@ def layout_zones(S: dict, af: Airframe, gp: dict) -> dict:
     zones["stabilator_spindle"] = {"box": _round([[pv[0] - r_s, y_sp, pv[2] - r_s], [pv[0] + r_s, pv[1], pv[2] + r_s]]),
                                    "symmetric": True, "clearance": 0.0,
                                    "content": "two stabilator stub spindles (starboard box shown, port mirrored): inboard "
-                                              "bearing in the engine-bay ring frame beside the crankcase/SG750, outboard "
-                                              "bearing in the fixed root stub; ahead of the cylinders; checked by "
-                                              "stab_spindle_check"}
+                                              "bearing in the firewall-mounted stabilator node fitting (layout "
+                                              "F-SPINDLE-NODE, layout phase VPK-01), outboard bearing in the fixed root "
+                                              "stub; ahead of the cylinders; checked by stab_spindle_check"}
     return {"zones": zones, "x_spar_main_0": x_f0, "x_spar_rear_0": x_r0, "z_box": z_box, "h_box": h_box,
             "x_pivot_nose": float(ngl["pivot"][0]), "z_pivot_nose": float(ngl["pivot"][2]), "turret": tg}
 
@@ -4601,31 +4625,56 @@ def mass_items(S: dict, af: Airframe, wing_m: dict, tail_m: dict, shell: dict, l
     add("flight_termination_lights", "systems", 0.15 + 3 * 0.083, 0.6 * av[0] + 0.4 * x_mac40, 0.02,
         "independent FTS 0.15 + 3 x AveoFlash 0.083 (components.yaml recovery_and_safety)")
     add("turret_lift_mechanism_doors", "systems", MR["turret_mechanism_kg"], tb[0], tb[2] + 0.06,
-        "ball-screw linear stage + BLDC/brake 0.45, guide rails/carriage 0.35, two bay doors + linkage 0.30, bay "
-        "liner/frame 0.40, controller/sensors 0.10" + (" + HD59 aperture ring 0.06 (flush skin insert)" if
-                                                      S["payload"]["turret"]["bay"].get("aperture_ring") else "") +
-        " (estimate, no catalogue unit)")
+        "ball-screw linear stage + BLDC/brake 0.45, guide rails/carriage 0.35, two sliding bay doors 0.122 (2 x "
+        "0.0223 m2 x 2.733 kg/m2, the gear-door areal mass) + their drives 0.304 (layout phase: one Volz DA 22 per "
+        "door, 2 x 0.132 kg datasheet, + pinions, racks and door rails 0.04), bay liner/frame 0.40, controller/sensors "
+        "0.10" + (" + HD59 aperture ring 0.06 (flush skin insert)" if
+                  S["payload"]["turret"]["bay"].get("aperture_ring") else "") +
+        " (estimate, no catalogue unit except the DA 22)")
+    smc = ((S["structures"].get("sizing") or {}).get("mass") or {}).get("chassis") or {}
+    st_note = " + structures phase (structures.sizing.mass.chassis)"
     keel_L = 0.82 * af.L
-    add("keel_beams_longerons", "chassis", 2 * keel_L * 0.20, 0.5 * af.L, -0.05,
-        "2 CFRP hat-section keel beams 0.20 kg/m (endurance study)")
-    add("frames_bulkheads", "chassis", MR["frames_kg"], 0.47 * af.L, 0.0, "13 sandwich frames/bulkheads (estimate, "
-        "endurance study 0.16 kg each, larger lifting-body sections)")
-    add("wing_carry_through_box_fittings", "chassis", MR["carry_through_kg"], 0.5 * (x_f0 + x_r0), P["z_root"],
-        "spar-cap carry-through box, root fittings, 7075 lugs and Ti pins (estimate, endurance 1.2 kg + gear loads)")
+    add("keel_beams_longerons", "chassis", 2 * keel_L * 0.20 + float(smc.get("keel_beams_longerons_add_kg", 0.0)),
+        0.5 * af.L, -0.05, "2 CFRP hat-section keel beams 0.20 kg/m (endurance study)" +
+        (f"{st_note}: central well web M-WELLKEEL + machined 7075 aft keel "
+         f"{float(smc['keel_beams_longerons_add_kg']):+.3f} kg" if "keel_beams_longerons_add_kg" in smc else ""))
+    add("frames_bulkheads", "chassis", MR["frames_kg"] + float(smc.get("frames_bulkheads_add_kg", 0.0)), 0.47 * af.L,
+        0.0, "13 sandwich frames/bulkheads (estimate, endurance study 0.16 kg each, larger lifting-body sections)" +
+        (f"{st_note}: firewall lower-foot solid lands + ROHACELL 71 WF core insert "
+         f"{float(smc['frames_bulkheads_add_kg']):+.3f} kg" if "frames_bulkheads_add_kg" in smc else ""))
+    add("wing_carry_through_box_fittings", "chassis", float(smc.get("carry_through_kg", MR["carry_through_kg"])),
+        0.5 * (x_f0 + x_r0), P["z_root"],
+        ("structures phase bottom-up (structures.sizing.mass.chassis.carry_through_kg): sandwich box covers, web "
+         "doublers, CFRP joint forks (glove webs, pin pads, cap widening, 4130 bushes), Ti main pins, rear-spar slot "
+         "fittings and pins, kink fitting; the spar caps of the box are in the wing item" if "carry_through_kg" in smc else
+         "spar-cap carry-through box, root fittings, 7075 lugs and Ti pins (estimate, endurance 1.2 kg + gear loads)"))
     add("main_gear_frame_trunnions_side_braces", "chassis", MR["main_trunnion_kg"], gp["x_mg"], gp["z_trunnion"],
         "gear frame (sandwich bulkhead pair) + 2 x 7075 trunnion fittings + side-brace/EMA mounts (estimate)")
-    add("nose_gear_trunnion_fitting", "chassis", 0.30, x_pn, z_pn, "endurance study")
+    add("nose_gear_trunnion_fitting", "chassis", float(smc.get("nose_pivot_fitting_kg", 0.30)), x_pn, z_pn,
+        "structures phase bottom-up (structures.sizing.mass.chassis.nose_pivot_fitting_kg): two 7075 pivot blocks, "
+        "flanged bushings, hollow 4130 pivot pin" if "nose_pivot_fitting_kg" in smc else "endurance study")
     add("engine_mount_4130", "chassis", 0.60, xh - 0.28, zt, "endurance study (4130 truss + isolator ring)")
-    add("parachute_attach_fitting", "chassis", 0.35, pc[0], pc[2], "endurance study (riser attach fitting on the "
-        "parachute-bay frame)")
+    add("parachute_attach_fitting", "chassis", float(smc.get("parachute_spine_fittings_kg", 0.35)), pc[0], pc[2],
+        "structures phase bottom-up (structures.sizing.mass.chassis.parachute_spine_fittings_kg): CFRP dorsal spine "
+        "channel M-SPINE with pads, two 7075 U-lug bridle fittings, shackle pins, frame lands"
+        if "parachute_spine_fittings_kg" in smc else "endurance study (riser attach fitting on the parachute-bay frame)")
     add("turret_bay_frame_guides", "chassis", MR["turret_bay_frame_kg"], tb[0], tb[2], "estimate: cut-out frame + "
         "linear-guide mounts around the 0.22 m belly opening")
-    add("floors_trays_rails", "chassis", 1.20, 1.4, -0.02, "endurance study")
+    add("floors_trays_rails", "chassis", 1.20 + float(smc.get("floors_trays_rails_add_kg", 0.0)), 1.4, -0.02,
+        "endurance study" + (f"{st_note}: well-roof layup fuel_floor_wellroof + mission-bay floor stiffener "
+                             f"{float(smc['floors_trays_rails_add_kg']):+.3f} kg" if "floors_trays_rails_add_kg" in smc
+                             else ""))
     add("hatch_frames_quick_access_fasteners", "chassis", MR["hatch_frames_kg"], 1.5, 0.08, "endurance study 0.80 + "
         "belly payload hatch and turret-bay frame lands (estimate)")
     add("fuel_bay_liners_supports", "chassis", 0.45, fuel_x, 0.05, "endurance study 0.40 + saddle cell")
-    add("stabilator_spindle_bearing_housings", "chassis", 0.40, pv[0], pv[2], "estimate: two stub spindles "
-        "(no cross-tube) + 2 bearing housings per side (engine-bay ring frame beside the SG750 and root-stub rib)")
+    add("stabilator_spindle_bearing_housings", "chassis",
+        float(smc.get("stabilator_spindle_bearing_housings_kg", 0.40)), pv[0], pv[2],
+        "structures phase bottom-up (structures.sizing.mass.chassis): two machined 7075 stabilator node fittings "
+        "(firewall-mounted: inboard bearing boss, stub root cheek) + 4 bearings 61805-ZZ (the Ti spindles and root "
+        "sockets are in the stabilator fittings; concept estimate 0.40 kg for spindles + housings)"
+        if "stabilator_spindle_bearing_housings_kg" in smc else
+        "estimate: two stub spindles (no cross-tube) + 2 bearing housings per side (firewall-mounted node fitting "
+        "and root-stub rib)")
     add("fin_ventral_root_fittings", "chassis", 0.30, fin_pp["x_le_mac"], 0.05, "estimate")
     add("body_skin_sandwich", "shell", shell["skin"], shell["x_c"], shell["z_c"],
         f"exposed body wetted area {shell['S_wet_exposed']:.2f} m2 x secondary sandwich {am['shell']:.2f} kg/m2")
@@ -4665,6 +4714,21 @@ def apply_mass_placement(S: dict, I: list) -> None:
         x, y, z = (float(v) for v in p["position"])
         it.update({"x": round(x, 4), "y": round(y, 4), "z": round(z, 4),
                    "basis": it["basis"] + "; position: layout.mass_placement (layout phase)"})
+
+
+def stretch_mass_placement(S: dict, x_plug: float, d: float) -> None:
+    """Body-stretch trade (layout phase): a plug of length ``d`` inserted at ``x_plug`` moves every layout-placed
+    component aft of the plug by ``d``; each ``layout.mass_placement`` position moves by ``d`` x the mass fraction of
+    its components aft of the plug (the whole item when it lists no components)."""
+    mp = (S.get("layout") or {}).get("mass_placement") or {}
+    for v in mp.values():
+        comps = [c for c in (v.get("components") or []) if "at" in c and "fraction" in c]
+        if comps:
+            tot = sum(float(c["fraction"]) for c in comps)
+            share = sum(float(c["fraction"]) for c in comps if float(c["at"][0]) >= x_plug) / max(tot, 1e-12)
+        else:
+            share = 1.0 if float(v["position"][0]) >= x_plug else 0.0
+        v["position"] = [float(v["position"][0]) + d * share] + [float(q) for q in v["position"][1:]]
 
 
 BASELINE_PAYLOAD_ITEMS = ("eo_ir_turret_hd59_mount", "mission_computer_recorder", "payload_tray_harness")
@@ -4814,6 +4878,7 @@ def landing_gear_block(S: dict, gp: dict, lz: dict) -> None:
 
 
 AREA_DEADBAND = 0.004            # m2: wing-area updates below this are not applied (closure convergence)
+WING_DEADBAND = 4e-4          # m, wing-station convergence band of the design closure (not nudged inside it)
 SM_CLOSURE_MARGIN = 0.001        # static-margin closure target above aero.stability_rules.sm_min (convergence band)
 TAIL_DEADBAND = 0.004            # tail SHRINK updates below 0.4 % are not applied (growth is always applied: V1-11)
 TAIL_OVERSHOOT = 0.002           # a needed tail growth is applied in full + 0.2 % (lands on the safe side of the rule)
@@ -4981,13 +5046,17 @@ def design_closure(S_in: dict, verbose: bool = True, max_iter: int = 30) -> dict
         # iterations equal within 5 g / 0.1 mm); the wing-station step is halved when it changes sign (no 2-cycle)
         same = len(hist) > 1 and abs(hist[-1]["fuel"] - hist[-2]["fuel"]) < 0.005 and \
             abs(hist[-1]["x_c4_root"] - hist[-2]["x_c4_root"]) < 1e-4
-        done = abs(dx) < 4e-4 and abs(d_mg) < 1.5e-3 and dS == 0.0 and f_h == 1.0 and f_v == 1.0 and same
+        done = abs(dx) < WING_DEADBAND and abs(d_mg) < 1.5e-3 and dS == 0.0 and f_h == 1.0 and f_v == 1.0 and same
         hist[-1]["converged"] = bool(done)
         if done and it > 1:
             break
         relax = 0.5 if (len(hist) > 1 and hist[-2]["d_sm"] * dx < 0.0) else 0.85
         hist[-1]["relax"] = relax
-        S["wing"]["planform"]["x_c4_root"] = round(S["wing"]["planform"]["x_c4_root"] + relax * dx, 5)
+        # dead band (fix round 1 of the layout / structures phase): inside the 0.4 mm convergence band the wing station
+        # is not nudged any more, so that the layout <-> sizing loop (station positions rounded to 0.1 mm feed the mass
+        # placement) reaches a fixed point instead of a rounding 2-cycle; SM_CLOSURE_MARGIN covers the band
+        if abs(dx) >= WING_DEADBAND:
+            S["wing"]["planform"]["x_c4_root"] = round(S["wing"]["planform"]["x_c4_root"] + relax * dx, 5)
         if rule:
             P_["area"] = round(float(P_["area"]) + dS, 4)
         if trs:
@@ -5135,8 +5204,8 @@ def _belly_seams(S: dict, af: Airframe, gear_up: bool, turret_in: bool) -> list:
     sequenced inner doors (hinged at the inboard well edges, open only while the gear moves, closed again after the
     down-lock: shown closed) and a leg door carried by the leg on two standoff brackets (rotated with the leg by the
     retraction angle about the trunnion axis), leaving the leg slot open; turret: the aperture ring with the open annulus
-    between the ring opening and the lowered ball (the bay doors are folded inside along the bay walls,
-    payload.turret.bay)."""
+    between the ring opening and the lowered ball (the bay doors are slid open inside the belly, outboard of the bay
+    walls, payload.turret.bay)."""
     from ..core.geom import cylinder, sweep_circle
     Z = S["layout"].get("zones_preliminary", {})
     LG = S["landing_gear"]
@@ -5520,11 +5589,22 @@ def evaluate(S: dict, verbose: bool = False, table_key: str | None = None, sens:
         return [(stab["x_np"] - max(xs_)) / cbar_, (stab["x_np"] - min(xs_)) / cbar_]
     pe_cache = {}
 
+    def half_ulp6(v: float) -> float:
+        """Half a unit in the 6th significant digit (the spec storage resolution of py())."""
+        v = abs(float(v))
+        return 0.5 * 10.0 ** (math.floor(math.log10(v)) - 5) if v > 0.0 else 0.0
+    # the design loading is the design mission itself: mass.fuel_kg = MTOM - empty - design payload, both stored with
+    # 6 significant digits, so in --check mode MTOM - empty_kg - payload differs from fuel_kg by up to the two storage
+    # roundings (fix round 1: 0.5 g gave a separate mission run 0.0002 h apart from the design mission)
+    fuel_id_tol = half_ulp6(empty) + half_ulp6(fuel) + 1e-9
+
     def payload_mission(pl: float) -> dict:
         key = round(pl, 6)
         if key in pe_cache:
             return pe_cache[key]
         fu = min(m0 - empty - pl, fuel_cap)
+        if abs(pl - payload) < 1e-9 and abs(fu - fuel) <= fuel_id_tol:
+            fu = fuel
         m_to = empty + pl + fu
         if abs(pl - payload) < 1e-9 and abs(fu - fuel) < 1e-9:
             r = mis_r                                             # the design mission itself
@@ -5637,6 +5717,10 @@ def evaluate(S: dict, verbose: bool = False, table_key: str | None = None, sens:
                   "budget_sum_kg": bud_sum, "reserve_kg": bud_reserve, "margin_kg": lim - bud_reserve - bud_sum,
                   "margin_R02_kg": empty_at_r02 - bud_reserve - bud_sum,
                   "margin_R02b_kg": empty_at_r02b - bud_reserve - bud_sum,
+                  # V5-05: the same limits measured from the current empty-mass ESTIMATE (the reference of the
+                  # payload-rule headroom), next to the R-56 margins measured from the ceilings + reserve
+                  "empty_estimate_kg": empty, "headroom_R02_over_estimate_kg": empty_at_r02 - empty,
+                  "headroom_R02b_over_estimate_kg": empty_at_r02b - empty,
                   "groups_over_ceiling": [g for g, b in bud.items()
                                           if empty_mass(S)["groups"].get(g, 0.0) > float(b["target_kg"]) + 1e-6]}
     VH_level = perf["0"]["V_max_m_s"]
@@ -6609,7 +6693,9 @@ def fig_3view(S: dict, R: dict, path: Path) -> dict:
     ax.plot([-b2 - 0.2, b2 + 0.2], [v_front + gz] * 2, color="#6B7280", lw=0.6)
     ax.plot([u_side - 0.2, u_side + L_all + 0.2], [v_front + gz] * 2, color="#6B7280", lw=0.6)
 
-    def dim(p0, p1, off, label, horiz=True, fs=8.5):
+    def dim(p0, p1, off, label, horiz=True, fs=8.5, label_left=False):
+        """Dimension line p0 -> p1 offset by ``off``; the label is centred on the line, or (``label_left``) placed left
+        of its start so that it does not cover the drawing (V5-07)."""
         p0, p1 = np.asarray(p0, float), np.asarray(p1, float)
         if horiz:
             y = p0[1] + off
@@ -6624,6 +6710,10 @@ def fig_3view(S: dict, R: dict, path: Path) -> dict:
                 ax.plot([q[0], x + 0.04 * np.sign(off)], [q[1], q[1]], lw=0.5, color="k")
             t, rot = (a + b) / 2 + [0.07 * np.sign(off), 0], 90
         ax.annotate("", xy=b, xytext=a, arrowprops=dict(arrowstyle="<|-|>", lw=0.6, mutation_scale=8, color="k"))
+        if label_left:
+            ax.text(min(a[0], b[0]) - 0.06, a[1], label, fontsize=fs, ha="right", va="center",
+                    bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none"))
+            return
         ax.text(*t, label, fontsize=fs, ha="center", va="center", rotation=rot,
                 bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none"))
     W = S["wing"]
@@ -6638,9 +6728,10 @@ def fig_3view(S: dict, R: dict, path: Path) -> dict:
     dim((-b2, -L_all), (b2, -L_all), -0.30, f"Kanat açıklığı {_n(2 * b2, 2)} m")
     dim((-b2, 0.0), (-b2, -L_all), -0.35, f"Toplam boy {_n(L_all, 2)} m", horiz=False)
     xj = float(W["sections"][0]["x_le"]) + 0.5 * float(W["sections"][0]["chord"])
-    dim((-yj, -xj - 0.55), (yj, -xj - 0.55), 0.0, f"Orta kesit {_n(2 * yj, 2)} m")
-    dim((yj, -float(W["mac_le_x"]) - 1.4), (b2, -float(W["mac_le_x"]) - 1.4), 0.0,
-        f"Dış panel {_n(b2 - yj, 2)} m")
+    dim((-yj, -xj - 0.55), (yj, -xj - 0.55), 0.0, f"Orta kesit {_n(2 * yj, 2)} m", label_left=True)
+    # V5-07: the outer-panel dimension runs 0.10 m behind the wing trailing edge (ahead of the stabilator tips)
+    x_te = max(float(s_["x_le"]) + float(s_["chord"]) for s_ in W["sections"])
+    dim((yj, -x_te - 0.10), (b2, -x_te - 0.10), 0.0, f"Dış panel {_n(b2 - yj, 2)} m")
     # front view
     dim((-b2, z_top + v_front), (-b2, gz + v_front), -0.30, f"Yükseklik {_n(z_top - gz, 2)} m", horiz=False)
     dim((-mg[1], gz + v_front), (mg[1], gz + v_front), -0.25, f"İz {_n(2 * mg[1], 2)} m")
@@ -6658,10 +6749,11 @@ def fig_3view(S: dict, R: dict, path: Path) -> dict:
         f"Dingil açıklığı {_n(mg[0] - ng[0], 2)} m")
     dim((u_side + x_side0, gz + v_front), (u_side + x_side1, gz + v_front), -0.55,
         f"Yerde boy {_n(x_side1 - x_side0, 2)} m")
-    ax.text(u_side + x_side1, gz + v_front - 0.12, f"statik tutum {_n(math.degrees(th_s), 1)}° burun yukarı",
-            fontsize=8, ha="right", va="center", color="#4B5563")
     ax.text(-b2, v_front + z_top + 0.35, "ÖNDEN GÖRÜNÜŞ", fontsize=11, weight="bold")
     ax.text(u_side, v_front + z_top + 0.35, "YANDAN GÖRÜNÜŞ (sol)", fontsize=11, weight="bold")
+    # V5-07: the attitude note under the view title (it overlapped the overall-length extension line)
+    ax.text(u_side, v_front + z_top + 0.20, f"statik tutum {_n(math.degrees(th_s), 1)}° burun yukarı",
+            fontsize=8, ha="left", va="center", color="#4B5563")
     ax.text(-b2, 0.25, "ÜSTTEN GÖRÜNÜŞ (burun yukarıda, sancak sağda)", fontsize=11, weight="bold")
     M = metrics(S, R)
     rows = [("Ad", S["meta"]["name"]), ("Revizyon", f"{S['meta']['revision']} ({S['meta']['date']})"),
@@ -6862,6 +6954,11 @@ def run_trades(S: dict, R: dict, verbose: bool = True) -> dict:
         for k in ("stabilator", "fin", "ventral"):
             S5["tail"]["surfaces"][k]["params"]["x_le_root"] += d
         bx = S5["layout"]["rules"]["boxes"]["equipment_bay_aft"]
+        # layout phase: the placed mass items move with their parts aft of the stretch plug (between the aft main-gear
+        # frame and the aft equipment bay); otherwise the engine group etc. would stay at their absolute layout x
+        st_x = [float(s_["x"]) for s_ in (S5["layout"].get("stations") or []) if float(s_["x"]) < float(bx["x"][0])]
+        x_plug = 0.5 * (max(st_x) + float(bx["x"][0])) if st_x else float(bx["x"][0])
+        stretch_mass_placement(S5, x_plug, d)
         bx["x"] = [bx["x"][0] + d, bx["x"][1] + d]
         S5["propeller"]["hub"][0] += d
         S5["propeller"]["plane_x"] += d
@@ -7020,7 +7117,12 @@ def write_report(S: dict, R: dict, M: dict, reqs: list, chk: dict | None, figs: 
         bc0 = m["budget_check"]
         w(f"\nKütle bütçesi (R-56): R-02'yi tam karşılayan boş kütle {_f(bc0['empty_kg_at_R02_limit'], 3)} kg, R-02b'yi "
           f"tam karşılayan {_f(bc0.get('empty_kg_at_R02b_limit'), 3)} kg; belirleyen {bc0.get('governing')}; tavanlar "
-          f"{_f(bc0['budget_sum_kg'], 2)} kg + yedek {_f(bc0['reserve_kg'], 2)} kg → pay {_f(bc0['margin_kg'], 3)} kg.")
+          f"{_f(bc0['budget_sum_kg'], 2)} kg + yedek {_f(bc0['reserve_kg'], 2)} kg → pay {_f(bc0['margin_kg'], 3)} kg "
+          f"(R-02'ye göre {_f(bc0.get('margin_R02_kg'), 3)} kg). Bu paylar tavan toplamı + yedekten ölçülür.")
+        if bc0.get("empty_estimate_kg") is not None:
+            w(f"\nAynı başvuru kütlesinden (bugünkü boş kütle tahmini {_f(bc0['empty_estimate_kg'], 3)} kg) ölçülen üç boş "
+              f"kütle payı (V5-05): görev yükü kuralı eşiği +{_f(pr_.get('empty_mass_headroom_kg'), 3)} kg, R-02b "
+              f"+{_f(bc0['headroom_R02b_over_estimate_kg'], 3)} kg, R-02 +{_f(bc0['headroom_R02_over_estimate_kg'], 3)} kg.")
     w("\n## 3. Kütle\n")
     w("| Grup | Kütle (kg) | Bütçe hedefi ± tolerans |\n|---|---|---|")
     bud = S["mass"].get("budget", {})

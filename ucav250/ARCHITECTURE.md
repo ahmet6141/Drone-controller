@@ -47,7 +47,9 @@ ucav250/
   analysis/
     aero.py                 airfoil polars (NeuralFoil), lifting line, drag build-up
     sizing.py               sizing study + checks -> out/sizing.md (--check exits 1 on violations)
-    structures.py           hand calculations -> out/structures.md
+    layout_check.py         layout-phase checks of spec.layout / spec.assembly -> out/layout.md (--write; --check is read-only)
+    structures.py           hand calculations (CS-LUAS / STANAG 4703 load cases, margins of safety) ->
+                            out/structures.md/.json; owns spec.structures.sizing (--update-spec, --check)
     mass.py                 mass properties from the registry, CG/inertia, budget cross-check
     checks.py               manifold, interference (static + swept), thickness, edge distance, attachment graph
   outputs/
@@ -56,6 +58,7 @@ ucav250/
     assembly_guide.py       out/montaj_kilavuzu.md
   blender/
     build.py                builds the scene from the registry, rigs, exploded/assembly states, previews
+  layout_build/             generator of spec.layout / spec.assembly (authored interface values; build --check/--write)
   data/                     research YAML, airfoil .dat files, datasheets extracts
   docs/                     Turkish reports (research, trade study, sizing, structures, ...)
   out/                      generated outputs (never edited by hand)
@@ -63,6 +66,7 @@ tests/test_ucav250_*.py     unit + integration tests (repo-level tests/ folder)
 ```
 
 Run everything from the repo root: `python3 -m ucav250.analysis.sizing --check`, `python3 -m ucav250.blender.build`.
+Structures workflow after a change: `layout_build --write` -> `structures --update-spec` -> `sizing --update-spec` (masses, closure; the wing moves only when |dx_c4| >= `sizing.WING_DEADBAND` 0.4 mm) -> `layout_build --write` (positions; last, because sizing stores the mechanism values to 6 significant digits) -> `layout_build --check`, `structures --check`, `sizing --check`, `layout_check --check` (all read-only).
 
 ## 3. Frames and units
 
@@ -166,7 +170,7 @@ verifies the spec value against the computed one within a stated tolerance).
 | `mass` | `mtow_kg`, `empty_kg`, `fuel_kg`, `payload_kg`, `budget: {group: {target_kg, tol_kg}}` (groups = part groups), `cases` (`name`, `fuel_fraction`, `payload`) |
 | `stability` | `mac`, `mac_le_x`, `np_x`, `cg_design` [x, y, z], `cg_range_x` [fwd, aft], `static_margin_range` [min, max] |
 | `performance` | reference copy of the sizing results (speeds, L/D, endurance, range, climb, ceiling, field lengths, payload) |
-| `structures` | limit load factors (+3.8 / −1.5), FoS 1.5, fitting factor, design speeds (VA, VC, VD), gust velocities, gear sink rate, standards references |
+| `structures` | limit load factors (+3.8 / −1.5), FoS 1.5, fitting factor, design speeds (VA, VC, VD), gust velocities, gear sink rate, standards references; `sizing` (structures phase, written by `analysis/structures.py --update-spec`): sized dimensions, spar-cap / web ply zones, joint, fitting and member sizes, and the `mass` block that `analysis/sizing.py` reads in place of the concept-model wing, carry-through, keel/floor and spindle terms |
 | `materials` | `{key: {name, kind (metal/composite/polymer/core/elastomer), density, E, Ftu, Fty, Fsu, Fbru, ply_t (plies), Tg_C/HDT_C, source}}` |
 | `layups` | `{key: {plies: [[material, angle_deg, count]], core, core_t, adhesive_areal, use}}` |
 | `processes` | `{key: {name, name_tr, min_thickness, tolerance (ISO 2768-m), draft_deg, min_bend_radius_t, edge_distance_D, notes}}` |

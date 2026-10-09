@@ -2,7 +2,7 @@
 the design-load cases of the interface fittings (values are computed by ucav250.analysis.layout_check)."""
 from __future__ import annotations
 
-from b_common import *  # noqa: F401,F403
+from .b_common import *  # noqa: F401,F403
 
 
 def _mount_axes():
@@ -20,8 +20,8 @@ def engine_mount(fittings: list) -> dict:
     ring_c = r3(mf - 0.030 * ax)                                             # ring plane 30 mm forward of the face
     feet = []
     for f in fittings:
-        if f["id"].startswith("F-EMOUNT"):
-            p = np.asarray(f["point"], float)
+        if f.get("engine_foot"):
+            p = np.asarray(f["engine_foot"], float)
             feet.append(r3([X_FW, p[1], p[2]]))
             feet.append(r3([X_FW, -p[1], p[2]]))
     # ring nodes on the boss directions at r = 0.095 m (radial cup arms to the isolators at the bosses): the truss
@@ -40,7 +40,7 @@ def engine_mount(fittings: list) -> dict:
     for k, f in enumerate(feet):
         same = [j for j, n in enumerate(ring_nodes) if np.sign(n[1] - axc[1]) == np.sign(f[1])]
         for j in same:
-            tubes.append({"from": f"foot{k + 1}", "to": f"ring{j + 1}", "a": f, "b": ring_nodes[j],
+            tubes.append({"from": f"foot{k + 1}", "to": f"ring{j + 1}", "a": list(f), "b": list(ring_nodes[j]),
                           "length": r3(float(np.linalg.norm(np.asarray(f) - np.asarray(ring_nodes[j]))))})
     low_feet = [k for k, f in enumerate(feet) if f[2] < axc[2]]
     for k in low_feet:                                      # lower cross diagonals pass below the SG750
@@ -48,12 +48,13 @@ def engine_mount(fittings: list) -> dict:
         opp = [j for j, n in enumerate(ring_nodes) if np.sign(n[1] - axc[1]) != np.sign(f[1]) and
                n[2] < axc[2] - 0.06]                     # only nodes well below the crank axis
         for j in opp:
-            tubes.append({"from": f"foot{k + 1}", "to": f"ring{j + 1}", "a": f, "b": ring_nodes[j],
+            tubes.append({"from": f"foot{k + 1}", "to": f"ring{j + 1}", "a": list(f), "b": list(ring_nodes[j]),
                           "length": r3(float(np.linalg.norm(np.asarray(f) - np.asarray(ring_nodes[j])))),
                           "note": "lower cross diagonal (below the SG750)"})
     return {
         "part": "YK250-CH-085",
-        "type": "welded 4130 N tube bed mount: 4 feet on the firewall attach fittings (F-EMOUNT-UP/LO, R/L) -> a "
+        "type": "welded 4130 N tube bed mount: 4 feet on the firewall fittings (upper: F-FW-CORNER, lower: "
+                "F-EMOUNT-LO, R/L) -> a "
                 "welded ring (4130 tube 15.9 x 0.89 mm) in a plane 30 mm forward of the crankcase mount face; 4 "
                 "elastomer isolators in the ring cups carry the engine on its 4 rear crankcase bosses",
         "material": "steel_4130_n", "process": "welded tube truss (TIG, normalised after welding), 12.7 x 0.89 mm "
@@ -108,7 +109,7 @@ def turret_elevator() -> dict:
     return {
         "joint": "turret_elevator",
         "part": "YK250-PL-824",
-        "rails": [{"id": f"RAIL-{c}", "part": "YK250-PL-828", "corner": c,
+        "rails": [{"id": f"RAIL-{c}", "part": "YK250-PL-828" if c == "FR" else "YK250-PL-829", "corner": c,
                    "line": r3([[xt + sx * 0.085, sy * 0.094, -0.150], [xt + sx * 0.085, sy * 0.094, 0.095]])}
                   for c, sx, sy in (("FR", -1, 1), ("AL", 1, -1))],
         "rail_spec": "2 miniature profile rails 9 mm (MGN9 class, steel, estimate) in two diagonal bay corners "
@@ -123,8 +124,10 @@ def turret_elevator() -> dict:
                                   "angles"},
         "stroke": float(TU["stroke"]), "ball_center_retracted": r3([xt, 0.0, zr]),
         "ball_center_extended": r3([xt, 0.0, float(TU["ball_center_extended_z"])]),
-        "doors": "two sliding doors (turret_door_R/L) on rails outboard of the bay walls, driven from the carriage by "
-                 "cam-slot levers (mechanical sequence: no separate door actuator, doors cannot close on the ball)",
+        "doors": "two sliding doors (turret_door_R/L) on rails outboard of the bay walls, each driven by its own Volz "
+                 "DA 22 through pinion and rack (EQ-TDOORACT on the outboard wall face); interlock: the elevator runs "
+                 "only with both door-open sensors made, the doors close only with the elevator on its upper limit "
+                 "switch (sequence turret_extension); a door actuator failure leaves the turret retractable",
         "load_path": "turret inertia (emergency landing 9 g fwd / 6 g down ultimate, CS-VLA 561) -> carriage -> 2 "
                      "rails -> walls M-TURRETWALL -> FS1110 / FS1330; drive load -> ball screw -> roof",
         "design_load_case": "DL-TURRET"}
@@ -146,47 +149,91 @@ def parachute(fittings: list, cg: list) -> dict:
         "container": {"zone": "parachute_bay", "part": "YK250-SY-800",
                       "restraint": "4 brackets YK250-CH-114 on the bay walls/floor (2 x M5 each) + 2 straps; "
                                    "container mouth under the dorsal hatch"},
-        "hatch": {"panel": "P-PARAHATCH", "joint": "para_hatch", "latch": "YK250-SY-804 pin-puller latch (FTS "
-                                                                          "command), tether to the hatch"},
+        "hatch": {"panel": "P-PARAHATCH", "joint": "para_hatch",
+                  "latch": "YK250-SY-804 pin-puller latch (FTS command) with cable-linked corner pins; tethered "
+                           "lift-off hatch (no hinge, fix round 1 VPK-11), 1.5 m aramid tether to FS1810"},
         "bridle": {"type": "Y-bridle (aramid webbing), confluence ring above the CG",
                    "forward_leg": {"fitting": "F-RISER-FWD", "point": r3(fa), "length": r3(la, 3),
                                    "route": "straight up out of the container mouth"},
                    "aft_leg": {"fitting": "F-RISER-AFT", "point": r3(fb), "length": r3(lb, 3),
-                               "route": "stowed in the dorsal spine channel (P-SPINE) under a tear-away cover from "
-                                        "the parachute bay to the rear-spar frame"},
+                               "route": "stowed in the dorsal spine channel M-SPINE under the tear-away cover strip "
+                                        "P-SPINE from the forward fitting to the rear-spar frame"},
                    "confluence_above_cg": H, "design_hang": "about 3 deg nose-down at the MTOW CG (verified by "
                                                            "layout_check for the CG range)",
                    "cg_used": r3(cg)},
-        "load_path": "canopy -> riser -> confluence ring -> 2 legs -> U-lug fittings (4 x M6 12.9 each, 7075 "
-                     "doublers both faces) -> FS1810 / rear-spar frame -> chine longerons, keel and the wing box",
+        "load_path": "fix round 1 (S1-04): canopy -> riser -> confluence ring -> 2 legs -> U-lug fittings "
+                     "F-RISER-FWD / F-RISER-AFT at the two ends of the dorsal spine channel M-SPINE -> x-components: "
+                     "the opposed leg components are a strut force in the spine (the spine closes the bridle "
+                     "triangle), the net x-component is diffused by shear into the screwed mission-bay upper skin "
+                     "P-MB-UPPER and from it into the chine longerons; z-components: frame lands of FS1810 / the "
+                     "rear-spar frame (in-plane) -> chine longerons, keel and the wing box (structures P-SPINE-*, "
+                     "P-FRAME-*)",
         "design_load_case": "DL-PARACHUTE"}
 
 
+FUEL_CELL_GEOM = {      # fix round 2 (PK2-08): explicit chevron-bay geometry (layout_check FuelBand reads it)
+    "forward_cell": {"fwd": ("FS-FUEL", 0.0), "aft": ("FS-MS", None), "liner": "YK250-CH-115",
+                     "floor": "M-FWDDECK (top face)", "access": "P-FUEL1", "cell": "YK250-FU-570"},
+    "saddle_cell": {"fwd": ("FS-MS", None), "aft": ("FS-RS", None), "liner": "YK250-CH-116",
+                    "floor": "upper cover of the centre wing box (M-CTBOX, z0 of the cell)", "access": "P-FUEL2",
+                    "cell": "YK250-FU-571"},
+    "aft_cell": {"fwd": ("FS-RS", None), "aft": ("FS-GEAR", 0.0), "liner": "YK250-CH-117",
+                 "floor": "M-WELLROOF (top face)", "access": "P-FUEL3", "cell": "YK250-FU-572"}}
+FUEL_INSET = 0.025      # cell surface to the OML (skin 5.8 mm + liner + 19 mm stand-off of the bladder; sizing._area_band)
+FUEL_LINER_T = 0.0004   # CFRP 2 plies PW (2 x 0.2 mm)
+
+
 def fuel_supports() -> list:
+    """Fuel-cell bays (fix round 2, PK2-08): each cell is the body section band z0..z1 inside the OML inset by
+    FUEL_INSET, |y| <= 0.45 clipped to the inset OML, between a forward and an aft boundary; a boundary on a swept spar
+    frame follows the frame: x(y) = x_ref + |y| tan(sweep) (chevron bladder), x_ref = layout.fuel_cells[*].x at y = 0."""
+    sw = {"FS-MS": SW_MS, "FS-RS": SW_RS}
     out = []
     for c in S["layout"]["fuel_cells"]:
+        g = FUEL_CELL_GEOM[c["name"]]
+
+        def bnd(key, k):
+            st, swp = g[key]
+            swp = sw[st] if swp is None else swp
+            return {"station": st, "x_at_centre_line": r3(c["x"][k]), "sweep_deg": r3(swp, 3),
+                    "rule": "x(y) = x_at_centre_line + |y| tan(sweep_deg)"}
         out.append({"cell": c["name"], "x": r3(c["x"]), "z": r3(c["z"]),
-                    "support": "bay liner (CFRP 2 plies, smooth, no sharp edges) bonded to the frames, keel beams "
-                               "and deck; cell hung from 6 Velcro/loop tabs + 2 restraint straps; vertical and "
-                               "lateral loads -> liner -> frames/decks; fore/aft (9 g ultimate emergency landing) -> "
-                               "frames FS-FUEL / spar frames / FS-GEAR",
-                    "access": {"forward_cell": "P-FUEL1", "saddle_cell": "P-FUEL2", "aft_cell": "P-FUEL3"}[c["name"]],
-                    "parts": {"liner": "YK250-CH-116", "cell": {"forward_cell": "YK250-FU-570",
-                                                                "saddle_cell": "YK250-FU-571",
-                                                                "aft_cell": "YK250-FU-572"}[c["name"]]}})
+                    "boundary_fwd": bnd("fwd", 0), "boundary_aft": bnd("aft", 1),
+                    "inset_from_oml_m": FUEL_INSET, "y_limits_m": [-0.45, 0.45],
+                    "y_rule": "clipped to the OML inset by inset_from_oml_m",
+                    "floor": g["floor"], "top": "z1 under the dorsal spine floor (z 0.161) and the fuel-bay panels",
+                    "liner": {"part": g["liner"], "t_m": FUEL_LINER_T,
+                              "text": "bay liner CFRP 2 plies PW, smooth, no sharp edges, bonded to the frames, keel beams "
+                                      "and floor of this bay only (one liner part per bay: the three bays differ)"},
+                    "support": "cell hung from 6 Velcro/loop tabs + 2 restraint straps inside the liner; vertical and "
+                               "lateral loads -> liner -> frames/decks; fore/aft (9 g ultimate emergency landing) -> the "
+                               "two boundary frames",
+                    "access": g["access"],
+                    "parts": {"liner": g["liner"], "cell": g["cell"]}})
     return out
 
 
 def trays() -> list:
     return [
-        {"id": "TR-SIDEBAY", "part": "YK250-CH-118", "mirror": True, "zone": "avionics_side_bays",
-         "spec": "CFRP flat tray 3 mm with potted M4 inserts, on 4 elastomer isolators (autopilot side only)"},
+        {"id": "TR-SIDEBAY-L", "part": "YK250-CH-118", "zone": "avionics_side_bays (port)",
+         "spec": "CFRP flat tray 3 mm with potted M4 inserts, rigidly bolted (generator power electronics with its "
+                 "heat-sink plate on the side-bay hatch, brake actuator + master cylinder, port nose-door actuator EQ-NDOORACT-L on FS1110)"},
+        {"id": "TR-SIDEBAY-R", "part": "YK250-CH-122", "zone": "avionics_side_bays (starboard)",
+         "spec": "CFRP flat tray 3 mm with potted M4 inserts on 4 elastomer isolators (autopilot with its IMU, datalinks, "
+                 "transponder; the starboard nose-door actuator EQ-NDOORACT-R sits on a bracket on FS1110, off the "
+                 "isolated tray; fix round 2, PK2-08: own part number, the two side-bay trays differ)"},
         {"id": "TR-FWDBAY", "part": "YK250-CH-119", "zone": "forward bay FS0300-FS0600",
-         "spec": "CFRP tray on FS0300/FS0600 angles (FTS unit, antennas splitters)"},
+         "spec": "CFRP tray on FS0300/FS0600 angles: buffer-battery box (upper, 2 straps + 1 connector) and the "
+                 "FTS unit below it"},
         {"id": "TR-MISSION", "part": "YK250-CH-120", "zone": "mission_computer",
-         "spec": "tray with Dzus quarter-turn retainers on the mission-bay floor"},
+         "spec": "removable CFRP equipment tray 329 x 250 mm (fix round 1, VPK-03) closing the centre cut-out of the "
+                 "mission-bay floor M-MIDFLOOR: mission computer + engine ECU on isolators, screwed from below (8 x M4 "
+                 "captive screws) to the cut-out edge stiffeners, lowered out through P-MBHATCH with its connectors "
+                 "unplugged"},
         {"id": "TR-AFTBAY", "part": "YK250-CH-121", "zone": "equipment_bay_aft",
-         "spec": "aluminium 6061-T6 tray 2 mm (ECU / PE heat sink), M4 nutplates on the floor angles"},
+         "spec": "aluminium 6061-T6 tray 2 mm: EFI fuel pump / regulator / filter (drain under the aft hatch), "
+                 "tail connector bracket; M4 nutplates on the floor angles (the ECU sits in the mission bay and the "
+                 "generator PE in the port side bay, layout.systems.equipment)"},
         {"id": "TR-PAYLOAD", "part": "YK250-PL-852", "zone": "payload_bay",
          "spec": "payload tray on 2 rails under the forward fuel deck (M-FWDDECK), 4 x M5 captive screws; research "
                  "payload <= mission.payload_max_kg retained for 9 g fwd / 6 g down ultimate"}]
@@ -205,7 +252,8 @@ def design_loads() -> dict:
                   "the spec.materials allowables; reported as margins of safety MS = allowable / applied - 1. The "
                   "detail phase replaces these with the FE / test substantiation.",
         "cases": [
-            {"id": "DL-WINGJOINT", "item": "outer-panel joint y 0.70 (P-MAIN1/2, fork, tongue, drag pin)",
+            {"id": "DL-WINGJOINT", "item": "outer-panel joint y 0.70 (P-MAIN1/2, CFRP fork and tongue, rear lug + "
+                                           "rear pin P-REAR)",
              "condition": "symmetric flight at n = loads.n_limit_wing_design (gust envelope) x MTOM, Schrenk lift on "
                           "the reference trapezoid, no inertia relief (as sizing.wing_structure)",
              "factors": "1.5 x 1.5 (frequent assembly) on pin shear / bending; x 2.0 bearing factor on bearing"},
@@ -227,3 +275,17 @@ def design_loads() -> dict:
             {"id": "DL-TAIL", "item": "fin root, stub and ventral fittings, stabilator spindle bearings",
              "condition": "CS-LUAS.441/427 tail loads (detail phase; the spindle is pre-sized in sizing "
                           "stab_spindle_check)", "factors": "1.5 x 1.15, bearing x 2.0"}]}
+
+
+def ground_handling() -> dict:
+    """Fix round 2 (VS2-12): ground-handling interfaces (towing point; tie-down and jacking statements)."""
+    ax = NG["axle_static"]
+    return {"tow_point": {"point": r3(ax), "part": "gear unit (nose fork)",
+                          "text": "tow bar on the nose-fork axle ends (both sides of the wheel), steering actuator "
+                                  "de-clutched / centred; towing load 0.3 W fore / aft / 30 deg (structures G-TOW-*)"},
+            "tie_down": "not provided: the aircraft is not parked outdoors tied down (operating concept: field assembly "
+                        "from the transport van, stored in its cradle / shelter); outdoor mooring points and their "
+                        "wind loads are an open item",
+            "jacking": "no jacking points: two-person lift at the wing roots or the transport cradle saddles on the "
+                       "FS1810 / FS-GEAR lower lands (structures TR-PAD / TR-FRAME) for gear work",
+            "text": "fix round 2 (VS2-12)"}

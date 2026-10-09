@@ -45,6 +45,7 @@ FIG_DIR = Z.FIG_DIR
 G0 = 9.80665
 ID_RE = re.compile(r"^YK250-(CH|SH|WG|TL|FC|PR|FU|LG|SY|PL|HW)-(\d{3})(-[LR])?$")
 STATION_TYPES = ("bulkhead", "ring", "fitting frame")
+EDGE_BAND = 0.020        # m, solid laminate edge band of the frame webs at the skin flange (stations construction)
 
 
 # =====================================================================================================================
@@ -335,10 +336,15 @@ class Ctx:
             out[i] = (np.interp(x, xl, zl) + margin < z < np.interp(x, xu, zu) - margin)
         return out
 
+    def fairing_y_inner(self) -> float:
+        f = (self.L.get("shell") or {}).get("wing_root_fairing") or {}
+        return float(f.get("y_inner_m", 0.36))
+
     def inside(self, P, margin=0.0, tail=False):
-        """Inside the body or the wing loft (``margin`` m from the skin); near the side-of-body seam (|y| 0.36-0.41)
-        a point inside the body also counts when it is inside the glove root profile extruded inboard (body and
-        glove are one closed shell there); ``tail``: also inside the fins / stubs / ventral."""
+        """Inside the body or the wing loft or the wing-root junction fairing (``margin`` m from the skin): between
+        the fairing's inner edge (layout.shell.wing_root_fairing.y_inner_m) and the wing root the glove root profile
+        extruded inboard is part of the OML (fix round 2: before, only points inside the body counted there);
+        ``tail``: also inside the fins / stubs / ventral."""
         P = np.atleast_2d(np.asarray(P, float))
         ok = self.af.inside(P, margin)
         rest = ~ok
@@ -346,13 +352,11 @@ class Ctx:
             ok[rest] = self.inside_wing(P[rest], margin)
         rest = ~ok
         y_root = float(self.S["wing"]["sections"][0]["y"])
-        seam = rest & (np.abs(P[:, 1]) > 0.36) & (np.abs(P[:, 1]) < 0.41)
+        seam = rest & (np.abs(P[:, 1]) > self.fairing_y_inner()) & (np.abs(P[:, 1]) < y_root + 0.002)
         if np.any(seam):
-            Q = P[seam].copy()
-            in_body = self.af.inside(Q, 0.0) | self.inside_wing(Q, 0.0)
-            Q2 = Q.copy()
+            Q2 = P[seam].copy()
             Q2[:, 1] = np.sign(Q2[:, 1]) * (y_root + 0.002)
-            ok[seam] = in_body & self.inside_wing(Q2, margin)
+            ok[seam] = self.inside_wing(Q2, margin)
         if tail:
             rest = ~ok
             for name in ("fin", "stabilator_stub", "ventral"):
@@ -400,6 +404,217 @@ class Ctx:
                                                        np.append(pt - poly[j], 0)))) /
                         max(float(np.linalg.norm(poly[j + 1] - poly[j])), 1e-12) for j in range(len(poly) - 1))
             out[i] = seg_d >= margin
+        return out
+
+    # ---------------------------------------------------------------- true distance to the OML (fix round 2, PK2-01)
+    def _body_tree(self):
+        """KD-tree on parametric body-OML samples (x 4 mm, phi 0.5 deg); refined locally by ``body_dist``."""
+        if getattr(self, "_btree", None) is None:
+            from scipy.spatial import cKDTree
+            F = self.af.fus
+            xs = np.arange(F.x0, F.x1 + 1e-9, 0.004)
+            ph = np.radians(np.arange(0.0, 360.0, 0.5))
+            X, PH = np.meshgrid(xs, ph, indexing="ij")
+            self._bX, self._bPH = X.ravel(), PH.ravel()
+            self._btree = cKDTree(F.point(self._bX, self._bPH).reshape(-1, 3))
+        return self._btree
+
+    def body_dist(self, P) -> np.ndarray:
+        """Unsigned distance (m) from the points to the body OML surface: nearest of the parametric samples (2 nearest
+        candidates), refined on a local (x, phi) grid in three levels (residual error < 0.3 mm, never optimistic by
+        more than that)."""
+        P = np.atleast_2d(np.asarray(P, float))
+        if len(P) == 0:
+            return np.zeros(0)
+        F = self.af.fus
+        tree = self._body_tree()
+        _, idx = tree.query(P, k=2)
+        best = np.full(len(P), np.inf)
+        u = np.linspace(-1.0, 1.0, 7)
+        UX, UP = (a.ravel() for a in np.meshgrid(u, u, indexing="ij"))
+        rr = np.arange(len(P))
+        for j in range(idx.shape[1]):
+            x0, p0 = self._bX[idx[:, j]], self._bPH[idx[:, j]]
+            hx, hp = 0.008, math.radians(1.0)
+            for _ in range(4):
+                XX = np.clip(x0[:, None] + hx * UX[None, :], F.x0, F.x1)
+                PP = p0[:, None] + hp * UP[None, :]
+                d = np.linalg.norm(F.point(XX, PP) - P[:, None, :], axis=2)
+                i = np.argmin(d, axis=1)
+                x0, p0 = XX[rr, i], PP[rr, i]
+                hx, hp = hx / 3.0, hp / 3.0
+            best = np.minimum(best, d[rr, i])
+        return best
+
+    def _wing_poly(self, y):
+        key = round(abs(float(y)), 3)
+        cache = self.__dict__.setdefault("_wpoly", {})
+        if key not in cache:
+            w = self._wing_section(key)
+            cache[key] = None if w is None else np.vstack([np.column_stack([w[0], w[1]]),
+                                                           np.column_stack([w[2], w[3]])[::-1]])
+        return cache[key]
+
+    def wing_depth(self, P) -> np.ndarray:
+        """Signed depth (m, + inside) below the wing loft in the streamwise section plane at the point's y (2-D distance
+        to the section contour; the spanwise slope of the loft is small); -inf outside the wing span. Between the
+        inner edge of the wing-root junction fairing and the wing root the glove root profile extruded inboard is the
+        surface, as in ``inside``."""
+        P = np.atleast_2d(np.asarray(P, float))
+        out = np.full(len(P), -np.inf)
+        y_root = float(self.S["wing"]["sections"][0]["y"])
+        Q = P.copy()
+        seam = (np.abs(Q[:, 1]) > self.fairing_y_inner()) & (np.abs(Q[:, 1]) < y_root + 0.002)
+        Q[seam, 1] = np.sign(Q[seam, 1]) * (y_root + 0.002)
+        ins = self.inside_wing(Q, 0.0)
+        keys = np.round(np.abs(Q[:, 1]), 3)
+        for key in np.unique(keys):
+            C = self._wing_poly(key)
+            if C is None:
+                continue
+            m = np.where(keys == key)[0]
+            a, d = C[:-1], np.diff(C, axis=0)
+            q = Q[m][:, [0, 2]]
+            t = np.clip(((q[:, None, :] - a[None]) * d[None]).sum(2) / np.maximum((d * d).sum(1), 1e-15)[None], 0.0,
+                        1.0)
+            dist = np.min(np.linalg.norm(a[None] + t[:, :, None] * d[None] - q[:, None, :], axis=2), axis=1)
+            out[m] = np.where(ins[m], dist, -dist)
+        return out
+
+    def tail_depth(self, P) -> np.ndarray:
+        """Signed depth (m, + inside) below the fin / stub / ventral lofts (section-plane distance, ``inside_surface``
+        construction); -inf where no tail surface is near."""
+        from matplotlib.path import Path as MPath
+        P = np.atleast_2d(np.asarray(P, float))
+        out = np.full(len(P), -np.inf)
+        for name in ("fin", "stabilator_stub", "ventral"):
+            srf = self.af.tail[name]
+            e = srf.span_coords()
+            LE = np.array([[s_["y"], s_["z_le"]] for s_ in srf.sections], float)
+            for i, p in enumerate(P):
+                q = p.copy()
+                if self.af.tail_mirror.get(name, True) and q[1] < 0:
+                    q[1] = -q[1]
+                best, eta = None, None
+                for k in range(len(LE) - 1):
+                    a, b = LE[k], LE[k + 1]
+                    dd = b - a
+                    t = float(np.clip((q[1:] - a) @ dd / max(dd @ dd, 1e-12), 0, 1))
+                    dist = float(np.linalg.norm(q[1:] - (a + t * dd)))
+                    if best is None or dist < best:
+                        best, eta = dist, e[k] + t * (e[k + 1] - e[k])
+                if eta is None or eta < e[0] or eta > e[-1]:
+                    continue
+                o, c, u, n = srf.frame_at(float(eta))
+                if abs((q - o) @ n) > 0.05:
+                    continue
+                loop = srf.loop_at(float(eta), 61)
+                poly = np.column_stack([(loop - o) @ c, (loop - o) @ u])
+                pt = np.array([(q - o) @ c, (q - o) @ u])
+                a, dd = poly[:-1], np.diff(poly, axis=0)
+                t = np.clip(((pt - a) * dd).sum(1) / np.maximum((dd * dd).sum(1), 1e-15), 0.0, 1.0)
+                dist = float(np.min(np.linalg.norm(a + t[:, None] * dd - pt, axis=1)))
+                sd = dist if MPath(poly).contains_point(pt) else -dist
+                out[i] = max(out[i], sd)
+        return out
+
+    def depth(self, P, wing=True, tail=False) -> np.ndarray:
+        """Signed depth (m, + inside) of the points below the OML of the union body + wing loft (+ tail surfaces):
+        the largest of the component depths (a lower bound of the depth into the union; exact away from the
+        junctions). Body: true 3-D distance (``body_dist``), sign by the exact superellipse inside test."""
+        P = np.atleast_2d(np.asarray(P, float))
+        d = self.body_dist(P)
+        sd = np.where(self.af.inside(P, 0.0), d, -d)
+        if wing:
+            sd = np.maximum(sd, self.wing_depth(P))
+        if tail:
+            tl = P[:, 0] > 3.3
+            if tl.any():
+                sd[tl] = np.maximum(sd[tl], self.tail_depth(P[tl]))
+        return sd
+
+    def layup_thickness(self, layup: str | None, material: str | None = None) -> float:
+        """Total thickness of a sandwich / laminate layup of spec.layups with the plies of ``material`` (a GFRP panel
+        on a CFRP layup takes the GFRP ply thickness); shell_secondary when the layup is not a defined sandwich."""
+        S = self.S
+        Ly = S["layups"].get(layup or "") or S["layups"]["shell_secondary"]
+        M = S["materials"]
+
+        def n_plies(pl):
+            n = 0
+            for _, code, cnt in pl or []:
+                k = len(str(code).split(","))
+                n += k if not isinstance(cnt, (int, float)) or k == int(cnt) else int(cnt) * k
+            return n
+        key = material if material in M and M[material].get("ply_t") else (Ly.get("plies") or [[None]])[0][0]
+        pt = float(M[key]["ply_t"]) if key in M and M[key].get("ply_t") else 0.0002
+        return (n_plies(Ly.get("plies")) + n_plies(Ly.get("inner_plies"))) * pt + float(Ly.get("core_t") or 0.0)
+
+    def skin_t(self, P) -> np.ndarray:
+        """Local skin thickness (m) over each point: the thickest shell panel of layout.shell.panels whose plan outline
+        holds the point on the matching side (upper / lower body or cowl, side band), the wing skins (upper box skin
+        between the spars to structures.sizing.wing.box_skin_upper_y_end_m) where the point lies deeper in the wing
+        loft than in the body, the tail skin in the tail surfaces (x > 3.3 m, deeper in a tail loft than in the body);
+        shell_secondary where no panel is declared."""
+        P = np.atleast_2d(np.asarray(P, float))
+        S = self.S
+        cache = self.__dict__.setdefault("_skin_cache", {})
+        if "panels" not in cache:
+            pans = []
+            for p in self.L["shell"]["panels"]:
+                if not p.get("layup") or p["surface"].startswith("glove"):
+                    continue
+                pans.append((p, panel_poly(p), self.layup_thickness(p["layup"], p.get("material"))))
+            cache["panels"] = pans
+            wd = (S["structures"].get("sizing") or {}).get("wing") or {}
+            cache["wing_up"] = self.layup_thickness(wd.get("box_skin_upper_layup", "wing_skin_primary"))
+            cache["wing"] = self.layup_thickness(wd.get("skin_layup", "wing_skin_primary"))
+            cache["y_box_up"] = float(wd.get("box_skin_upper_y_end_m", 0.0))
+            cache["tail"] = self.layup_thickness("tail_skin")
+            cache["default"] = self.layup_thickness("shell_secondary")
+        n = len(P)
+        out = np.full(n, cache["default"])
+        bd = self.body_dist(P)
+        sd_b = np.where(self.af.inside(P, 0.0), bd, -bd)
+        sd_w = self.wing_depth(P)
+        zc_ = np.asarray(self.af.sec(P[:, 0])[3], float)
+        upper = P[:, 2] >= zc_
+        t_pan = np.full(n, -1.0)
+        for p, V, t in cache["panels"]:
+            srf = p["surface"]
+            if srf == "body_full":
+                side_ok = np.ones(n, bool)
+            elif srf == "body_side":
+                zb = p.get("z_band")
+                side_ok = np.zeros(n, bool) if not zb else (P[:, 2] >= float(zb[0])) & (P[:, 2] <= float(zb[1]))
+            else:
+                side_ok = upper if _surf_side(srf) == "upper" else ~upper
+            if not side_ok.any():
+                continue
+            hit = _in_poly(P[:, :2], V)
+            if p.get("mirror"):
+                hit |= _in_poly(P[:, :2] * [1, -1], V)
+            t_pan = np.where(side_ok & hit, np.maximum(t_pan, t), t_pan)
+        out = np.where(t_pan > 0, t_pan, out)
+        wing = sd_w > sd_b
+        if wing.any():
+            Pw = S["wing"]["planform"]
+            b2 = 0.5 * float(S["wing"]["span"])
+            y_r = float(S["wing"]["sections"][0]["y"]) + 0.002
+            for i in np.where(wing)[0]:
+                x, y, z = P[i]
+                ay = min(max(abs(y), y_r), b2)
+                w = self._wing_section(ay)
+                up = w is not None and z > 0.5 * (np.interp(x, w[0], w[1]) + np.interp(x, w[2], w[3]))
+                sec = self.af.wing.interpolate_section(ay)
+                xc = (x - float(sec["x_le"])) / max(float(sec["chord"]), 1e-9)
+                box = float(Pw["main_spar_frac"]) - 0.02 <= xc <= float(Pw["rear_spar_frac"]) + 0.02
+                out[i] = cache["wing_up"] if (up and box and ay <= cache["y_box_up"]) else cache["wing"]
+        tl = P[:, 0] > 3.3
+        if tl.any():
+            sd_t = np.full(n, -np.inf)
+            sd_t[tl] = self.tail_depth(P[tl])
+            out = np.where(tl & (sd_t > sd_b), np.maximum(out, cache["tail"]), out)
         return out
 
     def z_top(self, x, y=0.0):
@@ -560,7 +775,7 @@ def mass_placements(ctx: Ctx, L: dict | None = None) -> dict:
                                       ("tail light (fin tip)", 0.083, _box_c(lt["LT-TAIL"]["box"]))],
         basis="FTS 0.15 kg + 3 x AveoFlash 0.083 kg at their installed places")
     comps = []
-    for mid in ("M-CHINE", "M-KEELWALL", "M-KEEL", "M-DORSAL", "M-AFTKEEL"):
+    for mid in ("M-CHINE", "M-KEELWALL", "M-KEEL", "M-DORSAL", "M-AFTKEEL", "M-WELLKEEL"):
         m = ch[mid]
         k = 2.0 if m.get("mirror") else 1.0
         if "paths" in m:
@@ -571,7 +786,7 @@ def mass_placements(ctx: Ctx, L: dict | None = None) -> dict:
             b = np.asarray(m["box"], float)
             comps.append((mid, k * (b[1][0] - b[0][0]), _box_c(b, True).tolist()))
     put("keel_beams_longerons", comps, basis="length-weighted centroid of the longitudinal members (chine longerons, "
-                                             "keel walls, keel beams, dorsal longerons, aft keel)")
+                                             "keel walls, keel beams, dorsal longerons, aft keel, well keel web)")
     comps = []
     zb = L["zones_preliminary"]["wing_carry_through"]["box"]
     for s_ in L["stations"]:
@@ -600,10 +815,13 @@ def mass_placements(ctx: Ctx, L: dict | None = None) -> dict:
                                        [np.asarray(n) for n in em["ring_nodes"]], axis=0) * [1, 0, 1])],
         basis="mean of the truss tube mid-points and the ring nodes (layout.chassis.engine_mount)")
     pb = L["zones_preliminary"]["parachute_bay"]["box"]
-    put("parachute_attach_fitting", [("forward bridle fitting", 0.4, fit["F-RISER-FWD"]["point"]),
-                                     ("aft bridle fitting (rear-spar frame)", 0.4, fit["F-RISER-AFT"]["point"]),
-                                     ("container restraint brackets", 0.2, [0.5 * (pb[0][0] + pb[1][0]), 0.0, -0.03])],
-        basis="two bridle fittings (Y-bridle) + container restraint")
+    sp_b = np.asarray(ch["M-SPINE"]["box"], float)
+    put("parachute_attach_fitting", [("dorsal spine channel M-SPINE", 0.65, _box_c(sp_b, True).tolist()),
+                                     ("forward bridle fitting", 0.15, fit["F-RISER-FWD"]["point"]),
+                                     ("aft bridle fitting (rear-spar frame)", 0.15, fit["F-RISER-AFT"]["point"]),
+                                     ("container restraint brackets", 0.05, [0.5 * (pb[0][0] + pb[1][0]), 0.0, -0.03])],
+        basis="dorsal spine channel (structures P-SPINE-*, about 65 % of the bottom-up mass) + two bridle fittings "
+              "(Y-bridle) + container restraint")
     comps = []
     for mid in ("M-DECK-NOSE", "M-MIDFLOOR", "M-FWDDECK", "M-TURRETROOF", "M-PARAFLOOR"):
         b = np.asarray(ch[mid]["box"], float)
@@ -630,7 +848,140 @@ def mass_placements(ctx: Ctx, L: dict | None = None) -> dict:
             p = np.asarray(f["point"], float)
             comps.append((f["id"], 2.0 if f.get("mirror") else 1.0, [p[0], 0.0, p[2]]))
     put("fin_ventral_root_fittings", comps, basis="fin, stub and ventral root fittings at the frames")
+    _placements_round2(ctx, L, eqs, put)
     return out
+
+
+def _pair(p) -> list:
+    """Centroid of a mirrored pair (y = 0)."""
+    p = np.asarray(p, float)
+    return [float(p[0]), 0.0, float(p[2])]
+
+
+def _placements_round2(ctx: Ctx, L: dict, eqs: dict, put) -> None:
+    """Fix round 2 (PK2-07): mass items whose hardware the layout places - wing / tail actuators, gear legs and EMAs,
+    nose-wheel steering, gear doors and their drives, turret mechanism, parachute, fuel system - at the placed objects
+    (flight pose = gear and turret retracted). Masses from the item bases (datasheets / research data, estimates
+    labelled)."""
+    S = ctx.S
+    acts = {a["id"]: a for a in L["systems"]["actuators"]}
+    jn = {j["name"]: j for j in L["mechanisms"]["joints"]}
+    da26 = float(Z.research_item("components.yaml#categories.control_surface_actuators.items[volz_da26].mass_kg"))
+    da30 = float(Z.research_item("components.yaml#categories.control_surface_actuators.items[volz_da30].mass_kg"))
+
+    def link_pt(a):
+        return _pair(0.5 * (np.asarray(a["servo_axis"], float) + np.asarray(a["hinge_point"], float)))
+    a = acts["ACT-AILERON"]
+    put("actuators_ailerons_2x_DA26", [("2 x DA 26 (ACT-AILERON, outer panels)", 2 * da26, _pair(_box_c(a["box"]))),
+                                       ("horns + pushrods (servo arm to hinge horn)", 0.10, link_pt(a))],
+        basis="item basis: 2 x DA 26 datasheet + horns/pushrods 0.10 at the layout actuators (fix round 2, PK2-07)")
+    a = acts["ACT-FLAP"]
+    put("actuators_flaps_2x_DA30", [("2 x DA 30 (ACT-FLAP)", 2 * da30, _pair(_box_c(a["box"]))),
+                                    ("installation 0.10 (at the actuator)", 0.10, _pair(_box_c(a["box"]))),
+                                    ("hinges / horns 0.20 (flap hinge line)", 0.20, _pair(a["hinge_point"]))],
+        basis="item basis: 2 x DA 30 datasheet + installation 0.10 + hinges/horns 0.20 at the layout actuators")
+    a = acts["ACT-RUDDER"]
+    put("actuators_rudders_2x_DA26", [("2 x DA 26 (ACT-RUDDER, in the fins)", 2 * da26, _pair(obb_of(a).c)),
+                                      ("linkages 0.06", 0.06, link_pt(a))],
+        basis="item basis: 2 x DA 26 datasheet + linkages 0.06 at the layout actuators (fin boxes)")
+    LG = S["landing_gear"]
+    ref = "components.yaml#categories.landing_gear.items"
+    m_leg = float(Z.research_item(f"{ref}[sagitta_retractable_gear].main_leg_mass_kg"))
+    m_whl = float(Z.research_item(f"{ref}[tost_sb_max2_70_50_20].assembly_mass_kg"))
+    M, t = joint_motion(ctx, "main_gear_R", float(jn["main_gear_R"]["hi"]))
+    tr = np.asarray(LG["main"]["trunnion"], float)
+    ax_up = M @ np.asarray(LG["main"]["axle_static"], float) + t
+    ema = acts["ACT-MLG-EMA"]
+    put("main_gear_legs_wheels_brakes_emas_pair", [
+        ("2 x TOST wheel + brake + tyre + tube (stowed wheel centre)", 2 * m_whl,
+         _pair(LG["main"]["retraction"]["stowed_wheel_center"])),
+        ("2 x retraction EMA (ACT-MLG-EMA; DA-26-class mass, estimate)", 2 * da26, _pair(obb_of(ema).c)),
+        ("2 x leg, damper, yoke, stub axles, side-brace lock (stowed leg mid-point)", 2 * (m_leg - m_whl - da26),
+         _pair(0.5 * (tr + ax_up)))],
+        basis="SAGITTA main leg 4.0 kg each (components.yaml) split as TOST wheel assembly 1.79 kg (research estimate) + "
+              "DA-26-class EMA 0.27 kg (estimate) + leg remainder, in the retracted (flight) pose")
+    m_nl = float(Z.research_item(f"{ref}[sagitta_retractable_gear].nose_leg_mass_kg"))
+    m_nw = (float(Z.research_item(f"{ref}[tost_lr_max2_nose].mass_kg")) +
+            float(Z.research_item(f"{ref}[tost_sb_max2_70_50_20].tyre.mass_kg")) +
+            float(Z.research_item(f"{ref}[tost_sb_max2_70_50_20].tyre.tube_mass_kg")))
+    Mn, tn = joint_motion(ctx, "nose_gear", float(jn["nose_gear"]["hi"]))
+    pv = np.asarray(LG["nose"]["pivot"], float)
+    axn = Mn @ np.asarray(LG["nose"]["axle_static"], float) + tn
+    put("nose_gear_leg_wheel_steering", [
+        ("TOST LR Max II nose wheel + 200x50 tyre + tube (stowed wheel centre)", m_nw,
+         _pair(LG["nose"]["retraction"]["stowed_wheel_center"])),
+        ("retraction EMA (ACT-NLG-EMA; DA-26-class mass, estimate)", da26, _pair(obb_of(acts["ACT-NLG-EMA"]).c)),
+        ("leg, damper, fork, steering collar (stowed leg mid-point)", m_nl - m_nw - da26, _pair(0.5 * (pv + axn)))],
+        basis="SAGITTA nose leg 3.5 kg (components.yaml) split as TOST nose wheel 0.365 + tyre 0.45 + tube 0.08 kg + "
+              "DA-26-class EMA 0.27 kg (estimate) + leg remainder, retracted (flight) pose")
+    st = acts["ACT-STEER"]
+    put("actuators_nose_steering_brake_2x_DA26", [
+        ("steering DA 26 + belt (ACT-STEER on the stowed leg)", da26 + 0.05, _pair(actuator_prim(ctx, st).c)),
+        ("brake DA 26 + master cylinder (EQ-BRAKE_UNIT)", da26 + 0.05, _box_c(eqs["EQ-BRAKE_UNIT"]["box"]))],
+        basis="item basis: 2 x DA 26 datasheet + 0.10 installation (half each); the steering actuator travels with the "
+              "leg (flight pose = retracted, layout_check actuator_prim)")
+    gd = Z.gear_doors_mass(S)
+    pk, g = gd["parts_kg"], gd["geometry"]
+    do = L["mechanisms"]["door_outlines"]
+
+    def door_c(*names):
+        P = []
+        for n in names:
+            V = np.asarray(do[n].get("outline") or do[n].get("outline_closed"), float)
+            x, y = float(V[:, 0].mean()), float(V[:, 1].mean())
+            P.append([x, 0.0, ctx.z_bot(x, y) + 0.002])
+        return np.mean(P, axis=0).tolist()
+    mb = np.asarray(LG["main"]["stowed_envelope"]["box"], float)
+    nb = np.asarray(LG["nose"]["stowed_envelope"]["box"], float)
+    wm, wn = _pair(0.5 * (mb[0] + mb[1])), _pair(0.5 * (nb[0] + nb[1]))
+    ak = float(S["mass"]["rules"]["gear_doors"]["door_areal_kg_per_m2"])
+    fixed = pk["well_close_outs"] + pk["cut_out_reinforcement"] + pk["locks_sensors"]
+    cnt = int(S["mass"]["rules"]["gear_doors"]["inner_door_actuator"]["count"])
+    n_main = min(cnt, 2)
+    act_e = pk["inner_door_actuators"] / max(cnt, 1)
+    lnk_e = pk["inner_door_linkages"] / max(cnt, 1)
+    comps = [("main inner doors", ak * g["area_main_inner_m2"], door_c("main_inner_door_R")),
+             ("main leg + trunnion doors", ak * g["area_main_leg_m2"],
+              door_c(*[n for n in ("main_leg_door_R", "main_trunnion_door_R") if n in do])),
+             ("nose clamshell doors", ak * g["area_nose_m2"], door_c("nose_door_R")),
+             ("close-outs, reinforcement, locks/sensors (main wells, 2/3)", 2.0 / 3.0 * fixed, wm),
+             ("close-outs, reinforcement, locks/sensors (nose well, 1/3)", fixed / 3.0, wn),
+             ("main inner-door DA 22 + linkages (EQ-DOORACT)", n_main * (act_e + lnk_e),
+              _pair(_box_c(eqs["EQ-DOORACT"]["box"]))),
+             ("leg-door brackets", pk["leg_door_brackets"], door_c("main_leg_door_R"))]
+    nda = [k for k in ("EQ-NDOORACT-R", "EQ-NDOORACT-L") if k in eqs]
+    if cnt > 2 and nda:
+        comps.append(("nose-door DA 22 + linkages (EQ-NDOORACT-R/-L)", (cnt - 2) * (act_e + lnk_e),
+                      np.mean([_box_c(eqs[k]["box"]) for k in nda], axis=0).tolist()))
+    if pk.get("seals", 0.0) > 0:
+        js = g["joint_main_m"] / max(g["joint_total_m"], 1e-9)
+        comps += [("door seals (main)", pk["seals"] * js, wm), ("door seals (nose)", pk["seals"] * (1 - js), wn)]
+    put("gear_doors_wells_locks_sensors", comps,
+        basis="sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout "
+              "door outlines (closed), well centres and door drives")
+    te = L["chassis"]["turret_elevator"]
+    rail_c = np.mean([np.asarray(r_["line"], float).mean(axis=0) for r_ in te["rails"]], axis=0)
+    tb = np.asarray(L["zones_preliminary"]["turret_bay"]["box"], float)
+    xt = float(S["payload"]["turret"]["bay_center_x"])
+    put("turret_lift_mechanism_doors", [
+        ("ball-screw stage + BLDC/brake (EQ-ELEVATOR on the bay roof)", 0.45, _box_c(eqs["EQ-ELEVATOR"]["box"])),
+        ("guide rails + carriage (RAIL-FR / RAIL-AL)", 0.35, _pair(rail_c)),
+        ("two sliding bay doors (closed)", 0.122, door_c("turret_door_R")),
+        ("door drives 2 x DA 22 + pinions/racks (EQ-TDOORACT)", 0.304, _pair(_box_c(eqs["EQ-TDOORACT"]["box"]))),
+        ("bay liner / frame (turret bay)", 0.40, _pair(0.5 * (tb[0] + tb[1]))),
+        ("controller / sensors (with the drive)", 0.10, _box_c(eqs["EQ-ELEVATOR"]["box"])),
+        ("HD59 aperture ring (flush skin insert)", 0.06, [xt, 0.0, ctx.z_bot(xt, 0.0) + 0.003])],
+        basis="item basis split (mass.rules.turret_mechanism_kg, estimates) at the layout objects, turret retracted")
+    put("parachute_uavos_200", [("UAVOS 200 container (EQ-PARACHUTE)", 1.0, _box_c(eqs["EQ-PARACHUTE"]["box"]))],
+        basis="container box centre (components.yaml compartment 0.300 x 0.300 x 0.275 m)")
+    fb = [FuelBand(ctx, c) for c in L["fuel_cells"]]
+    vol = np.array([f.volume() for f in fb])
+    cen = np.array([f.centroid() for f in fb])
+    put("fuel_system_3_cells", [("bladders, interconnection, valves and lines (no split in the item basis: at the "
+                                 "volume centroid of the three cells)", 1.0, _pair((vol[:, None] * cen).sum(0) / vol.sum()))],
+        basis="components.yaml fuel_system + three-cell interconnection; the item has no published split, so it is placed "
+              "at the volume centroid of the cells (layout FuelBand geometry); the shut-off valve EQ-SHUTOFF is part "
+              "of it")
 
 
 # =====================================================================================================================
@@ -657,6 +1008,29 @@ def obb_of(d: dict):
         o = d["obb"]
         return OBB(o["center"], np.asarray(o["axes"], float).T, o["half"])
     return OBB.aabb(d["box"])
+
+
+def joint_motion(ctx: Ctx, name: str, value: float) -> tuple:
+    """(M, t) of a layout joint at ``value`` (rad / m): p' = M p + t."""
+    j = next(j for j in ctx.L["mechanisms"]["joints"] if j["name"] == name)
+    o, a = np.asarray(j["origin"], float), _unit(j["axis"])
+    if j["kind"] == "prismatic":
+        return np.eye(3), value * a
+    M = _rot(a, value)
+    return M, o - M @ o
+
+
+def actuator_prim(ctx: Ctx, a: dict, value: float | None = None):
+    """Envelope of a layout actuator; one that moves with a joint ('moves_with', e.g. the nose-wheel steering actuator on
+    the leg) is placed at the joint value ``value`` (default: the flight pose = joint 'hi', gear up)."""
+    pr = obb_of(a)
+    jn = a.get("moves_with")
+    if not jn:
+        return pr
+    if value is None:
+        value = float(next(j["hi"] for j in ctx.L["mechanisms"]["joints"] if j["name"] == jn))
+    M, t = joint_motion(ctx, jn, value)
+    return pr.moved(M, t)
 
 
 def ctbox_prims(m: dict) -> list:
@@ -733,6 +1107,10 @@ def layout_objects(ctx: Ctx) -> list:
     for m in L["chassis"]["members"]:
         if "main_spar_line" in m:
             prims = ctbox_prims(m)
+        elif "boxes" in m:
+            prims = [OBB.aabb(b) for b in m["boxes"]]
+        elif "box" in m and m.get("cutout"):
+            prims = [OBB.aabb(b) for b in _box_minus_cutout(m["box"], m["cutout"])]
         elif "box" in m:
             prims = [OBB.aabb(m["box"])]
         else:
@@ -743,7 +1121,7 @@ def layout_objects(ctx: Ctx) -> list:
     for f in L["chassis"]["fittings"]:
         if "box" not in f:
             continue
-        O += _with_mirror(Obj(f["id"], f["part"], "structure", [obb_of(f)], "chassis",
+        O += _with_mirror(Obj(f["id"], f["part"], "structure", fitting_prims(f), "chassis",
                               f.get("material", ""), (), "layout.chassis.fittings"), bool(f.get("mirror")))
     for e in L["systems"]["equipment"]:
         box = e.get("envelope_with_connector", e["box"])
@@ -752,7 +1130,7 @@ def layout_objects(ctx: Ctx) -> list:
         O += _with_mirror(Obj(e["id"], e["part"], "content", [OBB.aabb(box)], e.get("group", ""), "",
                               (), "layout.systems.equipment"), bool(e.get("mirror")))
     for a in L["systems"]["actuators"]:
-        O += _with_mirror(Obj(a["id"], a["part"], "content", [obb_of(a)], "controls", "", (),
+        O += _with_mirror(Obj(a["id"], a["part"], "content", [actuator_prim(ctx, a)], "controls", "", (),
                               "layout.systems.actuators"), bool(a.get("mirror")))
     for a in L["systems"]["antennas"]:
         p, s = np.asarray(a["point"], float), 0.5 * np.asarray(a["size"], float)
@@ -769,6 +1147,9 @@ def layout_objects(ctx: Ctx) -> list:
     for t in L["systems"]["harness"]["trunks"]:
         O += _with_mirror(Obj(t["id"], t["part"], "harness", polyline(t["path"], 0.5 * float(t["diameter"])),
                               "systems", "", (), "layout.systems.harness"), bool(t.get("mirror")))
+    for fl in L.get("fuel_lines", []):
+        O += _with_mirror(Obj(fl["id"], fl["part"], "fuel_line", polyline(fl["path"], 0.5 * float(fl["diameter"])),
+                              "fuel", "", (), "layout.fuel_lines"), bool(fl.get("mirror")))
     em = L["chassis"]["engine_mount"]
     O.append(Obj("ENGINE-MOUNT", em["part"], "mount", [Capsule(t["a"], t["b"], 0.008) for t in em["tubes"]] +
                  [Capsule(em["ring_nodes"][i], em["ring_nodes"][j], 0.008)
@@ -796,18 +1177,18 @@ def layout_objects(ctx: Ctx) -> list:
         g = gear_prims(ctx, jn, ang, sd or "R")
         O.append(Obj(f"TYRE-{jn}{sd}-STOWED", "YK250-LG-622-" + sd if sd else "YK250-LG-626", "gear",
                      [g["tyre"]], "gear", "", (), "landing_gear (stowed)"))
-    sw = {s_["id"]: float(s_.get("sweep_deg", 0.0)) for s_ in L["stations"]}
-    cell_sw = {"forward_cell": (0.0, sw.get("FS-MS", 0.0)), "saddle_cell": (sw.get("FS-MS", 0.0), sw.get("FS-RS", 0.0)),
-               "aft_cell": (sw.get("FS-RS", 0.0), 0.0)}
     for c in L["fuel_cells"]:
-        O.append(Obj("FUEL-" + c["name"], "", "fuel", [FuelBand(ctx, c, cell_sw.get(c["name"], (0.0, 0.0)))], "fuel",
-                     "", (), "layout.fuel_cells (chevron bays)"))
+        O.append(Obj("FUEL-" + c["name"], "", "fuel", [FuelBand(ctx, c)], "fuel", "", (),
+                     "layout.chassis.fuel_supports (chevron bays: boundaries, inset; fix round 2, PK2-08)"))
     for k in L["keep_outs"]:
         if k["id"] == "KO-COOLING-DUCT":
             P = np.asarray(k["path"], float)
-            O.append(Obj("DUCT-COOLING", "YK250-PR-546", "content",
-                         [c for dy in k["lateral_offsets"] for c in polyline(P + [0, dy, 0], float(k["radius"]))],
-                         "propulsion", "", (), "layout.keep_outs.KO-COOLING-DUCT"))
+            prims = [c for dy in k["lateral_offsets"] for c in polyline(P + [0, dy, 0], float(k["radius"]))]
+            ex_ = k.get("exit_section")
+            if ex_:                         # flattened exit through the firewall cut-out (fix round 2, PK2-02)
+                prims.append(OBB.aabb([[ex_["x"][0], ex_["y"][0], ex_["z"][0]], [ex_["x"][1], ex_["y"][1], ex_["z"][1]]]))
+            O.append(Obj("DUCT-COOLING", "YK250-PR-546", "content", prims, "propulsion", "", (),
+                         "layout.keep_outs.KO-COOLING-DUCT"))
     st = L["chassis"]["parachute"]["bridle"]
     O.append(Obj("BRIDLE-AFT-LEG", "YK250-SY-802", "content",
                  [Capsule(np.asarray(st["forward_leg"]["point"]) + [0.03, 0, 0.0],
@@ -822,24 +1203,83 @@ def layout_objects(ctx: Ctx) -> list:
             p1 = hz + np.array([0.0, 0.0, float(lk["horn_m"])])
             O += _with_mirror(Obj(e["id"] + "-PUSHROD", e["part"], "linkage", [Capsule(p0, p1, 0.005)],
                                   "controls", "", (), "layout.systems.equipment.linkage"), bool(e.get("mirror")))
+            if e["id"] == "EQ-STABACT":
+                O += _with_mirror(Obj("STAB-HORN", "YK250-TL-301", "linkage", horn_sweep(ctx, lk), "controls", "", (),
+                                      "stabilator spindle horn swept over the stabilator range"), bool(e.get("mirror")))
     return O
 
 
-class FuelBand:
-    """Fuel cell: the body section band between z0..z1 over x0..x1, 25 mm inside the OML (sizing._area_band)."""
+def _box_minus_cutout(box, cut) -> list:
+    """A deck / floor box with a framed rectangular cut-out (x, y ranges): the four boxes around it."""
+    (x0, y0, z0), (x1, y1, z1) = box
+    cx0, cx1 = cut["x"]
+    cy0, cy1 = cut["y"]
+    return [[[x0, y0, z0], [cx0, y1, z1]], [[cx1, y0, z0], [x1, y1, z1]],
+            [[cx0, y0, z0], [cx1, cy0, z1]], [[cx0, cy1, z0], [cx1, y1, z1]]]
 
-    def __init__(self, ctx: Ctx, c: dict, sweeps=(0.0, 0.0)):
-        self.ctx, self.x, self.z, self.inset = ctx, [float(v) for v in c["x"]], [float(v) for v in c["z"]], \
-            float(c.get("inset", 0.025))
-        self.t0, self.t1 = (math.tan(math.radians(float(v))) for v in sweeps)
+
+def fitting_prims(f: dict) -> list:
+    """Envelope primitives of a fitting: its 'boxes' (multi-box fittings) + its 'cylinder' (bearing boss), else the
+    oriented 'obb' or the 'box'."""
+    if f.get("obbs"):
+        return [OBB(o["center"], np.asarray(o["axes"], float).T, o["half"]) for o in f["obbs"]]
+    if f.get("boxes"):
+        prims = [OBB.aabb(b) for b in f["boxes"]]
+        if f.get("cylinder"):
+            c = f["cylinder"]
+            prims.append(Cyl(c["center"], c["axis"], c["radius"], c["half_length"]))
+        return prims
+    return [obb_of(f)]
+
+
+def horn_sweep(ctx: Ctx, lk: dict) -> list:
+    """Stabilator horn (hub r 12 mm -> rod end at the horn radius, 6 mm half width) swept over the stabilator range
+    about the spindle axis: capsules at 7 angles."""
+    st = ctx.S["tail"]["surfaces"]["stabilator"]["controls"]["range_deg"]
+    hz = np.asarray(lk["horn_axis"], float)
+    r = float(lk["horn_m"])
+    out = []
+    for a in np.radians(np.linspace(float(min(st)), float(max(st)), 7)):
+        d = np.array([math.sin(a), 0.0, math.cos(a)])           # rotation about +y (TE down +)
+        out.append(Capsule(hz + 0.012 * d, hz + (r + 0.004) * d, 0.006))
+    return out
+
+
+def fuel_geometry(ctx: Ctx, c: dict) -> dict:
+    """Bay geometry of a fuel cell from layout.chassis.fuel_supports (fix round 2, PK2-08): x at the centre line, z band,
+    forward / aft boundary sweeps (x(y) = x_ref + |y| tan(sweep)), inset from the OML, |y| limits."""
+    fs = {f["cell"]: f for f in ctx.L["chassis"].get("fuel_supports", [])}.get(c["name"], {})
+    bf, ba = fs.get("boundary_fwd") or {}, fs.get("boundary_aft") or {}
+    return {"x": [float(bf.get("x_at_centre_line", c["x"][0])), float(ba.get("x_at_centre_line", c["x"][1]))],
+            "z": [float(v) for v in c["z"]], "sweeps": (float(bf.get("sweep_deg", 0.0)), float(ba.get("sweep_deg", 0.0))),
+            "stations": (bf.get("station"), ba.get("station")),
+            "inset": float(fs.get("inset_from_oml_m", c.get("inset", 0.025))),
+            "y_lim": float(max(abs(v) for v in fs.get("y_limits_m", [-0.45, 0.45])))}
+
+
+class FuelBand:
+    """Fuel cell: the body section band z0..z1 between the forward / aft bay boundaries (swept with the spar frames),
+    |y| <= y_lim, ``inset`` inside the OML (layout.chassis.fuel_supports; sizing._area_band)."""
+
+    def __init__(self, ctx: Ctx, c: dict):
+        g = fuel_geometry(ctx, c)
+        self.ctx, self.x, self.z, self.inset = ctx, g["x"], g["z"], g["inset"]
+        self.t0, self.t1 = (math.tan(math.radians(float(v))) for v in g["sweeps"])
+        self.y_lim = g["y_lim"]
         xs = np.arange(self.x[0], self.x[1] + 0.07, 0.01)
-        yy = np.arange(-0.45, 0.4501, 0.01)
+        yy = np.arange(-self.y_lim, self.y_lim + 1e-4, 0.01)
         zz = np.arange(self.z[0], self.z[1] + 1e-9, 0.01)
         G = np.array(np.meshgrid(xs, yy, zz, indexing="ij")).reshape(3, -1).T
         ay = np.abs(G[:, 1])
         keep = (G[:, 0] >= self.x[0] + ay * self.t0) & (G[:, 0] <= self.x[1] + ay * self.t1)
         G = G[keep]
         self._pts = G[ctx.af.inside(G, self.inset)]
+
+    def volume(self) -> float:
+        return float(len(self._pts)) * 1e-6                       # 10 mm grid
+
+    def centroid(self) -> np.ndarray:
+        return self._pts.mean(axis=0) if len(self._pts) else np.array([0.5 * sum(self.x), 0.0, 0.5 * sum(self.z)])
 
     def sdf(self, P):
         P = np.atleast_2d(P)
@@ -935,9 +1375,18 @@ def check_ids(ctx: Ctx) -> list:
             elif t not in known:
                 miss.append(f"{m['id']}.touch {t}")
     for p in L["shell"]["panels"]:
-        for t in p.get("lands", []):
+        for t in p.get("lands", []) or []:
             if t not in known:
                 miss.append(f"{p['id']}.lands {t}")
+    for f in L["chassis"]["fittings"]:
+        for t in f.get("touch", []):
+            if not (t in known or (t.endswith("*") and any(k.startswith(t[:-1]) for k in known))):
+                miss.append(f"{f['id']}.touch {t}")
+    obj_ids = known | {"ENGINE-MOUNT", "RAIL-FR", "RAIL-AL", "ELEV-SCREW", "EQ-TURRET", "TURRET"}
+    for pth in L["mechanisms"].get("assembly_paths", []):
+        for t in pth.get("engages", []):
+            if t not in obj_ids:
+                miss.append(f"path {pth['name']}.engages {t}")
     parts = {pid for _, pid, _ in _all_parts(L)}
     for t in L["systems"]["harness"]["trunks"]:
         for pn in t.get("penetrations", []):
@@ -1038,17 +1487,49 @@ def check_stations(ctx: Ctx) -> list:
             bad.append(f"{s_['id']} x_faces")
     R.append(_row("C02", "stations: type, material/process/layup keys, thickness >= process minimum, faces", not bad,
                   len(bad), 0, "; ".join(bad)))
-    # cut-outs inside the section
-    bad = []
+    # cut-outs inside the frame web (fix round 2, PK2-02): every corner of every pass-through keeps the frame inset
+    # + the 20 mm solid edge band of the web (layout.stations[*].construction) from the OML (true distance), so the
+    # web, its skin flange and edge band stay continuous round the frame
+    bad, worst = [], (np.inf, "")
+    for s_ in st:
+        need = float(s_.get("inset", 0.0065)) + EDGE_BAND
+        for c in s_.get("cutouts", []):
+            if c.get("kind") in ("bay", "edge notch"):
+                continue
+            Q = []
+            for sg in ((1.0, -1.0) if c.get("mirror") else (1.0,)):
+                for yy in c["y"]:
+                    for zz in c["z"]:
+                        Q.append([station_x(s_, sg * yy), sg * yy, zz])
+            Q = np.asarray(Q, float)
+            d = ctx.depth(Q)
+            m = float(d.min() - need)
+            if m < worst[0]:
+                worst = (m, f"{s_['id']}.{c['id']}")
+            if m < -1e-6:
+                bad.append(f"{s_['id']}.{c['id']} corner {d.min() * 1000:.1f} < {need * 1000:.1f} mm")
+    R.append(_row("C02", "cut-outs (pass-throughs): all corners >= frame inset + 20 mm edge band from the OML (true "
+                  "distance; fix round 2, PK2-02)", not bad, round(worst[0] * 1000, 1), ">= 0 mm margin",
+                  "; ".join(bad) if bad else f"worst {worst[1]}"))
+    # edge notches (open to the frame edge on purpose: bridle / spine passages that must lift out): <= 50 mm wide, under
+    # a removable cover panel of layout.shell.panels, with a declared U-doubler round the notch
+    pans = {p_["id"]: p_ for p_ in L["shell"]["panels"]}
+    bad, n_n = [], 0
     for s_ in st:
         for c in s_.get("cutouts", []):
-            if c.get("kind") == "bay":
+            if c.get("kind") != "edge notch":
                 continue
-            yc, zc = 0.5 * (c["y"][0] + c["y"][1]), 0.5 * (c["z"][0] + c["z"][1])
-            x = station_x(s_, yc)
-            if not ctx.inside([[x, yc, zc]], 0.004)[0]:
-                bad.append(f"{s_['id']}.{c['id']}")
-    R.append(_row("C02", "cut-outs (pass-throughs) inside the frame web", not bad, len(bad), 0, "; ".join(bad)))
+            n_n += 1
+            w = abs(float(c["y"][1]) - float(c["y"][0]))
+            cov = pans.get(c.get("cover", ""))
+            x = float(s_["x"])
+            under = cov is not None and cov["attach"] in ("removable", "hinged") and \
+                all(_in_poly([[x, yy]], panel_poly(cov))[0] for yy in c["y"])
+            if w > 0.050 + 1e-9 or not under or not c.get("doubler"):
+                bad.append(f"{s_['id']}.{c['id']} (w {w * 1000:.0f} mm, cover {c.get('cover')}, doubler "
+                           f"{bool(c.get('doubler'))})")
+    R.append(_row("C02", f"edge notches at the frame tops ({n_n}): <= 50 mm wide, under a removable cover, U-doubler "
+                  "declared (fix round 2, PK2-02)", not bad, len(bad), 0, "; ".join(bad)))
     # frames do not cut fuel / turret / gear / payload / parachute / equipment volumes
     Zp = L["zones_preliminary"]
     vols = {"fuel:" + c["name"]: (c["x"], None) for c in L["fuel_cells"]}
@@ -1091,17 +1572,20 @@ def check_stations(ctx: Ctx) -> list:
     eff = float(S_["structures"]["fuel"]["tank_volume_efficiency"])
     rho = float(S_["engine"]["fuel"]["density_kg_per_m3"])
     need = float(S_["mass"]["fuel_kg"]) / rho * (1 + float(S_["structures"]["fuel"]["expansion_fraction"]))
-    bounds = {"forward_cell": (None, "FS-MS"), "saddle_cell": ("FS-MS", "FS-RS"), "aft_cell": ("FS-RS", None)}
     vol = 0.0
     gmin = 1.0
-    for name, (fa, fb) in bounds.items():
-        c = cells[name]
-        g = np.array(np.meshgrid(np.arange(c["x"][0] - 0.06, c["x"][1] + 0.08, 0.005), np.arange(-0.42, 0.42, 0.005),
-                                 np.arange(c["z"][0], c["z"][1] + 1e-9, 0.005), indexing="ij")).reshape(3, -1).T
-        ins = ctx.af.inside(g, float(c.get("inset", 0.025)))
+    for name, c in cells.items():
+        geo = fuel_geometry(ctx, c)
+        fa, fb = geo["stations"]
+        fa = fa if fa in fs and float(fs[fa].get("sweep_deg", 0.0)) else None       # straight bulkheads: x faces
+        fb = fb if fb in fs and float(fs[fb].get("sweep_deg", 0.0)) else None
+        g = np.array(np.meshgrid(np.arange(geo["x"][0] - 0.06, geo["x"][1] + 0.08, 0.005),
+                                 np.arange(-geo["y_lim"], geo["y_lim"], 0.005),
+                                 np.arange(geo["z"][0], geo["z"][1] + 1e-9, 0.005), indexing="ij")).reshape(3, -1).T
+        ins = ctx.af.inside(g, geo["inset"])
         ay = np.abs(g[:, 1])
-        x0c = float(c["x"][0]) + (ay * math.tan(math.radians(float(fs[fa]["sweep_deg"]))) if fa else 0.0)
-        x1c = float(c["x"][1]) + (ay * math.tan(math.radians(float(fs[fb]["sweep_deg"]))) if fb else 0.0)
+        x0c = geo["x"][0] + ay * math.tan(math.radians(geo["sweeps"][0]))
+        x1c = geo["x"][1] + ay * math.tan(math.radians(geo["sweeps"][1]))
         cell = ins & (g[:, 0] >= x0c) & (g[:, 0] <= x1c)
         vol += float(cell.sum()) * 0.005 ** 3 * eff
         for fid, side in ((fa, -1), (fb, +1)):
@@ -1129,6 +1613,8 @@ def check_stations(ctx: Ctx) -> list:
             paths.append((e["id"] + " pushrod", np.array([p0, p1]), 0.005))
             if e.get("mirror"):
                 paths.append((e["id"] + " pushrod@L", np.array([p0, p1]) * [1, -1, 1], 0.005))
+    for fl in L.get("fuel_lines", []):
+        paths.append((fl["id"], np.asarray(fl["path"], float), 0.5 * float(fl["diameter"])))
     br = L["chassis"]["parachute"]["bridle"]
     paths.append(("bridle aft leg", np.array([br["forward_leg"]["point"], br["aft_leg"]["point"]], float), 0.008))
     for k in L["keep_outs"]:
@@ -1146,12 +1632,15 @@ def check_stations(ctx: Ctx) -> list:
                 if _in_cutout(s_, q[1], q[2], r):
                     continue
                 if s_["type"] == "ring":
+                    if s_.get("ring_z_max") is not None and q[2] - r > float(s_["ring_z_max"]):
+                        continue                   # above a U-ring (fix round 1: FS3738 ends below the node fittings)
                     if not ctx.af.inside([q], 0.006 + float(s_.get("ring_depth", 0.04)) + r)[0]:
                         bad.append(f"{name} x {s_['id']} at y {q[1]:.3f} z {q[2]:.3f}: in the ring web")
                     continue
                 if not _in_cutout(s_, q[1], q[2], r):
                     bad.append(f"{name} x {s_['id']} at y {q[1]:.3f} z {q[2]:.3f}")
-    R.append(_row("C02", f"harness / push-rod / bridle crossings of frame webs pass declared cut-outs ({n} crossings)",
+    R.append(_row("C02", f"harness / fuel-line / push-rod / bridle crossings of frame webs pass declared cut-outs ({n} "
+                  "crossings)",
                   not bad, len(bad), 0, "; ".join(bad[:10])))
     return R
 
@@ -1178,85 +1667,144 @@ def _box_points(box, n=4, skin=()):
     return P[keep]
 
 
+MOUNT_ALLOWANCE = 0.002     # m, antenna / actuator envelope to the inner skin surface (mount, hatch frame; fix round 2)
+
+
+def _req_depth(ctx: Ctx, obj: dict, P: np.ndarray, allowance: float) -> np.ndarray:
+    """Required depth below the OML of the points of a layout object: its declared ``oml_clearance_m`` (with the
+    basis in ``oml_clearance_basis``, e.g. spar caps under the solid skin over the caps), else the local skin thickness
+    (``Ctx.skin_t``: panel / wing / tail skin over the point) + ``allowance`` (fix round 2, PK2-01/06/10)."""
+    if obj.get("oml_clearance_m") is not None:
+        return np.full(len(P), float(obj["oml_clearance_m"]))
+    return ctx.skin_t(P) + allowance
+
+
+def _worst(ctx: Ctx, P: np.ndarray, need: np.ndarray, tail: bool = False, ok_mask=None) -> tuple:
+    d = ctx.depth(P, tail=tail)
+    m = d - need
+    if ok_mask is not None:
+        m = np.where(ok_mask, np.inf, m)
+    i = int(np.argmin(m))
+    return float(m[i]), float(d[i]), float(need[i]), P[i]
+
+
 def check_inside(ctx: Ctx) -> list:
+    """C03 (fix round 2, PK2-01/06/10): every envelope inside the INNER skin surface, by the true distance to the OML
+    (``Ctx.depth``: 3-D distance to the body surface, section distance in the wing / tail lofts) against the local
+    skin thickness of the panel / skin over it (``Ctx.skin_t``) + the item allowance: antennas and actuators + 2 mm
+    (mount, hatch frame), equipment >= max(bay_contents.clearance_to_oml, skin + 2 mm), members and fittings >= the
+    skin (faces declared on the skin are trimmed to the inner skin surface), harness trunks and fuel lines >= skin +
+    radius + 3 mm, engine-mount tubes >= skin + radius + 5 mm."""
     L = ctx.L
     R = []
-    cv = L["clearance_values"]
-    bc = L["rules"]["bay_contents"]["clearance_to_oml"]
-    groups = []
+    bc = float(L["rules"]["bay_contents"]["clearance_to_oml"])
+    rows = {k: [] for k in ("equipment", "member", "fitting", "actuator", "antenna")}
+    worst = {k: (np.inf, "") for k in rows}
+
+    def note(kind, oid, res):
+        m, d, need, q = res
+        if m < worst[kind][0]:
+            worst[kind] = (m, f"{oid}: {d * 1000:.1f} mm vs {need * 1000:.1f} mm at {_r(q, 3)}")
+        if m < -1e-6:
+            rows[kind].append(f"{oid} {d * 1000:.1f} < {need * 1000:.1f} mm at {_r(q, 3)}")
     for e in L["systems"]["equipment"]:
         if e["id"] == "EQ-TURRET":
             continue
-        groups.append(("equipment", e["id"], e.get("envelope_with_connector", e["box"]), float(bc),
-                       bool(e.get("mirror")), (), None))
+        P = _box_points(e.get("envelope_with_connector", e["box"]), 5)
+        if e.get("mirror"):
+            P = np.vstack([P, P * [1, -1, 1]])
+        need = np.maximum(bc, _req_depth(ctx, e, P, MOUNT_ALLOWANCE))
+        note("equipment", e["id"], _worst(ctx, P, need))
     contour = []
     for m in L["chassis"]["members"]:
-        if "main_spar_line" in m:
-            groups.append(("member", m["id"], None, 0.0, False, (), ctbox_prims(m)))
-        elif m.get("contour") == "wing_loft":
+        if m.get("contour") == "wing_loft":
             contour.append(m)
+            continue
+        skin = tuple(k for k in ("top", "bottom", "sides") if m.get(k) == "skin")
+        if "main_spar_line" in m:
+            P = np.vstack([c.samples(0.01) for c in ctbox_prims(m)])
+        elif "boxes" in m:
+            P = np.vstack([_box_points(b, 6, skin) for b in m["boxes"]])
         elif "box" in m:
-            groups.append(("member", m["id"], m["box"], 0.0, bool(m.get("mirror")),
-                           tuple(k for k in ("top", "bottom", "sides") if m.get(k) == "skin"), None))
-    for f in L["chassis"]["fittings"]:
-        if "box" in f:
-            groups.append(("fitting", f["id"], f["box"], 0.0, bool(f.get("mirror")), (), [obb_of(f)]))
-    for a in L["systems"]["actuators"]:
-        groups.append(("actuator", a["id"], a["box"], 0.003, bool(a.get("mirror")), (), [obb_of(a)]))
-    bad = {}
-    for kind, oid, box, m, mir, skin, prims in groups:
-        if prims is not None:
-            P = np.vstack([p.corners() if isinstance(p, OBB) else p.samples(0.01) if isinstance(p, Cyl) else
-                           np.array([p.p0, p.p1]) for p in prims])
-            if isinstance(prims[0], OBB):
-                P = np.vstack([P, prims[0].samples(0.01)])
+            P = _box_points(m["box"], 6, skin)
         else:
-            P = _box_points(box, 4, skin)
-        if mir:
+            continue
+        if m.get("mirror"):
             P = np.vstack([P, P * [1, -1, 1]])
-        ok = ctx.inside(P, m, tail=True)
-        if skin:                                      # faces declared on the skin: points beyond the skin side count
+        ok = None
+        if skin:                    # faces declared on the skin: trimmed to the inner skin surface on that side
             zc_ = np.array([float(ctx.af.sec(x)[3][0]) for x in P[:, 0]])
-            beyond = np.zeros(len(P), bool)
+            ok = np.zeros(len(P), bool)
             if "bottom" in skin:
-                beyond |= P[:, 2] < zc_
+                ok |= P[:, 2] < zc_
             if "top" in skin:
-                beyond |= P[:, 2] > zc_
+                ok |= P[:, 2] > zc_
             if "sides" in skin:
-                beyond |= np.ones(len(P), bool)
-            ok |= beyond & ~ctx.af.inside(P, 0.0) & ctx.af.inside(P * [1, 0, 1], 0.0)
-        if not ok.all():
-            bad.setdefault(kind, []).append(f"{oid} ({int((~ok).sum())} pts, e.g. {_r(P[~ok][0], 3)})")
+                ok |= np.ones(len(P), bool)
+        note("member", m["id"], _worst(ctx, P, _req_depth(ctx, m, P, 0.0), ok_mask=ok))
+    for f in L["chassis"]["fittings"]:
+        if "box" not in f:
+            continue
+        P = np.vstack([p.samples(0.006) for p in fitting_prims(f)])
+        if f.get("mirror"):
+            P = np.vstack([P, P * [1, -1, 1]])
+        tail = bool(np.any(P[:, 0] > 3.3))            # tail-root fittings: also inside the fin / stub / ventral lofts
+        note("fitting", f["id"], _worst(ctx, P, _req_depth(ctx, f, P, 0.0), tail=tail))
+    for a in L["systems"]["actuators"]:
+        P = actuator_prim(ctx, a).samples(0.006)
+        tail = bool(a.get("in_tail"))
+        note("actuator", a["id"], _worst(ctx, P, _req_depth(ctx, a, P, MOUNT_ALLOWANCE), tail=tail))
+    for a in L["systems"]["antennas"]:
+        if str(a.get("window", "")).startswith("external") or str(a.get("window", "")).startswith("YK250-TL"):
+            continue                                   # external blade / fin-tip caps (tail module)
+        p, h = np.asarray(a["point"], float), 0.5 * np.asarray(a["size"], float)
+        P = OBB.aabb([p - h, p + h]).samples(0.004)
+        note("antenna", a["id"], _worst(ctx, P, _req_depth(ctx, a, P, MOUNT_ALLOWANCE)))
     for m in contour:                                  # ribs trimmed to the wing loft: chord-line extent inside
         b = np.asarray(m["box"], float)
         y = 0.5 * (b[0][1] + b[1][1])
         w = ctx._wing_section(y)
         if w is None:
-            bad.setdefault("member", []).append(f"{m['id']} (no loft at y {y:.3f})")
+            rows["member"].append(f"{m['id']} (no loft at y {y:.3f})")
             continue
         xu, zu, xl, zl = w
         if b[0][0] < max(xu[0], xl[0]) - 1e-3 or b[1][0] > min(xu[-1], xl[-1]) + 1e-3:
-            bad.setdefault("member", []).append(f"{m['id']} chord extent outside the loft at y {y:.3f}")
-    for kind in ("equipment", "member", "fitting", "actuator"):
-        lim = {"equipment": f">= {bc * 1000:.0f} mm", "actuator": ">= 3 mm"}.get(kind, ">= 0 (skin faces excepted)")
-        R.append(_row("C03", f"{kind} envelopes inside the OML", kind not in bad, len(bad.get(kind, [])), lim,
-                      "; ".join(bad.get(kind, [])[:6])))
-    bad = []
-    for t in L["systems"]["harness"]["trunks"]:
-        for c in polyline(t["path"], 0.5 * float(t["diameter"])):
-            P = np.array([c.p0 + f * (c.p1 - c.p0) for f in np.linspace(0, 1, 12)])
-            ok = ctx.inside(P, c.r + 0.003)
-            if not ok.all():
-                bad.append(f"{t['id']} near {_r(P[~ok][0], 3)}")
-                break
-    R.append(_row("C03", "harness trunks inside the OML (radius + 3 mm)", not bad, len(bad), ">= r + 3 mm",
-                  "; ".join(bad)))
+            rows["member"].append(f"{m['id']} chord extent outside the loft at y {y:.3f}")
+    lim = {"equipment": f">= max({bc * 1000:.0f} mm, skin + 2 mm)", "actuator": ">= skin + 2 mm",
+           "antenna": ">= skin + 2 mm", "member": ">= skin (skin faces trimmed)", "fitting": ">= skin"}
+    for kind in ("equipment", "member", "fitting", "actuator", "antenna"):
+        R.append(_row("C03", f"{kind} envelopes inside the inner skin surface (true distance to the OML vs the local "
+                      "skin; fix round 2, PK2-01/06/10)", not rows[kind],
+                      round(worst[kind][0] * 1000, 1) if math.isfinite(worst[kind][0]) else None,
+                      lim[kind] + " (value: worst margin, mm)",
+                      "; ".join(rows[kind][:6]) if rows[kind] else "worst " + worst[kind][1]))
+    for key, rad_add, label in (("harness", 0.003, "harness trunks"), ("fuel_lines", 0.003, "fuel lines")):
+        items = L["systems"]["harness"]["trunks"] if key == "harness" else L.get("fuel_lines", [])
+        bad, w = [], (np.inf, "")
+        for t in items:
+            r = 0.5 * float(t["diameter"])
+            P = np.vstack([np.array([c.p0 + f_ * (c.p1 - c.p0) for f_ in np.linspace(0, 1, 12)])
+                           for c in polyline(t["path"], r)])
+            ok = None
+            if t.get("end_fitting") == "skin":         # the line ends in a fitting in the skin (vent, drain)
+                end = np.asarray(t["path"][-1], float)
+                ok = np.linalg.norm(P - end, axis=1) <= r + 0.0058 + 0.020
+            if t.get("mirror"):
+                P = np.vstack([P, P * [1, -1, 1]])
+                ok = None if ok is None else np.concatenate([ok, ok])
+            res = _worst(ctx, P, ctx.skin_t(P) + r + rad_add, ok_mask=ok)
+            if res[0] < w[0]:
+                w = (res[0], t["id"])
+            if res[0] < -1e-6:
+                bad.append(f"{t['id']} {res[1] * 1000:.1f} < {res[2] * 1000:.1f} mm near {_r(res[3], 3)}")
+        R.append(_row("C03", f"{label} inside the inner skin surface (true distance >= skin + radius + 3 mm)", not bad,
+                      round(w[0] * 1000, 1) if math.isfinite(w[0]) else None, ">= 0 mm margin", "; ".join(bad)))
     em = L["chassis"]["engine_mount"]
     P = np.array([np.asarray(t["a"]) + f * (np.asarray(t["b"]) - np.asarray(t["a"])) for t in em["tubes"]
                   for f in np.linspace(0, 1, 6)] + [np.asarray(n) for n in em["ring_nodes"]])
-    ok = ctx.inside(P, 0.008 + 0.005)
-    R.append(_row("C03", "engine mount truss inside the cowl (tube radius + 5 mm)", ok.all(), int((~ok).sum()), 0,
-                  "" if ok.all() else str(_r(P[~ok][0], 3))))
+    res = _worst(ctx, P, ctx.skin_t(P) + 0.008 + 0.005)
+    R.append(_row("C03", "engine mount truss inside the cowl (true distance >= skin + tube radius + 5 mm)",
+                  res[0] >= -1e-6, round(res[0] * 1000, 1), ">= 0 mm margin", "" if res[0] >= 0 else str(_r(res[3], 3))))
     T = turret_prims(ctx, 0.0)
     ok = ctx.inside(T[0].samples(0.01), 0.0)
     R.append(_row("C03", "turret growth envelope (retracted) inside the OML", bool(ok.all()), int((~ok).sum()), 0, ""))
@@ -1266,7 +1814,7 @@ def check_inside(ctx: Ctx) -> list:
 # =====================================================================================================================
 # C04 static overlaps
 # =====================================================================================================================
-CONTENT_KINDS = ("content", "harness", "fuel", "gear", "engine", "exhaust", "mount", "linkage")
+CONTENT_KINDS = ("content", "harness", "fuel", "fuel_line", "gear", "engine", "exhaust", "mount", "linkage")
 
 
 def _allowed(a: Obj, b: Obj) -> float | None:
@@ -1276,7 +1824,16 @@ def _allowed(a: Obj, b: Obj) -> float | None:
     if "external" in pair:
         return None
     if ka == "structure" and kb == "structure":
-        return None
+        return 0.0 if not _declared_touch(a, b) else None     # fix round 1 (VPK-06): only declared contacts
+    if "fuel_line" in pair:
+        other = b if ka == "fuel_line" else a
+        if other.kind in ("fuel",):
+            return None                        # the line ends in the cell fitting
+        if other.kind == "engine":
+            return None if (a.id + b.id).find("FL-FEED-3") >= 0 or (a.id + b.id).find("FL-RETURN") >= 0 else 0.0
+        if other.kind in ("structure", "content"):
+            return -0.003                      # lines clamped to members, ending at the pump / valve faces
+        return 0.0
     if pair == {"engine", "mount"} or pair == {"engine", "exhaust"} or pair == {"engine", "linkage"}:
         return None
     if ka == "harness" and kb == "harness":
@@ -1289,6 +1846,8 @@ def _allowed(a: Obj, b: Obj) -> float | None:
         if other.kind in ("content", "structure", "linkage"):
             return -0.003                      # trunks start at equipment and run along members (clamped)
         return 0.0
+    if ka == "linkage" and kb == "linkage":
+        return None                            # pushrod on its own horn / servo arm
     if "linkage" in pair:
         other = b if ka == "linkage" else a
         lk = a if ka == "linkage" else b
@@ -1300,7 +1859,7 @@ def _allowed(a: Obj, b: Obj) -> float | None:
     if "mount" in pair:
         other = b if ka == "mount" else a
         if other.kind == "structure":
-            return None if other.id.startswith(("F-EMOUNT",)) else 0.0
+            return None if other.id.startswith(("F-EMOUNT", "F-FW-CORNER")) else 0.0
         return 0.0
     if "structure" in pair:
         return -0.002                           # equipment resting on trays / decks / walls
@@ -1313,14 +1872,33 @@ def _allowed(a: Obj, b: Obj) -> float | None:
     return 0.0
 
 
+TOUCH: dict = {}
+
+
+def _base(i: str) -> str:
+    return i.split("@")[0]
+
+
+def _declared_touch(a: Obj, b: Obj) -> bool:
+    """Structure pair declared in contact: either part lists the other (or a glob of it) in its 'touch' list."""
+    ia, ib = _base(a.id), _base(b.id)
+    for x, y in ((ia, ib), (ib, ia)):
+        for t in TOUCH.get(x, ()):
+            if t == y or (t.endswith("*") and y.startswith(t[:-1])):
+                return True
+    return False
+
+
 def _penetration_ok(ctx: Ctx, a: Obj, b: Obj, req: float) -> bool:
     """A harness trunk may pass a member only at a declared penetration (trunk 'penetrations': member + point)."""
-    h, m = (a, b) if a.kind == "harness" else (b, a) if b.kind == "harness" else (None, None)
+    h, m = (a, b) if a.kind in ("harness", "fuel_line") else (b, a) if b.kind in ("harness", "fuel_line") \
+        else (None, None)
     if h is None or m.kind != "structure":
         return False
     tid = h.id.split("@")[0]
     side = h.id.split("@")[1] if "@" in h.id else ""
-    t = next((t for t in ctx.L["systems"]["harness"]["trunks"] if t["id"] == tid), None)
+    t = next((t for t in ctx.L["systems"]["harness"]["trunks"] + ctx.L.get("fuel_lines", []) if t["id"] == tid),
+             None)
     if not t:
         return False
     pens = [np.asarray(pn["point"], float) * ([1, -1, 1] if side == "L" else [1, 1, 1])
@@ -1336,9 +1914,12 @@ def _penetration_ok(ctx: Ctx, a: Obj, b: Obj, req: float) -> bool:
 
 def check_overlaps(ctx: Ctx, objs: list) -> tuple[list, list]:
     R, pairs = [], []
+    TOUCH.clear()
+    for m in ctx.L["chassis"]["members"] + ctx.L["chassis"]["fittings"]:
+        TOUCH[m["id"]] = tuple(m.get("touch", ()))
     B = {o.id: _bounds(o.prims) for o in objs}
-    viol = []
-    n = 0
+    viol, viol_s = [], []
+    n = ns = 0
     for i in range(len(objs)):
         for j in range(i + 1, len(objs)):
             a, b = objs[i], objs[j]
@@ -1349,17 +1930,80 @@ def check_overlaps(ctx: Ctx, objs: list) -> tuple[list, list]:
             lb, hb = B[b.id]
             if np.maximum(lb - ha, la - hb).max() > 0.01:
                 continue
-            n += 1
-            g = gap(a.prims, b.prims, cutoff=0.02, step=0.006)
+            ss = a.kind == "structure" and b.kind == "structure"
+            if ss:
+                ns += 1
+            else:
+                n += 1
+            g = gap(a.prims, b.prims, cutoff=0.02, step=0.004 if ss else 0.006)
             pairs.append((a.id, b.id, g, req))
             if g < req - 1e-9 and _penetration_ok(ctx, a, b, req):
                 continue
-            if g < req - 1e-9:
+            if ss and g < -0.0006:               # sampling tolerance of abutting faces
+                viol_s.append(f"{a.id} / {b.id}: {g * 1000:.1f} mm")
+            elif not ss and g < req - 1e-9:
                 viol.append(f"{a.id} / {b.id}: {g * 1000:.1f} mm (need {req * 1000:.0f})")
-    R.append(_row("C04", f"no overlaps between contents (equipment, fuel cells, harness, turret, stowed gear, engine, "
-                  f"mount, exhaust, linkages) and with structure ({n} close pairs evaluated)", not viol, len(viol), 0,
-                  "; ".join(viol[:12])))
+    R.append(_row("C04", f"no overlaps between contents (equipment, fuel cells, fuel lines, harness, turret, stowed "
+                  f"gear, engine, mount, exhaust, linkages) and with structure ({n} close pairs evaluated)", not viol,
+                  len(viol), 0, "; ".join(viol[:12])))
+    R.append(_row("C04", f"structure vs structure (members, fittings): overlap only where the parts declare the contact "
+                  f"('touch'; fix round 1, VPK-01/VPK-06) ({ns} close undeclared pairs evaluated)", not viol_s,
+                  len(viol_s), 0, "; ".join(viol_s[:12])))
+    R.append(fitting_bolt_row(ctx))
     return R, pairs
+
+
+def _bolt_edge(box_or_obb, p, axis):
+    """In-plane edge distance of a hole at p (axis) inside an OBB: smallest distance to the faces parallel to the
+    axis; None if the hole is outside the box or the axis is not along a box axis."""
+    o = box_or_obb
+    q = o.R.T @ (np.asarray(p, float) - o.c)
+    a = o.R.T @ _unit(axis)
+    k = int(np.argmax(np.abs(a)))
+    if abs(a[k]) < 0.99:
+        return None
+    if np.any(np.abs(q) > o.h + 2e-4):          # 0.2 mm: holes on a shared face of two envelope boxes
+        return None
+    return float(min(o.h[j] - abs(q[j]) for j in range(3) if j != k))
+
+
+def fitting_bolt_row(ctx: Ctx) -> dict:
+    """Fix round 1 (VPK-07): every fitting declares its bolt pattern; each hole lies inside one envelope box of the
+    fitting with edge distance >= 2 D (metal, processes.cnc_milling_metal) / 2.5 D (composite) and holes of one group
+    are >= 3 D apart (pitch); fittings without a bolt list fail."""
+    procs = ctx.S["processes"]
+    bad, n = [], 0
+    for f in ctx.L["chassis"]["fittings"]:
+        bl = f.get("bolts") or []
+        if not bl:
+            bad.append(f"{f['id']}: no bolt pattern")
+            continue
+        comp = str(f.get("material", "")).startswith(("cfrp", "gfrp"))
+        k_e = float(procs.get(f.get("process", ""), {}).get("edge_distance_D_min" if comp else "edge_distance_D",
+                                                           2.5 if comp else 2.0))
+        prims = [p for p in fitting_prims(f) if isinstance(p, OBB)]
+        for b in bl:
+            n += 1
+            e = [_bolt_edge(o, b["point"], b["axis"]) for o in prims]
+            e = [v for v in e if v is not None]
+            need = k_e * float(b["d"])
+            if not e:
+                bad.append(f"{f['id']}.{b['id']}: hole outside the envelope boxes")
+            elif max(e) < need - 1e-6:
+                bad.append(f"{f['id']}.{b['id']}: edge {max(e) * 1000:.1f} mm < {k_e} D = {need * 1000:.1f} mm")
+        for i in range(len(bl)):
+            for j in range(i + 1, len(bl)):
+                a_, b_ = bl[i], bl[j]
+                if a_.get("group") != b_.get("group"):
+                    continue
+                ax = _unit(a_["axis"])
+                d = np.asarray(b_["point"], float) - np.asarray(a_["point"], float)
+                d_perp = float(np.linalg.norm(d - (d @ ax) * ax))
+                need = 3.0 * max(float(a_["d"]), float(b_["d"]))
+                if d_perp < need - 1e-6:
+                    bad.append(f"{f['id']}.{a_['id']}/{b_['id']}: pitch {d_perp * 1000:.1f} mm < 3 D")
+    return _row("C04", f"fitting envelopes hold their bolt patterns ({n} holes): edge >= 2 D metal / 2.5 D composite, "
+                       "pitch >= 3 D (fix round 1, VPK-07)", not bad, len(bad), 0, "; ".join(bad[:10]))
 
 
 # =====================================================================================================================
@@ -1413,46 +2057,123 @@ def _surface_cloud(ctx: Ctx, srf, etas, xc0=0.0, n=41):
     return np.vstack(pts)
 
 
+def door_points(ctx: Ctx, d: dict, n: int = 10) -> np.ndarray:
+    """Points of a gear door in its CLOSED pose: the plan outline on the lower skin (both faces, door thickness)."""
+    V = np.asarray(d.get("outline") or d.get("outline_closed"), float)
+    xs, ys = np.linspace(V[:, 0].min(), V[:, 0].max(), n), np.linspace(V[:, 1].min(), V[:, 1].max(), n)
+    t = float(d.get("thickness", 0.004))
+    pts = []
+    for x in xs:
+        for y in ys:
+            zb = ctx.z_bot(x, y)
+            pts += [[x, y, zb], [x, y, zb + t]]
+    return np.asarray(pts, float)
+
+
+def _moved_pts(ctx: Ctx, joint: str, value: float, P: np.ndarray) -> np.ndarray:
+    M, t = joint_motion(ctx, joint, value)
+    return P @ M.T + t
+
+
+def _pts_gap(P: np.ndarray, prims: list) -> float:
+    return float(min(pr.sdf(P).min() for pr in prims))
+
+
 def check_mechanisms(ctx: Ctx, objs: list) -> list:
     S, L = ctx.S, ctx.L
     R = []
     cv = L["clearance_values"]
     J = {j["name"]: j for j in L["mechanisms"]["joints"]}
     seq = L["mechanisms"]["sequences"]
-    static = [o for o in objs if o.kind in ("structure", "content", "harness", "fuel", "linkage")]
-    # ---------------------------------------------------------------- landing gear + doors
+    moving_ids = {a["id"] for a in L["systems"]["actuators"] if a.get("moves_with")}
+    static = [o for o in objs if o.kind in ("structure", "content", "harness", "fuel", "linkage")
+              and _base(o.id) not in moving_ids]
+    # ---------------------------------------------------------------- landing gear + doors (fix round 2, PK2-03/13:
+    # the legs and the doors that move with them are swept against EVERY static object - no exclusions; the main leg
+    # door, the trunnion doors, the nose doors and the steering actuator are swept too)
     worst = {}
 
     def upd(key, g, who):
         if key not in worst or g < worst[key][0]:
             worst[key] = (g, who)
-    for st in seq["gear_retraction"]["states"]:
-        for side in ("R", "L"):
-            g = gear_prims(ctx, "main", float(st["main_gear_" + side]), side)
+    do = L["mechanisms"]["door_outlines"]
+    hi_m = float(J["main_gear_R"]["hi"])
+    P_leg = door_points(ctx, do["main_leg_door_R"])                      # closed = gear up (joint hi)
+    P_tdr = door_points(ctx, do["main_trunnion_door_R"]) if "main_trunnion_door_R" in do else None
+    P_nd = door_points(ctx, do["nose_door_R"])
+    steer = [a for a in L["systems"]["actuators"] if a.get("moves_with") == "nose_gear"]
+    gvals = seq["gear_retraction"].get("values") or [None] * len(seq["gear_retraction"]["states"])
+    for st, gv in zip(seq["gear_retraction"]["states"], gvals):
+        g_up = float(gv) if gv is not None else 0.5
+        for side, sg in (("R", 1.0), ("L", -1.0)):
+            mg = float(st["main_gear_" + side])
+            g = gear_prims(ctx, "main", mg, side)
             door = _door_main(ctx, side, float(st["main_inner_door_" + side]))
+            Pl = _moved_pts(ctx, "main_gear_" + side, mg - hi_m if side == "R" else mg - hi_m, P_leg * [1, sg, 1])
+            Pt = None
+            if P_tdr is not None:
+                Pt = _moved_pts(ctx, "main_trunnion_door_" + side, float(st["main_trunnion_door_" + side]),
+                                P_tdr * [1, sg, 1])
             for o in static:
-                if o.id.startswith(("F-TRUNNION", "M-GEARBEAM", "M-WELLROOF")) and o.kind == "structure":
-                    excl_leg = True
-                else:
-                    excl_leg = False
-                gt = gap([g["tyre"]], o.prims, cutoff=0.03)
-                upd("main tyre vs structure/contents", gt, f"{o.id} at gear_up state {st['main_gear_' + side]:.2f}")
-                if not excl_leg:
-                    gl = gap([g["leg"]], o.prims, cutoff=0.03)
-                    upd("main leg vs structure/contents", gl, o.id)
+                upd("main tyre vs structure/contents", gap([g["tyre"]], o.prims, cutoff=0.03),
+                    f"{o.id} at main_gear {mg:.2f}")
+                upd("main leg vs structure/contents", gap([g["leg"]], o.prims, cutoff=0.03),
+                    f"{o.id} at main_gear {mg:.2f}")
+                lo_, hi_ = _bounds(o.prims)
+                for key, PP in (("main leg door vs structure/contents", Pl),
+                                ("main trunnion door vs structure/contents", Pt)):
+                    if PP is None:
+                        continue
+                    jt = J.get("main_trunnion_door_" + side, {})
+                    if key.startswith("main trunnion") and _base(o.id) == jt.get("hinge_parent"):
+                        # the hinge fittings sit on the hinge parent: door points within hinge_zone_m of the hinge
+                        # axis are the hinge itself; everything else keeps the full clearance
+                        oa, aa = np.asarray(jt["origin"], float), _unit(jt["axis"])
+                        rr = PP - oa
+                        dax = np.linalg.norm(rr - np.outer(rr @ aa, aa), axis=1)
+                        PP = PP[dax > float(jt.get("hinge_zone_m", 0.015))]
+                        if not len(PP):
+                            continue
+                    if np.all(PP.max(0) < lo_ - 0.03) or np.all(PP.min(0) > hi_ + 0.03) or \
+                            np.any(PP.max(0) < lo_ - 0.03) or np.any(PP.min(0) > hi_ + 0.03):
+                        continue
+                    upd(key, _pts_gap(PP, o.prims), f"{o.id} at main_gear {mg:.2f}")
             for gg in (g["tyre"], g["leg"]):
                 upd("main inner door vs moving gear", gap([door], [gg], cutoff=0.05), f"side {side}")
-        gn = gear_prims(ctx, "nose", float(st["nose_gear"]))
+                if Pt is not None:
+                    upd("main trunnion door vs moving gear", _pts_gap(Pt, [gg]), f"side {side} at {mg:.2f}")
+            if Pt is not None:
+                d_lt = float(np.min(np.linalg.norm(Pl[:, None, :] - Pt[None, :, :], axis=2)))
+                if 0.15 <= g_up <= 0.85:                                 # leg moving: leg door vs open trunnion door
+                    upd("main trunnion door vs moving gear", d_lt, f"leg door, side {side} at {mg:.2f}")
+        ng = float(st["nose_gear"])
+        gn = gear_prims(ctx, "nose", ng)
+        Pst = [actuator_prim(ctx, a, ng) for a in steer]
+        nds = [_moved_pts(ctx, "nose_door_" + sd, float(st["nose_door_" + sd]), P_nd * [1, sg, 1])
+               for sd, sg in (("R", 1.0), ("L", -1.0))]
         for o in static:
             upd("nose tyre vs structure/contents", gap([gn["tyre"]], o.prims, cutoff=0.03), o.id)
-            if not o.id.startswith(("F-NG-PIVOT", "M-KEELWALL")):
-                upd("nose leg vs structure/contents", gap([gn["leg"]], o.prims, cutoff=0.03), o.id)
+            upd("nose leg vs structure/contents", gap([gn["leg"]], o.prims, cutoff=0.03), o.id)
+            if Pst:
+                upd("nose steering actuator vs structure/contents", gap(Pst, o.prims, cutoff=0.03), o.id)
+        for Pd in nds:
+            for pr in [gn["tyre"], gn["leg"]] + Pst:
+                if 0.15 <= g_up <= 0.85 or float(st["nose_door_R"]) < 1.5:
+                    upd("nose doors vs moving gear", _pts_gap(Pd, [pr]), f"nose_gear {ng:.2f}")
     lim = {"main tyre vs structure/contents": float(cv["tyre_to_well"]),
            "nose tyre vs structure/contents": float(cv["tyre_to_well"]),
            "main leg vs structure/contents": float(cv["harness_to_moving_parts"]),
            "nose leg vs structure/contents": float(cv["harness_to_moving_parts"]),
-           "main inner door vs moving gear": float(cv["door_to_moving_gear"])}
-    for k, (g, who) in worst.items():
+           "main leg door vs structure/contents": float(cv["harness_to_moving_parts"]),
+           "main trunnion door vs structure/contents": float(cv["harness_to_moving_parts"]),
+           "nose steering actuator vs structure/contents": float(cv["harness_to_moving_parts"]),
+           "main inner door vs moving gear": float(cv["door_to_moving_gear"]),
+           "main trunnion door vs moving gear": float(cv["door_to_moving_gear"]),
+           "nose doors vs moving gear": float(cv["door_to_moving_gear"])}
+    for k in lim:
+        if k not in worst:
+            continue
+        g, who = worst[k]
         R.append(_row("C05", f"gear retraction sequence ({len(seq['gear_retraction']['states'])} states): {k}",
                       g >= lim[k] - 1e-9, round(g * 1000, 1), f">= {lim[k] * 1000:.0f} mm", who))
     # ---------------------------------------------------------------- turret elevator + sliding doors
@@ -1537,18 +2258,180 @@ def check_mechanisms(ctx: Ctx, objs: list) -> list:
     hp = next(p for p in L["shell"]["panels"] if p["id"] == "P-PARAHATCH")
     jh = J["para_hatch"]
     z_h = float(jh["origin"][2])
-    hatch = OBB.aabb([[hp["x"][0], hp["y"][0], z_h - 0.002], [hp["x"][1], hp["y"][1], z_h + 0.002]])
+    hatch = OBB.aabb([[hp["x"][0], hp["y"][0], z_h - 0.08], [hp["x"][1], hp["y"][1], z_h + 0.002]])
     ext = [o for o in objs if o.kind == "external"]
     m_h = 1.0
-    for ang in np.linspace(0.0, float(jh["hi"]), 12):
-        M = _rot(jh["axis"], ang)
-        o = np.asarray(jh["origin"], float)
-        hh = hatch.moved(M, o - M @ o)
+    ax = _unit(jh["axis"])
+    for t in np.linspace(0.0, float(jh["hi"]), 8):
+        if jh["kind"] == "prismatic":
+            hh = hatch.moved(np.eye(3), t * ax)
+        else:
+            M = _rot(jh["axis"], t)
+            o = np.asarray(jh["origin"], float)
+            hh = hatch.moved(M, o - M @ o)
         for x in ext:
             m_h = min(m_h, gap([hh], x.prims, cutoff=0.1))
-    R.append(_row("C05", "parachute hatch (0-110 deg) vs external antennas, probes, lights", m_h >= 0.01,
-                  round(m_h * 1000, 1), ">= 10 mm"))
+    R.append(_row("C05", f"parachute hatch ({jh['kind']} lift-off over its range, V-roof envelope) vs external antennas, "
+                  "probes, lights", m_h >= 0.01, round(m_h * 1000, 1), ">= 10 mm"))
+    R += check_rudder_root(ctx)
+    R += check_turret_door_band(ctx)
+    R += check_assembly_paths(ctx, objs)
     return R
+
+
+def check_rudder_root(ctx: Ctx) -> list:
+    """Fix round 1 (VPK-05): rudder root end (span eta0 x fin span) swept over its range stays >= rudder_root_to_cowl
+    outside the body / cowl surface."""
+    L = ctx.L
+    J = {j["name"]: j for j in L["mechanisms"]["joints"]}
+    j = J["rudder_R"]
+    srf = ctx.af.tail["fin"]
+    rc = ctx.S["tail"]["surfaces"]["fin"]["controls"]["rudder"]
+    span = float(ctx.S["tail"]["surfaces"]["fin"]["params"]["span"])
+    sc = srf.span_coords()
+    e0 = float(sc[0]) + float(rc["eta0"]) * span                # root reference + eta0 x fin span
+    loop = srf.loop_at(e0, 81)
+    o_, cdir, _, _ = srf.frame_at(e0)
+    ch = srf.chord_at(e0)
+    sfr = (loop - o_) @ cdir / ch
+    P0 = loop[sfr >= float(rc["xc_hinge"]) - 1e-6]
+    o, a = np.asarray(j["origin"], float), _unit(j["axis"])
+    worst = 1.0
+    for ang in np.linspace(float(j["lo"]), float(j["hi"]), 11):
+        M = _rot(a, ang)
+        P = (P0 - o) @ M.T + o
+        lo_, hi_ = -0.2, 0.05
+        for _ in range(26):
+            mid = 0.5 * (lo_ + hi_)
+            lo_, hi_ = (mid, hi_) if ctx.af.inside(P, margin=mid).any() else (lo_, mid)
+        worst = min(worst, -hi_)                     # distance outside the body
+    need = float(L["clearance_values"]["rudder_root_to_cowl"])
+    return [_row("C05", f"rudder root (eta0 {float(rc['eta0']):.3f} of the fin span) over its range vs body / cowl "
+                 "surface", worst >= need - 1e-6, round(worst * 1000, 1), f">= {need * 1000:.0f} mm",
+                 "tail.surfaces.fin.controls.rudder.eta0/eta1 (fix round 1, VPK-05)")]
+
+
+def _in_poly(Q, V) -> np.ndarray:
+    """Point-in-polygon (plan) for points Q (n, 2) and polygon V (m, 2)."""
+    Q, V = np.asarray(Q, float), np.asarray(V, float)
+    ins = np.zeros(len(Q), bool)
+    for i in range(len(V)):
+        a, b = V[i], V[(i + 1) % len(V)]
+        cond = (a[1] > Q[:, 1]) != (b[1] > Q[:, 1])
+        xi = a[0] + (Q[:, 1] - a[1]) * (b[0] - a[0]) / np.where(np.abs(b[1] - a[1]) < 1e-12, 1e-12, b[1] - a[1])
+        ins ^= cond & (Q[:, 0] < xi)
+    return ins
+
+
+def panel_poly(p: dict, side: float = 1.0) -> np.ndarray:
+    """Plan polygon of a panel (outline or x/y box); side -1 gives the mirrored port copy."""
+    if p.get("outline"):
+        V = np.asarray(p["outline"], float)
+    else:
+        (x0, x1), (y0, y1) = p["x"], sorted(p["y"])
+        V = np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], float)
+    return V * [1.0, side]
+
+
+def _panel_sides(p: dict) -> list:
+    return [1.0, -1.0] if p.get("mirror") else [1.0]
+
+
+def check_turret_door_band(ctx: Ctx) -> list:
+    """Fix round 1 (VPK-08): the band swept by each sliding turret door (layout.mechanisms.door_outlines) holds no
+    removable cut-out except the aperture ring insert, whose fastener rows stay >= 10 mm from the E180 opening and
+    whose fastener pitch is within the declared range."""
+    L = ctx.L
+    d = L["mechanisms"]["door_outlines"]["turret_door_R"]
+    band = np.asarray(d["band"], float)
+    xs = np.linspace(band[:, 0].min(), band[:, 0].max(), 25)
+    ys = np.linspace(band[:, 1].min(), band[:, 1].max(), 25)
+    Q = np.array([[x, y] for x in xs for y in ys])
+    bad = []
+    for p in L["shell"]["panels"]:
+        if p["attach"] not in ("removable", "hinged") or p["id"] == "P-TURRETRING" or \
+                not p["surface"].startswith("body_lower"):
+            continue
+        for sg in _panel_sides(p):
+            if _in_poly(Q, panel_poly(p, sg)).any() or _in_poly(Q * [1, -1], panel_poly(p, sg)).any():
+                bad.append(p["id"])
+                break
+    ring = next(p for p in L["shell"]["panels"] if p["id"] == "P-TURRETRING")
+    g = ctx.S["payload"]["turret"]["growth_envelope"]
+    r_open = 0.5 * float(g["diameter"]) + 0.005                   # E180 ring opening (0.19 m)
+    em = float(ring["fastening"]["edge_margin"])
+    (x0, x1), (y0, y1) = ring["x"], sorted(ring["y"])
+    xc = 0.5 * (x0 + x1)
+    d_open = min(xc - x0 - em - r_open, x1 - em - xc - r_open, y1 - em - r_open)
+    per = 2 * ((x1 - x0 - 2 * em) + (y1 - y0 - 2 * em))
+    n_f = int(str(ring["fastening"]["spec"]).split(" x ")[0].split()[-1])
+    pitch = per / n_f
+    p_lo, p_hi = ring["fastening"]["pitch"]
+    ok = not bad and d_open >= 0.010 - 1e-6 and p_lo - 1e-6 <= pitch <= p_hi + 1e-6
+    return [_row("C05", "turret door bands free of removable cut-outs (except the ring insert); ring fastener rows >= 10 "
+                 "mm from the E180 opening, pitch in the declared range (fix round 1, VPK-08)", ok,
+                 round(d_open * 1000, 1), ">= 10 mm", f"cut-outs in the band: {bad}; {n_f} fasteners, pitch "
+                                                       f"{pitch * 1000:.0f} mm (declared {p_lo * 1000:.0f}-"
+                                                       f"{p_hi * 1000:.0f})")]
+
+
+def _path_prims(ctx: Ctx, pth: dict, objs: list) -> list:
+    st, ax, L_ = np.asarray(pth["start"], float), _unit(pth["axis"]), float(pth["stroke"])
+    env = pth["envelope"]
+    if "capsule_radius" in env:
+        return [Capsule(st, st + L_ * ax, float(env["capsule_radius"]))]
+    if "engine_envelope" in env:
+        eng = next(o for o in objs if o.id == "ENGINE")
+        off = float(env.get("offset", 0.0)) * _unit(env.get("offset_axis", [1.0, 0.0, 0.0]))
+        return [pr.moved(np.eye(3), off + t * L_ * ax) for t in (0.25, 0.5, 0.75, 1.0) for pr in eng.prims]
+    if "turret_envelope" in env:
+        return [pr for t in np.linspace(0.0, L_, 6) for pr in turret_prims(ctx, t)]
+    if "equipment" in env:
+        e = next(e for e in ctx.L["systems"]["equipment"] if e["id"] == env["equipment"])
+        b = np.asarray(e["box"], float)
+        lo_, hi_ = np.minimum(b[0], b[0] + L_ * ax), np.maximum(b[1], b[1] + L_ * ax)
+        return [OBB.aabb([lo_, hi_])]
+    raise ValueError(f"assembly path {pth['name']}: unknown envelope {env}")
+
+
+def check_assembly_paths(ctx: Ctx, objs: list) -> list:
+    """Fix round 1 (VPK-02/VPK-09): every assembly / maintenance path (layout.mechanisms.assembly_paths) is swept over
+    its stroke and checked against structure, contents, harness and fuel lines except the parts it engages (and the
+    item itself); main-pin puller corridors must end under the clear opening of P-JOINTACCESS."""
+    L = ctx.L
+    stat = [o for o in objs if o.kind in ("structure", "content", "harness", "fuel_line", "linkage", "mount")]
+    bad, worst, n = [], 1.0, 0
+    ja = next(p for p in L["shell"]["panels"] if p["id"] == "P-JOINTACCESS")
+    V = panel_poly(ja)
+    for pth in L["mechanisms"]["assembly_paths"]:
+        prims = _path_prims(ctx, pth, objs)
+        eng = set(pth.get("engages", []))
+        eid = pth["envelope"].get("equipment")
+        for sg, pr in ((1.0, prims),) + (((-1.0, [mirror_prim(q) for q in prims]),) if pth.get("mirror") else ()):
+            n += 1
+            for o in stat:
+                b = _base(o.id)
+                if b in eng or b == eid or o.id in ("ENGINE",) or (b.endswith("-PUSHROD") and False):
+                    continue
+                if "engine_envelope" in pth["envelope"] and o.kind == "mount":
+                    continue
+                g = gap(pr, o.prims, cutoff=0.02, step=0.005)
+                if g < worst:
+                    worst = g
+                if g < -1e-4:
+                    bad.append(f"{pth['name']}{'@L' if sg < 0 else ''} / {o.id}: {g * 1000:.1f} mm")
+        if pth["name"].startswith("pin_"):
+            st_ = np.asarray(pth["start"], float)
+            end = st_ + float(pth["stroke"]) * _unit(pth["axis"])
+            if not _in_poly([end[:2]], V)[0]:
+                bad.append(f"{pth['name']}: withdrawn head {_r(end[:2], 3)} not under P-JOINTACCESS")
+            r_ = float(pth["envelope"]["capsule_radius"])
+            Pax = np.array([st_ + f * (end - st_) for f in np.linspace(0, 1, 9)])
+            if not ctx.inside_wing(Pax, r_).all():
+                bad.append(f"{pth['name']}: head corridor (r {r_ * 1000:.0f} mm) leaves the wing loft")
+    return [_row("C05", f"assembly / maintenance paths ({n} sweeps: wing tongue, rear lug, main pins + pullers, reamers, "
+                 "rear pin, engine, turret, battery, parachute, mission tray, stabilators, propeller) free of other "
+                 "parts (fix round 1, VPK-02/VPK-09)", not bad, len(bad), 0, "; ".join(bad[:10]))]
 
 
 def _plume_sdf(k: dict, P: np.ndarray) -> np.ndarray:
@@ -1588,6 +2471,23 @@ def check_cg(ctx: Ctx) -> tuple[list, dict]:
         if it:
             d2.append((k, float(np.abs(p - np.array([it["x"], it["y"], it["z"]], float)).max())))
     missing = [k for k in mp if k not in spec_mp]
+    tagged = {}
+
+    def walk(o):
+        if isinstance(o, dict):
+            if o.get("mass_item"):
+                tagged.setdefault(o["mass_item"], []).append(o.get("id", "?"))
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+    walk(L)
+    unplaced = sorted(f"{k} ({', '.join(v)})" for k, v in tagged.items() if k not in mp or k not in spec_mp)
+    unknown = sorted(k for k in tagged if k not in items)
+    R.append(_row("C06", "every mass item whose hardware the layout places ('mass_item' tags) has a layout.mass_placement "
+                  f"entry ({len(tagged)} items)", not unplaced and not unknown, len(unplaced) + len(unknown), 0,
+                  "; ".join(unplaced + [f"unknown item {k}" for k in unknown]) or "all placed"))
     w1 = max(d1, key=lambda t: t[1]) if d1 else ("-", 0.0)
     w2 = max(d2, key=lambda t: t[1]) if d2 else ("-", 0.0)
     R.append(_row("C06", "layout.mass_placement = centroids recomputed from the layout objects", not missing and
@@ -1669,12 +2569,178 @@ def check_fov_rf(ctx: Ctx, objs: list) -> list:
     gn = [a for a in L["systems"]["antennas"] if "GNSS" in a["id"]]
     up = all(pans[a["window"]]["surface"] in ("body_upper",) for a in gn if a["window"] in pans)
     R.append(_row("C07", "GNSS antennas under upper-surface windows (sky view)", up, len(gn), None, ""))
+    R.append(antenna_los_row(ctx, objs, pans))
     return R
+
+
+def _window_targets(ctx: Ctx, p: dict, n: int = 7) -> np.ndarray:
+    """Points on the OML over a window panel (upper / lower surface over its plan outline; the nose cone: rings of
+    upper, lower and side points)."""
+    pts = []
+    (x0, x1), (y0, y1) = p["x"], sorted(p["y"])
+    for side in _panel_sides(p):
+        for x in np.linspace(x0 + 0.1 * (x1 - x0), x1 - 0.1 * (x1 - x0), n):
+            if p["surface"] == "body_full":
+                hw = float(ctx.af.sec(x)[0][0])
+                for y in np.linspace(-0.8 * hw, 0.8 * hw, n):
+                    pts += [[x, y, ctx.z_top(x, y)], [x, y, ctx.z_bot(x, y)]]
+                continue
+            for y in np.linspace(y0 + 0.1 * (y1 - y0), y1 - 0.1 * (y1 - y0), n):
+                yy = side * y
+                z = ctx.z_top(x, yy) if p["surface"].endswith("upper") else ctx.z_bot(x, yy)
+                pts.append([x, yy, z])
+    return np.asarray(pts, float)
+
+
+def antenna_los_row(ctx: Ctx, objs: list, pans: dict) -> dict:
+    """Fix round 1 (VPK-10): line of sight from every internal antenna to its GFRP window: at least half of the rays to
+    points on the window surface must not pass through carbon or metal structure or through equipment (other than the
+    antenna's own unit)."""
+    L = ctx.L
+    block = [o for o in objs if (o.kind == "structure" and not str(o.material).startswith("gfrp")) or
+             (o.kind == "content" and o.id.startswith("EQ-"))]
+    bad, worst = [], 1.0
+    for a in L["systems"]["antennas"]:
+        base = re.sub(r"-[LR]$", "", str(a["window"]))
+        if base not in pans:
+            continue
+        T = _window_targets(ctx, pans[base])
+        c = np.asarray(a["point"], float)
+        own = {a.get("integral_to", "")}
+        clear = 0
+        for t in T:
+            seg = np.array([c + f * (t - c) for f in np.linspace(0.08, 0.97, 30)])
+            hit = False
+            for o in block:
+                if _base(o.id) in own:
+                    continue
+                lo_, hi_ = _bounds(o.prims)
+                if np.any(np.all((seg >= lo_) & (seg <= hi_), axis=1)):
+                    if min(float(pr.sdf(seg).min()) for pr in o.prims) < 0.0:
+                        hit = True
+                        break
+            clear += 0 if hit else 1
+        frac = clear / max(len(T), 1)
+        worst = min(worst, frac)
+        if frac < 0.5:
+            bad.append(f"{a['id']}: {frac * 100:.0f} % of the rays to {base} clear")
+    return _row("C07", "RF line of sight: internal antennas see >= 50 % of their GFRP window past carbon / metal "
+                       "structure and equipment (fix round 1, VPK-10)", not bad, round(worst * 100, 0), ">= 50 %",
+                "; ".join(bad))
 
 
 # =====================================================================================================================
 # C08 keep-outs and separation rules
 # =====================================================================================================================
+def _in_box(P, b) -> np.ndarray:
+    b = np.asarray(b, float)
+    return np.all((P >= b[0] - 1e-9) & (P <= b[1] + 1e-9), axis=1)
+
+
+def _mirror_box(b) -> list:
+    b = np.asarray(b, float)
+    return [[b[0][0], -b[1][1], b[0][2]], [b[1][0], -b[0][1], b[1][2]]]
+
+
+def _regions(lst: list, key: str, name: str) -> list:
+    out = []
+    for h in lst:
+        if h.get(key) != name:
+            continue
+        out.append(h["region"])
+        if h.get("mirror"):
+            out.append(_mirror_box(h["region"]))
+    return out
+
+
+def check_heat(ctx: Ctx, objs: list, cyl, ex: list) -> list:
+    """Fix round 2 (PK2-09): hot-zone rules beyond the chassis members: composite shell panels (plan outline + z band
+    on the loft) and the exposed tail lofts keep 25 mm from the cylinder-head envelope (KO-CYL-HOT) and 50 mm from the
+    exhaust routing envelopes (25 mm inside a declared heat-shield region; inside a declared stainless insert the
+    panel is metal); every other object inside those zones is metal-only hardware listed in
+    layout.heat_protection.hardware with its basis."""
+    L = ctx.L
+    R = []
+    cv = L["clearance_values"]
+    hp = L.get("heat_protection") or {}
+    m_cyl = float(cv["composite_to_cylinder_heads"])
+    m_sh, m_un = (float(v) for v in cv["composite_to_exhaust"])
+    F = ctx.af.fus
+    x_lo = float(L["firewall_x"]) - 0.30
+    xs = np.arange(x_lo, F.x1, 0.004)
+    ph = np.radians(np.arange(0.0, 360.0, 0.75))
+    X, PH = np.meshgrid(xs, ph, indexing="ij")
+    SP = F.point(X.ravel(), PH.ravel()).reshape(-1, 3)
+    UP = np.cos(PH.ravel()) >= 0.0                                  # upper half of the section (Fuselage.point)
+    clouds = []                                                     # (name, points, insert regions, shield regions)
+    for p in L["shell"]["panels"]:
+        if p["x"][1] < x_lo or not str(p.get("material", "")).startswith(("cfrp", "gfrp", "afrp")):
+            continue
+        for sg in _panel_sides(p):
+            ins = _in_poly(SP[:, :2], panel_poly(p, sg))
+            side = _surf_side(p["surface"])
+            if side != "any":
+                ins &= UP if side == "upper" else ~UP
+            P = SP[ins]
+            if p.get("z_band"):
+                P = P[(P[:, 2] >= p["z_band"][0]) & (P[:, 2] <= p["z_band"][1])]
+            if len(P):
+                clouds.append((p["id"] + ("@L" if sg < 0 else ""), P, _regions(hp.get("inserts", []), "panel", p["id"]),
+                               _regions(hp.get("shields", []), "panel", p["id"])))
+    for name in ("fin", "stabilator_stub", "ventral", "stabilator"):
+        srf = ctx.af.tail[name]
+        e = srf.span_coords()
+        C = _surface_cloud(ctx, srf, np.linspace(e[0], e[-1], 15))
+        C = C[~ctx.af.inside(C, 0.0)]                               # exposed part only
+        for sg in ((1.0, -1.0) if ctx.af.tail_mirror.get(name, True) else (1.0,)):
+            clouds.append((name + ("@L" if sg < 0 else ""), C * [1.0, sg, 1.0],
+                           _regions(hp.get("inserts", []), "surface", name),
+                           _regions(hp.get("shields", []), "surface", name)))
+    w_cyl, w_ex = (1.0, ""), (1.0, "")
+    n_ins = 0
+    for nm, P, ins_r, sh_r in clouds:
+        metal = np.zeros(len(P), bool)
+        for b in ins_r:
+            metal |= _in_box(P, b)
+        n_ins += int(metal.sum())
+        Q = P[~metal]
+        if not len(Q):
+            continue
+        g = float(cyl.sdf(Q).min())
+        if g < w_cyl[0]:
+            w_cyl = (g, nm)
+        shd = np.zeros(len(Q), bool)
+        for b in sh_r:
+            shd |= _in_box(Q, b)
+        d = np.min([pr.sdf(Q) for e_ in ex for pr in e_.prims], axis=0)
+        need = np.where(shd, m_sh, m_un)
+        k = int(np.argmin(d - need))
+        if d[k] - need[k] < w_ex[0]:
+            w_ex = (float(d[k] - need[k]), f"{nm} {d[k] * 1000:.1f} mm ({'shielded' if shd[k] else 'unshielded'})")
+    R.append(_row("C08", "composite shell panels and exposed tail lofts vs the cylinder-head envelope (KO-CYL-HOT; fix "
+                  "round 2, PK2-09)", w_cyl[0] >= m_cyl - 1e-9, round(w_cyl[0] * 1000, 1), f">= {m_cyl * 1000:.0f} mm",
+                  w_cyl[1]))
+    R.append(_row("C08", "composite shell panels and exposed tail lofts vs the exhaust routing envelopes (50 mm, 25 mm "
+                  "under a declared heat shield; declared stainless inserts replace the composite)", w_ex[0] >= -1e-9,
+                  round(w_ex[0] * 1000, 1), ">= 0 mm over the required margin", w_ex[1] + f"; {n_ins} insert points"))
+    listed = {h["object"] for h in hp.get("hardware", [])}
+    bad = []
+    for o in objs:
+        if o.kind in ("engine", "exhaust", "harness", "fuel", "zone", "external") or o.id.startswith(("ENGINE",
+                                                                                                        "KO-")):
+            continue
+        if o.kind == "structure" and (str(o.material).startswith(("cfrp", "gfrp")) or o.id.startswith("ST-")):
+            continue                                        # composite: own rows; stations: firewall / frames
+        g1 = gap([cyl], o.prims, cutoff=0.03)
+        g2 = min(gap(e_.prims, o.prims, cutoff=0.06) for e_ in ex)
+        if (g1 < m_cyl - 1e-9 or g2 < m_un - 1e-9) and _base(o.id) not in listed:
+            bad.append(f"{o.id} ({g1 * 1000:.1f} / {g2 * 1000:.1f} mm)")
+    R.append(_row("C08", "hardware inside the hot zones (25 mm of the heads, 50 mm of the exhaust) is declared metal-only "
+                  "with its temperature basis (layout.heat_protection.hardware)", not bad, len(bad), 0,
+                  "; ".join(bad[:6]) or f"{len(listed)} declared"))
+    return R
+
+
 def check_keepouts(ctx: Ctx, objs: list) -> list:
     S, L = ctx.S, ctx.L
     R = []
@@ -1692,6 +2758,19 @@ def check_keepouts(ctx: Ctx, objs: list) -> list:
     d = fwd_face - max(float(c["x"][1]) for c in L["fuel_cells"])
     R.append(_row("C08", "fuel cells to the firewall forward face (CS-LUAS.967(c))", d >= float(cv["fuel_to_firewall"]),
                   round(d, 4), f">= {cv['fuel_to_firewall']} m"))
+    bad = []
+    for m in L["chassis"]["members"] + L["chassis"]["fittings"]:
+        if not str(m.get("material", "")).startswith(("cfrp", "gfrp")):
+            continue
+        xs = []
+        if "paths" in m:
+            xs = [float(q[0]) for pth in m["paths"] for q in pth]
+        for b in (m.get("boxes") or ([m["box"]] if "box" in m else [])):
+            xs += [float(b[0][0]), float(b[1][0])]
+        if xs and max(xs) > fwd_face + 1e-6:
+            bad.append(f"{m['id']} to x {max(xs):.4f}")
+    R.append(_row("C08", "no composite member or fitting crosses the firewall into the engine bay (members end at the "
+                  "forward face; fix round 1, VPK-06)", not bad, len(bad), 0, "; ".join(bad)))
     eng = by["ENGINE"]
     allowed = ("ENGINE-MOUNT", "KO-EXHAUST", "H-ENGINE", "EQ-STABACT")
     worst = (1.0, "")
@@ -1748,6 +2827,7 @@ def check_keepouts(ctx: Ctx, objs: list) -> list:
     R.append(_row("C08", "ventral fin vs exhaust routing envelopes / plume", gb >= float(cv["composite_to_exhaust"][1])
                   - 1e-9 and gp >= 0.0, round(min(gb, gp) * 1000, 1), f">= {cv['composite_to_exhaust'][1] * 1000:.0f} "
                   "mm (boxes) / outside (plume)", f"boxes {gb * 1000:.1f} mm, plume {gp * 1000:.1f} mm"))
+    R += check_heat(ctx, objs, cyl, ex)
     ko = next(k for k in L["keep_outs"] if k["id"] == "KO-PROP")
     disc = Cyl(ko["centre"], ko["axis"], float(ko["radius"]), float(ko["half_thickness"]))
     hub = Cyl(ko["centre"], ko["axis"], float(ko["hub_radius"]) + 0.01, float(ko["half_thickness"]) + 0.01)
@@ -1774,6 +2854,22 @@ def check_keepouts(ctx: Ctx, objs: list) -> list:
 # C09 shell, C10 maintenance reachability
 # =====================================================================================================================
 FASTENER_D = {"camloc": 0.0048, "nutplate+screw": 0.004, "insert+screw": 0.004}
+
+
+PANEL_CHINE_LAND = 0.025   # access panel edge to the chine: land on the chine-longeron flange (shell.rules: land >= 25 mm)
+PANEL_LE_LAND = 0.040      # glove access panel edge behind the leading edge: solid LE band 20 mm + half a land
+
+
+def panel_outline_points(p: dict, n: int = 9) -> np.ndarray:
+    """Plan points (x, y) on the boundary of a shell panel: its ``outline`` polygon when given, else its x / y box
+    (``n`` points per edge); starboard side (mirrored panels are symmetric)."""
+    if p.get("outline"):
+        V = np.asarray(p["outline"], float)
+    else:
+        (x0, x1), (y0, y1) = p["x"], sorted(p["y"])
+        V = np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], float)
+    W = np.vstack([V, V[:1]])
+    return np.vstack([W[i] + (W[i + 1] - W[i]) * s for i in range(len(V)) for s in np.linspace(0, 1, n)[:-1]])
 
 
 def check_shell(ctx: Ctx) -> list:
@@ -1803,6 +2899,29 @@ def check_shell(ctx: Ctx) -> list:
             bad.append(f"{p['id']} material {mat}")
     R.append(_row("C09", "shell panels: edge margin >= 2.5 D (composite) / 2 D (metal), pitch >= 3 D, structural "
                   "nutplate pitch <= 8 D, hinges, RF materials", not bad, len(bad), 0, "; ".join(bad[:8])))
+    # removable / hinged panels lie on their surface: body panels >= PANEL_CHINE_LAND inboard of the chine (the panel
+    # edge lands on the chine-longeron flange), glove panels between the leading edge and the trailing edge of the
+    # glove loft (plan outline when the panel has one, else its x / y box)
+    off = []
+    for p in L["shell"]["panels"]:
+        if p["attach"] not in ("removable", "hinged") or p["surface"] in ("body_full", "cowl_upper", "cowl_lower"):
+            continue
+        Q = panel_outline_points(p)
+        if p["surface"].startswith("body"):
+            hw = np.array([float(ctx.af.sec(float(q[0]))[0][0]) for q in Q])
+            m = float(np.min(hw - np.abs(Q[:, 1])))
+            if m < PANEL_CHINE_LAND - 1e-9:
+                off.append(f"{p['id']} {m * 1000:.1f} mm to the chine")
+        elif p["surface"].startswith("glove"):
+            secs = [ctx.af.wing.interpolate_section(float(abs(q[1]))) for q in Q]
+            m = min(min(float(q[0]) - float(s_["x_le"]), float(s_["x_le"]) + float(s_["chord"]) - float(q[0]))
+                    for q, s_ in zip(Q, secs))
+            yj = float(S["wing"]["planform"]["y_junction"])
+            if m < PANEL_LE_LAND - 1e-9 or float(np.max(np.abs(Q[:, 1]))) > yj + 1e-9:
+                off.append(f"{p['id']} {m * 1000:.1f} mm to the glove LE/TE")
+    R.append(_row("C09", f"access panels on their surface (>= {PANEL_CHINE_LAND * 1000:.0f} mm inboard of the chine, "
+                  f">= {PANEL_LE_LAND * 1000:.0f} mm behind the glove leading edge)", not off, len(off), 0,
+                  "; ".join(off)))
     xs = sorted([p["x"] for p in L["shell"]["panels"] if p["surface"] in ("body_upper", "body_full", "cowl_upper")],
                 key=lambda v: v[0])
     gaps_ = []
@@ -1813,45 +2932,316 @@ def check_shell(ctx: Ctx) -> list:
         x_end = max(x_end, x1)
     R.append(_row("C09", "upper body covered by shell panels from the nose to the cowl exit", not gaps_ and
                   x_end >= float(S["propeller"]["plane_x"]) - 0.2, len(gaps_), 0, ", ".join(gaps_)))
+    R += check_lands(ctx)
+    R += check_root_lines(ctx)
     return R
 
 
-def check_access(ctx: Ctx) -> list:
+LAND_W = 0.025          # layout.shell.rules: land width under a panel edge band
+RAMP = 0.019            # joggle ramp in the fixed skin outside a removable edge (1.9 mm at 1:10)
+FLANGE_W = 0.028        # default T-flange / cap flange width of members used as lands
+
+
+def _surf_side(surface: str) -> str:
+    return "upper" if surface.endswith("upper") else "lower" if surface.endswith("lower") else "any"
+
+
+def _edges(V):
+    V = np.asarray(V, float)
+    for i in range(len(V)):
+        a, b = V[i], V[(i + 1) % len(V)]
+        t = (b - a) / max(float(np.linalg.norm(b - a)), 1e-9)
+        yield a, b, t
+
+
+def _poly_area_sign(V) -> float:
+    V = np.asarray(V, float)
+    return 0.5 * float(np.sum(V[:, 0] * np.roll(V[:, 1], -1) - np.roll(V[:, 0], -1) * V[:, 1]))
+
+
+def _member_land_rects(ctx: Ctx, m: dict) -> list:
+    """Plan rectangles (x0, x1, y0, y1, side) a member offers as panel lands: its declared 'lands', else its box /
+    path footprint widened by the cap flange (side 'any' when the box reaches both skins)."""
+    out = []
+    for ld in m.get("lands", []) or []:
+        (x0, x1), (y0, y1) = ld["x"], sorted(ld["y"])
+        out.append((x0, x1, y0, y1, ld.get("surface", "any")))
+        if ld.get("mirror"):
+            out.append((x0, x1, -y1, -y0, ld.get("surface", "any")))
+    if out:
+        return out
+    if "box" in m:
+        b = np.asarray(m["box"], float)
+        rects = [(b[0][0] - FLANGE_W, b[1][0] + FLANGE_W, b[0][1] - FLANGE_W, b[1][1] + FLANGE_W, "any")]
+    elif "paths" in m:
+        rects = []
+        for pth in m["paths"]:
+            P = np.asarray(pth, float)
+            for i in range(len(P) - 1):
+                a, b = P[i], P[i + 1]
+                rects.append((min(a[0], b[0]) - FLANGE_W, max(a[0], b[0]) + FLANGE_W,
+                              min(a[1], b[1]) - FLANGE_W - 0.008, max(a[1], b[1]) + FLANGE_W + 0.008, "any"))
+    else:
+        rects = []
+    if m.get("mirror"):
+        rects += [(x0, x1, -y1, -y0, sd) for x0, x1, y0, y1, sd in rects]
+    return rects
+
+
+def _land_supports(ctx: Ctx, panel: dict, land: str, p0, n, objs_by_id: dict) -> bool:
+    """Does land ``land`` carry the edge band of ``panel`` at the edge point p0 (plan) with inward normal n?"""
+    L = ctx.L
+    band = [np.asarray(p0, float) + f * LAND_W * np.asarray(n, float) for f in (0.0, 0.5, 1.0)]
+    side = _surf_side(panel["surface"])
+    if land.startswith("ST-"):
+        s_ = next((q for q in L["stations"] if q["id"] == land[3:]), None)
+        if s_ is None or abs(n[0]) < 0.7:
+            return False
+        fw = float(s_.get("flange_w", FLANGE_W))
+        f0, f1 = (float(v) for v in s_.get("x_faces", [float(s_["x"]) - 0.5 * float(s_["t"]),
+                                                     float(s_["x"]) + 0.5 * float(s_["t"])]))
+        for q in band:
+            dx = station_x(s_, q[1]) - float(s_["x"])
+            if not (f0 + dx - fw - 1e-6 <= q[0] <= f1 + dx + fw + 1e-6):
+                return False
+        return True
+    mem = objs_by_id.get(land)
+    if mem is not None:
+        for x0, x1, y0, y1, sd in _member_land_rects(ctx, mem):
+            if sd not in ("any", side) and side != "any":
+                continue
+            if all(x0 - 1e-6 <= q[0] <= x1 + 1e-6 and y0 - 1e-6 <= q[1] <= y1 + 1e-6 for q in band):
+                return True
+        return False
+    pl = next((q for q in L["shell"]["panels"] if q["id"] == land), None)
+    if pl is None:
+        return False
+    q_out = np.asarray(p0, float) - (RAMP if pl["attach"] == "fixed" else LAND_W) * np.asarray(n, float)
+    for sg in _panel_sides(pl):
+        if _in_poly([q_out], panel_poly(pl, sg))[0] or _in_poly([np.asarray(p0) + 0.002 * np.asarray(n)],
+                                                                panel_poly(pl, sg))[0]:
+            return True
+    return False
+
+
+def check_lands(ctx: Ctx) -> list:
+    """Fix round 1 (VPK-04/VPK-12): every edge of a removable / hinged panel sits on a land listed by the panel - a frame
+    cap (web +- T-flange), a member land / flange, the joggle of a neighbouring fixed skin (which must extend >= one ramp
+    beyond the edge) or the lap of a neighbouring removable piece; every listed land carries part of an edge; strips of
+    fixed skin between two removable panels are >= 2 ramps + a fastener row unless both sit on a shared structural
+    land."""
+    L = ctx.L
+    objs_by_id = {m["id"]: m for m in L["chassis"]["members"] + L["chassis"]["fittings"]}
+    bad, unused, n_e = [], [], 0
+    rem = [q for q in L["shell"]["panels"] if q["attach"] in ("removable", "hinged")]
+    for pnl in rem:
+        V = panel_poly(pnl)
+        if _poly_area_sign(V) < 0:
+            V = V[::-1]
+        used = set()
+        free = set(pnl.get("free_edges", []))
+        xmax, xmin = float(V[:, 0].max()), float(V[:, 0].min())
+        ymax, ymin = float(V[:, 1].max()), float(V[:, 1].min())
+        for a, b, t in _edges(V):
+            if "aft" in free and abs(a[0] - xmax) < 1e-6 and abs(b[0] - xmax) < 1e-6:
+                continue
+            if "fore" in free and abs(a[0] - xmin) < 1e-6 and abs(b[0] - xmin) < 1e-6:
+                continue
+            if "sides" in free and ((abs(a[1] - ymax) < 1e-6 and abs(b[1] - ymax) < 1e-6) or
+                                    (abs(a[1] - ymin) < 1e-6 and abs(b[1] - ymin) < 1e-6)):
+                continue
+            nrm = np.array([-t[1], t[0]])                    # inward for a counter-clockwise polygon
+            for f in (0.15, 0.5, 0.85):
+                q = a + f * (b - a)
+                n_e += 1
+                sup = [ld for ld in pnl.get("lands", []) or [] if _land_supports(ctx, pnl, ld, q, nrm, objs_by_id)]
+                used.update(sup)
+                if not sup:
+                    bad.append(f"{pnl['id']} edge at {_r(q, 3)}")
+        unused += [f"{pnl['id']}.{ld}" for ld in (pnl.get("lands") or []) if ld not in used]
+    R = [_row("C09", f"panel edge lands: every edge band of a removable / hinged panel on a listed land ({n_e} edge "
+              "points; fix round 1, VPK-04/VPK-12)", not bad, len(bad), 0, "; ".join(bad[:10])),
+         _row("C09", "panel 'lands' references are geometric: every listed land carries part of an edge", not unused,
+              len(unused), 0, "; ".join(unused[:10]))]
+    # strips between removable panels in the same fixed skin
+    short = []
+    for i in range(len(rem)):
+        for j in range(i + 1, len(rem)):
+            a_, b_ = rem[i], rem[j]
+            if _surf_side(a_["surface"]) != _surf_side(b_["surface"]) or a_["surface"].startswith(("cowl", "glove")) \
+                    or b_["surface"].startswith(("cowl", "glove")):
+                continue
+            for sa in _panel_sides(a_):
+                for sb in _panel_sides(b_):
+                    Va, Vb = panel_poly(a_, sa), panel_poly(b_, sb)
+                    Pa = np.vstack([a + f * (b - a) for a, b, _ in _edges(Va) for f in np.linspace(0, 1, 15)])
+                    Pb = np.vstack([a + f * (b - a) for a, b, _ in _edges(Vb) for f in np.linspace(0, 1, 15)])
+                    d = float(np.min(np.linalg.norm(Pa[:, None, :] - Pb[None, :, :], axis=2)))
+                    if d >= 2 * RAMP + 0.020 - 1e-6:
+                        continue
+                    shared = set(l_ for l_ in (a_.get("lands") or []) if not l_.startswith("P-")) & \
+                        set(l_ for l_ in (b_.get("lands") or []) if not l_.startswith("P-"))
+                    if shared:
+                        continue
+                    short.append(f"{a_['id']}/{b_['id']} {d * 1000:.0f} mm")
+    R.append(_row("C09", f"fixed-skin strips between removable panels >= 2 x ramp {RAMP * 1000:.0f} mm + fastener row "
+                  "20 mm, or a shared structural land", not short, len(short), 0, "; ".join(sorted(set(short))[:10])))
+    return R
+
+
+def check_root_lines(ctx: Ctx) -> list:
+    """Fix round 1 (VPK-05): no point of the fin / stub / ventral root cut lines (layout.shell.root_cut_lines) lies
+    inside a removable panel (fixed surfaces never pass through a cowl or hatch piece)."""
+    L = ctx.L
+    rl = L["shell"].get("root_cut_lines") or {}
+    pts = []
+    for k, v in rl.items():
+        if not isinstance(v, dict):
+            continue
+        P = np.asarray(v["points"], float)
+        pts += [(k, q) for q in P]
+        if v.get("mirror"):
+            pts += [(k, q * [1, -1, 1]) for q in P]
+    bad = []
+    for pnl in L["shell"]["panels"]:
+        if pnl["attach"] not in ("removable", "hinged"):
+            continue
+        side = _surf_side(pnl["surface"])
+        zb = pnl.get("z_band")
+        for sg in _panel_sides(pnl):
+            V = panel_poly(pnl, sg)
+            for k, q in pts:
+                if not _in_poly([q[:2]], V)[0]:
+                    continue
+                zc_ = float(ctx.af.sec(float(q[0]))[3][0])
+                if zb is not None:
+                    inside = zb[0] <= q[2] <= zb[1]
+                else:
+                    inside = (side == "upper" and q[2] >= zc_ - 0.005) or (side == "lower" and q[2] <= zc_ + 0.005) \
+                        or side == "any"
+                if inside:
+                    bad.append(f"{k} root {_r(q, 3)} in {pnl['id']}")
+    R = [_row("C09", f"fixed tail surfaces (fin, stub, ventral root cut lines, {len(pts)} points) pass through no "
+              "removable panel (fix round 1, VPK-05)", not bad and bool(pts), len(bad), 0, "; ".join(bad[:8]))]
+    return R
+
+
+def _inset_poly(V, d: float):
+    """Convex polygon inset by d (counter-clockwise or clockwise)."""
+    V = np.asarray(V, float)
+    if _poly_area_sign(V) < 0:
+        V = V[::-1]
+    lines = []
+    for a, b, t in _edges(V):
+        nrm = np.array([-t[1], t[0]])
+        lines.append((a + d * nrm, t))
+    out = []
+    for i in range(len(lines)):
+        (p1, t1), (p2, t2) = lines[i - 1], lines[i]
+        A = np.array([t1, -t2]).T
+        if abs(np.linalg.det(A)) < 1e-12:
+            out.append(p2)
+            continue
+        s_ = np.linalg.solve(A, p2 - p1)
+        out.append(p1 + s_[0] * t1)
+    return np.asarray(out)
+
+
+BLADDER_OPENING = (0.18, 0.12)   # design rule (estimate): folded-bladder insertion opening (fuel cells)
+
+
+def check_access(ctx: Ctx, objs: list | None = None) -> list:
+    """Fix round 1 (VPK-03): every equipment item and fuel cell is reachable through a removable / hinged panel: same
+    side (upper panel -> item removed upward, lower -> downward, nose cone -> item inside it), the clear opening (panel
+    outline inset by the 25 mm land) passes the item's two smallest dimensions (bladders: the folded-bladder opening
+    BLADDER_OPENING), the item overlaps the opening in plan, and the removal prism between the item and the opening is
+    free of structure (decks / floors with declared cut-outs excepted) and of equipment that is not itself removed first
+    through the same panel."""
     L, S = ctx.L, ctx.S
     R = []
+    objs = objs if objs is not None else layout_objects(ctx)
+    struct = [o for o in objs if o.kind == "structure"]
+    eqo = {o.id: o for o in objs if o.kind == "content" and o.id.startswith("EQ-")}
     acc = [p for p in L["shell"]["panels"] if p["attach"] in ("removable", "hinged")]
-
-    def reach(box, mirror=False):
-        b = np.asarray(box, float)
-        hits = []
-        fw = float(L["firewall_x"])
-        for p in acc:
-            if p["x"][1] < b[0][0] or p["x"][0] > b[1][0]:
-                continue
-            if (p["surface"].startswith("cowl") and b[1][0] < fw) or (not p["surface"].startswith("cowl") and
-                                                                      b[0][0] > fw):
-                continue                                   # the firewall separates cowl access from the bays
-            ys = [sorted(p["y"])] + ([sorted([-p["y"][1], -p["y"][0]])] if p.get("mirror") else [])
-            if p["surface"] in ("body_full", "cowl_upper", "cowl_lower") or any(
-                    y[0] <= b[1][1] + 0.08 and y[1] >= b[0][1] - 0.08 for y in ys):
-                hits.append(p["id"])
-        return hits
-    bad = []
-    n = 0
+    fw = float(L["firewall_x"])
+    items = []
     for e in L["systems"]["equipment"]:
-        n += 1
-        if not reach(e["box"]):
-            bad.append(e["id"])
+        for sg in ((1.0, -1.0) if e.get("mirror") else (1.0,)):
+            b = np.asarray(e["box"], float).copy()
+            if sg < 0:
+                b = np.array([[b[0][0], -b[1][1], b[0][2]], [b[1][0], -b[0][1], b[1][2]]])
+            items.append((e["id"] + ("@L" if sg < 0 else ("@R" if e.get("mirror") else "")), e["id"], b, False))
     for c in L["fuel_cells"]:
-        n += 1
-        if not reach([[c["x"][0], -0.3, c["z"][0]], [c["x"][1], 0.3, c["z"][1]]]):
-            bad.append(c["name"])
-    for jn in ("P-JOINTACCESS",):
-        n += 1
-        if jn not in [p["id"] for p in acc]:
-            bad.append(jn)
-    R.append(_row("C10", f"maintenance: every equipment item and fuel cell under a removable / hinged panel ({n} "
-                  "items), wing joint access panel present", not bad, len(bad), 0, ", ".join(bad)))
+        items.append((c["name"], c["name"], np.array([[c["x"][0], -0.25, c["z"][0]], [c["x"][1], 0.25, c["z"][1]]]),
+                      True))
+
+    def through(pnl, sg, it, blockers_ok=()):
+        name, eid, b, bladder = it
+        if (pnl["surface"].startswith("cowl")) != (b[0][0] > fw):
+            return "firewall"
+        if pnl["surface"] == "body_full":
+            return "" if pnl["x"][0] - 1e-6 <= b[0][0] and b[1][0] <= pnl["x"][1] + 1e-6 else "outside"
+        V = panel_poly(pnl, sg)
+        C = _inset_poly(V, LAND_W)
+        lx, ly = float(np.ptp(C[:, 0])), float(np.ptp(C[:, 1]))
+        dims = sorted(np.ptp(b, axis=0).tolist())
+        need = BLADDER_OPENING if bladder else (dims[1] + 0.004, dims[0] + 0.004)
+        if max(lx, ly) < need[0] - 1e-6 or min(lx, ly) < need[1] - 1e-6:
+            return f"opening {lx * 1000:.0f} x {ly * 1000:.0f} mm"
+        xs = np.linspace(b[0][0], b[1][0], 9)
+        ys = np.linspace(b[0][1], b[1][1], 9)
+        Q = np.array([[x, y] for x in xs for y in ys])
+        ins = _in_poly(Q, C)
+        if not ins.any():
+            return "not under the opening"
+        q = Q[ins]
+        up = _surf_side(pnl["surface"]) == "upper"
+        if pnl["surface"] == "body_side":
+            return "side"
+        x0, x1, y0, y1 = q[:, 0].min(), q[:, 0].max(), q[:, 1].min(), q[:, 1].max()
+        xm, ym = 0.5 * (x0 + x1), 0.5 * (y0 + y1)
+        zs = ctx.z_top(xm, ym) if up else ctx.z_bot(xm, ym)
+        za, zb_ = (b[1][2], zs) if up else (zs, b[0][2])
+        if zb_ - za < 0.002:
+            return ""
+        prism = OBB.aabb([[x0 + 0.002, y0 + 0.002, za + 0.001], [x1 - 0.002, y1 - 0.002, zb_ - 0.001]])
+        for o in struct:
+            if gap([prism], o.prims, cutoff=0.01, step=0.004) < -0.001:
+                return f"blocked by {o.id}"
+        for oid, o in eqo.items():
+            if _base(oid) == eid or oid in blockers_ok:
+                continue
+            if gap([prism], o.prims, cutoff=0.01, step=0.004) < -0.001:
+                return f"equipment {oid}"
+        return ""
+    res = {}
+    for it in items:
+        res[it[0]] = []
+        for pnl in acc:
+            for sg in _panel_sides(pnl):
+                res[it[0]].append((pnl["id"], sg, through(pnl, sg, it)))
+    # items blocked only by equipment that is itself removable through the same panel
+    bad = []
+    for it in items:
+        ok = [r for r in res[it[0]] if r[2] == ""]
+        if not ok:
+            for pid, sg, why in res[it[0]]:
+                if why.startswith("equipment "):
+                    other = why.split(" ", 1)[1]
+                    if any(r[0] == pid and r[2] == "" for r in res.get(other, []) + res.get(_base(other), [])):
+                        pnl = next(p for p in acc if p["id"] == pid)
+                        if through(pnl, sg, it, blockers_ok=(other, _base(other))) == "":
+                            ok = [(pid, sg, "")]
+                            break
+        if not ok:
+            reasons = sorted({f"{r[0]}: {r[2]}" for r in res[it[0]] if r[2] not in ("firewall", "outside",
+                                                                                 "not under the opening")})
+            bad.append(f"{it[0]} ({'; '.join(reasons[:2]) or 'no panel over it'})")
+    R.append(_row("C10", f"maintenance: every equipment item and fuel cell removable through a panel ({len(items)} items): "
+                  "same side, clear opening (panel - 2 x 25 mm land) >= item cross-section, removal prism free "
+                  "(fix round 1, VPK-03)", not bad, len(bad), 0, "; ".join(bad[:8])))
+    need = [p for p in ("P-JOINTACCESS", "P-REARACCESS") if p not in [q["id"] for q in acc]]
+    R.append(_row("C10", "wing joint access panels present (main pins, rear pin)", not need, len(need), 0, str(need)))
     mm = S["assembly"].get("maintenance_access", [])
     ok = bool(mm) and all(r.get("primary_structure_removed") is False for r in mm)
     R.append(_row("C10", "maintenance access matrix: no primary structure removed for any item", ok, len(mm), None, ""))
@@ -1887,11 +3277,26 @@ def check_assembly(ctx: Ctx) -> list:
     units = {u["unit"]: u for u in A["transport"]["units"]}
     op = units.get("outer wing panel (x2)", {}).get("size_m", [0])[0]
     cw = units.get("centre body with LERX/glove, fins, stubs, ventral, gear, engine", {}).get("size_m", [0, 0])[1]
-    ok1 = outer <= float(req["R-29"]["value"]) + 1e-9 and op + 1e-9 >= outer - 0.02
+    # the listed outer-panel transport length (incl. the tongue) must cover the panel and stay within R-29 as well
+    ok1 = outer <= float(req["R-29"]["value"]) + 1e-9 and op + 1e-9 >= outer - 0.02 and \
+        op <= float(req["R-29"]["value"]) + 1e-9
     ok2 = 2 * yj <= float(req["R-30"]["value"]) + 1e-9 and abs(cw - 2 * yj) < 0.05
     R.append(_row("C11", "transport units vs R-29 (outer panel) / R-30 (centre section)", ok1 and ok2,
                   [round(outer, 3), round(2 * yj, 3)], [req["R-29"]["value"], req["R-30"]["value"]],
                   f"listed sizes {op} / {cw} m"))
+    # fix round 2 (PK2-12): the listed outer-panel envelope covers the loft in the panel frame (span along the
+    # dihedral, chord-wise and normal extents)
+    dih = math.radians(float(S["wing"]["planform"]["dihedral_deg"]))
+    e_s, e_n = np.array([0.0, math.cos(dih), math.sin(dih)]), np.array([0.0, -math.sin(dih), math.cos(dih)])
+    srf = ctx.af.wing.split([yj])[-1]
+    sc = srf.span_coords()
+    Q = np.vstack([srf.loop_at(e, 61) for e in np.linspace(sc[0], sc[-1], 25)])
+    need3 = [float(np.ptp(Q @ e_s)), float(np.ptp(Q[:, 0])), float(np.ptp(Q @ e_n))]
+    sz = units.get("outer wing panel (x2)", {}).get("size_m", [0, 0, 0])
+    ok3 = all(float(a) + 0.001 >= b for a, b in zip(sz, need3))
+    R.append(_row("C11", "outer-panel transport envelope >= loft extents in the panel frame (span, chord-wise, normal)",
+                  ok3, [round(float(v), 3) for v in sz], [round(v, 3) for v in need3],
+                  "listed size incl. tongue and wing pitot vs the bare loft"))
     R.append(_row("C11", "field re-assembly and maintenance matrix present",
                   bool(A.get("field_assembly")) and bool(A.get("maintenance_access")), len(A.get("field_assembly", [])),
                   None, ""))
@@ -1938,10 +3343,81 @@ def check_mech_defs(ctx: Ctx) -> list:
                     bad.append(f"sequence {name}: {k}={v} out of range")
     R.append(_row("C12", f"mechanism definitions ({len(J)} joints, {len(me['sequences'])} sequences): fields, ranges, "
                   "props, expressions, L/R pairs, sequence states", not bad, len(bad), 0, "; ".join(bad[:8])))
+    # declarative swept volumes / corridors: references resolve and the ranges are the joint ranges
+    bad = []
+    trunks = {tr["id"] for tr in L["systems"]["harness"]["trunks"]}
+    eqs = {e["id"] for e in L["systems"]["equipment"]}
+
+    def rng_ok(name, r):
+        j = J.get(name)
+        if j is None:
+            return False
+        lo, hi = float(j["lo"]), float(j["hi"])
+        if j["kind"] == "revolute":
+            lo, hi = math.degrees(lo), math.degrees(hi)
+        return abs(float(r[0]) - lo) < 0.01 and abs(float(r[1]) - hi) < 0.01
+    need = {"KO-SWEEP-MAINGEAR", "KO-SWEEP-NOSEGEAR", "KO-SWEEP-CONTROLS", "KO-CORRIDOR-HARNESS",
+            "KO-CORRIDOR-PUSHRODS"}
+    have = {k["id"]: k for k in L["keep_outs"]}
+    bad += [f"missing {k}" for k in sorted(need - set(have))]
+    for k in L["keep_outs"]:
+        for jn, r in (k.get("joints") or {}).items():
+            if not rng_ok(jn, r):
+                bad.append(f"{k['id']}: joint {jn} range {r}")
+        for s_ in k.get("surfaces", []):
+            if not rng_ok(s_["joint"], s_["range_deg"]):
+                bad.append(f"{k['id']}: surface {s_['joint']} range")
+        for tn in k.get("trunks", []):
+            if tn not in trunks:
+                bad.append(f"{k['id']}: trunk {tn}")
+        for it in k.get("items", []):
+            if it.get("equipment") not in eqs:
+                bad.append(f"{k['id']}: equipment {it.get('equipment')}")
+    if "KO-CORRIDOR-HARNESS" in have and set(have["KO-CORRIDOR-HARNESS"].get("trunks", [])) != trunks:
+        bad.append("KO-CORRIDOR-HARNESS does not list every trunk")
+    if "KO-SWEEP-CONTROLS" in have:
+        js = {s_["joint"] for s_ in have["KO-SWEEP-CONTROLS"].get("surfaces", [])}
+        for b in ("aileron_R", "flap_R", "rudder_R", "stabilator_R"):
+            if b not in js:
+                bad.append(f"KO-SWEEP-CONTROLS without {b}")
+    R.append(_row("C12", "swept-volume / corridor keep-outs (gear, control surfaces, harness, pushrods) reference "
+                  "registered joints with their ranges, trunks and actuators", not bad, len(bad), 0,
+                  "; ".join(bad[:8])))
     cl = L["clearances"]
     ok = isinstance(cl, list) and all({"name", "a", "b", "min_mm"} <= set(r) for r in cl)
     R.append(_row("C12", "layout.clearances in checks.py LIST format {name, a, b, min_mm, joints?}", ok, len(cl), None,
                   ""))
+    # fix round 1 (VPK-09): explicit geometry for assembly paths, door outlines and the cut-outs named by the panels
+    bad = []
+    names = set()
+    for pth in me.get("assembly_paths", []):
+        names.add(pth["name"])
+        if pth.get("axis") is None or abs(np.linalg.norm(pth["axis"]) - 1.0) > 1e-3:
+            bad.append(f"path {pth['name']}: axis")
+        if not float(pth.get("stroke") or 0.0) > 0.0 or not pth.get("envelope") or pth.get("start") is None:
+            bad.append(f"path {pth['name']}: stroke / envelope / start")
+    for need in ("outer_panel_insertion_R", "rear_lug_insertion_R", "pin_main1_R", "pin_main2_R", "ream_main1_R",
+                 "rear_pin_R", "engine_removal", "turret_removal", "parachute_removal", "battery_removal",
+                 "mission_tray_removal"):
+        if need not in names:
+            bad.append(f"missing path {need}")
+    do = me.get("door_outlines", {})
+    for need in ("main_inner_door_R", "main_leg_door_R", "nose_door_R", "turret_door_R"):
+        d = do.get(need)
+        if not d or not (d.get("outline") or d.get("outline_closed")) or d.get("joint") not in J:
+            bad.append(f"door outline {need}")
+    pans = {p_["id"]: p_ for p_ in L["shell"]["panels"]}
+    for p_ in L["shell"]["panels"]:
+        for c in p_.get("cutouts", []):
+            if c["id"] in pans:
+                continue
+            ref = str(c.get("outline", ""))
+            key = ref.split("door_outlines.")[-1].split(" ")[0] if "door_outlines." in ref else ""
+            key = key.split("/")[0]
+            if not key or (key not in do and key.replace("_L", "_R") not in do):
+                bad.append(f"{p_['id']} cut-out {c['id']} without geometry")
+    R.append(_row("C12", "assembly paths (axis, stroke, envelope), door / rail outlines and the panel cut-outs have "
+                  "explicit geometry (fix round 1, VPK-09)", not bad, len(bad), 0, "; ".join(bad[:8])))
     return R
 
 
@@ -1994,37 +3470,65 @@ def fitting_presizing(ctx: Ctx) -> list:
        f"{f_fa} frequent assembly; MPa", "kanat birleşimi ana pimi, çift kesme",
        f"R = {Rp:.0f} N (y = {yj} m'de M_nihai {Mj:.0f} N m, V_nihai {Vj:.0f} N; pimler arası {d * 1000:.0f} mm) x "
        f"{f_fa} sık sökülen bağlantı katsayısı; MPa")
-    t_pr = 0.006
-    t_tg = float(wj["main_spar"]["fork"]["slot"]["width"])
+    fk = wj["main_spar"]["fork"]
+    t_pr = float(fk.get("prong_t", 0.010))
+    t_tg = float(fk["slot"]["width"])
     arm = t_pr / 2 + t_tg / 4
     Mpin = Rp * f_fa / 2 * arm
     ms("wing joint main pin, bending", 32 * Mpin / (math.pi * D ** 3) / 1e6, ti["Ftu"] / 1e6,
        f"M = R/2 (t_prong/2 + t_tongue/4) = {Mpin:.0f} N m; Ftu (no plastic bending credit); MPa",
        "kanat birleşimi ana pimi, eğilme",
        f"M = R/2 (t_çatal/2 + t_dil/4) = {Mpin:.0f} N m; Ftu ile (plastik eğilme kazancı alınmadı); MPa")
-    ms("wing joint tongue bearing (7075)", Rp * f_br / (D * t_tg) / 1e6, al["Fbru"] / 1e6,
-       f"x {f_br} bearing factor, tongue width {t_tg * 1000:.1f} mm; MPa", "kanat birleşimi dil ezilmesi (7075)",
-       f"x {f_br} ezilme katsayısı, dil kalınlığı {t_tg * 1000:.1f} mm; MPa")
-    ms("wing joint fork prong bearing (7075, 2 prongs)", Rp * f_br / (2 * D * t_pr) / 1e6, al["Fbru"] / 1e6,
-       f"x {f_br} bearing factor, prongs {t_pr * 1000:.0f} mm; MPa", "kanat birleşimi çatal ezilmesi (7075, 2 kulak)",
-       f"x {f_br} ezilme katsayısı, kulaklar {t_pr * 1000:.0f} mm; MPa")
-    # ---- parachute bridle fittings
+    Db = 0.022
+    ohc = float(ctx.S["structures"].get("sizing", {}).get("wing_joint", {}).get("bush_bearing_limit_Pa", 175.4e6))
+    ms("wing joint CFRP tongue: bush bearing pressure (OD 22 x 30 mm, open-hole compression limit)",
+       Rp * f_br / (Db * t_tg) / 1e6, ohc / 1e6,
+       f"x {f_br} bearing factor; the 2 % offset bearing allowable needs e/D >= 3, here the bush is closed above "
+       "and below by the UD flanges, so the QI open-hole compression value is used (conservative substitute, element "
+       "test required); MPa", "kanat birleşimi CFRP dil: burç ezilme basıncı (dış çap 22 x 30 mm, açık delik bası "
+                              "sınırı)",
+       f"x {f_br} ezilme katsayısı; %2 kaymalı ezilme değeri e/D >= 3 ister, burç üstte ve altta UD flanşlarla "
+       "kapalıdır, bu yüzden QI açık delik bası değeri kullanılır (muhafazakâr yerine koyma, eleman testi gerekli); MPa")
+    ms("wing joint CFRP fork prongs: bush bearing pressure (2 x OD 22 x 10 mm)", Rp * f_br / (2 * Db * t_pr) / 1e6,
+       ohc / 1e6, f"x {f_br} bearing factor; open-hole compression limit as for the tongue; MPa",
+       "kanat birleşimi CFRP çatal kulakları: burç ezilme basıncı (2 x dış çap 22 x 10 mm)",
+       f"x {f_br} ezilme katsayısı; dildeki gibi açık delik bası sınırı; MPa")
+    # ---- parachute bridle fittings (fix round 2, VS2-10: the current F-RISER geometry; first-cut: the whole shock on
+    # each bolt group alone - structures P-* split the components and add the fitting moment)
     P_open = PARA_OPEN_N
     P_d = P_open * f_fit
     rm_129, tau_k = 1220e6, 0.6
-    As6 = 20.1e-6
-    ms("bridle fitting bolts 4 x M6 12.9 (single shear, one leg takes the full shock)", P_d / (4 * As6) / 1e6,
-       tau_k * rm_129 / 1e6, "13.1 kN (GRS 4/240 published opening shock, > UAVOS 200 5 g x MTOM) ultimate-only "
-       f"(CRASH-004) x {f_fit} fitting factor; ISO 898-1 12.9 Rm 1220 MPa, tau = 0.6 Rm on the stress area; MPa",
-       "kayış bağlantısı cıvataları 4 x M6 12.9 (tek kesme, şokun tamamını tek ayak taşır)",
-       f"{P_open / 1000:.1f} kN (GRS 4/240 yayımlanmış açılma şoku, > UAVOS 200 5 g x MTOM) yalnız nihai (CRASH-004) x "
-       f"{f_fit} bağlantı katsayısı; ISO 898-1 12.9 Rm 1220 MPa, gerilme alanında tau = 0,6 Rm; MPa")
-    st4130 = M["steel_4130_n"]
-    Dp = 0.010
-    ms("bridle shackle pin d 10 (4130, double shear)", P_d / (2 * math.pi * Dp ** 2 / 4) / 1e6, st4130["Fsu"] / 1e6,
-       "MPa", "kayış kilit pimi Ø10 (4130, çift kesme)", "MPa")
-    ms("bridle U-lug bearing (7075, 2 cheeks 8 mm)", P_d * f_br / (2 * Dp * 0.008) / 1e6, al["Fbru"] / 1e6,
-       f"x {f_br} bearing factor; MPa", "kayış U-kulak ezilmesi (7075, 2 yanak 8 mm)", f"x {f_br} ezilme katsayısı; MPa")
+    fr = next(f for f in L["chassis"]["fittings"] if f["id"] == "F-RISER-FWD")
+    As_ = {0.004: 8.78e-6, 0.005: 14.2e-6, 0.006: 20.1e-6}
+    for grp, nm_tr in (("frame", "çerçeve"), ("spine floor", "omurga tabanı")):
+        bb = [b_ for b_ in fr["bolts"] if b_["group"] == grp]
+        db = float(bb[0]["d"])
+        ms(f"bridle fitting {grp} bolts {len(bb)} x M{db * 1000:.0f} 12.9 (single shear, the whole shock on this group)",
+           P_d / (len(bb) * As_[round(db, 3)]) / 1e6, tau_k * rm_129 / 1e6,
+           "13.1 kN (GRS 4/240 published opening shock, > UAVOS 200 5 g x MTOM) ultimate-only (CRASH-004) x "
+           f"{f_fit} fitting factor; ISO 898-1 12.9, tau = 0.6 Rm on the stress area; MPa",
+           f"kayış bağlantısı {nm_tr} cıvataları {len(bb)} x M{db * 1000:.0f} 12.9 (tek kesme, şokun tamamı bu grupta)",
+           f"{P_open / 1000:.1f} kN (GRS 4/240 yayımlanmış açılma şoku) yalnız nihai (CRASH-004) x {f_fit} bağlantı "
+           "katsayısı; ISO 898-1 12.9, gerilme alanında tau = 0,6 Rm; MPa")
+    pin = fr.get("shackle_pin") or {"d": fr["lug"]["bore"], "material": "steel_4130_n"}
+    pm = M[pin["material"]]
+    Dp = float(pin["d"])
+    t_ear = float(fr["lug"]["t_m"])
+    gp = float(fr["lug"].get("gap_m", 0.0))
+    t_in = float((fr.get("bridle_spool") or {}).get("length_m", t_ear))
+    ms(f"bridle shackle pin d {Dp * 1000:.0f} ({pm['name'].split(' ')[0]}, double shear)",
+       P_d / (2 * math.pi * Dp ** 2 / 4) / 1e6, pm["Fsu"] / 1e6, "MPa",
+       f"kayış kilit pimi Ø{Dp * 1000:.0f} ({pm['name'].split(' ')[0]}, çift kesme)", "MPa")
+    Mpb = ST.pin_bending_moment(P_d, t_ear, t_in, gp)
+    ms(f"bridle shackle pin d {Dp * 1000:.0f} bending (Melcon-Hoblit, ears {t_ear * 1000:.0f} / spool "
+       f"{t_in * 1000:.0f} / gaps {gp * 1000:.1f} mm)", ST.pin_bending_stress(Mpb, Dp) / 1e6, pm["Ftu"] / 1e6,
+       "elastic, Ftu; MPa", f"kayış kilit pimi Ø{Dp * 1000:.0f} eğilmesi (Melcon-Hoblit)", "elastik, Ftu; MPa")
+    eD = float(fr["lug"]["e_m"]) / Dp
+    ms(f"bridle U-lug bearing (7075, 2 ears {t_ear * 1000:.0f} mm, e/D {eD:.2f})",
+       P_d * f_br / (2 * Dp * t_ear) / 1e6, al["Fbru"] * min(1.0, eD / 2.0) / 1e6,
+       f"x {f_br} bearing factor; MMPDS Fbru at e/D 2 x (e/D)/2; MPa",
+       f"kayış U-kulak ezilmesi (7075, 2 kulak {t_ear * 1000:.0f} mm, e/D {eD:.2f})",
+       f"x {f_br} ezilme katsayısı; e/D 2'de MMPDS Fbru x (e/D)/2; MPa")
     m_conf = PARA_OPEN_N / (m0 * G0)
     rows.append({"item": "opening load factor at MTOM (information)", "applied": _r(m_conf, 2), "allowable": None,
                  "MS": None, "basis": "13.1 kN / (MTOM g); UAVOS 200 rated 5 g",
@@ -2074,8 +3578,10 @@ def check_presizing(ctx: Ctx) -> tuple[list, list]:
     rows = fitting_presizing(ctx)
     bad = [r["item"] for r in rows if r["MS"] is not None and r["MS"] < 0.0]
     mn = min(r["MS"] for r in rows if r["MS"] is not None)
-    return [_row("C13", "first-cut fitting pre-sizing: margins of safety >= 0 (wing joint pins, bridle fittings, "
-                 "engine mount bolts)", not bad, mn, ">= 0", "; ".join(bad))], rows
+    return [_row("C13", "first-cut fitting pre-sizing cross-check on the current fitting geometry (conservative: no "
+                 "wing inertia relief, whole bridle shock on each bolt group; the governing margins are those of "
+                 "ucav250.analysis.structures): MS >= 0 (wing joint pins and CFRP bush bearing, bridle fittings, engine "
+                 "mount bolts)", not bad, mn, ">= 0", "; ".join(bad))], rows
 
 
 # =====================================================================================================================
@@ -2118,7 +3624,9 @@ def run_checks(ctx: Ctx | None = None, verbose: bool = False) -> dict:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="YK-250 layout checks (spec.layout / spec.assembly)")
-    ap.add_argument("--check", action="store_true", help="exit 1 if any check fails")
+    ap.add_argument("--check", action="store_true", help="exit 1 if any check fails; read-only (writes outputs only "
+                                                        "to an explicit --out / --fig-dir)")
+    ap.add_argument("--write", action="store_true", help="write out/layout.* and the figures (default without --check)")
     ap.add_argument("--no-figures", action="store_true")
     ap.add_argument("--no-write", action="store_true", help="do not write out/layout.* and figures")
     ap.add_argument("--out", default=None)
@@ -2131,7 +3639,10 @@ def main(argv=None) -> int:
         print(f"  {r['check']}  {'PASS' if r['ok'] else 'FAIL'}  {r['item']}  [{r['value']}"
               f"{' / ' + str(r['limit']) if r['limit'] is not None else ''}]" + (f"  {r['detail']}" if r['detail'] and
                                                                                   not r['ok'] else ""))
-    if not a.no_write:
+    # fix round 1 (S1-10 / VPK-14): --check never touches the tracked outputs; the outputs carry no run time, so a
+    # regeneration with unchanged inputs is byte-identical
+    write = not a.no_write and (a.write or not a.check or a.out or a.fig_dir)
+    if write:
         out_dir = Path(a.out) if a.out else OUT_DIR
         fig_dir = Path(a.fig_dir) if a.fig_dir else FIG_DIR
         figs = {} if a.no_figures else write_figures(ctx, res, fig_dir)
@@ -2235,14 +3746,18 @@ def _draw_layout(ax, ctx: Ctx, view: str, objs: list, detail: bool = True):
                 ax.plot(te_[:, 0], sg * te_[:, 1], color="#666666", lw=0.6)
                 ax.plot([le_[0, 0], te_[0, 0]], [sg * le_[0, 1], sg * te_[0, 1]], color="#666666", lw=0.6)
                 ax.plot([le_[-1, 0], te_[-1, 0]], [sg * le_[-1, 1], sg * te_[-1, 1]], color="#666666", lw=0.6)
-    # stations
+    # stations (labels of stations closer than 0.09 m are staggered upwards)
+    x_prev, up_prev = -9.0, False
     for s_ in L["stations"]:
         x = float(s_["x"])
         if view == "side":
             ax.plot([x, x], [ctx.z_bot(x), ctx.z_top(x)], color="#1a5276", lw=1.4 if s_["type"] != "ring" else 0.9,
                     ls="-" if s_["type"] != "ring" else "--", zorder=3)
-            ax.text(x, ctx.z_top(x) + 0.012, s_["id"], rotation=90, fontsize=6, ha="center", va="bottom",
-                    color="#1a5276")
+            up = (x - x_prev < 0.09) and not up_prev
+            ax.text(x, ctx.z_top(x) + 0.012 + (0.085 if up else 0.0), s_["id"], rotation=90, fontsize=6,
+                    ha="center", va="bottom", color="#1a5276", zorder=9,
+                    bbox=dict(fc="w", ec="none", alpha=0.75, pad=0.4))
+            x_prev, up_prev = x, up
         else:
             yy = np.linspace(-0.4, 0.4, 41)
             hw_ = float(ctx.af.sec(x)[0][0])
@@ -2493,7 +4008,7 @@ def _fig_structure(ctx: Ctx, objs: list, fig_dir: Path):
         ((0.65, -0.34), [(0.65, -0.125)], "#7d3c98", "burun takımı → omurga duvarları → FS0600 / FS1110"),
         ((1.22, -0.34), [(1.22, -0.12)], "#8e44ad", "taret ataleti → raylar → FS1110 / FS1330"),
         (apex, [(fr[0], fr[2]), (fa[0], fa[2])], "#b9770e",
-         f"paraşüt açılma yükü {para:.1f} kN (Y-kayış) → FS1810 / FS-RS".replace(".", ",")),
+         f"paraşüt açılma yükü {para:.1f} kN (Y-kayış) → x: sırt omurga kanalı, z: FS1810 / FS-RS".replace(".", ",")),
         ((tr[0], -0.34), [(tr[0], tr[2])], "#7d3c98", "ana takım yükü → mafsal → takım kirişi → FS-GEAR / FS-RS"),
         ((3.22, 0.36), [(3.30, 0.19)], "#1e8449", "yangın perdesi → sırt uzun kirişleri / arka omurga → FS-GEAR"),
         ((3.62, 0.50), [(3.52, 0.31)], "#2874a6", "dikey / stabilatör yükü → kök bağlantıları → FS3480 / FS3670"),
@@ -2503,12 +4018,16 @@ def _fig_structure(ctx: Ctx, objs: list, fig_dir: Path):
     a1.plot([tr[0], gx], [tr[2], -0.07], color="#7d3c98", lw=1.2, ls=":")
     a1.set_xlim(-0.1, 4.6)
     a1.set_ylim(-0.42, 0.58)
+    a1.set_xlabel("x (m, burundan geriye)", fontsize=8)
+    a1.set_ylabel("z (m)", fontsize=8)
     a1.set_title("Yapısal kavram — yan görünüş: birincil yük yolları (çerçeveler kalın mavi, uzun kirişler / omurga koyu, "
                  "bağlantılar turuncu)", fontsize=10)
     pins = L["chassis"]["wing_joint"]["main_spar"]["pins"]
     p2 = np.asarray(pins[1]["position"])
     top = [
-        ((p2[0] + 0.30, 1.30), [(p2[0], p2[1])], "#c0392b", "dış panel momenti / kesmesi → dil + 2 pim Ø14 (her yan)"),
+        ((p2[0] + 0.30, 1.30), [(p2[0], p2[1])], "#c0392b",
+         f"dış panel momenti / kesmesi → kompozit dil + 2 pim Ø{float(pins[0]['diameter']) * 1000:.0f} (her yan); "
+         "düzlem içi moment → arka kulak"),
         ((msx - 0.25, 0.75), [(msx + 0.01, 0.03)], "#c0392b",
          "çatal → kiriş başlıkları → orta kutu (simetrik eğilme kutu içinde dengelenir)"),
         ((msx - 0.70, 0.62), [(msx - 0.55, 0.36)], "#c0392b", "kiriş çerçeveleri → kenar uzun kirişleri (asimetrik yük)"),
@@ -2518,6 +4037,8 @@ def _fig_structure(ctx: Ctx, objs: list, fig_dir: Path):
     _callouts(a2, top, (0.02, 0.97), start=len(side) + 1)
     a2.set_xlim(-0.1, 4.6)
     a2.set_ylim(-0.8, 1.8)
+    a2.set_xlabel("x (m, burundan geriye)", fontsize=8)
+    a2.set_ylabel("y (m, sancak +)", fontsize=8)
     a2.set_title("Yapısal kavram — üst görünüş: ok açılı orta kutu (kök parça YK250-CH-001), dış panel birleşimi "
                  f"y = {float(S['wing']['planform']['y_junction']):.2f} m, takım / motor / kuyruk bağlantıları"
                  .replace("0.", "0,"), fontsize=10)
@@ -2530,7 +4051,7 @@ def _fig_structure(ctx: Ctx, objs: list, fig_dir: Path):
 
 def _fig_shell(ctx: Ctx, fig_dir: Path):
     import matplotlib.pyplot as plt
-    from matplotlib.patches import Rectangle
+    from matplotlib.patches import Polygon, Rectangle
     L = ctx.L
     col = {"fixed": "#d5d8dc", "removable": "#82e0aa", "hinged": "#f8c471", "fairing": "#aed6f1"}
     fig, axs = plt.subplots(2, 1, figsize=(16, 10.5))
@@ -2552,14 +4073,23 @@ def _fig_shell(ctx: Ctx, fig_dir: Path):
                 fc = col.get(p["attach"], "#d5d8dc")
                 if p.get("layup") == "wing_skin_primary" and p["attach"] == "fixed":
                     fc = "#d2b4de"
-                pt = ax.add_patch(Rectangle((p["x"][0], y0), p["x"][1] - p["x"][0], y1 - y0, fc=fc, ec="#34495e",
-                                            lw=0.7, alpha=0.85 if p["attach"] != "fixed" else 0.5,
-                                            hatch="///" if p.get("rf_window") else None,
-                                            zorder=3 if p["attach"] != "fixed" else 2))
+                kw = dict(fc=fc, ec="#34495e", lw=0.7, alpha=0.85 if p["attach"] != "fixed" else 0.5,
+                          hatch="///" if p.get("rf_window") else None, zorder=3 if p["attach"] != "fixed" else 2)
+                if p.get("outline"):
+                    V = np.asarray(p["outline"], float)
+                    if y1 <= 0 < max(p["y"]):
+                        V = V * np.array([1.0, -1.0])
+                    pt = ax.add_patch(Polygon(V, closed=True, **kw))
+                else:
+                    pt = ax.add_patch(Rectangle((p["x"][0], y0), p["x"][1] - p["x"][0], y1 - y0, **kw))
                 pt.set_clip_path(clip)
                 lbl = p["id"].replace("P-", "")
                 if p["attach"] != "fixed":
-                    ax.text(0.5 * (p["x"][0] + p["x"][1]), 0.5 * (y0 + y1), lbl, fontsize=5.5, ha="center",
+                    cx, cy = 0.5 * (p["x"][0] + p["x"][1]), 0.5 * (y0 + y1)
+                    if p.get("outline"):                       # label at the polygon centroid
+                        V = np.asarray(p["outline"], float)
+                        cx, cy = float(V[:, 0].mean()), float(V[:, 1].mean()) * (1.0 if y1 > 0 else -1.0)
+                    ax.text(cx, cy, lbl, fontsize=5.5, ha="center",
                             va="center", rotation=90 if (p["x"][1] - p["x"][0]) < 0.12 else 0, zorder=6,
                             bbox=dict(fc="w", ec="none", alpha=0.6, pad=0.3))
                 elif (y1 - y0) > 0.3 and y1 > 0:
@@ -2585,6 +4115,8 @@ def _fig_shell(ctx: Ctx, fig_dir: Path):
         ax.set_aspect("equal")
         ax.set_xlim(-0.05, 4.3)
         ax.set_ylim(-0.75, 0.75)
+        ax.set_xlabel("x (m, burundan geriye)", fontsize=8)
+        ax.set_ylabel("y (m, sancak +)", fontsize=8)
         ax.set_title(f"Kabuk paneli bölümlemesi — {title} (gri: sabit somun plakalı, yeşil: sökülebilir Camloc/vida, "
                      "turuncu: menteşeli, mavi: fileto, mor: yapıştırılmış birincil eldiven, tarama: RF penceresi)",
                      fontsize=9)
@@ -2600,9 +4132,23 @@ def _fig_sections(ctx: Ctx, objs: list, fig_dir: Path):
     import matplotlib.pyplot as plt
     from matplotlib.patches import Rectangle
     L = ctx.L
-    ids = ["FS0600", "FS1110", "FS1490", "FS-FUEL", "FS-MS", "FS-GEAR", "FS3480", "FS3670"]
+    ids = [s_["id"] for s_ in L["stations"]]                     # every frame / bulkhead / ring
     st = {s_["id"]: s_ for s_ in L["stations"]}
-    fig, axs = plt.subplots(2, 4, figsize=(17, 8.5))
+    nrow = int(math.ceil((len(ids) + 1) / 4))
+    fig, axs = plt.subplots(nrow, 4, figsize=(17, 4.1 * nrow))
+    for ax in axs.ravel()[len(ids):]:
+        ax.axis("off")
+    axs.ravel()[-1].text(0.02, 0.95, "Gösterim (y–z kesiti, arkadan bakış, sancak sağda):\n"
+                         "• açık mavi: perde gövdesi; açık turuncu: halka çerçeve\n"
+                         "  (beyaz: halkanın açık ortası)\n"
+                         "• kırmızı çerçeve: tanımlı geçiş kesiği (layout.stations.cutouts)\n"
+                         "• yarı saydam kutular: çerçeve düzlemini kesen teçhizat /\n"
+                         "  şasi elemanları / motor zarfı\n"
+                         "• turuncu daire: kablo demeti; gri daire: itme çubuğu,\n"
+                         "  kayış, soğutma kanalı, motor kafesi borusu",
+                         fontsize=8.5, va="top", ha="left", transform=axs.ravel()[-1].transAxes)
+    type_tr = {"bulkhead": "perde", "ring": "halka çerçeve", "fitting frame": "bağlantı çerçevesi",
+               "spar frame": "kiriş çerçevesi", "firewall": "yangın perdesi"}
     for ax, sid in zip(axs.ravel(), ids):
         s_ = st[sid]
         x = float(s_["x"])
@@ -2623,8 +4169,10 @@ def _fig_sections(ctx: Ctx, objs: list, fig_dir: Path):
         for c in s_.get("cutouts", []):
             for sg in ((1.0, -1.0) if c.get("mirror") else (1.0,)):
                 y0, y1 = sorted([sg * c["y"][0], sg * c["y"][1]])
-                ax.add_patch(Rectangle((y0, c["z"][0]), y1 - y0, c["z"][1] - c["z"][0], fc="w", ec="#c0392b", lw=0.8,
-                                       zorder=3))
+                z0c, z1c = float(c["z"][0]), float(c["z"][1])
+                if c.get("kind") == "edge notch":          # open to the frame top: draw it up to the frame edge only
+                    z1c = min(z1c, float(np.interp(0.5 * (y0 + y1), yy, zt)))
+                ax.add_patch(Rectangle((y0, z0c), y1 - y0, z1c - z0c, fc="w", ec="#c0392b", lw=0.8, zorder=3))
         for o in objs:
             if o.kind not in ("content", "harness", "fuel", "gear", "structure", "mount", "engine"):
                 continue
@@ -2646,8 +4194,12 @@ def _fig_sections(ctx: Ctx, objs: list, fig_dir: Path):
         ax.set_aspect("equal")
         ax.set_xlim(-0.45, 0.45)
         ax.set_ylim(-0.25, 0.40)
-        ax.set_title(f"{sid} (x = {x:.3f} m, {s_['type']}{', ' + s_['subtype'] if s_.get('subtype') else ''})",
-                     fontsize=8)
+        kind = type_tr.get(s_["type"], s_["type"]) + (", " + type_tr.get(s_["subtype"], s_["subtype"])
+                                                      if s_.get("subtype") else "")
+        ax.set_title(f"{sid} (x = {x:.3f} m, {kind}, t {float(s_['t']) * 1000:.1f} mm)", fontsize=8)
+        ax.set_xlabel("y (m)", fontsize=7)
+        ax.set_ylabel("z (m)", fontsize=7)
+        ax.tick_params(labelsize=7)
         ax.grid(alpha=0.2)
     fig.suptitle("Çerçeve kesitleri: kesikler (kırmızı), kesişen teçhizat / şasi (kutular), kablo demetleri (turuncu), "
                  "halka çerçevelerin açıklığı (beyaz)", fontsize=10)
@@ -2675,14 +4227,24 @@ TR_ITEMS = [
     ("fuel bays conform", "yakıt bölmeleri ok açılı kiriş çerçevelerini izliyor (çerçeve gövdesine boşluk)"),
     ("usable fuel volume", "ok açılı bölmelerin kullanılabilir yakıt hacmi >= gerekli hacim"),
     ("harness / push-rod / bridle", "kablo, itme çubuğu ve kayış geçişleri tanımlı kesiklerden"),
+    ("harness / fuel-line / push-rod / bridle", "kablo, yakıt hattı, itme çubuğu ve kayış geçişleri tanımlı çerçeve "
+                                                "kesiklerinden"),
     ("equipment envelopes inside", "teçhizat zarfları dış yüzeyin (OML) içinde, 10 mm pay"),
     ("member envelopes inside", "şasi elemanları OML içinde (kaplamaya oturan yüzler hariç)"),
     ("fitting envelopes inside", "bağlantı parçaları OML / kuyruk içinde"),
     ("actuator envelopes inside", "kanat / dikey eyleyicileri kesit içinde, 3 mm pay"),
     ("harness trunks inside", "kablo demetleri OML içinde (yarıçap + 3 mm)"),
+    ("fuel lines inside", "yakıt hatları OML içinde (yarıçap + 3 mm)"),
+    ("internal antenna envelopes inside", "iç anten zarfları iç kaplama yüzeyinin içinde (OML − 5,8 mm kaplama − 2 mm; "
+                                          "düzeltme turu 1, VPK-10)"),
     ("engine mount truss inside", "motor bağlantı kafesi kaporta içinde"),
     ("turret growth envelope", "taret büyüme zarfı (toplanmış) OML içinde"),
     ("no overlaps", "içerik / yapı çakışması yok"),
+    ("structure vs structure", "yapı – yapı (elemanlar, bağlantı parçaları): çakışma yalnız parçaların bildirdiği "
+                               "temaslarda ('touch'; düzeltme turu 1, VPK-01/VPK-06)"),
+    ("fitting envelopes hold their bolt patterns", "bağlantı parçası zarfları kendi cıvata düzenlerini taşıyor: kenar "
+                                                   ">= 2 D metal / 2,5 D kompozit, aralık >= 3 D (düzeltme turu 1, "
+                                                   "VPK-07)"),
     ("gear retraction sequence", "takım toplama dizisi"),
     ("turret E180 envelope along", "taret E180 zarfı strok boyunca bölme duvarları / tavan / çerçevelere"),
     ("turret E180 envelope vs elevator", "taret E180 zarfı asansör raylarına / bilyalı vidaya"),
@@ -2691,15 +4253,27 @@ TR_ITEMS = [
     ("stabilators (whole range, both sides)", "stabilatörler (tüm sapma) egzoz zarflarına"),
     ("stabilators (whole range) outside", "stabilatörler egzoz duman konisinin dışında"),
     ("ailerons / flaps", "kanatçık / flap (tüm sapma) kanat eyleyicilerine"),
-    ("parachute hatch", "paraşüt kapağı (0-110°) dış antenlere, sondalara, ışıklara"),
+    ("parachute hatch", "paraşüt kapağı (bağlı kapak, prizmatik kalkış, V çatı zarfı) dış antenlere, sondalara, "
+                        "ışıklara"),
+    ("rudder root", "dümen kökü (dikey açıklığının eta0 kesri) tüm sapmada gövde / kaporta yüzeyine"),
+    ("turret door bands", "taret kapaklarının kayma bantlarında sökülebilir kesik yok (halka parçası hariç); halka "
+                          "bağlantı sıraları E180 açıklığına >= 10 mm, aralık bildirilen aralıkta (düzeltme turu 1, "
+                          "VPK-08)"),
+    ("assembly / maintenance paths", "montaj / bakım yolları (kanat dili, arka kulak, ana pimler ve çektirmeleri, "
+                                     "raybalar, arka pim, motor, taret, batarya, paraşüt, görev tepsisi, stabilatörler, "
+                                     "pervane) başka parçalardan boş (düzeltme turu 1, VPK-02/VPK-09)"),
     ("layout.mass_placement =", "kütle yerleşimi yerleşim nesnelerinden yeniden hesaplananla aynı"),
     ("spec mass items at", "spec kütle kalemleri yerleşim konumlarında (sizing --update-spec uygulandı)"),
     ("empty-aircraft CG", "boş uçak AM'si: spec kalemleri ile yerleşim kalemleri arasındaki fark"),
     ("turret field of regard", "taret görüş alanı: bütün dış çıkıntılar -5° konisinin üstünde"),
     ("RF windows", "RF pencereleri: iç antenlerin tümü GFRP panel / uç kapağı altında"),
     ("GNSS antennas", "GNSS antenleri üst yüzey pencerelerinin altında"),
+    ("RF line of sight", "RF görüş hattı: iç antenler GFRP pencerelerinin >= %50'sini karbon / metal yapıya ve "
+                         "teçhizata takılmadan görüyor (düzeltme turu 1, VPK-10)"),
     ("Li-ion buffer battery", "Li-ion tampon batarya ile yakıt hücreleri arası"),
     ("fuel cells to the firewall", "yakıt hücreleri ile yangın perdesi ön yüzü arası (CS-LUAS.967(c))"),
+    ("no composite member or fitting crosses", "hiçbir kompozit eleman ya da bağlantı parçası yangın perdesinden motor "
+                                               "bölmesine geçmiyor (elemanlar ön yüzde biter; düzeltme turu 1, VPK-06)"),
     ("engine dynamic envelope", "motor dinamik zarfı ile diğer nesneler arası"),
     ("engine-mount truss vs SG750", "motor bağlantı kafesi ile SG750 arası"),
     ("cylinder/head hot zone", "silindir/kafa sıcak bölgesi ile kompozit yapı arası"),
@@ -2709,15 +4283,31 @@ TR_ITEMS = [
     ("propeller disc keep-out", "pervane diski yasak bölgesi boş"),
     ("parachute deployment volume", "paraşüt açılma hacmi boş"),
     ("shell panels:", "kabuk panelleri: kenar payı, aralık, menteşe, RF malzemesi"),
+    ("access panels on their surface", "erişim kapakları kendi yüzeylerinde (kenar çizgisine >= 25 mm, eldiven hücum "
+                                       "kenarına >= 40 mm)"),
     ("upper body covered", "üst gövde burundan kaporta çıkışına kadar panellerle kaplı"),
-    ("maintenance: every", "bakım: her teçhizat ve yakıt hücresi sökülebilir/menteşeli bir kapağın altında"),
+    ("panel edge lands", "panel kenar oturma yüzeyleri: sökülebilir / menteşeli her panelin kenar bandı listelenen bir "
+                         "oturma yüzeyinde (düzeltme turu 1, VPK-04/VPK-12)"),
+    ("panel 'lands' references", "panel 'lands' başvuruları geometrik: listelenen her oturma yüzeyi bir kenarın bir "
+                                 "kısmını taşıyor"),
+    ("fixed-skin strips", "sökülebilir paneller arasındaki sabit kaplama şeritleri >= 2 × 19 mm rampa + 20 mm bağlantı "
+                          "sırası ya da ortak yapısal oturma yüzeyi"),
+    ("fixed tail surfaces", "sabit kuyruk yüzeyleri (dikey, kök parçası ve ventral kök kesim çizgileri) hiçbir "
+                            "sökülebilir panelden geçmiyor (düzeltme turu 1, VPK-05)"),
+    ("maintenance: every", "bakım: her teçhizat ve yakıt hücresi bir kapaktan sökülebilir: aynı yüz, açık geçiş (panel − "
+                           "2 × 25 mm oturma) >= kalemin kesiti, söküm prizması boş (düzeltme turu 1, VPK-03)"),
+    ("wing joint access panels", "kanat birleşimi erişim kapakları mevcut (ana pimler, arka pim)"),
     ("maintenance access matrix", "bakım erişim matrisi: hiçbir kalem için birincil yapı sökülmüyor"),
     ("assembly steps numbered", "montaj adımları 1..N, Türkçe başlık/alt montaj/metin/takım/kontrol"),
     ("assembly covers", "montaj şasi tezgâhından ayara kadar bütün grupları kapsıyor"),
     ("transport units", "taşıma birimleri R-29 / R-30 ile uyumlu"),
     ("field re-assembly", "sahada montaj ve bakım matrisi mevcut"),
     ("mechanism definitions", "mekanizma tanımları (alanlar, aralıklar, özellikler, ifadeler, L/R çiftleri, diziler)"),
+    ("swept-volume / corridor keep-outs", "süpürme hacmi / koridor yasak bölgeleri (takım, kumanda yüzeyleri, kablo, "
+                                          "itme çubukları) kayıtlı mafsallara ve aralıklarına başvuruyor"),
     ("layout.clearances in checks.py", "layout.clearances checks.py LISTE biçiminde"),
+    ("assembly paths (axis", "montaj yolları (eksen, strok, zarf), kapak / ray dış hatları ve panel kesikleri açık "
+                             "geometriyle tanımlı (düzeltme turu 1, VPK-09)"),
     ("first-cut fitting pre-sizing", "bağlantıların ilk ön boyutlandırması: emniyet payları >= 0"),
 ]
 
@@ -2777,7 +4367,7 @@ def write_report(ctx: Ctx, res: dict, figs: dict, out_dir) -> Path:
       "faydalı yük) birbirlerinin geometrisini okumadan bu arayüzden çalışır. Açıklama ve gerekçeler: "
       "`docs/03_yerlesim_ve_yapi_konsepti.md`.\n")
     w(f"**Sonuç: {res['n_pass']}/{res['n']} kontrol geçti** ({res['n_objects']} yerleşim nesnesi, {res['close_pairs']} "
-      f"yakın çift, süre {_fmt(res['elapsed_s'])} s).\n")
+      "yakın çift).\n")
     w("## 1. Kontrol özeti\n")
     w("| No | Kontrol | Değer | Sınır | Sonuç |\n|---|---|---|---|---|")
     for r in res["rows"]:
@@ -2819,9 +4409,10 @@ def write_report(ctx: Ctx, res: dict, figs: dict, out_dir) -> Path:
           f"{f['material']} | {str(f.get('attach', ''))[:120]} |")
     wj = L["chassis"]["wing_joint"]
     pins = wj["main_spar"]["pins"]
-    w(f"\nDış panel birleşimi y = {_fmt(float(wj['plane']['y']))} m: dil-çatal, iki Ø{pins[0]['diameter'] * 1000:.0f} mm "
-      f"Ti-6Al-4V pim ({', '.join(str(_r(p['position'], 3)) for p in pins)}), arka kirişte Ø"
-      f"{wj['rear_spar']['pin']['diameter'] * 1000:.0f} mm sürükleme pimi; takma yolu ana kiriş ekseni boyunca "
+    w(f"\nDış panel birleşimi y = {_fmt(float(wj['plane']['y']))} m: pimli kompozit dil-çatal, iki "
+      f"Ø{pins[0]['diameter'] * 1000:.0f} mm Ti-6Al-4V pim ({', '.join(str(_r(p['position'], 3)) for p in pins)}), arka "
+      f"kirişte yuva bağlantısındaki kulak ve düşey Ø{wj['rear_spar']['pin']['diameter'] * 1000:.0f} mm bilyalı kilit "
+      f"pimi (veter yönü kuvvet ve düzlem içi moment çifti); takma yolu ana kiriş ekseni boyunca "
       f"{_fmt(wj['insertion']['stroke'])} m.\n")
     em = L["chassis"]["engine_mount"]
     w(f"Motor bağlantısı: {em['type']} — 4 x M8 cıvata, sönümleyici: {em['isolators']['make_model']}; yangın perdesi "
@@ -2862,7 +4453,7 @@ def write_report(ctx: Ctx, res: dict, figs: dict, out_dir) -> Path:
         w(f"![{k}](../docs/fig/{Path(v).name})")
     text = "\n".join(W) + "\n"
     (out_dir / "layout.md").write_text(text, encoding="utf-8")
-    js = {k: v for k, v in res.items() if k != "cg"}
+    js = {k: v for k, v in res.items() if k not in ("cg", "timing_s", "elapsed_s")}   # no run time in tracked files
     js["cg"] = {k: v for k, v in res["cg"].items() if k != "placements"}
     (out_dir / "layout.json").write_text(json.dumps(js, indent=1, default=str), encoding="utf-8")
     return out_dir / "layout.md"

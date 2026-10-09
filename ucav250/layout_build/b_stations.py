@@ -1,7 +1,7 @@
 """Layout builder: part numbering and stations (frames / bulkheads)."""
 from __future__ import annotations
 
-from b_common import *  # noqa: F401,F403
+from .b_common import *  # noqa: F401,F403
 
 PART_NUMBERS = {                       # module -> [first, last] number (disjoint across modules; any group code)
     "chassis": [1, 149], "wing": [150, 249], "tail": [250, 349], "shell": [350, 499], "propulsion": [500, 569],
@@ -44,6 +44,17 @@ PART_NUMBERING = {
              "own range. root_part is the first part loaded in the assembly jig (centre wing box)."}
 
 
+def notch(cid, purpose, y, z_bottom, cover):
+    """Edge notch at the top of a frame (open to the frame edge under a removable cover): the web edge band and skin
+    flange are interrupted on purpose (a bridle / spine passage that must lift out); a bonded U-doubler of solid laminate
+    (16 plies PW, 3.2 mm, 20 mm wide) runs round the notch and carries the edge-band load past it (fix round 2, PK2-02:
+    layout_check C02 checks the width, the cover and the doubler; pass-throughs are checked on their corners). The
+    upper z bound 0.4 m means 'open to the frame edge'."""
+    return {"id": cid, "purpose": purpose, "kind": "edge notch", "y": r3(y), "z": [r3(z_bottom), 0.4],
+            "cover": cover, "doubler": "bonded U-doubler PW 16 plies (3.2 mm) x 20 mm round the notch, ends 25 mm "
+                                       "past the notch corners into the edge band"}
+
+
 def cut(cid, purpose, y, z, mirror=False, kind="pass-through"):
     d = {"id": cid, "purpose": purpose, "kind": kind, "y": r3(y), "z": r3(z)}
     if mirror:
@@ -68,12 +79,15 @@ def stations() -> list:
     st = []
 
     def add(sid, x, role, ftype, part, cutouts, inset=0.0065, sweep=0.0, ring_depth=None, mat=None, notes="",
-            name_tr=""):
+            name_tr="", flange_w=0.028, ring_z_max=None):
         d = {"id": sid, "x": r3(x), "sweep_deg": r3(sweep, 3), "role": role, "role_tr": name_tr, "type": ftype,
              "part": part, "inset": inset}
         d.update(copy.deepcopy(mat or SANDWICH))
+        d["flange_w"] = flange_w            # T-flange width each side of the web at the skin line (land of skins/panels)
         if ring_depth is not None:
             d["ring_depth"] = ring_depth
+        if ring_z_max is not None:
+            d["ring_z_max"] = ring_z_max
         d["cutouts"] = cutouts
         if notes:
             d["notes"] = notes
@@ -82,29 +96,37 @@ def stations() -> list:
     add("FS0300", 0.300, "nose-cone bulkhead: nose-cone attach flange (8 x M4 nutplates), pitot/static and FTS "
         "antenna feed-throughs; closes the forward equipment bay", "bulkhead", "YK250-CH-002",
         [cut("C-PITOT", "pitot/static lines (2 x 6 mm tube, bulkhead unions)", [-0.012, 0.012], [-0.040, -0.016]),
-         cut("C-COAX-NC", "coax feeds of the nose-cone antennas (C2-A, backup diversity, FTS)", [0.020, 0.044],
-             [-0.030, -0.006])], name_tr="burun konisi perdesi")
+         cut("C-COAX-NC", "coax feeds of the nose-cone antennas (C2-A, backup diversity, FTS) and the nose branch "
+             "H-NOSE (fix round 2, PK2-02: on the centre line above the pitot lines, every corner >= inset + 20 mm edge "
+             "band from the OML)", [-0.012, 0.012], [-0.004, 0.024])], name_tr="burun konisi perdesi")
     add("FS0600", 0.600, "nose-gear forward bulkhead: front of the keel walls and the chine longerons, forward "
         "wall of the nose-gear well, nose-gear down-lock stop", "bulkhead", "YK250-CH-003",
-        [cut("C-HARN-FWD", "harness trunk to the forward bay (pitot, FTS, nose-cone coax)", [0.050, 0.090],
-             [0.020, 0.060])], name_tr="burun takımı ön perdesi")
+        [cut("C-HARN-FWD", "harness trunk to the forward bay (pitot, FTS, nose-cone coax), above the avionics deck",
+             [0.045, 0.080], [0.020, 0.040])], name_tr="burun takımı ön perdesi")
     add("FS1110", 1.110, "turret-bay front bulkhead: aft end of the nose box (keel walls, avionics deck, side "
         "bays), aft wall of the nose-gear well; turret elevator rail front mounts", "bulkhead", "YK250-CH-004",
-        [cut("C-HARN-1110", "main harness trunk (port) and coax trunk (starboard)", [0.130, 0.190], [-0.015, 0.090],
-             mirror=True)], name_tr="taret bölmesi ön perdesi")
+        [cut("C-HARN-1110", "main harness trunk H-MAIN (port, above the avionics deck; fix round 2, PK2-02: corners "
+             ">= inset + 20 mm edge band from the V roof)", [-0.168, -0.118], [0.019, 0.051]),
+         cut("C-COAX-1110", "coax trunk H-COAX (starboard, below the avionics deck from the side bay)", [0.125, 0.165],
+             [-0.022, 0.012])], name_tr="taret bölmesi ön perdesi")
     add("FS1330", 1.330, "turret-bay aft bulkhead: aft wall of the turret bay, elevator rail aft mounts",
         "bulkhead", "YK250-CH-005",
-        [cut("C-HARN-1330", "harness / coax trunks", [0.130, 0.190], [0.030, 0.090], mirror=True)],
+        [cut("C-HARN-1330", "harness / coax trunks", [0.120, 0.175], [0.030, 0.068], mirror=True),
+         cut("C-TDOOR-SHAFT", "turret-door drive shaft (actuator EQ-TDOORACT on the aft face -> crank and link to the "
+             "door rack in the bay; bushed; fix round 2: raised inboard, corners >= inset + 20 mm edge band)",
+             [0.126, 0.144], [-0.100, -0.084], mirror=True)],
         name_tr="taret bölmesi arka perdesi")
     add("FS1490", X_PFF, "parachute-bay forward bulkhead: forward wall of the parachute compartment, hatch hinge "
         "land, forward end of the parachute floor", "bulkhead", "YK250-CH-006",
-        [cut("C-HARN-1490", "harness / coax trunks", [0.180, 0.240], [0.020, 0.080], mirror=True)],
+        [cut("C-HARN-1490", "harness / coax trunks (fix round 2, PK2-02: inboard and lower, corners >= inset + 20 "
+             "mm edge band)", [0.170, 0.220], [0.020, 0.050], mirror=True)],
         name_tr="paraşüt bölmesi ön perdesi")
     add("FS1810", X_PFR, "parachute-bay aft bulkhead + forward bridle fitting (dorsal) + LERX apex frame (side-of-"
         "body rib and LERX rib 1 forward lands): forward wall of the mission-computer bay, start of the dorsal spine "
         "channel, hatch latch land", "fitting frame", "YK250-CH-007",
-        [cut("C-HARN-1810", "harness / coax trunks", [0.180, 0.240], [0.020, 0.080], mirror=True),
-         cut("C-BRIDLE-F", "bridle forward leg exit to the dorsal channel", [-0.015, 0.015], [0.150, 0.185])],
+        [cut("C-HARN-1810", "harness / coax trunks", [0.170, 0.220], [0.020, 0.050], mirror=True),
+         notch("C-BRIDLE-F", "bridle forward leg passage over the frame top (open to the deployment: the leg lifts "
+               "out of it)", [-0.015, 0.015], 0.150, "P-PARAHATCH")],
         name_tr="paraşüt bölmesi arka perdesi / ön kayış bağlantısı / LERX burun çerçevesi")
     add("FS-FUEL", X_FUELF, "forward fuel-bay bulkhead (vapour-tight): forward wall of the forward fuel cell, aft "
         "wall of the mission-computer bay, forward end of the keel beams and payload-bay roof deck", "bulkhead",
@@ -113,16 +135,18 @@ def stations() -> list:
              [0.100, 0.130]),
          cut("C-HARN-FUEL", "harness trunk (below the fuel cell floor, sealed grommet)", [0.240, 0.300],
              [-0.110, -0.070], mirror=True),
-         cut("C-HARN-WING", "wing harness branch at the chine (edge notch, sealed grommet)", [0.383, 0.3995],
-             [-0.037, -0.017], mirror=True),
-         cut("C-SPINE-FUEL", "dorsal spine channel (bridle aft leg)", [-0.020, 0.020], [0.160, 0.195])], name_tr="ön yakıt bölmesi perdesi")
+         notch("C-SPINE-FUEL", "dorsal spine channel M-SPINE (sealed trough, bridle aft leg inside; the leg tears out "
+               "upward)", [-0.024, 0.024], 0.159, "P-SPINE")], name_tr="ön yakıt bölmesi perdesi",
+        notes="fix round 1 (VPK-13): no wing-harness notch in this vapour-tight bulkhead; the wing branch H-WING "
+              "runs below the forward fuel deck and enters the centre wing box through its lower cover")
     add("FS-MS", X_MS0, "main-spar frame: carry-through main spar web inside the body (chevron along the main-spar "
         "line, 8 deg each side, centre kink fitting), forward wall of the saddle fuel bay, rear wall of the forward "
         "fuel bay; below the box only the outboard posts (payload bay open)", "spar frame", "YK250-CH-009",
         [cut("C-PAYLOAD-MS", "payload bay (open, below the box)", [-0.205, 0.205], [-0.215, zb0 - 0.004],
              kind="bay"),
          cut("C-FUEL-MS", "fuel interconnect (sealed union)", [-0.040, 0.040], [0.080, 0.110]),
-         cut("C-SPINE-MS", "dorsal spine channel (bridle aft leg)", [-0.020, 0.020], [0.160, 0.195]),
+         notch("C-SPINE-MS", "dorsal spine channel M-SPINE (sealed trough; the bridle aft leg tears out upward)",
+               [-0.024, 0.024], 0.159, "P-SPINE"),
          cut("C-HARN-MS", "harness trunk (sealed grommet)", [0.250, 0.310], [-0.118, -0.068], mirror=True)],
         sweep=SW_MS, notes="the box itself (spar caps and webs) is part YK250-CH-001; this part is the frame above "
         "and below the box (fuel-bay wall and outboard posts) bonded and bolted to the spar web",
@@ -133,30 +157,34 @@ def stations() -> list:
         [cut("C-PAYLOAD-RS", "payload bay (open, below the box)", [-0.205, 0.205], [-0.215, zb0 - 0.004],
              kind="bay"),
          cut("C-FUEL-RS", "fuel interconnect (sealed union)", [-0.040, 0.040], [0.080, 0.110]),
-         cut("C-HARN-RS", "harness trunk (sealed grommet)", [0.250, 0.310], [-0.118, -0.068], mirror=True),
-         cut("C-BRIDLE-A", "bridle aft leg fitting land", [-0.015, 0.015], [0.165, 0.190])],
+         cut("C-HARN-RS", "harness trunk (sealed grommet)", [0.250, 0.310], [-0.118, -0.068], mirror=True)],
         sweep=SW_RS, name_tr="arka kiriş çerçevesi")
     add("FS-GEAR", X_GEARF, "aft main-gear frame + aft fuel-bay bulkhead (vapour-tight): aft ends of the gear beams "
         "and trunnion fittings, inner-door actuator mounts (aft face), forward wall of the aft equipment bay",
         "bulkhead", "YK250-CH-011",
-        [cut("C-FUEL-FEED", "engine feed + return lines (sealed unions)", [0.020, 0.060], [-0.040, -0.010]),
+        [cut("C-FUEL-FEED", "engine feed line (sealed union)", [0.020, 0.060], [-0.040, -0.010]),
+         cut("C-FUEL-RET", "fuel return line (sealed union)", [0.093, 0.117], [-0.031, -0.003]),
+         cut("C-FUEL-VENT", "fuel vent line (sealed union)", [0.063, 0.087], [0.105, 0.135]),
          cut("C-HARN-CL", "centre-line harness conduit (H-MAIN, H-COAX; sealed grommets)", [-0.025, 0.025],
              [-0.115, -0.066]),
-         cut("C-DOORLINK", "inner-door drive pushrods (DA 22 crank -> door hinge horn)", [0.010, 0.045],
-             [-0.168, -0.150], mirror=True)],
+         cut("C-DOORLINK", "inner-door and trunnion-door drive pushrods (DA 22 crank -> door hinge horns; fix round "
+             "2: raised, corners >= inset + 20 mm edge band)", [0.010, 0.045], [-0.160, -0.142], mirror=True)],
         name_tr="arka ana takım çerçevesi / arka yakıt perdesi")
     add("FS3480", 3.480, "tail ring frame: fin front-spar fittings, stabilator-stub front-spar fittings, cooling "
         "inlet duct pass-through, aft end of the equipment bay; open centre for the equipment bay and the S-duct",
         "ring", "YK250-CH-012", [], ring_depth=0.040, name_tr="kuyruk halka çerçevesi")
-    add("FS3670", X_FW, "firewall: fireproof bulkhead (CS-VLA 1191): fin rear-spar fittings, ventral front "
-        "fitting, engine-mount attach fittings (4), stabilator actuators on the forward face, fuel shut-off valve "
-        "forward of it", "firewall", "YK250-CH-013",
-        [cut("C-DUCT", "cooling-air duct (stainless spigot + fireproof seal)", [-0.092, 0.092], [0.236, 0.336]),
+    add("FS3670", X_FW, "firewall: fireproof bulkhead (CS-VLA 1191): firewall corner fittings (engine-mount upper "
+        "feet, fin rear spars, dorsal-longeron splices), lower engine-mount feet, stabilator node fittings (chine "
+        "splices) on the aft face, ventral front fitting, stabilator actuators on the forward face, fuel shut-off "
+        "valve forward of it; no carbon member crosses it (fix round 1, VPK-06)", "firewall", "YK250-CH-013",
+        [cut("C-DUCT", "cooling-air duct exit (stainless spigot ring + fireproof seal; fix round 2, PK2-02: the duct "
+             "exit flattened to 180 x 73 mm so that the firewall keeps a continuous rim >= inset + 20 mm edge band "
+             "above it, keep-out KO-COOLING-DUCT exit_section)", [-0.090, 0.090], [0.238, 0.311]),
          cut("C-FW-FUEL", "fuel feed/return (fireproof bulkhead unions + fire sleeve)", [0.030, 0.060],
              [0.020, 0.050]),
          cut("C-FW-HARN", "engine harness / SG750 power (fireproof grommets)", [0.080, 0.110], [0.020, 0.060],
              mirror=True),
-         cut("C-FW-PUSHROD", "stabilator pushrods (fireproof bellows boots)", [0.150, 0.180], [0.215, 0.262],
+         cut("C-FW-PUSHROD", "stabilator pushrods (fireproof bellows boots)", [0.165, 0.195], [0.215, 0.262],
              mirror=True)],
         mat={"material": "cfrp_pw_mtm45_as4", "process": "prepreg_ooa_vacbag", "layup": "rib_panel", "t": 0.0148,
              "construction": "stack-up forward -> aft: CFRP sandwich bulkhead (layups.rib_panel, 6.8 mm) / 7.5 mm "
@@ -165,12 +193,23 @@ def stations() -> list:
                              "standards.yaml FIRE-001, CS-VLA 1191), riveted to a stainless edge angle; overall "
                              "14.8 mm", "shield_material": "ss_304_annealed", "shield_t": 0.0005},
         name_tr="yangın perdesi")
-    add("FS3738", X_RING, "engine-bay ring frame (metallic, in the hot zone): stabilator spindle inboard bearings, "
-        "ventral rear fitting, cowl forward land; open centre for the engine (dynamic envelope + 10 mm)", "ring",
-        "YK250-CH-014", [], ring_depth=0.030,
+    add("FS3738", X_RING, "engine-bay lower U-ring (metallic, in the hot zone): ventral rear fitting, aft keel beam, "
+        "lower cowl intermediate land; its upper ends are riveted to the feet of the outboard cheeks of the stabilator "
+        "node fittings; open centre for the engine (dynamic envelope + 10 mm); fix round 1 (VPK-01): the ring no "
+        "longer carries the spindle bearings (the 30 mm band at the spindle could not hold a 25 mm spindle hole and "
+        "the housing bolts) and ends below the node fittings (ring_z_max)", "ring", "YK250-CH-014", [],
+        ring_depth=0.030, ring_z_max=0.176, flange_w=0.020,
         mat={"material": "al_2024_t3_sheet", "process": "sheet_metal_aluminium", "layup": None, "t": 0.002,
-             "construction": "2024-T3 sheet web 2.0 mm, formed flanges 20 mm (bend radius >= 6 t per "
-                             "processes.sheet_metal_aluminium), machined 7075-T651 bearing bosses riveted on; no "
-                             "composite inside the engine-bay hot-zone keep-out"},
-        notes="x = stabilator pivot (tail.surfaces.stabilator.pivot)", name_tr="motor bölmesi halka çerçevesi")
+             "construction": "2024-T3 sheet web 2.0 mm, formed flanges 20 mm (bend radius >= 6 t = 12 mm per "
+                             "processes.sheet_metal_aluminium: the flat part of each flange is 6 mm, so the lower "
+                             "cowl Camloc receptacles are on separate 7075 land clips riveted to the web); no "
+                             "composite inside the engine-bay hot-zone keep-out; fix round 2 (VS2-03): the bottom of "
+                             "the U between y -0.15 and +0.15 is a machined 7075-T651 lower segment (I 60 x 20 x 3 / "
+                             "2.5 mm, structures.sizing.body.fs3738_lower_segment; 150-180 mm free height to the engine "
+                             "envelope + 10 mm there) carrying the tail-bumper keel reaction; the aft keel beam is "
+                             "bolted to its web (4 x M5), the 2024 legs are spliced to its ends (3 x M5 each)",
+             "lower_segment": {"y": [-0.150, 0.150], "depth_m": 0.060, "material": "al_7075_t651_plate",
+                               "process": "cnc_milling_metal", "part": "YK250-CH-015"}},
+        notes="x = stabilator pivot station (tail.surfaces.stabilator.pivot); U-ring below z 0.176",
+        name_tr="motor bölmesi alt U halkası")
     return st

@@ -59,7 +59,7 @@ class TestLayoutChecks(unittest.TestCase):
     def test_every_check_group_present(self):
         groups = {r["check"] for r in self.res["rows"]}
         self.assertEqual(groups, {f"C{i:02d}" for i in range(1, 14)})
-        self.assertGreaterEqual(self.res["n"], 60)
+        self.assertGreaterEqual(self.res["n"], 62)
 
     def test_cg_layout_matches_spec_items(self):
         cg = self.res["cg"]
@@ -217,6 +217,20 @@ class TestLayoutCLI(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE, "ucav250 dependencies missing")
+class TestLayoutCheckReadOnly(unittest.TestCase):
+    """--check without --out never writes the tracked outputs (fix round 1, S1-10 / VPK-14) and the written report
+    carries no run time."""
+
+    def test_check_mode_writes_nothing(self):
+        before = {p: p.read_bytes() for p in tracked_outputs()}
+        self.assertEqual(LC.main(["--check"]), 0)
+        self.assertEqual({p: p.read_bytes() for p in tracked_outputs()}, before)
+        md = (REPO / "ucav250" / "out" / "layout.md").read_text(encoding="utf-8")
+        self.assertNotIn("süre", md.split("## 1.")[0])
+        self.assertNotIn('"elapsed_s"', (REPO / "ucav250" / "out" / "layout.json").read_text(encoding="utf-8"))
+
+
+@unittest.skipUnless(HAVE, "ucav250 dependencies missing")
 class TestChecksDetectFaults(unittest.TestCase):
     """Each check flags a deliberately corrupted copy of the spec."""
 
@@ -267,11 +281,204 @@ class TestChecksDetectFaults(unittest.TestCase):
         rows, _ = LC.check_cg(self._ctx(edit))
         self.assertTrue(self._failed(rows, "C06"))
 
+    def test_access_panel_off_its_surface_detected(self):
+        """C09: a glove access panel whose outline reaches ahead of the LERX leading edge is flagged."""
+        def edit(S):
+            p = next(q for q in S["layout"]["shell"]["panels"] if q["id"] == "P-JOINTACCESS")
+            p["outline"] = [[c[0] - 0.08, c[1]] for c in p["outline"]]
+        rows = LC.check_shell(self._ctx(edit))
+        self.assertTrue(any("on their surface" in r["item"] for r in self._failed(rows, "C09")))
+
+    def test_side_bay_panel_on_the_chine_detected(self):
+        """C09: a body access panel reaching the chine (no land on the chine longeron) is flagged."""
+        def edit(S):
+            p = next(q for q in S["layout"]["shell"]["panels"] if q["id"] == "P-SIDEBAY-R")
+            p["y"] = [0.05, 0.235]
+        rows = LC.check_shell(self._ctx(edit))
+        self.assertTrue(any("on their surface" in r["item"] for r in self._failed(rows, "C09")))
+
+    def test_sweep_keep_out_range_mismatch_detected(self):
+        """C12: a swept-volume keep-out whose range differs from its joint is flagged."""
+        def edit(S):
+            k = next(q for q in S["layout"]["keep_outs"] if q["id"] == "KO-SWEEP-MAINGEAR")
+            k["joints"]["main_gear_R"] = [0.0, 90.0]
+        rows = LC.check_mech_defs(self._ctx(edit))
+        self.assertTrue(any("keep-outs" in r["item"] for r in self._failed(rows, "C12")))
+
+    def test_transport_length_over_r29_detected(self):
+        """C11: an outer-panel transport length (with the tongue) above R-29 is flagged."""
+        def edit(S):
+            u = next(q for q in S["assembly"]["transport"]["units"] if q["unit"].startswith("outer wing panel"))
+            u["size_m"] = [3.6] + list(u["size_m"][1:])
+        rows = LC.check_assembly(self._ctx(edit))
+        self.assertTrue(any("transport" in r["item"] for r in self._failed(rows, "C11")))
+
+    def test_fitting_bolt_edge_detected(self):
+        """C04: a fitting envelope too small for its declared bolt pattern (edge < 2 D) is flagged (VPK-07)."""
+        def edit(S):
+            f = next(q for q in S["layout"]["chassis"]["fittings"] if q["id"] == "F-RISER-FWD")
+            b = f["bolts"][0]
+            f["box"] = [list(f["box"][0]), [f["box"][1][0], float(b["point"][1]) + 0.003, f["box"][1][2]]]
+            f.pop("boxes", None)
+        self.assertFalse(LC.fitting_bolt_row(self._ctx(edit))["ok"])
+
+    def test_structure_structure_overlap_detected(self):
+        """C04: two structural fittings occupying the same space are flagged (structure pairs, VPK-06)."""
+        def edit(S):
+            F = {q["id"]: q for q in S["layout"]["chassis"]["fittings"]}
+            F["F-UPLOCK"]["box"] = copy.deepcopy(F["F-TRUNNION"]["box"])
+            F["F-UPLOCK"].pop("boxes", None)
+        ctx = self._ctx(edit)
+        rows, _ = LC.check_overlaps(ctx, LC.layout_objects(ctx))
+        self.assertTrue(self._failed(rows, "C04"))
+
+    def test_panel_edge_without_land_detected(self):
+        """C09: a removable panel edge moved off its frame land is flagged (VPK-04 / VPK-12)."""
+        def edit(S):
+            p = next(q for q in S["layout"]["shell"]["panels"] if q["id"] == "P-MBHATCH")
+            p["x"] = [float(p["x"][0]) + 0.05, float(p["x"][1])]
+        rows = LC.check_lands(self._ctx(edit))
+        self.assertTrue(self._failed(rows, "C09"))
+
+    def test_fixed_surface_through_removable_panel_detected(self):
+        """C09: an upper cowl without the cut-outs around the fin roots is crossed by the root cut lines (VPK-05)."""
+        def edit(S):
+            p = next(q for q in S["layout"]["shell"]["panels"] if q["id"] == "P-COWL-UP")
+            x0, x1 = (float(v) for v in p["x"])
+            y0, y1 = (float(v) for v in p["y"])
+            p["outline"] = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
+        rows = LC.check_root_lines(self._ctx(edit))
+        self.assertTrue(self._failed(rows, "C09"))
+
+    def test_access_opening_too_small_detected(self):
+        """C10: a parachute hatch narrower than the container is flagged (clear opening = panel - 2 x land, VPK-03)."""
+        def edit(S):
+            p = next(q for q in S["layout"]["shell"]["panels"] if q["id"] == "P-PARAHATCH")
+            p["y"] = [-0.08, 0.08]
+        rows = LC.check_access(self._ctx(edit))
+        self.assertTrue(self._failed(rows, "C10"))
+
+    # ---------------------------------------------------------------- fix round 2 (PK2-*): the new checks are not vacuous
+    def test_antenna_in_the_skin_detected(self):
+        """C03 (PK2-01): an antenna raised 4 mm toward the nose-cone skin is caught by the true OML distance."""
+        def edit(S):
+            a = next(q for q in S["layout"]["systems"]["antennas"] if q["id"] == "ANT-FTS")
+            a["point"] = [a["point"][0], a["point"][1], float(a["point"][2]) + 0.004]
+        rows = LC.check_inside(self._ctx(edit))
+        self.assertTrue(any("antenna" in r["item"] for r in self._failed(rows, "C03")))
+
+    def test_cutout_corner_in_the_edge_band_detected(self):
+        """C02 (PK2-02): a cut-out whose corner reaches into the 20 mm frame edge band is flagged (not only its centre)."""
+        def edit(S):
+            st = next(s_ for s_ in S["layout"]["stations"] if s_["id"] == "FS0600")
+            c = next(q for q in st["cutouts"] if q["id"] == "C-HARN-FWD")
+            c["y"] = [float(c["y"][0]), float(c["y"][1]) + 0.06]
+        rows = LC.check_stations(self._ctx(edit))
+        self.assertTrue(any("corners" in r["item"] for r in self._failed(rows, "C02")))
+
+    def test_gear_leg_against_the_beam_detected(self):
+        """C05 (PK2-03): the main leg is swept against every static object - a gear beam moved inboard is hit."""
+        def edit(S):
+            m = next(q for q in S["layout"]["chassis"]["members"] if q["id"] == "M-GEARBEAM")
+            for k in ("box", "boxes"):
+                if k in m:
+                    m[k] = [[[c[0], c[1] - 0.030, c[2]] for c in b] for b in m[k]] if k == "boxes" else \
+                        [[c[0], c[1] - 0.030, c[2]] for c in m[k]]
+        ctx = self._ctx(edit)
+        rows = LC.check_mechanisms(ctx, LC.layout_objects(ctx))
+        self.assertTrue(any("main leg" in r["item"] or "main tyre" in r["item"] for r in self._failed(rows, "C05")))
+
+    def test_unplaced_mass_item_detected(self):
+        """C06 (PK2-07): a mass item whose hardware the layout places must appear in layout.mass_placement."""
+        def edit(S):
+            S["layout"]["mass_placement"].pop("actuators_ailerons_2x_DA26")
+        rows, _ = LC.check_cg(self._ctx(edit))
+        self.assertTrue(any("mass_item" in r["item"] for r in self._failed(rows, "C06")))
+
+    def test_composite_cowl_piece_in_the_hot_zone_detected(self):
+        """C08 (PK2-09): the upper cowl side piece in CFRP is within 25 mm of the cylinder heads."""
+        def edit(S):
+            p = next(q for q in S["layout"]["shell"]["panels"] if q["id"] == "P-COWL-UPS")
+            p["material"], p["layup"] = "cfrp_pw_mtm45_as4", "shell_secondary"
+        ctx = self._ctx(edit)
+        rows = LC.check_heat(ctx, LC.layout_objects(ctx), *self._hot(ctx))
+        self.assertTrue(any("cylinder-head" in r["item"] for r in self._failed(rows, "C08")))
+
+    def test_unshielded_stub_detected(self):
+        """C08 (PK2-09): without its heat shield the CFRP stabilator stub is inside the 50 mm exhaust margin."""
+        def edit(S):
+            hp = S["layout"]["heat_protection"]
+            hp["shields"] = [h for h in hp["shields"] if h["id"] != "HS-STUB"]
+        ctx = self._ctx(edit)
+        rows = LC.check_heat(ctx, LC.layout_objects(ctx), *self._hot(ctx))
+        self.assertTrue(any("exhaust" in r["item"] for r in self._failed(rows, "C08")))
+
+    @staticmethod
+    def _hot(ctx):
+        objs = LC.layout_objects(ctx)
+        eng = next(o for o in objs if o.id == "ENGINE")
+        return LC.OBB(eng.prims[1].c, eng.prims[1].R, eng.prims[1].h), [o for o in objs if o.kind == "exhaust"]
+
+    def test_outer_panel_transport_envelope_detected(self):
+        """C11 (PK2-12): an outer-panel transport chord below the loft's chord-wise extent is flagged."""
+        def edit(S):
+            u = next(q for q in S["assembly"]["transport"]["units"] if q["unit"].startswith("outer wing panel"))
+            u["size_m"] = [u["size_m"][0], 0.58, 0.09]
+        rows = LC.check_assembly(self._ctx(edit))
+        self.assertTrue(any("loft extents" in r["item"] for r in self._failed(rows, "C11")))
+
     def test_unknown_sequence_joint_detected(self):
         def edit(S):
             S["layout"]["mechanisms"]["sequences"]["gear_retraction"]["states"][3]["no_such_joint"] = 0.1
         rows = LC.check_mech_defs(self._ctx(edit))
         self.assertTrue(self._failed(rows, "C12"))
+
+
+@unittest.skipUnless(HAVE, "ucav250 dependencies missing")
+class TestLayoutBuild(unittest.TestCase):
+    """The layout generator package reproduces spec.layout / spec.assembly byte for byte (nothing written), has no
+    scratch paths or probe scripts, and its interface decisions are consistent."""
+
+    def test_regenerated_spec_identical(self):
+        from ucav250.layout_build import build as B
+        new = B.render(B.generated_spec())
+        self.assertEqual(new, SPEC_FILE.read_text(encoding="utf-8"),
+                         "spec.yaml differs from `python3 -m ucav250.layout_build.build --write`")
+
+    def test_package_clean(self):
+        root = REPO / "ucav250" / "layout_build"
+        mods = sorted(p.name for p in root.glob("*.py"))
+        self.assertEqual(mods, ["__init__.py", "b_assembly.py", "b_chassis.py", "b_common.py", "b_loads.py",
+                                "b_mech.py", "b_shell.py", "b_stations.py", "b_systems.py", "build.py"])
+        for p in root.glob("*.py"):
+            text = p.read_text(encoding="utf-8")
+            self.assertNotIn("/tmp/", text, p.name)
+            self.assertNotIn("sys.path.insert", text, p.name)
+            self.assertIsNone(re.search(r"^from b_\w+ import|^import b_\w+", text, re.M), p.name)
+
+    def test_turret_door_drive_consistent(self):
+        S = load_spec()
+        eq = {e["id"]: e for e in S["layout"]["systems"]["equipment"]}
+        self.assertIn("EQ-TDOORACT", eq)
+        texts = [S["payload"]["turret"]["bay"]["doors"], S["layout"]["chassis"]["turret_elevator"]["doors"]]
+        texts += [j.get("notes", "") for j in S["layout"]["mechanisms"]["joints"] if j["name"].startswith("turret_door")]
+        for tx in texts:
+            self.assertIn("DA 22", tx)
+            self.assertNotIn("cam-slot", tx)
+        acc = next(m for m in S["assembly"]["maintenance_access"] if m["item"].startswith("turret elevator"))
+        self.assertIn("P-TDOORACC", acc["access"])
+
+    def test_turret_stroke_keeps_field_of_regard(self):
+        """The extended ball centre stays at least as low as in the sizing phase (z -0.226 m) so R-25 holds."""
+        S = load_spec()
+        T = S["payload"]["turret"]
+        self.assertLessEqual(float(T["ball_center_extended_z"]), -0.226 + 1e-6)
+        self.assertAlmostEqual(float(T["ball_center_retracted_z"]) - float(T["stroke"]),
+                               float(T["ball_center_extended_z"]), delta=0.003)
+        el = S["layout"]["chassis"]["turret_elevator"]
+        self.assertAlmostEqual(float(el["stroke"]), float(T["stroke"]), places=9)
+        j = next(q for q in S["layout"]["mechanisms"]["joints"] if q["name"] == "turret_elevator")
+        self.assertAlmostEqual(float(j["hi"]), float(T["stroke"]), places=6)
 
 
 @unittest.skipUnless(HAVE, "ucav250 dependencies missing")
@@ -288,6 +495,31 @@ class TestDoc03(unittest.TestCase):
         self.assertIn(S["layout"]["root_part"], doc)
         for k in ("side", "top", "structure", "shell", "sections"):
             self.assertIn(f"fig/yk250_layout_{k}.png", doc)
+
+    def test_doc03_tables_match_spec(self):
+        """Fix round 1, VPK-14: the station and panel tables of doc 03 carry the spec x values (to 0.5 mm), so the
+        document cannot silently fall behind a re-closure of the layout."""
+        doc = DOC03.read_text(encoding="utf-8")
+        S = load_spec()
+        rows = {}
+        for line in doc.splitlines():
+            if line.startswith("| "):
+                cells = [c.strip() for c in line.strip().strip("|").split("|")]
+                rows.setdefault(cells[0].replace(" (L/R)", ""), cells)
+
+        def num(s_):
+            return float(s_.replace(",", "."))
+        for s_ in S["layout"]["stations"]:
+            self.assertIn(s_["id"], rows, s_["id"])
+            m = re.match(r"\d+,\d+", rows[s_["id"]][1])
+            self.assertIsNotNone(m, s_["id"])
+            self.assertAlmostEqual(num(m.group(0)), float(s_["x"]), delta=5e-4, msg=s_["id"])
+        for p in S["layout"]["shell"]["panels"]:
+            self.assertIn(p["id"], rows, p["id"])
+            m = re.match(r"(\d+,\d+)–(\d+,\d+)$", rows[p["id"]][3])
+            self.assertIsNotNone(m, p["id"])
+            self.assertAlmostEqual(num(m.group(1)), float(p["x"][0]), delta=5e-4, msg=p["id"])
+            self.assertAlmostEqual(num(m.group(2)), float(p["x"][1]), delta=5e-4, msg=p["id"])
 
 
 if __name__ == "__main__":

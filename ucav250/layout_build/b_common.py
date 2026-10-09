@@ -1,19 +1,21 @@
-"""Layout builder (scratch): shared helpers and geometry anchors computed from the closed sizing geometry.
+"""Layout builder: shared helpers and geometry anchors computed from the closed sizing geometry.
 
 The layout values written to spec.yaml are authored interface decisions; anchors that must coincide with the sizing
 geometry (spar lines, gear pivots, turret centre, fuel cells, engine envelope) are taken from the spec here and rounded,
-and ucav250.analysis.layout_check verifies them against the geometry with stated tolerances."""
+and ucav250.analysis.layout_check verifies them against the geometry with stated tolerances.
+
+The spec is loaded once at import (``SPEC.SPEC_PATH``); ``build.py`` regenerates ``spec.layout`` / ``spec.assembly``
+from it."""
 from __future__ import annotations
 
 import copy
 import math
-import sys
 
-sys.path.insert(0, "/home/user/Drone-controller")
-import numpy as np  # noqa: E402
+import numpy as np
+import yaml
 
-from ucav250.analysis import sizing as Z  # noqa: E402
-from ucav250.core import spec as SPEC  # noqa: E402
+from ..analysis import sizing as Z
+from ..core import spec as SPEC
 
 SPEC.load.cache_clear()
 S = copy.deepcopy(SPEC.load())
@@ -33,7 +35,7 @@ def r3(v, n=4):
     """Round a scalar or a nested list to n decimals (plain python floats)."""
     if isinstance(v, (list, tuple, np.ndarray)):
         return [r3(x, n) for x in v]
-    return float(round(float(v), n))
+    return float(round(float(v), n)) + 0.0          # + 0.0: no negative zero in the spec text
 
 
 def half_width(x, z):
@@ -100,6 +102,7 @@ Y_SOB = 0.400                                              # side-of-body rib (b
 BOX = ZP["wing_carry_through"]["box"]
 Z_BOX = (float(BOX[0][2]), float(BOX[1][2]))
 X_FW = float(S["layout"]["firewall_x"])
+X_FW_FWD = round(X_FW - 0.0148, 4)                         # forward face of the firewall stack (14.8 mm)
 PIV = TL["stabilator"]["pivot"]
 X_RING = float(PIV[0])
 HUB = PR["hub"]
@@ -138,12 +141,8 @@ def engine_point(dist_ahead_of_plane, dy=0.0, dz=0.0):
 
 
 HUB_FACE_AHEAD = float(PR["hub_spacer"]) + float(PR["hub_half_thickness"])     # prop plane -> engine flange
-MOUNT_FACE_AHEAD = HUB_FACE_AHEAD + 0.1814                                       # engine.yaml datum distance
+_ENG_RESEARCH = yaml.safe_load((SPEC.DATA_DIR / "research" / "engine.yaml").read_text(encoding="utf-8"))
+MOUNT_FACE_FROM_HUB_FACE = float(_ENG_RESEARCH["installation"]["datum_distances_m"]
+                                 ["prop_hub_face_to_crankcase_mount_face"]["value"])     # 0.1814 (datasheet drawing)
+MOUNT_FACE_AHEAD = HUB_FACE_AHEAD + MOUNT_FACE_FROM_HUB_FACE
 SG750_FRONT_AHEAD = HUB_FACE_AHEAD + float(ENG["envelope"]["length_with_sg750"])
-
-if __name__ == "__main__":
-    print("X_MS0", X_MS0, "X_RS0", X_RS0, "sweeps", SW_MS, SW_RS, "Z_BOX", Z_BOX, "FW", X_FW, "ring", X_RING)
-    print("mount face", engine_point(MOUNT_FACE_AHEAD), "SG750 front", engine_point(SG750_FRONT_AHEAD),
-          "hub face", engine_point(HUB_FACE_AHEAD))
-    for x in (0.6, 1.11, 1.33, 1.49, 1.81, 2.215, 2.5125, 2.826, 3.12, 3.48, 3.67, 3.7375):
-        print(f"x {x}: chine hw {chine_halfwidth(x):.4f} zc {zc(x):.4f} ztop {z_top(x):.4f} zbot {z_bot(x):.4f}")

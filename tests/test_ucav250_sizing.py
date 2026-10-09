@@ -30,6 +30,18 @@ except Exception:  # pragma: no cover
 SPEC_FILE = REPO / "ucav250" / "spec.yaml"
 
 
+def json_tol(*vals, rel: float = 1e-9) -> float:
+    """Largest difference between values written to sizing.json (floats rounded to 6 significant digits,
+    sizing.py: py(x, sig=6)) whose unrounded values agree to ``rel``: the sum of their half-ulps at 6 significant
+    digits plus ``rel`` x the largest magnitude. Used where a test compares two independently rounded outputs."""
+    t = 0.0
+    for v in vals:
+        v = abs(float(v))
+        if v > 0.0:
+            t += 0.5 * 10.0 ** (math.floor(math.log10(v)) - 5)
+    return t + rel * max(abs(float(v)) for v in vals)
+
+
 def tracked_outputs() -> list:
     """Repository files the sizing CLI could write: the spec, ucav250/out/*, ucav250/docs/fig/*."""
     root = REPO / "ucav250"
@@ -119,7 +131,10 @@ class TestSizingCheck(unittest.TestCase):
         self.assertTrue(pr["consistent"])
         self.assertAlmostEqual(pr["derived_kg"] / 0.5, round(pr["derived_kg"] / 0.5), places=9)   # on the 0.5 kg grid
         self.assertGreaterEqual(pr["endurance_at_derived_h"], target)
-        self.assertAlmostEqual(pr["endurance_at_derived_h"], M["endurance_h"], places=6)
+        # the rule's own mission run and the design mission give the same endurance (equal within the 6-digit JSON
+        # rounding of the two outputs)
+        self.assertAlmostEqual(pr["endurance_at_derived_h"], M["endurance_h"],
+                               delta=json_tol(pr["endurance_at_derived_h"], M["endurance_h"]))
         if pr["next_step_kg"] is not None:                                        # largest such payload (rounded down)
             self.assertLess(pr["endurance_at_next_step_h"], target)
         self.assertEqual(M["payload_kg"], float(mis["payload_design_kg"]))
@@ -192,8 +207,10 @@ class TestSizingCheck(unittest.TestCase):
         self.assertLess(eta_pe, 1.0)
         for k in ("start", "end"):
             p = self.out["performance"]["mission_loiter_points"][k]
+            # rpm and gen_W are both written with 6 significant digits: the tolerance adds their rounding to 1e-6
             self.assertAlmostEqual(p["gen_W"], gen["power_continuous_W"] * p["rpm"] / gen["rated_rpm"] * eta_pe,
-                                   delta=1e-6 * p["gen_W"])
+                                   delta=1e-6 * p["gen_W"] + json_tol(p["gen_W"], rel=0.0) +
+                                   p["gen_W"] * json_tol(p["rpm"], rel=0.0) / p["rpm"])
         el = self.out["electrical"]
         # fix round 3 (V2-01): R-52 is the v1.2 capability again (E180 peak available throughout the design-mission
         # loiter), supplied by the generator plus the battery peak-support share; the v1.3 "installed turret only" rule
@@ -843,7 +860,21 @@ class TestMissionIntegration(unittest.TestCase):
         gc = [c for c in R["mass"]["ground_cases_gear_down"] if abs(c["m"] - m0) < 0.5]
         req = {r["id"]: r for r in Z.evaluate_requirements(S, Z.metrics(S, R))}
         self.assertTrue(req["R-60"]["pass"])
-        bad = self.fl.takeoff_cases(m0, 0.0, gc, rot_cap_factor=0.9)
+        # V5-04: positive control - the same call with the analysis cap reproduces the evaluated metric, so the
+        # failure below is caused by the reduced cap alone
+        ok = self.fl.takeoff_cases(m0, 0.0, gc, rot_cap_factor=1.0)
+        self.assertAlmostEqual(Z.r60_metric(ok), Z.r60_metric(R["performance"]["takeoff_sl_mtow"]), places=6)
+        # V5-04: the cap reduction is derived from the present margin (twice the smallest margin relative to the
+        # download at V_R, at least 10 %), so the forced failure holds whatever margin a later design has
+        rel = min(max(c["rotation"]["download_margin_min_N"], 0.0) / max(c["rotation"]["download_at_V_R_N"], 1e-9)
+                  for c in ok["cases"].values())
+        factor = min(0.9, 1.0 - 2.0 * rel)
+        self.assertGreater(factor, 0.0)
+        bad = self.fl.takeoff_cases(m0, 0.0, gc, rot_cap_factor=factor)
+        self.assertTrue(bad["feasible"])
+        for c in gc:                    # every loading case still takes off: only the rotation margin is violated
+            r = self.fl.takeoff(m0, 0.0, (c["x"], c["z"]), I_yy=c.get("I_yy"), rot_cap_factor=factor)
+            self.assertTrue(r["feasible"], c["name"])
         self.assertGreater(sum(c["rotation"]["rate_limited_steps"] for c in bad["cases"].values()), 0)
         R2 = dict(R, performance=dict(R["performance"], takeoff_sl_mtow=bad))
         M2 = Z.metrics(S, R2)
@@ -945,6 +976,53 @@ class TestDoc02(unittest.TestCase):
         self.assertIn("Gereksinim kararı: faydalı yük – dayanım", doc)
         self.assertIn(f"{tr(S['mission']['payload_design_kg'], 1)} kg", doc)
         self.assertIn(f"{tr(ref['endurance_max_payload_h'], 2)} h", doc)
+
+
+    def test_v5_doc_numbers_match_outputs(self):
+        """V5-01/V5-02/V5-05/V5-06 (layout phase): the turret-only fuel limit, the R-56 margin, the three empty-mass
+        headrooms measured from the same reference (the current estimate), the stabilator hinge row and the rotation
+        timing of doc 02 are those of out/sizing.json; the generated report has no 'nan' value."""
+        d = json.loads((REPO / "ucav250" / "out" / "sizing.json").read_text(encoding="utf-8"))
+        doc = (REPO / "ucav250" / "docs" / "02_konsept_ve_boyutlandirma.md").read_text(encoding="utf-8")
+        md = (REPO / "ucav250" / "out" / "sizing.md").read_text(encoding="utf-8")
+
+        def tr(x, n):
+            return f"{x:,.{n}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        # V5-01: every statement of the turret-only fuel limit is the computed one
+        f_t = d["performance"]["payload_permitted_loadings"]["turret_only"]["fuel_max_for_R09_kg"]
+        found = re.findall(r"yakıt (\d+,\d) kg ile sınırlı", doc)
+        self.assertGreaterEqual(len(found), 2)
+        self.assertEqual(set(found), {tr(f_t, 1)})
+        # V5-05: same reference for the three headrooms, R-56 margin from the ceilings + reserve
+        bc = d["mass"]["budget_check"]
+        pr = d["performance"]["payload_design_rule"]
+        self.assertAlmostEqual(bc["headroom_R02b_over_estimate_kg"],
+                               bc["empty_kg_at_R02b_limit"] - bc["empty_estimate_kg"],
+                               delta=json_tol(bc["headroom_R02b_over_estimate_kg"], bc["empty_kg_at_R02b_limit"],
+                                              bc["empty_estimate_kg"]))
+        self.assertAlmostEqual(bc["headroom_R02_over_estimate_kg"],
+                               bc["empty_kg_at_R02_limit"] - bc["empty_estimate_kg"],
+                               delta=json_tol(bc["headroom_R02_over_estimate_kg"], bc["empty_kg_at_R02_limit"],
+                                              bc["empty_estimate_kg"]))
+        for v in (pr["empty_mass_headroom_kg"], bc["headroom_R02b_over_estimate_kg"],
+                  bc["headroom_R02_over_estimate_kg"]):
+            self.assertIn(f"+{tr(v, 2)} kg", doc)
+        self.assertIn(f"+{tr(bc['margin_kg'], 3)} kg", doc)
+        # V5-06: no 'nan' in the generated report; the stabilator hinge row carries its speed
+        self.assertIsNone(re.search(r"\bnan\b", md, re.I))
+        st = d["control_hinges"]["stabilator"]
+        self.assertTrue(math.isfinite(st["V_eas_m_s"]))
+        self.assertIn(f"| Stabilatör (çift) | Volz DA 30 | 2,5:1 | {tr(st['V_eas_m_s'], 1)} m/s | "
+                      f"{tr(st['H_design_Nm'], 2)} |", doc)
+        # V5-03: the rotation timing statement follows the integration (lift-off time and the spin-up flag)
+        to = d["performance"]["takeoff_sl_mtow"]
+        self.assertIn(f"{tr(to['rotation_time_s'], 2)} s", doc)
+        rot = to["rotation"]
+        self.assertIn("spin_up_complete_before_lof", rot)
+        if rot["spin_up_complete_before_lof"]:
+            self.assertNotIn("rampa bitmeden yerden kesilir", doc)
+        else:
+            self.assertNotIn("rampa yerden kesilmeden önce tamamlanır", doc)
 
 
 @unittest.skipUnless(HAVE, "ucav250 dependencies missing")

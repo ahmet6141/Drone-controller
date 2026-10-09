@@ -1,7 +1,7 @@
 """Layout builder: mechanisms (joints + sequences), keep-out envelopes, clearance values and clearance rules."""
 from __future__ import annotations
 
-from b_common import *  # noqa: F401,F403
+from .b_common import *  # noqa: F401,F403
 
 DEG = math.pi / 180.0
 
@@ -25,11 +25,14 @@ def hinge(srf_name, eta0, eta1, xc, frac=0.5):
 
 
 def joint(name, kind, origin, axis, lo, hi, rest=0.0, prop="", scale=1.0, parent=None, expr="", moves="",
-          notes="", side="C", mirror_of=None):
+          notes="", side="C", mirror_of=None, hinge_parent=None, hinge_zone_m=None):
     d = {"name": name, "kind": kind, "origin": r3(origin, 5), "axis": r3(unit(axis), 6), "lo": r3(lo, 6),
          "hi": r3(hi, 6), "rest": r3(rest, 6), "prop": prop, "scale": r3(scale, 7)}
     if parent:
         d["parent"] = parent
+    if hinge_parent:
+        d["hinge_parent"] = hinge_parent          # the member carrying the hinge (no clearance within hinge_zone_m)
+        d["hinge_zone_m"] = hinge_zone_m
     if expr:
         d["expr"] = expr
     d["moves"] = moves
@@ -63,13 +66,15 @@ def mechanisms() -> dict:
                        mirror_of=f"{nm}_R", moves=f"{fc}-L", notes="+ = TE down (port)"))
     # ---------------------------------------------------------------- rudders (fin hinge 70 % chord)
     rc = FIN["controls"]["rudder"]
-    e0, e1 = 0.300, 0.880
+    e0, e1 = rudder_span()
     p0, p1 = hinge("fin", e0, e1, float(rc["xc_hinge"]))
     a = unit(p1 - p0)                                       # up the span: + = TE to starboard
     lo, hi = (float(v) * DEG for v in rc["range_deg"])
     J.append(joint("rudder_R", "revolute", p0, a, lo, hi, prop="rudder_deg", scale=-DEG, side="R",
-                   moves="YK250-FC-300-R", notes=f"fin span coordinate {e0}-{e1} m (root clear of the cowl, tip cap "
-                                                 "above 0.88 m); rudder_deg + = trailing edges to port"))
+                   moves="YK250-FC-300-R", notes=f"fin span coordinate {e0:.3f}-{e1:.3f} m (tail.surfaces.fin."
+                                                 "controls.rudder.eta0/eta1 x fin span: root clear of the cowl over "
+                                                 "+-25 deg, layout_check C05; tip cap above); rudder_deg + = trailing "
+                                                 "edges to port"))
     pm = p0 * np.array([1, -1, 1])
     am = np.array([a[0], -a[1], a[2]])
     J.append(joint("rudder_L", "revolute", pm, am, lo, hi, prop="rudder_deg", scale=-DEG, side="L",
@@ -106,6 +111,23 @@ def mechanisms() -> dict:
     J.append(joint("main_inner_door_L", "revolute", o_d * np.array([1, -1, 1]), [1.0, 0.0, 0.0], 0.0, a_door,
                    prop="", scale=1.0, expr=f"{a_door:.5f}*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))",
                    side="L", mirror_of="main_inner_door_R", moves="YK250-LG-670-L"))
+    # fix round 2 (PK2-03): trunnion door per well, hinged on the lower edge of the gear beam (chine corner), closing the
+    # leg-slot strip from the trimmed leg door (y 0.30) to the beam; opens outward-down before the leg moves and closes
+    # after it (slaved to the inner-door DA 22 by a second crank / pushrod, EQ-DOORACT)
+    from .b_chassis import Y_GB, T_SW as T_SW_GB
+    y_th = round(Y_GB + T_SW_GB, 4)                    # outboard lower edge of the gear beam (skin corner)
+    o_t = np.array([x_w, y_th, z_bot(float(MG["trunnion"][0]), y_th) + 0.002])
+    a_tdoor = 125.0 * DEG
+    J.append(joint("main_trunnion_door_R", "revolute", o_t, [1.0, 0.0, 0.0], 0.0, a_tdoor, prop="", scale=1.0,
+                   expr=f"{a_tdoor:.5f}*(1-clamp((gear_up-0.85)/0.15,0,1))", side="R",
+                   moves="YK250-LG-673-R", hinge_parent="M-GEARBEAM", hinge_zone_m=0.015,
+                   notes="hinged on the lower edge of the gear beam (axis along x), + = free edge down and outboard; "
+                         "open 125 deg whenever the gear is not up-locked (the down leg passes through its strip), "
+                         "closed after the leg is up (gear_up 0.85 -> 1)"))
+    J.append(joint("main_trunnion_door_L", "revolute", o_t * np.array([1, -1, 1]), [-1.0, 0.0, 0.0], 0.0, a_tdoor,
+                   prop="", scale=1.0, expr=f"{a_tdoor:.5f}*(1-clamp((gear_up-0.85)/0.15,0,1))",
+                   side="L", mirror_of="main_trunnion_door_R", moves="YK250-LG-673-L", hinge_parent="M-GEARBEAM",
+                   hinge_zone_m=0.015))
     # ---------------------------------------------------------------- nose gear (+ steering, clamshell doors)
     Pn = np.array(NG["pivot"], float)
     an = float(NG["retraction"]["angle_deg"]) * DEG
@@ -127,7 +149,8 @@ def mechanisms() -> dict:
                        expr=f"{90 * DEG:.5f}*(1-clamp((gear_up-0.85)/0.15,0,1))", side=sd,
                        moves=f"YK250-LG-674-{sd}",
                        notes="clamshell hinged at the keel-slot edge; open (90 deg, hanging) whenever the gear is not "
-                             "up-locked, closed for gear_up > 0.85 + 0.15"))
+                             "up-locked, closed for gear_up > 0.85 + 0.15; driven by its own DA 22 (EQ-NDOORACT-R/-L, fix "
+                             "round 2 PK2-13: a leg-driven link cannot close the doors while the leg stands still)"))
     # ---------------------------------------------------------------- turret elevator + sliding bay doors
     xt = X_TUR
     zr = float(TU["ball_center_retracted_z"])
@@ -148,12 +171,14 @@ def mechanisms() -> dict:
                              "lower edge of the bay wall to outboard of it; driven by its own DA 22 + rack "
                              "(EQ-TDOORACT): fully open (0.12 m along the skin each, clear of the E180 ring) before the elevator "
                              "starts, closed only after full retraction"))
-    # ---------------------------------------------------------------- parachute hatch
-    xh0 = PARA_X[0]
-    J.append(joint("para_hatch", "revolute", [xh0, 0.0, z_top(xh0) - 0.002], [0.0, -1.0, 0.0], 0.0, 110.0 * DEG,
-                   prop="para_hatch_deg", scale=DEG, moves="YK250-SH-367 hatch",
-                   notes="dorsal hatch hinged at its forward edge (2 piano-hinge segments), opened by the deploying "
-                         "canopy pack after the latch pin-puller (YK250-SY-804) retracts; tethered, never free"))
+    # ---------------------------------------------------------------- parachute hatch (tethered lift-off, VPK-11)
+    xh = 0.5 * (PARA_X[0] + PARA_X[1])
+    J.append(joint("para_hatch", "prismatic", [xh, 0.0, z_top(xh) - 0.002], [0.0, 0.0, 1.0], 0.0, 0.150,
+                   prop="para_hatch", scale=0.150, moves="YK250-SH-367 hatch",
+                   notes="fix round 1 (VPK-11): no hinge - the V-shaped hatch cannot carry a flush piano hinge on a "
+                         "transverse axis; the pin-puller latch (YK250-SY-804) retracts the four corner pins, the "
+                         "deploying canopy pack lifts the hatch straight off (0.15 m modelled lift, then free on its "
+                         "1.5 m tether to FS1810); never free"))
     # ---------------------------------------------------------------- propeller
     J.append(joint("prop_spin", "revolute", HUB, D_THRUST, 0.0, 2 * math.pi / 3, prop="prop_deg", scale=DEG,
                    moves="YK250-PR-540 propeller, YK250-PR-542 spinner",
@@ -168,6 +193,8 @@ def mechanisms() -> dict:
         d_in = a_door * (cl(g / 0.15) - cl((g - 0.85) / 0.15))
         seq_g.append({"gear_up": r3(g, 3), "main_gear_R": r3(ang * leg, 5), "main_gear_L": r3(ang * leg, 5),
                       "main_inner_door_R": r3(d_in, 5), "main_inner_door_L": r3(d_in, 5),
+                      "main_trunnion_door_R": r3(a_tdoor * (1 - cl((g - 0.85) / 0.15)), 5),
+                      "main_trunnion_door_L": r3(a_tdoor * (1 - cl((g - 0.85) / 0.15)), 5),
                       "nose_gear": r3(an * leg, 5), "nose_steer": 0.0,
                       "nose_door_R": r3(90 * DEG * (1 - cl((g - 0.85) / 0.15)), 5),
                       "nose_door_L": r3(90 * DEG * (1 - cl((g - 0.85) / 0.15)), 5)})
@@ -181,13 +208,14 @@ def mechanisms() -> dict:
     props = {"gear_up": {"range": [0, 1], "unit": "-", "text": "0 = gear down and locked, 1 = up and locked; legs move "
                                                                 "in 0.15-0.85, main inner doors open/close at the ends"},
              "turret": {"range": [0, 1], "unit": "-", "text": "0 = retracted (flush, doors closed); 0-0.2 doors open; "
-                                                              "0.2-1 elevator extends 0.12 m"},
+                                                              f"0.2-1 elevator extends {stroke:.3f} m"},
              "aileron_deg": {"range": [-20, 20], "unit": "deg", "text": "+ = roll right (starboard TE up)"},
              "flap_deg": {"range": [0, 40], "unit": "deg", "text": "take-off 35, landing 0"},
              "elevator_deg": {"range": [-20, 15], "unit": "deg", "text": "stabilator, + = TE down"},
              "rudder_deg": {"range": [-25, 25], "unit": "deg", "text": "+ = trailing edges to port"},
              "steer_deg": {"range": [-20, 20], "unit": "deg", "text": "nose-wheel steering, gear down only"},
-             "para_hatch_deg": {"range": [0, 110], "unit": "deg", "text": "parachute hatch (deployment only)"},
+             "para_hatch": {"range": [0, 1], "unit": "-", "text": "parachute hatch lift-off (deployment only; 1 = "
+                                                                  "0.15 m clear of the hatch seat)"},
              "prop_deg": {"range": [0, 120], "unit": "deg", "text": "propeller phase"}}
     return {"rules": "Joint = core.parts.Joint in the REST pose (all joints at rest = 0: gear down, turret in, "
                      "surfaces neutral, hatch closed). Producers register these names exactly (checks.py and "
@@ -197,10 +225,160 @@ def mechanisms() -> dict:
                      "states the swept-interference check evaluates.",
             "controls": props, "joints": J,
             "sequences": {"gear_retraction": seq_g, "turret_extension": seq_t},
-            "assembly_paths": [{"name": "outer_panel_insertion_R", "kind": "prismatic (assembly only, not a joint)",
-                                "axis": None, "stroke": 0.25,
-                                "text": "outer panel slides inboard along the main-spar line; tongue enters the fork "
-                                        "and the drag pin its bushing (layout.chassis.wing_joint.insertion)"}]}
+            "door_outlines": door_outlines(),
+            "assembly_paths": assembly_paths()}
+
+
+def rudder_span() -> tuple:
+    """Rudder ends on the fin span coordinate (m): root reference + tail.surfaces.fin.controls.rudder.eta0/eta1 x fin
+    span (the layout phase had the coordinates 0.30 / 0.88 = eta 0.200 / 0.844)."""
+    rc = FIN["controls"]["rudder"]
+    sp = float(FIN["params"]["span"])
+    e0 = float(af.tail["fin"].span_coords()[0])
+    return e0 + float(rc.get("eta0", (0.300 - e0) / sp)) * sp, e0 + float(rc.get("eta1", (0.880 - e0) / sp)) * sp
+
+
+Y_LEGDOOR = 0.300          # outboard edge of the main leg door (fix round 2, PK2-03)
+
+
+def door_outlines() -> dict:
+    """Plan outlines (x, y; starboard, port mirrored) of the gear doors, the sliding turret doors and their rails (fix
+    round 1, VPK-08/VPK-09): the shell cut-outs and layout_check use these, the gear / payload modules build the door
+    panels from them."""
+    from .b_chassis import Y_GB
+    wb = ZP["main_gear_wells"]["box"]
+    x0, x1 = float(wb[0][0]), float(wb[1][0])
+    y_in = 0.5 * float(MG["well_gap"])
+    y_out = float(LG["doors"]["main_inner_door_outer_edge_y"])
+    xt0 = float(MG["trunnion"][0])
+    slot = 0.5 * float(MG["leg_frontal_width"]) + 0.0225
+    nw = ZP["nose_gear_well"]["box"]
+    xs0, xs1, yh = float(nw[0][0]), float(nw[1][0]), float(nw[1][1])
+    tb = ZP["turret_bay"]["box"]
+    tx0, tx1 = float(tb[0][0]) + 0.003, float(tb[1][0]) - 0.003
+    out = {
+        "main_inner_door_R": {"joint": "main_inner_door_R", "thickness": 0.004,
+                              "outline": r3([[x0, y_in], [x1, y_in], [x1, y_out], [x0, y_out]]),
+                              "text": "inner door (well zone x range, from the inboard hinge edge to "
+                                      "landing_gear.doors.main_inner_door_outer_edge_y)"},
+        "main_leg_door_R": {"joint": "main_gear_R", "thickness": 0.004, "closed_at": "hi",
+                            "outline": r3([[xt0 - 0.032, y_out], [xt0 + 0.032, y_out], [xt0 + 0.032, Y_LEGDOOR],
+                                           [xt0 - 0.032, Y_LEGDOOR]]),
+                            "text": "leg door carried by the leg on two standoff brackets (closed = gear up): closes the "
+                                    "leg slot (64 mm, between the bearing lugs of F-TRUNNION) from the inner door edge to "
+                                    f"y {Y_LEGDOOR} (fix round 2, PK2-03: trimmed so that its sweep stays outside the "
+                                    "fitting and the beam)"},
+        "main_trunnion_door_R": {"joint": "main_trunnion_door_R", "thickness": 0.004, "closed_at": "lo",
+                                 "outline": r3([[xt0 - 0.032, Y_LEGDOOR], [xt0 + 0.032, Y_LEGDOOR],
+                                                [xt0 + 0.032, Y_GB + 0.0068], [xt0 - 0.032, Y_GB + 0.0068]]),
+                                 "text": "trunnion door hinged on the lower edge of the gear beam: closes the leg-slot "
+                                         f"strip y {Y_LEGDOOR}-{Y_GB} when the gear is up (fix round 2, PK2-03)"},
+        "nose_door_R": {"joint": "nose_door_R", "thickness": 0.004,
+                        "outline": r3([[xs0, 0.0005], [xs1, 0.0005], [xs1, yh], [xs0, yh]]),
+                        "text": "clamshell door hinged at the keel-slot edge (y = slot half width), meets its "
+                                "partner on the centre line"},
+        "turret_door_R": {"joint": "turret_door_R", "thickness": float(TU["bay"]["door_thickness"]),
+                          "outline_closed": r3([[tx0, 0.0], [tx1, 0.0], [tx1, 0.105], [tx0, 0.105]]),
+                          "travel_along_skin": 0.120,
+                          "outline_open": r3([[tx0, 0.120], [tx1, 0.120], [tx1, 0.225], [tx0, 0.225]]),
+                          "band": r3([[tx0, 0.0], [tx1, 0.0], [tx1, 0.235], [tx0, 0.235]]),
+                          "rails": [{"id": f"RAIL-TD-{k}", "line": r3([[x_, 0.010, 0.0], [x_, 0.235, 0.0]]),
+                                     "text": "door rail on the inner face of the belly skin (z follows the skin)"}
+                                    for k, x_ in (("F", tx0 + 0.006), ("A", tx1 - 0.006))],
+                          "text": "sliding door on the inner face of the V belly: closed y 0-0.105, open y 0.12-0.225 "
+                                  "(arc length along the skin); the band it sweeps holds no removable cut-out other "
+                                  "than the aperture ring P-TURRETRING, whose land and potted inserts stay within the "
+                                  "skin thickness (layout_check C05)"}}
+    return out
+
+
+def assembly_paths() -> list:
+    """Assembly / maintenance insertion paths with axis, stroke and envelope (fix round 1, VPK-02/VPK-09): layout_check
+    C05 sweeps each envelope and checks it against structure and contents except the parts it engages ('engages')."""
+    from .b_chassis import D_S, N_PIN, PIN_D, PRONG_T, Y_TONGUE_TIP, wing_joint
+    wj = wing_joint()
+    P_ = []
+
+    def path(name, kind, start, axis, stroke, env, engages, text, mirror=False):
+        d = {"name": name, "kind": kind, "start": r3(start), "axis": r3(unit(axis), 5), "stroke": r3(stroke),
+             "envelope": env, "engages": list(engages), "text": text}
+        if mirror:
+            d["mirror"] = True
+        P_.append(d)
+    tip = np.array([spar_x(Y_TONGUE_TIP, 0.25), Y_TONGUE_TIP, float(wj["main_spar"]["pins"][0]["position"][2])])
+    L_eng = (YJ - Y_TONGUE_TIP) / D_S[1]
+    path("outer_panel_insertion_R", "prismatic (assembly only, not a joint)", tip + 0.012 * D_S, D_S,
+         L_eng + float(wj["insertion"]["stroke"]) - 0.012, {"capsule_radius": 0.012},
+         ["F-FORK", "M-CTBOX", "M-JOINTRIB", "M-GLOVERIB", "M-SOB"],
+         "tongue core swept along the main-spar line from its seated position outboard over the engagement + the "
+         "insertion stroke: inside the fork slot (KO-WINGJOINT-PATH); the outer panel slides inboard along -axis",
+         mirror=True)
+    rp = wj["rear_spar"]["pin"]
+    path("rear_lug_insertion_R", "prismatic (with the outer panel)", np.asarray(rp["position"]) + 0.010 * D_S, D_S,
+         0.050, {"capsule_radius": 0.006}, ["F-REARSLOT", "M-JOINTRIB"],
+         "rear-spar lug bore centre swept outboard over the 44 mm lug engagement: inside the slot of F-REARSLOT",
+         mirror=True)
+    for pn in wj["main_spar"]["pins"]:
+        c = np.asarray(pn["position"], float)
+        L = float(pn["length"])
+        grip = 2 * PRONG_T + 0.0304
+        path(f"pin_{pn['id'][2:].lower()}_R", "pin insertion / withdrawal (by hand, ring handle)",
+             c - (0.5 * grip + 0.003) * N_PIN, -N_PIN, grip + 0.006,
+             {"capsule_radius": 0.5 * float(pn["head_diameter"]) + 0.002}, ["F-FORK"],
+             "pin head corridor forward of the fork front face over the grip length + 6 mm (head d 24 + 2 mm): the "
+             "withdrawn pin lies in the LERX bay and is taken out through P-JOINTACCESS", mirror=True)
+        path(f"ream_{pn['id'][2:].lower()}_R", "line reaming (assembly jig)", c + 0.5 * L * N_PIN, -N_PIN,
+             0.250, {"capsule_radius": 0.5 * PIN_D}, ["F-FORK"],
+             "reamer shank through both prongs and the master tongue, withdrawn forward (step 5, before the glove "
+             "skins)", mirror=True)
+    path("rear_pin_R", "pin insertion (ball-lock, from below)", np.asarray(rp["position"]) - [0, 0, 0.015],
+         [0.0, 0.0, -1.0], 0.025, {"capsule_radius": 0.007}, ["F-REARSLOT"],
+         "ball-lock pin d 8 (head d 14) inserted upward through the access port P-REARACCESS", mirror=True)
+    em = ENG["envelope"]
+    path("engine_removal", "lift-off aft along the thrust axis (propeller, spinner, cowls off)", HUB, D_THRUST, 0.250,
+         {"engine_envelope": "KO-ENGINE"}, ["ENGINE-MOUNT"],
+         "engine off its 4 isolator bolts, moved aft along the crank axis by 0.25 m (mount truss stays on the "
+         "firewall; fix round 2, PK2-11: 0.15 m left the cylinder heads under the fixed fin-root strips)")
+    path("engine_lift", "lift up after the aft stroke (second leg of the engine removal)",
+         HUB + 0.250 * D_THRUST, [0.0, 0.0, 1.0], 0.350, {"engine_envelope": "KO-ENGINE", "offset_axis": r3(D_THRUST),
+                                                          "offset": 0.250}, ["ENGINE-MOUNT"],
+         "after the 0.25 m aft stroke the engine is lifted 0.35 m clear of the fin-root strips and the fins")
+    from .b_chassis import fittings as _fits
+    fts = {f["id"]: f for f in _fits()}
+    tr = fts["F-TRUNNION"]
+    x0t, y0t, z0t = (float(v) for v in tr["pivot"])
+    for sg, nm in ((-1.0, "fwd"), (1.0, "aft")):
+        path(f"main_stub_axle_{nm}_R", "stub axle insertion from inside the leg yoke (gear down, maintenance mode)",
+             [x0t + sg * 0.020, y0t, z0t], [sg, 0.0, 0.0], 0.030, {"capsule_radius": 0.010}, ["F-TRUNNION"],
+             "flanged stub axle d 20 x 30 mm pushed outward from the yoke interior into the 20 H7 bushing of the "
+             "lug (fix round 2, PK2-04: no through-pin)", mirror=True)
+    npv = fts["F-NG-PIVOT"]
+    xn, _, zn = (float(v) for v in npv["pivot"])
+    for sg, nm in ((1.0, "R"), (-1.0, "L")):
+        path(f"nose_stub_axle_{nm}", "stub axle insertion from inside the nose-leg yoke (gear down, doors open)",
+             [xn, sg * 0.010, zn], [0.0, sg, 0.0], 0.0225, {"capsule_radius": 0.008}, ["F-NG-PIVOT"],
+             "flanged stub axle d 16 x 22 mm pushed outward from the yoke interior into the bushing of the block (fix "
+             "round 2, PK2-04: no through-pin)")
+    path("turret_removal", "lowered through the bay opening (aperture ring off, doors open)",
+         [X_TUR, 0.0, float(TU["ball_center_retracted_z"])], [0.0, 0.0, -1.0], 0.300,
+         {"turret_envelope": "payload.turret.growth_envelope"}, ["TURRET", "EQ-TURRET", "EQ-ELEVATOR", "RAIL-FR",
+                                                                 "RAIL-AL", "ELEV-SCREW"],
+         "turret unbolted from its carriage (4 bolts) and lowered out of the bay")
+    for nm, eid, ax_, stroke, eng, txt in (
+            ("battery_removal", "EQ-BUFFER_BATTERY", [0, 0, 1], 0.150, ["EQ-FTS_UNIT"],
+             "battery lifted out through P-FWDHATCH"),
+            ("parachute_removal", "EQ-PARACHUTE", [0, 0, 1], 0.300, ["EQ-PARALATCH"],
+             "container lifted out through the parachute hatch opening (313 x 312 mm between the frame and wall faces)"),
+            ("mission_tray_removal", "EQ-MC", [0, 0, -1], 0.120, ["EQ-ECU"],
+             "equipment tray TR-MISSION (mission computer + ECU) unscrewed and lowered through P-MBHATCH"),
+            ("ecu_removal", "EQ-ECU", [0, 0, -1], 0.120, ["EQ-MC"], "with the tray, through P-MBHATCH")):
+        path(nm, "item lift-out", [0.0, 0.0, 0.0], ax_, stroke, {"equipment": eid}, eng, txt)
+    path("stabilator_removal_R", "slide outboard off the spindle (cross-bolt out)",
+         [float(STAB["pivot"][0]), float(STAB["params"]["y_root"]), float(STAB["pivot"][2])], [0.0, 1.0, 0.0], 0.120,
+         {"capsule_radius": 0.0125}, [], "root socket slides 0.10 m off the spline + 20 mm", mirror=True)
+    path("propeller_removal", "off the hub along the thrust axis", HUB, D_THRUST, 0.100,
+         {"capsule_radius": 0.06}, [], "propeller and spinner off the hub flange")
+    return P_
 
 
 def engine_envelope() -> list:
@@ -226,8 +404,7 @@ def keep_outs() -> list:
     K.append({"id": "KO-ENGINE", "kind": "engine dynamic envelope", "frame": "engine axes (u ahead of the propeller "
               "plane along the thrust axis, v lateral, w engine vertical); origin propeller.hub, axis inclined "
               "propeller.thrust_line_inclination_deg", "boxes": engine_envelope(),
-              "margin": float(S["layout"]["clearances"]["engine_keep_out"])
-              if isinstance(S["layout"]["clearances"], dict) else 0.010,
+              "margin": CLEARANCE_VALUES["engine_keep_out"],
               "text": "L 275 EF + SG750 installed on isolators, crank axis = thrust axis (5 deg down-thrust, the "
                       "engine front sits ~34 mm lower than in the sizing boxes); 10 mm dynamic margin (isolator "
                       "travel); no part except the engine mount, isolators, exhaust, cooling baffles and the engine "
@@ -263,21 +440,30 @@ def keep_outs() -> list:
                       "fairings, the ventral fin) must lie above the -5 deg elevation cone from the ball centre at "
                       "every azimuth; checked by layout_check on the layout's external items (the OML, wing and "
                       "tail are checked by sizing.turret_checks)"})
-    xd = [3.30, 3.40, 3.48, 3.52, 3.56, 3.60, X_FW - 0.0148 - 0.005]
-    od = [0.060, 0.080, 0.094, 0.082, 0.070, 0.066, 0.066]   # under the FS3480 ring web, over the stabilator actuators
+    xd = [3.30, 3.40, 3.48, 3.52, 3.56, 3.60]
+    od = [0.060, 0.080, 0.094, 0.082, 0.070, 0.066]          # under the FS3480 ring web, over the stabilator actuators
     K.append({"id": "KO-COOLING-DUCT", "kind": "cooling-air S-duct corridor",
               "path": [r3([x, 0.0, z_top(x) - o]) for x, o in zip(xd, od)], "radius": 0.040,
               "lateral_offsets": [-0.05, 0.0, 0.05],
+              "exit_section": {"x": r3([3.600, X_FW - 0.0148 - 0.002]), "y": [-0.088, 0.088], "z": [0.240, 0.309],
+                               "area_m2": 0.0118,
+                               "text": "fix round 2 (PK2-02): the S-duct flattens over the last 55 mm to a rounded "
+                                       "rectangle 176 x 69 mm (r 20 mm corners) through the firewall cut-out C-DUCT, "
+                                       "keeping a continuous firewall rim above it; area 0.0118 m2 (three 80 mm tubes "
+                                       "0.0151 m2; no duct-area requirement in the spec - cooling-flow check in the "
+                                       "propulsion detail phase)"},
               "text": "flush dorsal inlet (P-INLET) -> S-duct (YK250-PR-546) -> firewall duct cut-out C-DUCT -> plenum over "
                       "the cylinders; corridor of three 80 mm tubes side by side (about 0.18 x 0.08 m section); nothing "
                       "else may enter it"})
-    K.append({"id": "KO-PARA-DEPLOY", "kind": "parachute deployment path", "box": r3([[PARA_X[0] - 0.02, -0.17, 0.15],
-              [PARA_X[1] + 0.02, 0.17, 0.80]]), "text": "volume above the dorsal hatch: no antenna, light or probe; the bridle "
-                                           "channel cover is the only item (tear-away)"})
+    K.append({"id": "KO-PARA-DEPLOY", "kind": "parachute deployment path", "box": r3([[1.4616 - 0.02, -0.208, 0.10],
+              [1.8384 + 0.02, 0.208, 0.80]]), "text": "volume above the 376 x 376 mm dorsal hatch (fix round 1): no "
+                                                    "antenna, light or probe; the bridle cover strip is the only item "
+                                                    "(tear-away)"})
     K.append({"id": "KO-WINGJOINT-PATH", "kind": "assembly path", "mirror": True,
-              "box": r3([[spar_x(0.43, 0.25) - 0.022, 0.43, -0.031], [spar_x(0.96, 0.25) + 0.022, 0.96, 0.031]]),
-              "text": "tongue insertion path (fork slot extended outboard over the stroke): nothing inside the fork "
-                      "slot; the main pins are inserted after the panel is home"})
+              "box": r3([[spar_x(0.408, 0.25) - 0.023, 0.408, -0.031], [spar_x(1.00, 0.25) + 0.023, 1.00, 0.031]]),
+              "text": "tongue insertion path (fork slot extended outboard over the 0.30 m stroke): nothing inside "
+                      "the fork slot; the main pins and the rear pin are inserted after the panel is home "
+                      "(layout.mechanisms.assembly_paths)"})
     K.append({"id": "KO-BATTERY-FUEL", "kind": "separation rule", "a": "EQ-BATTERY", "b": "fuel_cells",
               "min_distance": 1.0, "text": "Li-ion buffer battery >= 1 m from every fuel cell "
                                            "(engine.sources.buffer_battery)"})
@@ -354,9 +540,123 @@ def clearances() -> list:
         ["turret_elevator"], "payload.turret.bay.wall_margin")
     add("turret bay doors vs turret", ["YK250-PL-826-R", "YK250-PL-826-L"], ["YK250-PL-820", "YK250-PL-822"], 5.0,
         ["turret_door_R", "turret_door_L"])
-    add("parachute hatch vs dorsal items", "joint:para_hatch", ["group:systems", "group:shell"], 10.0, ["para_hatch"])
+    add("parachute hatch (lift-off) vs dorsal items", "joint:para_hatch", ["group:systems", "group:shell"], 10.0,
+        ["para_hatch"])
     add("battery vs fuel cells", ["YK250-SY-726"], ["group:fuel"], 1000.0, None, "engine.sources.buffer_battery")
     add("fuel cells vs firewall (CS-LUAS.967(c))", ["YK250-FU-570", "YK250-FU-571", "YK250-FU-572"],
         ["YK250-CH-013"], 13.0)
     add("harness vs exhaust", ["prefix:YK250-SY-75"], ["YK250-PR-504-R", "YK250-PR-504-L"], 50.0)
     return C
+
+
+def sweep_keep_outs(L: dict) -> list:
+    """Declarative swept volumes and corridors (gear, control surfaces, harness trunks, pushrods) for the detail
+    modules; they reference the joints / trunks / equipment of the layout ``L`` and layout_check sweeps them (C05)
+    and verifies the references and ranges (C12)."""
+    J = {j["name"]: j for j in L["mechanisms"]["joints"]}
+    cv = CLEARANCE_VALUES
+    ty = LG["tyre"]
+
+    def rng(name):
+        j = J[name]
+        if j["kind"] == "prismatic":
+            return r3([float(j["lo"]), float(j["hi"])], 4)
+        return r3([math.degrees(float(j["lo"])), math.degrees(float(j["hi"]))], 2)
+    K = []
+    K.append({"id": "KO-SWEEP-MAINGEAR", "kind": "swept volume (gear)", "mirror": True,
+              "joints": {"main_gear_R": rng("main_gear_R"), "main_inner_door_R": rng("main_inner_door_R")},
+              "sequence": "gear_retraction",
+              "envelope": {"tyre": {"axle_static": r3(MG["axle_static"]), "diameter": float(ty["diameter"]),
+                                    "width": float(ty["width"])},
+                           "leg": {"from": r3(MG["trunnion"]), "to": r3(MG["axle_static"]),
+                                   "radius": r3(0.5 * float(MG["leg_frontal_width"]))}},
+              "margin": cv["tyre_to_well"],
+              "text": "tyre + leg (+ the leg door carried by the leg) swept about the trunnion axis over the joint "
+                      "range, and the inner door about its hinge (sequence gear_retraction); only the well walls, "
+                      "the well roof and the gear beam bound it, nothing is mounted inside it; tyre to well "
+                      ">= 12 mm"})
+    K.append({"id": "KO-SWEEP-NOSEGEAR", "kind": "swept volume (gear)",
+              "joints": {"nose_gear": rng("nose_gear"), "nose_steer": rng("nose_steer"),
+                         "nose_door_R": rng("nose_door_R"), "nose_door_L": rng("nose_door_L")},
+              "sequence": "gear_retraction",
+              "envelope": {"tyre": {"axle_static": r3(NG["axle_static"]), "diameter": float(ty["diameter"]),
+                                    "width": float(ty["width"]), "note": "nose tyre envelope taken as the main "
+                                                                        "tyre (conservative until the unit is "
+                                                                        "selected)"},
+                           "leg": {"from": r3(NG["pivot"]), "to": r3(NG["axle_static"]),
+                                   "radius": r3(0.5 * float(NG["leg_frontal_width"]))}},
+              "margin": cv["tyre_to_well"],
+              "text": "leg + wheel swept aft into the keel slot (steering centred before retraction; +-20 deg "
+                      "steering only in the down position) and the clamshell doors about their keel-edge hinges; "
+                      "the keel walls bound it"})
+    surf = [n for n in ("aileron_R", "flap_R", "rudder_R", "stabilator_R") if n in J]
+    K.append({"id": "KO-SWEEP-CONTROLS", "kind": "swept volume (control surfaces)", "mirror": True,
+              "surfaces": [{"joint": n, "range_deg": rng(n), "moves": J[n].get("moves", "")} for n in surf],
+              "margin": cv["moving_surface_to_structure"],
+              "text": "each control surface (hinge line to trailing edge over its span; the stabilator as a whole "
+                      "panel about the spindle axis) swept over its full joint range: only its hinge fittings, horn "
+                      "and linkage enter the volume; 5 mm to every fixed part (rudder root vs cowl 8 mm, "
+                      "stabilator root gap R-38)"})
+    tr = [t["id"] for t in L["systems"]["harness"]["trunks"]]
+    K.append({"id": "KO-CORRIDOR-HARNESS", "kind": "corridor (harness trunks)", "trunks": tr,
+              "radius": "trunk diameter / 2 + radial_margin", "radial_margin": cv["harness_to_moving_parts"],
+              "exhaust_margin": cv["harness_to_exhaust"],
+              "text": "routing corridors of the harness trunks (layout.systems.harness.trunks: path + diameter): "
+                      "the trunk passes every frame through its declared cut-out; no moving part within 10 mm, no "
+                      "exhaust part within 50 mm; clamps at <= 150 mm on the frames / decks"})
+    rods = []
+    for e in L["systems"]["equipment"]:
+        lk = e.get("linkage")
+        if lk:
+            rods.append({"equipment": e["id"], "from_axis": lk["servo_axis"], "to_axis": lk["horn_axis"],
+                         "arm": float(lk["servo_arm_m"]), "horn": float(lk["horn_m"]), "through": "C-FW-PUSHROD",
+                         "radius": 0.012})
+    rods.append({"equipment": "EQ-DOORACT", "through": "C-DOORLINK", "radius": 0.010,
+                 "text": "crank + pushrod from the DA 22 on the aft face of FS-GEAR to the inner-door hinge horn"})
+    K.append({"id": "KO-CORRIDOR-PUSHRODS", "kind": "corridor (pushrods)", "mirror": True, "items": rods,
+              "text": "pushrod corridors: rod + rod ends (d 8 mm rod, 12 mm swept radius over the actuator travel) "
+                      "from the actuator arm to the horn; the frame crossings use the declared cut-outs (fireproof "
+                      "bellows boots at the firewall); wing and tail actuator linkages stay inside the surfaces "
+                      "(layout.systems.actuators)"})
+    return K
+
+
+def heat_protection(K: list) -> dict:
+    """Fix round 2 (PK2-09): heat protection of the engine bay (layout_check C08): stainless inserts that replace the
+    composite where a panel comes within the unshielded exhaust margin (the stack exit through the lower cowl, the
+    lower edge of the stub-root strip), heat shields over composite surfaces between the shielded and the unshielded
+    margin, and the metal-only hardware inside the hot zones with its temperature basis. Starboard regions (port
+    mirrored); region boxes = the exhaust routing boxes grown by the unshielded margin."""
+    ex = next(k for k in K if k["id"] == "KO-EXHAUST-R")
+    B = np.asarray(ex["boxes"], float)
+    m = float(ex["margin_composite"])
+    reg = r3([(B[:, 0, :].min(axis=0) - m).tolist(), (B[:, 1, :].max(axis=0) + m).tolist()])
+    return {
+        "inserts": [
+            {"id": "HS-COWL-EXIT", "part": "YK250-PR-520", "panel": "P-COWL-LO", "mirror": True,
+             "material": "ss_304_annealed", "region": reg,
+             "text": "stainless 304 exhaust-exit panel 0.5 mm riveted into the lower cowl half: every part of the cowl "
+                     "within 50 mm of the stack routing envelope is this insert (the stack passes through its exit "
+                     "cut-out with a 5 mm stand-off ring); the CFRP cowl starts outside it"},
+            {"id": "HS-STUBROOT", "part": "YK250-PR-521", "panel": "P-STUBROOT", "mirror": True,
+             "material": "ss_304_annealed", "region": reg,
+             "text": "stainless 304 lower section 0.5 mm of the stub-root strip where it comes within 50 mm of the "
+                     "stack envelope (screwed to the CFRP strip on a 20 mm lap)"}],
+        "shields": [
+            {"id": "HS-STUB", "part": "YK250-PR-522", "surface": "stabilator_stub", "mirror": True,
+             "material": "ss_304_annealed", "region": reg,
+             "text": "stainless 304 foil 0.1 mm on 5 mm stand-offs (air gap) over the lower / inboard stub skin facing "
+                     "the stack: the CFRP stub keeps >= 25 mm (shielded margin) from the routing envelope"}],
+        "hardware": [
+            {"object": "F-SPINDLE-NODE", "basis": "machined 7075-T651 node (metal); inboard bearing 61805-ZZ (steel "
+             "shields, no elastomer seal) with high-temperature grease; a 0.5 mm stainless baffle between the cylinder "
+             "heads and the node (cooling-baffle extension) faces the boss; the 7075 strength at the node temperature "
+             "is an open item (structures T-NODE-* report the strength retention the margins need)"},
+            {"object": "STAB-HORN", "basis": "7075 horn on the Ti spindle, all-metal rod end (steel ball / steel race, "
+             "no PTFE liner)"},
+            {"object": "EQ-STABACT-PUSHROD", "basis": "7075 tube pushrod, all-metal rod ends; the firewall passage "
+             "boot is a fireproof bellows (silicone-coated glass cloth, firewall side) - the boot lies forward of "
+             "the 25 mm cylinder zone"}],
+        "text": "C08 (fix round 2): composite shell panels and exposed tail lofts keep 25 mm from the cylinder-head "
+                "envelope and 50 mm from the exhaust envelope (25 mm behind a heat shield); inserts replace the "
+                "composite inside their region; every other object inside the hot zones is listed under 'hardware'"}

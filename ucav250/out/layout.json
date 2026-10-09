@@ -58,7 +58,15 @@
   },
   {
    "check": "C02",
-   "item": "cut-outs (pass-throughs) inside the frame web",
+   "item": "cut-outs (pass-throughs): all corners >= frame inset + 20 mm edge band from the OML (true distance; fix round 2, PK2-02)",
+   "ok": true,
+   "value": 1.5,
+   "limit": ">= 0 mm margin",
+   "detail": "worst FS3670.C-FW-PUSHROD"
+  },
+  {
+   "check": "C02",
+   "item": "edge notches at the frame tops (3): <= 50 mm wide, under a removable cover, U-doubler declared (fix round 2, PK2-02)",
    "ok": true,
    "value": 0,
    "limit": 0,
@@ -84,13 +92,13 @@
    "check": "C02",
    "item": "usable fuel volume of the chevron bays vs required (mass.fuel_kg, expansion space)",
    "ok": true,
-   "value": 51.04,
-   "limit": ">= 41.95 L",
+   "value": 50.94,
+   "limit": ">= 41.72 L",
    "detail": "tank efficiency 0.85"
   },
   {
    "check": "C02",
-   "item": "harness / fuel-line / push-rod / bridle crossings of frame webs pass declared cut-outs (57 crossings)",
+   "item": "harness / fuel-line / push-rod / bridle crossings of frame webs pass declared cut-outs (58 crossings)",
    "ok": true,
    "value": 0,
    "limit": 0,
@@ -98,66 +106,66 @@
   },
   {
    "check": "C03",
-   "item": "equipment envelopes inside the OML",
+   "item": "equipment envelopes inside the inner skin surface (true distance to the OML vs the local skin; fix round 2, PK2-01/06/10)",
    "ok": true,
-   "value": 0,
-   "limit": ">= 10 mm",
+   "value": 1.1,
+   "limit": ">= max(10 mm, skin + 2 mm) (value: worst margin, mm)",
+   "detail": "worst EQ-PARALATCH: 11.1 mm vs 10.0 mm at [1.755, -0.02, 0.18]"
+  },
+  {
+   "check": "C03",
+   "item": "member envelopes inside the inner skin surface (true distance to the OML vs the local skin; fix round 2, PK2-01/06/10)",
+   "ok": true,
+   "value": 0.3,
+   "limit": ">= skin (skin faces trimmed) (value: worst margin, mm)",
+   "detail": "worst M-CTBOX: 2.3 mm vs 2.0 mm at [2.847, -0.534, 0.005]"
+  },
+  {
+   "check": "C03",
+   "item": "fitting envelopes inside the inner skin surface (true distance to the OML vs the local skin; fix round 2, PK2-01/06/10)",
+   "ok": true,
+   "value": 0.3,
+   "limit": ">= skin (value: worst margin, mm)",
+   "detail": "worst F-REARSLOT: 6.3 mm vs 6.0 mm at [2.892, 0.656, -0.006]"
+  },
+  {
+   "check": "C03",
+   "item": "actuator envelopes inside the inner skin surface (true distance to the OML vs the local skin; fix round 2, PK2-01/06/10)",
+   "ok": true,
+   "value": 0.7,
+   "limit": ">= skin + 2 mm (value: worst margin, mm)",
+   "detail": "worst ACT-RUDDER: 8.5 mm vs 7.8 mm at [3.785, 0.182, 0.409]"
+  },
+  {
+   "check": "C03",
+   "item": "antenna envelopes inside the inner skin surface (true distance to the OML vs the local skin; fix round 2, PK2-01/06/10)",
+   "ok": true,
+   "value": 0.1,
+   "limit": ">= skin + 2 mm (value: worst margin, mm)",
+   "detail": "worst ANT-FTS: 8.1 mm vs 8.0 mm at [0.165, -0.005, 0.019]"
+  },
+  {
+   "check": "C03",
+   "item": "harness trunks inside the inner skin surface (true distance >= skin + radius + 3 mm)",
+   "ok": true,
+   "value": 4.3,
+   "limit": ">= 0 mm margin",
    "detail": ""
   },
   {
    "check": "C03",
-   "item": "member envelopes inside the OML",
+   "item": "fuel lines inside the inner skin surface (true distance >= skin + radius + 3 mm)",
    "ok": true,
-   "value": 0,
-   "limit": ">= 0 (skin faces excepted)",
+   "value": 17.2,
+   "limit": ">= 0 mm margin",
    "detail": ""
   },
   {
    "check": "C03",
-   "item": "fitting envelopes inside the OML",
+   "item": "engine mount truss inside the cowl (true distance >= skin + tube radius + 5 mm)",
    "ok": true,
-   "value": 0,
-   "limit": ">= 0 (skin faces excepted)",
-   "detail": ""
-  },
-  {
-   "check": "C03",
-   "item": "actuator envelopes inside the OML",
-   "ok": true,
-   "value": 0,
-   "limit": ">= 3 mm",
-   "detail": ""
-  },
-  {
-   "check": "C03",
-   "item": "harness trunks inside the OML (radius + 3 mm)",
-   "ok": true,
-   "value": 0,
-   "limit": ">= r + 3 mm",
-   "detail": ""
-  },
-  {
-   "check": "C03",
-   "item": "fuel lines inside the OML (radius + 3 mm)",
-   "ok": true,
-   "value": 0,
-   "limit": ">= r + 3 mm",
-   "detail": ""
-  },
-  {
-   "check": "C03",
-   "item": "internal antenna envelopes inside the inner skin surface (OML - 5.8 mm skin - 2 mm; fix round 1, VPK-10)",
-   "ok": true,
-   "value": 8.1,
-   "limit": ">= 7.8 mm",
-   "detail": ""
-  },
-  {
-   "check": "C03",
-   "item": "engine mount truss inside the cowl (tube radius + 5 mm)",
-   "ok": true,
-   "value": 0,
-   "limit": 0,
+   "value": 18.4,
+   "limit": ">= 0 mm margin",
    "detail": ""
   },
   {
@@ -170,7 +178,7 @@
   },
   {
    "check": "C04",
-   "item": "no overlaps between contents (equipment, fuel cells, fuel lines, harness, turret, stowed gear, engine, mount, exhaust, linkages) and with structure (209 close pairs evaluated)",
+   "item": "no overlaps between contents (equipment, fuel cells, fuel lines, harness, turret, stowed gear, engine, mount, exhaust, linkages) and with structure (220 close pairs evaluated)",
    "ok": true,
    "value": 0,
    "limit": 0,
@@ -186,7 +194,7 @@
   },
   {
    "check": "C04",
-   "item": "fitting envelopes hold their bolt patterns (76 holes): edge >= 2 D metal / 2.5 D composite, pitch >= 3 D (fix round 1, VPK-07)",
+   "item": "fitting envelopes hold their bolt patterns (73 holes): edge >= 2 D metal / 2.5 D composite, pitch >= 3 D (fix round 1, VPK-07)",
    "ok": true,
    "value": 0,
    "limit": 0,
@@ -198,39 +206,79 @@
    "ok": true,
    "value": 12.0,
    "limit": ">= 12 mm",
-   "detail": "M-WELLWALL-FWD at gear_up state 1.75"
-  },
-  {
-   "check": "C05",
-   "item": "gear retraction sequence (21 states): main leg vs structure/contents",
-   "ok": true,
-   "value": 16.5,
-   "limit": ">= 10 mm",
-   "detail": "F-UPLOCK@R"
-  },
-  {
-   "check": "C05",
-   "item": "gear retraction sequence (21 states): main inner door vs moving gear",
-   "ok": true,
-   "value": 23.2,
-   "limit": ">= 10 mm",
-   "detail": "side R"
+   "detail": "M-WELLWALL-FWD at main_gear 1.75"
   },
   {
    "check": "C05",
    "item": "gear retraction sequence (21 states): nose tyre vs structure/contents",
    "ok": true,
-   "value": 13.5,
+   "value": 14.2,
    "limit": ">= 12 mm",
-   "detail": "M-DECK-NOSE"
+   "detail": "NDOOR-LINKAGE"
+  },
+  {
+   "check": "C05",
+   "item": "gear retraction sequence (21 states): main leg vs structure/contents",
+   "ok": true,
+   "value": 11.9,
+   "limit": ">= 10 mm",
+   "detail": "M-GEARBEAM@R at main_gear 0.00"
   },
   {
    "check": "C05",
    "item": "gear retraction sequence (21 states): nose leg vs structure/contents",
    "ok": true,
-   "value": 30.0,
+   "value": 15.8,
    "limit": ">= 10 mm",
-   "detail": "M-CHINE@R"
+   "detail": "ACT-NLG-EMA"
+  },
+  {
+   "check": "C05",
+   "item": "gear retraction sequence (21 states): main leg door vs structure/contents",
+   "ok": true,
+   "value": 28.6,
+   "limit": ">= 10 mm",
+   "detail": "M-GEARBEAM@R at main_gear 0.27"
+  },
+  {
+   "check": "C05",
+   "item": "gear retraction sequence (21 states): main trunnion door vs structure/contents",
+   "ok": true,
+   "value": 10.4,
+   "limit": ">= 10 mm",
+   "detail": "M-GEARBEAM@R at main_gear 1.88"
+  },
+  {
+   "check": "C05",
+   "item": "gear retraction sequence (21 states): nose steering actuator vs structure/contents",
+   "ok": true,
+   "value": 14.5,
+   "limit": ">= 10 mm",
+   "detail": "M-KEELWALL@R"
+  },
+  {
+   "check": "C05",
+   "item": "gear retraction sequence (21 states): main inner door vs moving gear",
+   "ok": true,
+   "value": 22.7,
+   "limit": ">= 10 mm",
+   "detail": "side R"
+  },
+  {
+   "check": "C05",
+   "item": "gear retraction sequence (21 states): main trunnion door vs moving gear",
+   "ok": true,
+   "value": 12.3,
+   "limit": ">= 10 mm",
+   "detail": "leg door, side R at 0.00"
+  },
+  {
+   "check": "C05",
+   "item": "gear retraction sequence (21 states): nose doors vs moving gear",
+   "ok": true,
+   "value": 13.6,
+   "limit": ">= 10 mm",
+   "detail": "nose_gear 1.23"
   },
   {
    "check": "C05",
@@ -268,7 +316,7 @@
    "check": "C05",
    "item": "stabilators (whole range, both sides) vs exhaust routing envelopes",
    "ok": true,
-   "value": 124.7,
+   "value": 123.5,
    "limit": ">= 50 mm",
    "detail": ""
   },
@@ -284,7 +332,7 @@
    "check": "C05",
    "item": "ailerons / flaps (whole range) vs wing actuators",
    "ok": true,
-   "value": 66.5,
+   "value": 74.4,
    "limit": ">= 3 mm",
    "detail": ""
   },
@@ -300,7 +348,7 @@
    "check": "C05",
    "item": "rudder root (eta0 0.144 of the fin span) over its range vs body / cowl surface",
    "ok": true,
-   "value": 14.8,
+   "value": 19.6,
    "limit": ">= 8 mm",
    "detail": "tail.surfaces.fin.controls.rudder.eta0/eta1 (fix round 1, VPK-05)"
   },
@@ -314,11 +362,19 @@
   },
   {
    "check": "C05",
-   "item": "assembly / maintenance paths (23 sweeps: wing tongue, rear lug, main pins + pullers, reamers, rear pin, engine, turret, battery, parachute, mission tray, stabilators, propeller) free of other parts (fix round 1, VPK-02/VPK-09)",
+   "item": "assembly / maintenance paths (30 sweeps: wing tongue, rear lug, main pins + pullers, reamers, rear pin, engine, turret, battery, parachute, mission tray, stabilators, propeller) free of other parts (fix round 1, VPK-02/VPK-09)",
    "ok": true,
    "value": 0,
    "limit": 0,
    "detail": ""
+  },
+  {
+   "check": "C06",
+   "item": "every mass item whose hardware the layout places ('mass_item' tags) has a layout.mass_placement entry (13 items)",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": "all placed"
   },
   {
    "check": "C06",
@@ -346,7 +402,7 @@
     -0.0
    ],
    "limit": "<= 1 mm",
-   "detail": "spec CG [2.6485, -0.0007, 0.0517] m, layout CG [2.6485, -0.0007, 0.0517] m, empty 101.47 kg"
+   "detail": "spec CG [2.629, -0.0003, 0.0482] m, layout CG [2.629, -0.0003, 0.0482] m, empty 101.63 kg"
   },
   {
    "check": "C07",
@@ -384,7 +440,7 @@
    "check": "C08",
    "item": "Li-ion buffer battery to every fuel cell",
    "ok": true,
-   "value": 1.644,
+   "value": 1.624,
    "limit": ">= 1.0 m",
    "detail": "engine.sources.buffer_battery"
   },
@@ -392,7 +448,7 @@
    "check": "C08",
    "item": "fuel cells to the firewall forward face (CS-LUAS.967(c))",
    "ok": true,
-   "value": 0.605,
+   "value": 0.6252,
    "limit": ">= 0.013 m",
    "detail": ""
   },
@@ -451,6 +507,30 @@
    "value": 137.3,
    "limit": ">= 50 mm (boxes) / outside (plume)",
    "detail": "boxes 137.3 mm, plume 198.2 mm"
+  },
+  {
+   "check": "C08",
+   "item": "composite shell panels and exposed tail lofts vs the cylinder-head envelope (KO-CYL-HOT; fix round 2, PK2-09)",
+   "ok": true,
+   "value": 33.7,
+   "limit": ">= 25 mm",
+   "detail": "P-FINROOT-AFT"
+  },
+  {
+   "check": "C08",
+   "item": "composite shell panels and exposed tail lofts vs the exhaust routing envelopes (50 mm, 25 mm under a declared heat shield; declared stainless inserts replace the composite)",
+   "ok": true,
+   "value": 0.1,
+   "limit": ">= 0 mm over the required margin",
+   "detail": "P-COWL-LO 25.1 mm (shielded); 4950 insert points"
+  },
+  {
+   "check": "C08",
+   "item": "hardware inside the hot zones (25 mm of the heads, 50 mm of the exhaust) is declared metal-only with its temperature basis (layout.heat_protection.hardware)",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": "3 declared"
   },
   {
    "check": "C08",
@@ -526,7 +606,7 @@
   },
   {
    "check": "C10",
-   "item": "maintenance: every equipment item and fuel cell removable through a panel (29 items): same side, clear opening (panel - 2 x 25 mm land) >= item cross-section, removal prism free (fix round 1, VPK-03)",
+   "item": "maintenance: every equipment item and fuel cell removable through a panel (30 items): same side, clear opening (panel - 2 x 25 mm land) >= item cross-section, removal prism free (fix round 1, VPK-03)",
    "ok": true,
    "value": 0,
    "limit": 0,
@@ -544,7 +624,7 @@
    "check": "C10",
    "item": "maintenance access matrix: no primary structure removed for any item",
    "ok": true,
-   "value": 22,
+   "value": 23,
    "limit": null,
    "detail": ""
   },
@@ -576,7 +656,23 @@
     3.4,
     2.0
    ],
-   "detail": "listed sizes 3.2 / 1.4 m"
+   "detail": "listed sizes 3.199 / 1.4 m"
+  },
+  {
+   "check": "C11",
+   "item": "outer-panel transport envelope >= loft extents in the panel frame (span, chord-wise, normal)",
+   "ok": true,
+   "value": [
+    3.199,
+    0.728,
+    0.11
+   ],
+   "limit": [
+    2.904,
+    0.728,
+    0.096
+   ],
+   "detail": "listed size incl. tongue and wing pitot vs the bare loft"
   },
   {
    "check": "C11",
@@ -588,7 +684,7 @@
   },
   {
    "check": "C12",
-   "item": "mechanism definitions (21 joints, 2 sequences): fields, ranges, props, expressions, L/R pairs, sequence states",
+   "item": "mechanism definitions (23 joints, 2 sequences): fields, ranges, props, expressions, L/R pairs, sequence states",
    "ok": true,
    "value": 0,
    "limit": 0,
@@ -620,7 +716,7 @@
   },
   {
    "check": "C13",
-   "item": "first-cut fitting pre-sizing: margins of safety >= 0 (wing joint pins and CFRP bush bearing, bridle fittings, engine mount bolts)",
+   "item": "first-cut fitting pre-sizing cross-check on the current fitting geometry (conservative: no wing inertia relief, whole bridle shock on each bolt group; the governing margins are those of ucav250.analysis.structures): MS >= 0 (wing joint pins and CFRP bush bearing, bridle fittings, engine mount bolts)",
    "ok": true,
    "value": 0.07,
    "limit": ">= 0",
@@ -628,30 +724,30 @@
   }
  ],
  "ok": true,
- "n_pass": 77,
- "n": 77,
+ "n_pass": 88,
+ "n": 88,
  "presizing": [
   {
    "item": "wing joint main pin, double shear",
-   "applied": 134.2,
+   "applied": 134.0,
    "allowable": 599.8,
-   "MS": 3.47,
-   "basis": "R = 35969 N (M_ult 5491 N m, V_ult 4473 N at y 0.7; pins 184 mm apart) x 1.5 frequent assembly; MPa",
+   "MS": 3.48,
+   "basis": "R = 35918 N (M_ult 5483 N m, V_ult 4467 N at y 0.7; pins 184 mm apart) x 1.5 frequent assembly; MPa",
    "item_tr": "kanat birle\u015fimi ana pimi, \u00e7ift kesme",
-   "basis_tr": "R = 35969 N (y = 0.7 m'de M_nihai 5491 N m, V_nihai 4473 N; pimler aras\u0131 184 mm) x 1.5 s\u0131k s\u00f6k\u00fclen ba\u011flant\u0131 katsay\u0131s\u0131; MPa"
+   "basis_tr": "R = 35918 N (y = 0.7 m'de M_nihai 5483 N m, V_nihai 4467 N; pimler aras\u0131 184 mm) x 1.5 s\u0131k s\u00f6k\u00fclen ba\u011flant\u0131 katsay\u0131s\u0131; MPa"
   },
   {
    "item": "wing joint main pin, bending",
-   "applied": 845.3,
+   "applied": 844.1,
    "allowable": 923.9,
    "MS": 0.09,
-   "basis": "M = R/2 (t_prong/2 + t_tongue/4) = 340 N m; Ftu (no plastic bending credit); MPa",
+   "basis": "M = R/2 (t_prong/2 + t_tongue/4) = 339 N m; Ftu (no plastic bending credit); MPa",
    "item_tr": "kanat birle\u015fimi ana pimi, e\u011filme",
-   "basis_tr": "M = R/2 (t_\u00e7atal/2 + t_dil/4) = 340 N m; Ftu ile (plastik e\u011filme kazanc\u0131 al\u0131nmad\u0131); MPa"
+   "basis_tr": "M = R/2 (t_\u00e7atal/2 + t_dil/4) = 339 N m; Ftu ile (plastik e\u011filme kazanc\u0131 al\u0131nmad\u0131); MPa"
   },
   {
    "item": "wing joint CFRP tongue: bush bearing pressure (OD 22 x 30 mm, open-hole compression limit)",
-   "applied": 107.6,
+   "applied": 107.4,
    "allowable": 175.4,
    "MS": 0.63,
    "basis": "x 2.0 bearing factor; the 2 % offset bearing allowable needs e/D >= 3, here the bush is closed above and below by the UD flanges, so the QI open-hole compression value is used (conservative substitute, element test required); MPa",
@@ -660,7 +756,7 @@
   },
   {
    "item": "wing joint CFRP fork prongs: bush bearing pressure (2 x OD 22 x 10 mm)",
-   "applied": 163.5,
+   "applied": 163.3,
    "allowable": 175.4,
    "MS": 0.07,
    "basis": "x 2.0 bearing factor; open-hole compression limit as for the tongue; MPa",
@@ -668,31 +764,49 @@
    "basis_tr": "x 2.0 ezilme katsay\u0131s\u0131; dildeki gibi a\u00e7\u0131k delik bas\u0131 s\u0131n\u0131r\u0131; MPa"
   },
   {
-   "item": "bridle fitting bolts 6 x M5 12.9 (single shear, one leg takes the full shock)",
-   "applied": 176.8,
+   "item": "bridle fitting frame bolts 2 x M5 12.9 (single shear, the whole shock on this group)",
+   "applied": 530.5,
    "allowable": 732.0,
-   "MS": 3.14,
-   "basis": "13.1 kN (GRS 4/240 published opening shock, > UAVOS 200 5 g x MTOM) ultimate-only (CRASH-004) x 1.15 fitting factor; ISO 898-1 12.9 Rm 1220 MPa, tau = 0.6 Rm on the stress area; MPa",
-   "item_tr": "kay\u0131\u015f ba\u011flant\u0131s\u0131 c\u0131vatalar\u0131 6 x M5 12.9 (tek kesme, \u015fokun tamam\u0131n\u0131 tek ayak ta\u015f\u0131r)",
-   "basis_tr": "13.1 kN (GRS 4/240 yay\u0131mlanm\u0131\u015f a\u00e7\u0131lma \u015foku, > UAVOS 200 5 g x MTOM) yaln\u0131z nihai (CRASH-004) x 1.15 ba\u011flant\u0131 katsay\u0131s\u0131; ISO 898-1 12.9 Rm 1220 MPa, gerilme alan\u0131nda tau = 0,6 Rm; MPa"
+   "MS": 0.38,
+   "basis": "13.1 kN (GRS 4/240 published opening shock, > UAVOS 200 5 g x MTOM) ultimate-only (CRASH-004) x 1.15 fitting factor; ISO 898-1 12.9, tau = 0.6 Rm on the stress area; MPa",
+   "item_tr": "kay\u0131\u015f ba\u011flant\u0131s\u0131 \u00e7er\u00e7eve c\u0131vatalar\u0131 2 x M5 12.9 (tek kesme, \u015fokun tamam\u0131 bu grupta)",
+   "basis_tr": "13.1 kN (GRS 4/240 yay\u0131mlanm\u0131\u015f a\u00e7\u0131lma \u015foku) yaln\u0131z nihai (CRASH-004) x 1.15 ba\u011flant\u0131 katsay\u0131s\u0131; ISO 898-1 12.9, gerilme alan\u0131nda tau = 0,6 Rm; MPa"
   },
   {
-   "item": "bridle shackle pin d 6 (4130, double shear)",
-   "applied": 266.4,
-   "allowable": 393.0,
-   "MS": 0.48,
+   "item": "bridle fitting spine floor bolts 4 x M4 12.9 (single shear, the whole shock on this group)",
+   "applied": 429.0,
+   "allowable": 732.0,
+   "MS": 0.71,
+   "basis": "13.1 kN (GRS 4/240 published opening shock, > UAVOS 200 5 g x MTOM) ultimate-only (CRASH-004) x 1.15 fitting factor; ISO 898-1 12.9, tau = 0.6 Rm on the stress area; MPa",
+   "item_tr": "kay\u0131\u015f ba\u011flant\u0131s\u0131 omurga taban\u0131 c\u0131vatalar\u0131 4 x M4 12.9 (tek kesme, \u015fokun tamam\u0131 bu grupta)",
+   "basis_tr": "13.1 kN (GRS 4/240 yay\u0131mlanm\u0131\u015f a\u00e7\u0131lma \u015foku) yaln\u0131z nihai (CRASH-004) x 1.15 ba\u011flant\u0131 katsay\u0131s\u0131; ISO 898-1 12.9, gerilme alan\u0131nda tau = 0,6 Rm; MPa"
+  },
+  {
+   "item": "bridle shackle pin d 8 (Ti-6Al-4V, double shear)",
+   "applied": 149.9,
+   "allowable": 599.8,
+   "MS": 3.0,
    "basis": "MPa",
-   "item_tr": "kay\u0131\u015f kilit pimi \u00d86 (4130, \u00e7ift kesme)",
+   "item_tr": "kay\u0131\u015f kilit pimi \u00d88 (Ti-6Al-4V, \u00e7ift kesme)",
    "basis_tr": "MPa"
   },
   {
-   "item": "bridle U-lug bearing (7075, 2 ears 6 mm, e = 2 D)",
-   "applied": 418.5,
-   "allowable": 999.7,
-   "MS": 1.39,
-   "basis": "x 2.0 bearing factor; MMPDS Fbru at e/D = 2; MPa",
-   "item_tr": "kay\u0131\u015f U-kulak ezilmesi (7075, 2 kulak 6 mm, e = 2 D)",
-   "basis_tr": "x 2.0 ezilme katsay\u0131s\u0131; e/D = 2'de MMPDS Fbru; MPa"
+   "item": "bridle shackle pin d 8 bending (Melcon-Hoblit, ears 6 / spool 5 / gaps 0.5 mm)",
+   "applied": 711.8,
+   "allowable": 923.9,
+   "MS": 0.3,
+   "basis": "elastic, Ftu; MPa",
+   "item_tr": "kay\u0131\u015f kilit pimi \u00d88 e\u011filmesi (Melcon-Hoblit)",
+   "basis_tr": "elastik, Ftu; MPa"
+  },
+  {
+   "item": "bridle U-lug bearing (7075, 2 ears 6 mm, e/D 1.94)",
+   "applied": 313.9,
+   "allowable": 968.5,
+   "MS": 2.09,
+   "basis": "x 2.0 bearing factor; MMPDS Fbru at e/D 2 x (e/D)/2; MPa",
+   "item_tr": "kay\u0131\u015f U-kulak ezilmesi (7075, 2 kulak 6 mm, e/D 1.94)",
+   "basis_tr": "x 2.0 ezilme katsay\u0131s\u0131; e/D 2'de MMPDS Fbru x (e/D)/2; MPa"
   },
   {
    "item": "opening load factor at MTOM (information)",
@@ -722,19 +836,19 @@
    "basis_tr": "N; kaynakl\u0131 kafes bas\u0131yla ta\u015f\u0131r (4130 borular\u0131n ayr\u0131nt\u0131l\u0131 boyutland\u0131rmas\u0131)"
   }
  ],
- "n_objects": 139,
- "close_pairs": 232,
+ "n_objects": 145,
+ "close_pairs": 243,
  "cg": {
   "cg_spec": [
-   2.6485,
-   -0.0007,
-   0.0517
+   2.629,
+   -0.0003,
+   0.0482
   ],
   "cg_layout": [
-   2.6485,
-   -0.0007,
-   0.0517
+   2.629,
+   -0.0003,
+   0.0482
   ],
-  "empty_kg": 101.468
+  "empty_kg": 101.63
  }
 }

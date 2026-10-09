@@ -1,6 +1,6 @@
-# YK-250 HANÇER — Yerleşim ve yapı konsepti (faz 3, yerleşim evresi ve düzeltme turu 1)
+# YK-250 HANÇER — Yerleşim ve yapı konsepti (faz 3, yerleşim evresi ve düzeltme turları 1–2)
 
-**Tarih:** 9 Ekim 2026 · **Durum:** `spec.yaml → layout` ve `spec.yaml → assembly` bölümleri ayrıntılı tasarımın arayüz tanımıdır. Bağımsız doğrulamanın yerleşim bulguları (VPK-01 … VPK-14) bu turda düzeltildi (§14). `python3 -m ucav250.analysis.layout_check --check` 77 kontrolün 77'sini geçiyor; `python3 -m ucav250.analysis.sizing --check` 61 gereksinimin 61'ini karşılanmış ve 1224 türetilmiş değerin hepsini tolerans içinde buluyor; `python3 -m ucav250.analysis.structures --check` bütün emniyet paylarını sıfır ya da pozitif buluyor ([04](04_yapi_hesaplari.md)).
+**Tarih:** 9 Ekim 2026 · **Durum:** `spec.yaml → layout` ve `spec.yaml → assembly` bölümleri ayrıntılı tasarımın arayüz tanımıdır. Bağımsız doğrulamaların yerleşim bulguları düzeltildi: VPK-01 … VPK-14 (§14) ve PK2-01 … PK2-13 (§15). `python3 -m ucav250.analysis.layout_check --check` 88 kontrolün 88'ini geçiyor; `python3 -m ucav250.analysis.sizing --check` 61 gereksinimin 61'ini karşılanmış ve 1.231 türetilmiş değerin hepsini tolerans içinde buluyor; `python3 -m ucav250.analysis.structures --check` bütün emniyet paylarını sıfır ya da pozitif buluyor ([04](04_yapi_hesaplari.md)).
 
 > **Kapsam.** YK-250 HANÇER sivil bir EO/IR gözetleme ve araştırma İHA'sıdır. Gövdede dış yük taşıma bağlantısı,
 > askı, yük bırakma düzeneği ya da benzeri hiçbir donanım yoktur ve yerleşim bunlar için yer ayırmaz. Karın altındaki
@@ -12,7 +12,7 @@ Bu belge, boyutlandırma evresinde (doc 02) kapanan HANÇER'in iç yerleşimini 
 python3 -m ucav250.layout_build.build --check    # spec.yaml, yerleşim üreticisinin çıktısıyla bayt bayt aynı mı (çıkış 1 = fark)
 python3 -m ucav250.layout_build.build --write    # spec.layout / spec.assembly yeniden üretilir
 python3 -m ucav250.analysis.sizing --update-spec # layout.mass_placement kütle kalemlerine uygulanır, tasarım yeniden kapanır
-python3 -m ucav250.analysis.layout_check --check # 77 yerleşim kontrolü; salt okunur, hiçbir dosya yazmaz (çıkış 1 = hata)
+python3 -m ucav250.analysis.layout_check --check # 88 yerleşim kontrolü; salt okunur, hiçbir dosya yazmaz (çıkış 1 = hata)
 python3 -m ucav250.analysis.layout_check --write # out/layout.md, out/layout.json, docs/fig/yk250_layout_*.png
 ```
 
@@ -73,7 +73,7 @@ Kimlik biçimi `YK250-<KOD>-NNN[-L|-R]`'dir. KOD grup kodudur (CH şasi, SH kabu
 
 ## 4. İstasyonlar (çerçeveler ve perdeler)
 
-On üç istasyon vardır. İkisi (FS-MS ve FS-RS) kanat kirişleriyle aynı ok açısında çevron biçimlidir; çerçeve düzlemi x + |y|·tan(ok açısı) çizgisini izler. Bütün kompozit çerçeveler `layups.rib_panel` sandviçidir (iki kat PW CFRP / 6 mm ROHACELL 51 WF / iki kat; 6,8 mm); bağlantı hatlarında ve flanşlarda çekirdek 1:3 eğimle 1,6 mm'lik dolu laminata iner. Motor bölmesindeki FS3738 sıcak bölgededir ve metaldir; düzeltme turundan beri yalnızca düğüm bağlantılarının altında biten bir alt U halkadır (VPK-01). Tablo `spec.yaml`'dan üretilmiştir (x = çerçevenin orta düzlemi, ok açılı çerçevelerde orta hatta):
+On üç istasyon vardır. İkisi (FS-MS ve FS-RS) kanat kirişleriyle aynı ok açısında çevron biçimlidir; çerçeve düzlemi x + |y|·tan(ok açısı) çizgisini izler. Bütün kompozit çerçeveler `layups.rib_panel` sandviçidir (iki kat PW CFRP / 6 mm ROHACELL 51 WF / iki kat; 6,8 mm); bağlantı hatlarında ve flanşlarda çekirdek 1:3 eğimle 1,6 mm'lik dolu laminata iner. Motor bölmesindeki FS3738 sıcak bölgededir ve metaldir; düzeltme turu 1'den beri yalnızca düğüm bağlantılarının altında biten bir alt U halkadır (VPK-01); düzeltme turu 2'den beri alt parçası, kuyruk tamponu çarpmasında arka omurganın tepkisini taşıyan talaşlı bir 7075 I kesittir (YK250-CH-015, VS2-03). Tablo `spec.yaml`'dan üretilmiştir (x = çerçevenin orta düzlemi, ok açılı çerçevelerde orta hatta):
 
 | İstasyon | x (m) | Tür | Parça | Malzeme / katman | t (mm) | Görev | Geçiş kesikleri |
 |---|---|---|---|---|---|---|---|
@@ -83,19 +83,19 @@ On üç istasyon vardır. İkisi (FS-MS ve FS-RS) kanat kirişleriyle aynı ok a
 | FS1330 | 1,330 | perde | YK250-CH-005 | cfrp_pw_mtm45_as4 / rib_panel | 6,8 | taret bölmesi arka perdesi; asansör rayı arka bağlantısı; taret kapağı eyleyicileri arka yüzünde | C-HARN-1330, C-TDOOR-SHAFT |
 | FS1490 | 1,490 | perde | YK250-CH-006 | cfrp_pw_mtm45_as4 / rib_panel | 6,8 | paraşüt bölmesi ön perdesi; paraşüt kapağının ön oturma yüzeyi (dışa dönük flanş), paraşüt tabanının ön ucu | C-HARN-1490 |
 | FS1810 | 1,810 | bağlantı çerçevesi | YK250-CH-007 | cfrp_pw_mtm45_as4 / rib_panel | 6,8 | paraşüt bölmesi arka perdesi + LERX burun çerçevesi; sırt omurga kanalının (M-SPINE) ve ön kayış bağlantısının başlangıcı, görev bölmesinin ön duvarı | C-HARN-1810, C-BRIDLE-F |
-| FS-FUEL | 2,2097 | perde | YK250-CH-008 | cfrp_pw_mtm45_as4 / rib_panel | 6,8 | ön yakıt bölmesi perdesi (buhar sızdırmaz; kanat demeti çentiği yok, VPK-13); omurga kirişlerinin ve yük bölmesi tavanının ön ucu | C-FUEL-FUEL, C-HARN-FUEL, C-SPINE-FUEL |
-| FS-MS | 2,5072 (ok açısı 8,0°) | bağlantı / kiriş çerçevesi | YK250-CH-009 | cfrp_pw_mtm45_as4 / rib_panel | 6,8 | ana kiriş çerçevesi: gövde içindeki kutunun ana kiriş gövdesi; eyer bölmesinin ön, ön bölmenin arka duvarı; kutunun altında yalnızca dış dikmeler (yük bölmesi açık); yakıt kapaklarının oturma flanşı | C-PAYLOAD-MS, C-FUEL-MS, C-SPINE-MS, C-HARN-MS |
-| FS-RS | 2,8202 (ok açısı 4,8°) | bağlantı / kiriş çerçevesi | YK250-CH-010 | cfrp_pw_mtm45_as4 / rib_panel | 6,8 | arka kiriş çerçevesi; eyer bölmesinin arka, arka bölmenin ön duvarı; arka kayış bağlantısı (sırt kanalının arka ucu); ana takım kirişlerinin ve kuyu tavanının ön ucu | C-PAYLOAD-RS, C-FUEL-RS, C-HARN-RS, C-BRIDLE-A |
-| FS-GEAR | 3,1149 | perde | YK250-CH-011 | cfrp_pw_mtm45_as4 / rib_panel | 6,8 | arka ana takım çerçevesi ve arka yakıt perdesi (buhar sızdırmaz); iç kapak eyleyicileri arka yüzünde | C-FUEL-FEED, C-FUEL-RET, C-FUEL-VENT, C-HARN-CL, C-DOORLINK |
+| FS-FUEL | 2,1895 | perde | YK250-CH-008 | cfrp_pw_mtm45_as4 / rib_panel | 6,8 | ön yakıt bölmesi perdesi (buhar sızdırmaz; kanat demeti çentiği yok, VPK-13); omurga kirişlerinin ve yük bölmesi tavanının ön ucu | C-FUEL-FUEL, C-HARN-FUEL, C-SPINE-FUEL |
+| FS-MS | 2,487 (ok açısı 8,0°) | bağlantı / kiriş çerçevesi | YK250-CH-009 | cfrp_pw_mtm45_as4 / rib_panel | 6,8 | ana kiriş çerçevesi: gövde içindeki kutunun ana kiriş gövdesi; eyer bölmesinin ön, ön bölmenin arka duvarı; kutunun altında yalnızca dış dikmeler (yük bölmesi açık); yakıt kapaklarının oturma flanşı | C-PAYLOAD-MS, C-FUEL-MS, C-SPINE-MS, C-HARN-MS |
+| FS-RS | 2,800 (ok açısı 4,8°) | bağlantı / kiriş çerçevesi | YK250-CH-010 | cfrp_pw_mtm45_as4 / rib_panel | 6,8 | arka kiriş çerçevesi; eyer bölmesinin arka, arka bölmenin ön duvarı; arka kayış bağlantısı (sırt kanalının arka ucu); ana takım kirişlerinin ve kuyu tavanının ön ucu | C-PAYLOAD-RS, C-FUEL-RS, C-HARN-RS, C-BRIDLE-A |
+| FS-GEAR | 3,0954 | perde | YK250-CH-011 | cfrp_pw_mtm45_as4 / rib_panel | 6,8 | arka ana takım çerçevesi ve arka yakıt perdesi (buhar sızdırmaz); iç kapak eyleyicileri arka yüzünde | C-FUEL-FEED, C-FUEL-RET, C-FUEL-VENT, C-HARN-CL, C-DOORLINK |
 | FS3480 | 3,480 | halka | YK250-CH-012 | cfrp_pw_mtm45_as4 / rib_panel | 6,8 | kuyruk halka çerçevesi: dikey ön kiriş ve kök parçası ön bağlantıları; ortası açık (soğutma kanalı, teçhizat) | – (açık orta) |
-| FS3670 | 3,670 | perde / yangın perdesi | YK250-CH-013 | CFRP sandviç (rib_panel) + hava boşluğu + 0,5 mm AISI 304 | 14,8 | yangın perdesi (CS-VLA 1191): iki köşe bağlantısı (motor üst ayakları, dikey arka kirişleri, sırt uzun kirişi ekleri), iki alt motor ayağı, arka yüzde stabilatör düğüm bağlantıları (kenar uzun kirişi ekleri), ventral ön bağlantısı; ön yüzde stabilatör eyleyicileri; hiçbir karbon eleman geçmez (VPK-06) | C-DUCT, C-FW-FUEL, C-FW-HARN, C-FW-PUSHROD |
-| FS3738 | 3,7378 | alt U halka | YK250-CH-014 | al_2024_t3_sheet | 2,0 | motor bölmesi alt U halkası (metal, sıcak bölge): ventral arka bağlantısı, arka omurga kirişi, alt kaporta ara oturma yüzeyi; üst uçları düğüm bağlantılarının dış yanak ayaklarına perçinli; mil yatağı taşımaz (VPK-01) | – (açık orta) |
+| FS3670 | 3,670 | perde / yangın perdesi | YK250-CH-013 | CFRP sandviç (rib_panel) + hava boşluğu + 0,4 mm AISI 304 | 14,8 | yangın perdesi (CS-VLA 1191): iki köşe bağlantısı (motor üst ayakları, dikey arka kirişleri, sırt uzun kirişi ekleri), iki alt motor ayağı, arka yüzde stabilatör düğüm bağlantıları (kenar uzun kirişi ekleri), ventral ön bağlantısı; ön yüzde stabilatör eyleyicileri; hiçbir karbon eleman geçmez (VPK-06) | C-DUCT, C-FW-FUEL, C-FW-HARN, C-FW-PUSHROD |
+| FS3738 | 3,7378 | alt U halka | YK250-CH-014 | al_2024_t3_sheet; alt parça al_7075_t651_plate (YK250-CH-015) | 2,0 | motor bölmesi alt U halkası (metal, sıcak bölge; y ±0,15 arası alt parçası talaşlı 7075 I 60 × 20 × 1,6 / 2,0 mm, arka omurganın tampon tepkisini taşır): ventral arka bağlantısı, arka omurga kirişi, alt kaporta ara oturma yüzeyi; üst uçları düğüm bağlantılarının dış yanak ayaklarına perçinli; mil yatağı taşımaz (VPK-01) | – (açık orta) |
 
 ![Çerçeve kesitleri](fig/yk250_layout_sections.png)
 
 Her geçiş kesiği bir amaç taşır (kablo demeti, koaksiyel, yakıt hattı, itme çubuğu, kayış, sırt kanalı, soğutma kanalı, kapak tahrik mili) ve çerçeve gövdesinin içinde kalır. Yakıt bölmelerinden kablo geçmez: ana demet yakıt hücrelerinin altından, sızdırmaz rondelalarla geçer; kanat demeti H-WING artık FS-FUEL'den geçmez, ön yakıt güvertesinin altından orta kanat kutusunun alt kapağındaki sızdırmaz rondelaya girer (VPK-13). `layout_check`, her demetin, yakıt hattının, itme çubuğunun, kayışın ve soğutma kanalının bir çerçeve düzlemini kestiği her noktanın tanımlı bir kesiğin içinde olduğunu (halka çerçevelerde açık ortada olduğunu) ve hiçbir çerçevenin yakıt, taret, takım kuyusu, yük, paraşüt ya da teçhizat hacmini kesmediğini denetler.
 
-**Yangın perdesi yığını** (önden arkaya): CFRP sandviç perde 6,8 mm / 12 paslanmaz ayak üzerinde 7,5 mm hava boşluğu / 0,5 mm AISI 304 paslanmaz sac (test gerektirmeyen yangın dayanımı için ≥ 0,38 mm; CS-VLA 1191). `layout.firewall_x` = 3,670 m paslanmaz sacın arka yüzüdür; yığın onun önündedir. Perdeden yalnızca yangına dayanıklı bağlantılar, rondelalar ve körükler geçer; **hiçbir karbon eleman geçmez**: kenar ve sırt uzun kirişleri perdenin ön yüzünde biter ve metal eklerle (düğüm bağlantısının ön dili, köşe bağlantısının ön ek levhası) devam eder (VPK-06). Alt motor ayaklarının çevresinde perde sandviçi ROHACELL 71 WF çekirdek parçası ve 24 katlı dolu bantla güçlendirilmiştir (yapı, [04](04_yapi_hesaplari.md) §3.5).
+**Yangın perdesi yığını** (önden arkaya): CFRP sandviç perde 6,8 mm / 12 paslanmaz ayak üzerinde 7,6 mm hava boşluğu / 0,4 mm AISI 304 paslanmaz sac (test gerektirmeyen yangın dayanımı için ≥ 0,38 mm; CS-VLA 1191). `layout.firewall_x` = 3,670 m paslanmaz sacın arka yüzüdür; yığın onun önündedir. Perdeden yalnızca yangına dayanıklı bağlantılar, rondelalar ve körükler geçer; **hiçbir karbon eleman geçmez**: kenar ve sırt uzun kirişleri perdenin ön yüzünde biter ve metal eklerle (düğüm bağlantısının ön dili, köşe bağlantısının ön ek levhası) devam eder (VPK-06). Alt motor ayaklarının çevresinde perde sandviçi ROHACELL 71 WF çekirdek parçası ve 22 katlı, r 82 mm dolu bantla güçlendirilmiştir (yapı, [04](04_yapi_hesaplari.md) §3.5); motor demeti kesiği C-FW-HARN bu bantların kenar çemberini kesmemesi için ayakların altındadır. Paslanmaz katmanın kütlesi (sac, kenar köşebendi, ayaklar, perçinler) `layout.chassis.engine_mount.firewall_stackup.mass` içinde aşağıdan yukarı hesaplanır ve motor soğutma / yangın koruma kalemine girer (0,705 kg).
 
 ## 5. Şasi + kabuk konsepti ve yük yolları
 
@@ -137,14 +137,14 @@ Orta kanat kutusu (M-CTBOX, YK250-CH-001) y = −0,70 … +0,70 m arasında tek 
 
 ### 5.3 Bağlantı parçaları
 
-Bütün metal bağlantı parçaları 7075-T651 levhadan CNC ile işlenir (motor bölmesi alt U halkası 2024-T3 sacdır, motor kafesi kaynaklı 4130 borudur). Her bağlantının cıvata deseni (nokta, eksen, çap) `layout.chassis.fittings[].bolts` içinde açıkça yazılıdır; `layout_check` kutunun her cıvatayı kenar mesafesi (metal ≥ 2 D, kompozit ≥ 2,5 D) ve aralık (≥ 3 D) kuralıyla taşıdığını denetler (VPK-07).
+Bütün metal bağlantı parçaları 7075-T651 levhadan CNC ile işlenir (motor bölmesi alt U halkası 2024-T3 sacdır, alt parçası talaşlı 7075; motor kafesi kaynaklı 4130 borudur). Her bağlantının cıvata deseni (nokta, eksen, çap) `layout.chassis.fittings[].bolts` içinde açıkça yazılıdır; `layout_check` kutunun her cıvatayı kenar mesafesi (metal ≥ 2 D, kompozit ≥ 2,5 D) ve aralık (≥ 3 D) kuralıyla taşıdığını denetler (VPK-07).
 
 | Bağlantı | Parça | Konum / eksen | Bağlanma |
 |---|---|---|---|
-| F-TRUNNION (L/R) | YK250-CH-070 | ana takım mafsalı, eksen x; iki burç 20 H7, mafsalın ±49 mm'sinde | takım kirişine 6 × M6 12.9 (7075 takviye), kuyu tavanına 4 × M6; kulak kenar mesafesi 2 D'nin altında: kulak istisnası, Bruhn kesme-ezilmesiyle denetlenir |
+| F-TRUNNION (L/R) | YK250-CH-070 | ana takım mafsalı, eksen x; iki burç 20 H7, mafsalın ±49 mm'sinde | takım kirişinin yapıştırılmış ankrajlarına 5 × M6 12.9 (başlar kuyuda), kuyu tavanının yakıt tarafındaki sızdırmaz kubbe somun plakalarına 4 × M6 12.9; kulak kenar mesafesi 2 D'nin altında: kulak istisnası, Bruhn kesme-ezilmesiyle denetlenir |
 | F-UPLOCK (L/R) | YK250-CH-072 | ana takım yukarı kilidi, kuyu tavanının altında | 4 × M5 (eksen z, 20 mm kare), dökme insertler; yaylı kanca takım biriminin parçasıdır |
 | F-NG-PIVOT | YK250-CH-071 | burun takımı mafsalı, eksen y, burç 16 H7 | omurga duvarlarının **iç** yüzlerinde iki 7075 blok 64 × 46 × 6 mm, her biri flanşlı burç (dış çap 22) ve 4 × M6 |
-| F-SPINDLE-NODE (L/R) | YK250-CH-095 | stabilatör düğümü: yangın perdesinin arka yüzünden 92 mm geriye konsol; iç yanakta iç yatak 61805-2RS (25 × 37 × 7), dış yatak kök parçasının uç kaburgasında | taban flanşı 8 mm, 7 × M5 12.9 perde yığınından (önde 7075 destek levhası); dış yanak 10 mm, kök parçası arka kiriş kök bağlantısı 4 × M6 12.9 (76 × 62 mm dikdörtgen); kenar uzun kirişi ön dile 2 × M5 Ti |
+| F-SPINDLE-NODE (L/R) | YK250-CH-095 | stabilatör düğümü: yangın perdesinin arka yüzünden 92 mm geriye konsol; iç yanakta iç yatak 61805-ZZ (25 × 37 × 7, yüksek sıcaklık gresi), dış yatak kök parçasının uç kaburgasında | taban flanşı 8 mm, 7 × M5 12.9 perde yığınından (önde 7075 destek levhası); dış yanak 7 mm, kök parçası arka kiriş kök bağlantısı 4 × M6 12.9 (76 × 62 mm dikdörtgen); kenar uzun kirişi ön dile 2 × M5 Ti |
 | F-FW-CORNER (L/R) | YK250-CH-086 | yangın perdesi üst köşesi | tek parça: motor kafesi üst ayağı (taban levhası 10 mm, 2 × M8 12.9 perdeden), dikey arka kiriş kök kulağı (arka çatal kulağı, 2 × M6 12.9 çift kesme), sırt uzun kirişi ön ek levhası (perdenin ön yüzünde, M5 Ti) |
 | F-EMOUNT-LO (L/R) | YK250-CH-087 | motor kafesi alt ayakları, yangın perdesinde | ayak pedi 56 × 32 mm, 2 × M8 12.9 perde yığınından (aralık 24 mm, kenar 16 mm); ön yüzde 5 mm 7075 destek levhası, paslanmaz ara borular |
 | F-FIN-FRONT (L/R) | YK250-CH-096 | dikey ön kirişi, FS3480 arka yüzü | çatal 42 × 60 mm: dikey ön kiriş kök kulağı 2 × M6 12.9 çift kesme, çerçeveye 2 × M6 |
@@ -152,7 +152,7 @@ Bütün metal bağlantı parçaları 7075-T651 levhadan CNC ile işlenir (motor 
 | F-VENTRAL-1/2/3 | YK250-CH-099…101 | arka omurga kirişi üzerinde | çatal 32 × 24 mm (1 × M6 omurgaya), ventral kök kulağı 1 × M6 12.9 çift kesme |
 | F-FORK (L/R) | YK250-CH-053 | dış panel birleşimi (§5.2) | eldivenin ana kiriş kutusu: UD başlıklar, ±45 kulaklar, burçlar; metal bağlantı yok |
 | F-REARSLOT (L/R) | YK250-CH-054 | arka kiriş yuva bağlantısı (§5.2) | 2 × M4 Ti birleşim kaburgasına, 2 × M5 Ti arka kiriş gövdesine |
-| F-RISER-FWD / F-RISER-AFT | YK250-CH-112/113 | paraşüt kayış bağlantıları, sırt omurga kanalının iki ucunda (FS1810 ve arka kiriş çerçevesi) | U-kulak 48 × 38 mm: 4 × M5 12.9 kanal tabanına (x bileşeni), 2 × M5 çerçeve bandına (düşey bileşen); Ø6 çelik kilit pimi, iki 6 mm kulak, e 12 mm = 2 D |
+| F-RISER-FWD / F-RISER-AFT | YK250-CH-112/113 | paraşüt kayış bağlantıları, sırt omurga kanalının iki ucunda (FS1810 ve arka kiriş çerçevesi) | U-kulak: 4 × M4 12.9 kanal tabanından (x bileşeni ve bağlantı momenti; somunlar 48 × 40 × 3 mm 7075 pul levhasında), 2 × M5 12.9 çerçeve bandına (düşey bileşen); Ø8 Ti-6Al-4V kilit pimi, 4130 kayış makarası, iki 6 mm kulak (boşluk 0,5 mm), e 15,5 mm |
 
 ### 5.4 Motor bağlantısı
 
@@ -180,14 +180,18 @@ Tasarım yükleri `structures` bölümünden gelir: CS-LUAS'a uyarlanmış STANA
 
 | Kalem | Emniyet payı |
 |---|---|
-| kanat birleşimi ana pimi Ø16, çift kesme | 3,47 |
-| kanat birleşimi ana pimi, eğilme (Ftu ile, plastik kazanç alınmadı) | 0,09 |
-| CFRP dil burcu / CFRP çatal kulağı burcu ezilmesi (açık delik bası sınırı, ×2,0) | 0,63 / 0,07 |
-| kayış bağlantısı 6 × M5 12.9 (13,1 kN tek ayakta) | 3,14 |
-| kayış kilit pimi Ø6 / U-kulak ezilmesi | 0,48 / 1,39 |
-| motor bağlantı cıvatası M8 12.9 (en kötü durum) | 19,96 |
+| kanat birleşimi ana pimi, çift kesme | 3,48 |
+| kanat birleşimi ana pimi, eğilme | 0,09 |
+| kanat birleşimi CFRP dil: burç ezilme basıncı (dış çap 22 x 30 mm, açık delik bası sınırı) | 0,63 |
+| kanat birleşimi CFRP çatal kulakları: burç ezilme basıncı (2 x dış çap 22 x 10 mm) | 0,07 |
+| kayış bağlantısı çerçeve cıvataları 2 x M5 12.9 (tek kesme, şokun tamamı bu grupta) | 0,38 |
+| kayış bağlantısı omurga tabanı cıvataları 4 x M4 12.9 (tek kesme, şokun tamamı bu grupta) | 0,71 |
+| kayış kilit pimi Ø8 (Ti-6Al-4V, çift kesme) | 3,00 |
+| kayış kilit pimi Ø8 eğilmesi (Melcon-Hoblit) | 0,30 |
+| kayış U-kulak ezilmesi (7075, 2 kulak 6 mm, e/D 1.94) | 2,09 |
+| motor bağlantı cıvatası M8 12.9 (tork + 3,8 g / 1,47 g yan / 6 g aşağı durumlarının en kötüsü) | 19,96 |
 
-Bu ilk boyutlandırmanın yerini yapı evresinin el hesapları ([04](04_yapi_hesaplari.md), `out/structures.md`) alır: düzlem içi moment kuvvet çiftiyle birlikte ana pim eğilmesinde MS 0,22, çatal kulağı burcu ezilmesinde 0,21'dir ve bütün paylar sıfır ya da pozitiftir.
+Bu ilk boyutlandırmanın yerini yapı evresinin el hesapları ([04](04_yapi_hesaplari.md), `out/structures.md`) alır: düzlem içi moment kuvvet çiftiyle birlikte ana pim eğilmesinde MS 0,208, çatal kulağı burcu ezilmesinde 0,195'dir ve bütün paylar sıfır ya da pozitiftir.
 
 ## 6. Kabuk: panel bölümlemesi ve bağlama
 
@@ -227,23 +231,23 @@ Tablo `spec.yaml`'dan üretilmiştir (x ve y aralıkları panelin dış sınırl
 | P-PARA-SURR | YK250-SH-366 | paraşüt kapağı çevre kaplaması | 1,490–1,810 | -0,40…0,40 | sabit | somun plakası + vida, 25–32 mm | cfrp_pw_mtm45_as4 / shell_secondary |
 | P-PARAHATCH | YK250-SH-367 | paraşüt kapağı (sırt, bağlı fırlatmalı) | 1,462–1,838 | -0,188…0,188 | sökülebilir | menteşesiz: 4 köşe pimi + pim çekici mandal, 1,5 m aramid bağ | cfrp_pw_mtm45_as4 / shell_secondary |
 | P-PARA-LOWER | YK250-SH-368 | paraşüt bölmesi alt kaplaması | 1,490–1,810 | -0,40…0,40 | sabit | somun plakası + vida, 25–32 mm | cfrp_pw_mtm45_as4 / shell_secondary |
-| P-MB-UPPER | YK250-SH-370 | görev bölmesi üst kaplaması | 1,810–2,2097 | -0,40…0,40 | sabit | somun plakası + vida, 25–32 mm | cfrp_pw_mtm45_as4 / shell_secondary |
-| P-GNSS2 | YK250-SH-372 | GNSS 2 RF penceresi | 2,050–2,130 | 0,11…0,19 | sökülebilir | M4 + gömülü burç, 60–100 mm | gfrp_7781_mtm45 / shell_secondary |
-| P-MBHATCH | YK250-SH-373 | görev bölmesi kapağı | 1,813–2,2097 | -0,155…0,155 | sökülebilir | Camloc, 75–100 mm | cfrp_pw_mtm45_as4 / shell_secondary |
-| P-MB-LOWER | YK250-SH-374 | görev bölmesi alt kaplaması | 1,810–2,2097 | -0,40…0,40 | sabit | somun plakası + vida, 25–32 mm | cfrp_pw_mtm45_as4 / shell_secondary |
-| P-SPINE | YK250-SH-376 | yırtılır kayış örtüsü (sırt kanalı üstü) | 1,813–2,8362 | -0,045…0,045 | sökülebilir | cırt bant + 4 naylon M3 kesme vidası (yırtılır) | gfrp_7781_mtm45 / shell_secondary |
-| P-FUEL1 (L/R) | YK250-SH-377 | ön yakıt bölmesi kapağı | 2,2127–2,5464 | 0,055…0,30 | sökülebilir | M4 + somun plakası + yakıta dayanıklı conta, 25–30 mm | cfrp_pw_mtm45_as4 / shell_secondary |
-| P-FUEL2 (L/R) | YK250-SH-378 | orta yakıt bölmesi kapağı | 2,5179–2,8424 | 0,055…0,30 | sökülebilir | M4 + somun plakası + yakıta dayanıklı conta, 25–30 mm | cfrp_pw_mtm45_as4 / shell_secondary |
-| P-FUEL3 (L/R) | YK250-SH-379 | arka yakıt bölmesi kapağı | 2,8278–3,1119 | 0,055…0,30 | sökülebilir | M4 + somun plakası + yakıta dayanıklı conta, 25–30 mm | cfrp_pw_mtm45_as4 / shell_secondary |
-| P-CENTRE-UPPER | YK250-SH-380 | üst orta gövde kaplaması | 2,2097–3,1149 | -0,40…0,40 | sabit | somun plakası + vida, 25–32 mm | cfrp_pw_mtm45_as4 / shell_secondary |
-| P-PAYHATCH | YK250-SH-382 | faydalı yük bölmesi kapağı (karın) | 2,2127–2,8601 | -0,222…0,222 | sökülebilir | Camloc, 75–100 mm | cfrp_pw_mtm45_as4 / shell_secondary |
-| P-CENTRE-LOWER | YK250-SH-383 | alt orta gövde kaplaması | 2,2097–3,1149 | -0,40…0,40 | sabit | somun plakası + vida, 25–32 mm | cfrp_pw_mtm45_as4 / shell_secondary |
+| P-MB-UPPER | YK250-SH-370 | görev bölmesi üst kaplaması | 1,810–2,1895 | -0,40…0,40 | sabit | somun plakası + vida, 25–32 mm | cfrp_pw_mtm45_as4 / shell_secondary |
+| P-GNSS2 | YK250-SH-372 | GNSS 2 RF penceresi | 2,0495–2,1295 | 0,11…0,19 | sökülebilir | M4 + gömülü burç, 60–100 mm | gfrp_7781_mtm45 / shell_secondary |
+| P-MBHATCH | YK250-SH-373 | görev bölmesi kapağı | 1,813–2,1895 | -0,155…0,155 | sökülebilir | Camloc, 75–100 mm | cfrp_pw_mtm45_as4 / shell_secondary |
+| P-MB-LOWER | YK250-SH-374 | görev bölmesi alt kaplaması | 1,810–2,1895 | -0,40…0,40 | sabit | somun plakası + vida, 25–32 mm | cfrp_pw_mtm45_as4 / shell_secondary |
+| P-SPINE | YK250-SH-376 | yırtılır kayış örtüsü (sırt kanalı üstü) | 1,813–2,816 | -0,045…0,045 | sökülebilir | cırt bant + 4 naylon M3 kesme vidası (yırtılır) | gfrp_7781_mtm45 / shell_secondary |
+| P-FUEL1 (L/R) | YK250-SH-377 | ön yakıt bölmesi kapağı | 2,1925–2,5262 | 0,055…0,30 | sökülebilir | M4 + somun plakası + yakıta dayanıklı conta, 25–30 mm | cfrp_pw_mtm45_as4 / shell_secondary |
+| P-FUEL2 (L/R) | YK250-SH-378 | orta yakıt bölmesi kapağı | 2,4977–2,8222 | 0,055…0,30 | sökülebilir | M4 + somun plakası + yakıta dayanıklı conta, 25–30 mm | cfrp_pw_mtm45_as4 / shell_secondary |
+| P-FUEL3 (L/R) | YK250-SH-379 | arka yakıt bölmesi kapağı | 2,8077–3,0924 | 0,055…0,30 | sökülebilir | M4 + somun plakası + yakıta dayanıklı conta, 25–30 mm | cfrp_pw_mtm45_as4 / shell_secondary |
+| P-CENTRE-UPPER | YK250-SH-380 | üst orta gövde kaplaması | 2,1895–3,0954 | -0,40…0,40 | sabit | somun plakası + vida, 25–32 mm | cfrp_pw_mtm45_as4 / shell_secondary |
+| P-PAYHATCH | YK250-SH-382 | faydalı yük bölmesi kapağı (karın) | 2,1925–2,8406 | -0,222…0,222 | sökülebilir | Camloc, 75–100 mm | cfrp_pw_mtm45_as4 / shell_secondary |
+| P-CENTRE-LOWER | YK250-SH-383 | alt orta gövde kaplaması | 2,1895–3,0954 | -0,40…0,40 | sabit | somun plakası + vida, 25–32 mm | cfrp_pw_mtm45_as4 / shell_secondary |
 | P-REFUEL | YK250-SH-385 | yakıt ikmal kapağı (sol) | 2,300–2,380 | -0,35…-0,29 | menteşeli | gömülü düz menteşe + itmeli mandal | cfrp_pw_mtm45_as4 / shell_secondary |
-| P-AFTHATCH | YK250-SH-387 | arka teçhizat kapağı (karın) | 3,1149–3,480 | -0,12…0,12 | sökülebilir | Camloc, 75–100 mm | cfrp_pw_mtm45_as4 / shell_secondary |
+| P-AFTHATCH | YK250-SH-387 | arka teçhizat kapağı (karın) | 3,0954–3,480 | -0,12…0,12 | sökülebilir | Camloc, 75–100 mm | cfrp_pw_mtm45_as4 / shell_secondary |
 | P-STABACT (L/R) | YK250-SH-389 | alt kapak FS3480-yangın perdesi, sağ/sol yarımlar (stabilatör eyleyicileri) | 3,4806–3,6552 | 0,022…0,18 | sökülebilir | Camloc, 75–100 mm | cfrp_pw_mtm45_as4 / shell_secondary |
 | P-VENTRALROOT | YK250-SH-394 | ventral kök şeridi | 3,4806–4,000 | -0,022…0,022 | fileto | M4 + gömülü burç, 60–100 mm | cfrp_pw_mtm45_as4 / shell_secondary |
-| P-AFT-LOWER | YK250-SH-388 | alt arka kaplama | 3,1149–3,670 | -0,40…0,40 | sabit | somun plakası + vida, 25–32 mm | cfrp_pw_mtm45_as4 / shell_secondary |
-| P-AFT-UPPER | YK250-SH-390 | üst arka kaplama | 3,1149–3,670 | -0,40…0,40 | sabit | somun plakası + vida, 25–32 mm | cfrp_pw_mtm45_as4 / shell_secondary |
+| P-AFT-LOWER | YK250-SH-388 | alt arka kaplama | 3,0954–3,670 | -0,40…0,40 | sabit | somun plakası + vida, 25–32 mm | cfrp_pw_mtm45_as4 / shell_secondary |
+| P-AFT-UPPER | YK250-SH-390 | üst arka kaplama | 3,0954–3,670 | -0,40…0,40 | sabit | somun plakası + vida, 25–32 mm | cfrp_pw_mtm45_as4 / shell_secondary |
 | P-INLET | YK250-SH-391 | sırt soğutma girişi | 3,180–3,440 | -0,09…0,09 | sabit | EA 9394 yapıştırma, uçlarda kör perçin | cfrp_pw_mtm45_as4 / shell_secondary |
 | P-FINROOT (L/R) | YK250-SH-392 | dikey kök örtüsü | 3,268–3,670 | 0,10…0,22 | fileto | M4 + gömülü burç, 60–100 mm | cfrp_pw_mtm45_as4 / shell_secondary |
 | P-FINROOT-AFT (L/R) | YK250-SH-395 | motor bölmesi üstü dikey kök kaplaması (sabit) | 3,670–3,965 | 0,125…0,197 | fileto | M4 + gömülü burç, 60–100 mm | cfrp_pw_mtm45_as4 / shell_secondary |
@@ -251,10 +255,10 @@ Tablo `spec.yaml`'dan üretilmiştir (x ve y aralıkları panelin dış sınırl
 | P-COWL-UP | YK250-SH-450 | üst motor kaportası, orta parça | 3,670–4,000 | -0,236…0,236 | sökülebilir | Camloc, 70–90 mm | cfrp_pw_mtm45_as4 / shell_secondary |
 | P-COWL-UPS (L/R) | YK250-SH-452 | üst motor kaportası, yan parça | 3,670–3,965 | 0,197…0,236 | sökülebilir | Camloc, 70–90 mm | cfrp_pw_mtm45_as4 / shell_secondary |
 | P-COWL-LO (L/R) | YK250-SH-451 | alt motor kaportası, sağ/sol yarımlar | 3,670–4,000 | 0,022…0,236 | sökülebilir | Camloc, 70–90 mm | cfrp_pw_mtm45_as4 / shell_secondary |
-| P-GLOVE-UP (L/R) | YK250-SH-420 | LERX/eldiven üst kaplaması | 1,800–3,0419 | 0,40…0,70 | sabit | EA 9394 yapıştırma, uçlarda kör perçin | cfrp_pw_mtm45_as4 / wing_skin_primary |
-| P-GLOVE-LO (L/R) | YK250-SH-421 | LERX/eldiven alt kaplaması | 1,800–3,0419 | 0,40…0,70 | sabit | EA 9394 yapıştırma, uçlarda kör perçin | cfrp_pw_mtm45_as4 / wing_skin_primary |
-| P-JOINTACCESS (L/R) | YK250-SH-422 | kanat birleşim erişim kapağı (alt eldiven) | 2,0835–2,5787 | 0,406…0,694 | sökülebilir | Camloc, 75–100 mm | cfrp_pw_mtm45_as4 / shell_secondary |
-| P-REARACCESS (L/R) | YK250-SH-423 | arka pim erişim deliği (alt eldiven) | 2,8837–2,9137 | 0,657…0,687 | sökülebilir | gömülü süngü kapak (Ø30, bağlama elemanı yok) | cfrp_pw_mtm45_as4 / shell_secondary |
+| P-GLOVE-UP (L/R) | YK250-SH-420 | LERX/eldiven üst kaplaması | 1,800–3,0218 | 0,40…0,70 | sabit | EA 9394 yapıştırma, uçlarda kör perçin | cfrp_pw_mtm45_as4 / wing_skin_primary |
+| P-GLOVE-LO (L/R) | YK250-SH-421 | LERX/eldiven alt kaplaması | 1,800–3,0218 | 0,40…0,70 | sabit | EA 9394 yapıştırma, uçlarda kör perçin | cfrp_pw_mtm45_as4 / wing_skin_primary |
+| P-JOINTACCESS (L/R) | YK250-SH-422 | kanat birleşim erişim kapağı (alt eldiven) | 2,0605–2,5585 | 0,406…0,694 | sökülebilir | Camloc, 75–100 mm | cfrp_pw_mtm45_as4 / shell_secondary |
+| P-REARACCESS (L/R) | YK250-SH-423 | arka pim erişim deliği (alt eldiven) | 2,861–2,891 | 0,657…0,687 | sökülebilir | gömülü süngü kapak (Ø30, bağlama elemanı yok) | cfrp_pw_mtm45_as4 / shell_secondary |
 
 **RF pencereleri.** Gövde içindeki her anten GFRP bir panelin ya da dikey uç kapağının altındadır: GNSS 1 aviyonik kapağında, GNSS 2 görev bölmesinin üstündeki küçük pencerede (ikisi de gökyüzünü görür), birincil veri bağı anteni A, FTS anteni ve uzaktan kimlik vericisi (veri bağı radyosunun gölgesinden çıkarıldı) GFRP burun konisinde, veri bağı anteni B ve yedek C2 anteni dikey uç kapaklarında. Anten zarfları iç kaplama yüzeyinin en az 2 mm içindedir (OML − 5,8 mm kaplama − 2 mm). Transponder anteni karın altında, burun takımının önündedir (bakır ağ zemin düzlemli bıçak anten). `layout_check`, iç antenlerin RF geçirgen bir panelin altında olduğunu, pencerelerinin en az %50'sini karbon / metal yapıya ve teçhizata takılmadan gördüğünü (görüş hattı) ve taret açıkken bütün dış çıkıntıların taretin −5° görüş konisinin üstünde kaldığını denetler (VPK-10).
 
@@ -305,9 +309,9 @@ Bütün mafsallar `core.parts.Joint` biçimindedir ve **dinlenme konumunda** tan
 | Gövde kaplamaları, kapaklar, kaportalar | `shell_secondary` sandviç (0,4 / 5 / 0,4 mm), erkek ana kalıptan alınan dişi kalıplarda vakum torbası | kapak açıklıkları çerçeveli; bindirmeler kalıpta; delikler matkap şablonundan |
 | RF pencereleri, radom | E-cam 7781 / MTM45-1 (karbonsuz), aynı süreç | pencerede karbon ve metal yok |
 | Metal bağlantı parçaları (düğüm, köşe, mafsal, kayış, motor, kuyruk), arka omurga | 7075-T651 levhadan 3/5 eksen CNC | kenar mesafesi ≥ 2,0 D (kulaklar Bruhn ile); bükme yok; yüzey anodik oksit (tip II) + astar |
-| Motor bölmesi alt U halkası | 2024-T3 sac, şekillendirme | bükme yarıçapı ≥ 6 t (`sheet_metal_aluminium`); sıcak bölgede kompozit yok |
+| Motor bölmesi alt U halkası | 2024-T3 sac, şekillendirme; alt parçası talaşlı 7075 | bükme yarıçapı ≥ 6 t (`sheet_metal_aluminium`); sıcak bölgede kompozit yok |
 | Motor kafesi | 4130 N boru, TIG kaynak, kaynak sonrası normalizasyon | kaynak fikstüründe itki ekseni ve montaj yüzü referanslı |
-| Yangın perdesi kalkanı | 0,5 mm AISI 304, paslanmaz ayaklar ve kenar köşebendi | perçinli; perde geçişleri yangına dayanıklı |
+| Yangın perdesi kalkanı | 0,4 mm AISI 304, paslanmaz ayaklar ve kenar köşebendi | perçinli; perde geçişleri yangına dayanıklı |
 | Yakıt bölmesi astarları | 2 kat CFRP, çerçevelere yapıştırılır | keskin kenar yok; hücre askı noktaları |
 
 Genel kurallar `spec.assembly.general` içindedir: ISO 2768-mK genel toleranslar, ISO 286 geçmeler (pim yuvaları H8/h8, yatak yuvaları H7), EA 9394 yapıştırma (yüzey hazırlığı, 0,2 mm, tanık numunesi, tıklama testi), kompozitte ≥ 2,5 D / metalde ≥ 2,0 D kenar mesafesi, ISO 273 orta sınıf delikler, tork işaretleme, elektriksel bağlama (CS-VLA 857).
@@ -326,7 +330,7 @@ Genel kurallar `spec.assembly.general` içindedir: ISO 2768-mK genel toleranslar
 
 **Sahada montaj** iki kişiyle yaklaşık 35 dakikadır: gövdeyi takozlara koy; birleşim erişim kapaklarını ve arka pim deliği kapağını aç; dış paneli ana kiriş ekseni boyunca sür (dil, arka kulak ve konnektör aynı anda girer), iki Ø16 ana pimi önden, Ø8 arka pimi alttan tak ve emniyetle; konnektörü denetle, kapakları kapat; stabilatörleri mil uçlarına geçir; pervaneyi tak; uçuş öncesi denetim (paraşüt emniyet pimi en son çıkarılır).
 
-**Bakım erişim matrisi.** 22 kalemin hiçbiri için birincil yapı sökülmez (tablo `spec.assembly.maintenance_access`'ten üretilmiştir). `layout_check` her teçhizat ve yakıt hücresi için kapağın aynı yüzde olduğunu, açık geçişinin (panel − 2 × 25 mm oturma) kalemin en küçük kesitinden büyük olduğunu ve söküm prizmasının güverte, taban ve başka teçhizattan boş olduğunu denetler (VPK-03):
+**Bakım erişim matrisi.** 23 kalemin hiçbiri için birincil yapı sökülmez (tablo `spec.assembly.maintenance_access`'ten üretilmiştir). `layout_check` her teçhizat ve yakıt hücresi için kapağın aynı yüzde olduğunu, açık geçişinin (panel − 2 × 25 mm oturma) kalemin en küçük kesitinden büyük olduğunu ve söküm prizmasının güverte, taban ve başka teçhizattan boş olduğunu denetler (VPK-03):
 
 | Kalem | Erişim | Bağlama |
 |---|---|---|
@@ -347,6 +351,7 @@ Genel kurallar `spec.assembly.general` içindedir: ISO 2768-mK genel toleranslar
 | paraşüt (12 ayda bir katlama, UAVOS servis ömrü) | P-PARAHATCH | mandal |
 | araştırma faydalı yükü | P-PAYHATCH | Camloc |
 | ana takım bacakları, EMA'lar, kilitler, frenler, orta kablo kanalı | ana takım kuyuları (takım açık, iç kapaklar bakım modunda) | - |
+| ana takım mafsal bağlantıları F-TRUNNION, yukarı kilit bağlantıları F-UPLOCK (bağlantı elemanları) | ana takım kuyuları (takım açık, mafsal kapağı açık) | bağlantı başına 5 x M6 12.9 takım kirişinin yapıştırılmış ankrajlarına (başlar kuyuda) + 4 x M6 12.9 kuyu tavanının yakıt tarafındaki sızdırmaz kubbe somun plakalarına; yukarı kilit 4 x M5 kör dökme insertlere |
 | burun takımı, yönlendirme | omurga yuvası (takım açık), P-SIDEBAY-L, P-SIDEBAY-R | Camloc |
 | kanat birleşim pimleri, emniyetleri, kanat konnektörü | P-JOINTACCESS, P-REARACCESS | Camloc / süngü kapak |
 | kanatçık / flap eyleyicileri | dış panel alt servo kapakları (kanat modülü) | M4 dişli burç |
@@ -355,7 +360,7 @@ Genel kurallar `spec.assembly.general` içindedir: ISO 2768-mK genel toleranslar
 
 ## 11. Yerleşim kontrolleri
 
-`layout_check` basitleştirilmiş geometri (kutular, kapsüller, silindirler, küreler; gövde ve kanat dış yüzeyi `sizing.Airframe`'den) üzerinde 13 grup altında 77 kontrol yapar: parça kimlikleri ve numaralandırma (C01); istasyonlar, kesikler, yakıt bölmeleri ve geçişler (C02); zarfların dış yüzeyin ve iç kaplama yüzeyinin içinde kalması (C03); içerik / yapı çakışmaları, **yapı – yapı çakışmaları** (yalnız bildirilen temaslar serbest) ve **bağlantı parçalarının cıvata desenleri** (C04); mekanizma süpürmeleri, dümen kökü, taret kapağı bantları ve **montaj / bakım yolları** (C05); kütle yerleşimi ve ağırlık merkezi (C06); taret görüş alanı, RF pencereleri ve **RF görüş hattı** (C07); yasak bölgeler ve **yangın perdesinden geçen kompozit eleman yokluğu** (C08); kabuk kuralları, **panel kenar oturma yüzeyleri**, **şerit genişlikleri** ve **sabit kuyruk yüzeyleri ile sökülebilir paneller** (C09); bakım erişimi (**açık geçiş, aynı yüz, söküm prizması**) (C10); montaj ve taşıma (C11); mekanizma tanımları, açıklık kuralları ve **montaj yolları / kapak dış hatları / panel kesiklerinin açık geometrisi** (C12); bağlantıların ön boyutlandırması (C13). Kalın yazılanlar düzeltme turunda eklendi. Sonuçlar [`out/layout.md`](../out/layout.md) dosyasındadır. Testler `tests/test_ucav250_layout.py` içindedir; bunlar her kontrol grubunun kasıtlı olarak bozulmuş bir spec kopyasında hatayı yakaladığını (yeni denetimler için de: bağlantı cıvatası kenar mesafesi, yapı – yapı çakışması, oturma yüzeyi olmayan panel kenarı, sökülebilir panelden geçen sabit yüzey, kalemden küçük kapak açıklığı), `--check`'in hiçbir dosya yazmadığını, yerleşim üreticisinin `spec.yaml`'ı bayt bayt yeniden ürettiğini ve bu belgedeki istasyon / panel tablolarının spec ile aynı olduğunu da doğrular.
+`layout_check` basitleştirilmiş geometri (kutular, kapsüller, silindirler, küreler; gövde ve kanat dış yüzeyi `sizing.Airframe`'den) üzerinde 13 grup altında 88 kontrol yapar: parça kimlikleri ve numaralandırma (C01); istasyonlar, kesikler, yakıt bölmeleri ve geçişler (C02); zarfların dış yüzeyin ve iç kaplama yüzeyinin içinde kalması (C03); içerik / yapı çakışmaları, **yapı – yapı çakışmaları** (yalnız bildirilen temaslar serbest) ve **bağlantı parçalarının cıvata desenleri** (C04); mekanizma süpürmeleri, dümen kökü, taret kapağı bantları ve **montaj / bakım yolları** (C05); kütle yerleşimi ve ağırlık merkezi (C06); taret görüş alanı, RF pencereleri ve **RF görüş hattı** (C07); yasak bölgeler ve **yangın perdesinden geçen kompozit eleman yokluğu** (C08); kabuk kuralları, **panel kenar oturma yüzeyleri**, **şerit genişlikleri** ve **sabit kuyruk yüzeyleri ile sökülebilir paneller** (C09); bakım erişimi (**açık geçiş, aynı yüz, söküm prizması**) (C10); montaj ve taşıma (C11); mekanizma tanımları, açıklık kuralları ve **montaj yolları / kapak dış hatları / panel kesiklerinin açık geometrisi** (C12); bağlantıların ön boyutlandırması (C13). Kalın yazılanlar düzeltme turunda eklendi. Sonuçlar [`out/layout.md`](../out/layout.md) dosyasındadır. Testler `tests/test_ucav250_layout.py` içindedir; bunlar her kontrol grubunun kasıtlı olarak bozulmuş bir spec kopyasında hatayı yakaladığını (yeni denetimler için de: bağlantı cıvatası kenar mesafesi, yapı – yapı çakışması, oturma yüzeyi olmayan panel kenarı, sökülebilir panelden geçen sabit yüzey, kalemden küçük kapak açıklığı), `--check`'in hiçbir dosya yazmadığını, yerleşim üreticisinin `spec.yaml`'ı bayt bayt yeniden ürettiğini ve bu belgedeki istasyon / panel tablolarının spec ile aynı olduğunu da doğrular.
 
 ## 12. Boyutlandırmaya etkileri
 
@@ -366,19 +371,20 @@ Yerleşim evresi boyutlandırmada şu değişiklikleri getirdi (hepsi `--update-
 * **Stabilatör mili:** silindir ön yüzü itki ekseniyle 5° eğik modellendi (`engine_cylinder_front_x(z)`); mil yerleştirmesine 10 µm'lik bir yuvarlama koruması eklendi.
 * **Sonuç (yerleşim evresi):** boş kütle 101,34 → 101,48 kg; görev yükü 18,0 kg; dayanım 10,41 → 10,35 h, R-02b 9,64 → 9,58 h.
 * **Yapı fazı:** [doc 04](04_yapi_hesaplari.md) el hesaplarıyla yeniden boyutlandırılan üyelerin kütleleri kapanışa girdi; kanat x_c4 kökü 2,511 → 2,503 m, boş kütle 101,47 kg, R-56 payı +0,097 kg.
-* **Düzeltme turu 1:** kompozit birleşim, düğüm bağlantıları, sırt kanalı, perde bantları, burun mafsalı ve paraşüt bağlantılarının aşağıdan yukarı kütleleri; burun bacağı zarfı 36 mm (S1-08); kanat konumu kapanışında 0,4 mm ölü bant. Kanat x_c4 kökü 2,503 → 2,507 m, boş kütle 101,469 kg, dayanım 10,36 h, R-02b 9,59 h; grup tavanları şasi 12,38, kanat 15,46, kuyruk 7,60 kg; R-56 payı +0,120 kg (doc 04 §6).
+* **Düzeltme turu 1:** kompozit birleşim, düğüm bağlantıları, sırt kanalı, perde bantları, burun mafsalı ve paraşüt bağlantılarının aşağıdan yukarı kütleleri; burun bacağı zarfı 36 mm (S1-08); kanat konumu kapanışında 0,4 mm ölü bant. Kanat x_c4 kökü 2,503 → 2,507 m, boş kütle 101,469 kg, dayanım 10,36 h, R-02b 9,59 h; grup tavanları şasi 12,38, kanat 15,46, kuyruk 7,60 kg; R-56 payı +0,120 kg (doc 04 §7).
+* **Düzeltme turu 2:** ilk eklemeler (kayış kilit pimleri, mafsal bağlantısı cıvata grubu, FS3738 alt parçası, kırık bağlantıları, ayak bantları, dört burun kapağı eyleyicisi, ısı koruması) boş kütleyi 102,46 kg'a çıkardı; bütçe yeniden kapatıldı: dil başlıkları pimler arasında incelir, iki burun kapağını tek DA 22 sürer (PK2-13), yangın perdesi ve ısı koruması kütlesi aşağıdan yukarı sayılır ve kaporta kaplaması soğutma kaleminde ikinci kez sayılmaz, küçük kesitler inceltildi (doc 04 §7). Yerleşimde aviyonik güvertesinin omurga yarığı üstüne 6 katlı dolu şerit (toplanmış burun tekerine 12 mm), ön yakıt perdesi FS-FUEL kapanışta öne geldiği için görev bilgisayarı FS1810'a, döndürülen ECU ve GNSS 2 penceresi FS-FUEL'e göre konumlandı (C04, C09). Kanat x_c4 kökü 2,507 → 2,487 m, boş kütle 101,630 kg, dayanım 10,32 h, R-02b 9,54 h; R-56 payı +0,013 kg.
 
 ## 13. Sınırlamalar ve açık konular
 
 * Motor cıvata deseni ve sönümleyici boyutları tahminidir; Limbach kurulum çizimi ve sönümleyici verisi gelince güncellenecek. Egzoz çıkış noktası da Limbach çizimine bağlıdır.
 * Burun tekeri zarfı, takım birimi seçilene kadar ana tekerle aynı alındı (ihtiyatlı). Ana ve burun takımı birimleri ve EMA'ları henüz seçilmedi; mafsal burç çapları (20 H7 / 16 H7) birime göre değişebilir.
-* FS3738 alt U halkası kuyruk tamponu çarpmasında arka omurganın destek tepkisine (10,25 kN) göre boyutlandırılmadı; doc 04 §8'deki açık konudur.
+* Motor bölmesi ısı korumasının (paslanmaz ek parça ve kalkanlar, düğüm perdeleri) yeterliliği ve stabilatör düğümünün sıcaklığı motor yer çalıştırmasında ölçülmelidir (doc 04 §9, T-NODE-TEMP).
 * Bağlantıların ön boyutlandırması kapalı biçimlidir; kompozit birleşimin burç ezilmesi yarı izotrop delikli bası değeriyle ihtiyatlı denetlendi ve eleman testi gerektirir. Ayrıntılı tasarımda sonlu elemanlar ve test gerekir.
 * Jeneratör güç elektroniğinin ısı atımı (yaklaşık 48 W) sol yan bölme kapağındaki ısı plakasıyla atılır; ısıl doğrulama açık konudur. ECU kablo uzunluğu Limbach ile teyit edilmelidir.
 * `layout_check` basitleştirilmiş zarflarla çalışır; parça geometrisiyle çakışma, süpürme ve kenar mesafesi denetimi ayrıntılı tasarım modüllerinin `checks.py` çalıştırmasıyla yapılacaktır. Montaj yolu süpürmeleri düz eksenli prizmalardır; gerçek el ve takım erişimi maket üzerinde doğrulanmalıdır.
 * Kütle yerleşimindeki bileşen ağırlıkları (çerçeve ağ alanı, kapak çevresi, demet uzunluğu × kesit) tahmindir; ayrıntılı tasarımın kayıt kütlesi (`analysis/mass.py`) bunların yerini alacak.
 * Taret bölmesinin kayar kapaklarında pinyon, kremayer ve raylar için 0,04 kg bir tahmindir.
-* Kütle payları dardır: R-56 +0,120 kg (doc 02 §14). Ayrıntılı tasarımda eklenecek her kütle bu paydan düşülür.
+* Kütle payları dardır: R-56 +0,013 kg (doc 02 §14, doc 04 §7). Ayrıntılı tasarımda eklenecek her kütle bu paydan düşülür.
 
 ## 14. Düzeltme turu 1: yerleşim bulguları
 
@@ -415,8 +421,10 @@ Her bulgu önce yeniden üretildi, sonra düzeltildi; hiçbir kontrol, test ya d
 | PK2-06 kanatçık DA 26 kaplamalar arasına sığmıyor | eyleyici y 2,077–2,180'e (içe) ve itme çubuğu tabanı 0,16 m ile öne alındı; dört-çubuk denetimi de 0,16 m ile (`wing.controls.aileron.linkage`); C03 eyleyicileri kaplama + 2 mm montaj payıyla gerçek mesafede denetler | C03 eyleyiciler, sizing R-57…R-59 |
 | PK2-07 eyleyici kütle kalemleri yerleşimdeki yerlerinde değil | kanatçık, flap, dümen eyleyicileri; ana ve burun takımı (TOST teker grubu, DA-26 sınıfı EMA tahmini, bacak); burun yönlendirme (toplanmış bacakta); takım kapakları ve sürücüleri; taret mekanizması; paraşüt; yakıt sistemi `layout.mass_placement`'a girdi. C06'ya yeni kural: `mass_item` etiketi taşıyan her yerleşim nesnesinin kalemi kütle yerleşiminde olmalıdır. Kapanış yeniden yapıldı (§12) | C06 |
 | PK2-08 yakıt hücresi arayüzü yalnız kodda | `layout.chassis.fuel_supports`: ön/arka sınır (istasyon + ok açısı), OML'den 25 mm iç pay, 0,4 mm astar, taban/tavan, y sınırları; `FuelBand` bunları okur; üç astar ayrı parça numarası (CH-115/116/117), iki yan bölme tepsisi ayrı (CH-118 iskele, CH-122 sancak) | C02 yakıt satırları |
-| PK2-09 stabilatör düğümü ve kök parçası sıcak bölgede, denetlenmiyor | C08 kompozit kabuk panellerine, açıktaki kuyruk yüzeylerine ve sıcak bölgedeki donanıma genişletildi (`layout.heat_protection`): P-COWL-UPS 6061-T6 alüminyum; alt kaporta egzoz çıkış paneli ve kök şeridinin alt kısmı paslanmaz 304 ek parça; kök parçası alt yüzünde paslanmaz kalkan (25 mm kalkanlı pay); düğüm iç yatağı 61805-ZZ + yüksek sıcaklık gresi, silindir kafaları ile düğüm arasında paslanmaz perde; düğümün 7075 sıcaklık dayanımı açık konu (doc 04 T-NODE-TEMP) | C08 üç yeni satır |
+| PK2-09 stabilatör düğümü ve kök parçası sıcak bölgede, denetlenmiyor | C08 kompozit kabuk panellerine, açıktaki kuyruk yüzeylerine ve sıcak bölgedeki donanıma genişletildi (`layout.heat_protection`): P-COWL-UPS 0,8 mm 6061-T6 alüminyum; alt kaportanın egzoz çıkışı çevresi (egzoz zarfının 25 mm'si içi) 0,4 mm paslanmaz 304 ek parça (HS-COWL-EXIT, 20 mm perçinli bindirme); 25–50 mm arasında alt kaportanın, kök şeridinin alt kenarının ve kök parçası alt yüzünün iç yüzünde 5 mm ayaklı 0,1 mm paslanmaz folyo kalkanlar (HS-COWL-SHIELD, HS-STUBROOT, HS-STUB; kompozit 25 mm kalkanlı payı korur); düğüm iç yatağı 61805-ZZ + yüksek sıcaklık gresi, silindir kafaları ile düğüm arasında 0,4 mm paslanmaz perde (70 × 60 mm); düğümün 7075 sıcaklık dayanımı açık konu (doc 04 T-NODE-TEMP). Yeniden kapanışta her ek parça ve kalkanın alanı ve net kütlesi yerleşimden hesaplanır (`layout.heat_protection.mass`, 0,388 kg) ve motor soğutma / yangın koruma kalemine girer | C08 üç yeni satır; test: ısı koruması kütlesi kalemde |
 | PK2-10 eleman ve bağlantı zarfları iç kaplama yüzeyine göre denetlenmiyor | C03: eleman ve bağlantılar ≥ yerel kaplama kalınlığı, teçhizat ≥ max(10 mm, kaplama + 2 mm); taret tavanı kenar şeritleri, burun mafsal bloklarının ön alt köşesi, kayış bağlantıları ve F-TRUNNION flanşları kırpıldı | C03 |
 | PK2-11 motor sökme yolu kısa | itki ekseni boyunca 0,25 m geri çekme + 0,35 m yukarı kaldırma, ikisi de C05'te süpürülür; bakım matrisi güncel | C05 montaj yolları |
 | PK2-12 dış panel taşıma zarfı küçük | taşıma boyutu loft sınır kutusundan panel ekseninde hesaplanır: açıklık 2,904 m + dil 0,295 m, veter yönü 0,728 m, normal 0,110 m (kanat pito sondası dahil); kasa iç ölçüsü zarf + her yanda 25 mm | C11 yeni satır |
-| PK2-13 takım mekanizması arayüzü eksik | burun kapağı eyleyicileri (EQ-NDOORACT-R/-L, DA 22, kapak başına bir), ana / burun EMA zarfları (ACT-MLG-EMA, ACT-NLG-EMA) ve yönlendirme eyleyicisi (ACT-STEER, burun bacağının arka yüzünde, toplanınca bacağın üstünde) OBB zarflarıyla; kapak eyleyicisi sayısı 4 (`mass.rules.gear_doors`) | C05 takım dizisi, C04, C10 |
+| PK2-13 takım mekanizması arayüzü eksik | burun kapağı tahriki: iki istiridye kapağını tek DA 22 (EQ-NDOORACT, sol yan bölme tepsisinde) orta hattaki bir kol, iki bağlantı çubuğu ve menteşe pimi uzantılarındaki iki kolla sürer; kolun süpürme zarfı yerleşim nesnesidir (NDOOR-LINKAGE, YK250-LG-679); ana / burun EMA zarfları (ACT-MLG-EMA, ACT-NLG-EMA) ve yönlendirme eyleyicisi (ACT-STEER, burun bacağının arka yüzünde, toplanınca bacağın üstünde) OBB zarflarıyla; kapak eyleyicisi sayısı 3 + kol ve çubuklar 0,05 kg (`mass.rules.gear_doors`); tahrik torku doc 04 G-NDOOR-DRIVE (0,899) | C05 takım dizisi (kol zarfı burun tekerine karşı), C04, C10; testler: tek tahrik, kol zarfı 30 mm öne alınınca C05 hatası |
+
+**Yeniden kapanış.** Bu turun düzeltmeleri ve yapı eklemeleri (doc 04 §6) kapanışta kanadı ve kütle yerleşimini taşıdı; yeni konumlarda üç denetim hatası çıktı ve düzeltildi: toplanmış burun tekeri aviyonik güvertesine 11,3 mm (< 12 mm) yaklaşıyordu (M-DECK-NOSE omurga yarığının üstünde 6 katlı dolu şerit, C05), öne gelen ön yakıt perdesiyle görev bilgisayarı ve ECU çakışıyordu (görev bilgisayarı FS1810'a, ECU döndürülerek FS-FUEL'e göre; C04), GNSS 2 penceresi ile ön yakıt kapağı arasındaki sabit şerit 57 mm'ye (< 58 mm) iniyordu (pencere FS-FUEL'e göre; C09). Burun tekeri – tam güverte durumu için kasıtlı olarak bozulmuş bir spec kopyasında hatanın yakalandığını gösteren yeni bir test vardır; diğer ikisi C04 ve C09'un mevcut testleriyle kapsanır. Kütle kapanışı doc 04 §7'dedir: boş kütle 101,630 kg, R-02b 9,54 h, R-56 +0,013 kg.

@@ -1,12 +1,12 @@
-# YK-250 HANÇER — Yapı hesapları (faz 3, yapı evresi ve düzeltme turu 1)
+# YK-250 HANÇER — Yapı hesapları (faz 3, yapı evresi ve düzeltme turları 1–2)
 
-**Tarih:** 9 Ekim 2026 · **Durum:** `python3 -m ucav250.analysis.structures --check` 244 satırın 227 emniyet payının (MS) hepsini sıfır ya da pozitif (en küçük 0,002, W-CAP-04), `spec.yaml → structures.sizing` bölümünü güncel ve 15 yerleşim arayüzünün 15'ini tutarlı buluyor. Boyut değişiklikleri `spec.yaml`'a yazıldı; `sizing --check` (61/61), `layout_build.build --check` (bayt bayt aynı) ve `layout_check --check` (77/77) yeşil.
+**Tarih:** 9 Ekim 2026 · **Durum:** `python3 -m ucav250.analysis.structures --check` 280 satırın 261 emniyet payının (MS) hepsini sıfır ya da pozitif (en küçük 0,0002, W-CAP-07), `spec.yaml → structures.sizing` bölümünü güncel ve 15 yerleşim arayüzünün 15'ini tutarlı buluyor. Boyut değişiklikleri `spec.yaml`'a yazıldı; `sizing --check` (61/61), `layout_build.build --check` (bayt bayt aynı) ve `layout_check --check` (88/88) yeşil.
 
 > **Kapsam.** YK-250 HANÇER sivil bir EO/IR gözetleme ve araştırma İHA'sıdır. Hesaplarda dış yük taşıma bağlantısı,
 > askı ya da yük bırakma düzeneği yoktur; "bağlantı parçası" (fitting) sözcüğü yalnızca yapı içi bağlantıları
 > (kanat birleşimi, iniş takımı mafsalı, motor bağlantısı, paraşüt kayışı, kuyruk düğümleri) anlatır.
 
-Bu belge HANÇER'in birincil yapısı için yapılan el hesaplarını anlatır: hangi yük durumlarının alındığı, her elemanın hangi yöntemle ve hangi izin verilen değerle denetlendiği, hangi elemanların yetmediği ve nasıl yeniden boyutlandırıldığı, bunun kütleye ve kütle bütçesine etkisi ve açık kalan konular. §5, bağımsız doğrulamanın yapı bulgularına (S1-01 … S1-10) karşı yapılan **düzeltme turu 1**'i özetler. Satır satır emniyet payı tablosu [`out/structures.md`](../out/structures.md) dosyasındadır (makinece okunur sürümü [`out/structures.json`](../out/structures.json)); bu belge yöntemi ve sonuçları özetler.
+Bu belge HANÇER'in birincil yapısı için yapılan el hesaplarını anlatır: hangi yük durumlarının alındığı, her elemanın hangi yöntemle ve hangi izin verilen değerle denetlendiği, hangi elemanların yetmediği ve nasıl yeniden boyutlandırıldığı, bunun kütleye ve kütle bütçesine etkisi ve açık kalan konular. §5, bağımsız doğrulamanın ilk yapı bulgularına (S1-01 … S1-10) karşı yapılan **düzeltme turu 1**'i, §6 ikinci doğrulamanın yapı bulgularına (VS2-01 … VS2-12) karşı yapılan **düzeltme turu 2**'yi özetler. Satır satır emniyet payı tablosu [`out/structures.md`](../out/structures.md) dosyasındadır (makinece okunur sürümü [`out/structures.json`](../out/structures.json)); bu belge yöntemi ve sonuçları özetler.
 
 ```
 python3 -m ucav250.analysis.structures                # hesap; out/structures.md ve out/structures.json yazılır
@@ -14,7 +14,7 @@ python3 -m ucav250.analysis.structures --update-spec  # boyutlandırılan ölç�
 python3 -m ucav250.analysis.structures --check        # MS >= 0, spec bloğu güncel, yerleşim arayüzleri tutarlı (çıkış 1 = hata); hiçbir dosya yazmaz
 ```
 
-Bir değişiklikten sonra sıra şudur: `layout_build.build --write` → `structures --update-spec` → `sizing --update-spec` (kütle kalemleri, kapanış) → yeniden `layout_build.build --write` (kanat konumu ve kütle yerleşimi; `sizing` mekanizma değerlerini 6 anlamlı basamakla sakladığı için son yazan üretici olmalıdır) → `build --check`, `structures --check`, `sizing --check`, `layout_check --check`. Kanat konumu kapanışta değiştiğinde bu döngü sabit noktaya gelene kadar tekrarlanır. Düzeltme turunda yerleşim ile boyutlandırma arasında 0,1 mm'lik yuvarlamanın yol açtığı iki adımlı bir salınım görüldü; boyutlandırma kapanışı artık kanadı yalnızca |Δx_c4| ≥ 0,4 mm olduğunda taşır (`sizing.WING_DEADBAND`, kanat AM'sinin 0,4 mm içinde kalması statik payı ölçülebilir biçimde değiştirmez). Bu turda kanat kök çeyrek veter noktası 2,503 m'den 2,507 m'ye (4,2 mm geri) geldi (§6).
+Bir değişiklikten sonra sıra şudur: `layout_build.build --write` → `structures --update-spec` → `sizing --update-spec` (kütle kalemleri, kapanış) → yeniden `layout_build.build --write` (kanat konumu ve kütle yerleşimi; `sizing` mekanizma değerlerini 6 anlamlı basamakla sakladığı için son yazan üretici olmalıdır) → `build --check`, `structures --check`, `sizing --check`, `layout_check --check`. Kanat konumu kapanışta değiştiğinde bu döngü sabit noktaya gelene kadar tekrarlanır. Düzeltme turu 1'de yerleşim ile boyutlandırma arasında 0,1 mm'lik yuvarlamanın yol açtığı iki adımlı bir salınım görüldü; boyutlandırma kapanışı artık kanadı yalnızca |Δx_c4| ≥ 0,4 mm olduğunda taşır (`sizing.WING_DEADBAND`, kanat AM'sinin 0,4 mm içinde kalması statik payı ölçülebilir biçimde değiştirmez). Düzeltme turu 1'de kanat kök çeyrek veter noktası 2,503 m'den 2,507 m'ye geldi; düzeltme turu 2'nin kütle değişiklikleri (kanat ve kuyruk hafifledi, motor bölmesinin ısı koruması ve yangın perdesi aşağıdan yukarı sayıldı; §7) ağırlık merkezini geri aldı ve kanat **2,487 m**'ye taşındı.
 
 ---
 
@@ -22,7 +22,7 @@ Bir değişiklikten sonra sıra şudur: `layout_build.build --write` → `struct
 
 ### 1.1 El hesapları ve tek kaynak
 
-Her kontrol kapalı biçimli bir el hesabıdır ve [`analysis/structlib.py`](../analysis/structlib.py) içindeki yardımcılarla yapılır: klasik lamine teorisi (ABD matrisleri, ilk katman hasarı: en büyük gerilme ve Tsai-Wu), özel ortotrop levha basma ve uzun levha kesme burkulması (Kollár & Springer), sandviç kesme düzeltmesi, yüz buruşması (Zenkert, Q = 0,5), kesme kıvrılması (N = G_c d²/c), Johnson-Euler kolonu, boru burulması, Bredt kesme akışı, elastik cıvata grubu (düzlem içi ve çekme), pim eğilmesi (Melcon-Hoblit kolu), kulak (lug) dayanımı (Bruhn D1, gerçek e/D'de kesme-ezilme), doğrudan rijitlik yöntemiyle uzay kafes, enerji yöntemiyle iniş yük katsayısı ve düzeltme turunda eklenen basit mesnetli dikdörtgen levhanın merkez yamasındaki moment (Timoshenko, levhalar §19; yangın perdesi ayakları). Bu yardımcıların her biri [`tests/test_ucav250_structures.py`](../../tests/test_ucav250_structures.py) içinde kapalı biçimli bir değerle karşılaştırılarak test edilir.
+Her kontrol kapalı biçimli bir el hesabıdır ve [`analysis/structlib.py`](../analysis/structlib.py) içindeki yardımcılarla yapılır: klasik lamine teorisi (ABD matrisleri, ilk katman hasarı: en büyük gerilme ve Tsai-Wu), özel ortotrop levha basma ve uzun levha kesme burkulması (Kollár & Springer), sandviç kesme düzeltmesi, yüz buruşması (Zenkert, Q = 0,5), kesme kıvrılması (N = G_c d²/c), Johnson-Euler kolonu, boru burulması, Bredt kesme akışı, elastik cıvata grubu (düzlem içi, çekme ve düzeltme turu 2'de eklenen altı serbestlik dereceli grup), pim eğilmesi (Melcon-Hoblit kolu), kulak (lug) dayanımı (Bruhn D1, gerçek e/D'de kesme-ezilme), doğrudan rijitlik yöntemiyle uzay kafes, enerji yöntemiyle iniş yük katsayısı ve basit mesnetli dikdörtgen levhanın merkez yamasındaki moment (Timoshenko, levhalar §19; yangın perdesi ayakları). Bu yardımcıların her biri [`tests/test_ucav250_structures.py`](../../tests/test_ucav250_structures.py) içinde kapalı biçimli bir değerle karşılaştırılarak test edilir.
 
 Geometri, kütle ve malzeme tek kaynaktan gelir: kanat kesitleri ve kiriş çizgileri `wing`, çerçeveler, elemanlar, bağlantı parçaları, cıvata desenleri ve mekanizmalar `layout`, kütle kalemleri ve yükleme durumları `mass`, malzemeler `materials`, katman dizilimleri `layups`, katsayılar ve türetilmiş yükler `structures` (boyutlandırma evresinin hamle matrisi dahil). Yapı evresinin yazdığı ölçüler `structures.sizing` bölümündedir.
 
@@ -41,9 +41,9 @@ Geometri, kütle ve malzeme tek kaynaktan gelir: kanat kesitleri ve kiriş çizg
 | Kumanda menteşesi ezilmesi (toplam) | 6,67 | CS-LUAS.657 |
 | İtme-çekme bağlantısı (toplam) | 3,33 | CS-LUAS.693 |
 
-Birleştirme kuralı CS-LUAS.619'a göredir: toplam katsayı = 1,5 × uygulanabilir özel katsayıların **en büyüğü** (çarpılmazlar). Kompozit katsayısı 1,2 bu özel katsayılardan biridir (sıcak/nem etkisi ETW değerlerinin içindedir). Hasar toleransı birim şekil değiştirme sınırları (STANAG 4703 UL13.1.2, [`data/research/standards.yaml`](../data/research/standards.yaml)) nihai yükte uygulanır: 2 mm'den kalın lamine bası 3000 µε, sandviç kaplama ve ≤ 2 mm lamine bası 2600 µε, çekme 5000 µε, kesme 5200 µε.
+Birleştirme kuralı CS-LUAS.619'a göredir: toplam katsayı = 1,5 × uygulanabilir özel katsayıların **en büyüğü** (çarpılmazlar). Kompozit katsayısı 1,2 bu özel katsayılardan biridir (sıcak/nem etkisi ETW değerlerinin içindedir). Hasar toleransı birim şekil değiştirme sınırları (STANAG 4703 UL13.1.2, [`data/research/standards.yaml`](../data/research/standards.yaml)) nihai yükte uygulanır: 2 mm'den kalın lamine bası 3000 µε, sandviç kaplama ve ≤ 2 mm lamine bası 2600 µε, çekme 5000 µε, kesme 5200 µε. Bu sınırların bir uygulanabilirlik koşulu vardır: matrise duyarlı özelliklerin ETW kaybı oda sıcaklığı / kuru değerinin %50'sinin altında kalmalıdır. Düzeltme turu 2'de bu koşul ayrı bir satırla denetlenir (DT-COND, VS2-11): NCAMP MTM45-1/AS4 verisinde UD Xc, PW Xc / Yc ve PW S_0,2 için aynı yöndeki ETW ve RTD değerleri (B-tabanı varsa B-tabanı, yoksa ortalama) karşılaştırılır; en büyük kayıp **%47**'dir (PW S_0,2), koşul sağlanır ve UL13.1.2 sınırları kullanılır.
 
-İzin verilen değerler: MTM45-1/AS4 UD ve PW katları B-tabanı ETW (NCAMP), yarı izotrop delikli bası/ezilme değerleri ([`materials.yaml`](../data/research/materials.yaml) `design_values_for_code`), metal parçalar MMPDS (A-tabanı), cıvatalar ISO 898-1 / ISO 3506-1, ROHACELL çekirdekler üretici minimum değerleri. **UD bant için ezilme değeri yoktur** (düzeltme turunda `cfrp_ud_mtm45_as4`'ten kaldırıldı, S1-05): UD'ye bağlantı elemanı açılmaz, delikler her zaman ≥ %40 ±45 içeren bloklardadır. Burçlu kompozit deliklerin ezilmesi, delik kenar mesafesi %2 kaymalı ezilme değerinin koşulunu (e/D ≥ 3) sağlamadığı için **yarı izotrop delikli bası dayanımıyla (175,4 MPa)** ihtiyatlı biçimde denetlenir; bu bir yerine koymadır ve eleman testiyle doğrulanacaktır (§8).
+İzin verilen değerler: MTM45-1/AS4 UD ve PW katları B-tabanı ETW (NCAMP), yarı izotrop delikli bası/ezilme değerleri ([`materials.yaml`](../data/research/materials.yaml) `design_values_for_code`), metal parçalar MMPDS (A-tabanı), cıvatalar ISO 898-1 / ISO 3506-1, ROHACELL çekirdekler üretici minimum değerleri. **UD bant için ezilme değeri yoktur** (düzeltme turu 1'de `cfrp_ud_mtm45_as4`'ten kaldırıldı, S1-05): UD'ye bağlantı elemanı açılmaz, delikler her zaman ≥ %40 ±45 içeren bloklardadır. Burçlu kompozit deliklerin ezilmesi, delik kenar mesafesi %2 kaymalı ezilme değerinin koşulunu (e/D ≥ 3) sağlamadığı için **yarı izotrop delikli bası dayanımıyla (175,4 MPa)** ihtiyatlı biçimde denetlenir; bu bir yerine koymadır ve eleman testiyle doğrulanacaktır (§9). Kulak eksenel dayanımında (`lug_axial`, Bruhn D1.5) malzemenin çekme dayanımı Ftu kullanılır (düzeltme turu 2, VS2-09).
 
 ---
 
@@ -53,123 +53,126 @@ Birleştirme kuralı CS-LUAS.619'a göredir: toplam katsayı = 1,5 × uygulanabi
 
 | Büyüklük | Değer | Not |
 |---|---|---|
-| V_S (temiz, MTOM) / V_A / V_C / V_D (EAS) | 24,0 / 45,0 / 45,0 / 57,0 m/s | `structures.derived` |
+| V_S (temiz, MTOM) / V_A / V_C / V_D (EAS) | 23,9 / 45,0 / 45,0 / 57,0 m/s | `structures.derived` |
 | Manevra limit yük katsayıları | +3,8 / −1,52 | CS-LUAS.337 |
-| Kanat tasarım yük katsayısı (MTOM'da) | +5,47 | hamle matrisinin en büyük n·m değeri (6 kütle × irtifa) |
-| Negatif kanat durumu (MTOM'a eşdeğer) | −3,55 | en büyük \|n·m\| / MTOM |
-| Teçhizat yük katsayısı (en hafif durum 106,3 kg) | +7,01 / −5,01 | hamle; bağlantı ve teçhizat tutma için |
+| Kanat tasarım yük katsayısı (MTOM'da) | +5,46 | hamle matrisinin en büyük n·m değeri (6 kütle × irtifa) |
+| Negatif kanat durumu (MTOM'a eşdeğer) | −3,54 | en büyük \|n·m\| / MTOM |
+| Teçhizat yük katsayısı (en hafif durum 106,4 kg) | +6,99 / −4,99 | hamle; bağlantı ve teçhizat tutma için |
 
-Kanat yükü referans yamuk üzerinde Schrenk dağılımıdır; kanat yapısı, kumanda yüzeyleri ve kanatçık / flap eyleyicileri aynı yük katsayısıyla **atalet rahatlatması** olarak düşülür. Düzeltme turunda (S1-01) her kütle terimi fiziksel olarak bulunduğu yere konur: ana kiriş başlıkları kat sayısı programına göre (gövde içindeki y < 0,40 kutu başlıkları dış kanatta rahatlatma vermez), dış panel kiriş gövdeleri gövde kat bölgelerine ve vetere göre, arka kiriş gövde yanı kaburgasından uca, kaburgalar veterin karesiyle, birleşim donanımı (kompozit dil, başlık kalınlaşması, arka kulak) dilin ucundan başlık kalınlaşmasının sonuna kadar, kaplamalar ve kumanda yüzeyleri gerçek kanat vetere göre, eyleyiciler yerleşimdeki konumlarında nokta kütle olarak. Yarım kanat 10,0 kg'dır. Kök eğilme momenti (limit) **5293 N m**'dir (rahatlatmasız 6106 N m); birleşim düzleminde (y 0,70) **V 2562 N, M 3195 N m, T 104 N m**. Burulma zarfı üç durumun büyüğüdür: V_D'de kesit c_m0'ı (NLF(1)-0416, −0,102), V_A'da tam kanatçık (CS-LUAS.349(b): Δc_m = −0,01/derece) ve V_F'de 40° flap.
+Kanat yükü referans yamuk üzerinde Schrenk dağılımıdır; kanat yapısı, kumanda yüzeyleri ve kanatçık / flap eyleyicileri aynı yük katsayısıyla **atalet rahatlatması** olarak düşülür. Düzeltme turu 1'de (S1-01) her kütle terimi fiziksel olarak bulunduğu yere konur: ana kiriş başlıkları kat sayısı programına göre (gövde içindeki y < 0,40 kutu başlıkları dış kanatta rahatlatma vermez), dış panel kiriş gövdeleri gövde kat bölgelerine ve vetere göre, arka kiriş gövde yanı kaburgasından uca, kaburgalar veterin karesiyle, birleşim donanımı (kompozit dil, başlık kalınlaşması, arka kulak) dilin ucundan başlık kalınlaşmasının sonuna kadar, kaplamalar ve kumanda yüzeyleri gerçek kanat vetere göre, eyleyiciler yerleşimdeki konumlarında nokta kütle olarak. Düzeltme turu 2'de (VS2-05) rahatlatma **en küçük inandırıcı kanat kütlesiyle** hesaplanır: kalemlerin büyüme payı olmayan taban kütleleri, boyutlandırma modelinin 1,05 katsayısı da çıkarılarak (daha ağır bir kanat yalnızca rahatlatmayı artırır). Rahatlatmaya giren yarım kanat 9,08 kg'dır. Kök eğilme momenti (limit) **5361 N m**'dir (rahatlatmasız 6098 N m); birleşim düzleminde (y 0,70) **V 2594 N, M 3234 N m, T 104 N m**. Burulma zarfı üç durumun büyüğüdür: V_D'de kesit c_m0'ı (NLF(1)-0416, −0,102), V_A'da tam kanatçık (CS-LUAS.349(b): Δc_m = −0,01/derece) ve V_F'de 40° flap.
 
-**Veter yönü durumları (S1-02).** Dış panel birleşimi düzlem içi (sürükleme) momentini de taşır. Üç durum tanımlıdır: PHAA (pozitif yüksek hücum açısı: kanat CL_maks'ta kesit açısı 11,9°, veter yönünde öne doğru C = L tan α = 541 N, birleşimde Mz = 675 N m), NHAA (negatif yüksek hücum açısı, kesit c_l,min: Mz 385 N m) ve VD-DRAG (V_D'de sürükleme ağır basan durum: Mz −16 N m). Mz, ana pimler ile arka pim arasındaki 0,294 m veter yönü kol üzerinden açıklık yönünde bir kuvvet çiftidir (F_y = Mz / Δx; ana pimler F_y/2'şer, arka pim F_y).
+**Veter yönü durumları (S1-02).** Dış panel birleşimi düzlem içi (sürükleme) momentini de taşır. Üç durum tanımlıdır: PHAA (pozitif yüksek hücum açısı: kanat CL_maks'ta veter yönünde öne doğru C = L tan α = 548 N, birleşimde Mz = 683 N m), NHAA (negatif yüksek hücum açısı, kesit c_l,min: Mz 390 N m) ve VD-DRAG (V_D'de sürükleme ağır basan durum: Mz −16 N m). Mz, ana pimler ile arka pim arasındaki 0,292 m veter yönü kol üzerinden açıklık yönünde bir kuvvet çiftidir (F_y = Mz / Δx; ana pimler F_y/2'şer, arka pim F_y).
 
-**Yuvarlanma (CS-LUAS.349(a)):** bir tarafta n_A'da %100, diğerinde 2/3 yük ve tam kanatçık burulması. Daha yüklü tarafın kök momenti 3678 N m'dir, tasarım durumunun (5293 N m) altındadır (W-ROLL bilgi satırı).
+**Yuvarlanma (CS-LUAS.349(a)):** bir tarafta n_A'da %100, diğerinde 2/3 yük ve tam kanatçık burulması. Daha yüklü tarafın kök momenti 3731 N m'dir, tasarım durumunun (5361 N m) altındadır (W-ROLL bilgi satırı).
 
 ### 2.2 Kuyruk ve kumandalar
 
-* **Stabilatör:** V_A'da tam sapma ve kesit CN_maks (panel başına 481 N limit, basınç merkezi y 0,684), V_C'de CS-VLA 425(d) hamlesi (261 N, en büyük hamle azaltma katsayısı 0,78), simetrik olmayan durum %100 / %72 (CS-LUAS.427(b)). Mil kesitinde moment 175 N m; iç yatak tepkisi 999 N, dış yatak tepkisi 1480 N (limit).
-* **Dikeyler:** 15° yanal kayma × 1,5 aşma, V_A'da tam dümen ve V_C'de yanal hamle; her biri kesit CN_maks ile sınırlı (dikey başına 587 N, kökte 214 N m).
-* **Kumanda yüzeyleri:** yüzey yükü CS-VLA Ek B ortalama yüklemesi ile eyleyicinin uygulayabildiği menteşe momentinin büyüğüdür; bu uçakta her yüzeyde eyleyici belirleyicidir (kanatçık 389 N, flap 836 N, dümen 326 N). Menteşe tepkileri sürekli kiriş katsayılarıyla; menteşe ekseni boyunca atalet 24 g / 12 g (CS-LUAS.393(b)); itme çubukları eyleyici durma torkuyla (CS-LUAS.395); yer rüzgârı (CS-VLA 415).
+* **Stabilatör:** V_A'da tam sapma ve kesit CN_maks (panel başına 471 N limit), V_C'de CS-VLA 425(d) hamlesi (256 N, en büyük hamle azaltma katsayısı 0,78), simetrik olmayan durum %100 / %72 (CS-LUAS.427(b)). Mil kesitinde moment 169 N m; iç yatak tepkisi 966 N, dış yatak tepkisi 1436 N (limit).
+* **Dikeyler:** 15° yanal kayma × 1,5 aşma, V_A'da tam dümen ve V_C'de yanal hamle; her biri kesit CN_maks ile sınırlı (dikey başına 572 N, kökte 208 N m).
+* **Kumanda yüzeyleri:** yüzey yükü CS-VLA Ek B ortalama yüklemesi ile eyleyicinin uygulayabildiği menteşe momentinin büyüğüdür; bu uçakta her yüzeyde eyleyici belirleyicidir. Menteşe tepkileri sürekli kiriş katsayılarıyla; menteşe ekseni boyunca atalet 24 g / 12 g (CS-LUAS.393(b)); itme çubukları eyleyici durma torkuyla (CS-LUAS.395); yer rüzgârı (CS-VLA 415).
 * **Kuyruk tamponu:** skidden 45° yukarı-geri 1,0 × MTOM ağırlığı (1470 N; tasarım kararı, burun tekerli uçak tamponu için kural yok).
 
 ### 2.3 Yer yükleri ve iniş takımı
 
-Çökme hızı 2,35 m/s (CS-LUAS H.2(b)), serbest düşme yüksekliği 0,283 m, kullanılabilir yol 92 mm, verim 0,63, kanat taşıması 2/3 W → **n_j = 5,40**, atalet yük katsayısı 6,07; ana bacak başına düşey limit yük 3970 N. Ana takım durumları: düz iniş (dönme başlangıcı, geri yaylanma, en büyük düşey; AMC VLA 479(b)), kuyruk aşağı iniş (9,2°), tek teker inişi, yan yük (içe 0,5 W, dışa 0,33 W), frenli yuvarlanma (0,8 sürtünme). Burun takımı: üç noktalı düz iniş ve ek durumlar (arka 2,25/1,8, ön 3,2/0,9, yan 2,25/1,575 × statik). İniş yedek enerjisi 1,2 V_çökme'de n_j 7,0 (nihai). Takım işletme hızı tasarım kararı olarak 1,6 V_S = 38,3 m/s EAS. Toplanmış ana bacağın (4,20 kg) yukarı kilide yükü teçhizat yük katsayısı 7,01 ile hesaplanır (S1-06).
+Çökme hızı 2,35 m/s (CS-LUAS H.2(b)), serbest düşme yüksekliği 0,283 m, kullanılabilir yol 92 mm, verim 0,63, kanat taşıması 2/3 W → **n_j = 5,40**, atalet yük katsayısı 6,07. Ana takım durumları: düz iniş (dönme başlangıcı, geri yaylanma, en büyük düşey; AMC VLA 479(b)), kuyruk aşağı iniş, tek teker inişi, yan yük (içe 0,5 W, dışa 0,33 W), frenli yuvarlanma (0,8 sürtünme). Burun takımı: üç noktalı düz iniş ve ek durumlar (arka 2,25/1,8, ön 3,2/0,9, yan 2,25/1,575 × statik). İniş yedek enerjisi 1,2 V_çökme'de n_j 7,0 (nihai). Takım işletme hızı tasarım kararı olarak 1,6 V_S = 38,3 m/s EAS. Toplanmış ana bacağın yukarı kilide yükü teçhizat yük katsayısıyla hesaplanır (S1-06). Düzeltme turu 2'de mafsal bağlantısına bacak momentlerinin üçü de (sürükleme çifti M_y ve yuvarlanma momenti M_x dahil) verilir (VS2-02).
+
+**Yer taşıma (VS2-12).** Çekme yükü burun çatalı dingilinde 0,3 W'tır (W ≤ 30 000 lb için CS-23.509 / FAR 23.509 değeri, muhafazakâr tasarım kararı; CS-LUAS / CS-VLA çekme maddesinin metni araştırma dosyalarında yoktur), çekme demiri ekseninden ±30°'ye kadar. Uçak dışarıda bağlanmaz ve krikoyla kaldırılmaz: işletme kavramında uçmadığı zaman taşıma beşiğinde ya da barınaktadır (`structures.sizing.ground_handling`); bağlama noktaları açık konudur (§9).
 
 ### 2.4 Motor bağlantısı
 
-Motor grubu 10,10 kg (büyüme payı dahil), I_p 0,0227 kg m². Durumlar: MCP torku × 6 + n_A + itki; kalkış torku + 0,75 n_A + itki; en hafif durumun hamle yük katsayısı (+7,01) + MCP torku; negatif yük katsayısı; yan yük 1,47 g; jiroskopik (sapma 2,5, yunuslama 1,0 rad/s); iniş n_j + 0,67; çarpma 15 g ileri, acil iniş 6 g aşağı ve paraşüt açılması (nihai). Dört eşit sönümleyici üzerinde rijit cisim dağılımı; 4130 kaynaklı kafes doğrudan rijitlik yöntemiyle çözülür. Ayak tepkileri yangın perdesine düzlem içi ve **düzlem dışı** olarak verilir: alt ayakta en büyük düzlem dışı tepki 2207 N, üst ayakta 1785 N (nihai, hamle n 7,01 + MCP torku).
+Motor grubu 10,10 kg (büyüme payı dahil), I_p 0,0227 kg m². Durumlar: MCP torku × 6 + n_A + itki; kalkış torku + 0,75 n_A + itki; en hafif durumun hamle yük katsayısı + MCP torku; negatif yük katsayısı; yan yük 1,47 g; jiroskopik (sapma 2,5, yunuslama 1,0 rad/s); iniş n_j + 0,67; çarpma 15 g ileri, acil iniş 6 g aşağı ve paraşüt açılması (nihai). Dört eşit sönümleyici üzerinde rijit cisim dağılımı; 4130 kaynaklı kafes doğrudan rijitlik yöntemiyle çözülür. Ayak tepkileri yangın perdesine düzlem içi ve **düzlem dışı** olarak verilir: alt ayakta en büyük düzlem dışı tepki 2204 N, üst ayakta 1782 N (nihai, hamle + MCP torku).
 
 ### 2.5 Paraşüt, yakıt, taret, teçhizat, taşıma
 
-* **Paraşüt:** açılma şoku 13,1 kN tek kayış ayağında (yalnız nihai, × 1,15 bağlantı). Yönler: statik ayak yönü etrafında 30° koni (birleşme halkası AM'nin 1,5 m üstü) ve düşeyden 60° geriye kadar açılma silkmesi. Kayışın uçak eksenindeki (x) bileşeni en çok **11,36 kN**'dur (S1-04); en hafif kütlede yük katsayısı 12,6'dır.
+* **Paraşüt:** açılma şoku 13,1 kN tek kayış ayağında (yalnız nihai, × 1,15 bağlantı). Yönler: statik ayak yönü etrafında 30° koni (birleşme halkası AM'nin 1,5 m üstü) ve düşeyden 60° geriye kadar açılma silkmesi. Kayışın uçak eksenindeki (x) bileşeni en çok **11,34 kN**'dur (S1-04); en hafif kütlede açılma yük katsayısı 12,6 olur.
 * **Yakıt bölmeleri:** tasarım basıncı 21,0 kPa nihai = 1,5 × CS-LUAS.965(b) test basıncı 14 kPa; yakıt sütunu, acil iniş 9 g ileri ve 6 g aşağı ve paraşüt açılması karşılaştırılır.
 * **Taret asansörü:** E180 büyüme tareti + taşıyıcı 4,35 kg; nihai yük katsayıları aşağı 12,6, ileri 10,9, yan 2,2. Kayar kapaklar V_D emmesinde (|Cp| = 1 üst sınır).
 * **Teçhizat tutma:** nihai aşağı 12,6, yukarı 7,5, ileri 10,9, yan 2,2.
-* **Taşıma:** kızakta orta gövde (81,5 kg); 3,0 g düşey, 1,5 g ileri-geri, 1,5 g yan limit (tasarım kararı).
+* **Taşıma:** kızakta orta gövde; 3,0 g düşey, 1,5 g ileri-geri, 1,5 g yan limit (tasarım kararı).
 
 ### 2.6 Çerçevelere giren yoğun yükler (S1-06)
 
 | Yük | Değer (limit, aksi belirtilmedikçe) | Kaynak durum |
 |---|---|---|
-| FS-GEAR çerçevesine takım kirişi tepkisi (yan başına) | 2171 N | düz iniş, takım kirişinin iki çerçeveye dağılımı |
-| FS-RS çerçevesine takım kirişi tepkisi (yan başına) | 1799 N | aynı |
-| FS-MS / FS-RS: gövde ataleti, kutu uçlarında | 5113 / 1852 N | kanat tasarım durumu, gövde kütlesi 129,9 kg |
-| Yangın perdesi alt ayağı, düzlem dışı | 2207 N (nihai) | hamle n 7,01 + MCP torku |
-| Ana yukarı kilit kancası | 434 N (nihai) | toplanmış bacak, n 7,01 |
-| FS3738'de arka omurga desteği | 10,25 kN | kuyruk tamponu çarpması (yalnız bilgi satırı, §8) |
+| FS-GEAR çerçevesine takım kirişi uç tepkisi (yan başına, sürükleme çifti dahil) | 3620 N | iniş durumlarının en büyüğü (VS2-02) |
+| FS-RS çerçevesine takım kirişi uç tepkisi (yan başına, sürükleme çifti dahil) | 3755 N | aynı |
+| Yangın perdesi alt ayağı, düzlem dışı | 2204 N (nihai) | hamle + MCP torku |
+| Ana yukarı kilit kancası | 432 N (nihai) | toplanmış bacak, teçhizat yük katsayısı |
+| FS3738'de arka omurga desteği | 10,20 kN | kuyruk tamponu çarpması (düzeltme turu 2'de boyutlandırıldı, VS2-03) |
 
 ---
 
 ## 3. Elemanlar ve sonuçlar
 
-227 emniyet payı ve 17 gereksinim / bilgi satırı (toplam 244) hesaplanır; negatif pay yoktur, en küçük MS 0,002'dir (kiriş başlıkları kat sayısı bölgelerinde boyutlandırıldığı için sıfıra yakındır). Gruplara göre belirleyici satırlar:
+261 emniyet payı ve 19 gereksinim / bilgi / geometri satırı (toplam 280) hesaplanır; negatif pay yoktur; en küçük MS 0,0002 (W-CAP-07): kiriş başlıkları kat sayısı bölgelerinde en az kat sayısıyla boyutlandırıldığı için paylar sıfıra yakındır. Gruplara göre belirleyici satırlar:
 
 | Grup (satır) | Belirleyici kontrol | MS |
 |---|---|---|
-| Kanat (68) | ana kiriş başlığı bölgeleri: kaplama yüzü bası birim şekil değiştirmesi 2600 µε (W-CAP-04, y 0,70–0,80) | 0,002 |
-| Dış panel birleşimi (20) | dış pimde dilin UD başlığı, bası birim şekil değiştirmesi 3000 µε (J-TONGUE-FLANGE-DT) | 0,139 |
-| Orta kanat kutusu (11) | FS-MS gövdesi kesme kıvrılması | 0,229 |
-| Kuyruk (30) | arka omurga kirişi, tampon yükü (T-AFTKEEL) | 0,123 |
+| Kanat (69) | ana kiriş başlığı bölgeleri: kaplama yüzü bası birim şekil değiştirmesi 2600 µε (W-CAP-07, y 1,00–1,10) | 0,0002 |
+| Dış panel birleşimi (27) | dil-başlık rampası: azalan başlık kolunda kaplama birim şekil değiştirmesi (J-TRANS-SKIN) | 0,014 |
+| Orta kanat kutusu (15) | FS-MS gövdesi kesme kıvrılması | 0,210 |
+| Kuyruk (32) | arka omurga kirişi, tampon yükü (T-AFTKEEL) | 0,128 |
 | Kumanda yüzeyleri (21) | flap itme çubuğu kolonu | 0,709 |
-| İniş takımı (20) | ana yukarı kilit bağlantısı, insert sökülmesi (G-UPLOCK) | 0,351 |
-| Motor bağlantısı (8) | kafes çubuğu kolonu (Johnson-Euler) | 0,923 |
-| Paraşüt (14) | bağlantı – çerçeve cıvataları 2 × M5 (P-FRAME-BOLTS) | 0,380 |
+| İniş takımı ve yer taşıma (33) | takım kirişi UD başlıkları, bacak çentiğinde düşey yük + sürükleme çifti (G-BEAM-CAP) | 0,027 |
+| Motor bağlantısı (8) | kafes çubuğu kolonu (Johnson-Euler) | 0,924 |
+| Paraşüt (17) | Ø8 Ti kilit pimi eğilmesi (P-SHACKLE-BEND) | 0,298 |
 | Yakıt bölmeleri (12) | FS-FUEL perdesi çekirdek kesmesi | 0,198 |
 | Taret (6) | kayar kapak tahriki | 8,01 |
-| Taşıma (3) | kızak yastığı altında çekirdek ezilmesi | 0,591 |
-| Gövde (10) | görev bölmesi taban şeridi burkulması (B-MIDFLOOR-BUCK) | 0,265 |
-| Çerçeveler (14) | alt motor ayağında yangın perdesi çekirdek kesmesi (FW-FOOT-CORE) | 0,002 |
+| Taşıma (3) | kızak yastığı altında çekirdek ezilmesi | 0,596 |
+| Gövde (10) | görev bölmesi taban şeridi burkulması (B-MIDFLOOR-BUCK) | 0,258 |
+| Çerçeveler (20) | alt motor ayağında yangın perdesi çekirdek kesmesi (FW-FOOT-CORE) | 0,014 |
 | Teçhizat (7) | faydalı yük tepsisi vidaları | 12,5 |
 
 ### 3.1 Kanat kesiti
 
 Kesit modeli düzlem kesitler varsayar: ana ve arka kiriş UD başlıkları, başlıkların üstünde dolu kaplama (1 mm), kirişler arasındaki kutu kaplamalarının dış ve iç yüzleri; D-burnu ve firar kenarı kaplamaları sayılmaz (başlık birim şekil değiştirmesi için muhafazakâr). Gövde içinde (y < 0,40) kaplama yerine orta kutu kapakları alınır. Her başlık bölgesi için o bölgenin altı istasyonunda bütün ölçütleri sağlayan en küçük kat sayısı aranır: başlık bası/çekme birim şekil değiştirmesi (3000 / 5000 µε), A-tabanı tahmini 0,85 Fcu / 0,85 Ftu ile gerilme, kaplama yüzü bası birim şekil değiştirmesi (2600 µε), delikli bası (OHC) ve yüz buruşması. Belirleyici ölçüt kaplamanın 2600 µε sınırıdır. Başlıklar saf UD'dir: hiçbir ana kiriş başlığından bağlantı elemanı geçmez (S1-05).
 
-**Eldiven bölgesi (y 0,40–0,70).** Kompozit dil, birleşim momentini pimlere kadar kendisi taşır: dilin momenti dış pimin dışında birleşim momenti + kesme × kol, pimler arasında iç pime doğru doğrusal olarak sıfıra iner. Eldiven kutusunun başlıkları bu yüzden toplam momentten dil momentinin çıkarılmışıyla boyutlandırılır (`structures.sizing.wing.main_cap.fork_zone`): y 0,55'te toplam 3592 N m'nin 1998 N m'si eldiven kutusundadır ve bölge 12 kata iner; iç pimin içinde (y 0,40–0,55) bütün moment kutudadır (33 kat). Eldiven ana kiriş gövdeleri aynı zamanda çatal kulaklarıdır (2 × 10 kat ±45; W-GLOVEWEB MS 7,74).
+**Eldiven bölgesi (y 0,40–0,70).** Kompozit dil, birleşim momentini pimlere kadar kendisi taşır: dilin momenti dış pimin dışında birleşim momenti + kesme × kol, pimler arasında iç pime doğru doğrusal olarak sıfıra iner. Eldiven kutusunun başlıkları bu yüzden toplam momentten dil momentinin çıkarılmışıyla boyutlandırılır (`structures.sizing.wing.main_cap.fork_zone`); iç pimin içinde (y 0,40–0,55) bütün moment kutudadır. Eldiven ana kiriş gövdeleri aynı zamanda çatal kulaklarıdır (2 × 10 kat ±45; W-GLOVEWEB MS 7,61).
 
-Kiriş gövdeleri (±45 PW) dış panelde ilk katman hasarı, 5200 µε kesme birim şekil değiştirmesi ve uzun levha kesme burkulmasıyla boyutlandırılır. Kutu kaplama panelleri bası + kesme etkileşimiyle (Rc + Rs² = 1, CLT D*, sandviç kesme düzeltmesi) ve kesme kıvrılmasıyla denetlenir (dış panel üst kutu kaplaması MS 0,034, orta kutu kapağı 0,035); kaburgalar Brazier ezilme yükünde sandviç kolon olarak.
+Kiriş gövdeleri (±45 PW) dış panelde ilk katman hasarı, 5200 µε kesme birim şekil değiştirmesi ve uzun levha kesme burkulmasıyla boyutlandırılır. Kutu kaplama panelleri bası + kesme etkileşimiyle (Rc + Rs² = 1, CLT D*, sandviç kesme düzeltmesi) ve kesme kıvrılmasıyla denetlenir; kaburgalar Brazier ezilme yükünde sandviç kolon olarak.
 
 ### 3.2 Dış panel birleşimi (y 0,70): pimli kompozit dil-çatal
 
-Düzeltme turunda yapıştırmalı metal dil-çatal bırakıldı (§5, S1-03) ve yerine planör uygulamasındaki pimli kompozit birleşim kondu (`structures.sizing.wing_joint`, `layout.chassis.wing_joint`):
+Düzeltme turu 1'de yapıştırmalı metal dil-çatal bırakıldı (§5, S1-03) ve yerine planör uygulamasındaki pimli kompozit birleşim kondu (`structures.sizing.wing_joint`, `layout.chassis.wing_joint`):
 
-* **Dil (YK250-WG-151, dış panel):** CFRP kiriş kökü 30 × 61 mm, 0,292 m kavrama; UD flanşlar 30 × 10 mm (dış panel ana kiriş başlıklarının devamı, kök kaburgasından 0,10 m boyunca 1:20 kalınlaşır), ±45 PW gövde 5 mm (25 kat), iki pim deliğinin çevresinde 30 mm genişlik × 50 mm boyunda dolu [±45/0/90] bloklar, yapıştırılmış 4130 burçlar 16 H8 × dış çap 22 × 30 mm.
+* **Dil (YK250-WG-151, dış panel):** CFRP kiriş kökü 30 × 61 mm, 0,292 m kavrama; UD flanşlar 30 × 10 mm kök kaburgasından dış pime kadar (dış panel ana kiriş başlıklarının devamı, kök kaburgasından 0,10 m boyunca 1:20 kalınlaşır), dış pimden iç pime doğru dil momentiyle birlikte doğrusal olarak **3 mm'ye incelir** (kat düşürmeler gövde tarafında, iç yüzde; eğim 1:26 ≤ 1:20; düzeltme turu 2); ±45 PW gövde 5 mm (25 kat), iki pim deliğinin çevresinde 30 mm genişlik × 50 mm boyunda dolu [±45/0/90] bloklar, yapıştırılmış 4130 burçlar 16 H8 × dış çap 22 × 30 mm.
 * **Çatal (YK250-CH-053, orta kesit):** eldivenin ana kiriş kutusu; 40 mm UD başlıklar (çatal boyunca 52 mm'ye genişler), 30,4 mm aralıklı iki ±45 PW gövde (kulaklar, 2 mm, 10 kat), pim bölgelerinde 10 mm'ye kalınlaştırılmış [±45/0/90] bloklar, yapıştırılmış 4130 burçlar 16 H8 × dış çap 22 × 10 mm.
-* **Ana pimler:** 2 × Ø16 Ti-6Al-4V, kiriş boyunca 184 mm aralıklı (P-MAIN1 y 0,463, P-MAIN2 y 0,645). Düşey kuvvet çifti R_iç 18,31 kN, R_dış 20,88 kN; burulma çifti F_T 354 N (limit, PHAA).
+* **Ana pimler:** 2 × Ø16 Ti-6Al-4V, kiriş boyunca 184 mm aralıklı (P-MAIN1 y 0,463, P-MAIN2 y 0,645). Düşey kuvvet çifti R_iç 18,54 kN, R_dış 21,13 kN; burulma çifti F_T 357 N (limit, PHAA).
 * **Arka kiriş:** dış panelin arka kiriş kök bağlantısındaki 7075 kulak (t 8 mm, genişlik 32 mm, e 16 mm = 2 D), birleşim kaburgasındaki yuva bağlantısının (YK250-CH-054) iki 4 mm levhası arasına girer ve düşey Ø8 Ti bilyalı kilit pimiyle tutulur. Kulak veter yönü kuvveti ve düzlem içi momentin açıklık yönü kuvvet çiftini taşır.
+* **Derinlik geçişi (VS2-04):** dış panel ana kiriş başlıkları kök bölmesinde, 0,10 m'lik kalınlaşma bölgesi boyunca dil flanşı hattına doğrusal bir rampayla iner (`structures.sizing.wing_joint.transition`); rampanın iki ucundaki kırılma kuvvetleri dil gövdesine (ezilme), başlık-gövde ara yüzeyine (kesme) ve birleşim kaburgasının 20 katlı dolu bandına verilir; kök bölmesinin ilk 0,12 m'sinde kaplamanın dış yüzüne bir kat 0/90 takviye konur.
 
-PHAA durumunda Mz 675 N m → F_y 2296 N; ana pimin bileşke yükü P_dış = 21,26 kN, arka pim 2,36 kN. Sonuçlar (MS): pim kesmesi 4,04, **pim eğilmesi 0,22** (Melcon-Hoblit kolu, plastik kazanç yok, × 1,5 × 1,5), pim–burç ezilmesi 5,92, dil burcu ezilmesi 0,82, **çatal kulağı burcu ezilmesi 0,21**, dil UD başlığı çekme / bası birim şekil değiştirmesi / A-tabanı gerilme 1,84 / **0,139** / 0,63, dil gövdesi kesmesi 0,16, çatal kulakları kesmesi 0,21; arka pim kesme / eğilme 10,4 / 3,27, arka kulak 13,7, kulak ezilmesi 8,04, yuva levhası 2,09, yuva bağlantısının kaburga ve gövde cıvataları ≥ 2,19.
+Sonuçlar (MS): pim kesmesi 3,98, **pim eğilmesi 0,208** (Melcon-Hoblit kolu, plastik kazanç yok, × 1,5 × 1,5), pim–burç ezilmesi 5,83, dil burcu ezilmesi 0,793, **çatal kulağı burcu ezilmesi 0,195**, dil UD başlığı kalınlık yönünde bası / bası birim şekil değiştirmesi / A-tabanı gerilme 1,81 / **0,125** / 0,607, incelen başlık boyunca birim şekil değiştirme 0,125, dil gövdesi kesmesi 0,147, çatal kulakları kesmesi 0,198; geçiş rampası: gövde ezilmesi 1,79, ara yüzey kesmesi 1,04, kaburga bandı 0,248, başlık 0,425, **kaplama 0,014**; arka pim kesme / eğilme 10,1 / 3,19, arka kulak 6,68, kulak ezilmesi 7,87, yuva levhası 2,07, yuva bağlantısının kaburga ve gövde cıvataları ≥ 2,13.
 
 ### 3.3 Kuyruk: stabilatör düğüm bağlantısı (VPK-01 ile birlikte)
 
-Yerleşim evresinin FS3738 halka çerçevesine cıvatalanan iç yatak yuvası kurulamıyordu (30 mm'lik halka bandı 25 mm'lik mil deliğini ve yuva cıvatalarını taşıyamaz). Yerine her yanda bir **işlenmiş 7075-T651 düğüm bağlantısı (F-SPINDLE-NODE, YK250-CH-095)** kondu: yangın perdesinin arka yüzünden 92 mm geriye konsol, 8 mm U biçimli taban flanşı 7 × M5 12.9 ile perde yığınından geçer (önde 7075 destek levhası); iç yanak 28 mm, iç yatak göbeği (61805-2RS, Ø37) burada; dış yanak 10 mm, kök parçası arka kiriş kök bağlantısını 4 × M6 12.9 ile (76 × 62 mm dikdörtgen, çekme + kesme) taşır ve kol süpürmesinin dışında kalır. FS3738 artık düğümün altında biten bir alt U halkadır.
+Yerleşim evresinin FS3738 halka çerçevesine cıvatalanan iç yatak yuvası kurulamıyordu (30 mm'lik halka bandı 25 mm'lik mil deliğini ve yuva cıvatalarını taşıyamaz). Yerine her yanda bir **işlenmiş 7075-T651 düğüm bağlantısı (F-SPINDLE-NODE, YK250-CH-095)** kondu: yangın perdesinin arka yüzünden geriye konsol, 8 mm U biçimli taban flanşı 7 × M5 12.9 ile perde yığınından geçer (önde 7075 destek levhası); iç kol 3 mm gövdeli, iç yatak göbeği (61805-ZZ, Ø37) burada; dış yanak 7 mm, kök parçası arka kiriş kök bağlantısını 4 × M6 12.9 ile (çekme + kesme) taşır ve kol süpürmesinin dışında kalır. FS3738 artık düğümün altında biten bir alt U halkadır.
 
-* **Mil:** Ti-6Al-4V 25 × 1,5 mm (MS 0,79; kama kesiti 2,18). **Kök yuvası:** 7075 kovan 31 × 3 mm, 0,10 m (ezilme 79, boru 1,41, dış çap 16,4).
-* **Düğüm:** kök parçası cıvataları 9,54, kök cıvataları ezilmesi 93, dış yanak burulması (b t³/3; kök momenti yanaktan tabana) 2,42, iç yanak 8,09, iç yatak göbeği halkası 0,53, taban cıvata grubu (düzlem içi moment + çekme) 3,94, perde ezilmesi 2,07, **perde sandviçi çekirdek kesmesi 0,22**.
-* **Yataklar (tedarik gereksinimi):** iç 1,50 kN, dış 2,22 kN nihai statik yük sayısı (T-BRG-IN / T-BRG-OUT).
+* **Mil:** Ti-6Al-4V 25 × 1,2 mm (MS 0,528); kama milin dış ucunda, yuva geçmesinin son 20 mm'sinde (kama kesiti burulma 1,31, kama kökünde eğilme + burulma 0,975). **Kök yuvası:** 7075 kovan 29 × 2 mm, 0,10 m (ezilme 81,6, boru 0,578, dış çap 15,8).
+* **Düğüm:** kök parçası cıvataları 9,86, kök cıvataları ezilmesi 66,8, dış yanak burulması (b t³/3; kök momenti yanaktan tabana) 0,726, iç kol 3,70, iç yatak göbeği halkası 0,584, taban cıvata grubu (düzlem içi moment + çekme) 4,04, perde ezilmesi 2,14, **perde sandviçi çekirdek kesmesi 0,244**.
+* **Yataklar (tedarik gereksinimi):** iç 1,45 kN, dış 2,15 kN nihai statik yük sayısı (T-BRG-IN / T-BRG-OUT).
+* **Sıcaklık (PK2-09):** düğüm silindir kafaları bölgesindedir; T-NODE-TEMP satırı metal satırlarının gerektirdiği dayanım oranını raporlar (0,63); 7075'in düğüm sıcaklığındaki dayanımı açık konudur (§9).
 
-### 3.4 Paraşüt kayışı: sırt omurga kanalı (S1-04)
+### 3.4 Paraşüt kayışı: sırt omurga kanalı (S1-04, VS2-01)
 
-Kayışın x bileşeni çerçevelere düzlem dışı yük veriyordu ve onu taşıyan boyuna eleman yoktu. Yeni yük yolu: iki U-kulak bağlantısı (F-RISER-FWD / F-RISER-AFT) FS1810 ile arka kiriş çerçevesi arasındaki **sırt omurga kanalının (M-SPINE)** iki ucundadır. Kanal 4 kat PW (0,8 mm), U 44 × 24 mm, 60 mm flanşlı; iki ayağın karşıt x bileşenleri kanalda çubuk kuvvetidir (kayış üçgenini kapatır), net x bileşeni kanal flanşlarına 25 mm aralıkla vidalanan sabit görev bölmesi üst kaplamasıyla (P-MB-UPPER) kesme olarak kenar uzun kirişlerine geçer. x bileşeni 4 × M5 12.9 (eksen z) ile kanalın 16 katlı taban takviyesine, z bileşeni 2 × M5 12.9 (eksen x) ile çerçevenin 32 katlı (6,4 mm) dolu bandına girer. Kilit pimi Ø6 4130, kulaklar 2 × 6 mm, e 12 mm = 2 D.
+Kayışın x bileşeni çerçevelere düzlem dışı yük veriyordu ve onu taşıyan boyuna eleman yoktu. Yük yolu: iki U-kulak bağlantısı (F-RISER-FWD / F-RISER-AFT) FS1810 ile arka kiriş çerçevesi arasındaki **sırt omurga kanalının (M-SPINE)** iki ucundadır. Kanal 4 kat PW (0,8 mm), U 44 × 24 mm, 60 mm flanşlı; iki ayağın karşıt x bileşenleri kanalda çubuk kuvvetidir (kayış üçgenini kapatır), net x bileşeni kanal flanşlarına 25 mm aralıkla vidalanan sabit görev bölmesi üst kaplamasıyla (P-MB-UPPER) kesme olarak kenar uzun kirişlerine geçer. x bileşeni ve kilit piminin taban üstündeki yüksekliğinden doğan **bağlantı momenti** 4 × M4 12.9 (eksen z) ile kanalın 16 katlı taban takviyesine, somunlar takviyenin altındaki 48 × 40 × 3 mm 7075 pul levhasında; z bileşeni 2 × M5 12.9 (eksen x) ile çerçevenin 32 katlı (6,4 mm) dolu bandına girer. Düzeltme turu 2'de (VS2-01) kilit pimi Ø8 Ti-6Al-4V'ye, kayış ucu 4130 makaraya (OD 12 × 5 mm, tanımlı ip sonlandırması) çevrildi ve çatal sıkı yapıldı (kulaklar 2 × 6 mm, boşluklar 0,5 mm); pim eğilmesi Melcon-Hoblit koluyla denetlenir.
 
-Sonuçlar (MS): kilit pimi 0,475, kulak ezilmesi 1,75, kulak 5,45, **çerçeve cıvataları 0,38**, çerçeve bandı ezilmesi 0,70, çerçeve gövdesi 0,85, kanal cıvataları 1,51, kanal takviyesi ezilmesi 0,96, kanal eksenel 1,18, kolon 2,26, yerel 1,17, kaplama vidaları 5,78 / ezilme 4,86, kaplama kesmesi 4,69.
+Sonuçlar (MS): kilit pimi kesme 3,00, **eğilme 0,298**, makara ezilmesi 1,11, kulak ezilmesi 2,55, kulak 3,38, **çerçeve cıvataları 0,380**, çerçeve bandı ezilmesi 0,699, çerçeve gövdesi 0,852, taban cıvataları (kesme + moment çekmesi) 0,909, pul levhası çevresinde sökülme 0,782, kanal takviyesi ezilmesi 0,570, kanal eksenel 1,19, kolon 2,62, yerel 1,17, kaplama vidaları 5,78 / ezilme 4,87, kaplama kesmesi 4,41.
 
-### 3.5 Çerçeveler ve yangın perdesi (S1-06)
+### 3.5 Çerçeveler ve yangın perdesi (S1-06, VS2-03, VS2-06)
 
-* **FS-GEAR ve FS-RS:** takım kirişi tepkisinin girdiği yerde çerçeve gövdesi kesmesi, kesme kıvrılması ve bağlantı ezilmesi (FS-GEAR 1,71 / 1,67 / 4,13; FS-RS 2,27 / 2,23 / 5,19), takım yan yükünün kuyu tavanına girdiği 4 × M6 cıvatada bant ezilmesi 23,2.
-* **FS-MS / FS-RS halkaları:** kutu dışında, gövde yanı bağlantısında gövde ataleti kesmesi (1,56 / 2,08; FS-MS'de yüz başına bir ±45 kat).
-* **Yangın perdesi alt ayakları:** 2207 N düzlem dışı tepki 6,8 mm'lik sandviçte taşınamıyordu. Ayakların çevresine ROHACELL 71 WF çekirdek parçası ve 24 katlı (4,8 mm), r 66 mm dolu bant kondu; ayak destek levhası 56 × 32 × 5 mm. Merkez yamalı basit mesnetli levha momentiyle (Timoshenko) bant eğilmesi 0,40, yüzler 0,215, **çekirdek kesmesi 0,002**; ayak cıvatalarının bantta ezilmesi 1,48 (E-FOOT-BR). Üst ayaklar köşe bağlantısıyla (F-FW-CORNER) sırt uzun kirişi ekine bağlanır (FW-UPPER-SPLICE 2,88).
-* **Ana yukarı kilit:** kanca bağlantısı kuyu tavanının dökme insertlerine 4 × M5; dökme yarıçapı 12 mm, kanca kaçıklığı 6 mm ile insert sökülmesi MS 0,35 (ilk tasarımda −0,18).
-* **FS3738'de omurga desteği:** kuyruk tamponu çarpmasında arka omurga perde ucunda mafsallı ise FS3738 10,25 kN düşey tepki taşımalıdır; 2,0 mm 2024-T3 alt U halkası buna göre **boyutlandırılmadı** (FR-3738-KEEL bilgi satırı, açık konu §8).
+* **FS-GEAR ve FS-RS:** takım kirişi uç tepkisinin (sürükleme çifti M_y / L dahil, VS2-02) girdiği yerde çerçeve gövdesi kesmesi, kesme kıvrılması ve bağlantı ezilmesi (FS-GEAR 0,297 / 0,278 / 2,07; FS-RS 0,251 / 0,232 / 1,96), takım yan yükünün kuyu tavanına girdiği 4 × M6 cıvatada bant ezilmesi 23,2.
+* **FS-MS / FS-RS halkaları:** kutu dışında, gövde yanı bağlantısında gövde ataleti kesmesi (1,61 / 1,96; FS-MS'de yüz başına bir ±45 kat).
+* **Yangın perdesi alt ayakları:** düzlem dışı ayak tepkisi 6,8 mm'lik sandviçte taşınamıyordu. Ayakların çevresine ROHACELL 71 WF çekirdek parçası ve **22 katlı (4,4 mm), r 82 mm** dolu bant kondu; ayak destek levhası 56 × 32 × 5 mm. Merkez yamalı basit mesnetli levha momentiyle (Timoshenko) bant eğilmesi 0,046, yüzler 0,478, **çekirdek kesmesi 0,014**; ayak cıvatalarının bantta ezilmesi 1,49 (E-FOOT-BR). Çekirdek kesmesi bant kenarında düzgün değildir (VS2-06): en yakın kenar desteği ayak yükünün daha büyük payını çeker; gözden geçirenin levha kesme dağılımından tepe / ortalama 1,23 alındı (kendi sonlu eleman hesabımız yok). Düzeltme turu 2'nin yeniden kapanışında ayrıca, kenar çemberini kesen perde kesiklerinin payı çevreden düşülür: motor demeti kesiği C-FW-HARN ilk yerinde (z 0,02–0,06) çemberin %5,7'sini kesiyor ve payı −0,008'e düşürüyordu; kesik ayakların altına (z −0,035…0,000) indirildi ve çemberden çıktı. Üst ayaklar köşe bağlantısıyla (F-FW-CORNER) sırt uzun kirişi ekine bağlanır (FW-UPPER-SPLICE 2,89).
+* **Ana yukarı kilit:** kanca bağlantısı kuyu tavanının dökme insertlerine 4 × M5; insert sökülmesi MS 0,359 (ilk tasarımda −0,18).
+* **FS3738'de omurga desteği (VS2-03):** kuyruk tamponu çarpmasında arka omurganın FS3738'deki 10,20 kN düşey tepkisini artık talaşlı 7075-T651 I kesitli bir alt parça (60 × 20 × 1,6 / 2,0 mm, halka bacakları arasında y ±0,15) taşır: eğilme 0,142, gövde kesmesi 3,40; arka omurga parçanın gövdesine 4 × M5 12.9 ile (kesme 1,36, ezilme 1,27), parçanın uçları halka bacaklarına 3'er × M5 12.9 ile (kesme 2,54, ezilme 2,41) bağlanır.
 
 ### 3.6 Diğer elemanlar
 
-* **Orta kutu:** gövdeler = FS-MS / FS-RS çerçeveleri, kutu-çerçeve bağlantıları, çevron kırığı (CT-KINK: başlık başına 17,0 kN veter yönü kuvvet; kırık bağlantısının ve orta hat kaburgasının detay tasarımına yük olarak verilir).
-* **Kuyruk:** dikey kirişleri ve kök bağlantıları (köşe bağlantısının çatal kulağı), tail_skin kaplamaları, ventral kök kulakları ve arka omurga kirişi (7075 talaşlı U 24 × 40 × 2,5 mm, kaporta yarımları için alt oturma flanşlarıyla).
-* **İniş takımı:** ana bacak (7075 boru 42 × 3,5 mm), mafsal kulağı (e/D 1,14 < 2: kulak istisnası, Bruhn kesme-ezilme gerçek e/D'de, MS 2,11; S1-09), mafsal muylusu, burun bacağı (dış çap 36 mm; takım zarfı genişliği 36 mm'ye çıkarıldı, S1-08), burun mafsalı (iç yüzdeki 7075 bloklar, 16 H7 flanşlı burç dış çapı 22, kesme-ezilme 11,7), EMA gereksinimleri, iç kapak menteşeleri.
-* **Motor bağlantısı:** kafes çubukları (12,7 × 0,89 mm 4130), sönümleyici halkası, karter cıvataları, yangın perdesi ayakları, sönümleyici nihai kapasite gereksinimi (1,80 kN).
-* **Gövde:** görev bölmesi tabanının ortası sökülebilir ekipman tepsisine (TR-MISSION) açılan çerçeveli bir kesiktir; iki dış şerit ön gövdenin alt başlığıdır ve kesik kenarlarındaki iki yapıştırılmış şapka takviyeyle (PW 4 kat, 20 × 15 mm) burkulmaya karşı desteklenir (B-MIDFLOOR 0,93, burkulma 0,265). Arka gövdede sırt ve kenar uzun kirişleri, sabit kaplamalar ve vida sıraları.
+* **Orta kutu:** gövdeler = FS-MS / FS-RS çerçeveleri, kutu-çerçeve bağlantıları. **Çevron kırığı (VS2-03):** başlık başına 17,3 kN veter yönü kırılma kuvveti (CT-KINK) her başlıkta bir 7075 kırık bağlantısıyla (2,0 mm levha 40 × 100 mm, 30 mm kulak) orta hat kaburgasının 16 katlı dolu bandına 5 × M6 Ti ile verilir: cıvatalar 1,84, bant ezilmesi 0,286, kaburga bandı kesmesi 0,246, levha 0,238.
+* **Kuyruk:** dikey kirişleri ve kök bağlantıları (köşe bağlantısının çatal kulağı), tail_skin kaplamaları, ventral kök kulakları ve arka omurga kirişi (7075 talaşlı U 24 × 40 × 2,5 mm, kaporta yarımları için alt oturma flanşlarıyla; T-AFTKEEL 0,128).
+* **İniş takımı:** ana bacak (7075 boru 42 × 3,5 mm; 1,00), mafsal kulağı (e/D < 2: kulak istisnası, Bruhn kesme-ezilme gerçek e/D'de, 1,92; S1-09), mafsal muylusu (eğilme 1,95), **mafsal bağlantısı (VS2-02)**: 9 elastik cıvatalı altı serbestlik dereceli cıvata grubu (5 × M6 12.9 y ekseninde takım kirişinin yapıştırılmış flanşlı ankrajlarına, 4 × M6 12.9 z ekseninde kuyu tavanının kubbe somun plakalarına; 1,07, ezilme 0,868, sökülme 1,67 / 2,84); takım kirişi başlıkları 0,027, duvarı 0,251, çentik köprüsü 9,55, uç cıvataları 4,46; M_x kiriş duvarı ile kuyu tavanı arasında tanımlı bir yoldan (G-BEAM-TORSION 0,801, G-ROOF-TORSION 0,248). **Aşağı kilit (VS2-07):** Ø10 4130 kilit cıvatası sıkı çatalda çift kesmede, r 35 mm (kesme 3,49, eğilme 0,561). Burun bacağı (dış çap 36 mm; 3,29), burun mafsalı (iç yüzdeki 7075 bloklar, kesme-ezilme 11,6), çekme yükü altında burun bacağı 4,91 ve mafsal blokları 38,0 (VS2-12), EMA gereksinimleri, iç kapak menteşeleri. **Burun kapakları (PK2-13):** iki istiridye kapağı tek bir Volz DA 22 (EQ-NDOORACT) orta hattaki bir kol ve iki bağlantı çubuğuyla sürer; takım işletme hızında iki kapağın menteşe momentlerinin toplamı DA 22 anma torkuyla karşılaştırılır (G-NDOOR-DRIVE 0,899).
+* **Motor bağlantısı:** kafes çubukları (12,7 × 0,89 mm 4130; kolon 0,924), sönümleyici halkası, karter cıvataları, yangın perdesi ayakları, sönümleyici nihai kapasite gereksinimi (1,80 kN).
+* **Gövde:** görev bölmesi tabanının ortası sökülebilir ekipman tepsisine (TR-MISSION) açılan çerçeveli bir kesiktir; iki dış şerit ön gövdenin alt başlığıdır ve kesik kenarlarındaki iki yapıştırılmış şapka takviyeyle (PW 4 kat, 20 × 15 mm) burkulmaya karşı desteklenir (B-MIDFLOOR 0,910, burkulma 0,258). Arka gövdede sırt ve kenar uzun kirişleri, sabit kaplamalar ve vida sıraları.
 * **Yakıt bölmeleri:** FS-FUEL perdesi, ön hücre tabanı, kuyu tavanı, raylar ve kuyu omurga gövdeleri.
 
 ---
@@ -188,17 +191,17 @@ Boyutlandırma evresinin birincil kanat kaplaması `0/90, ±45, 0/90 / 5 mm ROHA
 * `layups.wing_box_skin_upper`: kirişler arasındaki üst kaplama y 2,20'ye kadar 6 mm çekirdek (0,6/6/0,4 mm). Dış yüz değişmez; iç yüz başlık kenarlarında 1 mm basamak yapar. Ek kütle 45 g (iki kanat).
 * Kaplama bükülmeye daha az katıldığı için başlıklar kalınlaştı; bölgeler 0,10 m'ye inceltildi, kat bırakma eğimi 1:20. Arka kiriş başlıkları 2 kattır.
 
-Ana kiriş başlıkları (UD MTM45-1/AS4, kat 0,1397 mm; gövde ve eldivende 40 mm, dış panelde 30 mm genişlik; düzeltme turu 1 sonrası):
+Ana kiriş başlıkları (UD MTM45-1/AS4, kat 0,1397 mm; gövde ve eldivende 40 mm, dış panelde 30 mm genişlik; düzeltme turu 2 sonrası):
 
-| y (m) | 0–0,40 | 0,40–0,55 | 0,55–0,70 | 0,70–0,80 | 0,80–0,90 | 0,90–1,00 | 1,00–1,10 | 1,10–1,20 | 1,20–1,30 | 1,30–1,40 |
-|---|---|---|---|---|---|---|---|---|---|---|
-| kat | 57 | 33 | 12 | 35 | 34 | 32 | 30 | 27 | 25 | 23 |
+| y (m) | 0,00–0,40 | 0,40–0,55 | 0,55–0,70 | 0,70–0,80 | 0,80–0,90 | 0,90–1,00 | 1,00–1,10 | 1,10–1,20 | 1,20–1,30 |
+|---|---|---|---|---|---|---|---|---|---|
+| kat | 58 | 33 | 12 | 36 | 35 | 33 | 30 | 28 | 25 |
 
-| y (m) | 1,40–1,50 | 1,50–1,60 | 1,60–1,70 | 1,70–1,80 | 1,80–1,90 | 1,90–2,00 | 2,00–2,20 | 2,20–3,60 |
+| y (m) | 1,30–1,40 | 1,40–1,50 | 1,50–1,60 | 1,60–1,70 | 1,70–1,80 | 1,80–1,90 | 1,90–2,00 | 2,00–3,60 |
 |---|---|---|---|---|---|---|---|---|
-| kat | 21 | 19 | 17 | 15 | 13 | 11 | 10 | 10 (en az, 40 mm² ≈ boyutlandırma modelinin alt sınırı) |
+| kat | 23 | 21 | 20 | 17 | 15 | 13 | 12 | 10 (en az, 40 mm² ≈ boyutlandırma modelinin alt sınırı) |
 
-Ana kiriş gövdesi (±45 PW): y 0,70–1,30 6 kat, 1,30–1,95 5 kat, 1,95–2,70 4 kat, 2,70–3,60 3 kat. Arka kiriş gövdesi 3 kat. Kesin değerler `structures.sizing.wing.main_cap.zones` ve `main_web.zones` alanlarındadır. 0,55–0,70 bölgesinin 12 kata inmesi §3.1'deki dil momentinden gelir.
+Ana kiriş gövdesi (±45 PW): y 0,70–1,30 6 kat, y 1,30–1,95 5 kat, y 1,95–2,70 4 kat, y 2,70–3,60 3 kat. Arka kiriş gövdesi 3 kat. Kesin değerler `structures.sizing.wing.main_cap.zones` ve `main_web.zones` alanlarındadır. 0,55–0,70 bölgesinin ince kalması §3.1'deki dil momentinden gelir.
 
 ### 4.2 Orta kanat kutusu
 
@@ -215,18 +218,21 @@ Yapı evresinde 7075 dil (I-kesit) ve 7075 çatal, kiriş başlıklarına EA 939
 | M-AFTKEEL arka omurga | 2024-T3 şekillendirilmiş U 24 × 40 × 1,6 mm | 7075-T651 talaşlı U 24 × 40 × 2,5 mm, iki alt oturma flanşı 26 × 1,6 mm | tampon yükünde MS −0,53; flanşlar alt kaporta yarımlarının oturma yüzeyi (VPK-05) |
 | M-WELLROOF kuyu tavanı / arka hücre tabanı | rib_panel 0,4/6/0,4 (51 WF) | `fuel_floor_wellroof` 0,6/5,6/0,6 (71 WF), aynı 6,8 mm | yakıt basıncında yüz birim şekil değiştirmesi ve çekirdek kesmesi |
 | M-WELLKEEL (yeni) | — | iki 1,0 mm PW gövde (y ±0,0105…0,0115), 0,12 m yükseklik | kuyu tavanı açıklığını yarıya indirir; aralarında orta hat kablo kanalı |
-| M-MIDFLOOR görev bölmesi tabanı | rib_panel düz panel + orta hat şapka takviyesi | ortada TR-MISSION tepsi kesiği (y ±0,125), kesik kenarlarında iki yapıştırılmış şapka takviye | ekipmana alttan erişim (VPK-03); dış şeritler ön gövdenin alt başlığı (B-MIDFLOOR-BUCK 0,265) |
+| M-MIDFLOOR görev bölmesi tabanı | rib_panel düz panel + orta hat şapka takviyesi | ortada TR-MISSION tepsi kesiği (y ±0,125), kesik kenarlarında iki yapıştırılmış şapka takviye | ekipmana alttan erişim (VPK-03); dış şeritler ön gövdenin alt başlığı |
 | M-FWDDECK ön hücre tabanı | — | yük tepsisi rayları (6061-T6 T 20 × 20 × 2,5 mm, y ±0,10) güverte takviyesi | güverte açıklığı yarıya iner |
+| M-DECK-NOSE aviyonik güvertesi | 6,8 mm sandviç | omurga yarığının üstünde 6 katlı (1,2 mm) dolu şerit, iki yanda sandviç | toplanmış burun tekerine 12 mm açıklık (C05, düzeltme turu 2) |
 | F-SPINDLE-NODE (düğüm) | FS3738 halkasına 6 × M5 ile bağlı yatak yuvası | yangın perdesine 7 × M5 ile bağlı işlenmiş 7075 düğüm, iki yanak | eski yuvanın bağlanacağı gövde yoktu (VPK-01) |
-| Stabilatör mili / kök yuvası | Ti-6Al-4V 25 × 2,0 mm / kök yuvası ayrı denetlenmiyordu | Ti-6Al-4V 25 × 1,5 mm / 7075 kovan 31 × 3 mm, 0,10 m (T-SOCKET-*) | mil hafifletildi (MS 0,79), kök yuvası ayrı satırlarla denetlenir (boru MS 1,41) |
+| Stabilatör mili / kök yuvası | Ti-6Al-4V 25 × 2,0 mm / kök yuvası ayrı denetlenmiyordu | Ti-6Al-4V 25 × 1,2 mm, kama dış uçta / 7075 kovan 29 × 2 mm, 0,10 m (T-SOCKET-*) | mil hafifletildi, kama kökü ayrı satırla (VS2-08) |
 | M-SPINE sırt omurga kanalı | kaplamanın parçası (yırtılır örtü) | yapısal kanal 4 kat PW, U 44 × 24, 60 mm flanş | kayış x bileşeninin yük yolu (S1-04) |
-| Yangın perdesi alt ayak bölgesi | düz sandviç | 71 WF çekirdek parçası + 24 katlı r 66 mm dolu bant | düzlem dışı ayak tepkisi (S1-06) |
+| Yangın perdesi alt ayak bölgesi | düz sandviç | 71 WF çekirdek parçası + 22 katlı r 82 mm dolu bant | düzlem dışı ayak tepkisi (S1-06, VS2-06) |
+| FS3738 alt parçası | 2,0 mm 2024-T3 U halka parçası (yer tutucu 0,10 kg) | talaşlı 7075 I 60 × 20 × 1,6 / 2,0 mm | omurga destek tepkisi (VS2-03) |
+| Yangın perdesi paslanmaz katmanı | 0,5 mm AISI 304, 7,5 mm hava boşluğu, kütle model payında | 0,4 mm AISI 304 (≥ 0,38 mm, testsiz yangın dayanımı), 7,6 mm hava boşluğu, kütlesi aşağıdan yukarı | kütle kapanışı (düzeltme turu 2, §7) |
 
 ---
 
 ## 5. Düzeltme turu 1: yapı bulguları
 
-Her bulgu önce yeniden üretildi, sonra düzeltildi; hiçbir kontrol, test ya da gereksinim gevşetilmedi.
+Her bulgu önce yeniden üretildi, sonra düzeltildi; hiçbir kontrol, test ya da gereksinim gevşetilmedi. Sonuç sütunu o turun değerlerini verir; güncel değerler §3'tedir.
 
 | Bulgu | Yeniden üretim | Düzeltme | Sonuç |
 |---|---|---|---|
@@ -235,49 +241,82 @@ Her bulgu önce yeniden üretildi, sonra düzeltildi; hiçbir kontrol, test ya d
 | S1-03 yapıştırma yöntemi ve katsayısı geçersiz | doğrulandı | yapıştırmalı metal birleşim kaldırıldı, pimli kompozit birleşim (§4.3) | J-BOND satırları yok; yük yolu tümüyle pimli |
 | S1-04 kayış x bileşeni çerçeve dışına | doğrulandı | sırt omurga kanalı M-SPINE + vidalı görev bölmesi üst kaplaması (§3.4) | P-* en küçük 0,38 |
 | S1-05 UD başlıkta yarı izotrop ezilme | doğrulandı | başlıklardan bağlantı elemanı kaldırıldı; UD malzemeden ezilme değeri silindi; burçlu delikler ±45 bloklarda, OHC ile | I-UD-BEARING arayüz denetimi |
-| S1-06 yoğun yük alan çerçeveler denetlenmemiş | doğrulandı | 14 satırlık "çerçeveler" grubu (FS-GEAR, FS-RS, FS-MS/RS halkaları, yangın perdesi ayakları, köşe eki), yukarı kilit, düğüm taban cıvataları | en küçük 0,002 (FW-FOOT-CORE); FS3738 omurga desteği açık konu |
-| S1-07 açık konuda eski kırık kuvveti | doğrulandı | açık konu metni CT-KINK değerinden üretilir | 17,0 kN her yerde |
+| S1-06 yoğun yük alan çerçeveler denetlenmemiş | doğrulandı | 14 satırlık "çerçeveler" grubu (FS-GEAR, FS-RS, FS-MS/RS halkaları, yangın perdesi ayakları, köşe eki), yukarı kilit, düğüm taban cıvataları | en küçük 0,002 (FW-FOOT-CORE); FS3738 omurga desteği açık konu (turu 2'de kapandı) |
+| S1-07 açık konuda eski kırık kuvveti | doğrulandı | açık konu metni CT-KINK değerinden üretilir | CT-KINK değeri her yerde aynı |
 | S1-08 burun bacağı zarfı | doğrulandı | `landing_gear.nose.leg_frontal_width` 0,035 → 0,036 m (üretici `NOSE_LEG_WIDTH`) | sizing ve layout_check takım zarfları yeni genişlikte yeşil |
-| S1-09 kulak kenar mesafeleri | doğrulandı | kayış U-kulağı e = 2 D (Ø6 pim, e 12 mm); mafsal ve burun kulakları kulak istisnası olarak Bruhn kesme-ezilmesiyle gerçek e/D'de | G-TRUN-BR 2,11, P-LUG-BR 1,75 |
+| S1-09 kulak kenar mesafeleri | doğrulandı | kayış U-kulağı e ≈ 2 D; mafsal ve burun kulakları kulak istisnası olarak Bruhn kesme-ezilmesiyle gerçek e/D'de | G-TRUN-BR 2,11, P-LUG-BR 1,75 |
 | S1-10 `layout_check --check` dosya yazıyor | doğrulandı | `--check` salt okunur; çıktılarda çalışma süresi yok | testle denetlenir (dosya sağlamaları değişmez) |
 
 ---
 
-## 6. Kütle ve bütçe
+## 6. Düzeltme turu 2: yapı bulguları
+
+İkinci bağımsız doğrulamanın yapı bulguları (VS2-01 … VS2-12) önce yeniden üretildi, sonra düzeltildi. Hiçbir kontrol, test ya da gereksinim gevşetilmedi; her düzeltme yeni bir emniyet payı satırı ya da sıkılaştırılmış bir hesap olarak `structures.py`'de durur ve her yeni denetimin kasıtlı olarak bozulmuş bir girdide hatayı yakaladığı testle gösterilir. Bu turun ek kütlesi ilk kapanışta kütle bütçesini aşırdı (boş kütle 102,46 kg; R-02b < 9,5 h); bütçe yeni yapı ve yerleşim kararlarıyla yeniden kapatıldı (§7).
+
+| Bulgu | Yeniden üretim | Düzeltme | Sonuç (MS) |
+|---|---|---|---|
+| VS2-01 kayış kilit pimi yalnız kesmede denetlenmiş; bağlantı momenti taşınmıyor | doğrulandı: Ø6 4130 pim eğilmede MS −0,37 … −0,67; Fz × kolun momenti hiçbir satırda yok | Ti-6Al-4V Ø8 pim, 4130 kayış makarası (ip sonlandırması tanımlı), sıkı çatal (kulak 6 mm, boşluk 0,5 mm); P-SHACKLE-BEND (Melcon-Hoblit kolu, plastik kazanç yok); bağlantı momenti 4 × M4 12.9 taban cıvatasına çekme + 48 × 40 × 3 mm 7075 pul levhasıyla sökülme (P-SPINE-BOLTS, P-SPINE-PULL); layout_check C13 güncel bağlantı modelinde ve "ilk kesim" olarak işaretli | P-SHACKLE-BEND 0,298, P-SPINE-BOLTS 0,909, P-SPINE-PULL 0,782, P-SPOOL-BR 1,11 |
+| VS2-02 mafsal bağlantısı cıvataları, takım kirişi ve çerçeve uçları bacak momentlerini görmüyor | doğrulandı: sürükleme çifti M_y ve M_x hesapta yok | F-TRUNNION 9 elastik cıvatalı (5 × M6 12.9 y ekseninde kiriş ankrajlarına, 4 × M6 12.9 z ekseninde kuyu tavanının sızdırmaz kubbe somun plakalarına) altı serbestlik dereceli cıvata grubu; kesme / çekme etkileşimi ve CFRP bandın sökülmesi; kiriş ve çerçeve uç tepkilerine M_y / L çifti; M_x kiriş duvarı ile kuyu tavanı arasında tanımlı bir yoldan (G-BEAM-TORSION, G-ROOF-TORSION; tavana her yüzde bir kat 0/90 takviye); cıvata tanımı kod ve yerleşimde aynı (M6 12.9) | G-FIT-BOLTS 1,07, G-FIT-BR 0,868, G-BEAM-CAP 0,027, G-BEAM-WEB 0,251, FR-GEAR-WEB 0,297, FR-GEAR-CRIMP 0,278, G-ROOF-TORSION 0,248 |
+| VS2-03 kuyruk tamponu yük yolu kapanmıyor; kırık bağlantısı boyutlandırılmamış | doğrulandı: FS3738'in omurga tepkisi boyutlandırılmamış, kırık bağlantısı 0,10 kg yer tutucu | FS3738 U halkasının alt parçası talaşlı 7075-T651 I kesit (60 × 20 × 1,6 / 2,0 mm, y ±0,15 arası), arka omurga 4 × M5 12.9 ile gövdesine, uçları 3 × M5 12.9 ile halka bacaklarına; çevron kırığı için başlık başına bir 7075 bağlantı (2,0 mm levha 40 × 100 mm, 30 mm kulak, 5 × M6 Ti orta hat kaburgasının 16 katlı bandına); kütleler `structures.sizing.mass`'ta | T-AFTKEEL 0,128, FR-3738-SEG 0,142, FR-3738-SEG-SH 3,40, CT-KINK-BR 0,286, CT-KINK-RIB 0,246, CT-KINK-PLATE 0,238 |
+| VS2-04 dil başlığından dış panel başlıklarına derinlik geçişi tanımsız | doğrulandı: başlık başına yaklaşık 16 mm basamak | geçiş kök bölmesinde 0,10 m üzerinde doğrusal rampa (`structures.sizing.wing_joint.transition`); iki uçtaki kırılma kuvvetleri dil gövdesinde ezilme, başlık-gövde ara yüzey kesmesi ve birleşim kaburgasının 20 katlı bandı olarak; azalan kol boyunca başlık ve kaplama birim şekil değiştirmesi; ilk 0,12 m'de dış yüze bir kat 0/90 kaplama takviyesi | J-TRANS-WEB 1,79, J-TRANS-ILSS 1,04, J-TRANS-RIB 0,248, J-TRANS-CAP 0,425, J-TRANS-SKIN 0,014 |
+| VS2-05 atalet rahatlatması büyüme payını sayıyor | doğrulandı: rahatlatma büyüme paylı kalemlerden | rahatlatma en küçük inandırıcı kanat kütlesiyle: kalemlerin büyüme payı ve 1,05 model katsayısı olmayan taban kütleleri (§2.1); başlık bölgeleri yeniden boyutlandırıldı | en küçük W-CAP 0,0002 (W-CAP-07) |
+| VS2-06 ayak bandı çekirdek kesmesi düzgün varsayılmış | doğrulandı | tepe / ortalama 1,23 (gözden geçirenin levha kesme dağılımı; kendi sonlu eleman hesabımız yok); bant yarıçapı 66 → 82 mm, 22 kat; yeniden kapanışta ayrıca kenar çemberini kesen perde kesiklerinin çevreden düşülmesi eklendi ve motor demeti kesiği C-FW-HARN ayakların altına indirildi (kesik çemberin %5,7'sini kesiyordu: MS −0,008) | FW-FOOT-CORE 0,014, FW-FOOT-LAND 0,046, FW-FOOT-FACE 0,478 |
+| VS2-07 aşağı kilit pimi eğilmede denetlenmemiş | doğrulandı: Ø8 dalıcı pim kolu 4–6 mm'de MS −0,3 … −0,6 | kilit, 4130 Ø10 kilit cıvatası olarak sıkı çatalda çift kesmede (kulaklar 2 × 6 mm, boşluk ≤ 0,5 mm), 35 mm yarıçapta; takım tedarikçisine gereksinim | G-DOWNLOCK 3,49, G-DOWNLOCK-BEND 0,561 |
+| VS2-08 mil kama kesiti yalnız burulmada | doğrulandı | kama milin dış ucunda, yuva geçmesinin son 20 mm'sinde (yuva momentinin yaklaşık %10'u); kama kökünde eğilme + burulma | T-SPINDLE-SPL 1,31, T-SPINDLE-SPL-MT 0,975 |
+| VS2-09 `lug_axial`'e Fbru verilmiş | doğrulandı | iki çağrıda Ftu (Bruhn D1.5) | J-REAR-LUG 6,68, P-LUG 3,38 |
+| VS2-10 eski / çelişkili metinler | doğrulandı | dil ve çatal metinleri DESIGN'dan (25 kat 5,0 mm; 10 kat 2,0 mm); stabilatör mili kaynak metni ve bölge metni düğüm bağlantısını anar; cıvatalar her yerde M6 12.9; C13 güncel bağlantı modelleriyle ve "ilk kesim çapraz denetimi" etiketiyle | metin denetimi |
+| VS2-11 UL13.1.2 sınırlarının uygulanabilirlik koşulu denetlenmemiş | doğrulandı | DT-COND satırı: matrise duyarlı özelliklerin ETW kaybı (UD Xc, PW Xc / Yc, PW S_0,2; NCAMP aynı yön, B-tabanı varsa B, yoksa ortalama) | en büyük kayıp %47 < %50 → UL13.1.2 kullanılır (§1.2) |
+| VS2-12 yer taşıma durumları yok | doğrulandı | çekme: burun çatalı dingilinde 0,3 W (CS-23.509 / FAR 23.509, tasarım kararı; CS-LUAS / CS-VLA metni araştırma dosyalarında yok); bağlama ve kriko noktası yok (taşıma beşiği; açık konu) | G-TOW-NLEG 4,91, G-TOW-PIVOT 38,0 |
+
+Paketleme bulgularından yapıyı etkileyenler de bu turda hesaplandı: tek DA 22'nin iki burun kapağını sürmesi (G-NDOOR-DRIVE 0,899; PK2-13) ve stabilatör düğümünün sıcak bölgedeki dayanım oranı (T-NODE-TEMP; PK2-09). Kütle kapanışı için yapılan değişikliklerin yapı satırları: dil başlıklarının pimler arasında incelmesi (J-TONGUE-TAPER 0,125, kat düşürme eğimi J-TONGUE-TAPER-DROP 0,313), kırık bağlantısı levhası 2,5 → 2,0 mm (CT-KINK-PLATE 0,238), FS3738 alt parçası başlıkları 2,0 → 1,6 mm (FR-3738-SEG 0,142), düğüm iç kolu 4 → 3 mm (T-NODE-INBOARD 3,70) ve ayak bandı 24 → 22 kat, r 82 mm (FW-FOOT-LAND 0,046). Stabilatör mili duvarını 1,0 mm'ye inceltmek denendi ve geri alındı: kama dişlerinin altında 0,5 mm duvar kalıyordu.
+
+---
+
+## 7. Kütle ve bütçe
 
 Boyutlandırılan elemanların aşağıdan yukarı kütlesi kavramsal kütle modelinin paylarıyla karşılaştırıldı (büyüme payı öncesi, kg):
 
 | Grup | Aşağıdan yukarı | Model payı | Fark |
 |---|---|---|---|
-| A — kanat birincil yapısı (ana başlıklar 2,434, arka başlıklar 0,171, gövdeler 0,511 + 0,174, birleşim donanımı çifti 1,275: dil 0,596 / adet, arka kulak 0,042 / adet; üst kutu kaplaması çekirdeği 0,045) | 4,609 | 5,454 | −0,845 |
-| B — orta kutu kapakları 0,686, gövde takviyeleri 0,034, kompozit çatallar 0,728, ana pimler (4) 0,261, arka pimler + yuva bağlantıları 0,111, kırık bağlantısı 0,10 | 1,920 | 1,600 | +0,320 |
-| C — şasi eklemeleri (yakıt tabanları 0,165, M-WELLKEEL 0,093, taban takviyeleri 0,064, arka omurga 0,055, yangın perdesi ayak bantları 0,154, çekirdek parçası 0,017) | 0,548 | 0 | +0,548 |
-| D — stabilatör milleri (0,152 / adet), düğüm bağlantıları (0,328 / adet: taban 0,086, iç yanak 0,053, dış yanak 0,189), yataklar, kök yuvaları + çapraz cıvata (0,084 / adet) | 1,208 | 1,100 | +0,108 |
-| E — burun mafsalı bağlantısı 0,209, sırt omurga kanalı 0,258 + takviyeler 0,015, kayış bağlantıları 0,089, kilit pimleri 0,018, çerçeve bantları 0,026 | 0,616 | 0,650 | −0,034 |
-| **Toplam** | | | **+0,097** (büyüme payıyla +0,102) |
+| A — kanat birincil yapısı (ana başlıklar 2,466, arka başlıklar 0,171, gövdeler 0,510 + 0,174, birleşim donanımı çifti 1,111: incelen dil 0,513 / adet, arka kulak 0,042 / adet; üst kutu kaplaması çekirdeği 0,045, kök bölmesi kaplama takviyeleri 0,039) | 4,515 | 5,450 | −0,934 |
+| B — orta kutu kapakları 0,686, gövde takviyeleri 0,034, kompozit çatallar 0,728, ana pimler (4) 0,261, arka pimler + yuva bağlantıları 0,111, kırık bağlantıları (2) 0,153 | 1,972 | 1,600 | +0,372 |
+| C — şasi eklemeleri (yakıt tabanları 0,165, M-WELLKEEL 0,093, taban takviyeleri 0,061, arka omurga 0,055, yangın perdesi ayak bantları 0,212, çekirdek parçası 0,017, FS3738 alt parçası 0,072, kuyu tavanı takviyeleri 0,018, aviyonik güvertesi şeridi 0,012) | 0,706 | 0 | +0,706 |
+| D — stabilatör milleri (0,123 / adet), düğüm bağlantıları (0,258 / adet: taban 0,086, iç kol 0,040, dış yanak 0,132), yataklar, kök yuvaları + çapraz cıvata (0,057 / adet) | 0,956 | 1,100 | −0,144 |
+| E — burun mafsalı bağlantısı 0,184, sırt omurga kanalı 0,253 + takviyeler 0,015, kayış bağlantıları 0,097, kilit pimleri + makaralar + pul levhaları 0,055, çerçeve bantları 0,026 | 0,630 | 0,650 | −0,020 |
+| **Toplam** | | | **−0,020** (büyüme payıyla −0,021) |
 
-Düğüm bağlantısının kütlesi zarf hacminin doluluk oranlarıyla (taban 0,55, dış yanak 0,70) ve iç yanak / göbek geometrisinden hesaplanan bir tahmindir. Bu değerler `structures.sizing.mass` bloğu olarak `spec.yaml`'a yazılır ve `analysis/sizing.py` bunları kavramsal modelin yerine okur (`wing_structure`, `mass_items`: orta kutu, çerçeve eklemeleri, burun mafsalı, paraşüt bağlantıları; `tail_structure`). Kapanış yeniden yapıldı: boş kütle 101,469 kg (MTOM 149,9 kg sabit), kanat kök x_c4 2,503 → 2,507 m, dayanım 10,36 h (R-02), azami faydalı yükle 9,59 h (R-02b); 61 gereksinimin 61'i karşılanır.
+Düğüm bağlantısının kütlesi zarf hacminin doluluk oranlarıyla (taban 0,55, dış yanak 0,70) ve iç kol / göbek geometrisinden hesaplanan bir tahmindir. Bu değerler `structures.sizing.mass` bloğu olarak `spec.yaml`'a yazılır ve `analysis/sizing.py` bunları kavramsal modelin yerine okur (`wing_structure`, `mass_items`: orta kutu, çerçeve eklemeleri, burun mafsalı, paraşüt bağlantıları; `tail_structure`).
 
-Grup tavanları yeni tahminlere (10 g'a yukarı yuvarlanmış) göre yeniden dağıtıldı: şasi 11,58 → 12,38 kg (12,370; kompozit çatallar, düğüm bağlantıları, sırt kanalı, perde bantları), kuyruk 7,91 → 7,60 kg (7,597; 25 × 1,5 mm mil ve 7075 kök yuvası kovanıyla stabilatör bağlantıları 0,384 → 0,236 kg / adet; yatak taşıyan düğüm bağlantıları şasi grubundadır), kanat 15,98 → 15,46 kg (15,453; metal dil yerine kompozit dil). Tavanların toplamı 101,56 → 101,53 kg'dır; R-56 payı (R-02b'nin tam karşılandığı boş kütle 101,700 kg − yedek 0,05 kg − tavanlar toplamı) **0,097 → 0,120 kg** olarak pozitif kalır. Pay küçüktür: ayrıntılı tasarımda her kütle artışı başka bir kalemden karşılanmalıdır.
+**Düzeltme turu 2'nin kütle kapanışı.** Turun ilk eklemeleri (Ø8 Ti kilit pimleri ve makaralar, mafsal bağlantısı cıvata grubu, FS3738 alt parçası ve kırık bağlantıları, 85 mm ayak bandı, dört burun kapağı eyleyicisi, motor bölmesi ısı koruması) boş kütleyi 102,46 kg'a çıkardı ve R-02b karşılanmadı. Bütçe şu kararlarla yeniden kapatıldı (hepsi bir yapı satırıyla ya da yerleşim denetimiyle doğrulanır):
+
+* **Dil başlıkları pimler arasında incelir** (10 → 3 mm, 1:20'den yatık; §3.2): dil momenti iç pimde sıfırdır.
+* **Burun kapakları tek DA 22 ile** (PK2-13): iki kapak orta hattaki bir kol ve iki bağlantı çubuğuyla bağlıdır; kapak eyleyicisi sayısı 4 → 3, kol ve çubuklar 0,05 kg (`mass.rules.gear_doors.nose_door_drive`); G-NDOOR-DRIVE ve yerleşimde NDOOR-LINKAGE zarfı (C04 / C05).
+* **Yangın perdesi ve ısı koruması aşağıdan yukarı:** motor soğutma / yangın koruma kalemi (`cooling_baffles_firewall_cowl_flap`) artık üç parçanın toplamıdır: yangın perdesi paslanmaz katmanı (0,705 kg; 0,4 mm sac, kenar köşebendi, ayaklar, perçinler; `layout.chassis.engine_mount.firewall_stackup.mass`), kompozit soğutma payı (temel 1 m² × 1 kg/m² eksi kabukta sayılan kaporta kaplaması 0,376 m² = 0,624 kg; `mass.rules.cooling_split`) ve ısı koruması (0,388 kg net: paslanmaz ek parça ve kalkanlar, düğüm perdeleri, metal kaporta parçaları; `layout.heat_protection.mass`). Kalem 1,500 → 1,718 kg. Önceki 1,5 kg'lık pay, kaportayı kabuk kaleminde ikinci kez sayıyordu.
+* **Küçük kesitler:** kırık bağlantısı levhası 2,0 mm, FS3738 başlıkları 1,6 mm, düğüm iç kolu 3 mm, ayak bandı 22 kat / r 82 mm, aviyonik güvertesinin yarık şeridi 6 kat, perde kenar köşebendi 13 mm kollar, P-COWL-UPS 0,8 mm alüminyum.
+
+Kapanış yeniden yapıldı: boş kütle **101,630 kg** (MTOM 149,9 kg sabit), kanat kök x_c4 2,507 → 2,487 m, dayanım 10,32 h (R-02), azami faydalı yükle 9,54 h (R-02b); 61 gereksinimin 61'i karşılanır.
+
+Grup tavanları yeni tahminlere (büyüme payı dahil, 10 g'a yukarı yuvarlanmış) göre yeniden dağıtıldı: şasi 12,38 → 12,46 kg (12,459), kumandalar 8,31 → 8,29 kg (8,281), iniş takımı 14,34 → 14,57 kg (14,565), itki 14,31 → 14,54 kg (14,532), kuyruk 7,60 → 7,35 kg (7,341), kanat 15,46 → 15,34 kg (15,340). Tavanların toplamı 101,53 → 101,68 kg'dır; R-56 payı (R-02b'nin tam karşılandığı boş kütle 101,743 kg − yedek 0,05 kg − tavanlar toplamı) **+0,013 kg** olarak pozitif kalır. Pay çok küçüktür: ayrıntılı tasarımda her kütle artışı başka bir kalemden karşılanmalıdır.
 
 ---
 
-## 7. Arayüzler
+## 8. Arayüzler
 
-`structures --check` şunları da denetler: `spec.structures.sizing` yeniden üretilen blokla birebir aynı mı, `spec.layups` içindeki yapı evresi dizilimleri güncel mi ve yerleşimdeki elemanlar yapı ölçülerini taşıyor mu. 15 arayüz denetimi vardır: I-AFTKEEL (malzeme / kesit), I-WELLKEEL, I-WELLROOF (dizilim), I-CTBOX (kapak dizilimi), I-MIDFLOOR (iki kesik kenarı takviyesi ve tepsi kesiği), **I-NODE** (düğümün kök parçası cıvataları, perde cıvataları, iç yatak silindiri ve dış yatak istasyonu), **I-TONGUE** ve **I-FORK** (kompozit dil ve çatal, flanş / gövde / takviye kalınlıkları), **I-SPINE** (kanal kalınlığı = kat sayısı × kat kalınlığı), **I-RISER** (kilit pimi çapı ve kulak kalınlığı), **I-UD-BEARING** (UD malzemede ezilme değeri yok) ve dört katman dizilimi. Yerleşim tarafında `layout_check` düğümün, köşe bağlantısının ve bütün bağlantı parçalarının cıvata desenlerini (kenar ≥ 2 D metal / 2,5 D kompozit, aralık ≥ 3 D), yapı–yapı çakışmalarını ve pim / rayba yollarını denetler ([03](03_yerlesim_ve_yapi_konsepti.md) §11).
+`structures --check` şunları da denetler: `spec.structures.sizing` yeniden üretilen blokla birebir aynı mı, `spec.layups` içindeki yapı evresi dizilimleri güncel mi ve yerleşimdeki elemanlar yapı ölçülerini taşıyor mu. 15 arayüz denetimi vardır: I-AFTKEEL (malzeme / kesit), I-WELLKEEL, I-WELLROOF (dizilim), I-CTBOX (kapak dizilimi), I-MIDFLOOR (iki kesik kenarı takviyesi ve tepsi kesiği), **I-NODE** (düğümün kök parçası cıvataları, perde cıvataları, iç yatak silindiri ve dış yatak istasyonu), **I-TONGUE** ve **I-FORK** (kompozit dil ve çatal, flanş / gövde / takviye kalınlıkları; dil metni iç pimdeki inceltilmiş kalınlığı da anmalıdır), **I-SPINE** (kanal kalınlığı = kat sayısı × kat kalınlığı), **I-RISER** (kilit pimi çapı ve kulak kalınlığı), **I-UD-BEARING** (UD malzemede ezilme değeri yok) ve dört katman dizilimi. Yerleşim tarafında `layout_check` düğümün, köşe bağlantısının ve bütün bağlantı parçalarının cıvata desenlerini (kenar ≥ 2 D metal / 2,5 D kompozit, aralık ≥ 3 D), yapı–yapı çakışmalarını ve pim / rayba yollarını denetler ([03](03_yerlesim_ve_yapi_konsepti.md) §11).
 
 ---
 
-## 8. Sınırlamalar ve açık konular
+## 9. Sınırlamalar ve açık konular
 
 * **Çırpınma, ıraksama, kanatçık tersinmesi analiz edilmedi.** Kanat ve kuyruğun rijitlik / kütle modeli henüz yok. İlk uçuştan önce yer titreşim testi (GVT) ve çırpınma analizi gerekir (CS-LUAS.629). ±45 ağırlıklı kaplamalar burulma rijitliğini artırır; stabilatörün kütle dengesi ve mil-yatak boşluğu ayrıca incelenmelidir.
-* **FS3738'de arka omurga desteği (FR-3738-KEEL):** kuyruk tamponu çarpmasında omurga yangın perdesi ucunda mafsallı ise FS3738 10,25 kN (limit) düşey tepki taşımalıdır; 2,0 mm 2024-T3 alt U halkası buna göre boyutlandırılmadı. Talaşlı bir alt çerçeve, omurgaya ön gövdede bir moment eki ya da yük sınırlayıcı bir kızak detay tasarımda seçilecektir. Bu turda payı hesaplanmış bir eleman olarak değil, bilgi satırı ve açık konu olarak raporlanır.
-* **Kompozit birleşim:** burçların dil ve kulak laminelerindeki ezilmesi yarı izotrop delikli bası dayanımıyla denetlendi (delik e/D 3'ün altında); tasarım değerleri dondurulmadan önce pimli CFRP dil / çatal eleman testi (statik, ETW, yorulma) gerekir.
-* **Yorulma ve hasar toleransı** yalnızca STANAG UL13.1.2 birim şekil değiştirme sınırlarıyla temsil edildi. Metal parçaların (pimler, burçlar, arka kulak, düğüm ve takım bağlantıları, motor kafesi kaynakları) yorulma ömrü ve kompozit BVID/CVID kanıtı (CS-LUAS.572/573) test ister.
+* **Kompozit birleşim:** burçların dil ve kulak laminelerindeki ezilmesi yarı izotrop delikli bası dayanımıyla denetlendi (delik e/D 3'ün altında); dil başlığının iç kat düşürmeleri ve derinlik geçişi rampası el hesabıdır. Tasarım değerleri dondurulmadan önce pimli CFRP dil / çatal eleman testi (statik, ETW, yorulma) gerekir.
+* **Yangın perdesi ayak bandı:** çekirdek kesmesinin tepe / ortalama oranı (1,23) gözden geçirenin levha kesme dağılımından alındı; kendi sonlu eleman hesabımız ve kupon testi yok. Pay küçüktür (FW-FOOT-CORE 0,014); perdeye yeni bir kesik ancak ayak bandı çemberinin dışında açılabilir (hesap kesikleri çevreden düşer).
+* **Stabilatör düğümünün sıcaklığı:** 7075-T651 düğüm silindir kafaları bölgesindedir; düğüm sıcaklığı ölçülmedi, T-NODE-TEMP gereken dayanım oranını (0,63) raporlar. Motor yer çalıştırmasında sıcaklık ölçümü gerekir.
+* **Yorulma ve hasar toleransı** yalnızca STANAG UL13.1.2 birim şekil değiştirme sınırlarıyla temsil edildi (uygulanabilirlik koşulu DT-COND ile sağlandı). Metal parçaların (pimler, burçlar, arka kulak, düğüm ve takım bağlantıları, motor kafesi kaynakları) yorulma ömrü ve kompozit BVID/CVID kanıtı (CS-LUAS.572/573) test ister.
 * **El hesabı varsayımları:** basit mesnetli paneller, düzlem kesitler, D-burnu ve firar kenarı kaplamaları eğilmede sayılmadı, üretici minimum çekirdek değerleri, çubuk parçalar için sac izin verilen değerleri (Ti-6Al-4V, 7075-T6). Kanat kutusu, birleşim, orta kutu, düğüm ve takım bağlantıları için sonlu eleman doğrulaması ve kupon / eleman testleri (sandviç kıvrılma ve buruşma, CFRP burç ezilmesi, dökme insertler) gerekir.
-* **Tedarik gereksinimleri (MS'siz satırlar):** 61805-2RS yatakların statik yük sayısı (iç 1,50 kN, dış 2,22 kN nihai), taret asansörü bilyalı vida (0,62 kN) ve ray taşıyıcıları (0,27 kN), motor sönümleyicisi nihai kapasitesi (1,80 kN), ana / burun takımı EMA torku (14 / 25 N m), burun aşağı kilidi (190 N m limit). Katalog değerleri araştırma verisinde yoktur.
-* **Ana iç takım kapakları:** DA 22 kapalı kapağı V_D emmesine karşı tutamaz (gereken nihai moment 10,3 N m); ölü nokta bağlantısı ya da kapak kilidi gerekir (G-DOOR-LOCK).
-* **Çevron kırığı:** başlık başına 17,0 kN kırılma kuvveti (CT-KINK) kırık bağlantısının ve orta hat kaburgasının detay tasarımına yük olarak verildi.
-* **Kütle tahminleri:** düğüm bağlantısı (doluluk oranları), kırık bağlantısı (0,10 kg) ve yatak kütleleri tahmindir.
-* **Tasarım kararları:** taşıma yük katsayıları (3,0 / 1,5 / 1,5 g), kuyruk tamponu yükü (45°'de 1,0 × MTOM ağırlığı), takım işletme hızı 1,6 V_S. İşletmeci belirtimi ve test verisiyle değiştirilmelidir.
-* **Kütle payı:** R-56 payı 0,120 kg'dır.
+* **Tedarik gereksinimleri (MS'siz satırlar):** 61805-ZZ yatakların statik yük sayısı (T-BRG-IN / T-BRG-OUT), taret asansörü bilyalı vida ve ray taşıyıcıları, motor sönümleyicisi nihai kapasitesi, ana / burun takımı EMA torku (14 / 26 N m), burun aşağı kilidi. Katalog değerleri araştırma verisinde yoktur.
+* **Ana iç takım kapakları:** DA 22 kapalı kapağı V_D emmesine karşı tutamaz; ölü nokta bağlantısı ya da kapak kilidi gerekir (G-DOOR-LOCK).
+* **Yer taşıma:** bağlama (rüzgâr) ve kriko noktaları tasarlanmadı; uçak açıkta park edilecekse eklenmelidir. Çekme yükü CS-23.509 değerinin tasarım kararı olarak alınmasıdır.
+* **Kütle tahminleri:** düğüm bağlantısı (doluluk oranları), yatak kütleleri, burun kapağı kolu, yangın perdesi ayakları ve perçinleri, ısı kalkanı ayakları (0,30 kg/m²) ve kompozit soğutma payı (temel 1 kg/m²) tahmindir.
+* **Tasarım kararları:** taşıma yük katsayıları (3,0 / 1,5 / 1,5 g), kuyruk tamponu yükü (45°'de 1,0 × MTOM ağırlığı), takım işletme hızı 1,6 V_S, çekme yükü 0,3 W. İşletmeci belirtimi ve test verisiyle değiştirilmelidir.
+* **Kütle payı:** R-56 payı +0,013 kg'dır.

@@ -488,13 +488,23 @@ _ACCESS_TR = {
     "outer-panel lower servo hatches (wing module)": "dış panel alt servo kapakları (kanat modülü)",
     "fin servo hatches (inboard face)": "dikey servo kapakları (iç yüz)",
     "fin-tip caps": "dikey uç kapakları",
+    "main wells (gear down, trunnion door open)": "ana takım kuyuları (takım açık, mafsal kapağı açık)",
 }
 _FAST_TR = {"Camloc + 4 x M8 mount bolts": "Camloc + 4 x M8 bağlantı cıvatası", "Camloc + cross-bolt": "Camloc + "
             "çapraz cıvata", "M4 nutplate screws + gasket": "M4 somun plakalı vida + conta",
             "14 x M4 + 4 turret mount bolts": "14 x M4 + 4 taret bağlantı cıvatası", "latch": "mandal",
             "Camloc / bayonet cap": "Camloc / süngü kapak",
-            "M4 inserts": "M4 dişli burç"}
+            "M4 inserts": "M4 dişli burç",
+            "5 x M6 12.9 per fitting into bonded inserts of the gear beam (heads in the well) + 4 x M6 12.9 into "
+            "sealed dome nutplates on the fuel side of the well roof; up-lock 4 x M5 into blind potted inserts":
+                "bağlantı başına 5 x M6 12.9 takım kirişinin yapıştırılmış ankrajlarına (başlar kuyuda) + 4 x M6 12.9 "
+                "kuyu tavanının yakıt tarafındaki sızdırmaz kubbe somun plakalarına; yukarı kilit 4 x M5 kör dökme "
+                "insertlere"}
+# every maintenance row carries Turkish access / fastener texts (a missing translation is a build error)
+_FAST_TR_SAME = {"Camloc", "-", "8 x M4", "M4", "M4 / Camloc", "Camloc / M4"}
 for _m in MAINTENANCE:
     _m["item_tr"] = _ITEM_TR[_m["item"]]
     _m["access_tr"] = [_ACCESS_TR.get(a, a) for a in _m["access"]]
     _m["fasteners_tr"] = _FAST_TR.get(_m["fasteners"], _m["fasteners"])
+    assert _m["fasteners"] in _FAST_TR or _m["fasteners"] in _FAST_TR_SAME, _m["fasteners"]
+    assert all(a in _ACCESS_TR or a.startswith("P-") for a in _m["access"]), _m["access"]

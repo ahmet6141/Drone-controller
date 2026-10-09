@@ -104,9 +104,38 @@ class TestSizingCheck(unittest.TestCase):
         self.assertLessEqual(self.S["mass"]["mtow_kg"], self.S["mass"]["mtow_cap_kg"])
 
     def test_endurance_and_payload_requirement(self):
-        M = self.out["metrics"]
-        self.assertGreaterEqual(M["endurance_h"], 10.0)
-        self.assertGreaterEqual(M["payload_kg"], 20.0)
+        """Requirement decision (fix round 4): R-02 >= 10 h with the design-mission payload, which is the largest payload
+        on the 0.5 kg grid giving >= 10.25 h (derived by sizing.py, equal to the spec value); R-02b: the 20 kg maximum
+        payload on the same mission >= 9.5 h; R-03: a 20 kg loading case at MTOM is checked."""
+        M, S = self.out["metrics"], self.S
+        mis = S["mission"]
+        self.assertGreaterEqual(M["endurance_h"], float(mis["endurance_requirement_h"]))
+        self.assertEqual(float(mis["endurance_requirement_h"]), 10.0)
+        pr = self.out["performance"]["payload_design_rule"]
+        target = float(mis["endurance_requirement_h"]) + float(mis["payload_design_rule"]["robustness_margin_h"])
+        self.assertAlmostEqual(target, 10.25, places=9)
+        self.assertEqual(float(mis["payload_design_rule"]["step_kg"]), 0.5)
+        self.assertEqual(pr["derived_kg"], float(mis["payload_design_kg"]))      # not hand-set: equals the rule result
+        self.assertTrue(pr["consistent"])
+        self.assertAlmostEqual(pr["derived_kg"] / 0.5, round(pr["derived_kg"] / 0.5), places=9)   # on the 0.5 kg grid
+        self.assertGreaterEqual(pr["endurance_at_derived_h"], target)
+        self.assertAlmostEqual(pr["endurance_at_derived_h"], M["endurance_h"], places=6)
+        if pr["next_step_kg"] is not None:                                        # largest such payload (rounded down)
+            self.assertLess(pr["endurance_at_next_step_h"], target)
+        self.assertEqual(M["payload_kg"], float(mis["payload_design_kg"]))
+        self.assertEqual(float(mis["payload_max_kg"]), 20.0)
+        self.assertGreaterEqual(M["payload_max_checked_kg"], 20.0)
+        self.assertGreaterEqual(M["endurance_max_payload_h"], float(mis["endurance_max_payload_requirement_h"]))
+        self.assertEqual(float(mis["endurance_max_payload_requirement_h"]), 9.5)
+        mx = self.out["performance"]["max_payload_mission"]
+        self.assertAlmostEqual(mx["takeoff_mass_kg"], S["mass"]["mtow_kg"], places=3)
+        self.assertAlmostEqual(mx["fuel_kg"], S["mass"]["mtow_kg"] - S["mass"]["empty_kg"] - 20.0, delta=2e-3)
+        # payload items: design payload = baseline set + research allowance; max = design + increment
+        pay = {p_["name"]: p_["mass_kg"] for p_ in S["mass"]["payload_items"]}
+        base = sum(pay[n] for n in Z.BASELINE_PAYLOAD_ITEMS)
+        self.assertAlmostEqual(base + pay["research_payload_allowance"], float(mis["payload_design_kg"]), places=6)
+        self.assertAlmostEqual(base + pay["research_payload_allowance"] + pay["research_payload_max_increment"],
+                               float(mis["payload_max_kg"]), places=6)
 
     def test_new_checks_reported(self):
         """Verification-finding checks (take-off physics, 925(a)/(c) clearances, stabilator hinge and roots, fin roots,
@@ -209,8 +238,13 @@ class TestSizingCheck(unittest.TestCase):
         self.assertGreater(hm["CN_max_panel"], 1.0)
         self.assertGreaterEqual(hm["surface_travel_deg"], 20.0)
         self.assertEqual(self.out["tail_root_interference"]["n_conflicts"], 0)
-        # R-56 (last: it fails while R-02 is not met, see doc 02 sec. 14)
-        self.assertLessEqual(bc["budget_sum_kg"], bc["empty_kg_at_R02_limit"] - bc["reserve_kg"] + 1e-9)
+        # R-56 (fix round 4: both payload requirements): the ceilings + reserve stay below the smaller of the empty masses
+        # that meet R-02 (design payload, 10 h) and R-02b (maximum payload, 9.5 h) exactly
+        self.assertAlmostEqual(bc["empty_kg_limit"], min(bc["empty_kg_at_R02_limit"], bc["empty_kg_at_R02b_limit"]),
+                               places=9)
+        self.assertLessEqual(bc["budget_sum_kg"], bc["empty_kg_limit"] - bc["reserve_kg"] + 1e-9)
+        self.assertAlmostEqual(bc["air_time_h_at_fuel_for_R02b"], 9.5, delta=1e-3)
+        self.assertGreater(bc["margin_kg"], 0.0)
 
     def test_fix_round3_checks(self):
         """Fix round 3: integrated descent at the generator floor (V2-07), consistent lift-off (V2-05), control-surface
@@ -251,6 +285,169 @@ class TestSizingCheck(unittest.TestCase):
         for p in out["aero"]["polars"].values():
             self.assertLessEqual(p["fit"]["CL_endurance"], p["fit"]["CL_max_trimmed"] + 1e-9)
             self.assertLessEqual(p["fit"]["CL_LDmax"], p["fit"]["CL_max_trimmed"] + 1e-9)
+
+    def test_fix_round4_checks(self):
+        """Fix round 4: avionics/power contents packed with their real envelopes (V3-02), take-off rotation law with the
+        moment balance about the main-wheel contact (V3-03), E180 mission at its own electrical load (V3-08), R-52
+        operating limit (V3-09), k_inst sensitivity (V3-06), low-load BSFC bound (V3-07), payload-endurance table."""
+        out, S = self.out, self.S
+        # V3-02: contents inside their zones, the OML and apart from each other; they are part of R-26
+        bc = out["packaging"]["bay_contents"]
+        self.assertTrue(bc["fits"], bc["failures"])
+        names = {r["name"] for r in bc["items"]}
+        self.assertTrue({"pdu", "buffer_battery", "autopilot", "datalink_primary", "datalink_backup", "transponder",
+                         "remote_id", "dcdc_28_12", "contactor_fuses"} <= names)
+        for r in bc["items"]:
+            self.assertGreaterEqual(r["oml_margin_m"], bc["clearance_to_oml_m"] - 1e-9, r["name"])
+            self.assertGreaterEqual(r["zone_wall_margin_m"], bc["clearance_to_wall_m"] - 1e-9, r["name"])
+            self.assertGreaterEqual(r["min_gap_to_other_items_m"], bc["gap_between_items_m"] - 1e-9, r["name"])
+        pdu = next(r for r in bc["items"] if r["name"] == "pdu")
+        self.assertEqual(pdu["dims_m"], [0.235, 0.195, 0.0545])                     # components.yaml vat_1000w_pdu
+        items = {i["name"]: i for i in S["mass"]["items"]}
+        self.assertAlmostEqual(items["buffer_battery_12S2P_liion"]["x"],
+                               Z.bay_content_centroid(S, ("buffer_battery",))[0], delta=1e-3)
+        # V3-03: every MTOM case rotates with the download that balances the moments about the main-wheel contact
+        to = out["performance"]["takeoff_sl_mtow"]
+        self.assertGreaterEqual(len(to["cases"]), 5)
+        for name, c in to["cases"].items():
+            rot = c["rotation"]
+            self.assertGreaterEqual(rot["download_margin_min_N"], 0.0, name)
+            self.assertEqual(rot["rate_limited_steps"], 0, name)
+            self.assertLess(rot["moment_residual_max_Nm"], 1e-6, name)
+            self.assertLess(abs(rot["download_continuity_at_lof_N"]), 1e-6, name)   # = power-on trim at lift-off
+            self.assertLess(abs(rot["main_wheel_reaction_at_lof_N"]), 1e-3, name)
+            self.assertGreaterEqual(rot["main_wheel_reaction_min_N"], 0.0, name)
+            self.assertLessEqual(rot["download_at_lof_N"], rot["download_at_V_R_N"] + 1e-9, name)
+        self.assertAlmostEqual(to["CL_available_lof"], to["CL_wb_lof"], delta=1e-6)  # N = 0 at lift-off
+        self.assertLessEqual(to["theta_lof_deg"], out["ground"]["theta_lof_deg"] + 1e-6)   # inside the R-16 attitude
+        # V3-08: the E180 mission flies its own continuous load (generator draw and descent rpm floor)
+        el = out["electrical"]
+        e180 = out["performance"]["e180_growth_mission"]
+        self.assertAlmostEqual(e180["continuous_load_W"], el["continuous_e180_W"], places=6)
+        for r in e180["mission_log"]:
+            if r["kind"] == "descent":
+                self.assertAlmostEqual(r["gen_W"], el["continuous_e180_W"], delta=1e-6 * el["continuous_e180_W"])
+        # V3-09: R-52 operating limit reported
+        cap = float(S["mission"]["peak_support_deficit_cap_W"])
+        self.assertAlmostEqual(el["peak_support_guaranteed_loiter_h_at_cap"], el["battery_peak_share_Wh"] / cap,
+                               delta=1e-4)
+        self.assertEqual(len(el["payload_endurance_peak_support"]), len(out["performance"]["payload_endurance"]))
+        # V3-06 / V3-07: sensitivities
+        sens = out["sensitivities_endurance_h"]
+        E = out["metrics"]["endurance_h"]
+        self.assertLess(sens["k_inst_0p90"], E)
+        self.assertLess(E, sens["k_inst_0p95"])
+        self.assertLess(sens["k_inst_0p95"], sens["k_inst_0p97"])
+        ll = out["low_load_bsfc_bound"]
+        self.assertGreaterEqual(ll["descent_fuel_kg_willans_line"], ll["descent_fuel_kg_bsfc_line"])
+        self.assertLessEqual(ll["endurance_h_willans_line"], ll["endurance_h_bsfc_line"])
+        self.assertLess(ll["descent_power_fraction_range_bsfc_line"][1], ll["lowest_bsfc_point_power_fraction"])
+        # payload-endurance table from the lightest permitted loading (the baseline EO/IR set, V4-02 fix round 5: the
+        # no-payload loading is below R-09 and reported separately) to 20 kg incl. the design and the maximum payload;
+        # endurance falls with payload
+        pe = out["performance"]["payload_endurance"]
+        pls = [r["payload_kg"] for r in pe]
+        self.assertAlmostEqual(pls[0], sum(S["payload"][k] for k in ("turret_mass_kg", "mission_computer_kg",
+                                                                     "tray_harness_kg")), places=9)
+        self.assertEqual(pls[-1], 20.0)
+        self.assertIn(float(S["mission"]["payload_design_kg"]), pls)
+        self.assertTrue(all(b["endurance_h"] <= a["endurance_h"] + 1e-9 for a, b in zip(pe, pe[1:])))
+        # maximum-payload loading cases at MTOM
+        mc = {c["name"]: c for c in out["mass"]["cases"]}
+        for n in ("mtow_max_payload_turret_retracted", "mtow_max_payload_turret_extended"):
+            self.assertAlmostEqual(mc[n]["m"], S["mass"]["mtow_kg"], delta=1e-3)
+            self.assertAlmostEqual(mc[n]["payload_kg"], 20.0, places=6)
+
+    def test_fix_round5_checks(self):
+        """Fix round 5 (V4-01..V4-08): pitch inertia in the rotation law, the unclipped R-60 margin, permitted
+        payload loadings (static margin of every table row, full-tank light loading among the mass cases, the
+        no-payload loading reported as not permitted), E180 columns only where the E180 set fits, the fuel-volume break
+        in the sweep, the door scheme in the mass item and the joint drag, the headroom of the design payload."""
+        out, S = self.out, self.S
+        M = out["metrics"]
+        p = out["performance"]
+        sm_min = float(S["aero"]["stability_rules"]["sm_min"])
+        # V4-05: every MTOM take-off case rotates with its own pitch inertia and the spin-up time of the spec
+        to = p["takeoff_sl_mtow"]
+        t_spin = float(S["mission"]["rotation_spin_up_s"])
+        self.assertGreater(t_spin, 0.0)
+        for name, c in to["cases"].items():
+            rot = c["rotation"]
+            self.assertGreater(rot["pitch_inertia_I_yy_kg_m2"], 90.0, name)    # >= the point-mass sum (~92 kg m^2)
+            self.assertAlmostEqual(rot["spin_up_time_s"], t_spin, places=9)
+            self.assertGreater(rot["spin_up_moment_at_V_R_Nm"], 0.0, name)
+            self.assertGreaterEqual(c["V_R_m_s"], rot["V_R_without_pitch_inertia_m_s"] - 1e-9, name)
+        pie = p["takeoff_pitch_inertia_effect"]
+        self.assertGreater(pie["delta_ground_roll_m"], 0.0)                     # inertia costs ground roll
+        self.assertGreaterEqual(pie["spin_up_0p1s"]["ground_roll_m"], pie["ground_roll_m"] - 1e-6)
+        self.assertLessEqual(pie["spin_up_0p1s"]["ground_roll_m"], 200.0)      # R-06 also with a 0.1 s spin-up
+        # V4-01: the R-60 metric is the unclipped margin of the cases, gated by the consistency of the rotation law
+        self.assertAlmostEqual(M["takeoff_rotation_download_margin_min_N"],
+                               min(c["rotation"]["download_margin_min_N"] for c in to["cases"].values()), places=4)
+        self.assertLess(M["takeoff_rotation_moment_residual_max_Nm"], 1e-6)
+        # V4-02: every row of the payload-endurance table is a permitted loading; the full-tank light loading is a
+        # mass case (R-09 covers it); the no-payload loading is not permitted (ballast reported); turret only has a fuel
+        # limit
+        for r in p["payload_endurance"]:
+            self.assertTrue(r["permitted_loading"], r["payload_kg"])
+            self.assertGreaterEqual(r["static_margin_range"][0], sm_min - 1e-9, r["payload_kg"])
+            fits = r["payload_kg"] >= p["payload_permitted_loadings"]["e180_set_kg"] - 1e-9
+            self.assertEqual(r["e180_set_fits"], fits)
+            if not fits:
+                self.assertIsNone(r["e180_peak_supported_loiter_h"])
+                self.assertIsNone(r["e180_peak_battery_draw_Wh"])
+        pp = p["payload_permitted_loadings"]
+        self.assertFalse(pp["no_payload"]["permitted"])
+        self.assertLess(pp["no_payload"]["static_margin_range"][0], sm_min)
+        self.assertGreater(pp["no_payload"]["nose_ballast_at_turret_mount_kg"], 0.0)
+        self.assertLess(pp["turret_only"]["fuel_max_for_R09_kg"], out["mass"]["fuel_capacity_kg"])
+        cap = out["mass"]["fuel_capacity_kg"]
+        ff = next(c for c in S["mass"]["cases"] if c["name"] == "full_fuel_baseline_sensors_only")
+        self.assertEqual(ff["fuel_rule"], "capacity")
+        self.assertAlmostEqual(ff["fuel_fraction"] * float(S["mass"]["fuel_kg"]), cap, delta=0.05)
+        mc = {c["name"]: c for c in out["mass"]["cases"]}
+        self.assertGreaterEqual(out["stability"]["static_margin"]["full_fuel_baseline_sensors_only"], sm_min - 1e-9)
+        self.assertIn("full_fuel_baseline_sensors_only", mc)
+        # V4-06: the fuel-volume break and its 0.5 kg neighbours are flown points of the sweep
+        pls = [r["payload_kg"] for r in p["payload_endurance"]]
+        brk = pp["fuel_volume_break_payload_kg"]
+        self.assertTrue(any(abs(x - brk) < 1e-3 for x in pls))
+        self.assertIn(math.floor(brk / 0.5) * 0.5, pls)
+        self.assertIn(math.ceil(brk / 0.5) * 0.5, pls)
+        # V4-03: the door item is the door scheme (6 doors, 2 inner-door actuators, leg-door brackets); the drag joint
+        # length includes the door split lines
+        items = {i["name"]: i for i in S["mass"]["items"]}
+        gd = Z.gear_doors_mass(S)
+        gr = 1.0 + float(S["mass"]["rules"]["growth_allowance"])
+        self.assertAlmostEqual(items["gear_doors_wells_locks_sensors"]["mass_kg"], gd["total_kg"] * gr, delta=1e-3)
+        self.assertGreaterEqual(gd["parts_kg"]["inner_door_actuators"], 2 * 0.132 - 1e-9)    # 2 x Volz DA 22 datasheet
+        self.assertGreater(gd["parts_kg"]["leg_door_brackets"], 0.0)
+        g = gd["geometry"]
+        self.assertAlmostEqual(g["area_total_m2"], g["area_main_inner_m2"] + g["area_main_leg_m2"] + g["area_nose_m2"],
+                               places=12)
+        LG = S["landing_gear"]
+        mb = LG["main"]["stowed_envelope"]["box"]
+        nb = LG["nose"]["stowed_envelope"]["box"]
+        outline = 4 * ((mb[1][0] - mb[0][0]) + (mb[1][1] - 0.5 * LG["main"]["well_gap"])) + \
+            2 * ((nb[1][0] - nb[0][0]) + (nb[1][1] - nb[0][1]))
+        self.assertAlmostEqual(g["joint_total_m"], outline + 2 * (mb[1][0] - mb[0][0]) + (nb[1][0] - nb[0][0]), places=9)
+        # headroom of the derived design payload to the rule threshold (V4-03 / V4-04)
+        pr = p["payload_design_rule"]
+        self.assertAlmostEqual(pr["endurance_margin_to_target_h"], pr["endurance_at_derived_h"] - pr["target_h"],
+                               delta=1e-4)                                # outputs carry 6 significant digits
+        self.assertGreaterEqual(pr["endurance_margin_to_target_h"], 0.0)
+        self.assertGreaterEqual(pr["empty_mass_headroom_kg"], 0.0)
+        self.assertGreater(pr["payload_at_target_kg_linear"], pr["derived_kg"] - 1e-9)
+        self.assertLess(pr["payload_at_target_kg_linear"], pr["next_step_kg"])
+        self.assertIn("ızgarada", pr["rule_tr"])
+
+    def test_retracted_belly_door_seams(self):
+        """V4-07: the retracted belly shows the inner-door and the two leg-door outlines of landing_gear.doors."""
+        S = self.S
+        names = [n for n, _, _ in Z._belly_seams(S, Z.Airframe(S), True, True)]
+        for n in ("seam_main_inner_doors", "seam_main_inner_doors_split", "seam_main_leg_door1", "seam_main_leg_door-1",
+                  "seam_nose_doors_split"):
+            self.assertIn(n, names)
 
     def test_turret_field_of_regard_includes_wing(self):
         """F13: the ray test obstacles include the wing (both sides) as well as the tail surfaces."""
@@ -531,6 +728,40 @@ class TestGeometryFixes(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE, "ucav250 dependencies missing")
+class TestBayContents(unittest.TestCase):
+    """V3-02 (fix round 4): the equipment zones are checked on their declared contents (real envelopes), not only as
+    boxes: the v1.4 avionics_power_bay (0.26 x 0.14 x 0.06 m) could not hold the 235 x 195 x 54.5 mm PDU."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(SPEC_FILE, encoding="utf-8") as fh:
+            cls.S = yaml.safe_load(fh)
+        cls.af = Z.Airframe(cls.S)
+
+    def test_spec_contents_fit(self):
+        r = Z.bay_contents_check(self.S, self.af)
+        self.assertTrue(r["fits"], r["failures"])
+
+    def test_research_envelopes(self):
+        self.assertEqual(Z.research_item("components.yaml#categories.avionics.autopilots[veronte_autopilot_1x]."
+                                         "dimensions_m"), [0.076, 0.065, 0.040])
+        bat = next(i for i in self.S["layout"]["rules"]["bay_contents"]["items"] if i["name"] == "buffer_battery")
+        e = Z.content_envelope(bat)
+        self.assertEqual(bat["pack"]["n_x"] * bat["pack"]["n_y"], 24)                 # 12S2P
+        self.assertGreaterEqual(e["dims"][2], bat["pack"]["cell_height"])
+
+    def test_v14_bay_would_fail(self):
+        S2 = json.loads(json.dumps(self.S))
+        Zs = S2["layout"]["zones_preliminary"]
+        Zs["avionics_power_deck"]["box"] = [[0.8, 0.0, 0.035], [1.06, 0.07, 0.095]]     # the v1.4 box
+        pdu = next(i for i in S2["layout"]["rules"]["bay_contents"]["items"] if i["name"] == "pdu")
+        pdu["center"] = [0.93, 0.0, 0.065]
+        r = Z.bay_contents_check(S2, self.af)
+        self.assertFalse(r["fits"])
+        self.assertTrue(any(f.startswith("pdu") for f in r["failures"]), r["failures"])
+
+
+@unittest.skipUnless(HAVE, "ucav250 dependencies missing")
 class TestMissionIntegration(unittest.TestCase):
     """V1-01: the mission fuel of every flown segment equals the time integral of the point fuel flow (bsfc x shaft
     power incl. the generator at the trimmed point, T = D / cos(eps)), checked independently with fine steps."""
@@ -602,6 +833,30 @@ class TestMissionIntegration(unittest.TestCase):
         e = self.fl.eps
         self.assertAlmostEqual(lp["CL"] * 0.5 * Z.AL.isa(self.fl.h_loiter)["rho"] * 33.0 ** 2 * self.fl.Sw,
                                1400.0 + lp["D"] * math.tan(e), delta=1e-4 * 1400.0)   # 2-pass fixed point
+
+    def test_r60_fails_when_the_rotation_download_exceeds_the_maximum(self):
+        """V4-01 (fix round 5): R-60 is evaluated on the UNCLIPPED download margin. A stabilator that cannot hold its
+        maximum download during the rotation (maximum x 0.9 in the rotation phase) makes R-60 fail; so does a
+        moment-balance or lift-off continuity error of the rotation law."""
+        S, R = self.S, self.R
+        m0 = float(S["mass"]["mtow_kg"])
+        gc = [c for c in R["mass"]["ground_cases_gear_down"] if abs(c["m"] - m0) < 0.5]
+        req = {r["id"]: r for r in Z.evaluate_requirements(S, Z.metrics(S, R))}
+        self.assertTrue(req["R-60"]["pass"])
+        bad = self.fl.takeoff_cases(m0, 0.0, gc, rot_cap_factor=0.9)
+        self.assertGreater(sum(c["rotation"]["rate_limited_steps"] for c in bad["cases"].values()), 0)
+        R2 = dict(R, performance=dict(R["performance"], takeoff_sl_mtow=bad))
+        M2 = Z.metrics(S, R2)
+        self.assertLess(M2["takeoff_rotation_download_margin_min_N"], 0.0)
+        req2 = {r["id"]: r for r in Z.evaluate_requirements(S, M2)}
+        self.assertFalse(req2["R-60"]["pass"])
+        # the consistency gate: a moment residual above the tolerance makes the metric negative
+        to = R["performance"]["takeoff_sl_mtow"]
+        c0 = next(iter(to["cases"]))
+        cases = {k: dict(v, rotation=dict(v["rotation"])) for k, v in to["cases"].items()}
+        cases[c0]["rotation"]["moment_residual_max_Nm"] = 1e-3
+        self.assertLess(Z.r60_metric(dict(to, cases=cases)), 0.0)
+        self.assertGreaterEqual(Z.r60_metric(to), 0.0)
 
     def test_mission_fuel_bookkeeping(self):
         mis = self.R["performance"]
@@ -686,6 +941,10 @@ class TestDoc02(unittest.TestCase):
         self.assertIn(f"{tr(ref['loiter_rpm'], 0)} rpm", doc)
         self.assertIn("MTOM'da 3000 m bekleme noktası", doc)
         self.assertNotIn("Bekleme 3000 m (başlangıç)", doc)
+        # fix round 4: the requirement decision is documented with the derived design-mission payload
+        self.assertIn("Gereksinim kararı: faydalı yük – dayanım", doc)
+        self.assertIn(f"{tr(S['mission']['payload_design_kg'], 1)} kg", doc)
+        self.assertIn(f"{tr(ref['endurance_max_payload_h'], 2)} h", doc)
 
 
 @unittest.skipUnless(HAVE, "ucav250 dependencies missing")

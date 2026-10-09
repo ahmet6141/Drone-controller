@@ -186,6 +186,13 @@ class Engine:
         self.elec_load_W = elec_load_W
         self.p_gen_shaft = elec_load_W / eta_gen
         self.bsfc_scale = 1.0                                   # sensitivity runs only
+        # below the lowest BSFC point (20 % power: the descent at about 5-7 % and the reserve loiter at about 18 %):
+        # "bsfc_linear" = the BSFC line through the two lowest points extrapolated (design model, endurance-study
+        # reproduction); "willans" = the FUEL FLOW line through the two lowest points extrapolated (Willans line:
+        # fuel flow linear in power with a positive zero-power intercept, the usual part-load behaviour of a
+        # spark-ignition engine) - a more conservative extrapolation (not a bound: no data below 20 % power) used by
+        # the V3-07 sensitivity
+        self.low_load_model = "bsfc_linear"
 
     def lapse(self, sigma: float) -> float:
         return sigma ** self.lapse_exp
@@ -196,11 +203,17 @@ class Engine:
         return np.where(n > self.n_cut, 0.0, q)
 
     def bsfc(self, p_total: float) -> float:
-        """g/kWh at total shaft power (propeller + generator); linear, extrapolated below the lowest point."""
+        """g/kWh at total shaft power (propeller + generator); linear, extrapolated below the lowest point
+        (``low_load_model``)."""
         f = p_total / self.P_max
         P = self.bsfc_pts
         if f < P[0, 0]:
-            b = P[0, 1] + (P[1, 1] - P[0, 1]) / (P[1, 0] - P[0, 0]) * (f - P[0, 0])
+            if self.low_load_model == "willans" and f > 1e-6:
+                ff0, ff1 = P[0, 0] * P[0, 1], P[1, 0] * P[1, 1]           # fuel flow / P_max at the two lowest points
+                ff = ff0 + (ff1 - ff0) / (P[1, 0] - P[0, 0]) * (f - P[0, 0])
+                b = ff / f
+            else:
+                b = P[0, 1] + (P[1, 1] - P[0, 1]) / (P[1, 0] - P[0, 0]) * (f - P[0, 0])
         else:
             b = float(np.interp(f, P[:, 0], P[:, 1]))
         return self.bsfc_scale * float(b)
@@ -1192,8 +1205,11 @@ def body_shell(S: dict, af: Airframe) -> dict:
 # =====================================================================================================================
 # 6. mass properties from the spec mass items (+ fuel, payload per loading case)
 # =====================================================================================================================
-def mass_cases(S: dict) -> list[dict]:
-    """CG of every loading case from spec mass items (empty incl. growth), payload items and fuel."""
+def mass_cases(S: dict, own_inertia: dict | None = None) -> list[dict]:
+    """CG of every loading case from spec mass items (empty incl. growth), payload items and fuel. With
+    ``own_inertia`` (distributed_pitch_inertia: specific own pitch inertia per item name and for the fuel, m^2) every
+    case also carries its pitch moment of inertia about its CG, I_yy (kg m^2; point masses + the own inertia of the
+    distributed items)."""
     M = S["mass"]
     items = M["items"]
     pay = {p["name"]: p for p in M["payload_items"]}
@@ -1201,17 +1217,67 @@ def mass_cases(S: dict) -> list[dict]:
     fx, fy, fz = M["fuel_cg"]
     out = []
     for c in M["cases"]:
-        its = [(i["mass_kg"], i["x"], i["y"], i["z"]) for i in items]
+        its = [(i["mass_kg"], i["x"], i["y"], i["z"], i["name"]) for i in items]
         names = c.get("payload", c.get("payload_items", []))
         for name in names:
             p = pay[name]
             z = p["z_extended"] if (c.get("turret") == "extended" and "z_extended" in p) else p["z"]
-            its.append((p["mass_kg"], p["x"], p.get("y", 0.0), z))
-        its.append((fuel * c["fuel_fraction"], fx, fy, fz))
+            its.append((p["mass_kg"], p["x"], p.get("y", 0.0), z, name))
+        its.append((fuel * c["fuel_fraction"], fx, fy, fz, "_fuel"))
         m = sum(i[0] for i in its)
         cg = [sum(i[0] * i[k] for i in its) / m for k in (1, 2, 3)]
-        out.append({"name": c["name"], "m": m, "x": cg[0], "y": cg[1], "z": cg[2],
-                    "fuel_fraction": c["fuel_fraction"], "payload_kg": sum(pay[n]["mass_kg"] for n in names)})
+        row = {"name": c["name"], "m": m, "x": cg[0], "y": cg[1], "z": cg[2],
+               "fuel_fraction": c["fuel_fraction"], "payload_kg": sum(pay[n]["mass_kg"] for n in names)}
+        if own_inertia is not None:
+            row["I_yy"] = sum(i[0] * ((i[1] - cg[0]) ** 2 + (i[3] - cg[2]) ** 2 + own_inertia.get(i[4], 0.0))
+                              for i in its)
+        out.append(row)
+    return out
+
+
+def distributed_pitch_inertia(S: dict, af: "Airframe") -> dict:
+    """V4-05 (fix round 5): specific own pitch inertia (m^2 = variance of the mass distribution in x and z about the
+    distribution's own centroid; I_own = m x value) of the distributed mass items, for the pitch moment of inertia of
+    the loading cases (mass_cases). Estimate: skins and lifting-surface structures spread uniformly over their exposed
+    wetted areas (OML meshes; body skin minus the parts covered by the wing and tail roots); the chine bands, keel beams,
+    frames and harness as uniform rods along the body (chine bands and frames over the body length, keel beams over
+    their 0.82 L length, harness over the body length); fuel uniform over the fuel-cell rectangles (x-z, layout.fuel_cells).
+    Every other item (engine, gear, equipment, payload, control surfaces) is a point mass at its position."""
+    def tri_var(mesh, keep):
+        tri = mesh.V[mesh.F]
+        c = tri.mean(axis=1)
+        ar = 0.5 * np.linalg.norm(np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0]), axis=1)
+        k = keep(c)
+        c, ar = c[k], ar[k]
+        w = ar / max(ar.sum(), 1e-12)
+        xm, zm = float(np.sum(w * c[:, 0])), float(np.sum(w * c[:, 2]))
+        return float(np.sum(w * ((c[:, 0] - xm) ** 2 + (c[:, 2] - zm) ** 2)))
+
+    def body_keep(c):
+        cov = np.zeros(len(c), bool)
+        for surf, mir in [(af.wing, True)] + [(af.tail[k], af.tail_mirror[k]) for k in af.tail]:
+            cov |= af._inside_surface(surf, c, mir)
+        return ~cov
+    outside = lambda c: ~af.inside(c)                        # noqa: E731
+    L = float(af.L)
+    out = {"wing_structure_pair": tri_var(af.wing_mesh, outside),
+           "body_skin_sandwich": tri_var(af.body_mesh, body_keep),
+           "chine_edge_bands": L ** 2 / 12.0, "frames_bulkheads": L ** 2 / 12.0,
+           "keel_beams_longerons": (0.82 * L) ** 2 / 12.0, "wiring_harness_connectors_coax": L ** 2 / 12.0}
+    tm = af.tail_meshes
+    for item, k in (("stabilators_pair", "stabilator"), ("stabilator_root_stubs_pair", "stabilator_stub"),
+                    ("fins_pair_fixed", "fin"), ("ventral_fin_bumper_skid", "ventral")):
+        if k in tm:
+            out[item] = tri_var(tm[k], outside)
+    cells = S["layout"].get("fuel_cells") or []
+    if cells:
+        A = np.array([(c["x"][1] - c["x"][0]) * (c["z"][1] - c["z"][0]) for c in cells])
+        xc = np.array([0.5 * (c["x"][0] + c["x"][1]) for c in cells])
+        zc = np.array([0.5 * (c["z"][0] + c["z"][1]) for c in cells])
+        own = np.array([((c["x"][1] - c["x"][0]) ** 2 + (c["z"][1] - c["z"][0]) ** 2) / 12.0 for c in cells])
+        w = A / A.sum()
+        xm, zm = float(np.sum(w * xc)), float(np.sum(w * zc))
+        out["_fuel"] = float(np.sum(w * (own + (xc - xm) ** 2 + (zc - zm) ** 2)))
     return out
 
 
@@ -1305,16 +1371,61 @@ def hoerner_junction_Dq(t: float, tc: float) -> float:
     return max(0.75 * tc - 0.0003 / tc ** 2, 0.0) * t * t
 
 
-def gear_door_joint_length(S: dict) -> float:
-    """Length (m) of the sealed door joints of the gear wells, from the stowed-envelope boxes: two main-well doors
-    (outline of each well box in plan view, from the centre-line gap outward) and the nose-well door."""
+def gear_door_geometry(S: dict) -> dict:
+    """Plan-view door areas (m2) and sealed joint lengths (m) of the gear wells from the stowed-envelope boxes and the
+    door scheme (landing_gear.doors, V3-10; V4-03 fix round 5): per main well a sequenced inner door (centre-line gap
+    to main_inner_door_outer_edge_y) and a leg door (from there to the outer well edge); the nose keel slot closed by
+    two clamshell doors. Joints: the outline of each main well, the inner/leg door split of each main well, the
+    outline of the nose slot and the clamshell centre split."""
     LG = S["landing_gear"]
     mb = np.asarray(LG["main"]["stowed_envelope"]["box"], float)
     nb = np.asarray(LG["nose"]["stowed_envelope"]["box"], float)
     y0 = 0.5 * float(LG["main"]["well_gap"])
-    main = 2 * 2 * ((mb[1, 0] - mb[0, 0]) + (mb[1, 1] - y0))
-    nose = 2 * ((nb[1, 0] - nb[0, 0]) + (nb[1, 1] - nb[0, 1]))
-    return float(main + nose)
+    y_s = float(LG.get("doors", {}).get("main_inner_door_outer_edge_y", y0))
+    dx_m, dx_n = mb[1, 0] - mb[0, 0], nb[1, 0] - nb[0, 0]
+    a_inner = 2 * dx_m * max(y_s - y0, 0.0)
+    a_leg = 2 * dx_m * (mb[1, 1] - max(y_s, y0))
+    a_nose = dx_n * (nb[1, 1] - nb[0, 1])
+    j_main = 2 * 2 * (dx_m + (mb[1, 1] - y0)) + (2 * dx_m if y_s > y0 else 0.0)
+    j_nose = 2 * (dx_n + (nb[1, 1] - nb[0, 1])) + dx_n
+    return {"area_main_inner_m2": float(a_inner), "area_main_leg_m2": float(a_leg), "area_nose_m2": float(a_nose),
+            "area_total_m2": float(a_inner + a_leg + a_nose), "joint_main_m": float(j_main), "joint_nose_m": float(j_nose),
+            "joint_total_m": float(j_main + j_nose), "x_main": float(0.5 * (mb[0, 0] + mb[1, 0])),
+            "x_nose": float(0.5 * (nb[0, 0] + nb[1, 0]))}
+
+
+def gear_door_joint_length(S: dict) -> float:
+    """Length (m) of the sealed door joints of the gear wells (gear_door_geometry: well outlines + the door split
+    lines; V4-03, fix round 5: the inner/leg door splits and the clamshell centre split are joints too)."""
+    return gear_door_geometry(S)["joint_total_m"]
+
+
+def gear_doors_mass(S: dict) -> dict:
+    """V4-03 (fix round 5): base mass (kg, before the growth allowance) and position of the gear doors, wells, locks and
+    door drives from the door scheme (landing_gear.doors) and mass.rules.gear_doors: door area x the areal mass of the
+    identity-study basis (sandwich doors incl. hinges and links), well close-outs, cut-out reinforcement, gear
+    locks/sensors, perimeter seals per metre of door joint (only with sealed doors), two door actuators for the
+    sequenced inner doors (catalogue unit) + their linkages, and the standoff brackets of the leg doors. x: mass-weighted
+    over the main-well and nose-well parts (close-outs, reinforcement and locks 2/3 main, 1/3 nose: three wells)."""
+    R = S["mass"]["rules"]["gear_doors"]
+    g = gear_door_geometry(S)
+    sealed = bool(S["aero"]["drag_rules"].get("gear_doors_sealed"))
+    ak = float(R["door_areal_kg_per_m2"])
+    seal = float(R["seal_kg_per_m"]) if sealed else 0.0
+    act = R["inner_door_actuator"]
+    m_act = float(research_item(act["mass_ref"])) * int(act["count"])
+    br = R["leg_door_brackets"]
+    fixed = float(R["well_close_outs_kg"]) + float(R["cut_out_reinforcement_kg"]) + float(R["locks_sensors_kg"])
+    parts = {"doors": ak * g["area_total_m2"], "seals": seal * g["joint_total_m"], "well_close_outs": float(R["well_close_outs_kg"]),
+             "cut_out_reinforcement": float(R["cut_out_reinforcement_kg"]), "locks_sensors": float(R["locks_sensors_kg"]),
+             "inner_door_actuators": m_act, "inner_door_linkages": float(act["linkage_kg_each"]) * int(act["count"]),
+             "leg_door_brackets": float(br["mass_kg_each"]) * int(br["count"])}
+    m_main = (ak * (g["area_main_inner_m2"] + g["area_main_leg_m2"]) + seal * g["joint_main_m"] + 2.0 / 3.0 * fixed +
+              parts["inner_door_actuators"] + parts["inner_door_linkages"] + parts["leg_door_brackets"])
+    m_nose = ak * g["area_nose_m2"] + seal * g["joint_nose_m"] + fixed / 3.0
+    total = sum(parts.values())
+    return {"total_kg": total, "parts_kg": parts, "geometry": g, "sealed": sealed,
+            "x": (m_main * g["x_main"] + m_nose * g["x_nose"]) / total}
 
 
 def tail_junctions(S: dict) -> list:
@@ -1850,7 +1961,7 @@ class Flight:
     def _state_key(self, *a) -> tuple:
         """Cache key: arguments + every model state the sensitivity runs change (BSFC scale, polar tables)."""
         return (tuple(round(float(x), 9) if isinstance(x, (int, float)) else x for x in a), self.eng.bsfc_scale,
-                tuple(round(float(np.sum(P.CDs)), 12) for P in self.pol.values()))
+                self.eng.low_load_model, tuple(round(float(np.sum(P.CDs)), 12) for P in self.pol.values()))
 
     def _cache(self, name: str) -> dict:
         if not hasattr(self, "_caches"):
@@ -2189,25 +2300,43 @@ class Flight:
         r = (16 * h_w / float(self.S["wing"]["span"])) ** 2
         return self.pol[pol].fit["k"] * r / (1 + r)
 
-    def takeoff(self, m: float, h: float = 0.0, cg: tuple | None = None) -> dict:
+    def takeoff(self, m: float, h: float = 0.0, cg: tuple | None = None, I_yy: float | None = None,
+                t_spin: float | None = None, rot_cap_factor: float = 1.0) -> dict:
         """Take-off at mass ``m`` and CG ``cg`` = (x, z) with the gear extended (default: ground design case).
 
-        V2-05 (fix round 3): the ground run ends at the actual lift-off, L >= W + T sin(eps) + stabilator trim download
-        at the actual attitude, and the take-off control law the run relies on is stated (fcs_stabilator_schedule):
-        1. Ground run at the ground attitude theta_g with the take-off flap, integrated in time (dt 0.02 s): WOT
-           propeller thrust T(V) (installation ramp, forward T cos eps, downward T sin eps), drag CD0_TO + k_ground CL^2
-           incl. the full-power cooling drag, rolling friction mu x (W + T sin eps - L + F_t) on all wheels.
-        2. FCS stabilator schedule before rotation: the stabilators give the smallest download F_t that keeps the main
-           wheels loaded (N_main >= 0: the aeroplane never wheelbarrows on the nose wheel); the download reaches its
-           maximum (eta q S_h CLt_max, local coefficient) at the rotation speed V_R, the lowest speed at which that
-           maximum lifts the nose wheel. Moments about the main-wheel contact (inertia and drag at the CG height,
-           friction at the ground): need = W (x_mg - x_cg) + T cos(eps)(z_t - z_cg) - T sin(eps)(x_t,thr - x_mg)
-           + mu N h_cg; capacity = q [eta S_h CLt (x_ac,t - x_mg) + S CL_g (x_mg - x_ac,wb) + S c Cm0_TO].
-        3. Rotation on the main wheels from V_R at the rate that would reach the 1.1 VS_TO trimmed lift-off attitude
-           (liftoff_attitude, the R-16 attitude) in ``t_rot`` (Raymer 6th ed. 17.8.2: about 1 s); the stabilator
-           returns to the power-on trim download. Lift-off when q S CL(theta) >= W + T sin(eps) + F_t,trim(V), but not
-           below 1.1 VS_TO (the FCS holds the attitude until then). V_LOF and theta_LOF are those of that instant.
-        4. Checks: main wheels still loaded at V_R, power-on trim at lift-off (local stabilator CL), V_LOF >= 1.1 VS_TO.
+        Geometry (V3-03, fix round 4): every moment is taken about the main-wheel ground contact C = (x_mg, z_g) in
+        the earth frame at the actual body attitude theta (nose-up rotation about C moves the points above C aft):
+        horizontal arm a = (x - x_mg) cos theta + (z - z_g) sin theta, height h = -(x - x_mg) sin theta + (z - z_g)
+        cos theta. Forces: weight W at the CG; wing-body lift L = q S (CL0 + CLa theta) at the wing-body AC (vertical,
+        level ground run); stabilator download F_t at the stabilator AC; thrust T along the body thrust line inclined
+        eps below the body axis (earth components: forward T cos(theta - eps), up T sin(theta - eps)) at the hub;
+        Cm0 of the take-off configuration; drag + longitudinal inertia (= forward thrust - friction) at the CG height;
+        wheel reactions (main, nose) and rolling friction mu N at the ground (no moment about C).
+        1. Ground run at the ground attitude theta_g with the take-off flap, time-integrated (dt 0.02 s): WOT thrust
+           T(V) with the installation ramp, drag CD0_TO + k_ground CL^2 + full-power cooling drag, friction mu N.
+        2. FCS ground-run schedule: the smallest stabilator download that keeps the main wheels loaded (no
+           wheelbarrowing).
+        3. Rotation law (V3-03; pitch inertia V4-05, fix round 5): the FCS commands a pitch rate that is ramped from
+           zero to the commanded rate (the 1.1 VS_TO trimmed attitude, the R-16 attitude, in ``t_rot``; Raymer 6th ed.
+           17.8.2: about 1 s) in the spin-up time ``t_spin`` (constant pitch acceleration thdd_s = rate / t_spin), then
+           held. With the nose wheel off the moment about C must equal (I_yy + m a_cg^2) thdd (pitch inertia about the
+           CG ``I_yy`` from the loading case, mass_cases; the m a_cg^2 part is the vertical acceleration of the CG
+           ahead of C, which also enters the wheel reaction N = W - T sin(theta - eps) + F_t - L + m a_z, a_z = -thdd
+           a_cg; the horizontal part is in the longitudinal integration); the stabilator download is the value that
+           gives it. The rotation starts at V_R = the lowest speed at which the maximum download eta q S_h CLt_max
+           gives the spin-up moment at the ground attitude (nose wheel unloaded, main wheels loaded). The download
+           then falls as the lift grows and becomes the airborne download (moment about the CG = I_yy thdd at the same
+           pitch acceleration and vertical CG acceleration; the power-on trim once the rate is held) exactly when N
+           reaches zero: lift-off. The download NEEDED is checked against the maximum at every step and the margin is
+           recorded unclipped (V4-01, fix round 5: negative when the stabilator cannot give it); on such a step the
+           maximum is applied and the aircraft follows the pitch acceleration that the maximum gives (the step is
+           counted). Below 1.1 VS_TO the FCS limits the attitude to the value at which the main wheels stay loaded (no
+           lift-off below 1.1 VS_TO). ``I_yy`` None or ``t_spin`` 0: the v1.5 quasi-static law (no pitch
+           acceleration, constant rate from V_R). ``rot_cap_factor`` (tests only; 1.0 in the analysis) scales the
+           maximum download in the rotation phase to emulate a stabilator that cannot hold it.
+        4. Checks: main wheels loaded at V_R (R-35); rotation download needed within the maximum (R-60, unclipped);
+           moment balance about C at every rotation step (residual) and the airborne balance at lift-off (download
+           continuity); V_LOF >= 1.1 VS_TO.
         5. Airborne distance to 15 m (Raymer 17.8.3)."""
         atm = AL.isa(h)
         rho = atm["rho"]
@@ -2215,6 +2344,9 @@ class Flight:
         P = self.pol["gear_down"]
         gr = self.ground
         x_cg, z_cg = cg if cg is not None else (gr["x_cg_to"], gr["z_cg_to"])
+        I_cg = float(I_yy) if I_yy is not None else 0.0
+        t_sp = float(gr.get("t_spin", 0.0) if t_spin is None else t_spin)
+        dynamic = I_cg > 0.0 and t_sp > 0.0
         fl = P.clmax["flap_to"]
         VS = AL.stall_speed(W, self.Sw, P.clmax["to_trimmed"], rho)
         CLg = gr["CL_ground_to"]
@@ -2222,17 +2354,17 @@ class Flight:
         kg = self.k_ground("gear_down")
         S, c = self.Sw, float(self.S["wing"]["mac"])
         e = self.eps
-        h_cg = z_cg - gr["z_g"]
         st = gr["stab"]
-        Sh, xt, eta, clt = st["S_h"], st["x_ac"], st["eta"], st["clt_max"]
+        Sh, xt, zt_ac, eta, clt = st["S_h"], st["x_ac"], st.get("z_ac", gr["z_t"]), st["eta"], st["clt_max"]
         Cm0 = gr["Cm0_to"]
-        x_ac, x_mg = gr["x_ac_wb"], gr["x_mg"]
+        x_ac, z_ac, x_mg, z_g = gr["x_ac_wb"], gr.get("z_ac_wb", 0.0), gr["x_mg"], gr["z_g"]
+        x_thr, z_thr = gr["x_thrust"], gr["z_t"]
         x_ng = gr.get("x_ng")
-        wb = (x_mg - x_ng) if x_ng is not None else None
+        th_s = math.radians(gr.get("static_attitude_deg", 0.0))
+        z_ng = z_g - (x_mg - x_ng) * math.tan(th_s) if x_ng is not None else None   # nose-wheel contact (body frame)
         CL0, CLa = gr["CL0"] + gr["dCL0_to"], gr["CLa"]
-        th_g = math.degrees((CLg - CL0) / CLa)                    # ground attitude (body = wing-body alpha datum)
+        th_g = (CLg - CL0) / CLa                                  # ground attitude (rad; body = wing-body datum)
         mu = gr["mu"]
-        d_thr = (gr["z_t"] - z_cg) * math.cos(e) - (gr["x_thrust"] - x_cg) * math.sin(e)
 
         def thrust(V):
             return self.prop.wot(max(V, 0.0), h)
@@ -2240,90 +2372,210 @@ class Flight:
         def drag(V, q, CL, w):
             return q * S * (cd0 + kg * CL ** 2) + q * self.cooling_extra_Dq(max(V, 1.0), h, self.wot_ff(w))
 
-        def need_cap(V, T, q, L, Ft):
-            N = max(W + T * math.sin(e) - L + Ft, 0.0)
-            need = (W * (x_mg - x_cg) + T * math.cos(e) * (gr["z_t"] - z_cg) - T * math.sin(e) * (gr["x_thrust"] - x_mg)
-                    + mu * N * h_cg)
-            cap0 = q * (S * CLg * (x_mg - x_ac) + S * c * Cm0)
-            return need, cap0, N
+        def arm(x, z, th):
+            return (x - x_mg) * math.cos(th) + (z - z_g) * math.sin(th)
 
-        def trim_download(V, T, q):
-            """Airborne power-on trim download (positive = down) at V (wing-body lift carries W + T sin e + F_t)."""
-            Ft = 0.0
-            for _ in range(8):
-                L = W + T * math.sin(e) + Ft
-                M_wb = q * S * c * Cm0 + L * (x_cg - x_ac) - T * d_thr        # nose-up positive, tail excluded
-                Ft = -M_wb / (xt - x_cg)
-            return Ft
+        def hgt(x, z, th):
+            return -(x - x_mg) * math.sin(th) + (z - z_g) * math.cos(th)
 
-        def schedule(V, T, q, L):
+        def I_eff(th):
+            """Pitch inertia in the moment equation about C (kg m^2): I_yy + m a_cg^2 (see the docstring)."""
+            return I_cg + m * arm(x_cg, z_cg, th) ** 2
+
+        def state(V, T, th, Ft, thdd=0.0):
+            """Total wheel reaction N (nose + main; with the vertical CG acceleration of a pitch acceleration thdd about
+            C) and the moment about C without the nose-wheel reaction (nose-up +)."""
+            q = 0.5 * rho * V * V
+            L = q * S * (CL0 + CLa * th)
+            Tf, Tv = T * math.cos(th - e), T * math.sin(th - e)
+            N = W - Tv + Ft - L - m * thdd * arm(x_cg, z_cg, th)
+            Nf = max(N, 0.0)
+            M = (W * arm(x_cg, z_cg, th) - L * arm(x_ac, z_ac, th) + Ft * arm(xt, zt_ac, th) + q * S * c * Cm0
+                 - Tf * hgt(x_thr, z_thr, th) - Tv * arm(x_thr, z_thr, th) + hgt(x_cg, z_cg, th) * (Tf - mu * Nf))
+            return N, M, L, q
+
+        def rot_download(V, T, th, thdd=0.0):
+            """Download that gives the moment I_eff thdd about C with the nose wheel off; the moment is linear in F_t on
+            each side of N = 0 (rolling friction mu N only while the main wheels are loaded)."""
+            Mreq = I_eff(th) * thdd
+            N0, M0, _, _ = state(V, T, th, 0.0, thdd)
+            hc, at = hgt(x_cg, z_cg, th), arm(xt, zt_ac, th)
+            M0nf = M0 + mu * hc * max(N0, 0.0)                    # moment without the friction term
+            Ft = (Mreq - M0nf + mu * hc * N0) / (at - mu * hc)    # main wheels loaded: N = N0 + F_t >= 0
+            if N0 + Ft >= 0.0:
+                return Ft
+            return (Mreq - M0nf) / at                             # wheels unloaded (N = 0, no friction)
+
+        def pitch_accel(V, T, th, Ft):
+            """Pitch acceleration about C that a given download produces (nose wheel off): M(thdd) = I_eff thdd, fixed
+            point (the friction term depends on thdd through N)."""
+            thdd = 0.0
+            for _ in range(20):
+                thdd_new = state(V, T, th, Ft, thdd)[1] / I_eff(th)
+                if abs(thdd_new - thdd) < 1e-12:
+                    break
+                thdd = thdd_new
+            return thdd
+
+        def trim_download(V, T, th, thdd=0.0):
+            """Airborne download at attitude th: moment about the CG = I_yy thdd with L = W - T sin(th - eps) + F_t +
+            m a_z (a_z = -thdd a_cg, the vertical CG acceleration of the rotation about C at lift-off; level flight
+            path and the power-on trim for thdd = 0)."""
+            q = 0.5 * rho * V * V
+            Tf, Tv = T * math.cos(th - e), T * math.sin(th - e)
+            a_ac = arm(x_ac, z_ac, th) - arm(x_cg, z_cg, th)
+            a_t = arm(xt, zt_ac, th) - arm(x_cg, z_cg, th)
+            h_t = hgt(x_thr, z_thr, th) - hgt(x_cg, z_cg, th)
+            a_thr = arm(x_thr, z_thr, th) - arm(x_cg, z_cg, th)
+            maz = -m * thdd * arm(x_cg, z_cg, th)
+            return ((W - Tv + maz) * a_ac - q * S * c * Cm0 + Tf * h_t + Tv * a_thr + I_cg * thdd) / (a_t - a_ac)
+
+        def trimmed_attitude(V, T):
+            th = th_g
+            q = 0.5 * rho * V * V
+            for _ in range(30):
+                Ft = trim_download(V, T, th)
+                th_new = ((W - T * math.sin(th - e) + Ft) / (q * S) - CL0) / CLa
+                if abs(th_new - th) < 1e-9:
+                    break
+                th = th_new
+            return th, trim_download(V, T, th)
+
+        def n_main(V, T, Ft):
+            """Main-wheel reaction on the ground run (both wheels on the ground, attitude th_g)."""
+            N, M, _, _ = state(V, T, th_g, Ft)
+            if x_ng is None:
+                return N
+            n_nose = max(-M / max(-arm(x_ng, z_ng, th_g), 1e-6), 0.0)
+            return N - n_nose
+
+        def schedule(V, T):
             """FCS ground-run download: the smallest F_t (0 .. maximum) that keeps the main wheels loaded."""
-            Ft_max = eta * q * Sh * clt
-            if wb is None:
+            Ft_max = eta * 0.5 * rho * V * V * Sh * clt
+            if x_ng is None or n_main(V, T, 0.0) >= 0.0:
                 return 0.0, Ft_max
-            def n_main(Ft):
-                need, cap0, N = need_cap(V, T, q, L, Ft)
-                n_nose = max((need - cap0 - Ft * (xt - x_mg)) / wb, 0.0)
-                return (W + T * math.sin(e) - L + Ft) - n_nose
-            if n_main(0.0) >= 0.0:
-                return 0.0, Ft_max
-            a, b = 0.0, Ft_max
-            if n_main(b) < 0.0:
+            if n_main(V, T, Ft_max) < 0.0:
                 return Ft_max, Ft_max
+            a, b = 0.0, Ft_max
             for _ in range(40):
                 mid = 0.5 * (a + b)
-                a, b = (a, mid) if n_main(mid) >= 0.0 else (mid, b)
+                a, b = (a, mid) if n_main(V, T, mid) >= 0.0 else (mid, b)
             return b, Ft_max
 
-        # rotation speed V_R (maximum download lifts the nose wheel)
-        V_R = None
-        for V in np.arange(2.0, 50.0, 0.02):
-            w = thrust(V)
-            T, q = w["T"], 0.5 * rho * V * V
-            L = q * S * CLg
-            Ft = eta * q * Sh * clt
-            need, cap0, _ = need_cap(V, T, q, L, Ft)
-            if cap0 + Ft * (xt - x_mg) >= need:
-                V_R = float(V)
-                break
+        # 1.1 VS_TO trimmed attitude (R-16 attitude), the commanded rotation rate and the spin-up pitch acceleration
+        V11 = 1.1 * VS
+        th_11, _ = trimmed_attitude(V11, thrust(V11)["T"])
+        th_rate = max(th_11 - th_g, math.radians(0.5)) / max(gr["t_rot"], 1e-3)          # rad/s
+        thdd_s = th_rate / t_sp if dynamic else 0.0
+
+        def vr_scan(thdd):
+            """Lowest speed (0.02 m/s grid) at which the maximum download gives the moment I_eff thdd about C at the
+            ground attitude (nose wheel off; the main-wheel reaction there is R-35)."""
+            for V in np.arange(2.0, 50.0, 0.02):
+                T = thrust(V)["T"]
+                Ft = eta * 0.5 * rho * V * V * Sh * clt
+                if state(V, T, th_g, Ft, thdd)[1] >= I_eff(th_g) * thdd:
+                    return float(V)
+            return None
+        V_R = vr_scan(thdd_s)
+        V_R_qs = vr_scan(0.0) if dynamic else V_R
         if V_R is None:
             return {"feasible": False, "ground_roll_m": float("inf"), "V_R_m_s": None, "VS_TO_m_s": VS}
-        w = thrust(V_R)
-        T, q = w["T"], 0.5 * rho * V_R * V_R
-        L = q * S * CLg
-        N_main_VR = W + T * math.sin(e) - L + eta * q * Sh * clt
-        # 1.1 VS_TO trimmed attitude (R-16 attitude) and the rotation rate
-        V11 = 1.1 * VS
-        w11 = thrust(V11)
-        q11 = 0.5 * rho * V11 * V11
-        th_11 = math.degrees(((W + w11["T"] * math.sin(e) + trim_download(V11, w11["T"], q11)) / (q11 * S) - CL0) / CLa)
-        th_rate = max(th_11 - th_g, 0.5) / max(gr["t_rot"], 1e-3)          # deg/s
+        T_R = thrust(V_R)["T"]
+        q_R = 0.5 * rho * V_R * V_R
+        Ft_R = eta * q_R * Sh * clt
+        N_main_VR = state(V_R, T_R, th_g, Ft_R, thdd_s)[0]
         # time integration of the ground run and the rotation
         dt, V, s, t, t_r = 0.02, 0.0, 0.0, 0.0, None
         V_dl0 = None
         lof = None
+        th, thd = th_g, 0.0
+        rot = {"download_margin_min_N": float("inf"), "moment_residual_max_Nm": 0.0, "rate_limited_steps": 0,
+               "attitude_hold_steps": 0, "N_min_N": float("inf"), "steps": 0, "Ft_min_N": float("inf"),
+               "Ft_max_N": -float("inf"), "thdd_max": 0.0, "nose_wheel_recontact_steps": 0}
         while True:
             w = thrust(V)
-            T, q = w["T"], 0.5 * rho * V * V
+            T = w["T"]
             if t_r is None and V >= V_R:
                 t_r = t
             if t_r is None:                                       # ground run at the ground attitude
-                th = th_g
-                L = q * S * CLg
-                Ft, _ = schedule(V, T, q, L)
+                Ft, _ = schedule(V, T)
                 if Ft > 0.0 and V_dl0 is None:
                     V_dl0 = V
+                N, _, L, q = state(V, T, th_g, Ft)
+                th = th_g
             else:                                                 # rotation on the main wheels
-                th = th_g + th_rate * (t - t_r)
-                CL = CL0 + CLa * math.radians(th)
-                L = q * S * CL
-                Ft = trim_download(V, T, q)
-                if L >= W + T * math.sin(e) + Ft and V >= V11:
-                    lof = {"V": V, "theta": th, "Ft": Ft, "CL": CL, "T": T}
+                Ft_cap = rot_cap_factor * eta * 0.5 * rho * V * V * Sh * clt
+                if dynamic:                                       # spin-up to the commanded rate, then hold it
+                    thdd = min(thdd_s, max(th_rate - thd, 0.0) / dt)
+                    thd_new = thd + thdd * dt
+                else:                                             # quasi-static law: commanded rate from V_R
+                    thdd, thd_new = 0.0, (th_rate if t > t_r else 0.0)
+                th_cmd = th + thd_new * dt
+                Ft_req = rot_download(V, T, th_cmd, thdd)
+                margin = Ft_cap - Ft_req                          # V4-01: unclipped (negative = cannot be held)
+                Ft = Ft_req
+                if Ft_req > Ft_cap:                               # the maximum is applied; the aircraft follows the
+                    rot["rate_limited_steps"] += 1                # pitch acceleration it gives (not below th_g)
+                    Ft = Ft_cap
+                    if dynamic:
+                        th_cmd = th
+                        for _ in range(30):                       # pitch acceleration at the end-of-step attitude
+                            thdd = pitch_accel(V, T, th_cmd, Ft)
+                            thd_new = max(thd + thdd * dt, 0.0)
+                            th_new_ = max(th + thd_new * dt, th_g)
+                            if abs(th_new_ - th_cmd) < 1e-15:
+                                break
+                            th_cmd = th_new_
+                        th_cmd = th_new_
+                    else:                                         # quasi-static law: attitude held this step
+                        thdd, thd_new, th_cmd = 0.0, 0.0, th
+                        Ft = min(rot_download(V, T, th), Ft_cap)
+                    if th_cmd <= th_g:                            # back on the nose wheel: it reacts the moment
+                        thd_new, thdd = 0.0, 0.0
+                        rot["nose_wheel_recontact_steps"] += 1
+                N, M, L, q = state(V, T, th_cmd, Ft, thdd)
+                if N <= 0.0 and V < V11:
+                    # no lift-off below 1.1 VS_TO: the FCS limits the attitude to keep the main wheels loaded (rate
+                    # stopped: no pitch acceleration at the held attitude)
+                    lo_, hi_ = th_g, th_cmd
+                    for _ in range(50):
+                        mid = 0.5 * (lo_ + hi_)
+                        lo_, hi_ = (mid, hi_) if state(V, T, mid, rot_download(V, T, mid))[0] > 0.0 else (lo_, mid)
+                    th_cmd, thdd, thd_new = lo_ - math.radians(0.02), 0.0, 0.0
+                    Ft = rot_download(V, T, th_cmd)
+                    margin = min(margin, Ft_cap - Ft)
+                    N, M, L, q = state(V, T, th_cmd, Ft)
+                    rot["attitude_hold_steps"] += 1
+                if N <= 0.0:                                      # lift-off inside this step: exact attitude N = 0
+                    lo_, hi_ = th, th_cmd
+                    if state(V, T, lo_, rot_download(V, T, lo_, thdd), thdd)[0] <= 0.0:
+                        lo_ = th_g
+                    for _ in range(60):
+                        mid = 0.5 * (lo_ + hi_)
+                        lo_, hi_ = (mid, hi_) if state(V, T, mid, rot_download(V, T, mid, thdd), thdd)[0] > 0.0 \
+                            else (lo_, mid)
+                    th_l = hi_
+                    Ft_l = rot_download(V, T, th_l, thdd)
+                    N_l, M_l, L_l, q_l = state(V, T, th_l, Ft_l, thdd)
+                    Ft_trim = trim_download(V, T, th_l, thdd)
+                    rot["download_margin_min_N"] = min(rot["download_margin_min_N"], Ft_cap - Ft_l)
+                    lof = {"V": V, "theta": th_l, "Ft": Ft_l, "CL": CL0 + CLa * th_l, "T": T, "N": N_l, "M": M_l,
+                           "Ft_trim": Ft_trim, "L": L_l, "thdd": thdd, "thd": thd_new, "I_eff": I_eff(th_l),
+                           "residual": abs(M_l - I_eff(th_l) * thdd)}
                     break
+                th, thd = th_cmd, thd_new
+                rot["download_margin_min_N"] = min(rot["download_margin_min_N"], margin)
+                if th_cmd > th_g or M > 0.0:                      # nose wheel off: moment balance about C
+                    rot["moment_residual_max_Nm"] = max(rot["moment_residual_max_Nm"], abs(M - I_eff(th_cmd) * thdd))
+                rot["N_min_N"] = min(rot["N_min_N"], N)
+                rot["Ft_min_N"] = min(rot["Ft_min_N"], Ft)
+                rot["Ft_max_N"] = max(rot["Ft_max_N"], Ft)
+                rot["thdd_max"] = max(rot["thdd_max"], thdd)
+                rot["steps"] += 1
             CL_now = L / max(q * S, 1e-9)
             D = drag(V, q, CL_now, w)
-            a = (T * math.cos(e) - D - mu * max(W + T * math.sin(e) - L + Ft, 0.0)) / m
+            a = (T * math.cos(th - e) - D - mu * max(N, 0.0)) / m
             if a <= 0.0 or t > 120.0:
                 return {"feasible": False, "ground_roll_m": float("inf"), "V_R_m_s": V_R, "VS_TO_m_s": VS}
             V += a * dt
@@ -2331,7 +2583,7 @@ class Flight:
             t += dt
         V_lof, th_lof, q = lof["V"], lof["theta"], 0.5 * rho * lof["V"] ** 2
         clt_lof = lof["Ft"] / (eta * q * Sh)
-        CL_wb = (W + lof["T"] * math.sin(e) + lof["Ft"]) / (q * S)
+        CL_wb = (W - lof["T"] * math.sin(th_lof - e) + lof["Ft"] - m * lof["thdd"] * arm(x_cg, z_cg, th_lof)) / (q * S)
         # airborne distance to 15 m
         V_tr = max(1.15 * VS, V_lof)
         R = V_tr ** 2 / (0.2 * G)
@@ -2342,31 +2594,53 @@ class Flight:
         # lift-off speed at the ground attitude without any stabilator download (information: below it the FCS
         # download keeps the main wheels on the ground)
         V_flat = math.sqrt(2 * W / (rho * S * CLg))
-        w_r = thrust(V_R)
-        q_r = 0.5 * rho * V_R * V_R
+        D_ = math.degrees
+        rot["moment_residual_max_Nm"] = max(rot["moment_residual_max_Nm"], lof["residual"])
+        if rot["steps"] == 0:
+            rot.update(N_min_N=0.0, Ft_min_N=lof["Ft"], Ft_max_N=lof["Ft"])
         return {"feasible": True, "ground_roll_m": s, "time_s": t, "V_lof_m_s": V_lof, "V_R_m_s": V_R,
                 "VS_TO_m_s": VS, "V_flat_ground_attitude_m_s": V_flat, "main_gear_load_at_VR_N": N_main_VR,
                 "wheelbarrow_free": bool(N_main_VR > 0.0), "stab_local_cl_at_lof": clt_lof,
-                "theta_lof_deg": th_lof, "theta_ground_deg": th_g, "theta_1p1VS_trimmed_deg": th_11,
+                "theta_lof_deg": D_(th_lof), "theta_ground_deg": D_(th_g), "theta_1p1VS_trimmed_deg": D_(th_11),
                 "CL_wb_lof": CL_wb, "CL_available_lof": lof["CL"], "T_static_N": self.prop.wot(0.0, h)["T"],
                 "T_lof_N": lof["T"], "air_distance_15m_m": s_air, "distance_15m_m": s + s_air,
                 "climb_gradient": math.sin(gam), "CL_ground": CLg, "flap_deg": fl["delta_deg"], "x_cg": x_cg,
-                "z_cg": z_cg, "mass_kg": m, "rotation_time_s": t - t_r, "rotation_rate_deg_s": th_rate,
+                "z_cg": z_cg, "mass_kg": m, "rotation_time_s": t - t_r, "rotation_rate_deg_s": D_(th_rate),
+                "rotation": {"download_at_V_R_N": Ft_R, "download_max_at_V_R_N": Ft_R,
+                             "download_at_lof_N": lof["Ft"], "trim_download_at_lof_N": lof["Ft_trim"],
+                             "download_continuity_at_lof_N": lof["Ft"] - lof["Ft_trim"],
+                             "main_wheel_reaction_at_lof_N": lof["N"], "moment_about_C_at_lof_Nm": lof["M"],
+                             "download_margin_min_N": rot["download_margin_min_N"],
+                             "moment_residual_max_Nm": rot["moment_residual_max_Nm"],
+                             "main_wheel_reaction_min_N": rot["N_min_N"], "download_min_N": rot["Ft_min_N"],
+                             "download_max_N": rot["Ft_max_N"], "rate_limited_steps": rot["rate_limited_steps"],
+                             "attitude_hold_steps": rot["attitude_hold_steps"], "steps": rot["steps"],
+                             "nose_wheel_recontact_steps": rot["nose_wheel_recontact_steps"],
+                             "pitch_inertia_I_yy_kg_m2": I_cg, "pitch_inertia_about_C_eff_at_V_R_kg_m2": I_eff(th_g),
+                             "spin_up_time_s": t_sp if dynamic else 0.0, "spin_up_pitch_accel_deg_s2": D_(thdd_s),
+                             "spin_up_moment_at_V_R_Nm": I_eff(th_g) * thdd_s,
+                             "pitch_rate_at_lof_deg_s": D_(lof["thd"]), "pitch_accel_at_lof_deg_s2": D_(lof["thdd"]),
+                             "V_R_without_pitch_inertia_m_s": V_R_qs},
                 "fcs_stabilator_schedule": {
                     "download_start_m_s": V_dl0, "full_nose_up_at_V_R_m_s": V_R,
-                    "full_nose_up_local_cl": clt, "trim_download_local_cl_at_V_R": trim_download(V_R, w_r["T"], q_r)
-                    / (eta * q_r * Sh), "liftoff_not_below_m_s": V11,
+                    "full_nose_up_local_cl": clt, "trim_download_local_cl_at_V_R":
+                        trim_download(V_R, T_R, th_g) / (eta * q_R * Sh),
+                    "rotation_download_local_cl_at_lof": clt_lof, "liftoff_not_below_m_s": V11,
                     "rule": "ground run: smallest stabilator download that keeps the main wheels loaded (from "
-                            "download_start), full nose-up at V_R; rotation at rotation_rate to the lift-off attitude "
-                            "with the stabilator at the power-on trim; no lift-off below 1.1 VS_TO"}}
+                            "download_start), full nose-up at V_R; rotation: pitch-rate command ramped from zero to the "
+                            "commanded rate in the spin-up time, then held, with the download that gives the moment "
+                            "(I_yy + m a_cg^2) x pitch acceleration about the main-wheel contact (nose wheel off), "
+                            "falling from full nose-up at V_R to the airborne value at lift-off, where the main-wheel "
+                            "reaction reaches zero; attitude limited below 1.1 VS_TO (no lift-off below it)"}}
 
-    def takeoff_cases(self, m: float, h: float, cases: list) -> dict:
-        """Take-off for every loading case of mass ``m`` (gear extended); the governing case is the longest roll."""
-        res = [dict(self.takeoff(m, h, (c["x"], c["z"])), case=c["name"]) for c in cases]
+    def takeoff_cases(self, m: float, h: float, cases: list, **kw) -> dict:
+        """Take-off for every loading case of mass ``m`` (gear extended; pitch inertia I_yy of each case when the case
+        carries it); the governing case is the longest roll."""
+        res = [dict(self.takeoff(m, h, (c["x"], c["z"]), I_yy=c.get("I_yy"), **kw), case=c["name"]) for c in cases]
         gov = max(res, key=lambda r: r["ground_roll_m"])
         return dict(gov, cases={r["case"]: {k: r.get(k) for k in ("ground_roll_m", "V_R_m_s", "V_lof_m_s",
                                                                  "main_gear_load_at_VR_N", "stab_local_cl_at_lof",
-                                                                 "theta_lof_deg", "x_cg")} for r in res})
+                                                                 "theta_lof_deg", "x_cg", "rotation")} for r in res})
 
     def landing(self, m: float, h: float = 0.0, flap: str = "ld") -> dict:
         """Landing ground roll (Raymer energy method incl. 1 s free roll) at mass m with the landing flap (``flap`` =
@@ -3538,6 +3812,130 @@ def electrical_budget(S: dict, gen_W: float) -> dict:
             "battery_reserve_holdup_min_at_reserve_power": float(E["battery_reserve_time_min"])}
 
 
+def research_item(ref: str):
+    """``components.yaml#categories.avionics.autopilots[veronte_autopilot_1x].dimensions_m`` -> value from a research
+    file; ``[id]`` selects the list entry with that id; a ``{value: ...}`` leaf returns its value."""
+    fname, path = ref.split("#", 1)
+    cur = research(fname)
+    for part in path.split("."):
+        if "[" in part:
+            key, sel = part[:-1].split("[")
+            cur = next(e for e in cur[key] if e.get("id") == sel)
+        else:
+            cur = cur[part]
+    return cur["value"] if isinstance(cur, dict) and "value" in cur else cur
+
+
+def content_envelope(it: dict) -> dict:
+    """Installed envelope of one bay content item (layout.rules.bay_contents): datasheet box (``ref`` into the research
+    files, or ``dims``, or a cell-pack rule ``pack``) in the installed orientation (``orient``: datasheet axis for x, y,
+    z), plus the connector / harness allowance on one face (``connector_face`` +x/-x/+y/-y/+z, ``connector_allowance``).
+    Returns the body and the allowance-inclusive boxes [[x0, y0, z0], [x1, y1, z1]] about ``center`` (the body centre)."""
+    if "pack" in it:
+        p = it["pack"]
+        d, h = float(p["cell_diameter"]), float(p["cell_height"])
+        dims = [p["n_x"] * d + 2 * p["wall"], p["n_y"] * d + 2 * p["wall"], h + p["bottom"] + p["top"]]
+    else:
+        raw = research_item(it["ref"]) if "ref" in it else it["dims"]
+        raw = [float(v) for v in raw]
+        o = it.get("orient", [0, 1, 2])
+        dims = [raw[o[0]], raw[o[1]], raw[o[2]]]
+    c = np.asarray(it["center"], float)
+    half = 0.5 * np.asarray(dims, float)
+    body = np.array([c - half, c + half])
+    env = body.copy()
+    a = float(it.get("connector_allowance", 0.0))
+    face = it.get("connector_face", "+x")
+    ax = {"x": 0, "y": 1, "z": 2}[face[1]]
+    if face[0] == "+":
+        env[1, ax] += a
+    else:
+        env[0, ax] -= a
+    return {"dims": dims, "body": body, "envelope": env}
+
+
+def _box_surface_points(b: np.ndarray, n: int = 5) -> np.ndarray:
+    g = [np.linspace(b[0, k], b[1, k], n) for k in range(3)]
+    P = np.array(np.meshgrid(*g, indexing="ij")).reshape(3, -1).T
+    on = np.zeros(len(P), bool)
+    for k in range(3):
+        on |= np.isclose(P[:, k], b[0, k]) | np.isclose(P[:, k], b[1, k])
+    return P[on]
+
+
+def bay_contents_check(S: dict, af: Airframe) -> dict:
+    """V3-02 (fix round 4): the real component envelopes declared for the equipment zones (layout.rules.bay_contents)
+    packed inside their zone boxes: every envelope (datasheet box + connector allowance) inside the OML with
+    ``clearance_to_oml``, inside its zone box (port-side items in the mirrored half of a symmetric side-bay pair) with
+    ``clearance_to_wall``, and at least ``gap_between_items`` from every other content item; the zone boxes themselves
+    are checked by packaging() (inside the OML, no overlap with the other zones and the fuel cells)."""
+    BC = S["layout"]["rules"].get("bay_contents")
+    if not BC:
+        return {"fits": True, "items": [], "failures": []}
+    Z = S["layout"]["zones_preliminary"]
+    c_oml, c_wall, gap = (float(BC[k]) for k in ("clearance_to_oml", "clearance_to_wall", "gap_between_items"))
+    rows, fails = [], []
+    envs = {}
+    for it in BC["items"]:
+        e = content_envelope(it)
+        env = e["envelope"]
+        envs[it["name"]] = env
+        P = _box_surface_points(env)
+        lo_, hi_ = -0.05, 0.10                                 # largest OML margin of the envelope (bisection)
+        for _ in range(28):
+            mid = 0.5 * (lo_ + hi_)
+            lo_, hi_ = (mid, hi_) if np.all(af.inside(P, margin=mid)) else (lo_, mid)
+        zb = np.asarray(Z[it["zone"]]["box"], float)
+        zlo, zhi = zb[0].copy(), zb[1].copy()
+        if it.get("side") == "port":                          # symmetric zone: the port box mirrors the starboard one
+            zlo[1], zhi[1] = -zb[1, 1], -zb[0, 1]
+        elif zb[0, 1] <= 0.0:
+            zlo[1] = -zb[1, 1]
+        wall = float(min(np.min(env[0] - zlo), np.min(zhi - env[1])))
+        rows.append({"name": it["name"], "zone": it["zone"], "dims_m": e["dims"], "envelope": env.tolist(),
+                     "oml_margin_m": lo_, "zone_wall_margin_m": wall, "mass_kg": it.get("mass_kg")})
+        if lo_ < c_oml - 1e-9:
+            fails.append(f"{it['name']}: {lo_ * 1000:.1f} mm inside the OML < {c_oml * 1000:.0f} mm")
+        if wall < c_wall - 1e-9:
+            fails.append(f"{it['name']}: outside its zone {it['zone']} (wall margin {wall * 1000:.1f} mm)")
+    names = list(envs)
+    gaps = {}
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            a, b = envs[names[i]], envs[names[j]]
+            sep = np.maximum(np.maximum(b[0] - a[1], a[0] - b[1]), 0.0)
+            ov = np.minimum(a[1], b[1]) - np.maximum(a[0], b[0])
+            d = float(np.linalg.norm(sep)) if np.any(sep > 0) else -float(np.min(ov))
+            gaps[f"{names[i]}/{names[j]}"] = d
+            if d < gap - 1e-9:
+                fails.append(f"{names[i]} / {names[j]}: gap {d * 1000:.1f} mm < {gap * 1000:.0f} mm")
+    for r in rows:
+        r["min_gap_to_other_items_m"] = min([v for k, v in gaps.items() if r["name"] in k.split("/")] or [float("inf")])
+    return {"fits": not fails, "items": rows, "failures": fails, "min_gap_m": min(gaps.values()) if gaps else None,
+            "clearance_to_oml_m": c_oml, "clearance_to_wall_m": c_wall, "gap_between_items_m": gap}
+
+
+def bay_content_centroid(S: dict, names: tuple) -> tuple:
+    """Mass-weighted centre (x, y, z) of the bay content items ``names`` (body boxes; mass_kg of the items)."""
+    its = [it for it in S["layout"]["rules"]["bay_contents"]["items"] if it["name"] in names]
+    m = sum(float(it["mass_kg"]) for it in its)
+    c = sum(float(it["mass_kg"]) * np.asarray(it["center"], float) for it in its) / m
+    return float(c[0]), float(c[1]), float(c[2])
+
+
+def fuel_capacity_kg(S: dict, af: Airframe) -> float:
+    """Usable fuel the bladder cells hold (kg): cell volume (area band x length, inset) x tank volume efficiency /
+    (1 + expansion space) x fuel density (the packaging() volume)."""
+    eff = float(S["structures"]["fuel"]["tank_volume_efficiency"])
+    vol = 0.0
+    for c in S["layout"]["fuel_cells"]:
+        xs = np.linspace(c["x"][0], c["x"][1], 30)
+        Ais = np.array([_area_band(af, x, c["z"][0], c["z"][1], float(c.get("inset", 0.025))) for x in xs])
+        vol += float(np.trapz(Ais, xs)) * eff
+    return vol / (1 + float(S["structures"]["fuel"]["expansion_fraction"])) * \
+        float(S["engine"]["fuel"]["density_kg_per_m3"])
+
+
 def packaging(S: dict, af: Airframe, mass_c: list) -> dict:
     """Keep-out boxes of the spec layout zones checked against the OML (corners and edge points inside with the zone
     clearance; the gear wells and the turret bay are checked on their real envelopes), pairwise overlap of the zones
@@ -3550,11 +3948,16 @@ def packaging(S: dict, af: Airframe, mass_c: list) -> dict:
             continue
         box = np.asarray(z["box"], float)
         m = float(z.get("clearance", 0.010))
-        ys = [-box[1, 1], 0.0, box[1, 1]] if z.get("symmetric", False) else [box[0, 1], box[1, 1]]
+        if z.get("symmetric", False) and box[0, 1] > 0.0:      # side-bay pair (y0..y1, mirrored): starboard box
+            ys = [box[0, 1], 0.5 * (box[0, 1] + box[1, 1]), box[1, 1]]
+        else:
+            ys = [-box[1, 1], 0.0, box[1, 1]] if z.get("symmetric", False) else [box[0, 1], box[1, 1]]
         pts = np.array([[x, y, zz] for x in np.linspace(box[0, 0], box[1, 0], 5) for y in ys
                         for zz in (box[0, 2], box[1, 2])])
         ok = bool(np.all(af.inside(pts, margin=m)))
         out[k] = {"box": box.tolist(), "fits": ok, "clearance_m": m}
+    # V3-02 (fix round 4): the declared contents of the equipment zones, packed with their real envelopes
+    out["bay_contents"] = bay_contents_check(S, af)
     gs = gear_stowage(S, af)
     out["main_gear_wells"] = {"fits": gs["main"]["ok"], **{k: v for k, v in gs["main"].items() if k != "ok"}}
     out["nose_gear_well"] = {"fits": gs["nose"]["ok"]}
@@ -3966,8 +4369,9 @@ def layout_zones(S: dict, af: Airframe, gp: dict) -> dict:
     E = S["engine"]["envelope"]
     zones = {}
     for k, b in R["boxes"].items():
-        zones[k] = {"box": [[b["x"][0], 0.0, b["z"][0]], [b["x"][1], b["half_width"], b["z"][1]]], "symmetric": True,
-                    "clearance": b.get("clearance", 0.008), "content": b.get("content", "")}
+        # y_inner > 0: a pair of side boxes (y_inner..half_width, mirrored), e.g. beside the nose-gear keel slot
+        zones[k] = {"box": [[b["x"][0], float(b.get("y_inner", 0.0)), b["z"][0]], [b["x"][1], b["half_width"], b["z"][1]]],
+                    "symmetric": True, "clearance": b.get("clearance", 0.008), "content": b.get("content", "")}
     ngl = gp["nose"]
     zones["nose_gear_well"] = {"box": _round(ngl["well_box"]), "symmetric": True, "clearance": 0.0,
                                "content": "stowed nose wheel (vertical) + leg slot; checked on the tyre envelope"}
@@ -4091,7 +4495,7 @@ def mass_items(S: dict, af: Airframe, wing_m: dict, tail_m: dict, shell: dict, l
     k_ms = m0 / float(MR["gear_reference_mtom"])
     x_pn, z_pn = lz["x_pivot_nose"], lz["z_pivot_nose"]
     LN = gp["nose_leg_length"]
-    av = ctr("avionics_power_bay")
+    av = ctr("avionics_power_deck")
     pc = ctr("parachute_bay")
     tb = ctr("turret_bay")
     eq = ctr("equipment_bay_aft")
@@ -4140,19 +4544,34 @@ def mass_items(S: dict, af: Airframe, wing_m: dict, tail_m: dict, shell: dict, l
         "retraction, TOST wheel + brake) x MTOM/150; flight CG = retracted position (wheels flat in the belly wells)")
     add("nose_gear_leg_wheel_steering", "gear", MR["sagitta_nose_leg_kg"] * k_ms, x_pn + 0.6 * LN, z_pn,
         "components.yaml SAGITTA nose leg 3.5 kg x MTOM/150; flight CG = retracted (aft, keel well)")
-    seals = " + perimeter door seals 0.08 (flush sealed doors, aero.drag_rules.gear_doors_sealed)" if \
-        S["aero"]["drag_rules"].get("gear_doors_sealed") else ""
-    add("gear_doors_wells_locks_sensors", "gear", MR["gear_doors_locks_kg"], 0.75 * gp["x_mg"] + 0.25 * x_pn, -0.10,
-        "identity study RETRACT items: doors 0.41 + well close-outs 0.36 + cut-out reinforcement 0.50 + locks/sensors "
-        f"0.25{seals}")
-    add("avionics", "systems", 0.62, av[0], av[2], "components.yaml avionics.recommended.mass_estimate_kg")
+    gd = gear_doors_mass(S)
+    gpk, gg, GR = gd["parts_kg"], gd["geometry"], MR["gear_doors"]
+    add("gear_doors_wells_locks_sensors", "gear", gd["total_kg"], gd["x"], -0.10,
+        f"V4-03 (fix round 5), door scheme landing_gear.doors: 6 doors {gg['area_total_m2']:.3f} m2 (main inner "
+        f"{gg['area_main_inner_m2']:.3f} + leg {gg['area_main_leg_m2']:.3f} + nose clamshells {gg['area_nose_m2']:.3f}) x "
+        f"{float(GR['door_areal_kg_per_m2']):.3f} kg/m2 (identity study 0.41 kg / 0.15 m2, sandwich doors incl. hinges and "
+        f"links) {gpk['doors']:.3f} + well close-outs {gpk['well_close_outs']:.2f} + cut-out reinforcement "
+        f"{gpk['cut_out_reinforcement']:.2f} + gear locks/sensors {gpk['locks_sensors']:.2f} + "
+        + (f"perimeter door seals {gpk['seals']:.3f} ({float(GR['seal_kg_per_m']) * 1000:.1f} g/m x "
+           f"{gg['joint_total_m']:.2f} m of joint) + " if gd["sealed"] else "") +
+        f"inner-door actuators {gpk['inner_door_actuators']:.3f} ({int(GR['inner_door_actuator']['count'])} x "
+        f"{GR['inner_door_actuator']['model']}, datasheet) + their linkages {gpk['inner_door_linkages']:.2f} + leg-door "
+        f"standoff brackets {gpk['leg_door_brackets']:.2f} (estimates)")
+    # V3-02 (fix round 4): positions of the avionics/power items = mass-weighted centres of their packed contents
+    # (layout.rules.bay_contents: real envelopes in the nose deck above the nose-gear well and in the side bays)
+    ax_, ay_, az_ = bay_content_centroid(S, ("autopilot", "datalink_primary", "datalink_backup", "transponder",
+                                            "remote_id"))
+    add("avionics", "systems", 0.62, ax_, az_, "components.yaml avionics.recommended.mass_estimate_kg (at the packed "
+        "autopilot / datalinks / transponder / Remote ID; probes and antennas counted in the same item)", y=ay_)
     EB = S["engine"]["electrical_budget"]
-    add("buffer_battery_12S2P_liion", "systems", float(EB["battery_mass_kg"]), av[0] - 0.08, av[2] - 0.01,
+    bx_, by_, bz_ = bay_content_centroid(S, ("buffer_battery",))
+    add("buffer_battery_12S2P_liion", "systems", float(EB["battery_mass_kg"]), bx_, bz_,
         f"{EB['battery_model']}: components.yaml#categories.electrical.buffer_batteries[liion_12s2p_molicel_p45b] "
         "1.98 kg (24 x 0.070 kg cells + 0.30 kg BMS/case/wiring); replaces the 14S2P LiFePO4 2.43 kg (V2-01, R-52 "
-        "peak-support share; engine.sources.buffer_battery)")
-    add("pdu_dcdc_fuses", "systems", 2.10, av[0] + 0.10, av[2], "components.yaml electrical: PDU 1.60 + DC-DC 0.10 + "
-        "fuses/contactor 0.40")
+        "peak-support share; engine.sources.buffer_battery); port side bay", y=by_)
+    px_, py_, pz_ = bay_content_centroid(S, ("pdu", "dcdc_28_12", "contactor_fuses"))
+    add("pdu_dcdc_fuses", "systems", 2.10, px_, pz_, "components.yaml electrical: PDU 1.60 + DC-DC 0.10 + "
+        "fuses/contactor 0.40 (deck above the nose-gear well)", y=py_)
     add("wiring_harness_connectors_coax", "systems", MR["harness_kg"], 1.9, 0.0,
         "baseline 2.50 kg + 0.20 kg longer wing harness (endurance study); distributed")
     pa = MR["parachute"]
@@ -4211,17 +4630,35 @@ def mass_items(S: dict, af: Airframe, wing_m: dict, tail_m: dict, shell: dict, l
     return I
 
 
-def payload_items(S: dict, lz: dict) -> list:
+BASELINE_PAYLOAD_ITEMS = ("eo_ir_turret_hd59_mount", "mission_computer_recorder", "payload_tray_harness")
+
+
+def payload_baseline_kg(S: dict) -> float:
+    """Baseline EO/IR set (HD59 turret + mount, mission computer/recorder, tray/harness): the payload every mission
+    carries; the rest of a payload is research-payload allowance in the belly bay."""
     PS = S["payload"]
+    return float(PS["turret_mass_kg"]) + float(PS["mission_computer_kg"]) + float(PS["tray_harness_kg"])
+
+
+def payload_items(S: dict, lz: dict) -> list:
+    """Payload mass items. Requirement decision (fix round 4): the design-mission payload (mission.payload_design_kg,
+    derived by the payload-endurance rule) = baseline set + research_payload_allowance; the maximum payload
+    (mission.payload_max_kg, R-02b) adds research_payload_max_increment in the same belly bay."""
+    PS = S["payload"]
+    mis = S["mission"]
     tb = lz["zones"]["turret_bay"]
     T = PS["turret"]
-    R = S["layout"]["rules"]
     pb = np.asarray(lz["zones"]["payload_bay"]["box"], float)
     xb = 0.5 * (pb[0, 0] + pb[1, 0])
     zb = 0.5 * (pb[0, 2] + pb[1, 2])
     xt = 0.5 * (tb["box"][0][0] + tb["box"][1][0])
     mcb = np.asarray(lz["zones"]["mission_computer"]["box"], float)
     mc = 0.5 * (mcb[0] + mcb[1])
+    p_d, p_x, p_b = float(mis["payload_design_kg"]), float(mis["payload_max_kg"]), payload_baseline_kg(S)
+    if not p_b - 1e-9 <= p_d <= p_x + 1e-9:
+        raise ValueError(f"design payload {p_d} kg outside [baseline set {p_b}, maximum {p_x}] kg")
+    if abs(p_b + float(PS["research_allowance_max_kg"]) - p_x) > 1e-6:
+        raise ValueError("payload.research_allowance_max_kg + baseline set must equal mission.payload_max_kg")
     return [{"name": "eo_ir_turret_hd59_mount", "mass_kg": PS["turret_mass_kg"], "x": round(xt, 4), "y": 0.0,
              "z": round(T["ball_center_retracted_z"], 4), "z_extended": round(T["ball_center_extended_z"], 4),
              "basis": "Trillium HD59-LLVV 1.55 kg datasheet + isolator/mount 0.20 kg (baseline.yaml#payload_set)"},
@@ -4229,19 +4666,74 @@ def payload_items(S: dict, lz: dict) -> list:
              "z": round(mc[2], 4), "basis": "baseline.yaml#payload_set"},
             {"name": "payload_tray_harness", "mass_kg": PS["tray_harness_kg"], "x": round(xb, 4), "y": 0.0,
              "z": round(zb, 4), "basis": "baseline.yaml#payload_set.payload_tray_harness_kg"},
-            {"name": "research_payload_allowance", "mass_kg": PS["research_allowance_kg"], "x": round(xb, 4), "y": 0.0,
-             "z": round(zb, 4), "basis": "baseline.yaml#payload_set.research_payload_allowance_kg (belly bay on the CG)"},
+            {"name": "research_payload_allowance", "mass_kg": round(p_d - p_b, 4), "x": round(xb, 4), "y": 0.0,
+             "z": round(zb, 4), "basis": "design-mission payload (mission.payload_design_kg, payload-endurance rule) "
+                                         "minus the baseline set; belly bay on the CG"},
+            {"name": "research_payload_max_increment", "mass_kg": round(p_x - p_d, 4), "x": round(xb, 4), "y": 0.0,
+             "z": round(zb, 4), "basis": "maximum payload (mission.payload_max_kg, R-02b; baseline.yaml research "
+                                         "allowance 16.75 kg) minus the design-mission payload; same belly bay"},
             {"name": "e180_growth_turret_delta", "mass_kg": round(PS["growth_turret_mass_kg"] - PS["turret_mass_kg"], 4),
              "x": round(xt, 4), "y": 0.0, "z": round(T["ball_center_retracted_z"], 4),
              "z_extended": round(T["ball_center_extended_z"], 4),
              "basis": "Octopus E180 class 4.0 kg incl. mount (baseline growth envelope) minus the HD59 set"},
             {"name": "research_payload_reduced_for_e180", "mass_kg": round(-(PS["growth_turret_mass_kg"] -
                                                                            PS["turret_mass_kg"]), 4),
-             "x": round(xb, 4), "y": 0.0, "z": round(zb, 4), "basis": "keeps the 20 kg design payload with the E180"}]
+             "x": round(xb, 4), "y": 0.0, "z": round(zb, 4),
+             "basis": "keeps the design-mission payload with the E180 (research allowance reduced by the turret "
+                      "mass difference)"}]
 
 
-def ground_cases(S: dict, gp: dict, lz: dict) -> list:
-    """Loading cases with the gear EXTENDED (ground): gear items moved to their extended positions."""
+def sm_range_items(S: dict, stab: dict, cbar: float, m_add: float, x_add: float, fuel_kg: float) -> list:
+    """Static-margin range [min, max] (fraction of MAC) of the empty aircraft + one added mass (m_add at x_add) over the
+    fuel load 0 .. fuel_kg (fuel at mass.fuel_cg)."""
+    M = S["mass"]
+    m_z = sum(float(i["mass_kg"]) for i in M["items"]) + m_add
+    mx = sum(float(i["mass_kg"]) * float(i["x"]) for i in M["items"]) + m_add * x_add
+    fx = float(M["fuel_cg"][0])
+    xs = [mx / m_z, (mx + fuel_kg * fx) / (m_z + fuel_kg)]
+    return [(stab["x_np"] - max(xs)) / cbar, (stab["x_np"] - min(xs)) / cbar]
+
+
+def payload_loading_cg_fn(S: dict, payload_kg: float):
+    """(f, m_zero_fuel) of a loading with ``payload_kg`` of payload (0 = no payload at all; otherwise the baseline set
+    at its items + the rest as research payload in the belly bay): x of the CG as a function f(m_fuel) of the fuel on
+    board (fuel at mass.fuel_cg). Payload-endurance sweep and the design-payload rule; for the design payload it is
+    the loading of mass.cases[0]."""
+    M = S["mass"]
+    pay = {p["name"]: p for p in M["payload_items"]}
+    its = [(float(i["mass_kg"]), float(i["x"])) for i in M["items"]]
+    p_b = payload_baseline_kg(S)
+    if payload_kg > 1e-9:
+        if payload_kg < p_b - 1e-9:
+            raise ValueError(f"payload {payload_kg} kg below the baseline set {p_b} kg")
+        its += [(float(pay[n]["mass_kg"]), float(pay[n]["x"])) for n in BASELINE_PAYLOAD_ITEMS]
+        its.append((payload_kg - p_b, float(pay["research_payload_allowance"]["x"])))
+    m_z = sum(m for m, _ in its)
+    mx = sum(m * x for m, x in its)
+    fx = float(M["fuel_cg"][0])
+    return (lambda mf: (mx + mf * fx) / (m_z + mf)), m_z
+
+
+def update_case_fuel(S: dict, fuel_cap: float | None = None) -> None:
+    """Loading cases with ``fuel_rule: mtom`` (maximum-payload cases at MTOM): fuel fraction = (MTOM - zero-fuel
+    mass) / mass.fuel_kg (the design-payload fuel); ``fuel_rule: capacity`` (V4-02, fix round 5: light payload with
+    full tanks, the loadings of the payload-endurance table): fuel fraction = min(fuel capacity, MTOM - zero-fuel mass)
+    / mass.fuel_kg. Written as a number (analysis/mass.py reads fuel_fraction)."""
+    M = S["mass"]
+    pay = {p["name"]: p["mass_kg"] for p in M["payload_items"]}
+    empty = sum(i["mass_kg"] for i in M["items"])
+    fuel = float(M["fuel_kg"])
+    for c in M["cases"]:
+        mz = empty + sum(pay[n] for n in c["payload"])
+        if c.get("fuel_rule") == "mtom":
+            c["fuel_fraction"] = round(min(max((float(M["mtow_kg"]) - mz) / fuel, 0.0), 1.0), 6)
+        elif c.get("fuel_rule") == "capacity" and fuel_cap is not None:
+            c["fuel_fraction"] = round(max(min(fuel_cap, float(M["mtow_kg"]) - mz), 0.0) / fuel, 6)
+
+
+def ground_cases(S: dict, gp: dict, lz: dict, own_inertia: dict | None = None) -> list:
+    """Loading cases with the gear EXTENDED (ground): gear items moved to their extended positions (with
+    ``own_inertia``: pitch moment of inertia I_yy of every case, mass_cases)."""
     S2 = copy.deepcopy(S)
     r_t = S["landing_gear"]["tyre"]["diameter"] / 2
     for it in S2["mass"]["items"]:
@@ -4250,7 +4742,7 @@ def ground_cases(S: dict, gp: dict, lz: dict) -> list:
         elif it["name"].startswith("nose_gear_leg"):
             it["x"] = round(gp["x_ng"], 4)
             it["z"] = round(gp["z_axle_nose"] + 0.4 * gp["nose_leg_length"], 4)
-    return mass_cases(S2)
+    return mass_cases(S2, own_inertia)
 
 
 def landing_gear_block(S: dict, gp: dict, lz: dict) -> None:
@@ -4385,6 +4877,8 @@ def design_closure(S_in: dict, verbose: bool = True, max_iter: int = 30) -> dict
         fuel = m0 - empty - pay
         S["mass"].update({"empty_kg": round(empty, 4), "fuel_kg": round(fuel, 4), "payload_kg": pay,
                           "fuel_cg": _round([fuel_x, 0.0, fuel_z], 4)})
+        S["payload"]["research_allowance_design_kg"] = round(pay - payload_baseline_kg(S), 4)
+        update_case_fuel(S, fuel_capacity_kg(S, af))
         cases = mass_cases(S)
         gcases = ground_cases(S, gp, lz)
         stab = stability(S, af, wa, llm, cm0s, tp, cases)
@@ -4472,6 +4966,7 @@ def design_closure(S_in: dict, verbose: bool = True, max_iter: int = 30) -> dict
 # 12. spec-built scene (renders) and the dimensioned 3-view
 # =====================================================================================================================
 COLORS = {"skin": "#C9CED3", "skin_dark": "#9AA2AA", "accent": "#5D646C", "dark": "#2E3338", "glass": "#1E2228",
+          "cavity": "#0E1012",
           "prop": "#1F2226", "gear": "#4A5057", "tyre": "#16181A", "turret": "#2A2E33", "metal": "#8C939B",
           "ground": "#F2F4F6"}
 
@@ -4571,48 +5066,134 @@ def scene_parts(S: dict, turret: str = "extended", gear: str = "down") -> list:
         parts.append(("ng_bridge", cylinder(0.010, a + np.array([0, -(tw / 2 + 0.012), rt + 0.02]),
                                             a + np.array([0, (tw / 2 + 0.012), rt + 0.02]), n=12), "metal"))
         parts.append(("ng_wheel", _wheel_mesh(a, rt, tw, (0, 1, 0)), "tyre"))
-    if gear == "up" or turret == "retracted":
-        parts += _belly_seams(S, af, gear == "up", turret == "retracted")
+    parts += _belly_seams(S, af, gear == "up", turret == "retracted")
     return parts
 
 
+def _skin_patch(af: Airframe, xy_grid: np.ndarray, off: float = 0.0025, t: float = 0.002, close_u: bool = False):
+    """Thin render-only solid that follows the belly skin over the (nu, nv, 2) grid of plan positions, ``off`` below
+    the skin (outside) and ``t`` thick toward it (no z-fighting with the OML)."""
+    from ..core.geom import shell_from_grid
+    g = np.asarray(xy_grid, float)
+    z = np.asarray(af.z_bot(g[..., 0].ravel(), g[..., 1].ravel()), float).reshape(g.shape[:2])
+    P = np.dstack([g[..., 0], g[..., 1], z - off])
+    inward = np.zeros_like(P)
+    inward[..., 2] = 1.0
+    return shell_from_grid(P, t, inward=inward, close_u=close_u)
+
+
+def _plate(P: np.ndarray, normal, t: float = 0.004):
+    """Thin closed plate (door) from a (nu, nv, 3) grid; thickness along ``normal``."""
+    from ..core.geom import shell_from_grid
+    P = np.asarray(P, float)
+    inward = np.broadcast_to(np.asarray(normal, float), P.shape).copy()
+    return shell_from_grid(P, t, inward=inward)
+
+
 def _belly_seams(S: dict, af: Airframe, gear_up: bool, turret_in: bool) -> list:
-    """Render-only joint lines on the belly (V2-08): outlines of the closed flush gear doors and of the turret bay
-    doors with the aperture ring, drawn as thin dark rods just outside the skin so that a view from below shows the
-    retracted state (the OML itself is continuous)."""
-    from ..core.geom import sweep_circle
+    """Render-only belly details. Retracted states (V2-08): joint lines of the closed flush gear doors and of the turret
+    aperture ring / bay doors, drawn as thin dark rods just outside the skin (the OML itself is continuous).
+    Extended states (V3-10, fix round 4): the open wells (dark openings with the real well footprints) and the open
+    doors (landing_gear.doors) - nose well: two clamshell doors hinged at the keel-slot edges, open 90 deg; main wells:
+    sequenced inner doors (hinged at the inboard well edges, open only while the gear moves, closed again after the
+    down-lock: shown closed) and a leg door carried by the leg on two standoff brackets (rotated with the leg by the
+    retraction angle about the trunnion axis), leaving the leg slot open; turret: the aperture ring with the open annulus
+    between the ring opening and the lowered ball (the bay doors are folded inside along the bay walls,
+    payload.turret.bay)."""
+    from ..core.geom import cylinder, sweep_circle
     Z = S["layout"].get("zones_preliminary", {})
+    LG = S["landing_gear"]
     out = []
 
     def on_skin(xy):
         return np.array([[x, y, float(af.z_bot(x, y)) - 0.0015] for x, y in xy])
 
-    def rect(name, x0, x1, hw, split=True):
+    def rect(name, x0, x1, y0, y1, split=None):
         n = 40
         xs = np.linspace(x0, x1, n)
-        ys = np.linspace(-hw, hw, max(int(2 * hw / 0.01), 8))
-        loop = ([(x, -hw) for x in xs] + [(x1, y) for y in ys[1:]] + [(x, hw) for x in xs[::-1][1:]] +
+        ys = np.linspace(y0, y1, max(int((y1 - y0) / 0.01), 8))
+        loop = ([(x, y0) for x in xs] + [(x1, y) for y in ys[1:]] + [(x, y1) for x in xs[::-1][1:]] +
                 [(x0, y) for y in ys[::-1][1:]])
         out.append((name, sweep_circle(on_skin(loop), 0.0025, 8), "dark"))
-        if split:
-            out.append((name + "_split", sweep_circle(on_skin([(x, 0.0) for x in xs]), 0.0025, 8), "dark"))
+        if split is not None:
+            out.append((name + "_split", sweep_circle(on_skin([(x, split) for x in xs]), 0.0025, 8), "dark"))
+
+    def grid(x0, x1, y0, y1, nx=28, ny=10):
+        X, Y = np.meshgrid(np.linspace(x0, x1, nx), np.linspace(y0, y1, ny), indexing="ij")
+        return np.dstack([X, Y])
+    mb = Z.get("main_gear_wells", {}).get("box")
+    nb = Z.get("nose_gear_well", {}).get("box")
+    y_in = float(LG["main"]["stowed_envelope"]["box"][0][1])
     if gear_up:
-        if "main_gear_wells" in Z:
-            b = Z["main_gear_wells"]["box"]
-            rect("seam_main_doors", b[0][0], b[1][0], b[1][1])
-        if "nose_gear_well" in Z:
-            b = Z["nose_gear_well"]["box"]
-            rect("seam_nose_doors", b[0][0], b[1][0], b[1][1])
-    if turret_in and "turret_bay" in Z:
-        b = Z["turret_bay"]["box"]
-        rect("seam_turret_doors", b[0][0], b[1][0], b[1][1])
-        T = S["payload"]["turret"]
-        ring = T.get("bay", {}).get("aperture_ring")             # flush skin ring around the ball opening (V1-07)
-        r_ap = 0.5 * float(T["ball_diameter"]) + (float(ring["radial_clearance"]) if ring else 0.005)
+        if mb:                                                   # V4-07: inner doors + leg doors (landing_gear.doors)
+            y_split = float(LG["doors"]["main_inner_door_outer_edge_y"])
+            rect("seam_main_inner_doors", mb[0][0], mb[1][0], -y_split, y_split, split=0.0)
+            for sg in (1, -1):
+                y_a, y_b = sorted((sg * y_split, sg * mb[1][1]))
+                rect(f"seam_main_leg_door{sg}", mb[0][0], mb[1][0], y_a, y_b)
+        if nb:
+            rect("seam_nose_doors", nb[0][0], nb[1][0], -nb[1][1], nb[1][1], split=0.0)
+    else:
+        if nb:                                                   # nose keel slot: open well + clamshell doors
+            x0, x1, hw = nb[0][0], nb[1][0], nb[1][1]
+            out.append(("nose_well_open", _skin_patch(af, grid(x0, x1, -hw, hw, ny=6)), "cavity"))
+            xs = np.linspace(x0, x1, 24)
+            for sg in (1, -1):
+                zh = np.array([float(af.z_bot(x, sg * hw)) for x in xs])
+                P = np.array([[[x, sg * hw, z - f * hw] for f in (0.0, 1.0)] for x, z in zip(xs, zh)])
+                out.append((f"nose_door{sg}", _plate(P, (0.0, sg * 1.0, 0.0)), "skin_dark"))
+        if mb:                                                   # main wells: leg slot open, inner doors re-closed
+            x0, x1, y1 = mb[0][0], mb[1][0], mb[1][1]
+            T = np.asarray(LG["main"]["trunnion"], float)
+            A = np.asarray(LG["main"]["axle_static"], float)
+            Cs = np.asarray(LG["main"]["retraction"]["stowed_wheel_center"], float)
+            ang = math.atan2(A[2] - T[2], A[1] - T[1]) - math.atan2(Cs[2] - T[2], Cs[1] - T[1])
+            ang = (ang + math.pi) % (2 * math.pi) - math.pi                 # stowed -> extended about +x
+            y_split = float(LG["doors"]["main_inner_door_outer_edge_y"])
+            xs = np.linspace(x0, x1, 24)
+            rect("seam_main_inner_doors", x0, x1, -y_split, y_split, split=0.0)   # sequenced: closed after down-lock
+            for sg in (1, -1):
+                out.append((f"main_leg_slot_open{sg}", _skin_patch(af, grid(x0, x1, sg * y_split, sg * y1)), "cavity"))
+                ys = np.linspace(y_split + 0.004, T[1] - 0.03, 6)
+                Pst = np.array([[[x, y, float(af.z_bot(x, y)) - 0.004] for y in ys] for x in xs])
+                c, s_ = math.cos(ang), math.sin(ang)
+                dy, dz = Pst[..., 1] - T[1], Pst[..., 2] - T[2]
+                Pex = np.dstack([Pst[..., 0], T[1] + c * dy - s_ * dz, T[2] + s_ * dy + c * dz])
+                Ax = A.copy()
+                if sg < 0:
+                    Pex = Pex * np.array([1.0, -1.0, 1.0])
+                    Ax = Ax * np.array([1.0, -1.0, 1.0])
+                Tx = T * np.array([1.0, sg, 1.0])
+                nrm = np.cross(Pex[1, 0] - Pex[0, 0], Pex[0, 1] - Pex[0, 0])
+                out.append((f"main_leg_door{sg}", _plate(Pex, nrm / np.linalg.norm(nrm)), "skin_dark"))
+                for k_, j_ in ((0, 1), (1, len(ys) - 2)):        # two standoff brackets leg -> door
+                    q_ = Pex[len(xs) // 2 + (k_ * 2 - 1) * len(xs) // 5, j_]
+                    d_ = Ax - Tx
+                    f_ = float(np.clip(np.dot(q_ - Tx, d_) / np.dot(d_, d_), 0.1, 0.6))
+                    out.append((f"main_leg_door_bracket{sg}_{k_}", cylinder(0.006, Tx + f_ * d_, q_, n=10), "metal"))
+    tb = Z.get("turret_bay", {}).get("box")
+    if tb:
+        T_ = S["payload"]["turret"]
+        ring = T_.get("bay", {}).get("aperture_ring")             # flush skin ring around the ball opening (V1-07)
+        r_ap = 0.5 * float(T_["ball_diameter"]) + (float(ring["radial_clearance"]) if ring else 0.005)
+        xc = float(T_["bay_center_x"])
+        rect("seam_turret_ring_insert", tb[0][0], tb[1][0], -tb[1][1], tb[1][1])
         th = np.linspace(0.0, 2 * math.pi, 73)
-        xc = float(T["bay_center_x"])
-        out.append(("seam_turret_ring", sweep_circle(on_skin([(xc + r_ap * math.cos(t), r_ap * math.sin(t)) for t in th]),
-                                                     0.0025, 8), "dark"))
+        out.append(("seam_turret_ring", sweep_circle(on_skin([(xc + r_ap * math.cos(t), r_ap * math.sin(t))
+                                                               for t in th]), 0.0025, 8), "dark"))
+        if turret_in:                                              # bay doors closing the ring opening (split line)
+            out.append(("seam_turret_doors_split", sweep_circle(on_skin([(xc + r_ap * f, 0.0)
+                                                                         for f in np.linspace(-1, 1, 20)]), 0.0025, 8),
+                        "dark"))
+        else:                                                      # open annulus around the lowered ball
+            zs = float(af.z_bot(xc))
+            r_b = 0.5 * float(T_["ball_diameter"])
+            dz = zs - float(T_["ball_center_extended_z"])
+            r_in = math.sqrt(max(r_b ** 2 - dz ** 2, 0.0)) if abs(dz) < r_b else 0.5 * float(T_["stem_diameter"])
+            tt = np.linspace(0.0, 2 * math.pi, 72, endpoint=False)
+            rr = np.linspace(r_in + 0.0005, r_ap, 4)
+            G_ = np.array([[(xc + r * math.cos(t), r * math.sin(t)) for r in rr] for t in tt])
+            out.append(("turret_aperture_open", _skin_patch(af, G_, close_u=True), "cavity"))
     return out
 
 
@@ -4672,11 +5253,17 @@ def render_scene(parts: list, out_dir: Path, prefix: str, ground, views=None, re
 # =====================================================================================================================
 # 13. evaluation of the spec design point
 # =====================================================================================================================
-def make_propulsion(S: dict, table_key: str | None = None) -> tuple:
+def make_propulsion(S: dict, table_key: str | None = None, elec_load_W: float | None = None,
+                    k_inst: float | None = None) -> tuple:
+    """(Engine, Prop) of the spec. ``elec_load_W``: continuous DC load the generator carries (default: base load with
+    the HD59 + research-payload allowance; the E180 growth mission passes its own load, V3-08); ``k_inst``: pusher
+    installation factor override (sensitivity runs)."""
     E = S["engine"]
     eb = E.get("electrical_budget")
     load = (float(eb["continuous_base_W"]) + float(eb["research_payload_allowance_W"])) if eb else \
         float(E["electrical_load_continuous_W"])
+    if elec_load_W is not None:
+        load = float(elec_load_W)
     # shaft draw of the generator: DC load / (machine efficiency x power-electronics efficiency) (V1-02)
     eng = Engine(E, load, float(E["generator"]["efficiency"]) *
                  float(E["generator"].get("power_electronics_efficiency", 1.0)))
@@ -4685,7 +5272,7 @@ def make_propulsion(S: dict, table_key: str | None = None) -> tuple:
     rows = ref_get(key)["rows_rpm_thrust_N_torque_Nm_power_W"]
     D = float(P["diameter"]) if table_key is None else float(P["alternatives"][table_key]["diameter"])
     ramp = P.get("k_inst_wot_ramp_speed")
-    return eng, Prop(rows, D, float(P["k_wot"]), float(P["k_inst"]), eng,
+    return eng, Prop(rows, D, float(P["k_wot"]), float(P["k_inst"]) if k_inst is None else float(k_inst), eng,
                      k_inst_wot_ramp=float(ramp) if ramp else None)
 
 
@@ -4718,7 +5305,8 @@ def evaluate(S: dict, verbose: bool = False, table_key: str | None = None, sens:
     gp_like = {"z_trunnion": LG["main"]["trunnion"][2], "z_axle": LG["main"]["axle_static"][2],
                "x_ng": LG["nose"]["axle_static"][0], "z_axle_nose": LG["nose"]["axle_static"][2],
                "nose_leg_length": LG["nose"]["leg_length"]}
-    gcases = ground_cases(S, gp_like, None)
+    own_I = distributed_pitch_inertia(S, af)          # V4-05: pitch inertia of the take-off loading cases
+    gcases = ground_cases(S, gp_like, None, own_I)
     pot = power_on_trim(S, wa, stab, tp["stabilator"], clm, prop, cases, gcases)
     gr = ground_geometry(S, af, wa, clm, gcases, float(S["propeller"]["diameter"]), pot)
     # drag items and trimmed polars (design CG = MTOW case)
@@ -4746,26 +5334,40 @@ def evaluate(S: dict, verbose: bool = False, table_key: str | None = None, sens:
               "x_ac_wb": stab["x_ac_wb"], "CL_ground_to": gr["CL_ground_to"], "CL_ground_ld": gr["CL_ground_ld"],
               "Cm0_to": stab["Cm0_wb"] - 0.25 * clm["dCL0_to"], "CL0": wa["CL_0"], "dCL0_to": clm["dCL0_to"],
               "CLa": wa["CL_alpha"], "mu": float(mis["rolling_friction"]), "t_rot": float(mis["rotation_time_s"]),
+              "t_spin": float(mis.get("rotation_spin_up_s", 0.0)),
+              "z_ac_wb": float(S["wing"]["planform"]["z_root"]),
+              "static_attitude_deg": float(LG["rules"]["static_attitude_deg"]),
               "stab": {"S_h": tp["stabilator"]["S_exposed"], "x_ac": tp["stabilator"]["x_ac"],
+                       "z_ac": float(tp["stabilator"]["z"]),
                        "eta": float(st_rules["eta_tail"]), "clt_max": float(st_rules["stabilator_clmax"])}}
 
     fuel = float(S["mass"]["fuel_kg"])
-    # design-mission loading (design payload): CG and trimmed CLmax as the fuel burns off (mission 1.2 VS floors)
-    cg_mis, m_zf_mis = loading_cg_fn(S, 0)
-
-    def mission_clmax(W: float) -> float:
-        mf = min(max(W / G - m_zf_mis, 0.0), fuel)
-        return trimmed_clmax_at(S, wa, stab, tp["stabilator"], cg_mis(mf))
-
+    empty = float(S["mass"]["empty_kg"])
     use_mission_cg = str(mis.get("stall_floor_cg", "design_mission")) == "design_mission"
-
     eb0 = electrical_budget(S, 0.0) if S["engine"].get("electrical_budget") else None
 
-    def make_flight():
-        return Flight(S, eng, prop, polars, ground, {"Dq": items_all["loiter"]["engine_cooling"], "k_leak": k_leak},
-                      mission_clmax=mission_clmax if use_mission_cg else None,
-                      floor_peak_W=eb0["peak_hd59_W"] if eb0 else None)
-    fl = make_flight()
+    def clmax_fn(cg_f, m_zf: float, f_max: float):
+        """Trimmed clean CLmax of a loading as a function of the weight (N): CG with the fuel burning off (mission
+        1.2 VS floors); None when the forward-CG rule is used instead (mission.stall_floor_cg)."""
+        if not use_mission_cg:
+            return None
+
+        def f(W: float) -> float:
+            mf = min(max(W / G - m_zf, 0.0), f_max)
+            return trimmed_clmax_at(S, wa, stab, tp["stabilator"], cg_f(mf))
+        return f
+
+    def flight_for(clmax_f, pols=None, items=None, eng_prop=None, floor_peak=None):
+        e_, p_ = eng_prop or (eng, prop)
+        it_ = items or items_all
+        return Flight(S, e_, p_, pols or polars, ground, {"Dq": it_["loiter"]["engine_cooling"], "k_leak": k_leak},
+                      mission_clmax=clmax_f, floor_peak_W=floor_peak if floor_peak is not None else
+                      (eb0["peak_hd59_W"] if eb0 else None))
+
+    # design-mission loading (design payload, mass.cases[0]): CG and trimmed CLmax as the fuel burns off
+    cg_mis, m_zf_mis = loading_cg_fn(S, 0)
+    mission_clmax = clmax_fn(cg_mis, m_zf_mis, fuel)
+    fl = flight_for(mission_clmax)
     # mission: iterate the cooling-drag fuel-flow ratio with the loiter fuel flow (endurance study)
     for _ in range(3):
         mis_r = fl.solve_loiter_for_fuel(m0, fuel)
@@ -4776,33 +5378,37 @@ def evaluate(S: dict, verbose: bool = False, table_key: str | None = None, sens:
             break
         ffr = ffr_new
         build_polars(ffr)
-        fl = make_flight()
+        fl = flight_for(mission_clmax)
     endurance_h = mis_r["t_air_s"] / 3600.0
+
+    def polars_at(case: dict, S_drag: dict | None = None) -> tuple:
+        """Trimmed polars (and drag items) at the CG of a loading case (``S_drag``: spec copy for the drag build-up)."""
+        pol_, it_all = {}, {}
+        for name_, cfg_ in CFG:
+            it_ = drag_items(S_drag or S, af, V_ref, h_l, cfg_, ffr)
+            pol_[name_] = trimmed_polar(name_, S, wa, cdp, k_trip, stab, sum(it_.values()) / float(S["wing"]["area"]),
+                                        (case["x"], case["z"]), tp["stabilator"], clm, it_)
+            it_all[name_] = it_
+        return pol_, it_all
     # E180 growth mission (V1-02): growth turret extended in the loiter (ball of the growth-envelope diameter in the
     # drag build-up), its own peak load -> its own loiter rpm floor, E180 loading CG for trim and the 1.2 VS floor;
-    # same MTOM and fuel (the research allowance is reduced by the turret mass difference)
+    # same MTOM and fuel (the research allowance is reduced by the turret mass difference). V3-08 (fix round 4): the
+    # generator carries the E180 continuous load (base - HD59 average + E180 average + research allowance) on this
+    # mission (shaft draw, descent rpm floor), not the HD59 load of the design mission
     e180 = None
     ci = next((i for i, c in enumerate(S["mass"]["cases"]) if c["name"].startswith("e180")), None)
     if ci is not None and eb0:
         Se = copy.deepcopy(S)
         Se["payload"]["turret"]["ball_diameter"] = float(Se["payload"]["turret"]["growth_envelope"]["diameter"])
         ce = mass_cases(S)[ci]
-        pol_e, items_e = {}, {}
-        for name, cfg in CFG:
-            it_ = drag_items(Se, af, V_ref, h_l, cfg, ffr)
-            pol_e[name] = trimmed_polar(name, S, wa, cdp, k_trip, stab, sum(it_.values()) / float(S["wing"]["area"]),
-                                        (ce["x"], ce["z"]), tp["stabilator"], clm, it_)
-            items_e[name] = it_
+        pol_e, items_e = polars_at(ce, Se)
         cg_e, m_zf_e = loading_cg_fn(S, ci)
-
-        def mission_clmax_e(W: float) -> float:
-            mf = min(max(W / G - m_zf_e, 0.0), fuel)
-            return trimmed_clmax_at(S, wa, stab, tp["stabilator"], cg_e(mf))
-        fl_e = Flight(S, eng, prop, pol_e, ground, {"Dq": items_e["loiter"]["engine_cooling"], "k_leak": k_leak},
-                      mission_clmax=mission_clmax_e if use_mission_cg else None, floor_peak_W=eb0["peak_e180_W"])
+        eng_e, prop_e = make_propulsion(S, table_key, elec_load_W=eb0["continuous_e180_W"])
+        fl_e = flight_for(clmax_fn(cg_e, m_zf_e, fuel), pol_e, items_e, (eng_e, prop_e), eb0["peak_e180_W"])
         mis_e = fl_e.solve_loiter_for_fuel(m0, fuel)
         e180 = {"flight": fl_e, "mission": mis_e, "case": ce["name"], "endurance_h": mis_e["t_air_s"] / 3600.0,
                 "loiter_time_h": mis_e["t_loiter_s"] / 3600.0, "rpm_floor": fl_e.rpm_floor,
+                "continuous_load_W": eng_e.elec_load_W, "descent_rpm": fl_e.descent_rpm(),
                 "cd0_loiter": pol_e["loiter"].fit["cd0"], "turret_drag_Dq_m2": items_e["loiter"]["eo_ir_turret"] +
                 items_e["loiter"].get("turret_bay_cavity", 0.0)}
     rng = {"range_m": float("nan")} if light else fl.solve_range(m0, fuel)
@@ -4810,35 +5416,192 @@ def evaluate(S: dict, verbose: bool = False, table_key: str | None = None, sens:
     # 10 h mission closure (sizinglib MassModel): MTOW needed for the requirement, same aircraft scaled
     r10 = fl.solve_loiter_for_endurance(m0, float(mis["endurance_requirement_h"]) * 3600.0)
     payload = float(S["mass"]["payload_kg"])
-    empty = float(S["mass"]["empty_kg"])
     struct_names = ("wing", "tail", "shell", "chassis", "gear")
     af_mass = sum(i["mass_kg"] for i in S["mass"]["items"] if i["group"] in struct_names)
     fixed = empty - af_mass
     mm_design = SZ.MassModel(payload, fixed, mis_r["ff"], lambda m: af_mass / m0 * (m / m0) ** 0.0).solve(m0_guess=m0)
     mm_10 = SZ.MassModel(payload, fixed, r10["ff"], lambda m: af_mass / m0).solve(m0_guess=m0)
-    # V1-03: empty mass at which R-02 is met exactly (fixed MTOM: every kg of empty mass is a kg of fuel) and the mass
-    # budget (group ceilings) against it
-    fuel_10h = r10["ff"] * m0
-    empty_at_r02 = empty + (fuel - fuel_10h)
-    bud = S["mass"].get("budget", {})
-    bud_sum = sum(float(b["target_kg"]) for b in bud.values())
-    bud_reserve = float(S["mass"].get("budget_rules", {}).get("reserve_kg", 0.0))
-    budget_chk = {"fuel_for_10h_kg": fuel_10h, "air_time_h_at_fuel_for_10h": r10["t_air_s"] / 3600.0,
-                  "empty_kg_at_R02_limit": empty_at_r02, "budget_sum_kg": bud_sum,
-                  "reserve_kg": bud_reserve, "margin_kg": empty_at_r02 - bud_reserve - bud_sum,
-                  "groups_over_ceiling": [g for g, b in bud.items()
-                                          if empty_mass(S)["groups"].get(g, 0.0) > float(b["target_kg"]) + 1e-6]}
-    # payload-endurance trade (fuel = MTOM - empty - payload, limited by the tank volume)
     pack = packaging(S, af, cases)
     fuel_cap = pack["fuel"]["available_m3"] / (1 + float(S["structures"]["fuel"]["expansion_fraction"])) * \
         float(S["engine"]["fuel"]["density_kg_per_m3"])
-    pe = []
-    for pl in (() if light else (0.0, 3.25, 10.0, 15.0, 20.0, 25.0)):
+    # requirement decision (fix round 4): R-02b - the maximum payload (mission.payload_max_kg) on the same mission at
+    # MTOM (fuel = MTOM - empty - maximum payload); its own loading CG (trim polars and 1.2 VS floors)
+    p_max = float(mis["payload_max_kg"])
+    ci_x = next((i for i, c in enumerate(S["mass"]["cases"]) if c["name"] == "mtow_max_payload_turret_retracted"), None)
+    cg_x, m_zf_x = payload_loading_cg_fn(S, p_max)
+    fuel_x = min(m0 - empty - p_max, fuel_cap)
+    if ci_x is not None:
+        pol_x, items_x = polars_at(mass_cases(S)[ci_x])
+    else:
+        pol_x, items_x = polars, items_all
+    fl_x = flight_for(clmax_fn(cg_x, m_zf_x, fuel_x), pol_x, items_x)
+    mis_x = fl_x.solve_loiter_for_fuel(empty + p_max + fuel_x, fuel_x)
+    max_payload = {"payload_kg": p_max, "fuel_kg": fuel_x, "takeoff_mass_kg": empty + p_max + fuel_x,
+                   "endurance_h": mis_x["t_air_s"] / 3600.0, "loiter_time_h": mis_x["t_loiter_s"] / 3600.0,
+                   "requirement_h": float(mis["endurance_max_payload_requirement_h"]),
+                   "case": S["mass"]["cases"][ci_x]["name"] if ci_x is not None else None, "mission_log": mis_x["log"]}
+
+    def peak_draw_Wh(mr):
+        """R-52: battery energy the E180 peak would draw over the loiter of a mission if it lasted the whole loiter
+        (peak minus the generator DC output at the midpoint of every integration step)."""
+        if not eb0:
+            return 0.0
+        return sum(max(eb0["peak_e180_W"] - l_["gen_W"], 0.0) * l_["dt_s"] / 3600.0
+                   for l_ in mr["log"] if l_["kind"] == "loiter" and "gen_W" in l_)
+
+    def supported_loiter_h(mr):
+        """V3-09: loiter time (h) after which the E180 peak, drawn continuously, would have used the battery
+        peak-support share (None = the whole loiter of that mission is covered)."""
+        if not eb0:
+            return None
+        cum, t = 0.0, 0.0
+        share = eb0["battery_peak_share_Wh"]
+        for l_ in mr["log"]:
+            if l_["kind"] != "loiter" or "gen_W" not in l_:
+                continue
+            d = max(eb0["peak_e180_W"] - l_["gen_W"], 0.0)
+            e_ = d * l_["dt_s"] / 3600.0
+            if cum + e_ >= share and d > 0:
+                return (t + (share - cum) / d * 3600.0) / 3600.0
+            cum += e_
+            t += l_["dt_s"]
+        return None
+
+    # payload -> endurance at MTOM (fuel = MTOM - empty - payload, limited by the tank volume): one flight model per
+    # payload loading (CG for the 1.2 VS floors). Design polars (trimmed at the design CG) for every point. V4-02 (fix
+    # round 5): every payload carries at least the baseline EO/IR set (the lightest permitted loading; without it the
+    # static margin falls below R-09, see payload_permitted_loadings); each row carries its static-margin range over its
+    # fuel load. The E180 peak-support columns only for payloads that can carry the E180 set (V4-02).
+    PS_ = S["payload"]
+    e180_set_kg = float(PS_["growth_turret_mass_kg"]) + float(PS_["mission_computer_kg"]) + float(PS_["tray_harness_kg"])
+    cbar_ = float(S["wing"]["mac"])
+    sm_rule = float(S["aero"]["stability_rules"]["sm_min"])
+
+    def sm_range(pl: float, fu_: float) -> list:
+        f_, _ = payload_loading_cg_fn(S, pl)
+        xs_ = (f_(0.0), f_(fu_))
+        return [(stab["x_np"] - max(xs_)) / cbar_, (stab["x_np"] - min(xs_)) / cbar_]
+    pe_cache = {}
+
+    def payload_mission(pl: float) -> dict:
+        key = round(pl, 6)
+        if key in pe_cache:
+            return pe_cache[key]
         fu = min(m0 - empty - pl, fuel_cap)
         m_to = empty + pl + fu
-        r = fl.solve_loiter_for_fuel(m_to, fu)
-        pe.append({"payload_kg": pl, "fuel_kg": fu, "takeoff_mass_kg": m_to, "endurance_h": r["t_air_s"] / 3600.0,
-                   "fuel_volume_limited": bool(m0 - empty - pl > fuel_cap)})
+        if abs(pl - payload) < 1e-9 and abs(fu - fuel) < 1e-9:
+            r = mis_r                                             # the design mission itself
+        elif abs(pl - p_max) < 1e-9 and abs(fu - fuel_x) < 1e-9:
+            r = mis_x
+        else:
+            cg_p, m_zf_p = payload_loading_cg_fn(S, pl)
+            fl_p = flight_for(clmax_fn(cg_p, m_zf_p, fu))
+            r = fl_p.solve_loiter_for_fuel(m_to, fu, loiter_pol="loiter" if pl > 1e-9 else "clean")
+        smr = sm_range(pl, fu)
+        e180_ok = pl >= e180_set_kg - 1e-9
+        pe_cache[key] = {"payload_kg": pl, "fuel_kg": fu, "takeoff_mass_kg": m_to, "endurance_h": r["t_air_s"] / 3600.0,
+                         "loiter_time_h": r["t_loiter_s"] / 3600.0, "fuel_volume_limited": bool(m0 - empty - pl > fuel_cap),
+                         "turret": pl > 1e-9, "static_margin_range": smr, "permitted_loading": bool(smr[0] >= sm_rule - 1e-9),
+                         "e180_set_fits": e180_ok,
+                         "e180_peak_battery_draw_Wh": peak_draw_Wh(r) if e180_ok else None,
+                         "e180_peak_supported_loiter_h": supported_loiter_h(r) if e180_ok else None}
+        return pe_cache[key]
+    # design-mission payload rule (requirement decision, fix round 4): the largest payload on the rule grid (0.5 kg,
+    # rounded DOWN) that gives at least endurance_requirement_h + robustness_margin_h on the design mission at MTOM;
+    # never above the maximum payload. Derived here from the closed aircraft; the spec value must equal it (--check)
+    rule = mis["payload_design_rule"]
+    E_tgt = float(mis["endurance_requirement_h"]) + float(rule["robustness_margin_h"])
+    step = float(rule["step_kg"])
+    p_d = None
+    if not light:
+        p = min(math.floor(payload / step + 1e-9) * step, p_max)
+        if payload_mission(p)["endurance_h"] >= E_tgt:
+            while p + step <= p_max + 1e-9 and payload_mission(p + step)["endurance_h"] >= E_tgt:
+                p += step
+        else:
+            while p - step >= payload_baseline_kg(S) - 1e-9 and payload_mission(p)["endurance_h"] < E_tgt:
+                p -= step
+        p_d = round(p, 6)
+    p_next = None if p_d is None or p_d + step > p_max + 1e-9 else round(p_d + step, 6)
+    # V4-03 (fix round 5): headroom of the derived design payload to the rule threshold - endurance above the target, the
+    # empty-mass growth that brings the design mission down to the target at fixed MTOM (every kg of empty mass is a kg
+    # of fuel; the design loading, as R-56) and the payload at the target (linear between the grid points)
+    head = {}
+    if p_d is not None:
+        E_d = payload_mission(p_d)["endurance_h"]
+        head = {"endurance_margin_to_target_h": E_d - E_tgt}
+        if abs(p_d - payload) < 1e-9:
+            r_t = fl.solve_loiter_for_endurance(m0, E_tgt * 3600.0)
+            head["empty_mass_headroom_kg"] = fuel - r_t["ff"] * m0
+        if p_next is not None:
+            E_n = payload_mission(p_next)["endurance_h"]
+            p_star = p_d + step * (E_d - E_tgt) / max(E_d - E_n, 1e-9)
+            head.update({"payload_at_target_kg_linear": p_star, "payload_headroom_kg": p_star - p_d})
+    payload_rule = {"rule": f"largest payload on a {step} kg grid (rounded down) with endurance >= "
+                            f"{E_tgt:.2f} h ({float(mis['endurance_requirement_h']):.2f} h + "
+                            f"{float(rule['robustness_margin_h']):.2f} h robustness margin), at most the maximum payload",
+                    "rule_tr": f"{_f(step, 1)} kg'lık ızgarada (aşağı yuvarlanmış), dayanımı ≥ {_f(E_tgt)} h "
+                               f"({_f(float(mis['endurance_requirement_h']))} h + {_f(float(rule['robustness_margin_h']))} h "
+                               "sağlamlık payı) olan en büyük faydalı yük; azami yükü aşmaz",
+                    "target_h": E_tgt, "step_kg": step, "spec_kg": payload, "derived_kg": p_d,
+                    "endurance_at_derived_h": None if p_d is None else payload_mission(p_d)["endurance_h"],
+                    "next_step_kg": p_next,
+                    "endurance_at_next_step_h": None if p_next is None else payload_mission(p_next)["endurance_h"],
+                    "consistent": None if p_d is None else bool(abs(p_d - payload) < 1e-9)} | head
+    pe = []
+    p_base = payload_baseline_kg(S)
+    p_break = m0 - empty - fuel_cap                       # below it the fuel volume limits the fuel (full tanks)
+    if not light:
+        pts = {p_base, 5.0, 7.5, 10.0, 12.5, 15.0, 17.5, payload, p_max}
+        if p_base < p_break < p_max:                      # V4-06: the fuel-volume break and its 0.5 kg neighbours
+            pts |= {round(p_break, 4), math.floor(p_break / 0.5) * 0.5, math.ceil(p_break / 0.5) * 0.5}
+        if p_next is not None:
+            pts.add(p_next)
+        pe = [payload_mission(pl) for pl in sorted(p for p in pts if p_base - 1e-9 <= p <= p_max + 1e-9)]
+    # V4-02 (fix round 5): loadings below the baseline set are not permitted (R-09): without any payload the static
+    # margin is below the minimum over the whole fuel range (nose ballast at the turret mount that would restore it);
+    # turret only: the largest fuel load that keeps R-09
+    pay_it = {p_["name"]: p_ for p_ in S["mass"]["payload_items"]}
+    x_lim = stab["x_np"] - sm_rule * cbar_
+    f0, mz0 = payload_loading_cg_fn(S, 0.0)
+    mx0 = f0(0.0) * mz0
+    fx_ = float(S["mass"]["fuel_cg"][0])
+    xb_ = float(pay_it["eo_ir_turret_hd59_mount"]["x"])
+    ballast = max(max((mx0 + f_ * fx_ - x_lim * (mz0 + f_)) / (x_lim - xb_), 0.0) for f_ in (0.0, fuel_cap))
+    m_t = float(pay_it["eo_ir_turret_hd59_mount"]["mass_kg"])
+    mz_t, mx_t = mz0 + m_t, mx0 + m_t * xb_
+    f_t = fuel_cap if fx_ <= x_lim else min(max((x_lim * mz_t - mx_t) / (fx_ - x_lim), 0.0), fuel_cap)
+    permitted = {"static_margin_min_rule": sm_rule, "x_cg_aft_limit_m": x_lim,
+                 "baseline_set_kg": p_base, "fuel_volume_break_payload_kg": p_break, "fuel_capacity_kg": fuel_cap,
+                 "e180_set_kg": e180_set_kg,
+                 "no_payload": {"static_margin_range": sm_range(0.0, fuel_cap), "permitted": False,
+                                "nose_ballast_at_turret_mount_kg": ballast, "ballast_x_m": xb_},
+                 "turret_only": {"static_margin_range_full_tanks": sm_range_items(S, stab, cbar_, m_t, xb_, fuel_cap),
+                                 "fuel_max_for_R09_kg": f_t},
+                 "rule_tr": "izin verilen en hafif yükleme temel EO/IR setidir (taret + görev bilgisayarı + tepsi); "
+                            "yalnız taretle yakıt fuel_max_for_R09_kg ile sınırlıdır"}
+    permitted["no_payload"]["permitted"] = bool(permitted["no_payload"]["static_margin_range"][0] >= sm_rule - 1e-9)
+    # V1-03 / R-56 (fix round 4: both payload requirements): empty mass at which R-02 (design payload, 10 h) and R-02b
+    # (maximum payload, 9.5 h) are met exactly at fixed MTOM (every kg of empty mass is a kg of fuel); the budget
+    # (group ceilings) + reserve must stay below the smaller of the two
+    fuel_10h = r10["ff"] * m0
+    empty_at_r02 = empty + (fuel - fuel_10h)
+    r95 = fl_x.solve_loiter_for_endurance(m0, max_payload["requirement_h"] * 3600.0)
+    fuel_95 = r95["ff"] * m0
+    empty_at_r02b = m0 - p_max - fuel_95
+    bud = S["mass"].get("budget", {})
+    bud_sum = sum(float(b["target_kg"]) for b in bud.values())
+    bud_reserve = float(S["mass"].get("budget_rules", {}).get("reserve_kg", 0.0))
+    lim = min(empty_at_r02, empty_at_r02b)
+    budget_chk = {"fuel_for_10h_kg": fuel_10h, "air_time_h_at_fuel_for_10h": r10["t_air_s"] / 3600.0,
+                  "empty_kg_at_R02_limit": empty_at_r02, "fuel_for_R02b_kg": fuel_95,
+                  "air_time_h_at_fuel_for_R02b": r95["t_air_s"] / 3600.0, "empty_kg_at_R02b_limit": empty_at_r02b,
+                  "empty_kg_limit": lim, "governing": "R-02" if empty_at_r02 <= empty_at_r02b else "R-02b",
+                  "budget_sum_kg": bud_sum, "reserve_kg": bud_reserve, "margin_kg": lim - bud_reserve - bud_sum,
+                  "margin_R02_kg": empty_at_r02 - bud_reserve - bud_sum,
+                  "margin_R02b_kg": empty_at_r02b - bud_reserve - bud_sum,
+                  "groups_over_ceiling": [g for g, b in bud.items()
+                                          if empty_mass(S)["groups"].get(g, 0.0) > float(b["target_kg"]) + 1e-6]}
     VH_level = perf["0"]["V_max_m_s"]
     VC = float(S["structures"]["VC_eas"])
     VD = max(1.25 * VC, VH_level, float(S["structures"]["VD_min_eas"]))
@@ -4893,10 +5656,8 @@ def evaluate(S: dict, verbose: bool = False, table_key: str | None = None, sens:
     elec["margin_peak_e180_at_design_mission_rpm"] = gen_min / elec["peak_e180_W"]
 
     # R-52 (V2-01, fix round 3): the battery energy the E180 peak would draw over the loiter if it lasted the whole
-    # loiter (deficit below the generator DC output, midpoint of every integration step) vs the battery peak-support share
-    def peak_draw_Wh(mr):
-        return sum(max(elec["peak_e180_W"] - l_["gen_W"], 0.0) * l_["dt_s"] / 3600.0
-                   for l_ in mr["log"] if l_["kind"] == "loiter" and "gen_W" in l_)
+    # loiter (deficit below the generator DC output, midpoint of every integration step; peak_draw_Wh above) vs the
+    # battery peak-support share
     elec["e180_peak_battery_draw_design_mission_Wh"] = peak_draw_Wh(mis_r)
     elec["e180_peak_deficit_max_design_mission_W"] = max(elec["peak_e180_W"] - gen_min, 0.0)
     draws = [elec["e180_peak_battery_draw_design_mission_Wh"]]
@@ -4917,12 +5678,30 @@ def evaluate(S: dict, verbose: bool = False, table_key: str | None = None, sens:
     elec["margin_peak"] = elec["margin_peak_e180_at_design_mission_rpm"]
     elec["peak_support_margin"] = elec["battery_peak_share_Wh"] / max(max(draws), 1e-3)
     elec["peak_support_rule"] = str(S["mission"].get("loiter_rpm_floor"))
+    # V3-09 (fix round 4): the peak-support share is sized on the loiters R-52 checks (design mission, E180 mission).
+    # Operating limit: with the E180 peak drawn continuously at the loiter rpm floor the share lasts at least
+    # share / deficit cap hours of loiter (deficit at the cap all the time); a longer loiter (lighter payload, more
+    # fuel) is covered only while the share lasts - the power management then raises the loiter rpm to the
+    # generator-only E180 floor or the peak duty is limited. Supported loiter time = time at which the cumulative draw
+    # reaches the share along each mission's loiter (None = the whole loiter is covered)
+    cap_W = float(S["mission"].get("peak_support_deficit_cap_W", 0.0) or 0.0)
+    elec["peak_support_guaranteed_loiter_h_at_cap"] = elec["battery_peak_share_Wh"] / cap_W if cap_W > 0 else None
+    elec["e180_peak_battery_draw_max_payload_mission_Wh"] = peak_draw_Wh(mis_x)
+    elec["generator_rpm_e180_peak_generator_only"] = generator_rpm_for_dc(S, elec["peak_e180_W"])
+    for r_ in pe:
+        r_["e180_peak_share_exceeded"] = None if r_["e180_peak_battery_draw_Wh"] is None else \
+            bool(r_["e180_peak_battery_draw_Wh"] > elec["battery_peak_share_Wh"])
+    elec["payload_endurance_peak_support"] = [
+        {"payload_kg": r_["payload_kg"], "loiter_time_h": r_["loiter_time_h"], "draw_Wh": r_["e180_peak_battery_draw_Wh"],
+         "share_exceeded": r_["e180_peak_share_exceeded"], "e180_set_fits": r_["e180_set_fits"],
+         "e180_peak_supported_loiter_h": r_["e180_peak_supported_loiter_h"]} for r_ in pe]
+    elec["e180_peak_supported_loiter_h_design_mission"] = supported_loiter_h(mis_r)
     keys_lp = ("W_N", "V", "EAS", "CL", "rpm", "gen_W", "ff_kg_h", "P_total", "power_fraction")
     mission_loiter = {"start": {k: (p_ls.get(k) if k != "W_N" else lrows[0]["W_start_N"]) for k in keys_lp} if lrows
                       else None,
                       "end": {k: (p_le.get(k) if k != "W_N" else mis_r["W_loiter_end"]) for k in keys_lp} if lrows
                       else None}
-    sens_d = {}
+    sens_d, low_load = {}, {}
     if sens and not light:
         for k_, sc in (("bsfc_minus_12pct", 0.88), ("bsfc_plus_12pct", 1.12)):
             eng.bsfc_scale = sc
@@ -4937,6 +5716,26 @@ def evaluate(S: dict, verbose: bool = False, table_key: str | None = None, sens:
         sens_d["loiter_at_1000m"] = fl.solve_loiter_for_fuel(m0, fuel, h=1000.0)["t_air_s"] / 3600
         sens_d["no_transit_loiter_only"] = fl.solve_loiter_for_fuel(m0, fuel, R_transit=0.0)["t_air_s"] / 3600
         sens_d["turret_retracted_whole_mission"] = fl.solve_loiter_for_fuel(m0, fuel, loiter_pol="clean")["t_air_s"] / 3600
+        # V3-06 (fix round 4): k_inst is an estimate (bottom of the research-phase judgement range 0.93-0.97 for a pusher
+        # behind a fuselage; a bluff-base installation is not bounded by that range): endurance with other values
+        for k_ in (0.90, 0.95, 0.97):
+            fl_k = flight_for(mission_clmax, eng_prop=make_propulsion(S, table_key, k_inst=k_))
+            sens_d[f"k_inst_{k_:.2f}".replace(".", "p")] = fl_k.solve_loiter_for_fuel(m0, fuel)["t_air_s"] / 3600
+        # V3-07: below 20 % power (descent about 5-7 %, reserve loiter about 18 %) the BSFC line is extrapolated; the
+        # Willans-line extrapolation (fuel flow linear in power through the two lowest points) is a more conservative
+        # extrapolation, not a bound (no map data below 20 % power; V4-08)
+        eng.low_load_model = "willans"
+        r_w = fl.solve_loiter_for_fuel(m0, fuel)
+        eng.low_load_model = "bsfc_linear"
+        sens_d["low_load_fuel_flow_willans_line"] = r_w["t_air_s"] / 3600
+        low_load = {"endurance_h_bsfc_line": endurance_h, "endurance_h_willans_line": r_w["t_air_s"] / 3600}
+        for k_ in ("descent", "reserve"):
+            for nm_, r_m in (("bsfc_line", mis_r), ("willans_line", r_w)):
+                rows_ = [r_ for r_ in r_m["log"] if r_["kind"] == k_]
+                low_load[f"{k_}_fuel_kg_{nm_}"] = sum(r_["fuel_kg"] for r_ in rows_)
+                low_load[f"{k_}_power_fraction_range_{nm_}"] = [min(r_.get("power_fraction", 1.0) for r_ in rows_),
+                                                                max(r_.get("power_fraction", 0.0) for r_ in rows_)]
+        low_load["lowest_bsfc_point_power_fraction"] = float(eng.bsfc_pts[0, 0])
     res = {
         "meta": {"spec": _rel(SPEC.SPEC_PATH), "generated_by": "ucav250/analysis/sizing.py"},
         "geometry": {"wing_area_m2": float(S["wing"]["area"]), "span_m": float(S["wing"]["span"]),
@@ -4982,9 +5781,12 @@ def evaluate(S: dict, verbose: bool = False, table_key: str | None = None, sens:
                                "mission_log": mis_r["log"], "payload_endurance": pe,
                                "mtow_for_10h_mission_kg": mm_10["mtow"], "loiter_3000m": loi3,
                                "mission_loiter_points": mission_loiter,
+                               "payload_design_rule": payload_rule, "payload_permitted_loadings": permitted,
+                               "max_payload_mission": {k: v for k, v in max_payload.items() if k != "mission_log"},
+                               "max_payload_mission_log": max_payload["mission_log"],
                                "e180_growth_mission": ({k: v for k, v in e180.items() if k not in ("flight", "mission")}
                                                        | {"mission_log": e180["mission"]["log"]}) if e180 else None},
-        "constraint_diagram": cdiag, "sensitivities_endurance_h": sens_d,
+        "constraint_diagram": cdiag, "sensitivities_endurance_h": sens_d, "low_load_bsfc_bound": low_load,
         "electrical": elec,
         "propeller": {"table": table_key or S["propeller"]["table_ref"], "static_wot": perf["static_wot"],
                       "static_tip_speed_m_s": perf["static_tip_speed_m_s"], "clearances": pcl},
@@ -5067,6 +5869,21 @@ def performance_block(S: dict, fl: Flight, m0: float, fuel: float, mis_r: dict, 
     out["ceiling_absolute_m"] = fl.ceiling(m0, 0.0)
     out["takeoff_sl_mtow"] = fl.takeoff_cases(m0, 0.0, g_cases_m0)
     out["takeoff_1500m_isa_mtow"] = fl.takeoff_cases(m0, 1500.0, g_cases_m0)
+    # V4-05 (fix round 5): effect of the pitch inertia on the governing take-off (the v1.5 quasi-static law without it,
+    # and a faster 0.1 s spin-up)
+    to_ = out["takeoff_sl_mtow"]
+    gc_ = next(c for c in g_cases_m0 if c["name"] == to_["case"])
+    if gc_.get("I_yy") is not None:
+        q0 = fl.takeoff(m0, 0.0, (gc_["x"], gc_["z"]))
+        q1 = fl.takeoff(m0, 0.0, (gc_["x"], gc_["z"]), I_yy=gc_["I_yy"], t_spin=0.1)
+        out["takeoff_pitch_inertia_effect"] = {
+            "case": to_["case"], "I_yy_kg_m2": gc_["I_yy"], "spin_up_time_s": fl.ground.get("t_spin", 0.0),
+            "V_R_m_s": to_["V_R_m_s"], "ground_roll_m": to_["ground_roll_m"], "V_lof_m_s": to_["V_lof_m_s"],
+            "without_pitch_inertia": {k: q0[k] for k in ("V_R_m_s", "ground_roll_m", "V_lof_m_s")},
+            "spin_up_0p1s": {k: q1[k] for k in ("V_R_m_s", "ground_roll_m", "V_lof_m_s")} |
+            {"download_margin_min_N": q1["rotation"]["download_margin_min_N"]},
+            "delta_V_R_m_s": to_["V_R_m_s"] - q0["V_R_m_s"], "delta_ground_roll_m": to_["ground_roll_m"] -
+            q0["ground_roll_m"]}
     m_land = m0 - fuel * 0.88
     out["landing_sl_mtow"] = fl.landing(m0)
     out["landing_sl_mtow_takeoff_flap"] = fl.landing(m0, flap="to")
@@ -5128,6 +5945,25 @@ def constraint_block(S: dict, fl: Flight, polars: dict, perf: dict, m0: float, e
 # =====================================================================================================================
 # 14. metrics, requirements and the derived-value check
 # =====================================================================================================================
+R60_CONSISTENCY_TOL = 1e-6        # N m / N: moment residual about C and lift-off download continuity (R-60 gate)
+
+
+def r60_metric(to: dict) -> float:
+    """R-60 metric (V4-01, fix round 5): the smallest download margin (maximum - needed, UNCLIPPED: negative when the
+    stabilator cannot give the download the rotation law needs) of every rotation step of every MTOM loading case. The
+    rotation law must also hold: a moment residual about the main-wheel contact or a lift-off download continuity error
+    above R60_CONSISTENCY_TOL makes the metric negative (minus the larger error), and so does a rate-limited step whose
+    margin was not negative."""
+    rots = [c["rotation"] for c in to["cases"].values()]
+    margin = min(r["download_margin_min_N"] for r in rots)
+    err = max(max(r["moment_residual_max_Nm"], abs(r["download_continuity_at_lof_N"])) for r in rots)
+    if err > R60_CONSISTENCY_TOL:
+        margin = min(margin, -err)
+    if any(r["rate_limited_steps"] > 0 for r in rots):
+        margin = min(margin, -R60_CONSISTENCY_TOL)
+    return margin
+
+
 def metrics(S: dict, R: dict) -> dict:
     """Flat metric table (out/sizing.json -> metrics); the spec requirements refer to these keys."""
     p, g, st, tu, pk, m = (R["performance"], R["ground"], R["stability"], R["turret"], R["packaging"], R["mass"])
@@ -5148,12 +5984,26 @@ def metrics(S: dict, R: dict) -> dict:
         "mtow_margin_to_cap_kg": m["mtow_margin_to_cap_kg"],
         "fuel_volume_margin": pk["fuel"]["available_m3"] / pk["fuel"]["required_m3"] - 1.0,
         "endurance_h": p["endurance_h"], "loiter_time_h": p["loiter_time_h"], "range_km": p["range_km"],
+        # requirement decision (fix round 4): R-02 at the design-mission payload, R-02b at the maximum payload, R-03 the
+        # largest payload of the MTOM loading cases that every check (CG, stability, take-off, R-02b) is run with
+        "payload_design_kg": m["payload_kg"], "endurance_max_payload_h": p["max_payload_mission"]["endurance_h"],
+        "payload_max_checked_kg": max(c["payload_kg"] for c in m["cases"] if abs(c["m"] - m["mtow_kg"]) < 0.05),
         "ceiling_service_m": p["ceiling_service_m"], "roc_sl_m_s": p["0"]["RoC_max_m_s"],
         "roc_3000m_m_s": p["3000"]["RoC_max_m_s"],
         "climb_time_to_loiter_altitude_min": (sum(c_["dt_s"] for c_ in climb) / 60.0) if climb else None,
         "takeoff_ground_roll_m": to["ground_roll_m"], "takeoff_distance_15m_m": to["distance_15m_m"],
         "takeoff_rotation_speed_m_s": to["V_R_m_s"], "takeoff_liftoff_speed_m_s": to["V_lof_m_s"],
         "takeoff_main_gear_load_at_rotation_N": min(c["main_gear_load_at_VR_N"] for c in to["cases"].values()),
+        # V3-03 (fix round 4): rotation law - download needed for the moment balance about the main-wheel contact vs the
+        # maximum download, every rotation step of every MTOM case; download continuity with the trim at lift-off.
+        # V4-01 (fix round 5): the margin is the UNCLIPPED one and the rotation-law consistency gates it (r60_metric)
+        "takeoff_rotation_download_margin_min_N": r60_metric(to),
+        "takeoff_rotation_moment_residual_max_Nm": max(c["rotation"]["moment_residual_max_Nm"]
+                                                       for c in to["cases"].values()),
+        "takeoff_rotation_rate_limited_steps": float(sum(c["rotation"]["rate_limited_steps"]
+                                                         for c in to["cases"].values())),
+        "takeoff_liftoff_trim_continuity_N": max(abs(c["rotation"]["download_continuity_at_lof_N"])
+                                                 for c in to["cases"].values()),
         "landing_ground_roll_m": p["landing_sl_end_of_mission"]["ground_roll_m"],
         "vs_clean_sl_mtow_m_s": p["0"]["VS_clean_m_s"], "v_max_sl_m_s": p["0"]["V_max_m_s"],
         "loiter_eas_m_s": p["loiter_3000m"]["EAS"], "loiter_tas_3000m_m_s": p["loiter_3000m"]["V"],
@@ -5283,6 +6133,7 @@ DERIVED_CLOSURE = [
     ("layout.firewall_x", 0.003),
     ("tail.surfaces.stabilator.params.x_le_root", 0.004), ("tail.surfaces.stabilator.params.pivot_mac_fraction", 0.003),
     ("tail.surfaces.stabilator.controls.ac_mac_fraction_range", 0.003), ("tail.surfaces.ventral.params.sweep_le_deg", 0.3),
+    ("payload.research_allowance_design_kg", 1e-4), ("mass.cases", 2e-4),
 ]
 
 
@@ -5330,6 +6181,16 @@ def check_derived(S: dict, R: dict, verbose: bool = True) -> dict:
                 continue
             t = tol if tol is not None else PERF_TOL.get(k, 0.01 * max(abs(float(v)), 1.0))
             _cmp(cur[k], v, t, f"{blk}.{k}", bad, n)
+    # requirement decision (fix round 4): the design-mission payload of the spec is the value the payload-endurance
+    # rule gives for the closed aircraft (largest payload on the rule grid with >= R-02 + robustness margin)
+    pr_ = R["performance"].get("payload_design_rule", {})
+    n[0] += 1
+    if pr_.get("derived_kg") is None:
+        bad.append({"path": "mission.payload_design_kg", "spec": S["mission"]["payload_design_kg"], "computed": None,
+                    "issue": "payload-endurance rule not evaluated"})
+    elif abs(float(S["mission"]["payload_design_kg"]) - float(pr_["derived_kg"])) > 1e-6:
+        bad.append({"path": "mission.payload_design_kg", "spec": S["mission"]["payload_design_kg"],
+                    "computed": pr_["derived_kg"], "issue": "differs from the payload-endurance rule"})
     budget = S["mass"].get("budget", {})
     groups = empty_mass(S)["groups"]
     for gname, b in budget.items():
@@ -5350,7 +6211,7 @@ def check_derived(S: dict, R: dict, verbose: bool = True) -> dict:
     return {"n_compared": n[0], "n_bad": len(bad), "bad": bad, "closure_history": hist}
 
 
-PERF_TOL = {"endurance_h": 0.05, "loiter_time_h": 0.05, "range_km": 8.0, "ceiling_service_m": 60.0, "roc_sl_m_s": 0.05,
+PERF_TOL = {"endurance_h": 0.05, "endurance_max_payload_h": 0.05, "loiter_time_h": 0.05, "range_km": 8.0, "ceiling_service_m": 60.0, "roc_sl_m_s": 0.05,
             "roc_3000m_m_s": 0.05, "takeoff_ground_roll_m": 3.0, "landing_ground_roll_m": 3.0, "vs_clean_sl_mtow_m_s": 0.05,
             "v_max_sl_m_s": 0.3, "loiter_tas_3000m_m_s": 0.2, "loiter_eas_m_s": 0.2, "loiter_fuel_flow_kg_h": 0.02,
             "takeoff_distance_15m_m": 5.0, "climb_time_to_loiter_altitude_min": 0.3, "mtow_for_10h_mission_kg": 0.5,
@@ -5380,7 +6241,7 @@ def reference_blocks(S: dict, R: dict) -> dict:
     perf = {k: M[k] for k in ("endurance_h", "loiter_time_h", "range_km", "ceiling_service_m", "roc_sl_m_s",
                               "roc_3000m_m_s", "takeoff_ground_roll_m", "takeoff_distance_15m_m",
                               "landing_ground_roll_m", "vs_clean_sl_mtow_m_s", "v_max_sl_m_s", "loiter_tas_3000m_m_s",
-                              "loiter_eas_m_s", "climb_time_to_loiter_altitude_min")}
+                              "loiter_eas_m_s", "climb_time_to_loiter_altitude_min", "endurance_max_payload_h")}
     perf["loiter_fuel_flow_kg_h"] = p["loiter_3000m"]["ff_kg_h"]
     perf["loiter_power_W"] = p["loiter_3000m"]["P_total"]
     perf["loiter_rpm"] = p["loiter_3000m"]["rpm"]
@@ -5439,104 +6300,169 @@ def fig_constraint(S: dict, R: dict, path: Path) -> None:
                label="kullanılabilir: sabit hatveli pervanenin tam gazda\nemdiği mil gücü (tırmanma hızında)")
     # design point = (design wing loading, usable power loading); the curves are the simplified sizing equations
     ax.plot([c["ws_design_Pa"] / G], [c["pw_prop_absorbed_wot_climb"]], "o", color="#B91C1C", ms=6, zorder=5)
-    ax.annotate("HANÇER", (c["ws_design_Pa"] / G, c["pw_prop_absorbed_wot_climb"]), xytext=(6, 6),
-                textcoords="offset points", color="#B91C1C", fontweight="bold")
+    ax.annotate("HANÇER", (c["ws_design_Pa"] / G, c["pw_prop_absorbed_wot_climb"]), xytext=(-64, 7),
+                textcoords="offset points", color="#B91C1C", fontweight="bold",
+                bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.85))
     ax.axvline(c["ws_design_Pa"] / G, color="#B91C1C", lw=0.8, alpha=0.5,
                label=f"tasarım kanat yüklemesi {c['ws_design_Pa'] / G:.1f} kg/m²".replace(".", ","))
     p0 = R["performance"]
     roc_d = f"{p0['0']['RoC_max_m_s']:.2f}".replace(".", ",")
-    ax.text(0.99, 0.02, ("Eğriler basitleştirilmiş boyutlandırma denklemleridir (sabit η, temiz polar).\n"
-                         "Ayrıntılı model (pervane haritası, tam gazda soğutma sürüklemesi, aşağı itki): "
-                         f"DS tırmanma {roc_d} m/s, kalkış koşusu {p0['takeoff_sl_mtow']['ground_roll_m']:.0f} m."),
-            transform=ax.transAxes, ha="right", va="bottom", fontsize=6.5, color="#4B5563")
+    # V4-06: the footnote sits below the axes (no data lines cross it)
+    fig.text(0.01, 0.01, ("Eğriler basitleştirilmiş boyutlandırma denklemleridir (sabit η, temiz polar).\n"
+                          "Ayrıntılı model (pervane haritası, tam gazda soğutma sürüklemesi, aşağı itki): "
+                          f"DS tırmanma {roc_d} m/s, kalkış koşusu {p0['takeoff_sl_mtow']['ground_roll_m']:.0f} m."),
+             ha="left", va="bottom", fontsize=6.5, color="#4B5563")
     ax.set_xlabel("Kanat yüklemesi W/S (kg/m²)")
     ax.set_ylabel("Güç yüklemesi P/W (W/N)")
     ax.set_ylim(0, 22)
     ax.set_xlim(ws[0], ws[-1])
     ax.legend(fontsize=7, loc="upper left", ncol=2)
     ax.set_title("YK-250 HANÇER — kısıt diyagramı (MTOM, ISA)")
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
     fig.savefig(path)
     plt.close(fig)
 
 
 def fig_polars(S: dict, R: dict, path: Path) -> None:
+    """Trimmed polars of the three configurations (design CG), each ending at its trimmed CLmax. V3-11: the gear-down
+    polar is the flaps-up one (the take-off/landing flap increments are added in the field-performance models), and the
+    marked CL band is the design mission's own loiter (start -> end, turret extended), not an MTOM point."""
     plt = _plt()
-    fig, (a1, a2) = plt.subplots(1, 2, figsize=(9.0, 3.8))
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(9.0, 3.9))
     lab = {"clean": "temiz (takım ve taret içeride)", "loiter": "bekleme (taret dışarıda)",
-           "gear_down": "takım açık (kalkış/iniş)"}
+           "gear_down": "takım açık, flapsız (kalkış/iniş flap artımı ayrıca)"}
+    col = {"clean": "#1F4E79", "loiter": "#C2410C", "gear_down": "#15803D"}
     for k, p in R["aero"]["polars"].items():
         CL, CD = np.asarray(p["table"]["CL"]), np.asarray(p["table"]["CD"])
-        # V2-08: each curve ends at the trimmed CLmax of its configuration (no L/D beyond the stall)
         m = (CL > 0.1) & (CL <= float(p["fit"].get("CL_max_trimmed", 1.6)) + 1e-9)
-        a1.plot(CD[m], CL[m], lw=1.5, label=lab.get(k, k))
-        a2.plot(CL[m], CL[m] / CD[m], lw=1.5, label=lab.get(k, k))
-    a1.set_xlabel("CD (trimli, S_ref)")
+        a1.plot(CD[m], CL[m], lw=1.5, color=col.get(k), label=lab.get(k, k))
+        a2.plot(CL[m], CL[m] / CD[m], lw=1.5, color=col.get(k), label=lab.get(k, k))
+    a1.set_xlabel("CD (trimli, S_ref; bütün sürükleme kalemleri)")
     a1.set_ylabel("CL")
     a2.set_xlabel("CL")
     a2.set_ylabel("L/D")
-    loi = R["performance"]["loiter_3000m"]
-    a2.axvline(loi["CL"], color="#6B7280", ls=":", lw=1.0)
-    a2.annotate(f"bekleme CL {loi['CL']:.2f} (MTOM)".replace(".", ","), (loi["CL"], 6), fontsize=7)
-    a1.legend(fontsize=7)
-    fig.suptitle("Trimli sürükleme polarları (geçiş x/c 0,075'e zorlanmış × 1,15)", fontsize=9)
-    fig.tight_layout()
+    ml = R["performance"].get("mission_loiter_points") or {}
+    if ml.get("start") and ml.get("end"):
+        c0, c1 = sorted((ml["end"]["CL"], ml["start"]["CL"]))
+        a2.axvspan(c0, c1, color="#C2410C", alpha=0.12, lw=0)
+        a2.text(0.5 * (c0 + c1), 0.04, f"görev beklemesi\nCL {_f(ml['start']['CL'], 2)} → {_f(ml['end']['CL'], 2)}",
+                transform=a2.get_xaxis_transform(), ha="center", va="bottom", fontsize=7, color="#9A3412")
+    h_, l_ = a1.get_legend_handles_labels()                 # V4-06: legend below the panels (clear of every curve)
+    fig.legend(h_, l_, fontsize=7.5, loc="lower center", ncol=3, frameon=False)
+    fig.suptitle("Trimli sürükleme polarları (tasarım AM'si; kanat profil sürüklemesi geçiş x/c 0,075'e zorlanmış × 1,15; "
+                 "eğriler trimli CLmaks'ta biter)", fontsize=8.5)
+    fig.tight_layout(rect=(0, 0.07, 1, 1))
     fig.savefig(path)
     plt.close(fig)
 
 
-CASE_TR = {"mtow_design_payload_turret_retracted": "MTOM, tasarım yükü", "mtow_design_payload_turret_extended":
-           "MTOM, taret dışarıda", "full_fuel_baseline_sensors_only": "tam yakıt, temel sensörler",
-           "zero_fuel_design_payload": "yakıtsız, tasarım yükü", "reserve_fuel_design_payload": "yedek yakıt, tasarım yükü",
+CASE_TR = {"mtow_design_payload_turret_retracted": "MTOM, görev yükü", "mtow_design_payload_turret_extended":
+           "MTOM, görev yükü, taret dışarıda", "mtow_max_payload_turret_retracted": "MTOM, azami yük",
+           "mtow_max_payload_turret_extended": "MTOM, azami yük, taret dışarıda",
+           "full_fuel_baseline_sensors_only": "dolu depolar, temel sensör seti",
+           "zero_fuel_design_payload": "yakıtsız, görev yükü", "zero_fuel_max_payload": "yakıtsız, azami yük",
+           "reserve_fuel_design_payload": "yedek yakıt, görev yükü",
            "minimum_flying_turret_only": "asgari uçuş (yalnız taret)", "e180_growth_turret_full_fuel": "E180 taret, tam yakıt"}
+CASE_MARK = ("o", "s", "D", "^", "v", "P", "X", "<", ">", "h", "*", "p")
 
 
 def fig_cg(S: dict, R: dict, path: Path) -> None:
+    """CG envelope (flight, gear up). V3-11: every loading case has its own marker shape; markers are drawn from the
+    largest to the smallest so that coincident cases stay visible; the neutral-point / aft-limit labels and the
+    main-gear note sit outside the data."""
     plt = _plt()
     st = R["stability"]
     cb, le = float(S["wing"]["mac"]), float(S["wing"]["mac_le_x"])
     pct = lambda x: (x - le) / cb * 100                                  # noqa: E731
-    fig, ax = plt.subplots(figsize=(7.4, 4.4))
+    fig, ax = plt.subplots(figsize=(7.6, 4.6))
     cases = R["mass"]["cases"]
     xs = [pct(c["x"]) for c in cases]
+    # V4-06: cases that coincide on the plot (within 0.6 % MAC and 1.5 kg) are drawn as concentric open markers, the
+    # first of the cluster largest and underneath, each 4.5 pt smaller than the one before (all stay visible)
+    rank = [0] * len(cases)
+    size_n = [1] * len(cases)
     for i, c in enumerate(cases):
-        ax.plot(pct(c["x"]), c["m"], "o", ms=6, color=f"C{i}", label=CASE_TR.get(c["name"], c["name"]))
+        mates = [j for j, d in enumerate(cases) if abs(pct(d["x"]) - pct(c["x"])) < 0.6 and abs(d["m"] - c["m"]) < 1.5]
+        rank[i] = mates.index(i)
+        size_n[i] = len(mates)
+    for i, c in enumerate(cases):
+        ms = 6.0 + 4.5 * (size_n[i] - 1 - rank[i])
+        ax.plot(pct(c["x"]), c["m"], CASE_MARK[i % len(CASE_MARK)], ms=ms, mfc="none", mec=f"C{i % 10}", mew=1.5,
+                color=f"C{i % 10}", label=CASE_TR.get(c["name"], c["name"]), zorder=3 + rank[i])
     np_ = pct(st["x_np"])
     smin = float(S["aero"]["stability_rules"]["sm_min"]) * 100
     ax.axvline(np_, color="#B91C1C", lw=1.5)
     ax.axvline(np_ - smin, color="#B91C1C", ls="--", lw=1.1)
-    y_txt = min(c["m"] for c in cases) + 1.0
-    ax.text(np_ + 0.4, y_txt, f"nötr nokta %{np_:.1f}".replace(".", ","), color="#B91C1C", fontsize=8, rotation=90,
-            va="bottom")
-    ax.text(np_ - smin + 0.4, y_txt, f"arka sınır (SM %{smin:.0f})", color="#B91C1C", fontsize=8, rotation=90,
-            va="bottom")
-    ax.set_xlim(min(xs) - 6, np_ + 6)
+    ms_ = sorted(c["m"] for c in cases)
+    y_txt = 0.5 * (ms_[0] + ms_[-1])                     # labels in the middle band, right of their lines
+    ax.text(np_ + 0.3, y_txt, f"nötr nokta %{np_:.1f}".replace(".", ","), color="#B91C1C", fontsize=8, rotation=90,
+            va="center")
+    ax.text(np_ - smin + 0.3, y_txt, f"arka sınır (SM %{smin:.0f})", color="#B91C1C", fontsize=8, rotation=90,
+            va="center")
+    ax.set_xlim(min(xs) - 7, np_ + 4)
+    ax.set_ylim(min(c["m"] for c in cases) - 4, max(c["m"] for c in cases) + 4)
     ax.set_xlabel(f"Ağırlık merkezi (% referans OAK; OAK ön kenarı x = {le:.3f} m)".replace(".", ","))
     ax.set_ylabel("Kütle (kg)")
-    ax.legend(fontsize=7, loc="lower left")
-    ax.set_title("Ağırlık merkezi zarfı ve statik marj (uçuş, takım içeride; taret durumu yükleme adında)")
-    ax.text(0.99, 0.02, f"ana takım: %{pct(R['ground']['x_mg']):.0f} OAK (zemin)", transform=ax.transAxes, ha="right",
-            fontsize=7, color="#374151")
-    fig.tight_layout()
+    leg = ax.legend(fontsize=6.5, loc="center left", bbox_to_anchor=(1.01, 0.5), frameon=False)
+    for h_ in leg.legend_handles:                         # uniform legend symbols (the plot sizes encode clusters)
+        h_.set_markersize(7.0)
+    ax.set_title("Ağırlık merkezi zarfı ve statik marj (uçuş, takım içeride)", fontsize=9)
+    fig.text(0.01, 0.01, f"Ana takım dingili %{pct(R['ground']['x_mg']):.0f} OAK'ta (zemin; eksen dışında). "
+             "Çakışan durumlar iç içe halkalar olarak çizilir (ilki en büyük ve en altta).", fontsize=7, color="#374151")
+    fig.tight_layout(rect=(0, 0.04, 1, 1))
     fig.savefig(path)
     plt.close(fig)
 
 
 def fig_payload_endurance(S: dict, R: dict, path: Path) -> None:
+    """Payload-endurance at MTOM (requirement decision, fix round 4): design-mission payload from the rule (largest
+    payload on the 0.5 kg grid with >= 10.25 h), R-02 (10 h) and R-02b (maximum payload, 9.5 h); V3-11: the fuel-volume
+    limited range is one shaded band. V4-02/V4-06 (fix round 5): the sweep starts at the lightest permitted loading (the
+    baseline EO/IR set; below it R-09 is not met, shaded) and includes the fuel-volume break and its 0.5 kg neighbours."""
     plt = _plt()
-    pe = R["performance"]["payload_endurance"]
-    fig, ax = plt.subplots(figsize=(6.0, 3.8))
-    ax.plot([r["payload_kg"] for r in pe], [r["endurance_h"] for r in pe], "o-", color="#1F4E79", lw=1.6)
-    for r in pe:
-        if r["fuel_volume_limited"]:
-            ax.annotate("yakıt hacmi sınırı", (r["payload_kg"], r["endurance_h"]), fontsize=7, xytext=(4, 4),
-                        textcoords="offset points")
-    ax.axhline(float(S["mission"]["endurance_requirement_h"]), color="#B91C1C", ls="--", lw=1.0, label="Gereksinim")
-    ax.axvline(float(S["mission"]["payload_design_kg"]), color="#6B7280", ls=":", lw=1.0, label="Tasarım faydalı yükü")
+    p = R["performance"]
+    pe = p["payload_endurance"]
+    mis = S["mission"]
+    pl_ = p.get("payload_permitted_loadings", {})
+    fig, ax = plt.subplots(figsize=(6.8, 4.1))
+    x = [r["payload_kg"] for r in pe]
+    y = [r["endurance_h"] for r in pe]
+    p_b = float(pl_.get("baseline_set_kg", x[0]))
+    y_lo = min(min(y), p["max_payload_mission"]["requirement_h"]) - 0.7
+    ax.axvspan(-0.5, p_b, color="#FCA5A5", alpha=0.25, lw=0)
+    sm0 = (pl_.get("no_payload") or {}).get("static_margin_range")
+    ax.text(0.25 * p_b - 0.3, y_lo + 0.12, "izin verilen\nyükleme değil\n(temel EO/IR\nseti yok:\n"
+            + (f"SM %{_f(100 * sm0[0], 1)} < %{_f(100 * float(pl_['static_margin_min_rule']), 0)})" if sm0 else "SM < R-09)"),
+            fontsize=6.5, color="#991B1B", va="bottom")
+    x_lim = float(pl_.get("fuel_volume_break_payload_kg", float(S["mass"]["mtow_kg"]) - float(S["mass"]["empty_kg"]) -
+                          R["mass"]["fuel_capacity_kg"]))
+    if x_lim > p_b:
+        ax.axvspan(p_b, x_lim, color="#9CA3AF", alpha=0.18, lw=0)
+        ax.text(p_b + 0.3, y_lo + 0.12, f"yakıt hacmi sınırı (hücreler dolu,\n{_f(R['mass']['fuel_capacity_kg'], 2)} kg; "
+                f"yük < {_f(x_lim, 2)} kg)", fontsize=7, color="#374151", va="bottom")
+    ax.plot(x, y, "-", color="#1F4E79", lw=1.6, zorder=3)
+    ax.plot(x, y, "o", color="#1F4E79", ms=3.5, zorder=4)
+    req, rob = float(mis["endurance_requirement_h"]), float(mis["payload_design_rule"]["robustness_margin_h"])
+    ax.axhline(req, color="#B91C1C", ls="--", lw=1.0, label=f"R-02: {_f(req, 1)} h (görev yüküyle)")
+    ax.axhline(req + rob, color="#B91C1C", ls=":", lw=1.0, label=f"görev yükü kuralı: {_f(req + rob, 2)} h")
+    pr = p.get("payload_design_rule", {})
+    pd_ = float(pr.get("derived_kg") or S["mass"]["payload_kg"])
+    mx = p["max_payload_mission"]
+    e_d = pr.get("endurance_at_derived_h") or p["endurance_h"]
+    ax.plot([pd_], [e_d], "o", ms=8, color="#B91C1C", zorder=5)
+    ax.annotate(f"görev yükü {_f(pd_, 1)} kg\n{_f(e_d, 2)} h", (pd_, e_d), xytext=(-12, 40), textcoords="offset points",
+                fontsize=7.5, color="#B91C1C", arrowprops=dict(arrowstyle="-", lw=0.6, color="#B91C1C"))
+    ax.plot([mx["payload_kg"]], [mx["endurance_h"]], "s", ms=7, color="#7C3AED", zorder=5)
+    ax.plot([mx["payload_kg"] - 0.6, mx["payload_kg"] + 0.6], [mx["requirement_h"]] * 2, color="#7C3AED", lw=2.0)
+    ax.annotate(f"azami yük {_f(mx['payload_kg'], 0)} kg: {_f(mx['endurance_h'], 2)} h\n(R-02b ≥ {_f(mx['requirement_h'], 1)} h)",
+                (mx["payload_kg"], mx["endurance_h"]), xytext=(-150, -24), textcoords="offset points", fontsize=7.5,
+                color="#7C3AED", arrowprops=dict(arrowstyle="-", lw=0.6, color="#7C3AED"))
+    ax.set_xlim(-0.5, mx["payload_kg"] + 1.0)
+    ax.set_ylim(y_lo, max(y) + 0.5)
     ax.set_xlabel("Faydalı yük (kg)")
     ax.set_ylabel("Dayanım (h, tasarım görevi)")
-    ax.legend(fontsize=7)
-    ax.set_title("Faydalı yük – dayanım (MTOM sabit, yakıt = MTOM − boş − yük)")
+    ax.legend(fontsize=7, loc="upper right")
+    ax.set_title("Faydalı yük – dayanım (MTOM 149,9 kg; yakıt = MTOM − boş − yük, hacimle sınırlı)", fontsize=9)
     fig.tight_layout()
     fig.savefig(path)
     plt.close(fig)
@@ -5703,11 +6629,13 @@ def fig_3view(S: dict, R: dict, path: Path) -> dict:
     M = metrics(S, R)
     rows = [("Ad", S["meta"]["name"]), ("Revizyon", f"{S['meta']['revision']} ({S['meta']['date']})"),
             ("MTOM / boş / yakıt / yük", f"{_n(M['mtow_kg'], 1)} / {_n(M['empty_kg'], 1)} / {_n(M['fuel_kg'], 1)} / "
-                                         f"{_n(M['payload_kg'], 1)} kg"),
+                                         f"{_n(M['payload_kg'], 1)} kg (görev yükü)"),
+            ("Azami faydalı yük", f"{_n(M['payload_max_checked_kg'], 1)} kg ({_n(M['endurance_max_payload_h'], 2)} h)"),
             ("Kanat", f"S {_n(float(W['area']), 2)} m², AR {_n(float(W['aspect_ratio']), 1)}, OAK {_n(float(W['mac']), 3)} m"),
             ("Motor / pervane", f"Limbach L 275 EF 18 kW / Mejzlik {S['propeller'].get('designation', '32x18 2B')} "
                                 f"itici"),
-            ("Dayanım (tasarım görevi)", f"{_n(M['endurance_h'], 2)} h (3000 m, taret dışarıda)"),
+            ("Dayanım (tasarım görevi)", f"{_n(M['endurance_h'], 2)} h ({_n(M['payload_kg'], 1)} kg yük; 3000 m, "
+                                         f"taret dışarıda)"),
             ("Tutunma hızı (temiz, MTOM)", f"{_n(M['vs_clean_sl_mtow_m_s'], 1)} m/s"),
             ("(L/D)maks", f"{_n(M['ld_max'], 1)}"),
             ("Statik marj", f"%{M['static_margin_min'] * 100:.0f} – %{M['static_margin_max'] * 100:.0f} OAK"),
@@ -5939,20 +6867,19 @@ def _battery_lifepo4(S_):
 
 
 R02_REVERTS = (
-    ("k_inst_095", "k_inst 0,95 (küt taban için alt sınır 0,93 yerine aralığın ortası; pervane/gövde testi bekliyor)",
+    ("k_inst_095", "k_inst 0,95 (tahmin 0,93 yerine; pervane/gövde kurulum testi bekliyor)",
      lambda S_: S_["propeller"].update(k_inst=0.95)),
-    ("r52_v13_installed_turret", "R-52 v1.3 yeniden yapılandırması (yalnız takılı taretin tepesi; kullanıcı onayı yok)",
+    ("r52_v13_installed_turret", "R-52 v1.3 biçimi (yalnız takılı taretin tepesi; kullanıcı onaylamadı, uygulanmadı)",
      lambda S_: S_["mission"].update(loiter_rpm_floor="installed_turret_peak")),
-    ("r52_v12_generator_lifepo4", "v1.2 çözümü: LiFePO4 14S2P batarya, E180 tepesi jeneratörle (E180 devir tabanı)",
+    ("r52_v12_generator_lifepo4", "v1.2 çözümü: LiFePO4 14S2P batarya, E180 tepesi yalnız jeneratörle (E180 devir tabanı)",
      lambda S_: (_battery_lifepo4(S_), S_["mission"].update(loiter_rpm_floor="generator_peak"))),
-    ("k_inst_095_and_r52_v13", "k_inst 0,95 ve R-52 v1.3 birlikte (ikisi de karar/test bekliyor)",
+    ("k_inst_095_and_r52_v13", "k_inst 0,95 ve R-52 v1.3 birlikte (ikisi de uygulanmadı)",
      lambda S_: (S_["propeller"].update(k_inst=0.95), S_["mission"].update(loiter_rpm_floor="installed_turret_peak"))),
     ("sweep_c4", "c/4 süpürme 8° → 6° (v1.2)", lambda S_: S_["wing"]["planform"].update(sweep_c4_deg=6.0)),
     ("washout", "burulma 4° → 3° (v1.2)", lambda S_: S_["wing"]["planform"].update(washout_deg=3.0)),
     ("lerx_apex_v13", "LERX tepesi x 1,80 → 1,85 m (v1.2)", lambda S_: S_["wing"]["planform"].update(x_apex=1.85)),
     ("sealed_gear_doors", "kapaklar contalı değil (v1.1: uzatılmış takım sürüklemesinin %10'u)",
-     lambda S_: (S_["aero"]["drag_rules"].update(gear_doors_sealed=False),
-                 S_["mass"]["rules"].update(gear_doors_locks_kg=1.52))),
+     lambda S_: S_["aero"]["drag_rules"].update(gear_doors_sealed=False)),       # no seal mass (gear_doors_mass)
     ("glove_junction", "eldiven/dış panel birleşimi y = 0,82 m (v1.1)",
      lambda S_: S_["wing"]["planform"].update(y_junction=0.82)),
     ("taper", "sivrilme 0,42 (v1.1)", lambda S_: S_["wing"]["planform"].update(taper=0.42)),
@@ -6005,13 +6932,17 @@ def write_report(S: dict, R: dict, M: dict, reqs: list, chk: dict | None, figs: 
         f"**Türetilmiş değer kontrolü:** {chk['n_compared']} değer, {chk['n_bad']} sapma." if chk else ""))
     w("\n## 1. Özet\n")
     w("| Büyüklük | Değer |\n|---|---|")
-    rows = [("MTOM / boş / yakıt / faydalı yük", f"{_f(M['mtow_kg'], 1)} / {_f(M['empty_kg'], 1)} / {_f(M['fuel_kg'], 1)} / "
-             f"{_f(M['payload_kg'], 1)} kg"),
+    pr_ = p.get("payload_design_rule", {})
+    mx_ = p.get("max_payload_mission", {})
+    rows = [("MTOM / boş / yakıt / görev faydalı yükü", f"{_f(M['mtow_kg'], 1)} / {_f(M['empty_kg'], 1)} / "
+             f"{_f(M['fuel_kg'], 1)} / {_f(M['payload_kg'], 1)} kg"),
+            ("Azami faydalı yük (R-02b)", f"{_f(mx_.get('payload_kg'), 1)} kg: dayanım {_f(mx_.get('endurance_h'))} h "
+             f"(yakıt {_f(mx_.get('fuel_kg'), 1)} kg)"),
             ("Kanat açıklığı / alan / AR", f"{_f(M['span_m'])} m / {_f(float(S['wing']['area']), 3)} m² / "
              f"{_f(float(S['wing']['aspect_ratio']), 1)}"),
             ("Gövde boyu / genişlik / yükseklik", f"{_f(R['geometry']['body_length_m'])} / {_f(R['geometry']['body_width_max_m'])} / "
              f"{_f(R['geometry']['body_height_max_m'])} m"),
-            ("Dayanım (tasarım görevi)", f"{_f(M['endurance_h'])} h (bekleme {_f(M['loiter_time_h'])} h)"),
+            ("Dayanım (tasarım görevi, görev yüküyle)", f"{_f(M['endurance_h'])} h (bekleme {_f(M['loiter_time_h'])} h)"),
             ("Menzil (feribot, yedek dahil)", f"{_f(M['range_km'], 0)} km"),
             ("Görev beklemesi başı / sonu (3000 m)",
              " / ".join(f"{_f(lp['V'])} m/s TAS ({_f(lp['EAS'])} EAS), {_f(lp['rpm'], 0)} rpm, {_f(lp['ff_kg_h'])} kg/h"
@@ -6037,6 +6968,22 @@ def write_report(S: dict, R: dict, M: dict, reqs: list, chk: dict | None, figs: 
         v = r["actual"]
         w(f"| {r['id']} | {r['text_tr']} | `{r['metric']}` | {r['op']} {_f(float(r['value']), 3)} {r['unit']} | "
           f"{_f(float(v), 3) if v is not None else '–'} | {'✔' if r['pass'] else '✘'} |")
+    if pr_:
+        w("\n### Gereksinim kararı: görev faydalı yükü kuralı\n")
+        w(f"Kural: {pr_.get('rule_tr', pr_.get('rule'))}. Spec değeri {_f(pr_.get('spec_kg'), 1)} kg; kapalı tasarımdan "
+          f"türetilen {_f(pr_.get('derived_kg'), 1)} kg ({_f(pr_.get('endurance_at_derived_h'), 3)} h; bir adım fazlası "
+          f"{_f(pr_.get('next_step_kg'), 1)} kg ile {_f(pr_.get('endurance_at_next_step_h'), 3)} h). Azami yük "
+          f"{_f(mx_.get('payload_kg'), 1)} kg ile dayanım {_f(mx_.get('endurance_h'), 3)} h (R-02b ≥ "
+          f"{_f(mx_.get('requirement_h'), 1)} h).")
+        if pr_.get("endurance_margin_to_target_h") is not None:
+            w(f"\nKural eşiğine pay (V4-03): görev yüküyle dayanım eşiğin {_f(pr_['endurance_margin_to_target_h'], 3)} h "
+              f"üstündedir. Bu, sabit MTOM'da boş kütlenin {_f(pr_.get('empty_mass_headroom_kg'), 3)} kg artmasına denktir "
+              f"(her kg boş kütle bir kg yakıttır); faydalı yük olarak eşik ≈ {_f(pr_.get('payload_at_target_kg_linear'), 2)} "
+              f"kg'dır (ızgara noktaları arasında doğrusal). Boş kütle bundan fazla artarsa kural bir alt adımı verir.")
+        bc0 = m["budget_check"]
+        w(f"\nKütle bütçesi (R-56): R-02'yi tam karşılayan boş kütle {_f(bc0['empty_kg_at_R02_limit'], 3)} kg, R-02b'yi "
+          f"tam karşılayan {_f(bc0.get('empty_kg_at_R02b_limit'), 3)} kg; belirleyen {bc0.get('governing')}; tavanlar "
+          f"{_f(bc0['budget_sum_kg'], 2)} kg + yedek {_f(bc0['reserve_kg'], 2)} kg → pay {_f(bc0['margin_kg'], 3)} kg.")
     w("\n## 3. Kütle\n")
     w("| Grup | Kütle (kg) | Bütçe hedefi ± tolerans |\n|---|---|---|")
     bud = S["mass"].get("budget", {})
@@ -6117,12 +7064,29 @@ def write_report(S: dict, R: dict, M: dict, reqs: list, chk: dict | None, figs: 
       f"{_f(to.get('theta_ground_deg'), 1)}°, dönüş {_f(to.get('rotation_time_s'), 2)} s) (VS_TO {_f(to['VS_TO_m_s'], 1)} m/s, "
       f"flap {_f(to['flap_deg'], 0)}°) |")
     if fcs_:
+        rot_ = to.get("rotation", {})
         w(f"| — uçuş kontrol sistemi stabilatör programı | {_f(fcs_.get('download_start_m_s'), 1)} m/s'den itibaren ana "
           f"tekerleri yüklü tutan en küçük aşağı kuvvet, V_R'de tam burun yukarı (yerel CL {_f(fcs_['full_nose_up_local_cl'], 2)}); "
-          f"dönüşte güç-açık trim; {_f(fcs_['liftoff_not_below_m_s'], 1)} m/s (1,1 VS_TO) altında yerden kesilme yok |")
+          f"dönüşte sabit yunuslama hızı ({_f(to.get('rotation_rate_deg_s'), 2)}°/s), aşağı kuvvet ana teker temas "
+          f"noktasına göre moment dengesinden: {_f(rot_.get('download_at_V_R_N'), 0)} N'dan yerden kesilmede güç-açık trim "
+          f"değerine {_f(rot_.get('download_at_lof_N'), 0)} N (trim {_f(rot_.get('trim_download_at_lof_N'), 0)} N); "
+          f"en büyük aşağı kuvvete en küçük pay {_f(rot_.get('download_margin_min_N'), 1)} N, moment artığı en çok "
+          f"{rot_.get('moment_residual_max_Nm', 0.0):.1e} N·m; {_f(fcs_['liftoff_not_below_m_s'], 1)} m/s (1,1 VS_TO) "
+          f"altında yerden kesilme yok |")
+    pie = p.get("takeoff_pitch_inertia_effect")
+    if pie:
+        rot_ = to.get("rotation", {})
+        w(f"| — yunuslama ataleti (V4-05) | I_yy {_f(pie['I_yy_kg_m2'], 1)} kg·m² (kütle kalemlerinden; deri, kanat ve kuyruk "
+          f"yüzeylerine yayılı, uzun kalemler çubuk); yunuslama hızı komutu {_f(pie['spin_up_time_s'], 1)} s'de "
+          f"rampalanır ({_f(rot_.get('spin_up_pitch_accel_deg_s2'), 2)}°/s², V_R'de ana teker noktasına göre "
+          f"{_f(rot_.get('spin_up_moment_at_V_R_Nm'), 1)} N·m). V_R {_f(pie['without_pitch_inertia']['V_R_m_s'], 2)} → "
+          f"{_f(pie['V_R_m_s'], 2)} m/s, koşu {_f(pie['without_pitch_inertia']['ground_roll_m'], 1)} → "
+          f"{_f(pie['ground_roll_m'], 1)} m (+{_f(pie['delta_ground_roll_m'], 1)} m); 0,1 s rampayla "
+          f"{_f(pie['spin_up_0p1s']['ground_roll_m'], 1)} m |")
     for cn_, cv in to.get("cases", {}).items():
         w(f"| — {CASE_TR.get(cn_, cn_)} | koşu {_f(cv['ground_roll_m'], 0)} m, V_R {_f(cv['V_R_m_s'], 1)}, V_LOF "
-          f"{_f(cv['V_lof_m_s'], 1)} m/s, θ_LOF {_f(cv.get('theta_lof_deg'), 1)}°, x_AM {_f(cv['x_cg'], 3)} m |")
+          f"{_f(cv['V_lof_m_s'], 1)} m/s, θ_LOF {_f(cv.get('theta_lof_deg'), 1)}°, x_AM {_f(cv['x_cg'], 3)} m, "
+          f"aşağı kuvvet payı {_f(cv['rotation']['download_margin_min_N'], 1)} N |")
     to2 = p["takeoff_1500m_isa_mtow"]
     w(f"| Kalkış (1500 m ISA) | koşu {_f(to2['ground_roll_m'], 0)} m |")
     ld = p["landing_sl_end_of_mission"]
@@ -6136,14 +7100,52 @@ def write_report(S: dict, R: dict, M: dict, reqs: list, chk: dict | None, figs: 
         w(f"| {h} m | VS {_f(q['VS_clean_m_s'], 1)} m/s, Vmaks {_f(q['V_max_m_s'], 1)} m/s, tırmanma "
           f"{_f(q['RoC_max_m_s'], 2)} m/s @ {_f(q['V_climb_m_s'], 1)} m/s |")
     w(f"| Tavan | servis {_f(p['ceiling_service_m'], 0)} m, mutlak {_f(p['ceiling_absolute_m'], 0)} m |")
-    w("\nFaydalı yük – dayanım:\n")
-    w("| Yük (kg) | Yakıt (kg) | Dayanım (h) |\n|---|---|---|")
+    ppl = p.get("payload_permitted_loadings", {})
+    w("\nFaydalı yük – dayanım (MTOM 149,9 kg; yakıt = MTOM − boş − yük, yakıt hacmiyle sınırlı). Tablo izin verilen en "
+      "hafif yüklemeden, temel EO/IR setinden başlar (V4-02):\n")
+    w("| Yük (kg) | Yakıt (kg) | Kalkış kütlesi (kg) | Dayanım (h) | Bekleme (h) | SM aralığı (% OAK) | E180 tepesi bütün "
+      "bekleme sürseydi batarya (Wh) | E180 tepesinin desteklendiği bekleme (h) |\n|---|---|---|---|---|---|---|---|")
+    el0 = R["electrical"]
     for r in p["payload_endurance"]:
+        sup = r.get("e180_peak_supported_loiter_h")
+        smr = r.get("static_margin_range") or [float("nan")] * 2
+        e180_txt = (f"{_f(r.get('e180_peak_battery_draw_Wh'), 1)}{' > pay' if r.get('e180_peak_share_exceeded') else ''} | "
+                    f"{'bütün bekleme' if sup is None else _f(sup, 2)}") if r.get("e180_set_fits", True) else \
+            "– (E180 seti sığmaz) | –"
         w(f"| {_f(r['payload_kg'], 2)} | {_f(r['fuel_kg'], 2)}{' (hacim sınırı)' if r['fuel_volume_limited'] else ''} | "
-          f"{_f(r['endurance_h'], 2)} |")
+          f"{_f(r['takeoff_mass_kg'], 1)} | {_f(r['endurance_h'], 2)} | {_f(r.get('loiter_time_h'), 2)} | "
+          f"{_f(100 * smr[0], 1)}–{_f(100 * smr[1], 1)} | {e180_txt} |")
+    w(f"\nTepe destek payı {_f(el0['battery_peak_share_Wh'], 1)} Wh. '> pay' satırlarında E180 tepesi bütün bekleme "
+      f"boyunca karşılanamaz (R-52 işletme sınırı, bkz. §8). E180 sütunları yalnız E180 setini ({_f(ppl.get('e180_set_kg'), 1)} "
+      f"kg: E180 4,0 + görev bilgisayarı 1,0 + tepsi 0,5) taşıyabilen yükler içindir.")
+    if ppl:
+        np_ = ppl["no_payload"]
+        w(f"\nİzin verilmeyen yüklemeler (R-09, SM ≥ %{_f(100 * ppl['static_margin_min_rule'], 0)}): faydalı yüksüz "
+          f"(taret de yok) SM %{_f(100 * np_['static_margin_range'][0], 1)}–%{_f(100 * np_['static_margin_range'][1], 1)} aralığındadır; "
+          f"uçmak için taret bağlantısına (x = {_f(np_['ballast_x_m'], 3)} m) {_f(np_['nose_ballast_at_turret_mount_kg'], 2)} "
+          f"kg safra gerekir. Yalnız taretle (görev bilgisayarı ve tepsi yok) dolu depolarda SM "
+          f"%{_f(100 * ppl['turret_only']['static_margin_range_full_tanks'][0], 1)} olur; bu yüklemede yakıt "
+          f"{_f(ppl['turret_only']['fuel_max_for_R09_kg'], 1)} kg ile sınırlıdır.")
     sens = R.get("sensitivities_endurance_h", {})
+    SENS_TR = {"bsfc_minus_12pct": "BSFC −%12", "bsfc_plus_12pct": "BSFC +%12", "cd0_plus_10pct_all_drag":
+               "bütün sürükleme +%10", "empty_plus_5pct": "boş kütle +%5", "loiter_at_1000m": "bekleme 1000 m'de",
+               "no_transit_loiter_only": "geçişsiz", "turret_retracted_whole_mission": "taret hep içeride",
+               "k_inst_0p90": "k_inst 0,90", "k_inst_0p95": "k_inst 0,95", "k_inst_0p97": "k_inst 0,97",
+               "low_load_fuel_flow_willans_line": "düşük yükte Willans doğrusu"}
     if sens:
-        w("\nDuyarlılıklar (dayanım, h): " + ", ".join(f"{k} {_f(v, 2)}" for k, v in sens.items()))
+        w("\nDuyarlılıklar (görev yüküyle dayanım, h): " + ", ".join(f"{SENS_TR.get(k, k)} {_f(v, 2)}"
+                                                                    for k, v in sens.items()))
+    ll = R.get("low_load_bsfc_bound", {})
+    if ll:
+        w(f"\nDüşük yük BSFC dışdeğerlemesi (V3-07): en düşük BSFC noktası %{_f(ll['lowest_bsfc_point_power_fraction'] * 100, 0)} "
+          f"güçtedir; alçalma %{_f(ll['descent_power_fraction_range_bsfc_line'][0] * 100, 1)}–"
+          f"%{_f(ll['descent_power_fraction_range_bsfc_line'][1] * 100, 1)}, yedek bekleme "
+          f"%{_f(ll['reserve_power_fraction_range_bsfc_line'][0] * 100, 1)}–"
+          f"%{_f(ll['reserve_power_fraction_range_bsfc_line'][1] * 100, 1)} güçtedir (dışdeğerleme). Alçalma yakıtı BSFC "
+          f"doğrusuyla {_f(ll['descent_fuel_kg_bsfc_line'], 3)} kg, Willans doğrusuyla (yakıt akışı güçle doğrusal; daha ihtiyatlı bir dışdeğerleme, sınır değil) "
+          f"{_f(ll['descent_fuel_kg_willans_line'], 3)} kg; yedek {_f(ll['reserve_fuel_kg_bsfc_line'], 3)} / "
+          f"{_f(ll['reserve_fuel_kg_willans_line'], 3)} kg; dayanım {_f(ll['endurance_h_bsfc_line'], 3)} / "
+          f"{_f(ll['endurance_h_willans_line'], 3)} h.")
     w("\n## 8. Kumanda yüzeyleri, kökler, kiriş derinliği, elektrik, yükler\n")
     hm, rt, sd = R["stabilator_hinge"], R["tail_roots"], R["spar_depth"]
     acv = S["tail"]["surfaces"]["stabilator"]["controls"].get("ac_mac_fraction_vlm", {})
@@ -6203,6 +7205,17 @@ def write_report(S: dict, R: dict, M: dict, reqs: list, chk: dict | None, figs: 
       f"{_f(el.get('margin_peak_hd59_design_mission'), 3)} payla karşılar. E180 görevinin dayanımı "
       f"{_f(el.get('e180_mission_endurance_h'), 2)} h. Sürekli yük (en büyüğü E180 ile {_f(el['continuous_e180_W'], 0)} W) "
       f"iki görevin en düşük çıkışına göre pay {_f(el['margin_continuous'], 3)} (R-32).")
+    e180_ = p.get("e180_growth_mission") or {}
+    if e180_:
+        w(f"* E180 büyüme görevi (V3-08): jeneratör bu görevde E180 sürekli yükünü taşır "
+          f"({_f(e180_.get('continuous_load_W'), 0)} W; alçalma devir tabanı {_f(e180_.get('descent_rpm'), 0)} rpm).")
+    if el.get("peak_support_guaranteed_loiter_h_at_cap"):
+        w(f"* R-52 işletme sınırı (V3-09): tepe destek payı, R-52'nin denetlediği bekleme sürelerine göre boyutlanmıştır "
+          f"(tasarım görevi {_f(p['loiter_time_h'], 2)} h). E180 tepesi devir tabanında sürekli çekilirse pay en az "
+          f"{_f(el['peak_support_guaranteed_loiter_h_at_cap'], 2)} h bekleme yeter (açık her an üst sınırda); daha uzun "
+          f"beklemede (daha hafif yük, daha çok yakıt) pay bitince güç yönetimi bekleme devrini jeneratörün tek başına "
+          f"E180 tepesini taşıdığı {_f(el['generator_rpm_e180_peak_generator_only'], 0)} rpm'e çıkarır ya da tepe yük "
+          f"süresi sınırlanır.")
     de_ = [r_ for r_ in p["mission_log"] if r_["kind"] == "descent"]
     if de_:
         w(f"* Alçalma (V2-07): motor jeneratörün sürekli yükü taşıdığı devirde ({_f(de_[0]['rpm'], 0)} rpm), "
@@ -6230,6 +7243,17 @@ def write_report(S: dict, R: dict, M: dict, reqs: list, chk: dict | None, figs: 
     for k, v in R["packaging"].items():
         if isinstance(v, dict) and "fits" in v and k not in ("fuel",):
             w(f"| {k} | {_f(bool(v['fits']))} |")
+    bcn = R["packaging"].get("bay_contents", {})
+    if bcn.get("items"):
+        w("\nBölme içerikleri (V3-02; gerçek zarflar + bağlayıcı payı; R-26'nın parçası):\n")
+        w("| Öğe | Bölge | Boyut (mm) | OML'ye pay (mm) | Bölge duvarına pay (mm) | Komşuya en yakın (mm) |\n"
+          "|---|---|---|---|---|---|")
+        for r_ in bcn["items"]:
+            w(f"| {r_['name']} | {r_['zone']} | {' × '.join(_f(v * 1000, 1) for v in r_['dims_m'])} | "
+              f"{_f(r_['oml_margin_m'] * 1000, 1)} | {_f(r_['zone_wall_margin_m'] * 1000, 1)} | "
+              f"{_f(r_['min_gap_to_other_items_m'] * 1000, 1)} |")
+        if bcn.get("failures"):
+            w("\nSığmayanlar: " + "; ".join(bcn["failures"]))
     fu = R["packaging"]["fuel"]
     w(f"\nYakıt hacmi: gereken {_f(fu['required_m3'] * 1000, 1)} L, kullanılabilir {_f(fu['available_m3'] * 1000, 1)} L "
       f"(tank verimi dahil); yakıt AM'si x = {_f(fu['fuel_cg_x_volume_centroid'], 3)} m.")
@@ -6263,7 +7287,8 @@ def write_report(S: dict, R: dict, M: dict, reqs: list, chk: dict | None, figs: 
               f"{_f(r.get('empty_kg'))} | {_f(r.get('endurance_h'))} | {_f(r.get('cn_beta'), 4)} |"
               + (" LERX tepesi de kaydırıldı" if r.get("note") else "") + (" kapanış hatası" if r.get("error") else ""))
         if trades.get("r02_ladder"):
-            w("\nR-02 kapanışı (her tasarım değişikliği tek başına geri alınırsa, tam tasarım kapanışıyla):\n")
+            w("\nTasarım değişiklikleri merdiveni (görev yüküyle; her değişiklik tek başına geri alınırsa, tam tasarım "
+              "kapanışıyla):\n")
             w("| Durum | Dayanım (h) | Fark (h) |\n|---|---|---|")
             for r in trades["r02_ladder"]:
                 w(f"| {r['text_tr']} | {_f(r.get('endurance_h'))} | {_f(-r['delta_h']) if 'delta_h' in r else '–'} |")
@@ -6345,8 +7370,23 @@ def refresh_spec(S_in: dict, verbose: bool = True) -> tuple[dict, dict]:
     that ``--check`` compares. Authored content (texts, sources, requirements, rules) is kept; the mass budget stays a
     deliberate allocation (``--check`` reports a group that leaves its band). Returns (new spec, its evaluation)."""
     write_glove_airfoils(S_in)
-    D = design_closure(S_in, verbose=verbose)
-    D.pop("_closure_history", None)
+    # requirement decision (fix round 4): the design-mission payload is derived by the payload-endurance rule on the
+    # closed aircraft; the closure depends on it (loading cases, fuel), so close -> evaluate -> update the payload
+    # until it repeats (a 0.5 kg grid: one or two passes)
+    S_cur = copy.deepcopy(S_in)
+    for k_ in range(6):
+        D = design_closure(S_cur, verbose=verbose)
+        D.pop("_closure_history", None)
+        R = evaluate(D, sens=False)
+        p_new = R["performance"]["payload_design_rule"]["derived_kg"]
+        if verbose:
+            print(f"  [payload rule] pass {k_}: spec {D['mission']['payload_design_kg']} kg -> derived {p_new} kg "
+                  f"(E {R['performance']['payload_design_rule']['endurance_at_derived_h']:.3f} h)", flush=True)
+        if abs(float(p_new) - float(D["mission"]["payload_design_kg"])) < 1e-9:
+            break
+        S_cur["mission"]["payload_design_kg"] = float(p_new)
+    else:
+        raise RuntimeError("design-payload rule did not repeat in 6 closure passes")
     R = evaluate(D, sens=True)
     ref = reference_blocks(D, R)
     st, g, p, pr = R["stability"], R["ground"], R["performance"], R["propeller"]
@@ -6428,7 +7468,16 @@ def refresh_spec(S_in: dict, verbose: bool = True) -> tuple[dict, dict]:
                            "computed": ref["stability"]})
     D["performance"].update({"reference": ref["performance"], "payload_endurance": p["payload_endurance"],
                              "sensitivities_endurance_h": R["sensitivities_endurance_h"],
-                             "loiter_3000m": p["loiter_3000m"]})
+                             "loiter_3000m": p["loiter_3000m"], "payload_design_rule": p["payload_design_rule"],
+                             "max_payload_mission": p["max_payload_mission"],
+                             "low_load_bsfc_bound": R["low_load_bsfc_bound"],
+                             "payload_permitted_loadings": p["payload_permitted_loadings"],
+                             "takeoff_pitch_inertia_effect": p.get("takeoff_pitch_inertia_effect")})
+    bc_ = R["packaging"]["bay_contents"]
+    D["layout"]["bay_contents_check"] = {"fits": bc_["fits"], "failures": bc_["failures"], "min_gap_m": bc_["min_gap_m"],
+                                         "items": [{k: r_[k] for k in ("name", "zone", "dims_m", "oml_margin_m",
+                                                                         "zone_wall_margin_m", "min_gap_to_other_items_m")}
+                                                   for r_ in bc_["items"]]}
     vn = R["loads"]["vn"]
     ws = float(D["mass"]["mtow_kg"]) * G / float(D["wing"]["area"])
     gm = R["loads"]["gust_matrix"]
@@ -6458,7 +7507,10 @@ def refresh_spec(S_in: dict, verbose: bool = True) -> tuple[dict, dict]:
     added = {"aero": ("cd0", "e", "k", "ld_max", "clmax_clean", "clmax_to", "clmax_ld", "polars", "power_on_trim",
                       "flaps"),
              "propeller": ("clearance_checks",), "tail": ("arm_h_wing_ac_to_tail_ac", "arms_note"),
-             "fuselage": ("lines_derived",)}
+             "fuselage": ("lines_derived",),
+             "performance": ("payload_design_rule", "max_payload_mission", "low_load_bsfc_bound",
+                             "payload_permitted_loadings", "takeoff_pitch_inertia_effect"),
+             "layout": ("bay_contents_check",)}
     out = {}
     for k, v in S_in.items():
         nv = D.get(k, v)

@@ -38,7 +38,17 @@ SIZING_PHASE_POSITIONS = {
     "parachute_attach_fitting": [1.65, 0.0, -0.0345],
     "floors_trays_rails": [1.4, 0.0, -0.02],
     "hatch_frames_quick_access_fasteners": [1.5, 0.0, 0.08],
-    "fin_ventral_root_fittings": [3.5722, 0.0, 0.05]}
+    "fin_ventral_root_fittings": [3.5722, 0.0, 0.05],
+    # fix round 2 (PK2-07): items placed from the layout since this round, same source (commit b9d0b87)
+    "actuators_ailerons_2x_DA26": [3.0999, 0.0, 0.0425],
+    "actuators_flaps_2x_DA30": [3.0063, 0.0, 0.0],
+    "actuators_rudders_2x_DA26": [3.921, 0.0, 0.6312],
+    "main_gear_legs_wheels_brakes_emas_pair": [3.0006, 0.0, -0.127],
+    "nose_gear_leg_wheel_steering": [0.8443, 0.0, -0.1244],
+    "gear_doors_wells_locks_sensors": [2.4987, 0.0, -0.1],
+    "turret_lift_mechanism_doors": [1.22, 0.0, 0.007],
+    "parachute_uavos_200": [1.65, 0.0, -0.0345],
+    "fuel_system_3_cells": [2.6421, 0.0, 0.05]}
 
 SIZING_OWNED = ("datum", "rules", "fuel_cells", "zones_preliminary", "firewall_x", "ground_z", "bay_contents_check")
 

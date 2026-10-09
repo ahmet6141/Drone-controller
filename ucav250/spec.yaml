@@ -10644,6 +10644,7 @@ layout:
       - what: horns + pushrods (servo arm to hinge horn)
         fraction: 0.1562
         at: [2.9158, 0.0, 0.0801]
+      position_sizing_phase: [3.0999, 0.0, 0.0425]
     actuators_flaps_2x_DA30:
       mode: absolute
       position: [2.7821, 0.0, 0.0013]
@@ -10658,6 +10659,7 @@ layout:
       - what: hinges / horns 0.20 (flap hinge line)
         fraction: 0.1282
         at: [2.8976, 0.0, 0.0037]
+      position_sizing_phase: [3.0063, 0.0, 0.0]
     actuators_rudders_2x_DA26:
       mode: absolute
       position: [3.7638, 0.0, 0.4562]
@@ -10669,6 +10671,7 @@ layout:
       - what: linkages 0.06
         fraction: 0.1
         at: [3.8178, 0.0, 0.499]
+      position_sizing_phase: [3.921, 0.0, 0.6312]
     main_gear_legs_wheels_brakes_emas_pair:
       mode: absolute
       position: [2.9705, 0.0, -0.1309]
@@ -10684,6 +10687,7 @@ layout:
       - what: 2 x leg, damper, yoke, stub axles, side-brace lock (stowed leg mid-point)
         fraction: 0.485
         at: [2.976, 0.0, -0.1309]
+      position_sizing_phase: [3.0006, 0.0, -0.127]
     nose_gear_leg_wheel_steering:
       mode: absolute
       position: [0.8419, 0.0, -0.0993]
@@ -10699,6 +10703,7 @@ layout:
       - what: leg, damper, fork, steering collar (stowed leg mid-point)
         fraction: 0.6671
         at: [0.8125, 0.0, -0.1072]
+      position_sizing_phase: [0.8443, 0.0, -0.1244]
     gear_doors_wells_locks_sensors:
       mode: absolute
       position: [2.3692, -0.0072, -0.1402]
@@ -10738,6 +10743,7 @@ layout:
       - what: door seals (nose)
         fraction: 0.0152
         at: [0.851, 0.0, -0.0922]
+      position_sizing_phase: [2.4987, 0.0, -0.1]
     turret_lift_mechanism_doors:
       mode: absolute
       position: [1.2454, 0.0, -0.0283]
@@ -10764,6 +10770,7 @@ layout:
       - what: HD59 aperture ring (flush skin insert)
         fraction: 0.0336
         at: [1.22, 0.0, -0.207]
+      position_sizing_phase: [1.22, 0.0, 0.007]
     parachute_uavos_200:
       mode: absolute
       position: [1.65, 0.0, -0.0345]
@@ -10772,6 +10779,7 @@ layout:
       - what: UAVOS 200 container (EQ-PARACHUTE)
         fraction: 1.0
         at: [1.65, 0.0, -0.0345]
+      position_sizing_phase: [1.65, 0.0, -0.0345]
     fuel_system_3_cells:
       mode: absolute
       position: [2.6068, 0.0, 0.0371]
@@ -10782,6 +10790,7 @@ layout:
           cells)'
         fraction: 1.0
         at: [2.6068, 0.0, 0.0371]
+      position_sizing_phase: [2.6421, 0.0, 0.05]
 
 # ---------------------------------------------------------------------------------------------------------------------
 # assembly: assembly (sequence, transport, field assembly, maintenance access)

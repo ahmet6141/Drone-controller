@@ -117,15 +117,15 @@ Boş kütle 101,6 kg; spec kalemlerinden AM [2,629; -0,0003; 0,0482] m, yerleşi
 | floors_trays_rails | 1,4 | 1,766 | 0,3658 | area-weighted decks/floors + trays |
 | hatch_frames_quick_access_fasteners | 1,5 | 2,344 | 0,8444 | perimeter-weighted removable panels/hatches (frame lands, Camlocs, nutplates) |
 | fin_ventral_root_fittings | 3,572 | 3,606 | 0,0341 | fin, stub and ventral root fittings at the frames |
-| actuators_ailerons_2x_DA26 | – | 2,831 | – | item basis: 2 x DA 26 datasheet + horns/pushrods 0.10 at the layout actuators (fix round 2, PK2-07) |
-| actuators_flaps_2x_DA30 | – | 2,782 | – | item basis: 2 x DA 30 datasheet + installation 0.10 + hinges/horns 0.20 at the layout actuators |
-| actuators_rudders_2x_DA26 | – | 3,764 | – | item basis: 2 x DA 26 datasheet + linkages 0.06 at the layout actuators (fin boxes) |
-| main_gear_legs_wheels_brakes_emas_pair | – | 2,97 | – | SAGITTA main leg 4.0 kg each (components.yaml) split as TOST wheel assembly 1.79 kg (research estimate) + DA-2 |
-| nose_gear_leg_wheel_steering | – | 0,8419 | – | SAGITTA nose leg 3.5 kg (components.yaml) split as TOST nose wheel 0.365 + tyre 0.45 + tube 0.08 kg + DA-26-cl |
-| gear_doors_wells_locks_sensors | – | 2,369 | – | sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout door  |
-| turret_lift_mechanism_doors | – | 1,245 | – | item basis split (mass.rules.turret_mechanism_kg, estimates) at the layout objects, turret retracted |
-| parachute_uavos_200 | – | 1,65 | – | container box centre (components.yaml compartment 0.300 x 0.300 x 0.275 m) |
-| fuel_system_3_cells | – | 2,607 | – | components.yaml fuel_system + three-cell interconnection; the item has no published split, so it is placed at  |
+| actuators_ailerons_2x_DA26 | 3,1 | 2,831 | -0,2685 | item basis: 2 x DA 26 datasheet + horns/pushrods 0.10 at the layout actuators (fix round 2, PK2-07) |
+| actuators_flaps_2x_DA30 | 3,006 | 2,782 | -0,2242 | item basis: 2 x DA 30 datasheet + installation 0.10 + hinges/horns 0.20 at the layout actuators |
+| actuators_rudders_2x_DA26 | 3,921 | 3,764 | -0,1572 | item basis: 2 x DA 26 datasheet + linkages 0.06 at the layout actuators (fin boxes) |
+| main_gear_legs_wheels_brakes_emas_pair | 3,001 | 2,97 | -0,0301 | SAGITTA main leg 4.0 kg each (components.yaml) split as TOST wheel assembly 1.79 kg (research estimate) + DA-2 |
+| nose_gear_leg_wheel_steering | 0,8443 | 0,8419 | -0,0024 | SAGITTA nose leg 3.5 kg (components.yaml) split as TOST nose wheel 0.365 + tyre 0.45 + tube 0.08 kg + DA-26-cl |
+| gear_doors_wells_locks_sensors | 2,499 | 2,369 | -0,1295 | sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout door  |
+| turret_lift_mechanism_doors | 1,22 | 1,245 | 0,0254 | item basis split (mass.rules.turret_mechanism_kg, estimates) at the layout objects, turret retracted |
+| parachute_uavos_200 | 1,65 | 1,65 | 0 | container box centre (components.yaml compartment 0.300 x 0.300 x 0.275 m) |
+| fuel_system_3_cells | 2,642 | 2,607 | -0,0353 | components.yaml fuel_system + three-cell interconnection; the item has no published split, so it is placed at  |
 
 ## 3. Arayüz bağlantılarının ilk ön boyutlandırması
 

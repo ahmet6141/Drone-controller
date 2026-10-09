@@ -294,42 +294,42 @@ Yakıt hacmi: gereken 41,7 L, kullanılabilir 49,4 L (tank verimi dahil); yakıt
 
 | Pervane (her biri kendi kapanışıyla) | Dayanım (h) | Tırmanma DS (m/s) | Kalkış / iniş koşusu (m) | Statik itki (N) | Uç Mach | Karşılanmayan gereksinimler |
 |---|---|---|---|---|---|---|
-| Mejzlik 31x12 3B (tasarım) | 10,35 | 4,21 | 179 / 183 | 492 | 0,712 | – |
-| Mejzlik 32x18 2B | 8,63 | 3,55 | 207 / 182 | 446 | 0,713 | R-02, R-02b, R-05, R-06, R-21, R-26, R-33, R-50, R-56 |
+| Mejzlik 31x12 3B (tasarım) | 10,32 | 4,22 | 178 / 183 | 492 | 0,712 | – |
+| Mejzlik 32x18 2B | 8,60 | 3,56 | 207 / 182 | 446 | 0,713 | R-02, R-02b, R-05, R-06, R-21, R-26, R-33, R-50, R-56 |
 
 Dayanımın sürüklemeye duyarlılığı: her uçuş evresinde +0,001 CD → -0,104 h.
 
-İniş takımı: içeri katlanır 10,35 h (14,33 kg) – sabit kaportalı 11,94 h (9,55 kg).
-Taret: geri çekilir 10,35 h – sabit (sürekli dışarıda) 11,06 h.
+İniş takımı: içeri katlanır 10,32 h (14,57 kg) – sabit kaportalı 11,99 h (9,55 kg).
+Taret: geri çekilir 10,32 h – sabit (sürekli dışarıda) 11,03 h.
 
 | Açıklık (m) | VS hedefi (m/s) | S (m²) | AR | Kanat (kg) | Boş (kg) | Dayanım (h) | Kalkış (m) |
 |---|---|---|---|---|---|---|---|
-| 7,20 (tasarım) | 23,95 | 3,241 | 16,0 | 16,40 | 101,48 | 10,35 | 179 |
-| 6,80 | 23,95 | 3,233 | 14,3 | 15,77 | 100,97 | 10,33 | 186 |
-| 7,60 | 23,95 | 3,248 | 17,8 | 17,07 | 102,27 | 10,19 | 173 |
-| 7,20 | 23,00 | 3,505 | 14,8 | 17,25 | 103,34 | 9,55 | 168 |
-| 7,20 | 24,50 | 3,098 | 16,7 | 15,95 | 100,54 | 10,72 | 186 |
+| 7,20 (tasarım) | 23,95 | 3,237 | 16,0 | 15,34 | 101,63 | 10,32 | 178 |
+| 6,80 | 23,95 | 3,229 | 14,3 | 15,22 | 101,63 | 10,10 | 185 |
+| 7,60 | 23,95 | 3,247 | 17,8 | 15,42 | 101,81 | 10,39 | 172 |
+| 7,20 | 23,00 | 3,504 | 14,8 | 16,26 | 103,56 | 9,48 | 167 |
+| 7,20 | 24,50 | 3,096 | 16,7 | 14,86 | 100,71 | 10,67 | 186 |
 
 | Gövde uzatma (m) | Boy (m) | V_H | Boş (kg) | Dayanım (h) | Cnβ |
 |---|---|---|---|---|---|
-| -0,10 | 3,90 | 0,432 | 101,54 | 10,30 | 0,0593 |
-| 0,10 | 4,10 | 0,445 | 101,46 | 10,39 | 0,0589 |
+| -0,10 | 3,90 | 0,432 | 101,77 | 10,22 | 0,0588 |
+| 0,10 | 4,10 | 0,441 | 101,62 | 10,35 | 0,0591 |
 
 Tasarım değişiklikleri merdiveni (görev yüküyle; her değişiklik tek başına geri alınırsa, tam tasarım kapanışıyla):
 
 | Durum | Dayanım (h) | Fark (h) |
 |---|---|---|
-| v1.6 tasarımı | 10,35 | – |
-| k_inst 0,95 (tahmin 0,93 yerine; pervane/gövde kurulum testi bekliyor) | 10,48 | 0,12 |
-| R-52 v1.3 biçimi (yalnız takılı taretin tepesi; kullanıcı onaylamadı, uygulanmadı) | 10,52 | 0,17 |
-| v1.2 çözümü: LiFePO4 14S2P batarya, E180 tepesi yalnız jeneratörle (E180 devir tabanı) | 9,90 | -0,45 |
-| k_inst 0,95 ve R-52 v1.3 birlikte (ikisi de uygulanmadı) | 10,68 | 0,33 |
-| c/4 süpürme 8° → 6° (v1.2) | 10,17 | -0,18 |
-| burulma 4° → 3° (v1.2) | 10,29 | -0,07 |
-| LERX tepesi x 1,80 → 1,85 m (v1.2) | 10,35 | -0,01 |
-| kapaklar contalı değil (v1.1: uzatılmış takım sürüklemesinin %10'u) | 10,31 | -0,04 |
-| eldiven/dış panel birleşimi y = 0,82 m (v1.1) | 10,10 | -0,25 |
-| sivrilme 0,42 (v1.1) | 10,25 | -0,10 |
+| v1.6 tasarımı | 10,32 | – |
+| k_inst 0,95 (tahmin 0,93 yerine; pervane/gövde kurulum testi bekliyor) | 10,44 | 0,12 |
+| R-52 v1.3 biçimi (yalnız takılı taretin tepesi; kullanıcı onaylamadı, uygulanmadı) | 10,49 | 0,17 |
+| v1.2 çözümü: LiFePO4 14S2P batarya, E180 tepesi yalnız jeneratörle (E180 devir tabanı) | 9,83 | -0,48 |
+| k_inst 0,95 ve R-52 v1.3 birlikte (ikisi de uygulanmadı) | 10,65 | 0,33 |
+| c/4 süpürme 8° → 6° (v1.2) | 10,17 | -0,14 |
+| burulma 4° → 3° (v1.2) | 10,24 | -0,08 |
+| LERX tepesi x 1,80 → 1,85 m (v1.2) | 10,30 | -0,02 |
+| kapaklar contalı değil (v1.1: uzatılmış takım sürüklemesinin %10'u) | 10,27 | -0,05 |
+| eldiven/dış panel birleşimi y = 0,82 m (v1.1) | 10,12 | -0,20 |
+| sivrilme 0,42 (v1.1) | 10,27 | -0,05 |
 
 ## Şekiller
 

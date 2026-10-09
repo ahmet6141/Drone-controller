@@ -1,6 +1,6 @@
 # YK-250 HANÇER — Yerleşim ve yapı konsepti (faz 3, yerleşim evresi ve düzeltme turları 1–2)
 
-**Tarih:** 9 Ekim 2026 · **Durum:** `spec.yaml → layout` ve `spec.yaml → assembly` bölümleri ayrıntılı tasarımın arayüz tanımıdır. Bağımsız doğrulamaların yerleşim bulguları düzeltildi: VPK-01 … VPK-14 (§14) ve PK2-01 … PK2-13 (§15). `python3 -m ucav250.analysis.layout_check --check` 88 kontrolün 88'ini geçiyor; `python3 -m ucav250.analysis.sizing --check` 61 gereksinimin 61'ini karşılanmış ve 1.231 türetilmiş değerin hepsini tolerans içinde buluyor; `python3 -m ucav250.analysis.structures --check` bütün emniyet paylarını sıfır ya da pozitif buluyor ([04](04_yapi_hesaplari.md)).
+**Tarih:** 9 Ekim 2026 · **Durum:** `spec.yaml → layout` ve `spec.yaml → assembly` bölümleri ayrıntılı tasarımın arayüz tanımıdır. Bağımsız doğrulamaların yerleşim bulguları düzeltildi: VPK-01 … VPK-14 (§14) ve PK2-01 … PK2-13 (§15). `python3 -m ucav250.analysis.layout_check --check` 88 kontrolün 88'ini geçiyor; `python3 -m ucav250.analysis.sizing --check` 61 gereksinimin 61'ini karşılanmış ve 1231 türetilmiş değerin hepsini tolerans içinde buluyor; `python3 -m ucav250.analysis.structures --check` bütün emniyet paylarını sıfır ya da pozitif buluyor ([04](04_yapi_hesaplari.md)).
 
 > **Kapsam.** YK-250 HANÇER sivil bir EO/IR gözetleme ve araştırma İHA'sıdır. Gövdede dış yük taşıma bağlantısı,
 > askı, yük bırakma düzeneği ya da benzeri hiçbir donanım yoktur ve yerleşim bunlar için yer ayırmaz. Karın altındaki
@@ -188,7 +188,7 @@ Tasarım yükleri `structures` bölümünden gelir: CS-LUAS'a uyarlanmış STANA
 | kayış bağlantısı omurga tabanı cıvataları 4 x M4 12.9 (tek kesme, şokun tamamı bu grupta) | 0,71 |
 | kayış kilit pimi Ø8 (Ti-6Al-4V, çift kesme) | 3,00 |
 | kayış kilit pimi Ø8 eğilmesi (Melcon-Hoblit) | 0,30 |
-| kayış U-kulak ezilmesi (7075, 2 kulak 6 mm, e/D 1.94) | 2,09 |
+| kayış U-kulak ezilmesi (7075, 2 kulak 6 mm, e/D 1,94) | 2,09 |
 | motor bağlantı cıvatası M8 12.9 (tork + 3,8 g / 1,47 g yan / 6 g aşağı durumlarının en kötüsü) | 19,96 |
 
 Bu ilk boyutlandırmanın yerini yapı evresinin el hesapları ([04](04_yapi_hesaplari.md), `out/structures.md`) alır: düzlem içi moment kuvvet çiftiyle birlikte ana pim eğilmesinde MS 0,208, çatal kulağı burcu ezilmesinde 0,195'dir ve bütün paylar sıfır ya da pozitiftir.

@@ -805,7 +805,7 @@
    "allowable": 968.5,
    "MS": 2.09,
    "basis": "x 2.0 bearing factor; MMPDS Fbru at e/D 2 x (e/D)/2; MPa",
-   "item_tr": "kay\u0131\u015f U-kulak ezilmesi (7075, 2 kulak 6 mm, e/D 1.94)",
+   "item_tr": "kay\u0131\u015f U-kulak ezilmesi (7075, 2 kulak 6 mm, e/D 1,94)",
    "basis_tr": "x 2.0 ezilme katsay\u0131s\u0131; e/D 2'de MMPDS Fbru x (e/D)/2; MPa"
   },
   {

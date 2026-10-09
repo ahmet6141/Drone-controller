@@ -3630,7 +3630,7 @@ def fitting_presizing(ctx: Ctx) -> list:
     ms(f"bridle U-lug bearing (7075, 2 ears {t_ear * 1000:.0f} mm, e/D {eD:.2f})",
        P_d * f_br / (2 * Dp * t_ear) / 1e6, al["Fbru"] * min(1.0, eD / 2.0) / 1e6,
        f"x {f_br} bearing factor; MMPDS Fbru at e/D 2 x (e/D)/2; MPa",
-       f"kayış U-kulak ezilmesi (7075, 2 kulak {t_ear * 1000:.0f} mm, e/D {eD:.2f})",
+       f"kayış U-kulak ezilmesi (7075, 2 kulak {t_ear * 1000:.0f} mm, e/D {eD:.2f})".replace(".", ","),
        f"x {f_br} ezilme katsayısı; e/D 2'de MMPDS Fbru x (e/D)/2; MPa")
     m_conf = PARA_OPEN_N / (m0 * G0)
     rows.append({"item": "opening load factor at MTOM (information)", "applied": _r(m_conf, 2), "allowable": None,

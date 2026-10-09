@@ -3,15 +3,15 @@
   {
    "propeller": "aero.yaml#propeller_tables_mejzlik.0164",
    "model": "Mejzlik 31x12 3B",
-   "endurance_h": 10.354,
-   "roc_sl_m_s": 4.21017,
-   "takeoff_roll_m": 178.655,
-   "landing_roll_m": 182.713,
-   "loiter_rpm_3000m": 4946.67,
+   "endurance_h": 10.3179,
+   "roc_sl_m_s": 4.21824,
+   "takeoff_roll_m": 178.168,
+   "landing_roll_m": 182.878,
+   "loiter_rpm_3000m": 4943.82,
    "static_thrust_N": 492.201,
    "static_tip_mach": 0.711503,
-   "ground_z_m": -0.42875,
-   "empty_kg": 101.48,
+   "ground_z_m": -0.42995,
+   "empty_kg": 101.63,
    "generator_margin_loiter": 1.27614,
    "requirements_failed": [],
    "design": true
@@ -19,15 +19,15 @@
   {
    "propeller": "aero.yaml#propeller_tables_mejzlik.0161",
    "model": "Mejzlik 32x18 2B",
-   "endurance_h": 8.63103,
-   "roc_sl_m_s": 3.54829,
-   "takeoff_roll_m": 207.261,
-   "landing_roll_m": 182.194,
-   "loiter_rpm_3000m": 4236.1,
+   "endurance_h": 8.60153,
+   "roc_sl_m_s": 3.55535,
+   "takeoff_roll_m": 206.782,
+   "landing_roll_m": 182.471,
+   "loiter_rpm_3000m": 4233.53,
    "static_thrust_N": 446.306,
    "static_tip_mach": 0.713387,
-   "ground_z_m": -0.44072,
-   "empty_kg": 101.446,
+   "ground_z_m": -0.4419,
+   "empty_kg": 101.585,
    "generator_margin_loiter": 1.27614,
    "requirements_failed": [
     "R-02",
@@ -43,107 +43,107 @@
    "design": false
   }
  ],
- "endurance_per_0p001_cd_h": -0.103905,
+ "endurance_per_0p001_cd_h": -0.10386,
  "landing_gear": {
   "retractable": {
-   "mass_kg": 14.3329,
-   "endurance_h": 10.354
+   "mass_kg": 14.5654,
+   "endurance_h": 10.3179
   },
   "fixed_faired": {
    "mass_kg": 9.555,
-   "extra_Dq_m2": 0.00781784,
-   "endurance_h": 11.9367
+   "extra_Dq_m2": 0.00781676,
+   "endurance_h": 11.9925
   },
-  "delta_h_retractable_minus_fixed": -1.58274,
+  "delta_h_retractable_minus_fixed": -1.67459,
   "basis": "fixed: components.yaml landing_gear_fixed_tricycle_kg x growth and the faired fixed-gear D/q of the endurance concept study; retractable: SAGITTA legs + doors, residual gap drag (gear up)"
  },
  "turret": {
   "retractable": {
    "mechanism_kg": 2.2953,
-   "endurance_h": 10.354
+   "endurance_h": 10.3179
   },
   "fixed_extended": {
-   "endurance_h": 11.065,
+   "endurance_h": 11.0297,
    "extra_Dq_transit_m2": 0.00537378
   },
-  "delta_h_retractable_minus_fixed": -0.711029,
+  "delta_h_retractable_minus_fixed": -0.711859,
   "other_reasons": "retracted turret: protected at take-off/landing (gravel, prop debris), clean belly on the ground and in transit, lower RCS/visual signature not claimed"
  },
  "wing_span_loading": [
   {
    "span_m": 7.2,
    "stall_speed_target_m_s": 23.95,
-   "area_m2": 3.2406,
-   "aspect_ratio": 15.997,
-   "wing_kg": 16.3988,
-   "empty_kg": 101.48,
-   "fuel_kg": 30.4196,
-   "ld_max": 17.2744,
-   "endurance_h": 10.354,
-   "vs_m_s": 23.9429,
-   "takeoff_roll_m": 178.655,
-   "landing_roll_m": 182.713,
+   "area_m2": 3.2369,
+   "aspect_ratio": 16.0153,
+   "wing_kg": 15.3397,
+   "empty_kg": 101.63,
+   "fuel_kg": 30.2704,
+   "ld_max": 17.335,
+   "endurance_h": 10.3179,
+   "vs_m_s": 23.9471,
+   "takeoff_roll_m": 178.168,
+   "landing_roll_m": 182.878,
    "outer_panel_m": 2.9,
    "design": true
   },
   {
    "span_m": 6.8,
    "stall_speed_target_m_s": 23.95,
-   "area_m2": 3.2327,
-   "aspect_ratio": 14.3038,
-   "wing_kg": 15.7681,
-   "empty_kg": 100.975,
-   "fuel_kg": 30.9245,
-   "ld_max": 16.5095,
-   "endurance_h": 10.3301,
-   "vs_m_s": 23.9466,
-   "takeoff_roll_m": 185.798,
-   "landing_roll_m": 179.57,
+   "area_m2": 3.2286,
+   "aspect_ratio": 14.322,
+   "wing_kg": 15.2249,
+   "empty_kg": 101.63,
+   "fuel_kg": 30.27,
+   "ld_max": 16.5649,
+   "endurance_h": 10.1021,
+   "vs_m_s": 23.9503,
+   "takeoff_roll_m": 185.305,
+   "landing_roll_m": 180.328,
    "outer_panel_m": 2.7
   },
   {
    "span_m": 7.6,
    "stall_speed_target_m_s": 23.95,
-   "area_m2": 3.2479,
-   "aspect_ratio": 17.7838,
-   "wing_kg": 17.0719,
-   "empty_kg": 102.265,
-   "fuel_kg": 29.6349,
-   "ld_max": 17.9376,
-   "endurance_h": 10.1923,
-   "vs_m_s": 23.9468,
-   "takeoff_roll_m": 172.974,
-   "landing_roll_m": 186.304,
+   "area_m2": 3.2468,
+   "aspect_ratio": 17.7898,
+   "wing_kg": 15.4181,
+   "empty_kg": 101.809,
+   "fuel_kg": 30.0913,
+   "ld_max": 17.9904,
+   "endurance_h": 10.3875,
+   "vs_m_s": 23.9462,
+   "takeoff_roll_m": 172.486,
+   "landing_roll_m": 185.68,
    "outer_panel_m": 3.1
   },
   {
    "span_m": 7.2,
    "stall_speed_target_m_s": 23.0,
-   "area_m2": 3.5048,
-   "aspect_ratio": 14.7911,
-   "wing_kg": 17.2484,
-   "empty_kg": 103.343,
-   "fuel_kg": 28.5567,
-   "ld_max": 16.9769,
-   "endurance_h": 9.5451,
-   "vs_m_s": 23.0056,
-   "takeoff_roll_m": 167.738,
-   "landing_roll_m": 171.148,
+   "area_m2": 3.5042,
+   "aspect_ratio": 14.7937,
+   "wing_kg": 16.26,
+   "empty_kg": 103.564,
+   "fuel_kg": 28.3362,
+   "ld_max": 17.0325,
+   "endurance_h": 9.47856,
+   "vs_m_s": 22.999,
+   "takeoff_roll_m": 166.77,
+   "landing_roll_m": 171.234,
    "outer_panel_m": 2.9
   },
   {
    "span_m": 7.2,
    "stall_speed_target_m_s": 24.5,
-   "area_m2": 3.0977,
-   "aspect_ratio": 16.735,
-   "wing_kg": 15.9514,
-   "empty_kg": 100.536,
-   "fuel_kg": 31.3636,
-   "ld_max": 17.3979,
-   "endurance_h": 10.7243,
-   "vs_m_s": 24.4997,
-   "takeoff_roll_m": 186.035,
-   "landing_roll_m": 189.768,
+   "area_m2": 3.0959,
+   "aspect_ratio": 16.7447,
+   "wing_kg": 14.8587,
+   "empty_kg": 100.713,
+   "fuel_kg": 31.1871,
+   "ld_max": 17.4417,
+   "endurance_h": 10.6717,
+   "vs_m_s": 24.499,
+   "takeoff_roll_m": 185.533,
+   "landing_roll_m": 189.903,
    "outer_panel_m": 2.9
   }
  ],
@@ -151,21 +151,21 @@
   {
    "body_stretch_m": -0.1,
    "body_length_m": 3.9,
-   "volume_h": 0.432046,
-   "empty_kg": 101.543,
-   "endurance_h": 10.2957,
-   "cn_beta": 0.0593158,
-   "static_margin_min": 0.100973,
+   "volume_h": 0.431714,
+   "empty_kg": 101.769,
+   "endurance_h": 10.2219,
+   "cn_beta": 0.0588057,
+   "static_margin_min": 0.100736,
    "note": null
   },
   {
    "body_stretch_m": 0.1,
    "body_length_m": 4.1,
-   "volume_h": 0.44472,
-   "empty_kg": 101.46,
-   "endurance_h": 10.3891,
-   "cn_beta": 0.0589074,
-   "static_margin_min": 0.10099,
+   "volume_h": 0.44142,
+   "empty_kg": 101.621,
+   "endurance_h": 10.3518,
+   "cn_beta": 0.0590674,
+   "static_margin_min": 0.101421,
    "note": null
   }
  ],
@@ -173,78 +173,78 @@
   {
    "change": "design",
    "text_tr": "v1.6 tasarımı",
-   "endurance_h": 10.354,
-   "empty_kg": 101.48
+   "endurance_h": 10.3179,
+   "empty_kg": 101.63
   },
   {
    "change": "k_inst_095",
    "text_tr": "k_inst 0,95 (tahmin 0,93 yerine; pervane/gövde kurulum testi bekliyor)",
-   "endurance_h": 10.4762,
-   "empty_kg": 101.482,
-   "delta_h": -0.122214
+   "endurance_h": 10.4398,
+   "empty_kg": 101.63,
+   "delta_h": -0.121935
   },
   {
    "change": "r52_v13_installed_turret",
    "text_tr": "R-52 v1.3 biçimi (yalnız takılı taretin tepesi; kullanıcı onaylamadı, uygulanmadı)",
-   "endurance_h": 10.5226,
-   "empty_kg": 101.48,
-   "delta_h": -0.168664
+   "endurance_h": 10.488,
+   "empty_kg": 101.63,
+   "delta_h": -0.170125
   },
   {
    "change": "r52_v12_generator_lifepo4",
    "text_tr": "v1.2 çözümü: LiFePO4 14S2P batarya, E180 tepesi yalnız jeneratörle (E180 devir tabanı)",
-   "endurance_h": 9.9033,
-   "empty_kg": 101.797,
-   "delta_h": 0.45068
+   "endurance_h": 9.83463,
+   "empty_kg": 102.013,
+   "delta_h": 0.48323
   },
   {
    "change": "k_inst_095_and_r52_v13",
    "text_tr": "k_inst 0,95 ve R-52 v1.3 birlikte (ikisi de uygulanmadı)",
-   "endurance_h": 10.6821,
-   "empty_kg": 101.482,
-   "delta_h": -0.328135
+   "endurance_h": 10.6471,
+   "empty_kg": 101.63,
+   "delta_h": -0.329254
   },
   {
    "change": "sweep_c4",
    "text_tr": "c/4 süpürme 8° → 6° (v1.2)",
-   "endurance_h": 10.1693,
-   "empty_kg": 101.844,
-   "delta_h": 0.184693
+   "endurance_h": 10.1739,
+   "empty_kg": 101.906,
+   "delta_h": 0.144
   },
   {
    "change": "washout",
    "text_tr": "burulma 4° → 3° (v1.2)",
-   "endurance_h": 10.2878,
-   "empty_kg": 101.582,
-   "delta_h": 0.0662271
+   "endurance_h": 10.2423,
+   "empty_kg": 101.749,
+   "delta_h": 0.07556
   },
   {
    "change": "lerx_apex_v13",
    "text_tr": "LERX tepesi x 1,80 → 1,85 m (v1.2)",
-   "endurance_h": 10.3463,
-   "empty_kg": 101.49,
-   "delta_h": 0.00769941
+   "endurance_h": 10.2964,
+   "empty_kg": 101.668,
+   "delta_h": 0.0214127
   },
   {
    "change": "sealed_gear_doors",
    "text_tr": "kapaklar contalı değil (v1.1: uzatılmış takım sürüklemesinin %10'u)",
-   "endurance_h": 10.3091,
-   "empty_kg": 101.372,
-   "delta_h": 0.0448501
+   "endurance_h": 10.2719,
+   "empty_kg": 101.522,
+   "delta_h": 0.0459932
   },
   {
    "change": "glove_junction",
    "text_tr": "eldiven/dış panel birleşimi y = 0,82 m (v1.1)",
-   "endurance_h": 10.104,
-   "empty_kg": 102.013,
-   "delta_h": 0.250033
+   "endurance_h": 10.1176,
+   "empty_kg": 102.039,
+   "delta_h": 0.200209
   },
   {
    "change": "taper",
    "text_tr": "sivrilme 0,42 (v1.1)",
-   "endurance_h": 10.2509,
-   "empty_kg": 101.749,
-   "delta_h": 0.10313
+   "endurance_h": 10.2695,
+   "empty_kg": 101.75,
+   "delta_h": 0.048367
   }
  ]
 }

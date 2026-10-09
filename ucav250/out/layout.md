@@ -141,7 +141,7 @@ Yöntem: kapalı biçimli pim kesme / eğilme / ezilme ve cıvata grubu kesmesi,
 | kayış bağlantısı omurga tabanı cıvataları 4 x M4 12.9 (tek kesme, şokun tamamı bu grupta) | 429 | 732 | 0,71 | 13,1 kN (GRS 4/240 yayımlanmış açılma şoku) yalnız nihai (CRASH-004) x 1,15 bağlantı katsayısı; ISO 898-1 12.9, gerilme alanında tau = 0,6 Rm; MPa |
 | kayış kilit pimi Ø8 (Ti-6Al-4V, çift kesme) | 149,9 | 599,8 | 3 | MPa |
 | kayış kilit pimi Ø8 eğilmesi (Melcon-Hoblit) | 711,8 | 923,9 | 0,3 | elastik, Ftu; MPa |
-| kayış U-kulak ezilmesi (7075, 2 kulak 6 mm, e/D 1.94) | 313,9 | 968,5 | 2,09 | x 2,0 ezilme katsayısı; e/D 2'de MMPDS Fbru x (e/D)/2; MPa |
+| kayış U-kulak ezilmesi (7075, 2 kulak 6 mm, e/D 1,94) | 313,9 | 968,5 | 2,09 | x 2,0 ezilme katsayısı; e/D 2'de MMPDS Fbru x (e/D)/2; MPa |
 | MTOM'da açılma yük katsayısı (bilgi) | 8,91 | – | – | 13,1 kN / (MTOM g); UAVOS 200 anma değeri 5 g |
 | motor bağlantı cıvatası M8 12.9 (tork + 3,8 g / 1,47 g yan / 6 g aşağı durumlarının en kötüsü) | 34,9 | 732 | 19,96 | motor + SG750 + adaptör 7,59 kg, AM bağlantı yüzünün 90 mm önünde (tahmin), x 1,5 (uçuş durumları) x 1,15; gerilme alanında birleşik kesme/çekme, 0,6 Rm ile karşılaştırma; MPa; karter dişi sıyrılması ve sönümleyici kapasitesi açık konu (Limbach verisi) |
 | 15 g ileri çarpma tutması (motor kafese basar, kafes basıda) | 1284 | – | – | N; kaynaklı kafes basıyla taşır (4130 boruların ayrıntılı boyutlandırması) |

@@ -49,6 +49,50 @@ def fin_spar_root(frac, depth=0.015):
     raise RuntimeError("fin spar root not found")
 
 
+def _wd() -> dict:
+    """structures.sizing.wing of the loaded spec (the ply schedule the cap geometry is drawn with)."""
+    return ((S.get("structures") or {}).get("sizing") or {}).get("wing") or {}
+
+
+def _prong_plies() -> int:
+    """Fork prong ply count of structures.sizing.wing_joint.fork (8 since fix round 3, VS3-01)."""
+    fk = (((S.get("structures") or {}).get("sizing") or {}).get("wing_joint") or {}).get("fork") or {}
+    return int(fk.get("prong_plies", 8))
+
+
+def plies_at(zones: list, y: float) -> int:
+    """Ply count of the zone holding y (y0 <= y < y1; the last zone holds its end) - structures.cap_plies_at."""
+    for y0, y1, n in zones:
+        if y0 <= y < y1:
+            return int(n)
+    return int(zones[-1][2])
+
+
+def cap_centroids(prof: list, y: float, which: str) -> tuple:
+    """(lower, upper) cap centroid z and cap thickness at span station y (fix round 3, VS3-01): face = box-cover
+    surface inside the body, glove loft outboard of the SOB ramp (linear between Y_SOB and Y_RAMP); centroid = face
+    -+ (skin_solid_over_caps_m + t/2). The station y = YJ takes the glove zone (inboard side of the joint rib)."""
+    wd = _wd()
+    zb0, zb1 = Z_BOX
+    t_s = float(wd.get("skin_solid_over_caps_m", 0.001))
+    t_ply = float(S["materials"]["cfrp_ud_mtm45_as4"]["ply_t"])
+    yq = y - 1e-6 if y >= YJ - 1e-9 else y
+    if which == "main":
+        zones = (wd.get("main_cap") or {}).get("zones") or [[0.0, 3.6, 58]]
+        t = plies_at(zones, yq) * t_ply
+    else:
+        t = int((wd.get("rear_cap") or {}).get("plies", 2)) * t_ply
+    if y < Y_SOB - 1e-9:
+        fu, fl = zb1, zb0
+    else:
+        yy = np.array([r["y"] for r in prof])
+        d = float(np.interp(y, yy, [r["depth"] for r in prof]))
+        m = float(np.interp(y, yy, [r["mid"] for r in prof])) + float(P.get("z_root", 0.0))
+        f = min(max((y - Y_SOB) / (Y_RAMP - Y_SOB), 0.0), 1.0)
+        fu, fl = zb1 + f * (m + 0.5 * d - zb1), zb0 + f * (m - 0.5 * d - zb0)
+    return r3([fl + t_s + 0.5 * t, fu - t_s - 0.5 * t]), t
+
+
 def members() -> list:
     zb0, zb1 = Z_BOX
     M = []
@@ -302,21 +346,19 @@ def members() -> list:
                     thickness=0.0016, touch=["ST-FS3480", "ST-FS3670"]))
     # ---------------------------------------------------------------- wing carry-through and glove ribs
     yj = YJ
-    ygl = [Y_SOB, 0.45, 0.50, 0.55, 0.60, 0.65, yj]                 # fix round 2: cap lines follow the glove loft
+    # fix round 3 (VS3-01): the glove caps follow the glove loft outboard of a defined cap ramp at the side-of-body rib
+    # (the layout and the section model of ucav250.analysis.structures use the same cap geometry)
+    ygl = [Y_SOB, Y_RAMP, 0.50, 0.55, 0.60, 0.65, yj]
     ms = [[r3(X_MS0), 0.0, 0.0]] + [[r3(spar_x(y_, 0.25)), y_, 0.0] for y_ in ygl]
     rs = [[r3(X_RS0), 0.0, 0.0]] + [[r3(spar_x(y_, 0.72)), y_, r3(-0.006 - 0.006 * (y_ - Y_SOB) / (yj - Y_SOB))]
                                     for y_ in ygl]
     prof_m = Z.spar_depth_profile(S, af, float(P["main_spar_frac"]))["rows"]
     prof_r = Z.spar_depth_profile(S, af, float(P["rear_spar_frac"]))["rows"]
-
-    def caps(prof, y, zmid):
-        yy = np.array([r["y"] for r in prof])
-        d = float(np.interp(y, yy, [r["depth"] for r in prof])) if y >= yy[0] else zb1 - zb0
-        m = float(np.interp(y, yy, [r["mid"] for r in prof])) if y >= yy[0] else zmid
-        d = min(d, zb1 - zb0)
-        return r3([m - 0.5 * d + 0.004, m + 0.5 * d - 0.004])
-    z_caps_m = [caps(prof_m, p[1], 0.0) for p in ms]
-    z_caps_r = [caps(prof_r, p[1], 0.0) for p in rs]
+    z_caps_m, t_caps_m = zip(*[cap_centroids(prof_m, p[1], "main") for p in ms])
+    z_caps_r, t_caps_r = zip(*[cap_centroids(prof_r, p[1], "rear") for p in rs])
+    z_caps_m, z_caps_r = [list(v) for v in z_caps_m], [list(v) for v in z_caps_r]
+    zbox0 = min([zb0] + [v[0] - 0.5 * t for v, t in zip(z_caps_m, t_caps_m)])
+    zbox1 = max([zb1] + [v[1] + 0.5 * t for v, t in zip(z_caps_m, t_caps_m)])
     M.append(member("M-CTBOX", "YK250-CH-001", "centre wing box (carry-through)", "orta kanat kutusu (geçiş kutusu)",
                     "one-piece centre wing box y -0.70 .. +0.70: main and rear spars on the reference-trapezoid spar "
                     "lines (25 % / 72 % chord; chevron with a centre kink of 2 x 8.0 deg main and 2 x 4.8 deg rear), "
@@ -329,17 +371,60 @@ def members() -> list:
                              "covers inside the body: sandwich layups.ct_box_cover 0.4/6/0.4 mm bonded to the caps, "
                              "centre-line rib with the kink fitting at y = 0",
                      "main_cap_width": 0.040, "rear_cap_width": 0.025, "depth_in_body": r3(zb1 - zb0)},
-                    {"main_spar_line": ms, "rear_spar_line": rs, "z": r3([zb0, zb1]), "y_extent": [-yj, yj],
-                     "main_spar_caps_z": z_caps_m, "rear_spar_caps_z": z_caps_r,
-                     "box": r3([[X_MS0 - 0.021, -yj, zb0], [spar_x(yj, 0.72) + 0.013, yj, zb1]]),
-                     "oml_clearance_m": 0.002,
-                     "oml_clearance_basis": "spar caps under the 1.0 mm solid skin over the caps (structures.sizing.wing."
-                                            "skin_solid_over_caps_m; the sandwich core is ramped out over the caps) + 1 mm"},
+                    {"main_spar_line": ms, "rear_spar_line": rs, "z": r3([zb0, zb1]),
+                     "z_note": "outer surfaces of the box covers inside the body (|y| < y_sob); outboard of the side-of-"
+                               "body rib the caps follow the glove loft (sob_transition)",
+                     "y_extent": [-yj, yj],
+                     "main_spar_caps_z": z_caps_m, "main_spar_caps_t": [r3(t, 5) for t in t_caps_m],
+                     "rear_spar_caps_z": z_caps_r, "rear_spar_caps_t": [r3(t, 5) for t in t_caps_r],
+                     "caps_basis": "fix round 3 (VS3-01): cap CENTROID z and cap thickness at each spar-line point (lower, "
+                                   "upper), from the ply schedule structures.sizing.wing.main_cap.zones (rear caps: "
+                                   "rear_cap.plies) x the UD ply thickness: centroid = face - skin_solid_over_caps_m - "
+                                   "t/2, face = box cover surface (z) inside the body, the glove loft outboard of the "
+                                   "ramp, linear in between; the section model of ucav250.analysis.structures "
+                                   "(wing_section) uses the same geometry (interface check I-CAPZ)",
+                     "sob_transition": {
+                         "y": r3([Y_SOB, Y_RAMP]),
+                         "text": "cap ramp from the box-cover level (z +-0.0391, under the saddle fuel cell / above the "
+                                 "payload bay) at the side-of-body rib to the glove loft at the inner-pin station: "
+                                 "each UD cap rises / drops linearly over the ramp (ply-drop free), kinks at both ends "
+                                 "(SOB rib solid land inboard, padded fork prongs at the inner pin outboard); the glove "
+                                 "skins stay on the loft and are bonded to the ramped caps through a tapered ROHACELL 71 "
+                                 "WF filler; the glove box skins end on the SOB rib, whose web carries the offset to the "
+                                 "box covers (structures W-SOB-*)"},
+                     "box": r3([[X_MS0 - 0.021, -yj, zbox0], [spar_x(yj, 0.72) + 0.013, yj, zbox1]]),
+                     "oml_clearance_m": float(_wd().get("skin_solid_over_caps_m", 0.001)),
+                     "oml_clearance_basis": "fix round 3 (VS3-01): the cap outer face lies directly under the solid skin "
+                                            "over the caps (structures.sizing.wing.skin_solid_over_caps_m; the sandwich "
+                                            "core is ramped out over the caps); cap capsules = centroid +- t/2"},
                     "outer panel -> tongue + pins -> fork -> spar caps (bending couple) / webs (shear) -> box -> "
                     "spar frames + side-of-body ribs -> body; symmetric bending balanced through the box",
                     layup="spar_cap_ud", touch=["ST-FS-MS", "ST-FS-RS", "M-SOB", "M-GLOVERIB", "M-JOINTRIB",
                                                 "F-FORK", "F-REARSLOT", "M-KEEL", "M-CHINE", "M-WELLROOF",
                                                 "M-FWDDECK"]))
+    # fix round 3 (VS3-03): centre-line rib of the CT box with the chevron kink fittings (F-KINK-UP / -LO)
+    t_cov = 0.0068                                       # layups.ct_box_cover 0.4/6/0.4 mm
+    xr0 = X_MS0 + 0.020                                  # aft edge of the 40 mm main cap
+    xr1 = X_RS0 - 0.0125                                 # forward edge of the 25 mm rear cap
+    M.append(member("M-CLRIB", "YK250-CH-055", "CT-box centre-line rib (chevron kink rib)",
+                    "orta kutu orta hat kaburgası (ok kırığı kaburgası)",
+                    "fix round 3 (VS3-03): rib in the plane y = 0 between the main and rear spar caps and between the "
+                    "box covers; reacts the chordwise kink forces of the chevron main caps (via the 7075 kink fittings "
+                    "F-KINK-UP / -LO, 5 x M6 Ti each through its solid lands) and of the box covers (bonded flanges) "
+                    "as an in-plane couple carried to the spar frames FS-MS / FS-RS (bonded and riveted end clips); "
+                    "laid up and bonded into the box in the CT-box jig (assembly step 1)", "cfrp_pw_mtm45_as4",
+                    "prepreg_ooa_vacbag",
+                    {"type": "flanged sandwich rib (rib_panel 0.4/6/0.4), 16-ply solid lands 100 x 30 mm under the two kink "
+                             "fitting tabs, 20 mm flanges bonded to the box covers", "t": T_SW,
+                     "land_plies": 16, "land_mm": [100, 30]},
+                    {"box": r3([[xr0, -T_SW / 2, zb0 + t_cov], [xr1, T_SW / 2, zb1 - t_cov]]),
+                     "lands": [{"x": r3([xr0, xr0 + 0.100]), "z": r3([zb1 - t_cov - 0.030, zb1 - t_cov]),
+                                "text": "upper kink-fitting land"},
+                               {"x": r3([xr0, xr0 + 0.100]), "z": r3([zb0 + t_cov, zb0 + t_cov + 0.030]),
+                                "text": "lower kink-fitting land"}]},
+                    "main-cap kink forces -> kink fittings -> bolts -> rib solid lands -> rib web (in-plane couple) -> "
+                    "end clips -> FS-MS / FS-RS; cover kink forces -> flanges -> rib web",
+                    layup="rib_panel", touch=["M-CTBOX", "ST-FS-MS", "ST-FS-RS", "F-KINK-UP", "F-KINK-LO"]))
     for mid, part, y, nm, ntr, role in (
             ("M-SOB", "YK250-CH-050", Y_SOB, "side-of-body rib", "gövde yanı kaburgası",
              "rib on the body side line between main and rear spar (and forward to the LERX nose): splices the chine "
@@ -369,6 +454,7 @@ BUSH_OD = 0.022                                                       # bonded s
 PRONG_T = 0.010                                                       # fork prong thickness at the bushes
 Y_TONGUE_TIP = 0.408                                                  # tongue tip (4.6 mm clear of the SOB rib face)
 Y_PINS = (0.463, 0.645)                                               # >= 2.5 D_bush from the tongue tip / fork mouth
+Y_RAMP = Y_PINS[0]                                                    # end of the SOB cap ramp (fix round 3, VS3-01)
 X_REARPIN_AFT = 0.0195                                                # rear pin 19.5 mm aft of the rear-spar line (fix round 2: slot plates >= 6 mm skin to the OML)
 Y_REARPIN = 0.672                                                     # rear pin 28 mm inboard of the joint plane
 REARPIN_D = 0.008
@@ -426,7 +512,9 @@ def wing_joint() -> dict:
                      "process": "prepreg_ooa_vacbag",
                      "geometry": "the glove main-spar box of the centre wing box (YK250-CH-001) from the side-of-body rib "
                                  "to the joint rib: UD caps 40 mm wide (structures.sizing.wing.main_cap) top and bottom, "
-                                 "two +-45 PW webs 2 mm (prongs, 10 plies) 30.4 mm apart, padded up to 10 mm (>= 40 % +-45, "
+                                 "following the glove loft outboard of the SOB cap ramp (M-CTBOX.sob_transition), "
+                                 f"two +-45 PW webs {_prong_plies() * 0.20066:.1f} mm (prongs, {_prong_plies()} plies, "
+                                 "full depth between the cap faces) 30.4 mm apart, padded up to 10 mm (>= 40 % +-45, "
                                  "[+-45/0/90] blocks 50 mm long) around the pin bores, caps widened to 52 mm over the "
                                  "fork; four bonded 4130 bushes 16 H8 x OD 22 x 10 mm (YK250-CH-053 = bush set); mouth "
                                  "chamfer 3 x 30 deg on a bonded 1 mm GFRP wear strip (structures.sizing.wing_joint.fork)",
@@ -809,6 +897,42 @@ def fittings() -> list:
             obbs.append({"center": r3(cen), "axes": r3(axes.T.tolist()), "half": r3(half)})
             corners += [cen + sa * half[0] * axes[:, 0] + sb * half[1] * axes[:, 1] + sc * half[2] * axes[:, 2]
                         for sa in (-1, 1) for sb in (-1, 1) for sc in (-1, 1)]
+    # fix round 3 (VS3-03): chevron kink fittings of the main caps at y = 0 (structures.sizing.wing.ct_box.kink_fitting)
+    kf = (_wd().get("ct_box") or {}).get("kink_fitting") or {"plate_t_m": 0.002, "w_m": 0.040, "length_m": 0.10,
+                                                              "tab_h_m": 0.030, "tab_t_m": 0.003, "bolts": 5,
+                                                              "bolt_d_m": 0.006}
+    zb0, zb1 = Z_BOX
+    t_s = float(_wd().get("skin_solid_over_caps_m", 0.001))
+    zc_lo, zc_up = (float(v) for v in cap_centroids([], 0.0, "main")[0])
+    t_c = cap_centroids([], 0.0, "main")[1]
+    xr0 = X_MS0 + 0.020
+    tp, w_k, L_k = float(kf["plate_t_m"]), float(kf["w_m"]), float(kf["length_m"])
+    h_t, t_t = float(kf["tab_h_m"]), float(kf["tab_t_m"])
+    nb_k, d_k = int(kf["bolts"]), float(kf["bolt_d_m"])
+    for fid, part, sg, nm, ntr in (("F-KINK-UP", "YK250-CH-056", 1.0, "CT-box kink fitting, upper main cap",
+                                    "orta kutu kırık bağlantısı, üst ana başlık"),
+                                   ("F-KINK-LO", "YK250-CH-057", -1.0, "CT-box kink fitting, lower main cap",
+                                    "orta kutu kırık bağlantısı, alt ana başlık")):
+        z_in = (zc_up - 0.5 * t_c) if sg > 0 else (zc_lo + 0.5 * t_c)       # inner face of the cap
+        zp = sorted([z_in, z_in - sg * tp])
+        zt_ = sorted([z_in, z_in - sg * h_t])
+        ys = 1.0 if sg > 0 else -1.0                                       # tabs on opposite rib faces
+        yt = sorted([ys * T_SW / 2, ys * (T_SW / 2 + t_t)])
+        plate = [[X_MS0 - 0.5 * w_k, -0.5 * L_k, zp[0]], [X_MS0 + 0.5 * w_k, 0.5 * L_k, zp[1]]]
+        tab = [[xr0, yt[0], zt_[0]], [xr0 + L_k, yt[1], zt_[1]]]
+        pitch = 3.0 * d_k
+        x_b0 = xr0 + 0.5 * (L_k - (nb_k - 1) * pitch)
+        bl = [bolt(f"B{k + 1}", [x_b0 + k * pitch, ys * T_SW / 2, z_in - sg * 0.5 * h_t], AY, d_k,
+                   "M6 Ti-6Al-4V (NAS1956 type) + self-locking nut, through the tab and the 16-ply solid land of the "
+                   "centre-line rib", ["M-CLRIB"], "rib land") for k in range(nb_k)]
+        F.append({"id": fid, "part": part, "name": nm, "name_tr": ntr, "material": "al_7075_t651_plate",
+                  "process": "cnc_milling_metal", "boxes": r3([plate, tab]), "box": _bbox([plate, tab]), "bolts": bl,
+                  "attach": f"fix round 3 (VS3-03): machined 7075-T651 L-fitting: plate {w_k * 1000:.0f} x "
+                            f"{L_k * 1000:.0f} x {tp * 1000:.0f} mm bonded (EA 9394) to the box-side face of the main cap "
+                            f"over the chevron kink (no fastener through the cap), tab {L_k * 1000:.0f} x "
+                            f"{h_t * 1000:.0f} x {t_t * 1000:.0f} mm on the {'starboard' if sg > 0 else 'port'} face of "
+                            f"the centre-line rib, {nb_k} x M6 Ti at {pitch * 1000:.0f} mm pitch (structures CT-KINK-*)",
+                  "touch": ["M-CTBOX", "M-CLRIB"]})
     F.append({"id": "F-FORK", "part": "YK250-CH-053", "name": "outer-panel joint fork (glove main-spar box, CFRP)",
               "name_tr": "dış panel birleşim çatalı (eldiven ana kiriş kutusu, CFRP)", "material": "cfrp_pw_mtm45_as4",
               "process": "prepreg_ooa_vacbag", "mirror": True,

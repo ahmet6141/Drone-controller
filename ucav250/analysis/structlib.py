@@ -306,6 +306,23 @@ def orthotropic_shear_buckling_long(D: np.ndarray, b: float) -> float:
     return 4.0 / b ** 2 * math.sqrt(D22 * H) * (11.71 + 1.46 / K ** 2)
 
 
+def orthotropic_shear_buckling_finite(D: np.ndarray, a: float, b: float) -> float:
+    """Critical shear running load N_xy (N/m) of a finite specially orthotropic SS plate, length a along x and width b
+    along y (fix round 3): the long-plate value on the SHORT side (D11 / D22 swapped when a < b) times the isotropic
+    finite-length factor (5.35 + 4 (s/l)²) / 5.35 of Timoshenko & Gere (k_s = 5.35 + 4 (b/a)², a >= b). An estimate
+    for near-isotropic (+-45 dominated) laminates; it reduces to the long-plate value for l >> s."""
+    D = np.asarray(D, float)
+    if a >= b:
+        s_, l_, Dq = b, a, D
+    else:
+        s_, l_ = a, b
+        Dq = D.copy()
+        Dq[0, 0], Dq[1, 1] = D[1, 1], D[0, 0]
+        Dq[0, 2], Dq[1, 2] = D[1, 2], D[0, 2]
+        Dq[2, 0], Dq[2, 1] = D[2, 1], D[2, 0]
+    return orthotropic_shear_buckling_long(Dq, s_) * (5.35 + 4.0 * (s_ / l_) ** 2) / 5.35
+
+
 def sandwich_shear_stiffness(Gc: float, d: float, c: float) -> float:
     """Transverse shear stiffness S = G_c d² / c (N/m) of a sandwich (d: distance between face centroids)."""
     return Gc * d ** 2 / c

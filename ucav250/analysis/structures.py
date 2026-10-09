@@ -66,10 +66,21 @@ DESIGN = {
         "skin_layup": "wing_skin_primary",
         "box_skin_upper_layup": "wing_box_skin_upper",
         "box_skin_upper_y_end_m": 2.2,
+        "lerx_upper_first_bay_layup": "lerx_skin_upper_root",
+        "lerx_upper_first_bay_text": "fix round 3 (VS3-04): the glove LERX upper skin between the side-of-body rib and the "
+                                     "glove rib (no LERX nose ribs: pin, puller and reamer corridors) uses a 7 mm "
+                                     "core (layups.lerx_skin_upper_root; panel buckling of the 0.15 m bay under the "
+                                     "plane-section box strain, W-SKINBUCK-LERX-UP); OML unchanged, the inner face "
+                                     "steps 2 mm",
         "skin_solid_over_caps_m": 0.001,
         "main_cap": {"material": "cfrp_ud_mtm45_as4", "width_body_glove_m": 0.040, "width_outer_m": 0.030,
-                     "zone_breaks_y_m": [0.0, 0.40, 0.55, 0.70, 0.80, 0.90, 1.00, 1.10, 1.20, 1.30, 1.40, 1.50, 1.60,
-                                         1.70, 1.80, 1.90, 2.00, 2.10, 2.20, 3.60],
+                     # fix round 3 (VS3-01 + mass closure): breaks at the SOB cap ramp end (inner pin, y 0.463),
+                     # 0.10 m ply-drop zones inside the CT box (outside the kink-fitting bond |y| <= 0.05), 0.05 m
+                     # zones on the outer panel to y 2.10 (internal 1:20 ply drops, model factor 1.10 kept)
+                     "zone_breaks_y_m": [0.0, 0.10, 0.20, 0.30, 0.40, 0.463, 0.50, 0.55, 0.625, 0.70, 0.75, 0.80,
+                                         0.85, 0.90, 0.95, 1.00, 1.05, 1.10, 1.15, 1.20, 1.25, 1.30, 1.35, 1.40,
+                                         1.45, 1.50, 1.55, 1.60, 1.65, 1.70, 1.75, 1.80, 1.85, 1.90, 1.95, 2.00,
+                                         2.05, 2.10, 2.20, 3.60],
                      "min_plies": 10,
                      "interleaf": "none: no fastener passes through a main-spar cap (fix round 1, S1-05): the outer-panel "
                                   "joint is a pinned CFRP tongue / fork whose bores are in solid [+-45/0/90] boss blocks "
@@ -79,6 +90,18 @@ DESIGN = {
                      "fork_zone": "glove caps y 0.40-0.70 sized for the glove-box moment: the total moment minus the "
                                   "tongue moment (the tongue carries the joint moment to the pins; between the pins it "
                                   "falls linearly to zero at the inner pin)"},
+        "sob_transition": {
+            "rib_land_plies": 12, "land_length_m": 0.050, "intro_length_m": 0.030, "filler": "core_rohacell_71wf",
+            "rib_face_doubler_plies": 1, "rib_doubler_band_m": 0.030,
+            "text": "fix round 3 (VS3-01): the main and rear caps leave the box-cover level (z +-0.0391, layout M-CTBOX.z) "
+                    "at the side-of-body rib and reach the glove loft at the inner-pin station (layout M-CTBOX."
+                    "sob_transition, linear, no ply drop on the ramp); the reduced lever arm along the ramp sizes the "
+                    "cap zone y 0.40-0.463; the kink forces F_cap sin(theta) go into a 12-ply solid land of the SOB rib "
+                    "(50 mm long, under each cap) inboard and into the 10 mm bush pads of the prongs outboard; the glove "
+                    "skins stay on the loft and are bonded to the ramped caps through a tapered ROHACELL 71 WF filler; "
+                    "the glove box skins end on the SOB rib, whose sandwich web carries the skin-to-cover offset couple "
+                    "(W-SOB-OFFSET) with one +-45 PW ply added on each face over a 30 mm band along its upper and "
+                    "lower edges between the spars (the couple falls linearly to zero at mid-depth)"},
         "rear_cap": {"material": "cfrp_ud_mtm45_as4", "width_m": 0.025, "plies": 2,
                      "text": "UD strip of 2 plies under the rear-spar web flanges (bending is carried by the main caps "
                              "at the deeper main-spar station: lighter than thicker rear caps)"},
@@ -141,11 +164,13 @@ DESIGN = {
                                "skins stay on the loft (reduced cap lever arm checked with the skins in the section) and "
                                "get one extra 0/90 PW ply in the OUTER face between the spars over the first 0.12 m "
                                "of the outer panel (root-bay skin doubler: the 0.10 m ramp + a 20 mm ply drop-off)"},
-        "fork": {"material": "cfrp_pw_mtm45_as4", "prong_plies": 10, "prong_pad_t_m": 0.010, "pad_length_m": 0.050,
+        "fork": {"material": "cfrp_pw_mtm45_as4", "prong_plies": 8, "prong_pad_t_m": 0.010, "pad_length_m": 0.050,
                  "cap_width_m": 0.052,
                  "text": "glove main-spar box YK250-CH-001 from the side-of-body rib to the joint rib: two +-45 PW webs "
-                         "10 plies (2.0 mm, the prongs) padded to 10 mm [+-45/0/90] blocks 50 mm long around the bushes, "
-                         "UD caps widened to 52 mm over the fork"},
+                         "8 plies (1.6 mm, the prongs) over the full depth between the UD cap faces (fix round 3, "
+                         "VS3-01: the caps follow the glove loft outboard of the SOB cap ramp), padded to 10 mm "
+                         "[+-45/0/90] blocks 50 mm long around the bushes, panels between the SOB rib, the bush pads, "
+                         "the glove rib and the joint rib; UD caps widened to 52 mm over the fork"},
         "bush": {"material": "steel_4130_n", "od_m": 0.022, "id_m": 0.016, "length_tongue_m": 0.030,
                  "length_prong_m": 0.010,
                  "text": "bonded 4130 bushes 16 H8 x OD 22 (tongue 30 mm, prongs 10 mm), line-reamed in the jig; bearing "
@@ -366,6 +391,14 @@ LAYUPS = {
                 "wing_skin_primary (buckling and shear crimping under the bending compression); OML unchanged, the "
                 "inner surface steps 1 mm at the cap edges (core ramp)"),
         "source": "structures.py (check W-SKINBUCK / W-SKINCRIMP)"},
+    "lerx_skin_upper_root": {
+        "plies": [["cfrp_pw_mtm45_as4", "+-45,0/90,+-45", 3]], "core": "core_rohacell_51wf", "core_t": 0.007,
+        "inner_plies": [["cfrp_pw_mtm45_as4", "+-45,+-45", 2]], "adhesive_areal": 0.0,
+        "use": ("glove LERX upper skin of the first bay (side-of-body rib to glove rib, ahead of the main-spar cap; "
+                "0.6/7/0.4 mm, fix round 3 VS3-04): the 0.15 m bay has no nose rib (pin, puller and reamer corridors) "
+                "and carries the box bending strain; core 2 mm thicker than wing_skin_primary for panel buckling; OML "
+                "unchanged, the inner face steps 2 mm (core ramp at the glove rib and the main-cap edge)"),
+        "source": "structures.py (checks W-SKINBUCK-LERX-UP / W-SKINCRIMP-LERX-UP)"},
     "ct_box_cover": {
         "plies": [["cfrp_pw_mtm45_as4", "+-45,0/90", 2]], "core": "core_rohacell_51wf", "core_t": 0.006,
         "inner_plies": [["cfrp_pw_mtm45_as4", "+-45,+-45", 2]], "adhesive_areal": 0.0,
@@ -705,6 +738,30 @@ def wing_contour(c: Ctx, y: float):
 Y_SOB = 0.40          # side-of-body rib (layout M-SOB): CT box inboard, glove outboard
 
 
+def ctbox_member(c: Ctx) -> dict:
+    if "ctbox" not in c.cache:
+        c.cache["ctbox"] = [m_ for m_ in c.S["layout"]["chassis"]["members"] if m_["id"] == "M-CTBOX"][0]
+    return c.cache["ctbox"]
+
+
+def sob_ramp(c: Ctx) -> tuple:
+    """(y0, y1) of the cap ramp at the side-of-body rib (layout M-CTBOX.sob_transition, fix round 3 VS3-01): the caps
+    leave the box-cover level at y0 and reach the glove loft at y1 (linear); (Y_SOB, Y_SOB) = step (layout phase)."""
+    tr = ctbox_member(c).get("sob_transition") or {}
+    y = tr.get("y") or [Y_SOB, Y_SOB]
+    return float(y[0]), float(y[1])
+
+
+def sob_fraction(c: Ctx, y: float) -> float:
+    """Blend factor of the cap faces between the box-cover level (0) and the glove loft (1) at span station y."""
+    y0, y1 = sob_ramp(c)
+    if y < y0:
+        return 0.0
+    if y1 <= y0 + 1e-9:
+        return 1.0
+    return min(max((y - y0) / (y1 - y0), 0.0), 1.0)
+
+
 def wing_section(c: Ctx, y: float, n_main: int, n_rear: int | None = None, nx: int = 24) -> dict:
     """Bending section of the wing box at span station y (plane sections, spanwise moduli): main and rear UD spar
     caps under the skins (skin over the caps solid laminate, core ramped out), the box skins between the caps (outer
@@ -725,9 +782,9 @@ def wing_section(c: Ctx, y: float, n_main: int, n_rear: int | None = None, nx: i
     tr = (n_rear if n_rear is not None else D["rear_cap"]["plies"]) * t_ply
     sk = skin_faces(c, D["ct_box"]["cover_layup"] if body else D["skin_layup"])
     els = []                                  # (E, A, z, kind)
+    ct = ctbox_member(c)
+    zt, zb = float(ct["z"][1]), float(ct["z"][0])
     if body:
-        ct = [m_ for m_ in c.S["layout"]["chassis"]["members"] if m_["id"] == "M-CTBOX"][0]
-        zt, zb = float(ct["z"][1]), float(ct["z"][0])
         zu = lambda x: np.full_like(np.asarray(x, float), zt)           # noqa: E731
         zl = lambda x: np.full_like(np.asarray(x, float), zb)           # noqa: E731
     else:
@@ -747,8 +804,13 @@ def wing_section(c: Ctx, y: float, n_main: int, n_rear: int | None = None, nx: i
     E_sover = 0.5 * (sk["E_out"] + sk["E_in"])
     zum, zlm = float(np.asarray(zu(xm))), float(np.asarray(zl(xm)))
     zur, zlr = float(np.asarray(zu(xr))), float(np.asarray(zl(xr)))
-    z_cmu, z_cml = zum - t_s - tm / 2, zlm + t_s + tm / 2
-    z_cru, z_crl = zur - t_s - tr / 2, zlr + t_s + tr / 2
+    # fix round 3 (VS3-01): cap faces = box-cover level inside the body, glove loft outboard of the SOB cap ramp,
+    # linear over the ramp (the glove skins stay on the loft, tapered filler between skin and cap)
+    fr = 0.0 if body else sob_fraction(c, y)
+    fum, flm = (zum, zlm) if body else (zt + fr * (zum - zt), zb + fr * (zlm - zb))
+    fur, flr = (zur, zlr) if body else (zt + fr * (zur - zt), zb + fr * (zlr - zb))
+    z_cmu, z_cml = fum - t_s - tm / 2, flm + t_s + tm / 2
+    z_cru, z_crl = fur - t_s - tr / 2, flr + t_s + tr / 2
     Eud = ud["E1"]
     els += [(Eud, wm * tm, z_cmu, "main_cap_up"), (Eud, wm * tm, z_cml, "main_cap_lo"),
             (Eud, wr * tr, z_cru, "rear_cap_up"), (Eud, wr * tr, z_crl, "rear_cap_lo"),
@@ -763,6 +825,14 @@ def wing_section(c: Ctx, y: float, n_main: int, n_rear: int | None = None, nx: i
     xx = np.linspace(xm, xr, 41)
     z_top_max = float(np.max(np.asarray(zu(xx))))
     z_bot_min = float(np.min(np.asarray(zl(xx))))
+    if Y_SOB <= y < float(c.P["y_junction"]):
+        # fix round 3 (VS3-04): the glove LERX skins ahead of the main spar are bonded primary skins strained with the
+        # box: their deepest point (from 20 mm aft of the leading edge, solid LE laminate) counts as an extreme fibre
+        x_le_ = float(np.interp(y, [s_["y"] for s_ in c.S["wing"]["sections"]],
+                                [s_["x_le"] for s_ in c.S["wing"]["sections"]]))
+        xl_ = np.linspace(x_le_ + 0.020, xm, 41)
+        z_top_max = max(z_top_max, float(np.max(np.asarray(zu(xl_)))))
+        z_bot_min = min(z_bot_min, float(np.min(np.asarray(zl(xl_)))))
     h_main = z_cmu - z_cml
     h_rear = z_cru - z_crl
     # torsion cell: mid-skin contour between the spar webs
@@ -777,6 +847,7 @@ def wing_section(c: Ctx, y: float, n_main: int, n_rear: int | None = None, nx: i
     return {"y": y, "chord": cT, "x_main": xm, "x_rear": xr, "body": body, "EI": EI, "z_na": zna,
             "z_cap_main": (z_cmu, z_cml), "z_cap_rear": (z_cru, z_crl), "z_top_max": z_top_max,
             "z_bot_min": z_bot_min, "h_main": h_main, "h_rear": h_rear, "A_box": A_box,
+            "h_web_main": h_main - tm, "sob_fraction": fr,
             "box_width": xr - xm, "t_main_cap": tm, "t_rear_cap": tr, "w_main": wm, "w_rear": wr,
             "E_ud": Eud, "skin": sk, "f_main": Q_main / (Q_main + Q_rear), "t_skin_cap": t_s,
             "depth_main": zum - zlm, "depth_rear": zur - zlr,
@@ -792,6 +863,48 @@ def section_strains(sec: dict, M: float) -> dict:
     return {"cap_main_up": -k * (sec["z_cap_main"][0] - zna), "cap_main_lo": -k * (sec["z_cap_main"][1] - zna),
             "skin_top": -k * (sec["z_top_max"] - zna), "skin_bot": -k * (sec["z_bot_min"] - zna),
             "cap_rear_up": -k * (sec["z_cap_rear"][0] - zna)}
+
+
+def prong_panels(c: Ctx) -> list:
+    """(y0, y1, length along the spar) of the glove main-spar web panels (fork prongs) between their supports: the
+    side-of-body rib, the bush pads (pad_length centred on each pin), the glove rib and the joint rib (layout members;
+    fix round 3, VS3-01)."""
+    if "prong_panels" in c.cache:
+        return c.cache["prong_panels"]
+    L_ = c.S["layout"]
+    WJ = L_["chassis"]["wing_joint"]["main_spar"]
+    mem = {m_["id"]: m_ for m_ in L_["chassis"]["members"]}
+    sw = joint_geometry(c)["sw"]
+    hp = 0.5 * float(c.D["wing_joint"]["fork"]["pad_length_m"]) * math.cos(sw)
+    sup = []
+    for mid in ("M-SOB", "M-GLOVERIB", "M-JOINTRIB"):
+        if mid in mem:
+            b_ = mem[mid]["box"]
+            sup.append((float(b_[0][1]), float(b_[1][1])))
+    for p_ in WJ["pins"]:
+        yp = float(p_["position"][1])
+        sup.append((yp - hp, yp + hp))
+    sup.sort()
+    out = []
+    for (a0, a1), (b0, b1) in zip(sup[:-1], sup[1:]):
+        if b0 > a1 + 1e-6:
+            out.append((a1, b0, (b0 - a1) / math.cos(sw)))
+    c.cache["prong_panels"] = out
+    return out
+
+
+def prong_panel_at(c: Ctx, y: float) -> float:
+    """Length (along the spar) of the prong web panel holding span station y."""
+    for y0, y1, a in prong_panels(c):
+        if y0 - 1e-6 <= y <= y1 + 1e-6:
+            return a
+    return max(a for _, _, a in prong_panels(c))
+
+
+def prong_height(c: Ctx, caps: list, y: float) -> float:
+    """Clear height of the glove main-spar webs (fork prongs) between the cap inner faces at span station y (fix round
+    3, VS3-01: full-depth webs, not the 61 mm tongue slot)."""
+    return float(wing_section(c, y, cap_plies_at(caps, y))["h_web_main"])
 
 
 def wing_cap_criteria(c: Ctx, sec: dict, M_lim: float, M_neg_lim: float) -> list:
@@ -848,13 +961,16 @@ def web_laminate(c: Ctx, n: int, key: str = "cfrp_pw_mtm45_as4", theta: float = 
     return ST.laminate_abd([(pp, theta, pp["t"])] * int(n))
 
 
-def web_criteria(c: Ctx, q_lim: float, b: float, n: int) -> list:
-    """Solid +-45 PW web of n plies under a limit shear flow q (N/m), panel width b (long plate): strength (first-ply
-    failure, B-basis ETW ply allowables), damage-tolerance shear strain at ultimate, shear buckling at ultimate."""
+def web_criteria(c: Ctx, q_lim: float, b: float, n: int, a: float | None = None) -> list:
+    """Solid +-45 PW web of n plies under a limit shear flow q (N/m), panel width b (long plate, or a finite panel of
+    length a between stiffening supports: structlib.orthotropic_shear_buckling_finite, fix round 3): strength
+    (first-ply failure, B-basis ETW ply allowables), damage-tolerance shear strain at ultimate, shear buckling at
+    ultimate."""
     lam = web_laminate(c, n)
     eng = ST.laminate_engineering(lam)
     fpf = ST.first_ply_failure(lam, (0.0, 0.0, q_lim))
-    Ncr = ST.orthotropic_shear_buckling_long(lam["D"], b)
+    Ncr = ST.orthotropic_shear_buckling_long(lam["D"], b) if a is None else \
+        ST.orthotropic_shear_buckling_finite(lam["D"], a, b)
     fc = total_factor(c, comp=True)
     f15 = total_factor(c)
     gam = q_lim / (eng["Gxy"] * lam["h"])
@@ -862,8 +978,11 @@ def web_criteria(c: Ctx, q_lim: float, b: float, n: int) -> list:
              "CLT, ply allowables B-basis ETW (spec.materials)"),
             ("web shear strain (DT, thin laminate)", gam * 1e6, c.dt["shear_thin"] * 1e6, f15, "µε",
              "STANAG 4703 UL13.1.2 (5200 µε at ultimate)"),
-            ("web shear buckling (long plate, SS)", q_lim / 1e3, Ncr / 1e3, fc, "N/mm",
-             "Kollár & Springer long-plate shear buckling, CLT bending stiffness")]
+            (("web shear buckling (long plate, SS)" if a is None else
+              f"web shear buckling (panel {a * 1000:.0f} x {b * 1000:.0f} mm, SS)"), q_lim / 1e3, Ncr / 1e3, fc, "N/mm",
+             "Kollár & Springer long-plate shear buckling, CLT bending stiffness" if a is None else
+             "Kollár & Springer long-plate fit on the short side x isotropic finite-length factor (5.35 + 4 (s/l)^2) "
+             "/ 5.35 (Timoshenko & Gere), CLT bending stiffness - estimate")]
 
 
 def _min_ms(crit: list) -> float:
@@ -900,7 +1019,8 @@ def size_wing(c: Ctx) -> dict:
                 break
             n += 1
         caps.append([y0, y1, n])
-    # continuity: the CT-box / glove caps run fork to fork with the largest inboard count (no ply drop in the box)
+    # the caps run continuously fork to fork; each zone carries the count of its worst station (internal 1:20 ply
+    # drops / build-ups at the zone breaks, fix round 3: also inside the CT box, outside the kink-fitting bond)
     webs = []
     wz = D["main_web"]["zone_breaks_y_m"]
     for y0, y1 in zip(wz[:-1], wz[1:]):
@@ -1141,11 +1261,18 @@ def check_wing(c: Ctx, R: Rows, sized: dict) -> dict:
     # the pins is J-PRONG-WEB)
     wj = c.S["layout"]["chassis"]["wing_joint"]["main_spar"]
     npr = int(c.D["wing_joint"]["fork"]["prong_plies"])
-    h_pr = float(wj["fork"]["slot"]["height"])
-    V_g = at(L, "V", Y_SOB + 0.01)
-    add_crit(R, "W-GLOVEWEB", "wing", f"glove main-spar webs (2 x {npr} plies +-45 PW, the fork prongs) inboard of the "
-             "inner pin, shear", f"iç pimin içinde eldiven ana kiriş gövdeleri (2 x {npr} kat ±45 PW, çatal kulakları), "
-             "kesme", case, case_tr, worst(web_criteria(c, V_g / (2 * h_pr), h_pr, npr)), part="YK250-CH-001")
+    # fix round 3 (VS3-01): the prongs are the full-depth glove main-spar webs between the cap inner faces (the cap
+    # ramp shortens them over Y_SOB-Y_RAMP); shear and buckling at the stations inboard of the inner pin
+    y_in = min(float(p_["position"][1]) for p_ in wj["pins"])
+    cands = []
+    for y in np.linspace(Y_SOB + 0.005, y_in, 6):
+        h_pr = prong_height(c, caps, y)
+        cands += web_criteria(c, at(L, "V", y) / (2 * h_pr), h_pr, npr, a=prong_panel_at(c, y))
+    h_lo = prong_height(c, caps, Y_SOB + 0.005)
+    add_crit(R, "W-GLOVEWEB", "wing", f"glove main-spar webs (2 x {npr} plies +-45 PW, the fork prongs, full depth "
+             f"between the cap faces, h {h_lo * 1000:.0f} mm at the SOB) inboard of the inner pin, shear",
+             f"iç pimin içinde eldiven ana kiriş gövdeleri (2 x {npr} kat ±45 PW, çatal kulakları, başlık yüzleri arasında "
+             f"tam derinlik, SOB'da h {h_lo * 1000:.0f} mm), kesme", case, case_tr, worst(cands), part="YK250-CH-001")
     # skin panels between ribs: compression (from the section strain of the surface in compression) + torsion shear;
     # shear crimping of every skin region (incl. the D-nose / trailing-edge skins at the box-skin strain)
     for row in wing_skin_panels(c, L, caps):
@@ -1404,12 +1531,15 @@ def check_wing_joint(c: Ctx, R: Rows, sized: dict) -> dict:
              f"pimler arasında dil ±45 gövdesi ({nw} kat), kesme R_iç", ct, ct_tr, worst_crit(crit), part="YK250-WG-151")
     r = worst("R_out")
     ct, ct_tr = case_txt(r)
-    hs = float(WJ["main_spar"]["fork"]["slot"]["height"])
     npr = int(fk["prong_plies"])
-    crit = web_criteria(c, r["R_out"] / (2 * hs), hs, npr)
-    add_crit(R, "J-PRONG-WEB", "wing joint", f"fork prongs (glove main-spar webs, 2 x {npr} plies +-45) between the pins, "
-             "shear R_out", f"pimler arasında çatal kulakları (eldiven ana kiriş gövdeleri, 2 x {npr} kat ±45), kesme "
-             "R_dış", ct, ct_tr, worst_crit(crit), part="YK250-CH-001")
+    crit = []                                       # fix round 3 (VS3-01): full-depth prongs between the cap faces
+    for y_q in np.linspace(g["y_in"], g["y_out"], 9):
+        hs = prong_height(c, sized["main_cap_zones"], y_q)
+        crit += web_criteria(c, r["R_out"] / (2 * hs), hs, npr, a=prong_panel_at(c, y_q))
+    add_crit(R, "J-PRONG-WEB", "wing joint", f"fork prongs (glove main-spar webs, 2 x {npr} plies +-45, full depth "
+             "between the cap faces) between the pins, shear R_out", f"pimler arasında çatal kulakları (eldiven ana "
+             f"kiriş gövdeleri, 2 x {npr} kat ±45, başlık yüzleri arasında tam derinlik), kesme R_dış", ct, ct_tr,
+             worst_crit(crit), part="YK250-CH-001")
     # depth transition tongue -> outer-panel caps (fix round 2, VS2-04)
     TRN = JD.get("transition")
     if TRN:
@@ -1570,6 +1700,194 @@ def check_wing_joint(c: Ctx, R: Rows, sized: dict) -> dict:
             "C": w0["C"], "pin_spacing": d, "dx": dx,
             "cases": {q["id"]: {k: float(q[k]) for k in ("V", "M", "T", "C", "Mz", "R_in", "R_out", "F_T", "F_y",
                                                           "P_out", "P_rear")} for q in res}}
+
+
+def sob_kinks(c: Ctx, sized: dict) -> dict:
+    """Cap ramp at the side-of-body rib (fix round 3, VS3-01): ramp angles of the four caps and the limit cap forces at
+    both ramp ends (positive and negative design moments)."""
+    y0, y1 = sob_ramp(c)
+    L = wing_loads(c)
+    caps = sized["main_cap_zones"]
+    sw = joint_geometry(c)["sw"]
+    Lr = (y1 - y0) / math.cos(sw)
+    ct = ctbox_member(c)
+    zt, zb = float(ct["z"][1]), float(ct["z"][0])
+    s1 = wing_section(c, y1, cap_plies_at(caps, y1 - 1e-6))
+    f = wing_contour(c, y1)
+    zum1, zlm1 = (float(v) for v in f(s1["x_main"]))
+    th_u, th_l = math.atan2(abs(zum1 - zt), Lr), math.atan2(abs(zlm1 - zb), Lr)
+    out = {"y0": y0, "y1": y1, "L": Lr, "th_up": th_u, "th_lo": th_l, "dz_up": zum1 - zt, "dz_lo": zlm1 - zb}
+    for tag, y in (("0", y0), ("1", y1 - 1e-6)):
+        sec = wing_section(c, y, cap_plies_at(caps, y))
+        A = sec["w_main"] * sec["t_main_cap"]
+        F = 0.0
+        for M_ in (at(L, "M", y), at(L, "M_neg", y)):
+            st_ = section_strains(sec, M_)
+            F = max(F, abs(st_["cap_main_up"]) * sec["E_ud"] * A * math.sin(th_u),
+                    abs(st_["cap_main_lo"]) * sec["E_ud"] * A * math.sin(th_l))
+        out["K" + tag] = F
+        out["sec" + tag] = sec
+    return out
+
+
+def check_sob_transition(c: Ctx, R: Rows, sized: dict) -> dict:
+    """Cap ramp and box-cover / glove-skin offset at the side-of-body rib (fix round 3, VS3-01): kink forces of the caps
+    at both ramp ends (SOB rib land inboard, padded prongs at the inner pin outboard), cap-to-web interlaminar shear,
+    and the plate bending of the SOB rib web under the offset couple of the glove box skins (on the loft) and the box
+    covers (on the box level). The cap and skin strains along the ramp are the W-CAP rows of the ramp zone."""
+    y0, y1 = sob_ramp(c)
+    if y1 <= y0 + 1e-9:
+        return {}
+    K = sob_kinks(c, sized)
+    TD = c.D["wing"]["sob_transition"]
+    pw = ply_props(c, "cfrp_pw_mtm45_as4")
+    qi = qi_design_values(c)
+    fk = c.D["wing_joint"]["fork"]
+    w_cap = float(c.D["wing"]["main_cap"]["width_body_glove_m"])
+    L_i = float(TD["intro_length_m"])
+    t_l = int(TD["rib_land_plies"]) * pw["t"]
+    case = (f"wing design case (limit, positive and negative): cap ramp y {y0:.3f}-{y1:.3f} over {K['L'] * 1000:.0f} mm "
+            f"along the spar, upper cap {K['dz_up'] * 1000:+.1f} mm ({math.degrees(K['th_up']):.1f} deg), lower cap "
+            f"{K['dz_lo'] * 1000:+.1f} mm ({math.degrees(K['th_lo']):.1f} deg); kink force F_cap sin(theta)")
+    case_tr = (f"kanat tasarım durumu (limit, pozitif ve negatif): başlık rampası y {dec(y0, 3)}-{dec(y1, 3)}, kiriş "
+               f"boyunca {K['L'] * 1000:.0f} mm, üst başlık {dec(K['dz_up'] * 1000, 1)} mm ({dec(math.degrees(K['th_up']), 1)}°), "
+               f"alt başlık {dec(K['dz_lo'] * 1000, 1)} mm ({dec(math.degrees(K['th_lo']), 1)}°); kırılma kuvveti "
+               "F_başlık sin(θ)")
+    R.add("W-SOB-KINK-RIB", "wing", f"SOB cap ramp: kink force at the side-of-body rib into its {int(TD['rib_land_plies'])}-"
+          f"ply solid land ({t_l * 1000:.1f} x {w_cap * 1000:.0f} mm)", f"SOB başlık rampası: gövde yanı kaburgasında "
+          f"kırılma kuvveti {int(TD['rib_land_plies'])} katlı dolu banda ({dec(t_l * 1000, 1)} x {w_cap * 1000:.0f} mm)",
+          case, case_tr, K["K0"] / (t_l * w_cap) / 1e6, qi["OHC_Pa"] / 1e6, "MPa", total_factor(c, comp=True),
+          "QI OHC ETW as the in-plane compression limit of the land (as J-TRANS-RIB) - fix round 3, VS3-01",
+          part="YK250-CH-050")
+    t_pd = float(fk["prong_pad_t_m"])
+    R.add("W-SOB-KINK-PRONG", "wing", f"SOB cap ramp: kink force at the inner-pin station into the two prong bush pads "
+          f"(2 x {t_pd * 1000:.0f} mm over {L_i * 1000:.0f} mm)", f"SOB başlık rampası: iç pim istasyonunda kırılma "
+          f"kuvveti iki kulak burç takviyesine (2 x {t_pd * 1000:.0f} mm, {L_i * 1000:.0f} mm boyunca)", case, case_tr,
+          K["K1"] / (2 * t_pd * L_i) / 1e6, qi["OHC_Pa"] / 1e6, "MPa", total_factor(c, comp=True),
+          "QI OHC ETW - fix round 3, VS3-01", part="YK250-CH-053")
+    ilss_ = float(research_value("materials", "composites.laminae.cfrp_pw_ooa_prepreg_as4_193.strength_Pa.ETW."
+                                              "ILSS.b_basis"))
+    R.add("W-SOB-KINK-ILSS", "wing", f"SOB cap ramp: cap-to-web / land interlaminar shear of the larger kink force (cap "
+          f"width x {L_i * 1000:.0f} mm)", f"SOB başlık rampası: büyük kırılma kuvvetinin başlık-gövde / bant ara yüzey "
+          f"kesmesi (başlık genişliği x {L_i * 1000:.0f} mm)", case, case_tr,
+          max(K["K0"], K["K1"]) / (w_cap * L_i) / 1e6, ilss_ / 1e6, "MPa", total_factor(c, comp=True),
+          "ILSS ETW B-basis (NCAMP PW) - fix round 3, VS3-01", part="YK250-CH-001")
+    # offset of the glove box skins (on the loft) to the box covers (box level) at the SOB rib: the rib web carries the
+    # couple N_skin x e per unit chord as plate bending (sandwich rib_panel, faces at the core distance)
+    sec0 = K["sec0"]
+    L = wing_loads(c)
+    sk = sec0["skin"]
+    N_ = 0.0
+    for M_ in (at(L, "M", y0), at(L, "M_neg", y0)):
+        st_ = section_strains(sec0, M_)
+        N_ = max(N_, max(abs(st_["skin_top"]), abs(st_["skin_bot"])) * (sk["E_out"] * sk["t_out"] + sk["E_in"] * sk["t_in"]))
+    ct = ctbox_member(c)
+    zt, zb = float(ct["z"][1]), float(ct["z"][0])
+    f0 = wing_contour(c, y0)
+    xx = np.linspace(sec0["x_main"], sec0["x_rear"], 21)
+    e_ = max(float(np.max(np.asarray(f0(xx)[0]) - zt)), float(np.max(zb - np.asarray(f0(xx)[1]))))
+    rib = skin_faces(c, "rib_panel")
+    n_db = int(TD.get("rib_face_doubler_plies", 0))
+    t_f = min(rib["t_out"], rib["t_in"]) + n_db * pw["t"]
+    d_r = rib["c"] + t_f
+    m_allow = qi["OHC_Pa"] * t_f * d_r
+    R.add("W-SOB-OFFSET", "wing", f"SOB rib web (rib_panel sandwich + {n_db} +-45 ply per face over the "
+          f"{float(TD.get('rib_doubler_band_m', 0.0)) * 1000:.0f} mm edge bands): plate bending of the glove-skin / "
+          f"box-cover offset couple (offset {e_ * 1000:.1f} mm, skin running load from the section strain at the rib)",
+          f"SOB kaburgası gövdesi (rib_panel sandviç + {float(TD.get('rib_doubler_band_m', 0.0)) * 1000:.0f} mm kenar "
+          f"bantlarında yüz başına {n_db} kat ±45): eldiven kaplaması / kutu kapağı kaçıklık çiftinin plaka eğilmesi "
+          f"(kaçıklık {dec(e_ * 1000, 1)} mm, kaplama yayılı yükü kaburgadaki kesit birim şekil değiştirmesinden)",
+          f"wing design case (limit) at y {y0:.2f}: N_skin {N_ / 1e3:.1f} N/mm", f"kanat tasarım durumu (limit), y "
+          f"{dec(y0)}: N_kaplama {dec(N_ / 1e3, 1)} N/mm", N_ * e_, m_allow, "N m/m", total_factor(c, comp=True),
+          "m = N e per unit chord; M_allow = OHC (QI ETW) x t_face x face distance - fix round 3, VS3-01",
+          part="YK250-CH-050")
+    return {"ramp": {k: (float(v) if not isinstance(v, dict) else None) for k, v in K.items() if not k.startswith("sec")},
+            "N_skin_sob": N_, "offset_m": e_}
+
+
+def section_le(c: Ctx, y: float) -> tuple:
+    """(x_le, chord) of the wing loft at span station y (linear between the spec sections, as wing_contour)."""
+    secs = c.S["wing"]["sections"]
+    ys = np.array([s_["y"] for s_ in secs])
+    y = float(np.clip(y, ys[0], ys[-1]))
+    return (float(np.interp(y, ys, [s_["x_le"] for s_ in secs])), float(np.interp(y, ys, [s_["chord"] for s_ in secs])))
+
+
+def check_lerx_skins(c: Ctx, R: Rows, sized: dict) -> dict:
+    """Glove LERX (D-nose) skins ahead of the main spar between the side-of-body rib, the glove rib and the joint rib
+    (no LERX nose ribs since VPK-02) - fix round 3, VS3-04: bonded primary skins (P-GLOVE-UP / -LO, wing_skin_primary)
+    strained with the box: plane sections at the box curvature (no shear-lag relief from the SOB free edge: upper
+    bound of the strain), the deepest point of the LERX surface ahead of the main-cap edge; panel a = rib bay (span),
+    b = LERX chord from 20 mm aft of the leading edge (solid LE laminate) to the main-cap edge; torsion shear flow of
+    the box added (conservative). Upper skin under the positive case, lower skin under the negative case."""
+    L = wing_loads(c)
+    caps = sized["main_cap_zones"]
+    D = c.D["wing"]
+    mem = {m_["id"]: m_ for m_ in c.S["layout"]["chassis"]["members"]}
+    ribs = sorted(0.5 * (float(mem[k]["box"][0][1]) + float(mem[k]["box"][1][1]))
+                  for k in ("M-SOB", "M-GLOVERIB", "M-JOINTRIB") if k in mem)
+    out = {}
+    case = (f"wing design case n = {c.n_wing:.2f} (upper skin) / {c.n_wing_neg:.2f} (lower skin), limit; plane sections at "
+            "the box curvature over the LERX chord")
+    case_tr = (f"kanat tasarım durumu n = {c.n_wing:.2f} (üst kaplama) / {dec(c.n_wing_neg)} (alt kaplama), limit; LERX "
+               "veteri boyunca kutu eğriliğinde düzlem kesitler")
+    lay_bay1 = D.get("lerx_upper_first_bay_layup", D["skin_layup"])
+    for surf in ("UP", "LO"):
+        best = None
+        e_max = (0.0, 0.0)
+        for y in np.linspace(Y_SOB + 0.005, float(c.P["y_junction"]) - 0.005, 28):
+            lay = lay_bay1 if (surf == "UP" and len(ribs) > 1 and y < ribs[1]) else D["skin_layup"]
+            sk = skin_faces(c, lay)
+            EA = sk["E_out"] * sk["t_out"] + sk["E_in"] * sk["t_in"]
+            sec = wing_section(c, y, cap_plies_at(caps, y))
+            xle, ch = section_le(c, y)
+            x0, x1 = xle + 0.020, sec["x_main"] - 0.5 * sec["w_main"]
+            if x1 <= x0 + 0.02:
+                continue
+            f = wing_contour(c, y)
+            xx = np.linspace(x0, x1, 25)
+            zu_, zl_ = (np.asarray(v) for v in f(xx))
+            Mp_, Mn_ = cap_moments(c, L, y)          # glove-box moments (total - tongue moment in the fork)
+            if surf == "UP":
+                kap = Mp_ / sec["EI"]
+                e = float(np.max(kap * (zu_ - sec["z_na"])))
+            else:
+                kap = Mn_ / sec["EI"]
+                e = float(np.max(kap * (zl_ - sec["z_na"])))
+            e = max(e, 0.0)
+            ia = int(np.searchsorted(ribs, y))
+            a = (ribs[min(ia, len(ribs) - 1)] - ribs[max(ia - 1, 0)]) if 0 < ia < len(ribs) else 0.15
+            b = x1 - x0
+            Nx = e * EA
+            Nxy = at(L, "T", y) / (2 * sec["A_box"])
+            pb = panel_buckling_multiplier(c, sk, Nx, Nxy, a, b)
+            pb.update(y=y, Nx=Nx, Nxy=Nxy, a=a, b=b, e=e, sk=sk)
+            if best is None or pb["k"] < best["k"]:
+                best = dict(pb, N_comb_max=best.get("N_comb_max", 0.0) if best else 0.0)
+            if e > e_max[0]:
+                e_max = (e, y)
+            best["N_comb_max"] = max(best.get("N_comb_max", 0.0), math.hypot(Nx, Nxy))
+        sk = best["sk"]
+        lab = {"UP": ("glove LERX upper skin (positive case)", "eldiven LERX üst kaplaması (pozitif durum)"),
+               "LO": ("glove LERX lower skin (negative case)", "eldiven LERX alt kaplaması (negatif durum)")}[surf]
+        part = "YK250-SH-420" if surf == "UP" else "YK250-SH-421"
+        R.add(f"W-SKINBUCK-LERX-{surf}", "wing", f"{lab[0]} panel {best['a']:.2f} x {best['b']:.2f} m ({sk['label']}) "
+              f"buckling, compression + shear (governing y {best['y']:.3f})", f"{lab[1]} paneli {dec(best['a'])} x "
+              f"{dec(best['b'])} m ({sk['label_tr']}) burkulma, bası + kesme (belirleyici y {dec(best['y'], 3)})", case,
+              case_tr, 1.0, best["k"], "load multiplier", total_factor(c, comp=True),
+              f"Rc + Rs^2 = 1; N_c {best['Nc'] / 1e3:.0f} N/mm, N_s {best['Ns'] / 1e3:.0f} N/mm (CLT D*, sandwich shear "
+              f"correction); Nx {best['Nx'] / 1e3:.1f} N/mm from the plane-section strain - fix round 3, VS3-04", part=part)
+        R.add(f"W-SKINCRIMP-LERX-{surf}", "wing", f"{lab[0]} ({sk['label']}): shear crimping", f"{lab[1]} "
+              f"({sk['label_tr']}): kesme kıvrılması", case, case_tr, best["N_comb_max"] / 1e3, best["N_crimp"] / 1e3,
+              "N/mm", total_factor(c, comp=True), "Zenkert 1995: N = G_c d^2 / c; N = hypot(Nx, Nxy) - fix round 3, "
+              "VS3-04", part=part)
+        R.add(f"W-SKINDT-LERX-{surf}", "wing", f"{lab[0]}: face compression strain (DT, sandwich), deepest point of the "
+              f"LERX surface (governing y {e_max[1]:.3f})", f"{lab[1]}: yüz bası birim şekil değiştirmesi (hasar toleransı, "
+              f"sandviç), LERX yüzeyinin en derin noktası (belirleyici y {dec(e_max[1], 3)})", case, case_tr,
+              e_max[0] * 1e6, c.dt["sand_comp"] * 1e6, "µε", total_factor(c), "STANAG 4703 UL13.1.2 (2600 µε sandwich "
+              "skins) - fix round 3, VS3-04", part=part)
+        out[surf] = {"k": best["k"], "y": best["y"], "Nx": best["Nx"], "e_max": e_max[0], "y_e": e_max[1]}
+    return out
 
 
 def wing_set_mass(c: Ctx) -> float:
@@ -4069,7 +4387,9 @@ def mass_tally(c: Ctx, sized: dict) -> dict:
     hs = float(WJ["main_spar"]["fork"]["slot"]["height"])
     L_f = yj - Y_SOB
     t_pr = int(fk["prong_plies"]) * t_pw
-    v_prong = 2 * t_pr * hs * L_f
+    # fix round 3 (VS3-01): full-depth prongs (glove main-spar webs between the cap faces), mean height over the fork
+    h_pr_m = float(np.mean([prong_height(c, caps, y) for y in np.linspace(Y_SOB + 0.005, yj - 0.005, 15)]))
+    v_prong = 2 * t_pr * h_pr_m * L_f
     v_pad = 2 * 2 * (float(fk["prong_pad_t_m"]) - t_pr) * hs * float(fk["pad_length_m"])
     n_fz = float(np.mean([cap_plies_at(caps, y) for y in np.linspace(Y_SOB + 0.005, yj - 0.005, 20)]))
     v_widen = 2 * (float(fk["cap_width_m"]) - float(D["wing"]["main_cap"]["width_body_glove_m"])) * n_fz * t_ud * L_f
@@ -4091,12 +4411,29 @@ def mass_tally(c: Ctx, sized: dict) -> dict:
             2 * int(KF["bolts"]) * (math.pi / 4 * float(KF["bolt_d_m"]) ** 2 * 0.030 * rho_ti + 0.002)
     else:
         m_kink = 0.10
-    bu_B = m_cov + m_dbl + 2 * m_fork + 4 * m_pin + 2 * (m_rpin + m_slot) + m_kink
+    # fix round 3 (VS3-01): SOB ramp - solid lands of the SOB rib under the main caps (land - sandwich it replaces)
+    # and the tapered filler wedges between the glove skins and the ramped caps (4 caps x 2 sides)
+    TDs = D["wing"].get("sob_transition")
+    m_sob = 0.0
+    if TDs:
+        rib_ = skin_faces(c, "rib_panel")
+        a_rib = (rib_["t_out"] + rib_["t_in"]) * rho_pw + rib_["c"] * float(rib_["core"]["density"])
+        w_c = float(D["wing"]["main_cap"]["width_body_glove_m"])
+        m_land = 4 * float(TDs["land_length_m"]) * w_c * (int(TDs["rib_land_plies"]) * t_pw * rho_pw - a_rib)
+        y0r, y1r = sob_ramp(c)
+        Kq = sob_kinks(c, sized)
+        rho_f = float(M_[TDs["filler"]]["density"])
+        m_fill = 2 * w_c * (y1r - y0r) * 0.5 * (abs(Kq["dz_up"]) + abs(Kq["dz_lo"])) * rho_f
+        s0_ = sob_kinks(c, sized)["sec0"]
+        m_rdb = 2 * 2 * 2 * int(TDs.get("rib_face_doubler_plies", 0)) * t_pw * float(TDs.get("rib_doubler_band_m", 0.0)) * \
+            (s0_["x_rear"] - s0_["x_main"]) * rho_pw                  # 2 sides x 2 edges x 2 faces
+        m_sob = m_land + m_fill + m_rdb
+    bu_B = m_cov + m_dbl + 2 * m_fork + 4 * m_pin + 2 * (m_rpin + m_slot) + m_kink + m_sob
     alloc_B = float(S["mass"]["rules"]["carry_through_kg"])
     out["B_carry_through"] = {"bottom_up_kg": bu_B, "allocation_kg": alloc_B, "delta_kg": bu_B - alloc_B,
                               "items": {"sandwich_covers": m_cov, "web_doublers": m_dbl, "cfrp_forks_pair": 2 * m_fork,
                                         "main_pins_4": 4 * m_pin, "rear_pins_slot_fittings_2": 2 * (m_rpin + m_slot),
-                                        "kink_fittings_2": m_kink}}
+                                        "kink_fittings_2": m_kink, "sob_ramp_lands_fillers": m_sob}}
     # (C) chassis members added / changed in this phase
     mem = {m_["id"]: m_ for m_ in S["layout"]["chassis"]["members"]}
     FD = D["fuel_bay"]
@@ -4328,6 +4665,8 @@ def run_all(c: Ctx, sized: dict | None = None) -> dict:
     res["dt_applicability"] = dt_applicability(c, R)
     res["wing"] = check_wing(c, R, sized)
     res["wing_joint"] = check_wing_joint(c, R, sized)
+    res["sob_transition"] = check_sob_transition(c, R, sized)
+    res["lerx_skins"] = check_lerx_skins(c, R, sized)
     res["ct_box"] = check_ct_box(c, R, sized)
     res["tail"] = check_tail(c, R)
     res["controls"] = check_controls(c, R)
@@ -4449,7 +4788,7 @@ def interface_checks(S: dict, D: dict) -> list:
         (not tg.get("flange_taper") or
          f"to {tg['flange_taper']['t_min_m'] * 1000:.0f} mm at the inner pin" in tg_txt))
     chk("I-FORK", "layout fork: CFRP prongs and pads = structures.sizing.wing_joint.fork",
-        f"webs {int(fk['prong_plies']) * 0.20066:.0f} mm" in fk_txt and
+        f"webs {int(fk['prong_plies']) * 0.20066:.1f} mm" in fk_txt and f"{int(fk['prong_plies'])} plies" in fk_txt and
         f"padded up to {fk['prong_pad_t_m'] * 1000:.0f} mm" in fk_txt and
         float(wj["main_spar"]["fork"].get("prong_t", 0)) == float(fk["prong_pad_t_m"]))
     sp_ = mem.get("M-SPINE", {}).get("section", {})

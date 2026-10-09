@@ -1067,11 +1067,21 @@ def ctbox_prims(m: dict) -> list:
     for key, ck in (("main_spar_line", "main_spar_caps_z"), ("rear_spar_line", "rear_spar_caps_z")):
         P = np.asarray(m[key], float)
         C = np.asarray(m.get(ck) or [[z0 + 0.004, z1 - 0.004]] * len(P), float)
+        tk = m.get(ck.replace("_z", "_t"))
         P = np.vstack([P[::-1] * [1, -1, 1], P[1:]])
         C = np.vstack([C[::-1], C[1:]])
+        if tk is None:                      # layout phase convention: outer face, capsule of 8 mm inward
+            for k in (0, 1):
+                zz = C[:, k] + (0.004 if k == 0 else -0.004)
+                out += polyline(np.column_stack([P[:, 0], P[:, 1], zz]), 0.004)
+            continue
+        T_ = np.asarray(tk, float)          # fix round 3 (VS3-01): cap centroids + cap thickness per point
+        T_ = np.concatenate([T_[::-1], T_[1:]])
         for k in (0, 1):
-            zz = C[:, k] + (0.004 if k == 0 else -0.004)
-            out += polyline(np.column_stack([P[:, 0], P[:, 1], zz]), 0.004)
+            for i in range(len(P) - 1):
+                a = np.array([P[i, 0], P[i, 1], C[i, k]])
+                b = np.array([P[i + 1, 0], P[i + 1, 1], C[i + 1, k]])
+                out.append(Capsule(a, b, 0.5 * max(T_[i], T_[i + 1], 0.001)))
     return out
 
 

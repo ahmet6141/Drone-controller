@@ -46,6 +46,21 @@ class TestStructLib(unittest.TestCase):
         self.assertAlmostEqual(S.ms(1500.0, 1000.0, 1.5), 0.0, places=12)
         self.assertAlmostEqual(S.euler_buckling(70e9, 1e-9, 1.0, 1.0), math.pi ** 2 * 70.0, places=6)
 
+    def test_finite_plate_shear_buckling(self):
+        """Fix round 3: finite orthotropic plate in shear - isotropic limit k_s = 5.35 + 4 (s/l)^2 on the short side,
+        symmetric in a <-> b, and the long-plate value for l >> s."""
+        Dv = 10.0
+        D = np.array([[Dv, 0.3 * Dv, 0.0], [0.3 * Dv, Dv, 0.0], [0.0, 0.0, 0.35 * Dv]])      # D12 + 2 D66 = D
+        b = 0.08
+        long_ = S.orthotropic_shear_buckling_long(D, b)
+        self.assertAlmostEqual(long_ / (math.pi ** 2 * Dv / b ** 2), 5.34, delta=0.02)
+        self.assertAlmostEqual(S.orthotropic_shear_buckling_finite(D, 100.0, b) / long_, 1.0, places=5)
+        sq = S.orthotropic_shear_buckling_finite(D, b, b)
+        self.assertAlmostEqual(sq / long_, 9.35 / 5.35, places=9)
+        self.assertAlmostEqual(S.orthotropic_shear_buckling_finite(D, 0.06, b),
+                               S.orthotropic_shear_buckling_finite(D, b, 0.06), places=6)
+        self.assertGreater(S.orthotropic_shear_buckling_finite(D, 0.06, b), long_)
+
 
 if __name__ == "__main__":
     unittest.main()

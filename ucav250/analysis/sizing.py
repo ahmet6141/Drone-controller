@@ -2923,7 +2923,12 @@ def turret_geometry(S: dict, af: "Airframe") -> dict:
     xc = float(S["layout"]["rules"]["turret_x"])
     g = T["growth_envelope"]
     zk = float(af.z_bot(xc))
-    z_ret = zk + float(T["bay"]["door_thickness"]) + float(T["bay"]["door_clearance"]) + float(g["diameter"]) / 2
+    r_g = float(g["diameter"]) / 2
+    # layout phase: the door clearance holds over the whole ball footprint on the curved belly (the closed doors follow
+    # the skin), not only on the keel line
+    ys = np.linspace(0.0, 0.999 * r_g, 41)
+    z_ret = max(float(af.z_bot(xc, y)) + float(T["bay"]["door_thickness"]) + float(T["bay"]["door_clearance"]) +
+                math.sqrt(r_g ** 2 - y ** 2) for y in ys)
     return {"x": xc, "z_keel": zk, "ball_center_retracted_z": z_ret,
             "ball_center_extended_z": z_ret - float(T["stroke"]),
             "envelope_top_z": z_ret + float(g["height"]) - float(g["diameter"]) / 2,
@@ -3713,6 +3718,7 @@ def control_hinge_moments(S: dict, VA: float, VD: float, VF: float) -> dict:
     sc = S["tail"]["surfaces"]["stabilator"]["controls"]
     hm = stab_hinge_moments(S)
     out["stabilator"] = {"H_design_Nm": hm["H_design_Nm"], "actuator": sc["actuator"]["model"],
+                         "V_eas_m_s": VA, "VD_eas_m_s": VD,
                          "basis": "CN_max hinge moment at VA applied at every deflection (conservative; "
                                   "stab_hinge_moments)", **hm["linkage"]}
     prim = [out[k] for k in ("aileron", "flap", "rudder")]
@@ -4009,7 +4015,7 @@ def stab_spindle_check(S: dict, af: Airframe) -> dict:
     hp = st_["params"]
     pv = np.asarray(st_["pivot"], float)
     r_s = float(hp["spindle_housing_radius"])
-    cyl_gap = engine_cylinder_front_x(S) - (pv[0] + r_s)
+    cyl_gap = (engine_cylinder_front_x(S, pv[2]) - pv[0]) * math.cos(_cyl_eps(S)) - r_s   # normal to the inclined face
     y_in = spindle_inboard_y(S)
     sbp = S["tail"]["surfaces"]["stabilator_stub"]["params"]
     ys = np.linspace(y_in, float(sbp["y_in"]), 12)
@@ -4086,14 +4092,30 @@ def stab_panel(hp: dict) -> dict:
             "x_pivot": x_le_mac + float(hp["pivot_mac_fraction"]) * mac, "area_panel": 0.5 * (cr + ct) * b}
 
 
-def engine_cylinder_front_x(S: dict) -> float:
-    """Front face of the cylinder/head envelope: engine flange - engine.envelope.cylinder_slab_from_flange[1]."""
-    return float(S["fuselage"]["lines"]["x_hub"]) - float(S["engine"]["envelope"]["cylinder_slab_from_flange"][1])
+def engine_cylinder_front_x(S: dict, z: float | None = None) -> float:
+    """Front face of the cylinder/head envelope: engine flange - engine.envelope.cylinder_slab_from_flange[1]. With
+    ``z`` (layout phase): x of that face at height z, the envelope being square to the crank / thrust axis inclined by
+    propeller.thrust_line_inclination_deg through propeller.hub (5 deg aft-up: the face leans forward above the axis)."""
+    x0 = float(S["fuselage"]["lines"]["x_hub"]) - float(S["engine"]["envelope"]["cylinder_slab_from_flange"][1])
+    if z is None:
+        return x0
+    pr = S["propeller"]
+    eps = math.radians(float(pr.get("thrust_line_inclination_deg", 0.0)))
+    hub = np.asarray(pr["hub"], float)
+    u1 = float(hub[0]) - x0
+    fx, fz = hub[0] - u1 * math.cos(eps), hub[2] - u1 * math.sin(eps)
+    return float(fx - (float(z) - fz) * math.tan(eps))
+
+
+def _cyl_eps(S: dict) -> float:
+    return math.radians(float(S["propeller"].get("thrust_line_inclination_deg", 0.0)))
 
 
 def spindle_inboard_y(S: dict) -> float:
     """Inboard end of the stabilator stub spindles: crankcase/SG750 half width + the engine clearance rule."""
-    return 0.10 + float(S["layout"]["clearances"]["engine_keep_out"])
+    lay = S["layout"]
+    cv = lay.get("clearance_values") or (lay.get("clearances") if isinstance(lay.get("clearances"), dict) else {})
+    return 0.10 + float(cv["engine_keep_out"])
 
 
 def stab_ac_fractions(hp: dict, sbp: dict) -> tuple:
@@ -4193,8 +4215,8 @@ def build_geometry(S: dict) -> None:
     #     each in an inboard bearing in an engine-bay ring frame beside the SG750 and an outboard bearing in the fixed
     #     root stub; the spindle station is as far aft as the cylinders allow (longest tail arm) and the panel root
     #     leading edge follows from it
-    x_piv_max = engine_cylinder_front_x(S) - float(hp["spindle_housing_radius"]) - \
-        float(hp["spindle_engine_clearance"])
+    x_piv_max = engine_cylinder_front_x(S, float(TS["stabilator"]["pivot"][2])) - \
+        (float(hp["spindle_housing_radius"]) + float(hp["spindle_engine_clearance"])) / math.cos(_cyl_eps(S))
     hp["x_le_root"] = round(float(hp["x_le_root"]) + x_piv_max - stab_panel(hp)["x_pivot"], 5)
     sp = stab_panel(hp)
     x_piv = sp["x_pivot"]
@@ -4627,7 +4649,22 @@ def mass_items(S: dict, af: Airframe, wing_m: dict, tail_m: dict, shell: dict, l
     struct = sum(i["mass_base_kg"] for i in I if i["group"] in ("chassis", "shell", "wing", "tail", "gear"))
     add("fasteners_inserts_nutplates", "hardware", MR["hardware_fraction"] * struct, 1.95, 0.0,
         f"{MR['hardware_fraction']:.3f} x structure + gear base mass (estimate)")
+    apply_mass_placement(S, I)
     return I
+
+
+def apply_mass_placement(S: dict, I: list) -> None:
+    """Layout-phase positions: ``layout.mass_placement[name].position`` (centroid of the objects the layout places for
+    that mass item: members, fittings, equipment, harness trunks, panels) replaces the sizing heuristic position of
+    the item; ucav250.analysis.layout_check recomputes the centroids from the layout and verifies them."""
+    mp = (S.get("layout") or {}).get("mass_placement") or {}
+    for it in I:
+        p = mp.get(it["name"])
+        if not p:
+            continue
+        x, y, z = (float(v) for v in p["position"])
+        it.update({"x": round(x, 4), "y": round(y, 4), "z": round(z, 4),
+                   "basis": it["basis"] + "; position: layout.mass_placement (layout phase)"})
 
 
 BASELINE_PAYLOAD_ITEMS = ("eo_ir_turret_hd59_mount", "mission_computer_recorder", "payload_tray_harness")
@@ -7327,7 +7364,9 @@ SPEC_SECTION_TITLES = {
     "stability": "stability", "performance": "performance (reference copy)", "structures": "structural design basis",
     "materials": "materials (materials.yaml spec_ready)", "adhesives": "adhesives (materials.yaml spec_ready)",
     "layups": "layups", "processes": "processes (materials.yaml spec_ready)", "display": "display",
-    "layout": "layout (sizing-phase zones; filled by the layout phase)", "assembly": "assembly (placeholder)"}
+    "layout": "layout (interface definition: stations, chassis, shell, mechanisms, keep-outs, clearances, systems; "
+              "zones from sizing)",
+    "assembly": "assembly (sequence, transport, field assembly, maintenance access)"}
 
 GEAR_CHECK_KEYS = ("z_g", "track", "wheelbase", "h_cg", "static_attitude_deg", "tipback_deg", "turnover_deg",
                    "nose_load_aft_cg", "nose_load_fwd_cg", "prop_clear_level", "prop_clear_static",

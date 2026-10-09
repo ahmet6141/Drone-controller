@@ -225,7 +225,12 @@ def check_clearances(reg: Registry, cache: _ManCache | None = None) -> list[dict
         need = float(r["min_mm"]) / 1000.0
         states = [{}]
         for jn in r.get("joints", []) or []:
-            j = reg.joints[jn]
+            j = reg.joints.get(jn)
+            if j is None:                          # rule names a joint no producer registered
+                if A and B:                        # parts exist -> the swept part of the rule cannot be evaluated
+                    out.append(_violation("clearance", [A[0], B[0]], None, f"joint {jn} registered",
+                                          f"{r.get('name', '')}: joint not registered"))
+                continue
             states += [{jn: j.lo}, {jn: j.hi}]
         for st in states:
             for a in A:
@@ -244,7 +249,7 @@ def check_clearances(reg: Registry, cache: _ManCache | None = None) -> list[dict
     best = {}
     for v in out:                                  # keep the smallest gap per part pair
         k = tuple(sorted(v["parts"]))
-        if k not in best or v["value"] < best[k]["value"]:
+        if k not in best or v["value"] is None or (best[k]["value"] is not None and v["value"] < best[k]["value"]):
             best[k] = v
     return list(best.values())
 

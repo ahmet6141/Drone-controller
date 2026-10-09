@@ -1,0 +1,620 @@
+{
+ "rows": [
+  {
+   "check": "C01",
+   "item": "part_numbers: module ranges disjoint",
+   "ok": true,
+   "value": null,
+   "limit": null,
+   "detail": "[(1, 149, 'chassis'), (150, 249, 'wing'), (250, 349, 'tail'), (350, 499, 'shell'), (500, 569, 'propulsion'), (570, 619, 'fuel'), (620, 719, 'gear'), (720, 819, 'systems'), (820, 869, 'payload'), (870, 999, 'hardware')]"
+  },
+  {
+   "check": "C01",
+   "item": "part ids: convention YK250-<CODE>-NNN, number in a module range of that code",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C01",
+   "item": "part ids unique across the layout",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C01",
+   "item": "root_part is a chassis member",
+   "ok": true,
+   "value": "YK250-CH-001",
+   "limit": "YK250-CH-...",
+   "detail": ""
+  },
+  {
+   "check": "C01",
+   "item": "references (touch, lands, windows, joints, clearance selectors, mass items, access panels) resolve",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C02",
+   "item": "stations ordered along x, unique ids",
+   "ok": true,
+   "value": null,
+   "limit": null,
+   "detail": ""
+  },
+  {
+   "check": "C02",
+   "item": "stations: type, material/process/layup keys, thickness >= process minimum, faces",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C02",
+   "item": "cut-outs (pass-throughs) inside the frame web",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C02",
+   "item": "frames do not cut fuel cells, turret bay, gear wells, payload/parachute/equipment volumes (except declared bay cut-outs; ring frames: the volume passes through the ring opening)",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C02",
+   "item": "fuel bays conform to the swept spar frames (chevron bladders): gap to the frame webs",
+   "ok": true,
+   "value": 6.6,
+   "limit": ">= 0 mm",
+   "detail": "cell ends follow x + |y| tan(sweep) of the spar frame"
+  },
+  {
+   "check": "C02",
+   "item": "usable fuel volume of the chevron bays vs required (mass.fuel_kg, expansion space)",
+   "ok": true,
+   "value": 51.1,
+   "limit": ">= 42.07 L",
+   "detail": "tank efficiency 0.85"
+  },
+  {
+   "check": "C02",
+   "item": "harness / push-rod / bridle crossings of frame webs pass declared cut-outs (48 crossings)",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C03",
+   "item": "equipment envelopes inside the OML",
+   "ok": true,
+   "value": 0,
+   "limit": ">= 10 mm",
+   "detail": ""
+  },
+  {
+   "check": "C03",
+   "item": "member envelopes inside the OML",
+   "ok": true,
+   "value": 0,
+   "limit": ">= 0 (skin faces excepted)",
+   "detail": ""
+  },
+  {
+   "check": "C03",
+   "item": "fitting envelopes inside the OML",
+   "ok": true,
+   "value": 0,
+   "limit": ">= 0 (skin faces excepted)",
+   "detail": ""
+  },
+  {
+   "check": "C03",
+   "item": "actuator envelopes inside the OML",
+   "ok": true,
+   "value": 0,
+   "limit": ">= 3 mm",
+   "detail": ""
+  },
+  {
+   "check": "C03",
+   "item": "harness trunks inside the OML (radius + 3 mm)",
+   "ok": true,
+   "value": 0,
+   "limit": ">= r + 3 mm",
+   "detail": ""
+  },
+  {
+   "check": "C03",
+   "item": "engine mount truss inside the cowl (tube radius + 5 mm)",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C03",
+   "item": "turret growth envelope (retracted) inside the OML",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C04",
+   "item": "no overlaps between contents (equipment, fuel cells, harness, turret, stowed gear, engine, mount, exhaust, linkages) and with structure (178 close pairs evaluated)",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C05",
+   "item": "gear retraction sequence (21 states): main tyre vs structure/contents",
+   "ok": true,
+   "value": 12.0,
+   "limit": ">= 12 mm",
+   "detail": "M-WELLWALL-FWD at gear_up state 1.75"
+  },
+  {
+   "check": "C05",
+   "item": "gear retraction sequence (21 states): main leg vs structure/contents",
+   "ok": true,
+   "value": 30.0,
+   "limit": ">= 10 mm",
+   "detail": "M-CHINE@R"
+  },
+  {
+   "check": "C05",
+   "item": "gear retraction sequence (21 states): main inner door vs moving gear",
+   "ok": true,
+   "value": 22.8,
+   "limit": ">= 10 mm",
+   "detail": "side R"
+  },
+  {
+   "check": "C05",
+   "item": "gear retraction sequence (21 states): nose tyre vs structure/contents",
+   "ok": true,
+   "value": 13.5,
+   "limit": ">= 12 mm",
+   "detail": "M-DECK-NOSE"
+  },
+  {
+   "check": "C05",
+   "item": "gear retraction sequence (21 states): nose leg vs structure/contents",
+   "ok": true,
+   "value": 30.0,
+   "limit": ">= 10 mm",
+   "detail": "M-CHINE@R"
+  },
+  {
+   "check": "C05",
+   "item": "turret E180 envelope along the elevator stroke vs bay walls, roof and frames FS1110/FS1330",
+   "ok": true,
+   "value": 16.1,
+   "limit": ">= 6 mm",
+   "detail": ""
+  },
+  {
+   "check": "C05",
+   "item": "turret E180 envelope vs elevator rails / ball screw",
+   "ok": true,
+   "value": 30.3,
+   "limit": ">= 5 mm",
+   "detail": ""
+  },
+  {
+   "check": "C05",
+   "item": "turret E180 envelope vs sliding bay doors over the coupled sequence",
+   "ok": true,
+   "value": 9.0,
+   "limit": ">= 5 mm",
+   "detail": ""
+  },
+  {
+   "check": "C05",
+   "item": "HD59 ball vs aperture ring (radial)",
+   "ok": true,
+   "value": 5.0,
+   "limit": ">= 5 mm",
+   "detail": "ring radius 0.0785 m"
+  },
+  {
+   "check": "C05",
+   "item": "stabilators (whole range, both sides) vs exhaust routing envelopes",
+   "ok": true,
+   "value": 125.5,
+   "limit": ">= 50 mm",
+   "detail": ""
+  },
+  {
+   "check": "C05",
+   "item": "stabilators (whole range) outside the exhaust plume cones",
+   "ok": true,
+   "value": 190.6,
+   "limit": ">= 0",
+   "detail": ""
+  },
+  {
+   "check": "C05",
+   "item": "ailerons / flaps (whole range) vs wing actuators",
+   "ok": true,
+   "value": 66.5,
+   "limit": ">= 3 mm",
+   "detail": ""
+  },
+  {
+   "check": "C05",
+   "item": "parachute hatch (0-110 deg) vs external antennas, probes, lights",
+   "ok": true,
+   "value": 100.0,
+   "limit": ">= 10 mm",
+   "detail": ""
+  },
+  {
+   "check": "C06",
+   "item": "layout.mass_placement = centroids recomputed from the layout objects",
+   "ok": true,
+   "value": 0.0,
+   "limit": "<= 2 mm",
+   "detail": "worst engine_group_installed"
+  },
+  {
+   "check": "C06",
+   "item": "spec mass items at the placed centroids (sizing --update-spec applied the placement)",
+   "ok": true,
+   "value": 0.1,
+   "limit": "<= 2 mm",
+   "detail": "worst frames_bulkheads"
+  },
+  {
+   "check": "C06",
+   "item": "empty-aircraft CG: spec mass items vs layout-placed items",
+   "ok": true,
+   "value": [
+    -0.02,
+    0.0,
+    0.0
+   ],
+   "limit": "<= 1 mm",
+   "detail": "spec CG [2.6559, -0.0014, 0.0523] m, layout CG [2.6558, -0.0014, 0.0523] m, empty 101.38 kg"
+  },
+  {
+   "check": "C07",
+   "item": "turret field of regard: every external protrusion above the -5 deg cone from the extended ball centre",
+   "ok": true,
+   "value": -1.01,
+   "limit": ">= -5.0 deg",
+   "detail": "lowest: ANT-XPDR"
+  },
+  {
+   "check": "C07",
+   "item": "RF windows: every internal antenna under a GFRP (RF-transparent) panel / tip cap",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C07",
+   "item": "GNSS antennas under upper-surface windows (sky view)",
+   "ok": true,
+   "value": 2,
+   "limit": null,
+   "detail": ""
+  },
+  {
+   "check": "C08",
+   "item": "Li-ion buffer battery to every fuel cell",
+   "ok": true,
+   "value": 1.651,
+   "limit": ">= 1.0 m",
+   "detail": "engine.sources.buffer_battery"
+  },
+  {
+   "check": "C08",
+   "item": "fuel cells to the firewall forward face (CS-LUAS.967(c))",
+   "ok": true,
+   "value": 0.5973,
+   "limit": ">= 0.013 m",
+   "detail": ""
+  },
+  {
+   "check": "C08",
+   "item": "engine dynamic envelope vs every other layout object",
+   "ok": true,
+   "value": 10.0,
+   "limit": ">= 10 mm",
+   "detail": "F-SPINDLE-IN@R"
+  },
+  {
+   "check": "C08",
+   "item": "engine-mount truss vs SG750 (d 101 x 28.6 mm) on its isolators",
+   "ok": true,
+   "value": 17.7,
+   "limit": ">= 10 mm",
+   "detail": ""
+  },
+  {
+   "check": "C08",
+   "item": "cylinder/head hot zone vs composite structure",
+   "ok": true,
+   "value": 34.0,
+   "limit": ">= 25 mm",
+   "detail": "M-CHINE@R"
+  },
+  {
+   "check": "C08",
+   "item": "exhaust routing envelopes vs unshielded composite structure",
+   "ok": true,
+   "value": 75.3,
+   "limit": ">= 50 mm",
+   "detail": "M-CHINE@R"
+  },
+  {
+   "check": "C08",
+   "item": "exhaust routing envelopes vs harness",
+   "ok": true,
+   "value": 100.0,
+   "limit": ">= 50 mm",
+   "detail": "H-MAIN"
+  },
+  {
+   "check": "C08",
+   "item": "ventral fin vs exhaust routing envelopes / plume",
+   "ok": true,
+   "value": 137.3,
+   "limit": ">= 50 mm (boxes) / outside (plume)",
+   "detail": "boxes 137.3 mm, plume 198.2 mm"
+  },
+  {
+   "check": "C08",
+   "item": "propeller disc keep-out (R + 26 mm, blade half extent + 13 mm) free of layout objects",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C08",
+   "item": "parachute deployment volume free of antennas, probes, lights",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C09",
+   "item": "shell panels: edge margin >= 2.5 D (composite) / 2 D (metal), pitch >= 3 D, structural nutplate pitch <= 8 D, hinges, RF materials",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C09",
+   "item": "upper body covered by shell panels from the nose to the cowl exit",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C10",
+   "item": "maintenance: every equipment item and fuel cell under a removable / hinged panel (27 items), wing joint access panel present",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C10",
+   "item": "maintenance access matrix: no primary structure removed for any item",
+   "ok": true,
+   "value": 22,
+   "limit": null,
+   "detail": ""
+  },
+  {
+   "check": "C11",
+   "item": "assembly steps numbered 1..N with title_tr, subassembly, text, tools, checks (Turkish)",
+   "ok": true,
+   "value": 42,
+   "limit": null,
+   "detail": "missing fields []; Turkish text 42/42"
+  },
+  {
+   "check": "C11",
+   "item": "assembly covers jig/chassis, frames, fuel, harness, engine, gear, wing, tail, shell closure, rigging",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C11",
+   "item": "transport units vs R-29 (outer panel) / R-30 (centre section)",
+   "ok": true,
+   "value": [
+    2.904,
+    1.4
+   ],
+   "limit": [
+    3.4,
+    2.0
+   ],
+   "detail": "listed sizes 2.9 / 1.4 m"
+  },
+  {
+   "check": "C11",
+   "item": "field re-assembly and maintenance matrix present",
+   "ok": true,
+   "value": 7,
+   "limit": null,
+   "detail": ""
+  },
+  {
+   "check": "C12",
+   "item": "mechanism definitions (21 joints, 2 sequences): fields, ranges, props, expressions, L/R pairs, sequence states",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C12",
+   "item": "layout.clearances in checks.py LIST format {name, a, b, min_mm, joints?}",
+   "ok": true,
+   "value": 26,
+   "limit": null,
+   "detail": ""
+  },
+  {
+   "check": "C13",
+   "item": "first-cut fitting pre-sizing: margins of safety >= 0 (wing joint pins, bridle fittings, engine mount bolts)",
+   "ok": true,
+   "value": 0.07,
+   "limit": ">= 0",
+   "detail": ""
+  }
+ ],
+ "ok": true,
+ "n_pass": 60,
+ "n": 60,
+ "presizing": [
+  {
+   "item": "wing joint main pin, double shear",
+   "applied": 142.8,
+   "allowable": 599.8,
+   "MS": 3.2,
+   "basis": "R = 29302 N (M_ult 5498 N m, V_ult 4479 N at y 0.7; pins 227 mm apart) x 1.5 frequent assembly; MPa",
+   "item_tr": "kanat birle\u015fimi ana pimi, \u00e7ift kesme",
+   "basis_tr": "R = 29302 N (y = 0.7 m'de M_nihai 5498 N m, V_nihai 4479 N; pimler aras\u0131 227 mm) x 1.5 s\u0131k s\u00f6k\u00fclen ba\u011flant\u0131 katsay\u0131s\u0131; MPa"
+  },
+  {
+   "item": "wing joint main pin, bending",
+   "applied": 864.7,
+   "allowable": 923.9,
+   "MS": 0.07,
+   "basis": "M = R/2 (t_prong/2 + t_tongue/4) = 233 N m; Ftu (no plastic bending credit); MPa",
+   "item_tr": "kanat birle\u015fimi ana pimi, e\u011filme",
+   "basis_tr": "M = R/2 (t_\u00e7atal/2 + t_dil/4) = 233 N m; Ftu ile (plastik e\u011filme kazanc\u0131 al\u0131nmad\u0131); MPa"
+  },
+  {
+   "item": "wing joint tongue bearing (7075)",
+   "applied": 137.7,
+   "allowable": 999.7,
+   "MS": 6.26,
+   "basis": "x 2.0 bearing factor, tongue width 30.4 mm; MPa",
+   "item_tr": "kanat birle\u015fimi dil ezilmesi (7075)",
+   "basis_tr": "x 2.0 ezilme katsay\u0131s\u0131, dil kal\u0131nl\u0131\u011f\u0131 30.4 mm; MPa"
+  },
+  {
+   "item": "wing joint fork prong bearing (7075, 2 prongs)",
+   "applied": 348.8,
+   "allowable": 999.7,
+   "MS": 1.87,
+   "basis": "x 2.0 bearing factor, prongs 6 mm; MPa",
+   "item_tr": "kanat birle\u015fimi \u00e7atal ezilmesi (7075, 2 kulak)",
+   "basis_tr": "x 2.0 ezilme katsay\u0131s\u0131, kulaklar 6 mm; MPa"
+  },
+  {
+   "item": "bridle fitting bolts 4 x M6 12.9 (single shear, one leg takes the full shock)",
+   "applied": 187.4,
+   "allowable": 732.0,
+   "MS": 2.91,
+   "basis": "13.1 kN (GRS 4/240 published opening shock, > UAVOS 200 5 g x MTOM) ultimate-only (CRASH-004) x 1.15 fitting factor; ISO 898-1 12.9 Rm 1220 MPa, tau = 0.6 Rm on the stress area; MPa",
+   "item_tr": "kay\u0131\u015f ba\u011flant\u0131s\u0131 c\u0131vatalar\u0131 4 x M6 12.9 (tek kesme, \u015fokun tamam\u0131n\u0131 tek ayak ta\u015f\u0131r)",
+   "basis_tr": "13.1 kN (GRS 4/240 yay\u0131mlanm\u0131\u015f a\u00e7\u0131lma \u015foku, > UAVOS 200 5 g x MTOM) yaln\u0131z nihai (CRASH-004) x 1.15 ba\u011flant\u0131 katsay\u0131s\u0131; ISO 898-1 12.9 Rm 1220 MPa, gerilme alan\u0131nda tau = 0,6 Rm; MPa"
+  },
+  {
+   "item": "bridle shackle pin d 10 (4130, double shear)",
+   "applied": 95.9,
+   "allowable": 393.0,
+   "MS": 3.1,
+   "basis": "MPa",
+   "item_tr": "kay\u0131\u015f kilit pimi \u00d810 (4130, \u00e7ift kesme)",
+   "basis_tr": "MPa"
+  },
+  {
+   "item": "bridle U-lug bearing (7075, 2 cheeks 8 mm)",
+   "applied": 188.3,
+   "allowable": 999.7,
+   "MS": 4.31,
+   "basis": "x 2.0 bearing factor; MPa",
+   "item_tr": "kay\u0131\u015f U-kulak ezilmesi (7075, 2 yanak 8 mm)",
+   "basis_tr": "x 2.0 ezilme katsay\u0131s\u0131; MPa"
+  },
+  {
+   "item": "opening load factor at MTOM (information)",
+   "applied": 8.91,
+   "allowable": null,
+   "MS": null,
+   "basis": "13.1 kN / (MTOM g); UAVOS 200 rated 5 g",
+   "item_tr": "MTOM'da a\u00e7\u0131lma y\u00fck katsay\u0131s\u0131 (bilgi)",
+   "basis_tr": "13,1 kN / (MTOM g); UAVOS 200 anma de\u011feri 5 g"
+  },
+  {
+   "item": "engine mount bolt M8 12.9 (worst of torque + 3.8 g / 1.47 g side / 6 g down)",
+   "applied": 34.9,
+   "allowable": 732.0,
+   "MS": 19.96,
+   "basis": "engine + SG750 + adapter 7.59 kg, CG 90 mm ahead of the mount face (estimate), x 1.5 (flight cases) x 1.15; combined shear/tension on the stress area vs 0.6 Rm; MPa; crankcase thread pull-out and isolator capacity: open (Limbach data)",
+   "item_tr": "motor ba\u011flant\u0131 c\u0131vatas\u0131 M8 12.9 (tork + 3,8 g / 1,47 g yan / 6 g a\u015fa\u011f\u0131 durumlar\u0131n\u0131n en k\u00f6t\u00fcs\u00fc)",
+   "basis_tr": "motor + SG750 + adapt\u00f6r 7.59 kg, AM ba\u011flant\u0131 y\u00fcz\u00fcn\u00fcn 90 mm \u00f6n\u00fcnde (tahmin), x 1.5 (u\u00e7u\u015f durumlar\u0131) x 1.15; gerilme alan\u0131nda birle\u015fik kesme/\u00e7ekme, 0,6 Rm ile kar\u015f\u0131la\u015ft\u0131rma; MPa; karter di\u015fi s\u0131yr\u0131lmas\u0131 ve s\u00f6n\u00fcmleyici kapasitesi a\u00e7\u0131k konu (Limbach verisi)"
+  },
+  {
+   "item": "15 g forward crash retention (engine pushes into the mount, truss in compression)",
+   "applied": 1284.0,
+   "allowable": null,
+   "MS": null,
+   "basis": "N; carried by the welded truss in compression (detail sizing of the 4130 tubes)",
+   "item_tr": "15 g ileri \u00e7arpma tutmas\u0131 (motor kafese basar, kafes bas\u0131da)",
+   "basis_tr": "N; kaynakl\u0131 kafes bas\u0131yla ta\u015f\u0131r (4130 borular\u0131n ayr\u0131nt\u0131l\u0131 boyutland\u0131rmas\u0131)"
+  }
+ ],
+ "n_objects": 130,
+ "close_pairs": 178,
+ "timing_s": {
+  "ids": 0.0,
+  "stations": 0.25,
+  "inside": 2.08,
+  "overlaps": 0.79,
+  "mechanisms": 3.58,
+  "cg": 0.03,
+  "fov_rf": 0.0,
+  "keepouts": 0.2,
+  "shell": 0.0,
+  "access": 0.0,
+  "assembly": 0.0,
+  "mech_defs": 0.0,
+  "presizing": 0.0
+ },
+ "elapsed_s": 7.0,
+ "cg": {
+  "cg_spec": [
+   2.6559,
+   -0.0014,
+   0.0523
+  ],
+  "cg_layout": [
+   2.6558,
+   -0.0014,
+   0.0523
+  ],
+  "empty_kg": 101.376
+ }
+}

@@ -183,17 +183,17 @@ def stations() -> list:
          cut("C-FW-FUEL", "fuel feed/return (fireproof bulkhead unions + fire sleeve)", [0.030, 0.060],
              [0.020, 0.050]),
          cut("C-FW-HARN", "engine harness / SG750 power (fireproof grommets; fix round 2: lowered below the "
-             "lower engine-mount feet so that the 85 mm solid land around each foot keeps an uninterrupted core-shear "
+             "lower engine-mount feet so that the 82 mm solid land around each foot keeps an uninterrupted core-shear "
              "perimeter, structures FW-FOOT-CORE; corners >= inset + 20 mm edge band)", [0.080, 0.110],
              [-0.035, 0.000], mirror=True),
          cut("C-FW-PUSHROD", "stabilator pushrods (fireproof bellows boots)", [0.165, 0.195], [0.215, 0.262],
              mirror=True)],
         mat={"material": "cfrp_pw_mtm45_as4", "process": "prepreg_ooa_vacbag", "layup": "rib_panel", "t": 0.0148,
-             "construction": "stack-up forward -> aft: CFRP sandwich bulkhead (layups.rib_panel, 6.8 mm) / 7.5 mm "
+             "construction": "stack-up forward -> aft: CFRP sandwich bulkhead (layups.rib_panel, 6.8 mm) / 7.6 mm "
                              "air gap on 12 stainless stand-offs (insulation blanket optional, material to be "
-                             "selected) / 0.5 mm AISI 304 stainless sheet (fireproof without test: >= 0.38 mm, "
+                             "selected) / 0.4 mm AISI 304 stainless sheet (fireproof without test: >= 0.38 mm, "
                              "standards.yaml FIRE-001, CS-VLA 1191), riveted to a stainless edge angle; overall "
-                             "14.8 mm", "shield_material": "ss_304_annealed", "shield_t": 0.0005},
+                             "14.8 mm", "shield_material": "ss_304_annealed", "shield_t": 0.0004},
         name_tr="yangın perdesi")
     add("FS3738", X_RING, "engine-bay lower U-ring (metallic, in the hot zone): ventral rear fitting, aft keel beam, "
         "lower cowl intermediate land; its upper ends are riveted to the feet of the outboard cheeks of the stabilator "

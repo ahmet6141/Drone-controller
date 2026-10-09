@@ -117,13 +117,13 @@ def equipment(L: dict) -> list:
                     connector=f"{it.get('connector_face', '+x')} face, {1000 * float(it.get('connector_allowance', 0)):.0f}"
                               " mm allowance", extra={"envelope_with_connector": r3(env["envelope"].tolist())}))
     E.append(eq("EQ-MC", "YK250-PL-850", "mission computer / recorder + video encoder",
-                "görev bilgisayarı / kayıtçı + video kodlayıcı", "payload", [[1.860, -0.070, -0.120],
-                                                                             [2.040, 0.070, -0.045]], 1.0,
+                "görev bilgisayarı / kayıtçı + video kodlayıcı", "payload",
+                [[X_PFR + 0.040, -0.070, -0.120], [X_PFR + 0.220, 0.070, -0.045]], 1.0,
                 {"zone": "mission_computer", "tray": "YK250-CH-120 removable tray in the floor cut-out (lowered out "
                                                      "through P-MBHATCH, fix round 1 VPK-03)"},
                 "baseline.yaml#payload_set mission computer and recorder 1.0 kg; allocation box (estimate)"))
     E.append(eq("EQ-ECU", "YK250-PR-510", "engine ECU (Limbach)", "motor kontrol birimi", "propulsion",
-                [[X_FUELF - 0.1555, -0.110, -0.128], [X_FUELF - 0.0355, -0.030, -0.078]], 0.8,
+                [[X_FUELF - 0.1155, -0.060, -0.128], [X_FUELF - 0.0355, 0.060, -0.078]], 0.8,
                 {"zone": "mission bay, on the removable equipment tray (fix round 1, VPK-03: lowered out through "
                          "P-MBHATCH; out of the engine-bay heat and vibration)", "tray": "YK250-CH-120"},
                 "engine.installed_items_kg.ecu_harness_ignition_coils 0.8 kg (coils on the engine); allocation box "
@@ -146,22 +146,30 @@ def equipment(L: dict) -> list:
                 "crank + pushrod to the trunnion door (fix round 2, PK2-03: both doors open before and close after the "
                 "leg moves)", mirror=True))
     nd_src = ("fix round 2 (PK2-13): the clamshell doors open before and close after the leg moves (sequence "
-              "gear_retraction), which a leg-driven link cannot do; one DA 22 per door (components.yaml volz_da22_28v "
-              "41.5 x 65.9 x 22 mm, 0.132 kg; mass.rules.gear_doors.inner_door_actuator count 4): shaft along x, crank "
-              "+ pushrod in the plane x 1.095 (between the side-bay contents and FS1110) through a bushed hole in the "
-              "keel-wall land to the horn at the aft end of the door hinge; over-centre lock in the closed position")
-    E.append(eq("EQ-NDOORACT-R", "YK250-LG-678", "nose-door actuator Volz DA 22 (28 V), starboard",
-                "burun kapağı eyleyicisi DA 22, sağ", "gear",
-                [[1.0370, 0.1345, -0.0740], [1.0370 + 0.0659, 0.1345 + 0.0415, -0.0740 + 0.0220]], 0.132,
-                {"zone": "aft outboard corner of the starboard avionics side bay on the forward face of FS1110, outboard "
-                         "of EQ-DATALINK_PRIMARY (its removal path through P-SIDEBAY-R stays free)",
-                 "tray": "bracket on FS1110 (off the isolated tray YK250-CH-122)"}, nd_src, extra={"mass_item": "gear_doors_wells_locks_sensors"}))
-    E.append(eq("EQ-NDOORACT-L", "YK250-LG-679", "nose-door actuator Volz DA 22 (28 V), port",
-                "burun kapağı eyleyicisi DA 22, sol", "gear",
+              "gear_retraction), which a leg-driven link cannot do; ONE DA 22 drives both doors (components.yaml "
+              "volz_da22_28v 41.5 x 65.9 x 22 mm, 0.132 kg; mass.rules.gear_doors.inner_door_actuator count 3 = 2 main "
+              "+ 1 nose; mass closure of fix round 2): shaft along x, crank + pushrod in the plane x 1.095 (between the "
+              "side-bay contents and FS1110) through a bushed hole in the port keel-wall land to a centre-line bellcrank "
+              "on the forward face of FS1110; two links from the bellcrank arms to the horns on the aft extensions of "
+              "the two door hinge pins (bearing blocks on FS1110): mirror-symmetric door motion; over-centre lock in "
+              "the closed position (envelope NDOOR-LINKAGE, aft of the stowed tyre)")
+    z_nd0 = round(z_bot(1.096, 0.0415) + 0.010, 4)
+    E.append(eq("EQ-NDOORACT", "YK250-LG-678", "nose-door actuator Volz DA 22 (28 V), drives both clamshell doors",
+                "burun kapağı eyleyicisi DA 22 (iki kapak)", "gear",
                 [[1.0370, -0.1200, -0.1100], [1.0370 + 0.0659, -0.1200 + 0.0415, -0.1100 + 0.0220]], 0.132,
                 {"zone": "aft lower corner of the port avionics side bay on the forward face of FS1110 (under the "
                          "P-SIDEBAY-L opening)", "tray": "YK250-CH-118"}, nd_src,
-                extra={"mass_item": "gear_doors_wells_locks_sensors"}))
+                extra={"mass_item": "gear_doors_wells_locks_sensors",
+                       "drive_envelope": {"id": "NDOOR-LINKAGE", "part": "YK250-LG-679",
+                                          "box": r3([[1.0855, -0.0415, z_nd0], [1.1060, 0.0415, z_nd0 + 0.070]]),
+                                          "text": "swept envelope of the centre-line bellcrank (pivot bracket on the "
+                                                  "forward face of FS1110), the two door links and the horns on the "
+                                                  "hinge-pin extensions, over the door travel; between the keel walls, "
+                                                  ">= 18 mm aft of the stowed nose tyre",
+                                          "mass_kg": 0.05,
+                                          "mass_basis": "estimate: 7075 bellcrank 0.010 + pivot bracket and bearing "
+                                                        "0.010 + two links 0.010 + two horns 0.008 + two hinge-pin "
+                                                        "bearing blocks 0.010 (mass.rules.gear_doors.nose_door_drive)"}}))
     E.append(eq("EQ-STABACT", "YK250-FC-302", "stabilator actuator Volz DA 30", "stabilatör eyleyicisi DA 30",
                 "controls", [[3.5650, 0.0215, 0.2025], [3.6500, 0.1800, 0.2325]], 0.63,
                 {"zone": "forward face of the firewall (cool side)", "tray": "bracket on YK250-CH-013"},
@@ -270,8 +278,9 @@ def antennas() -> list:
                  "YK250-SH-354", "autopilot GNSS 1 (SSMA)", "under the GFRP avionics hatch; no ground plane needed "
                  "(components.yaml calian_hc977exf)"))
     A.append(ant("ANT-GNSS2", "YK250-SY-781", "GNSS antenna 2 Calian HC977EXF", "GNSS anteni 2",
-                 _sink([2.090, 0.150, 0.0], [0.0387, 0.0387, 0.0497], z_top(2.090, 0.150)), [0.0387, 0.0387, 0.0497],
-                 "YK250-SH-372", "autopilot GNSS 2 (dual-antenna heading, baseline 1.17 m)"))
+                 _sink([X_GNSS2, 0.150, 0.0], [0.0387, 0.0387, 0.0497], z_top(X_GNSS2, 0.150)), [0.0387, 0.0387, 0.0497],
+                 "YK250-SH-372", f"autopilot GNSS 2 (dual-antenna heading, baseline "
+                 f"{float(np.hypot(X_GNSS2 - 0.970, 0.150)):.2f} m)"))
     A.append(ant("ANT-C2A", "YK250-SY-782", "primary datalink antenna A (2.4 GHz omni dipole, SWA 1001-202)",
                  "birincil veri bağı anteni A", _sink([0.250, 0.0, 0.0], [0.013, 0.013, 0.109], 0.0),
                  [0.013, 0.013, 0.109], "YK250-SH-350",
@@ -428,7 +437,7 @@ def gear_actuators() -> list:
     envelopes, estimates; SAGITTA practice: DA-26-class EMAs for retraction and steering, components.yaml):
     main-gear retraction EMA on the trunnion axis ahead of the forward lug, nose-gear retraction EMA above the pivot
     (crank + over-centre drag link), nose-wheel steering DA 26 on the nose leg (moves with the leg: rest pose = gear
-    down, layout_check sweeps it with gear_retraction). The door drives are equipment (EQ-DOORACT, EQ-NDOORACT-R/-L)."""
+    down, layout_check sweeps it with gear_retraction). The door drives are equipment (EQ-DOORACT, EQ-NDOORACT + its linkage envelope NDOOR-LINKAGE)."""
     x0, y0, z0 = (float(v) for v in MG["trunnion"])
     xn, zn = float(NG["pivot"][0]), float(NG["pivot"][2])
     A = np.asarray(NG["axle_static"], float)

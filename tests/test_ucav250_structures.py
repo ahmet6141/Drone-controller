@@ -343,7 +343,7 @@ class TestStructures(unittest.TestCase):
         self.assertLess(min(ms["P-SPINE-AX"], ms["P-SPINE-LOCAL"]), 0.0)
 
     def test_firewall_foot_land_needed(self):
-        """S1-06 / VS2-06: without the 85 mm land and the denser core insert the firewall peak core shear at a lower
+        """S1-06 / VS2-06: without the 82 mm land and the denser core insert the firewall peak core shear at a lower
         engine foot fails; with the 66 mm land of fix round 1 the peak shear (x 1.23) fails as well."""
         D = copy.deepcopy(self.S["structures"]["sizing"])
         D["firewall"]["foot_land"].update(land_r_m=0.035, core="core_rohacell_51wf")
@@ -367,10 +367,32 @@ class TestStructures(unittest.TestCase):
                   "G-ROOF-TORSION", "FR-3738-SEG", "FR-3738-SEG-SH", "FR-3738-KEEL-BOLTS", "FR-3738-END-BOLTS",
                   "CT-KINK-BOLTS", "CT-KINK-BR", "CT-KINK-RIB", "CT-KINK-PLATE", "J-TRANS-WEB", "J-TRANS-ILSS",
                   "J-TRANS-RIB", "J-TRANS-CAP", "J-TRANS-SKIN", "T-SPINDLE-SPL-MT", "T-NODE-TEMP", "G-TOW-NLEG",
-                  "G-TOW-PIVOT", "DT-COND"):
+                  "G-TOW-PIVOT", "DT-COND", "J-TONGUE-TAPER", "J-TONGUE-TAPER-DROP", "G-NDOOR-DRIVE"):
             self.assertIn(i, ids, i)
         dt = next(r for r in self.rows if r["id"] == "DT-COND")
         self.assertLess(dt["applied"], 0.50)
+
+    def test_firewall_cutout_across_the_land_edge_detected(self):
+        """Fix round 2 (re-closure): a firewall cut-out crossing the land-edge circle of a lower engine foot
+        interrupts the core-shear perimeter - the engine-harness cut-out C-FW-HARN back at its round-1 place
+        (z 0.02-0.06) gives FW-FOOT-CORE < 0."""
+        S = copy.deepcopy(self.S)
+        st = next(s_ for s_ in S["layout"]["stations"] if s_["id"] == "FS3670")
+        next(c_ for c_ in st["cutouts"] if c_["id"] == "C-FW-HARN")["z"] = [0.020, 0.060]
+        c = SS.Ctx(S)
+        R = SS.Rows()
+        SS.check_frames(c, R, SS.check_ct_box(c, R, self.res["sized"]), SS.check_engine_mount(c, R))
+        self.assertLess({r["id"]: r["ms"] for r in R.rows}["FW-FOOT-CORE"], 0.0)
+
+    def test_tongue_ply_drop_rule_detected(self):
+        """Fix round 2 (mass closure): the tongue flange ply drop between the pins obeys the 1:20 rule; a drop to
+        0.5 mm over the pin spacing is flagged."""
+        D = copy.deepcopy(self.S["structures"]["sizing"])
+        D["wing_joint"]["tongue"]["flange_taper"]["t_min_m"] = 0.0005
+        c = SS.Ctx(copy.deepcopy(self.S), design=D)
+        R = SS.Rows()
+        SS.check_wing_joint(c, R, self.res["sized"])
+        self.assertLess({r["id"]: r["ms"] for r in R.rows}["J-TONGUE-TAPER-DROP"], 0.0)
 
     def test_shackle_pin_bending_detected(self):
         """VS2-01: the former d 6 4130 shackle pin fails in bending (Melcon-Hoblit) although it passes in shear."""

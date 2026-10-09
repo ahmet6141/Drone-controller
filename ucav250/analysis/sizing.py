@@ -1414,6 +1414,32 @@ def gear_door_joint_length(S: dict) -> float:
     return gear_door_geometry(S)["joint_total_m"]
 
 
+def cooling_installation_mass(S: dict) -> tuple[float, str]:
+    """Base mass (kg) + basis of the engine cooling / fire-protection installation. Concept: the baseline roll-up
+    mass.rules.cooling_firewall_kg (cowl skin in the shell). Fix round 2 (layout phase, mass closure of PK2-09): when
+    the layout defines the firewall stack and the heat protection, the item is re-based bottom-up - the layout's
+    stainless firewall layer (layout.chassis.engine_mount.firewall_stackup.mass) + the baffles / plenum / exit-lip
+    allowance (mass.rules.cooling_split, the non-firewall share of the roll-up) + the net masses of the heat-protection
+    inserts, shields, node baffles and metal cowl pieces (layout.heat_protection.mass)."""
+    MR = S["mass"]["rules"]
+    L = S.get("layout") or {}
+    fwm = (((L.get("chassis") or {}).get("engine_mount") or {}).get("firewall_stackup") or {}).get("mass")
+    hpm = (L.get("heat_protection") or {}).get("mass")
+    cs = MR.get("cooling_split")
+    if not (fwm and cs):
+        return float(MR["cooling_firewall_kg"]), ("baseline.yaml#mass_targets.systems_rollup_kg.cowling_cooling_ducts_"
+                                                  "baffles_firewall (cowl skin in the shell)")
+    hp = float(hpm["total_net_kg"]) if hpm else 0.0
+    m_c = float(cs["baffles_plenum_ducts_lip_kg"])
+    m = float(fwm["total_kg"]) + m_c + hp
+    return m, (f"fix round 2 bottom-up: stainless firewall layer {float(fwm['total_kg']):.3f} (layout.chassis.engine_"
+               f"mount.firewall_stackup.mass: sheet, edge angle, stand-offs, rivets) + baffles / plenum / ducts / exit lip "
+               f"{m_c:.3f} (baseline 1 m2 x 1 kg/m2 composite allowance minus the cowl skin "
+               f"{float(cs['cowl_skin_area_m2']):.3f} m2 booked in the shell, mass.rules.cooling_split) + heat protection "
+               f"{hp:.3f} (layout.heat_protection.mass: stainless inserts, foil shields, node baffles, metal cowl pieces, "
+               "net of the composite they replace)")
+
+
 def gear_doors_mass(S: dict) -> dict:
     """V4-03 (fix round 5): base mass (kg, before the growth allowance) and position of the gear doors, wells, locks and
     door drives from the door scheme (landing_gear.doors) and mass.rules.gear_doors: door area x the areal mass of the
@@ -1434,9 +1460,17 @@ def gear_doors_mass(S: dict) -> dict:
              "cut_out_reinforcement": float(R["cut_out_reinforcement_kg"]), "locks_sensors": float(R["locks_sensors_kg"]),
              "inner_door_actuators": m_act, "inner_door_linkages": float(act["linkage_kg_each"]) * int(act["count"]),
              "leg_door_brackets": float(br["mass_kg_each"]) * int(br["count"])}
+    nd = R.get("nose_door_drive")
+    n_act = int(act["count"])
+    n_nose = max(n_act - 2, 0)                  # actuators beyond the two main inner-door drives drive the nose doors
+    if nd:
+        parts["nose_door_bellcrank_links"] = float(nd["bellcrank_links_kg"])
+    m_nd = (parts["inner_door_actuators"] + parts["inner_door_linkages"]) * n_nose / max(n_act, 1) + \
+        parts.get("nose_door_bellcrank_links", 0.0)
     m_main = (ak * (g["area_main_inner_m2"] + g["area_main_leg_m2"]) + seal * g["joint_main_m"] + 2.0 / 3.0 * fixed +
-              parts["inner_door_actuators"] + parts["inner_door_linkages"] + parts["leg_door_brackets"])
-    m_nose = ak * g["area_nose_m2"] + seal * g["joint_nose_m"] + fixed / 3.0
+              (parts["inner_door_actuators"] + parts["inner_door_linkages"]) * (n_act - n_nose) / max(n_act, 1) +
+              parts["leg_door_brackets"])
+    m_nose = ak * g["area_nose_m2"] + seal * g["joint_nose_m"] + fixed / 3.0 + m_nd
     total = sum(parts.values())
     return {"total_kg": total, "parts_kg": parts, "geometry": g, "sealed": sealed,
             "x": (m_main * g["x_main"] + m_nose * g["x_nose"]) / total}
@@ -4556,8 +4590,8 @@ def mass_items(S: dict, af: Airframe, wing_m: dict, tail_m: dict, shell: dict, l
     add("propeller", "propulsion", pr["mass_kg"], x_p, zt, "Mejzlik datasheet (propeller.mass_kg)")
     add("spinner_hub_adapter_spacer", "propulsion", MR["spinner_hub_spacer_kg"], xh + 0.07, zt,
         "baseline.yaml#mass_targets.systems_rollup_kg.spinner_and_hub_adapter 0.40 + 0.10 hub spacer (endurance study)")
-    add("cooling_baffles_firewall_cowl_flap", "propulsion", MR["cooling_firewall_kg"], xh - 0.22, zt + 0.03,
-        "baseline.yaml#mass_targets.systems_rollup_kg.cowling_cooling_ducts_baffles_firewall (cowl skin in the shell)")
+    m_cool, b_cool = cooling_installation_mass(S)
+    add("cooling_baffles_firewall_cowl_flap", "propulsion", m_cool, xh - 0.22, zt + 0.03, b_cool)
     add("dorsal_cooling_inlet_s_duct", "propulsion", MR["cooling_inlet_duct_kg"], xh - 0.55, zt + 0.10,
         "identity study INLET['sduct'] duct mass (estimate)")
     n_cells = len(S["layout"].get("fuel_cells") or []) or (3 if float(S["layout"]["rules"]["fuel_cell_aft_length"]) > 0
@@ -4602,7 +4636,9 @@ def mass_items(S: dict, af: Airframe, wing_m: dict, tail_m: dict, shell: dict, l
            f"{gg['joint_total_m']:.2f} m of joint) + " if gd["sealed"] else "") +
         f"inner-door actuators {gpk['inner_door_actuators']:.3f} ({int(GR['inner_door_actuator']['count'])} x "
         f"{GR['inner_door_actuator']['model']}, datasheet) + their linkages {gpk['inner_door_linkages']:.2f} + leg-door "
-        f"standoff brackets {gpk['leg_door_brackets']:.2f} (estimates)")
+        f"standoff brackets {gpk['leg_door_brackets']:.2f}" +
+        (f" + nose-door bellcrank, links and horns {gpk['nose_door_bellcrank_links']:.2f}"
+         if "nose_door_bellcrank_links" in gpk else "") + " (estimates)")
     # V3-02 (fix round 4): positions of the avionics/power items = mass-weighted centres of their packed contents
     # (layout.rules.bay_contents: real envelopes in the nose deck above the nose-gear well and in the side bays)
     ax_, ay_, az_ = bay_content_centroid(S, ("autopilot", "datalink_primary", "datalink_backup", "transponder",
@@ -4661,7 +4697,8 @@ def mass_items(S: dict, af: Airframe, wing_m: dict, tail_m: dict, shell: dict, l
     add("turret_bay_frame_guides", "chassis", MR["turret_bay_frame_kg"], tb[0], tb[2], "estimate: cut-out frame + "
         "linear-guide mounts around the 0.22 m belly opening")
     add("floors_trays_rails", "chassis", 1.20 + float(smc.get("floors_trays_rails_add_kg", 0.0)), 1.4, -0.02,
-        "endurance study" + (f"{st_note}: well-roof layup fuel_floor_wellroof + mission-bay floor stiffener "
+        "endurance study" + (f"{st_note}: well-roof layup fuel_floor_wellroof + mission-bay floor stiffeners + "
+                             "well-roof fitting doublers + solid deck strip over the nose keel slot "
                              f"{float(smc['floors_trays_rails_add_kg']):+.3f} kg" if "floors_trays_rails_add_kg" in smc
                              else ""))
     add("hatch_frames_quick_access_fasteners", "chassis", MR["hatch_frames_kg"], 1.5, 0.08, "endurance study 0.80 + "

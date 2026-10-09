@@ -84,8 +84,15 @@ def members() -> list:
     M.append(member("M-DECK-NOSE", "YK250-CH-022", "avionics deck", "aviyonik güverte",
                     "horizontal deck above the nose-gear well, chine to chine: PDU and power-switching equipment "
                     "tray, roof of the keel slot and of the side bays, upper chord of the nose box",
-                    "cfrp_pw_mtm45_as4", "prepreg_ooa_vacbag", {"type": "flat sandwich deck (rib_panel)", "t": T_SW},
-                    {"box": r3([[0.6034, -0.30, 0.0140], [1.1066, 0.30, 0.0140 + T_SW]]), "sides": "skin"},
+                    "cfrp_pw_mtm45_as4", "prepreg_ooa_vacbag",
+                    {"type": "flat sandwich deck (rib_panel); over the keel slot (between the keel walls) a solid PW "
+                             "strip of 6 plies (1.2 mm) at the upper-face level, core ramped out 1:3 over the keel walls "
+                             "(fix round 2: 12 mm clearance to the stowed nose tyre; structures.sizing.body."
+                             "deck_slot_strip)", "t": T_SW},
+                    {"box": r3([[0.6034, -0.30, 0.0140], [1.1066, 0.30, 0.0140 + T_SW]]), "sides": "skin",
+                     "boxes": r3([[[0.6034, -0.30, 0.0140], [1.1066, -0.0415, 0.0140 + T_SW]],
+                                  [[0.6034, 0.0415, 0.0140], [1.1066, 0.30, 0.0140 + T_SW]],
+                                  [[0.6034, -0.0415, 0.0140 + T_SW - 0.0012], [1.1066, 0.0415, 0.0140 + T_SW]]])},
                     "equipment inertia -> deck -> keel walls + chine longerons -> FS0600 / FS1110",
                     layup="rib_panel", touch=["ST-FS0600", "ST-FS1110", "M-KEELWALL", "M-CHINE"]))
     tb = ZP["turret_bay"]["box"]

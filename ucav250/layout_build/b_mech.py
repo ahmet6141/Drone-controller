@@ -149,8 +149,9 @@ def mechanisms() -> dict:
                        expr=f"{90 * DEG:.5f}*(1-clamp((gear_up-0.85)/0.15,0,1))", side=sd,
                        moves=f"YK250-LG-674-{sd}",
                        notes="clamshell hinged at the keel-slot edge; open (90 deg, hanging) whenever the gear is not "
-                             "up-locked, closed for gear_up > 0.85 + 0.15; driven by its own DA 22 (EQ-NDOORACT-R/-L, fix "
-                             "round 2 PK2-13: a leg-driven link cannot close the doors while the leg stands still)"))
+                             "up-locked, closed for gear_up > 0.85 + 0.15; driven together with the other door by one "
+                             "DA 22 (EQ-NDOORACT, centre-line bellcrank and links NDOOR-LINKAGE; fix round 2 PK2-13: a "
+                             "leg-driven link cannot close the doors while the leg stands still)"))
     # ---------------------------------------------------------------- turret elevator + sliding bay doors
     xt = X_TUR
     zr = float(TU["ball_center_retracted_z"])
@@ -621,37 +622,57 @@ def sweep_keep_outs(L: dict) -> list:
     return K
 
 
+HS_SHEET_T = 0.0004        # stainless 304 insert sheet (>= 0.38 mm fireproof without test, standards.yaml FIRE-001)
+HS_FOIL_T = 0.0001         # stainless 304 heat-shield foil on stand-offs
+HS_STANDOFF_KG_M2 = 0.30   # stand-offs + rivnuts of a foil shield (one per 100 x 100 mm, ~3 g each; estimate)
+HS_LAP_W = 0.020           # riveted lap of an insert on the solid composite land
+HS_RIVET = (0.025, 0.0005)  # rivet pitch (m) and mass (kg) of a 3.2 mm stainless blind rivet (estimate)
+NODE_BAFFLE = (0.070, 0.060)  # stainless baffle between the cylinder heads and each node boss (m x m)
+
+
 def heat_protection(K: list) -> dict:
-    """Fix round 2 (PK2-09): heat protection of the engine bay (layout_check C08): stainless inserts that replace the
-    composite where a panel comes within the unshielded exhaust margin (the stack exit through the lower cowl, the
-    lower edge of the stub-root strip), heat shields over composite surfaces between the shielded and the unshielded
-    margin, and the metal-only hardware inside the hot zones with its temperature basis. Starboard regions (port
-    mirrored); region boxes = the exhaust routing boxes grown by the unshielded margin."""
+    """Fix round 2 (PK2-09): heat protection of the engine bay (layout_check C08). Composite within the SHIELDED margin
+    (25 mm) of an exhaust routing box is replaced by a riveted stainless insert; composite between the shielded and the
+    unshielded margin (25-50 mm) carries a stainless foil heat shield on stand-offs; metal-only hardware inside the hot
+    zones is listed with its temperature basis. Region boxes: each exhaust routing box grown by the margin (union of
+    the boxes; a point outside a box grown by m is more than m away from it); starboard, port mirrored. The parts'
+    areas and net masses are added by heat_protection_mass (fix round 2, mass closure)."""
     ex = next(k for k in K if k["id"] == "KO-EXHAUST-R")
     B = np.asarray(ex["boxes"], float)
-    m = float(ex["margin_composite"])
-    reg = r3([(B[:, 0, :].min(axis=0) - m).tolist(), (B[:, 1, :].max(axis=0) + m).tolist()])
+    m_sh, m_un = float(ex["margin_composite_shielded"]), float(ex["margin_composite"])
+    reg_in = [r3([(b[0] - m_sh).tolist(), (b[1] + m_sh).tolist()]) for b in B]
+    reg_sh = [r3([(b[0] - m_un).tolist(), (b[1] + m_un).tolist()]) for b in B]
+    t_in, t_f = HS_SHEET_T * 1000, HS_FOIL_T * 1000
     return {
         "inserts": [
             {"id": "HS-COWL-EXIT", "part": "YK250-PR-520", "panel": "P-COWL-LO", "mirror": True,
-             "material": "ss_304_annealed", "region": reg,
-             "text": "stainless 304 exhaust-exit panel 0.5 mm riveted into the lower cowl half: every part of the cowl "
-                     "within 50 mm of the stack routing envelope is this insert (the stack passes through its exit "
-                     "cut-out with a 5 mm stand-off ring); the CFRP cowl starts outside it"},
-            {"id": "HS-STUBROOT", "part": "YK250-PR-521", "panel": "P-STUBROOT", "mirror": True,
-             "material": "ss_304_annealed", "region": reg,
-             "text": "stainless 304 lower section 0.5 mm of the stub-root strip where it comes within 50 mm of the "
-                     "stack envelope (screwed to the CFRP strip on a 20 mm lap)"}],
+             "material": "ss_304_annealed", "t": HS_SHEET_T, "regions": reg_in,
+             "text": f"stainless 304 exhaust-exit panel {t_in:.1f} mm (>= 0.38 mm, fireproof without test: standards.yaml "
+                     "FIRE-001) riveted on a 20 mm lap into the lower cowl half: every part of the cowl within 25 mm of "
+                     "the stack routing envelope (the boxes grown by 25 mm) is this insert; the stack passes through its "
+                     "exit cut-out with a 5 mm stand-off ring"}],
         "shields": [
+            {"id": "HS-COWL-SHIELD", "part": "YK250-PR-523", "panel": "P-COWL-LO", "mirror": True,
+             "material": "ss_304_annealed", "t": HS_FOIL_T, "regions": reg_sh, "exclude_regions": reg_in,
+             "text": f"stainless 304 foil {t_f:.1f} mm on 5 mm stand-offs (air gap) on the inner face of the CFRP lower "
+                     "cowl between 25 and 50 mm from the stack routing envelope (around the insert): the composite "
+                     "keeps the 25 mm shielded margin"},
+            {"id": "HS-STUBROOT", "part": "YK250-PR-521", "panel": "P-STUBROOT", "mirror": True,
+             "material": "ss_304_annealed", "t": HS_FOIL_T, "regions": reg_sh,
+             "text": f"stainless 304 foil {t_f:.1f} mm on 5 mm stand-offs on the inner face of the lower edge of the "
+                     "stub-root strip where it comes within 50 mm of the stack envelope (no part of the strip is "
+                     "within 25 mm: shield, no insert)"},
             {"id": "HS-STUB", "part": "YK250-PR-522", "surface": "stabilator_stub", "mirror": True,
-             "material": "ss_304_annealed", "region": reg,
-             "text": "stainless 304 foil 0.1 mm on 5 mm stand-offs (air gap) over the lower / inboard stub skin facing "
-                     "the stack: the CFRP stub keeps >= 25 mm (shielded margin) from the routing envelope"}],
+             "material": "ss_304_annealed", "t": HS_FOIL_T, "regions": reg_sh,
+             "text": f"stainless 304 foil {t_f:.1f} mm on 5 mm stand-offs (air gap) over the lower / inboard stub skin "
+                     "facing the stack: the CFRP stub keeps >= 25 mm (shielded margin) from the routing envelope"}],
         "hardware": [
             {"object": "F-SPINDLE-NODE", "basis": "machined 7075-T651 node (metal); inboard bearing 61805-ZZ (steel "
-             "shields, no elastomer seal) with high-temperature grease; a 0.5 mm stainless baffle between the cylinder "
-             "heads and the node (cooling-baffle extension) faces the boss; the 7075 strength at the node temperature "
-             "is an open item (structures T-NODE-* report the strength retention the margins need)"},
+             f"shields, no elastomer seal) with high-temperature grease; a {t_in:.1f} mm stainless baffle "
+             f"{NODE_BAFFLE[0] * 1000:.0f} x {NODE_BAFFLE[1] * 1000:.0f} mm between the cylinder heads and the node "
+             "(cooling-baffle extension) faces the boss; the 7075 strength at the node temperature is an open item "
+             "(structures T-NODE-* report the strength retention the margins need)",
+             "baffle": {"material": "ss_304_annealed", "t": HS_SHEET_T, "size": list(NODE_BAFFLE), "mirror": True}},
             {"object": "STAB-HORN", "basis": "7075 horn on the Ti spindle, all-metal rod end (steel ball / steel race, "
              "no PTFE liner)"},
             {"object": "EQ-STABACT-PUSHROD", "basis": "7075 tube pushrod, all-metal rod ends; the firewall passage "
@@ -659,4 +680,57 @@ def heat_protection(K: list) -> dict:
              "the 25 mm cylinder zone"}],
         "text": "C08 (fix round 2): composite shell panels and exposed tail lofts keep 25 mm from the cylinder-head "
                 "envelope and 50 mm from the exhaust envelope (25 mm behind a heat shield); inserts replace the "
-                "composite inside their region; every other object inside the hot zones is listed under 'hardware'"}
+                "composite inside their regions; every other object inside the hot zones is listed under 'hardware'"}
+
+
+def heat_protection_mass(hp: dict, areas: dict, L: dict) -> None:
+    """Fix round 2 (mass closure): areas (one side, layout_check.heat_protection_areas) and NET masses (both sides, kg,
+    before the growth allowance) of the heat-protection parts and of the metal cowl pieces, written into
+    layout.heat_protection: insert = sheet (area + 20 mm lap on the perimeter 4 sqrt(A)) + rivets at 25 mm - the
+    composite skin it replaces (sizing areal mass of the shell); shield = foil + stand-offs (on top of the composite);
+    node baffles = sheet + 15 % fasteners; metal shell panels = sheet - the composite skin they replace. Read by
+    sizing (item cooling_baffles_firewall_cowl_flap)."""
+    rho = float(S["materials"]["ss_304_annealed"]["density"])
+    am = Z.areal_masses(S)["shell"]
+    tot, rows = 0.0, []
+    for h in hp["inserts"]:
+        A = float(areas.get(h["id"], 0.0))
+        per = 4.0 * math.sqrt(max(A, 0.0))
+        m1 = (A + per * HS_LAP_W) * float(h["t"]) * rho + per / HS_RIVET[0] * HS_RIVET[1] - A * am
+        n = 2 if h.get("mirror") else 1
+        h["area_m2"], h["mass_net_kg"] = r3(A, 5), r3(n * m1, 4)
+        tot += n * m1
+        rows.append(h["id"])
+    for h in hp["shields"]:
+        A = float(areas.get(h["id"], 0.0))
+        m1 = A * (float(h["t"]) * rho + HS_STANDOFF_KG_M2)
+        n = 2 if h.get("mirror") else 1
+        h["area_m2"], h["mass_net_kg"] = r3(A, 5), r3(n * m1, 4)
+        tot += n * m1
+        rows.append(h["id"])
+    for h in hp["hardware"]:
+        bf = h.get("baffle")
+        if bf:
+            A = float(bf["size"][0]) * float(bf["size"][1])
+            m1 = 1.15 * A * float(bf["t"]) * rho
+            n = 2 if bf.get("mirror") else 1
+            bf["mass_net_kg"] = r3(n * m1, 4)
+            tot += n * m1
+            rows.append(h["object"] + " baffle")
+    metal = []
+    for p in L["shell"]["panels"]:
+        if p["id"] in areas and p.get("thickness_m"):
+            A = float(areas[p["id"]])
+            mat_ = S["materials"][p["material"]]
+            n = 2 if p.get("mirror") else 1
+            m1 = A * (float(p["thickness_m"]) * float(mat_["density"]) - am)
+            metal.append({"panel": p["id"], "material": p["material"], "area_m2": r3(A, 5), "mass_net_kg": r3(n * m1, 4)})
+            tot += n * m1
+            rows.append(p["id"])
+    hp["metal_panels"] = metal
+    hp["mass"] = {"total_net_kg": r3(tot, 4), "items": rows,
+                  "basis": "net masses of the parts above (both sides, before the growth allowance): inserts = stainless "
+                           "sheet incl. a 20 mm riveted lap + blind rivets at 25 mm - the composite shell skin they "
+                           f"replace ({am:.3f} kg/m2, sizing.areal_masses shell); foil shields + stand-offs "
+                           f"{HS_STANDOFF_KG_M2:.2f} kg/m2 (estimate); node baffles + 15 % fasteners; metal cowl pieces - "
+                           "the composite skin; added by sizing to cooling_baffles_firewall_cowl_flap (fix round 2)"}

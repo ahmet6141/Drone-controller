@@ -170,6 +170,13 @@ DESIGN = {
         "frame_land_plies": 16,
         "shear_wall_doubler_plies_per_face": 0,
         "midfloor_stiffeners": 2,
+        "deck_slot_strip": {"plies": 6,
+                            "text": "fix round 2 (re-closure): over the nose-gear keel slot (between the keel walls, y "
+                                    "+-0.0415) the avionics deck M-DECK-NOSE is a solid PW laminate of 6 plies (1.2 mm, the "
+                                    "two sandwich faces together) "
+                                    "at its upper-face level (core ramped out 1:3 over the keel walls): the stowed nose "
+                                    "tyre keeps the 12 mm tyre-to-well clearance (layout_check C05); equipment on it is "
+                                    "fixed with nutplates; span 83 mm between the keel walls"},
         "aft_keel": {"material": "al_7075_t651_plate", "process": "cnc_milling_metal", "w_m": 0.024, "h_m": 0.040,
                      "t_m": 0.0025,
                      "replaces": {"material": "al_2024_t3_sheet", "w_m": 0.024, "h_m": 0.040, "t_m": 0.0016},
@@ -205,10 +212,10 @@ DESIGN = {
         "socket": {"material": "al_7075_t651_plate", "od_m": 0.029, "length_m": 0.10,
                    "text": "stabilator root socket: 7075 sleeve 29 x 2 mm, 0.10 m, bonded and cross-bolted into the "
                            "stabilator root rib and spar (internal spline, cross-bolt M6)"},
-        "node": {"material": "al_7075_t651_plate", "base_t_m": 0.008, "cheek_t_m": 0.007, "inboard_web_t_m": 0.004,
+        "node": {"material": "al_7075_t651_plate", "base_t_m": 0.008, "cheek_t_m": 0.007, "inboard_web_t_m": 0.003,
                  "bearing_od_m": 0.037, "fill": {"base": 0.55, "outboard": 0.70},
                  "text": "machined 7075-T651 node F-SPINDLE-NODE (layout boxes = envelopes): base flange 8 mm with "
-                         "bolt bosses and edge rails (55 % of its envelope), inboard arm = 4 mm web carrying the bearing "
+                         "bolt bosses and edge rails (55 % of its envelope), inboard arm = 3 mm web carrying the bearing "
                          "boss (the layout cylinder: OD 42 = 2 x tail spindle_housing_radius, bore 37 for the 61805, "
                          "30 mm long), outboard cheek 7 mm with pockets outside the torsion band (70 %); the stub root "
                          "moment is carried by the outboard cheek in torsion (open section b t^3/3) into the base "
@@ -262,15 +269,16 @@ DESIGN = {
         "core_insert": {"core": "core_rohacell_71wf", "area_m2": 0.12,
                         "text": "ROHACELL 71 WF core in the lower and outboard part of the firewall (y +-0.01..0.25, "
                                 "z 0.02..0.27: lower engine feet and stabilator-node bases), core splice to the 51 WF"},
-        "foot_land": {"core": "core_rohacell_71wf", "core_insert_m": 0.20, "land_plies": 22, "land_r_m": 0.085,
+        "foot_land": {"core": "core_rohacell_71wf", "core_insert_m": 0.20, "land_plies": 22, "land_r_m": 0.082,
                       "core_shear_peak_factor": 1.23,
                       "peak_basis": "fix round 2 (VS2-06): the core shear round the land is not uniform (the nearest "
                                     "edge support draws more of the foot load); peak / mean = 1.23 from the review's "
                                     "plate-shear distribution (structures-2 VS2-06; no own FE), applied to the mean "
-                                    "tau = P / (2 pi r d); land radius 66 -> 85 mm to restore the margin",
+                                    "tau = P / (2 pi r d); land radius 66 -> 82 mm to restore the margin (with the "
+                                    "engine-harness cut-out C-FW-HARN moved below the feet, fix round 2)",
                       "text": "lower engine-mount feet (F-EMOUNT-LO): the firewall sandwich gets a ROHACELL 71 WF core "
                               "insert 200 x 200 mm and a solid PW land of 22 plies (4.4 mm, core ramped out 1:3) of radius "
-                              "85 mm around each foot; the out-of-plane (x) foot load is carried by plate bending and core "
+                              "82 mm around each foot; the out-of-plane (x) foot load is carried by plate bending and core "
                               "shear to the firewall perimeter (no longeron at the lower feet)"},
         "plate_support_m": "distance from the foot to the nearest firewall edge support (fuselage contour - inset)",
     },
@@ -1379,12 +1387,12 @@ def check_wing_joint(c: Ctx, R: Rows, sized: dict) -> dict:
         R.add("J-TONGUE-TAPER", "wing joint", f"tongue UD flange ply drop {tf * 1000:.0f} -> {t_min * 1000:.0f} mm between "
               f"the pins: compression strain at the taper stations (worst at {w_tp[1] * 100:.0f} % of the pin spacing, "
               f"flange {w_tp[2] * 1000:.1f} mm)", f"pimler arasında dil UD başlığı kat düşürme {tf * 1000:.0f} -> "
-              f"{t_min * 1000:.0f} mm: inceltme istasyonlarında bası birim şekil değiştirmesi (en kötü pim aralığının "
-              f"%{w_tp[1] * 100:.0f}'inde, başlık {dec(w_tp[2] * 1000, 1)} mm)", ct, ct_tr, w_tp[0] * 1e6,
+              f"{t_min * 1000:.0f} mm: inceltme istasyonlarında bası birim şekil değiştirmesi (en kötü istasyon dış pimden "
+              f"x/s = {dec(w_tp[1])}, başlık {dec(w_tp[2] * 1000, 1)} mm)", ct, ct_tr, w_tp[0] * 1e6,
               c.dt["cap_comp"] * 1e6, "µε", total_factor(c), "M(y) linear from the outer pin to zero at the inner pin "
               "(tongue_moment) + F_y/2 axial; STANAG 4703 UL13.1.2 - fix round 2 (mass closure)", part="YK250-WG-151")
         R.add("J-TONGUE-TAPER-DROP", "wing joint", "tongue flange ply-drop slope (rise / run along the spar) vs the 1:20 "
-              "rule", "dil başlığı kat düşürme eğimi (spar boyunca yükselme / uzunluk), 1:20 kuralı", "geometry",
+              "rule", "dil başlığı kat düşürme eğimi (kiriş boyunca kalınlık değişimi / uzunluk), 1:20 kuralı", "geometry",
               "geometri", (tf - t_min) / L_tp, 1.0 / 20.0, "-", {"fos": 1.0, "special": 1.0, "total": 1.0,
                                                                   "text": "geometric rule"},
               "materials.yaml processes.composite_moulding taper_slope_main_load_direction (1:20 minimum)",
@@ -2742,6 +2750,22 @@ def check_gear(c: Ctx, R: Rows) -> dict:
            "ana iç kapak: kapalı konumda tutma momenti (gereksinim: ölü nokta bağlantısı veya kapak kilidi; DA 22 anma "
            f"torku {da22} N m için bağlantı oranı >= değer / {da22})", case_d, case_dtr, 1.5 * H_door, "N m",
            "ultimate holding moment; the actuator is not relied upon to hold the closed door", part="EQ-DOORACT")
+    # fix round 2 (PK2-13 / mass closure): ONE DA 22 drives both nose clamshell doors through the centre-line bellcrank
+    nb_ = np.asarray(LG["nose"]["stowed_envelope"]["box"], float)
+    A_nd = gdg["area_nose_m2"] / 2
+    w_nd = 0.5 * (nb_[1][1] - nb_[0][1])
+    H_nd = 1.0 * q_LO * A_nd * w_nd / 2
+    cs_nd = (f"nose clamshell doors operated at V_LO {V_LO:.1f} m/s EAS: suction |Cp| 1.0 x q {q_LO:.0f} Pa (bound) on "
+             f"{A_nd:.4f} m2 per door, hinge moment {H_nd:.2f} N m per door (limit); both doors on one actuator, "
+             "bellcrank ratio 1.0 (no mechanical-advantage credit)")
+    cs_nd_tr = (f"burun kapakları V_LO {dec(V_LO, 1)} m/s EAS'te işletilir: emme |Cp| 1,0 x q {q_LO:.0f} Pa (üst sınır), "
+                f"kapak başına {dec(A_nd, 4)} m2, kapak başına menteşe momenti {dec(H_nd, 2)} N m (limit); iki kapak tek "
+                "eyleyicide, kol oranı 1,0 (mekanik avantaj sayılmadı)")
+    R.add("G-NDOOR-DRIVE", "gear", "nose-door drive: one Volz DA 22 for both clamshell doors (EQ-NDOORACT, bellcrank "
+          "NDOOR-LINKAGE), required torque vs rated torque", "burun kapağı tahriki: iki kapak için tek Volz DA 22 "
+          "(EQ-NDOORACT, kol NDOOR-LINKAGE), gerekli tork / anma torku", cs_nd, cs_nd_tr, 2 * H_nd, da22, "N m",
+          dict(total_factor(c), text="FoS 1.5 (functional)"), "components.yaml volz_da22_28v rated torque; the closed "
+          "doors are held by the over-centre lock, not by the actuator", part="EQ-NDOORACT")
     return {"ground": {k: v for k, v in GL.items() if k not in ("main_cases", "nose_cases")}, "V_LO": V_LO,
             "T_main_ema_req": 1.25 * T_main, "T_nose_ema_req": 1.25 * T_nose, "door_hinge_moment": H_door,
             "main_cases": out["cases"]}
@@ -3137,7 +3161,7 @@ def check_frames(c: Ctx, R: Rows, ct: dict, em: dict) -> dict:
     R.add("FW-FOOT-CORE", "frames", f"firewall sandwich at the lower foot: peak core shear at the land edge "
           f"({core['name']} insert; peak / mean {kpk:.2f}; {f_cut * 100:.1f} % of the edge circle in cut-outs)",
           f"alt ayakta yangın perdesi sandviçi: bant kenarında en büyük çekirdek kesmesi ({core['name']} parçası; "
-          f"tepe / ortalama {dec(kpk)}; kenar çemberinin %{dec(f_cut * 100, 1)}'i kesiklerde)", cs,
+          f"tepe / ortalama {dec(kpk)}; kesiklerde kalan kenar çemberi payı %{dec(f_cut * 100, 1)})", cs,
           cs_tr, kpk * P / (2 * math.pi * r_l * (1.0 - f_cut) * d_s) / 1e6, float(core["Fsu"]) / 1e6, "MPa", fu,
           "tau_peak = k P / (2 pi r (1 - f_cut) d), k from the plate-shear distribution (fix round 2, VS2-06), f_cut = "
           "share of the land-edge circle inside the FS3670 cut-outs; core minimum value", part="FS3670")
@@ -3222,9 +3246,9 @@ def check_frames(c: Ctx, R: Rows, ct: dict, em: dict) -> dict:
     Lsg = float(SG["span_y_m"])
     M_sg = R38 * Lsg / 4
     R.add("FR-3738-SEG", "frames", f"FS3738 lower segment (machined 7075 I {hs_ * 1000:.0f} x {bf_ * 1000:.0f} x "
-          f"{tf_ * 1000:.0f} / {tw_ * 1000:.1f} mm, span {Lsg:.2f} m between the ring legs): bending under the keel "
+          f"{tf_ * 1000:.1f} / {tw_ * 1000:.1f} mm, span {Lsg:.2f} m between the ring legs): bending under the keel "
           "reaction (simply supported, load at mid-span)", f"FS3738 alt parçası (talaşlı 7075 I {hs_ * 1000:.0f} x "
-          f"{bf_ * 1000:.0f} x {tf_ * 1000:.0f} / {dec(tw_ * 1000, 1)} mm, halka bacakları arası {dec(Lsg)} m): omurga "
+          f"{bf_ * 1000:.0f} x {dec(tf_ * 1000, 1)} / {dec(tw_ * 1000, 1)} mm, halka bacakları arası {dec(Lsg)} m): omurga "
           "tepkisi altında eğilme (basit mesnetli, yük ortada)", cs38, cs38_tr, M_sg * hs_ / 2 / I_sg / 1e6,
           float(msg["Fty"]) / 1e6, "MPa", total_factor(c), "M = R L / 4; Fty - fix round 2, VS2-03", part="FS3738")
     R.add("FR-3738-SEG-SH", "frames", "FS3738 lower segment web shear at the ring legs", "FS3738 alt parçası gövde "
@@ -4116,12 +4140,18 @@ def mass_tally(c: Ctx, sized: dict) -> dict:
             (int(SG["keel_bolts"]) + 2 * int(SG["end_bolts"])) * 0.004
     n_rd = int(D["gear"].get("roof_fitting_doubler_plies_per_face", 0))
     m_rd = 2 * 2 * n_rd * t_pw * 0.15 * 0.10 * rho_pw                 # 2 sides x 2 faces
-    bu_C = m_floor + m_web_c + m_stf + m_ak + m_fwland + m_fwcore + m_seg + m_rd
+    DS = D["body"].get("deck_slot_strip")
+    m_ds = 0.0
+    if DS and "M-DECK-NOSE" in mem:
+        db_ = mem["M-DECK-NOSE"]["box"]
+        m_ds = (db_[1][0] - db_[0][0]) * 0.083 * (int(DS["plies"]) * t_pw * rho_pw - a_old)
+    bu_C = m_floor + m_web_c + m_stf + m_ak + m_fwland + m_fwcore + m_seg + m_rd + m_ds
     out["C_chassis_changes"] = {"bottom_up_kg": bu_C, "allocation_kg": 0.0, "delta_kg": bu_C,
                                 "items": {"fuel_floors_layup_delta": m_floor, "well_web_M-WELLKEEL": m_web_c,
                                           "midfloor_stiffeners": m_stf, "aft_keel_delta": m_ak,
                                           "firewall_foot_lands": m_fwland, "firewall_core_insert": m_fwcore,
-                                          "fs3738_lower_segment_delta": m_seg, "well_roof_fitting_doublers": m_rd}}
+                                          "fs3738_lower_segment_delta": m_seg, "well_roof_fitting_doublers": m_rd,
+                                          "deck_slot_strip_delta": m_ds}}
     # (D) stabilator spindles, sockets, node fittings, bearings
     sp = D["tail"]["spindle"]
     node = [f for f in S["layout"]["chassis"]["fittings"] if f["id"] == "F-SPINDLE-NODE"][0]
@@ -4342,7 +4372,8 @@ def mass_block(mt: dict) -> dict:
         "chassis": {"carry_through_kg": r(B["bottom_up_kg"]),
                     "keel_beams_longerons_add_kg": r(C["well_web_M-WELLKEEL"] + C["aft_keel_delta"]),
                     "floors_trays_rails_add_kg": r(C["fuel_floors_layup_delta"] + C["midfloor_stiffeners"] +
-                                                   C.get("well_roof_fitting_doublers", 0.0)),
+                                                   C.get("well_roof_fitting_doublers", 0.0) +
+                                                   C.get("deck_slot_strip_delta", 0.0)),
                     "frames_bulkheads_add_kg": r(C["firewall_foot_lands"] + C["firewall_core_insert"] +
                                                  C.get("fs3738_lower_segment_delta", 0.0)),
                     "stabilator_spindle_bearing_housings_kg": r(2 * (Dd["node_each"] + 2 * Dd["bearing_each_estimate"])),

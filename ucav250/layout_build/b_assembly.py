@@ -436,7 +436,8 @@ MAINTENANCE = [
      "fasteners": "Camloc", "primary_structure_removed": False,
      "notes": "nose leg on two flanged stub axles pushed outward into the pivot-block bushings from inside the yoke "
               "(assembly_paths nose_stub_axle_*); steering DA 26 on the aft face of the leg (gear down); nose-door "
-              "DA 22s EQ-NDOORACT-L / -R through the side-bay panels"},
+              "DA 22 EQ-NDOORACT through P-SIDEBAY-L, its bellcrank and links (NDOOR-LINKAGE) through the keel slot with "
+              "the gear down"},
     {"item": "wing joint pins, keepers, wing connector", "access": ["P-JOINTACCESS", "P-REARACCESS"],
      "fasteners": "Camloc / bayonet cap", "primary_structure_removed": False},
     {"item": "aileron / flap actuators", "access": ["outer-panel lower servo hatches (wing module)"],

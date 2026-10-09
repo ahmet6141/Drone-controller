@@ -152,10 +152,16 @@ def build() -> tuple[dict, dict]:
     out["fuel_lines"] = b_systems.fuel_lines()
     out["keep_outs"] += b_mech.sweep_keep_outs(out)
     out["heat_protection"] = b_mech.heat_protection(out["keep_outs"])
+    out["chassis"]["engine_mount"]["firewall_stackup"]["mass"] = b_loads.firewall_mass(out)
     from ..analysis import layout_check as LC
     S2 = copy.deepcopy(S)
     S2["layout"] = out
     round2_edits(S2)
+    # fix round 2 (mass closure): areas and net masses of the heat-protection parts and metal cowl pieces; the cowl
+    # skin area (booked in the shell item) for the cooling roll-up split
+    hpa = LC.heat_protection_areas(LC.Ctx(S2), out)
+    b_mech.heat_protection_mass(out["heat_protection"], hpa, out)
+    cooling_split(S2, hpa["cowl_skin_area_m2"])
     out["mass_placement"] = LC.mass_placements(LC.Ctx(S2), out)
     for k, v in out["mass_placement"].items():
         if k in SIZING_PHASE_POSITIONS:
@@ -184,24 +190,55 @@ def _unshare(o):
     return o
 
 
+COWL_SKIN_M2 = [None]          # cowl skin area of the last build (both sides), for the generated spec copy
+
+
+def cooling_split(S2: dict, cowl_m2: float) -> None:
+    """Fix round 2 (mass closure, PK2-09 heat protection booked): the engine cooling / fire-protection item is re-based
+    bottom-up on the layout (sizing.cooling_installation_mass). The baseline roll-up mass.rules.cooling_firewall_kg
+    (1.5 kg = "about 1 m2 composite cowl/ducts at about 1 kg/m2 + 0.38 mm stainless firewall about 0.45 kg",
+    baseline.yaml) is split: the stainless firewall layer and the heat protection come from the layout; the composite
+    share keeps the baseline areal rule on the baseline area minus the cowl skin, which the shell item already books
+    (P-COWL-* pieces, layout_check.heat_protection_areas)."""
+    COWL_SKIN_M2[0] = float(cowl_m2)
+    a_base, k_ar = 1.0, 1.0
+    S2["mass"]["rules"]["cooling_split"] = {
+        "baseline_composite_area_m2": a_base, "baseline_areal_kg_m2": k_ar,
+        "cowl_skin_area_m2": round(float(cowl_m2), 4),
+        "baffles_plenum_ducts_lip_kg": round(k_ar * (a_base - float(cowl_m2)), 4),
+        "note": "fix round 2: composite share of the baseline roll-up (about 1 m2 composite cowl/ducts at about 1 kg/m2, "
+                "baseline.yaml#mass_targets.systems_rollup_kg.cowling_cooling_ducts_baffles_firewall) minus the cowl "
+                "skin booked in the shell item = cylinder baffles, plenum, internal ducts and the exit lip (estimate); "
+                "the firewall layer (layout.chassis.engine_mount.firewall_stackup.mass) and the heat protection "
+                "(layout.heat_protection.mass) are bottom-up from the layout"}
+
+
 def round2_edits(S2: dict) -> None:
     """Fix round 2 consistent edits outside spec.layout (also applied to the spec copy the mass placement is computed
     on, so that build() is a fixed point)."""
     # PK2-06: the aileron DA 26 sits 0.16 m ahead of the hinge (deeper section); the four-bar of the sizing linkage
     # check uses the same base
     S2["wing"]["controls"]["aileron"]["linkage"]["pushrod_base_m"] = b_systems.AILERON_PUSHROD_BASE
-    # PK2-13: one Volz DA 22 per nose clamshell door (EQ-NDOORACT-R/-L) in addition to the two main inner-door drives; the
-    # trunnion doors are slaved to the inner-door drive (no actuator of their own)
+    # PK2-13: one Volz DA 22 for both nose clamshell doors (EQ-NDOORACT, centre-line bellcrank + two links, NDOOR-LINKAGE)
+    # in addition to the two main inner-door drives; the trunnion doors are slaved to the inner-door drive
     # VS2-10: the inboard spindle bearing sits in the firewall-mounted node fitting F-SPINDLE-NODE (VPK-01)
     src = S2["tail"]["surfaces"]["stabilator"]["controls"]["sources"]
     src["spindle"] = str(src["spindle"]).replace(
         "inboard bearing in an engine-bay ring frame beside the crankcase/SG750 (y >= 0.10 m + engine keep-out)",
         "inboard bearing in the firewall-mounted node fitting (layout F-SPINDLE-NODE, layout phase VPK-01; y >= 0.10 m "
         "+ engine keep-out; 61805-ZZ, fix round 2 PK2-09)")
+    if COWL_SKIN_M2[0] is not None:
+        cooling_split(S2, COWL_SKIN_M2[0])
     gda = S2["mass"]["rules"]["gear_doors"]["inner_door_actuator"]
-    gda["count"] = 4
+    gda["count"] = 3
     gda["note"] = ("fix round 2 (PK2-13): 2 main inner-door drives (EQ-DOORACT, each also driving the trunnion door "
-                   "through a second crank) + 2 nose clamshell-door drives (EQ-NDOORACT-R/-L)")
+                   "through a second crank) + 1 nose clamshell-door drive (EQ-NDOORACT) for both doors through a "
+                   "centre-line bellcrank (mass.rules.gear_doors.nose_door_drive)")
+    nde = next(e for e in S2["layout"]["systems"]["equipment"] if e["id"] == "EQ-NDOORACT")["drive_envelope"]
+    S2["mass"]["rules"]["gear_doors"]["nose_door_drive"] = {
+        "bellcrank_links_kg": nde["mass_kg"], "basis": nde["mass_basis"],
+        "note": "fix round 2: one DA 22 (counted in inner_door_actuator) drives both clamshell doors through this "
+                "bellcrank, two links and two horns on the hinge-pin extensions (layout NDOOR-LINKAGE)"}
 
 
 def generated_spec() -> dict:

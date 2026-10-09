@@ -48,7 +48,7 @@ def panel(pid, part, name, name_tr, surface, x, y, attach, fastening, material="
          "attach": attach, "fastening": fastening, "material": material,
          "process": "prepreg_ooa_vacbag" if layup else "sheet_metal_aluminium", "layup": layup}
     if not layup:
-        d["thickness_m"] = 0.001
+        d["thickness_m"] = 0.0008             # formed 6061-T6 cowl piece 0.8 mm (fix round 2)
     if outline is not None:                 # plan polygon [[x, y], ...] of a non-rectangular panel (x / y = its box)
         d["outline"] = r3(outline)
     if mirror:
@@ -191,7 +191,7 @@ def panels() -> list:
                          "and the chine longerons: shear path of the net bridle x-component (structures P-SPINE-SKIN); "
                          "GNSS 2 window cut-out", cutouts=[{"id": "P-GNSS2", "kind": "RF window insert"}]))
     X.append(panel("P-GNSS2", "YK250-SH-372", "GNSS 2 RF window", "GNSS 2 RF penceresi", "body_upper",
-                   [2.050, 2.130], [0.110, 0.190], "removable", INS, material=G, rf_window=True,
+                   r3([X_GNSS2 - 0.040, X_GNSS2 + 0.040]), [0.110, 0.190], "removable", INS, material=G, rf_window=True,
                    lands=["P-MB-UPPER"], notes="outboard of the spine flanges (no carbon above the antenna)"))
     X.append(panel("P-MBHATCH", "YK250-SH-373", "mission-bay hatch (belly)", "görev bölmesi kapağı", "body_lower",
                    [_frame_edge(X_PFR, 1.0), _frame_edge(X_FUELF, -1.0) + 0.003], [-0.155, 0.155], "removable", CAM,
@@ -333,7 +333,7 @@ def panels() -> list:
                    z_band=[0.262, 0.400], material="al_6061_t6_sheet", layup=None,
                    notes="fix round 1 (VPK-05): from the fin-root fairing down to the stub-root strip at the chine "
                          "(cowl split line); laps on the lower cowl aft of the stub root; fix round 2 (PK2-09): "
-                         "aluminium 6061-T6 sheet 1.0 mm (formed, removable): its lower edge comes within 25 mm of the "
+                         "aluminium 6061-T6 sheet 0.8 mm (formed, removable): its lower edge comes within 25 mm of the "
                          "cylinder-head envelope, where KO-CYL-HOT admits no composite"))
     X.append(panel("P-COWL-LO", "YK250-SH-451", "lower cowl, L/R halves", "alt motor kaportası, sağ/sol yarımlar",
                    "cowl_lower", [3.670, 4.000], [0.022, 0.236], "removable", cam_c, mirror=True,

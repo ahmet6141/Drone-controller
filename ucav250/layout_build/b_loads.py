@@ -91,9 +91,10 @@ def engine_mount(fittings: list) -> dict:
             "station": "FS3670", "aft_face_x": X_FW, "forward_face_x": r3(X_FW - 0.0148),
             "layers_fwd_to_aft": [
                 {"layer": "CFRP sandwich bulkhead (layups.rib_panel)", "t": 0.0068},
-                {"layer": "air gap on 12 stainless stand-offs (insulation blanket optional)", "t": 0.0075},
-                {"layer": "AISI 304 stainless sheet, fireproof without test (>= 0.38 mm, standards.yaml FIRE-001)",
-                 "t": 0.0005}],
+                {"layer": "air gap on 12 stainless stand-offs (insulation blanket optional)", "t": 0.0076},
+                {"layer": "AISI 304 stainless sheet 0.4 mm, fireproof without test (>= 0.38 mm, standards.yaml "
+                          "FIRE-001; fix round 2: 0.5 -> 0.4 mm, air gap 7.5 -> 7.6 mm, stack unchanged 14.8 mm)",
+                 "t": 0.0004}],
             "text": "layout.firewall_x is the AFT face (stainless shield); the stack lies forward of it so the "
                     "firewall_gap of the sizing (SG750 front 20 mm aft of the shield) is kept; penetrations only "
                     "through fireproof unions, grommets and bellows (stations FS3670 cut-outs); fuel cells >= 13 mm "
@@ -217,11 +218,10 @@ def trays() -> list:
     return [
         {"id": "TR-SIDEBAY-L", "part": "YK250-CH-118", "zone": "avionics_side_bays (port)",
          "spec": "CFRP flat tray 3 mm with potted M4 inserts, rigidly bolted (generator power electronics with its "
-                 "heat-sink plate on the side-bay hatch, brake actuator + master cylinder, port nose-door actuator EQ-NDOORACT-L on FS1110)"},
+                 "heat-sink plate on the side-bay hatch, brake actuator + master cylinder, nose-door actuator EQ-NDOORACT on FS1110, driving both clamshell doors)"},
         {"id": "TR-SIDEBAY-R", "part": "YK250-CH-122", "zone": "avionics_side_bays (starboard)",
          "spec": "CFRP flat tray 3 mm with potted M4 inserts on 4 elastomer isolators (autopilot with its IMU, datalinks, "
-                 "transponder; the starboard nose-door actuator EQ-NDOORACT-R sits on a bracket on FS1110, off the "
-                 "isolated tray; fix round 2, PK2-08: own part number, the two side-bay trays differ)"},
+                 "transponder; fix round 2, PK2-08: own part number, the two side-bay trays differ)"},
         {"id": "TR-FWDBAY", "part": "YK250-CH-119", "zone": "forward bay FS0300-FS0600",
          "spec": "CFRP tray on FS0300/FS0600 angles: buffer-battery box (upper, 2 straps + 1 connector) and the "
                  "FTS unit below it"},
@@ -289,3 +289,35 @@ def ground_handling() -> dict:
             "jacking": "no jacking points: two-person lift at the wing roots or the transport cradle saddles on the "
                        "FS1810 / FS-GEAR lower lands (structures TR-PAD / TR-FRAME) for gear work",
             "text": "fix round 2 (VS2-12)"}
+
+
+FW_STANDOFFS = (12, 0.004)          # stainless stand-offs + screws of the firewall shield (count, kg each; estimate)
+FW_EDGE_ANGLE_LEGS = 0.026          # stainless edge angle at the skin, 2 x 13 mm legs (rivet edge 2 D for 3.2 mm)
+
+
+def firewall_mass(L: dict) -> dict:
+    """Fix round 2 (mass closure): bottom-up mass of the firewall fireproof layer from the layout - the stainless sheet
+    over the FS3670 section (OML at firewall_x, minus the declared cut-outs), its riveted edge angle on the section
+    perimeter, the stand-offs and the rivets (pitch 25 mm). Read by sizing (cooling_baffles_firewall_cowl_flap)."""
+    em = L["chassis"]["engine_mount"]
+    st = next(s_ for s_ in L["stations"] if s_["id"] == "FS3670")
+    t = float(em["firewall_stackup"]["layers_fwd_to_aft"][-1]["t"])
+    rho = float(S["materials"]["ss_304_annealed"]["density"])
+    ph = np.radians(np.linspace(0.0, 360.0, 721))
+    Pf = af.fus.point(np.full_like(ph, float(L["firewall_x"])), ph)
+    y, z = Pf[:, 1], Pf[:, 2]
+    A = 0.5 * abs(float(np.sum(y * np.roll(z, -1) - np.roll(y, -1) * z)))
+    per = float(np.sum(np.hypot(np.diff(y), np.diff(z))))
+    A_cut = sum((2 if c_.get("mirror") else 1) * (c_["y"][1] - c_["y"][0]) * (c_["z"][1] - c_["z"][0])
+                for c_ in st.get("cutouts", []))
+    sheet = (A - A_cut) * t * rho
+    angle = per * FW_EDGE_ANGLE_LEGS * t * rho
+    stand = FW_STANDOFFS[0] * FW_STANDOFFS[1]
+    rivets = per / 0.025 * 0.0005
+    return {"section_area_m2": r3(A, 4), "cutouts_m2": r3(A_cut, 4), "perimeter_m": r3(per, 3),
+            "sheet_kg": r3(sheet, 4), "edge_angle_kg": r3(angle, 4), "standoffs_kg": r3(stand, 4),
+            "rivets_kg": r3(rivets, 4), "total_kg": r3(sheet + angle + stand + rivets, 4),
+            "basis": f"stainless 304 sheet {t * 1000:.1f} mm over the FS3670 section at layout.firewall_x minus the "
+                     f"cut-outs + edge angle 2 x 13 mm on the perimeter + {FW_STANDOFFS[0]} stand-offs "
+                     f"({FW_STANDOFFS[1] * 1000:.0f} g each, estimate) + blind rivets at 25 mm (0.5 g, estimate); "
+                     "read by sizing (cooling_baffles_firewall_cowl_flap, fix round 2)"}

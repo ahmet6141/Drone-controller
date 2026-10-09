@@ -713,12 +713,36 @@ def mass_placements(ctx: Ctx, L: dict | None = None) -> dict:
         basis="engine.installed_items_kg at the layout positions (engine on the inclined crank axis; ECU in the "
               "mission bay, fuel pump in the aft equipment bay, generator PE in the port avionics side bay)")
     fw = float(L["firewall_x"])
-    put("cooling_baffles_firewall_cowl_flap", [
-        ("firewall stainless shield + edge angle (section centroid)", 0.8, [fw - 0.0003, 0.0, 0.125]),
-        ("cylinder baffles + plenum", 0.6, ctx.engine_point(hub_face + 0.115, 0.0, 0.03)),
-        ("cowl-flap / exit lip parts", 0.1, [3.98, 0.0, 0.22])],
-        basis="split of the allowance (estimate): firewall shield 0.5 mm 304 sheet ~0.8 kg, baffles/plenum 0.6, exit "
-              "lip 0.1")
+    fwm = (L["chassis"]["engine_mount"].get("firewall_stackup") or {}).get("mass") or {}
+    cs_ = S["mass"]["rules"].get("cooling_split") or {"baffles_plenum_ducts_lip_kg": 0.7}
+    hp_ = L.get("heat_protection") or {}
+    m_cl = float(cs_["baffles_plenum_ducts_lip_kg"])
+    comps = [("firewall stainless layer + edge angle + stand-offs (section centroid)", float(fwm.get("total_kg", 0.8)),
+              [fw - 0.0002, 0.0, 0.125]),
+             ("cylinder baffles + plenum + ducts (6/7 of the composite allowance)", m_cl * 6.0 / 7.0,
+              ctx.engine_point(hub_face + 0.115, 0.0, 0.03)),
+             ("cowl exit lip parts (1/7)", m_cl / 7.0, [3.98, 0.0, 0.22])]
+    for h in hp_.get("inserts", []) + hp_.get("shields", []):
+        bx = np.asarray(_hp_boxes(h), float)
+        if float(h.get("mass_net_kg", 0.0)) > 0 and len(bx):
+            c_ = 0.5 * (bx[:, 0, :].min(axis=0) + bx[:, 1, :].max(axis=0))
+            comps.append((f"{h['id']} (heat protection)", float(h["mass_net_kg"]), [c_[0], 0.0 if h.get("mirror") else
+                                                                                  c_[1], c_[2]]))
+    for h in hp_.get("hardware", []):
+        if (h.get("baffle") or {}).get("mass_net_kg"):
+            nd_ = fit.get(h["object"])
+            comps.append((f"{h['object']} baffle", float(h["baffle"]["mass_net_kg"]),
+                          _pair(_box_c(nd_["box"])) if nd_ else ctx.engine_point(hub_face + 0.115, 0.0, 0.03)))
+    for mp in hp_.get("metal_panels", []):
+        pnl = next(p for p in L["shell"]["panels"] if p["id"] == mp["panel"])
+        xm = 0.5 * (pnl["x"][0] + pnl["x"][1])
+        zm = 0.5 * (pnl["z_band"][0] + pnl["z_band"][1]) if pnl.get("z_band") else ctx.z_top(xm)
+        if float(mp["mass_net_kg"]) > 0:
+            comps.append((f"{mp['panel']} metal cowl piece (net)", float(mp["mass_net_kg"]), [xm, 0.0, zm]))
+    put("cooling_baffles_firewall_cowl_flap", comps,
+        basis="sizing.cooling_installation_mass components at the layout objects: firewall stainless layer "
+              "(firewall_stackup.mass), baffles/plenum and exit-lip allowances (mass.rules.cooling_split), heat "
+              "protection (layout.heat_protection.mass, region centres)")
     inl = next(p for p in L["shell"]["panels"] if p["id"] == "P-INLET")
     put("dorsal_cooling_inlet_s_duct", [("inlet lip", 0.3, [0.5 * sum(inl["x"]), 0.0, 0.285]),
                                         ("S-duct", 0.7, [0.5 * (inl["x"][1] + fw), 0.0, 0.27])],
@@ -949,10 +973,13 @@ def _placements_round2(ctx: Ctx, L: dict, eqs: dict, put) -> None:
              ("main inner-door DA 22 + linkages (EQ-DOORACT)", n_main * (act_e + lnk_e),
               _pair(_box_c(eqs["EQ-DOORACT"]["box"]))),
              ("leg-door brackets", pk["leg_door_brackets"], door_c("main_leg_door_R"))]
-    nda = [k for k in ("EQ-NDOORACT-R", "EQ-NDOORACT-L") if k in eqs]
+    nda = [k for k in ("EQ-NDOORACT", "EQ-NDOORACT-R", "EQ-NDOORACT-L") if k in eqs]
     if cnt > 2 and nda:
-        comps.append(("nose-door DA 22 + linkages (EQ-NDOORACT-R/-L)", (cnt - 2) * (act_e + lnk_e),
+        comps.append(("nose-door DA 22 + crank/pushrod (EQ-NDOORACT)", (cnt - 2) * (act_e + lnk_e),
                       np.mean([_box_c(eqs[k]["box"]) for k in nda], axis=0).tolist()))
+    if pk.get("nose_door_bellcrank_links", 0.0) > 0 and nda and eqs[nda[0]].get("drive_envelope"):
+        comps.append(("nose-door bellcrank, links and horns (NDOOR-LINKAGE)", pk["nose_door_bellcrank_links"],
+                      _box_c(eqs[nda[0]]["drive_envelope"]["box"])))
     if pk.get("seals", 0.0) > 0:
         js = g["joint_main_m"] / max(g["joint_total_m"], 1e-9)
         comps += [("door seals (main)", pk["seals"] * js, wm), ("door seals (nose)", pk["seals"] * (1 - js), wn)]
@@ -1206,6 +1233,10 @@ def layout_objects(ctx: Ctx) -> list:
             if e["id"] == "EQ-STABACT":
                 O += _with_mirror(Obj("STAB-HORN", "YK250-TL-301", "linkage", horn_sweep(ctx, lk), "controls", "", (),
                                       "stabilator spindle horn swept over the stabilator range"), bool(e.get("mirror")))
+        de = e.get("drive_envelope")
+        if de:                      # fix round 2: swept envelope of a door drive linkage (bellcrank, links, horns)
+            O += _with_mirror(Obj(de["id"], de["part"], "linkage", [OBB.aabb(de["box"])], e.get("group", ""), "", (),
+                                  "layout.systems.equipment.drive_envelope"), bool(e.get("mirror")))
     return O
 
 
@@ -2642,14 +2673,86 @@ def _mirror_box(b) -> list:
     return [[b[0][0], -b[1][1], b[0][2]], [b[1][0], -b[0][1], b[1][2]]]
 
 
+def _hp_boxes(h: dict, key: str = "regions") -> list:
+    """Region boxes of a heat-protection entry ('region' = one box, 'regions' = a union of boxes), starboard."""
+    if key == "regions":
+        return list(h.get("regions") or ([h["region"]] if h.get("region") else []))
+    return list(h.get(key) or [])
+
+
 def _regions(lst: list, key: str, name: str) -> list:
     out = []
     for h in lst:
         if h.get(key) != name:
             continue
-        out.append(h["region"])
-        if h.get("mirror"):
-            out.append(_mirror_box(h["region"]))
+        for b in _hp_boxes(h):
+            out.append(b)
+            if h.get("mirror"):
+                out.append(_mirror_box(b))
+    return out
+
+
+def _aft_skin_samples(ctx: Ctx, x_lo: float, dx: float = 0.004, dph_deg: float = 0.75):
+    """OML samples of the aft body (x >= x_lo) with their surface-area weights (m2) and the upper-half flag."""
+    F = ctx.af.fus
+    xs = np.arange(x_lo, F.x1, dx)
+    ph = np.radians(np.arange(0.0, 360.0, dph_deg))
+    X, PH = np.meshgrid(xs, ph, indexing="ij")
+    SP = F.point(X.ravel(), PH.ravel()).reshape(len(xs), len(ph), 3)
+    dPx = np.gradient(SP, dx, axis=0)
+    dPp = np.gradient(SP, np.radians(dph_deg), axis=1)
+    dA = (np.linalg.norm(np.cross(dPx, dPp), axis=2) * dx * np.radians(dph_deg)).ravel()
+    return SP.reshape(-1, 3), dA, np.cos(PH.ravel()) >= 0.0
+
+
+def heat_protection_areas(ctx: Ctx, L: dict | None = None) -> dict:
+    """Fix round 2 (mass closure of PK2-09): areas (m2, ONE side) of the declared heat-protection parts on the OML -
+    panel inserts / shields: the panel's skin inside the declared region box (the same sampling as C08); tail-surface
+    shields: the share of the exposed loft points inside the region x the exposed wetted area of one surface; metal
+    shell panels (material not composite) aft of the firewall - 0.30 m: their skin area. Used by the layout builder to
+    book the net masses (layout.heat_protection.mass) that sizing adds to the engine-installation item."""
+    L = L if L is not None else ctx.L
+    hp = L.get("heat_protection") or {}
+    x_lo = float(L["firewall_x"]) - 0.30
+    SP, dA, UP = _aft_skin_samples(ctx, x_lo)
+    pnl = {p["id"]: p for p in L["shell"]["panels"]}
+
+    def panel_mask(p, sg=1.0):
+        ins = _in_poly(SP[:, :2], panel_poly(p, sg))
+        side = _surf_side(p["surface"])
+        if side != "any":
+            ins &= UP if side == "upper" else ~UP
+        if p.get("z_band"):
+            ins &= (SP[:, 2] >= p["z_band"][0]) & (SP[:, 2] <= p["z_band"][1])
+        return ins
+    out = {}
+    for kind in ("inserts", "shields"):
+        for h in hp.get(kind, []):
+            if h.get("panel"):
+                m = np.zeros(len(SP), bool)
+                for b in _hp_boxes(h):
+                    m |= _in_box(SP, b)
+                m &= panel_mask(pnl[h["panel"]])
+                for b in _hp_boxes(h, "exclude_regions"):
+                    m &= ~_in_box(SP, b)
+                out[h["id"]] = float(dA[m].sum())
+            elif h.get("surface"):
+                srf = ctx.af.tail[h["surface"]]
+                e = srf.span_coords()
+                C = _surface_cloud(ctx, srf, np.linspace(e[0], e[-1], 31))
+                C = C[~ctx.af.inside(C, 0.0)]
+                inb = np.zeros(len(C), bool)
+                for b in _hp_boxes(h):
+                    inb |= _in_box(C, b)
+                frac = float(inb.mean()) if len(C) else 0.0
+                out[h["id"]] = frac * float(ctx.af.exposed_area(ctx.af.tail_meshes[h["surface"]]))
+    cowl = 0.0
+    for p in L["shell"]["panels"]:
+        if p["x"][1] >= x_lo and not str(p.get("material", "")).startswith(("cfrp", "gfrp", "afrp")):
+            out[p["id"]] = float(dA[panel_mask(p)].sum())
+        if p["id"].startswith("P-COWL"):
+            cowl += sum(float(dA[panel_mask(p, sg)].sum()) for sg in _panel_sides(p))
+    out["cowl_skin_area_m2"] = cowl                    # all cowl pieces, both sides
     return out
 
 

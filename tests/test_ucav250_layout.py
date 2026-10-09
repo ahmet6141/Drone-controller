@@ -171,6 +171,37 @@ class TestLayoutContract(unittest.TestCase):
         self.assertIn("R-29", R)
         self.assertIn("R-30", R)
 
+    def test_one_nose_door_drive(self):
+        """Fix round 2 (PK2-13 + mass closure): one DA 22 drives both nose clamshell doors through a centre-line
+        bellcrank whose swept envelope is a layout object; the door-drive mass rule counts 3 actuators + the bellcrank."""
+        eq = [e for e in self.L["systems"]["equipment"] if e["id"].startswith("EQ-NDOORACT")]
+        self.assertEqual([e["id"] for e in eq], ["EQ-NDOORACT"])
+        self.assertIn("drive_envelope", eq[0])
+        gd = self.S["mass"]["rules"]["gear_doors"]
+        self.assertEqual(int(gd["inner_door_actuator"]["count"]), 3)
+        self.assertGreater(float(gd["nose_door_drive"]["bellcrank_links_kg"]), 0.0)
+
+    def test_heat_protection_booked_in_mass(self):
+        """Mass closure of PK2-09: every heat-protection part carries its area and net mass, and the engine cooling /
+        fire-protection item is the bottom-up sum: firewall layer + composite allowance (baseline 1 m2 minus the cowl
+        skin booked in the shell) + heat protection (sizing.cooling_installation_mass)."""
+        from ucav250.analysis import sizing as Z
+        hp = self.L["heat_protection"]
+        self.assertGreater(float(hp["mass"]["total_net_kg"]), 0.1)
+        for h in hp["inserts"] + hp["shields"]:
+            self.assertGreater(float(h["area_m2"]), 0.0, h["id"])
+        m, basis = Z.cooling_installation_mass(self.S)
+        fw = float(self.L["chassis"]["engine_mount"]["firewall_stackup"]["mass"]["total_kg"])
+        cs = self.S["mass"]["rules"]["cooling_split"]
+        self.assertAlmostEqual(cs["baffles_plenum_ducts_lip_kg"],
+                               cs["baseline_areal_kg_m2"] * (cs["baseline_composite_area_m2"] - cs["cowl_skin_area_m2"]),
+                               places=3)
+        self.assertAlmostEqual(m, fw + float(cs["baffles_plenum_ducts_lip_kg"]) + float(hp["mass"]["total_net_kg"]),
+                               places=6)
+        it = next(i for i in self.S["mass"]["items"] if i["name"] == "cooling_baffles_firewall_cowl_flap")
+        self.assertAlmostEqual(float(it["mass_base_kg"]), m, delta=1e-4)
+        self.assertIn("heat protection", it["basis"])
+
     def test_mass_placement_applied(self):
         items = {i["name"]: i for i in self.S["mass"]["items"]}
         for k, v in self.L["mass_placement"].items():
@@ -412,6 +443,26 @@ class TestChecksDetectFaults(unittest.TestCase):
         ctx = self._ctx(edit)
         rows = LC.check_heat(ctx, LC.layout_objects(ctx), *self._hot(ctx))
         self.assertTrue(any("exhaust" in r["item"] for r in self._failed(rows, "C08")))
+
+    def test_nose_tyre_against_the_full_deck_detected(self):
+        """C05 (fix round 2 re-closure): with the full 6.8 mm sandwich deck over the keel slot (no solid strip) the
+        stowed nose tyre is closer to the avionics deck than the 12 mm tyre-to-well clearance."""
+        def edit(S):
+            m = next(q for q in S["layout"]["chassis"]["members"] if q["id"] == "M-DECK-NOSE")
+            m.pop("boxes", None)
+        ctx = self._ctx(edit)
+        rows = LC.check_mechanisms(ctx, LC.layout_objects(ctx))
+        self.assertTrue(any("nose tyre" in r["item"] for r in self._failed(rows, "C05")))
+
+    def test_nose_door_linkage_in_the_tyre_path_detected(self):
+        """C05 (PK2-13): the nose-door bellcrank / link envelope moved 30 mm forward into the stowed tyre is flagged."""
+        def edit(S):
+            e = next(q for q in S["layout"]["systems"]["equipment"] if q["id"] == "EQ-NDOORACT")
+            b = e["drive_envelope"]["box"]
+            e["drive_envelope"]["box"] = [[b[0][0] - 0.03, b[0][1], b[0][2]], [b[1][0] - 0.03, b[1][1], b[1][2]]]
+        ctx = self._ctx(edit)
+        rows = LC.check_mechanisms(ctx, LC.layout_objects(ctx))
+        self.assertTrue(any("nose tyre" in r["item"] for r in self._failed(rows, "C05")))
 
     @staticmethod
     def _hot(ctx):

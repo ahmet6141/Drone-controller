@@ -123,6 +123,9 @@ WB = ZP["main_gear_wells"]["box"]
 X_W0, X_W1 = float(WB[0][0]), float(WB[1][0])
 X_FUELF = round(float(FC["forward_cell"]["x"][0]) - 0.0275, 4)    # forward fuel-bay bulkhead (FS-FUEL)
 X_GEARF = round(X_W1 + 0.0124, 4)                                  # aft main-gear frame / aft fuel bulkhead (FS-GEAR)
+# GNSS 2 antenna / RF window centre: at most 0.10 m ahead of FS-FUEL so that the fixed upper-skin strip to the forward
+# fuel panel P-FUEL1 keeps 2 x ramp + fastener row (layout_check C09) when the fuel bays move with the wing
+X_GNSS2 = round(min(2.090, X_FUELF - 0.100), 4)
 X_DUCT = round(0.5 * (X_PB1 + X_W0), 4)                            # lateral harness duct between payload bay and wells
 T_WALL = 0.0068
 PARA_X = [1.500, 1.800]                     # parachute bay (layout.rules.boxes.parachute_bay, unchanged)

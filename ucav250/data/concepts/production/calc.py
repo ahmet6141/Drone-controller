@@ -16,7 +16,7 @@ Concept (decided by the trade studies in this file; reasons recorded in concept.
   * Twin bought CFRP tube booms clamped under the centre section; constant-chord H stabiliser between the boom ends
     (one mould: symmetric section and planform), two identical outward-canted fins (one mould pair). No flaps.
   * Fixed tricycle gear: GFRP spring bow + TOST wheels, steerable nose leg.
-  * Structure = CHASSIS + SHELL: aluminium sheet-metal/extrusion chassis with machined 7075 hard points carries every
+  * Structure = CHASSIS + SHELL: aluminium sheet-metal/extrusion chassis with machined 7075 load fittings carries every
     point load (wing, gear, engine, parachute); the composite shell panels are bolt-on and non-structural, so any panel
     can be removed for access without affecting the load paths.
 
@@ -185,7 +185,7 @@ rec("aluminium_alloys", {"al_6061_t6_density_kg_per_m3": AL6061["density"], "al_
                          "al_7075_t651_Ftu_Pa": AL7075["Ftu"]},
     "baseline.yaml#materials_to_use.metals (MIL-HDBK-5G A-basis)", "standard",
     basis="chassis: 6061-T6 extrusions and bulkheads (formable, weldable, corrosion resistant), 2024-T3 shear webs, "
-          "7075-T651 machined hard points; isolation ply + primer + wet-installed fasteners at every Al/CFRP faying "
+          "7075-T651 machined load fittings; isolation ply + primer + wet-installed fasteners at every Al/CFRP faying "
           "surface (baseline.yaml#fasteners.materials_in_cfrp)")
 
 # EC propulsion objects (PROP, set_prop) are used through the module so that EC.set_prop switches them everywhere.
@@ -643,7 +643,7 @@ def chassis_items(d: Design, pod: Pod, x_spar: float, x_rear: float, x_mg: float
     """Bottom-up chassis, (mass kg, x m) per item. Aluminium (this concept): 6061-T6 extruded longerons, three heavy
     bulkheads (wing front / wing rear + gear / firewall), light formed 2024-T3 ring frames, 0.5 mm liners closing the
     two fuel-cell compartments, payload-bay rails, 2024-T3 shear webs closing the centre torsion box, machined 7075
-    hard points, 4130 engine truss. CFRP alternative (trade): the endurance-chain keel beams + sandwich bulkheads."""
+    load fittings, 4130 engine truss. CFRP alternative (trade): the endurance-chain keel beams + sandwich bulkheads."""
     L_ch = pod.x_fw - 0.50
     xm = 0.5 * (0.50 + pod.x_fw)
     A_sec = pod.internal_area(1.2, 0.0)
@@ -672,7 +672,7 @@ def chassis_items(d: Design, pod: Pod, x_spar: float, x_rear: float, x_mg: float
             "main_gear_bow_saddle_7075": (0.60, x_mg),
             "nose_gear_trunnion_7075": (0.30, X_NG),
             "engine_mount_4130_truss": (0.60, pod.X_HUB - 0.20),
-            "parachute_hard_point": (0.35, sum(X_PARACHUTE) / 2),
+            "parachute_attach_fitting": (0.35, sum(X_PARACHUTE) / 2),
             "quarter_turn_receptacles_and_hatch_frames": (0.86, 1.2),
             "rivets_bolts_sealant": (0.40, xm),
         }
@@ -685,7 +685,7 @@ def chassis_items(d: Design, pod: Pod, x_spar: float, x_rear: float, x_mg: float
             "main_gear_saddle_clamps_7075": (0.60, x_mg),
             "nose_gear_trunnion_fitting": (0.30, X_NG),
             "engine_mount_frame_4130_truss": (0.60, pod.X_HUB - 0.20),
-            "parachute_hard_point_tray": (0.35, sum(X_PARACHUTE) / 2),
+            "parachute_attach_tray": (0.35, sum(X_PARACHUTE) / 2),
             "floors_trays_equipment_rails": (1.20, 1.10),
             "hatch_frames_quick_release_fasteners": (0.80, 1.20),
             "fuel_bay_liner_supports": (0.40, tank["x_c"]),
@@ -1594,7 +1594,7 @@ def production_indicators(ac: Aircraft) -> dict:
     return {"moulds": moulds, "mould_count": sum(moulds.values()), "servo_count": servos, "field_joints": joints,
             "transport_pieces": pieces, "longest_piece_m": longest, "bought_structural_parts": bought,
             "composite_process_lines": 1, "metal_processes": ["water-jet/laser cutting", "press-brake bending",
-                                                               "CNC milling (7075 hard points)", "TIG (4130 mount)",
+                                                               "CNC milling (7075 load fittings)", "TIG (4130 mount)",
                                                                "blind/solid riveting"]}
 
 
@@ -1913,7 +1913,7 @@ def run_config_trades(d: Design, ref: dict) -> dict:
         "cfrp": {"endurance_h": rc["endurance_h"], "chassis_kg": rc["ac"].mass["groups"]["chassis"]},
         "decision": "aluminium",
         "reason": "MIL-HDBK-5 A-basis allowables (no composite qualification programme for the most loaded, most "
-                  "detailed parts: every hard point, gear and engine load path), flat-pattern parts cut and bent from "
+                  "detailed parts: every load fitting, gear and engine load path), flat-pattern parts cut and bent from "
                   "CAD without tooling, visible damage, field-repairable with rivets and doublers, isotropic fitting "
                   f"design; costs {rc['endurance_h'] - E0:+.2f} h"}
     print(f"   CFRP chassis: E {rc['endurance_h']:.2f} h ({rc['ac'].mass['groups']['chassis']:.2f} kg) vs Al "
@@ -2511,7 +2511,7 @@ def main():
             "planform": f"constant chord {ac.pf['cr']:.3f} m to y = {ac.pf['y_cs']:.2f} m, then linear taper "
                         f"{d.taper_o:.2f} to the tip, straight unswept quarter chord, NLF(1)-0416 16 % throughout, "
                         f"{d.washout:.1f} deg linear washout on the outer panels, no flaps",
-            "structure": "chassis (aluminium sheet metal + extrusions, 7075 machined hard points, 4130 engine truss) "
+            "structure": "chassis (aluminium sheet metal + extrusions, 7075 machined load fittings, 4130 engine truss) "
                          "carries every point load; bolt-on composite shell panels are non-structural; wing and tail in "
                          "OOA prepreg (one composite process line)",
             "layout": "payload bay on the CG between two identical interconnected fuel cells; EO/IR turret in the chin; "

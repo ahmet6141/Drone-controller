@@ -70,7 +70,7 @@ configuration:
     hump behind the wing'
   planform: constant chord 0.581 m to y = 1.00 m, then linear taper 0.60 to the tip, straight unswept quarter chord, NLF(1)-0416
     16 % throughout, 3.0 deg linear washout on the outer panels, no flaps
-  structure: chassis (aluminium sheet metal + extrusions, 7075 machined hard points, 4130 engine truss) carries every point
+  structure: chassis (aluminium sheet metal + extrusions, 7075 machined load fittings, 4130 engine truss) carries every point
     load; bolt-on composite shell panels are non-structural; wing and tail in OOA prepreg (one composite process line)
   layout: payload bay on the CG between two identical interconnected fuel cells; EO/IR turret in the chin; battery, avionics
     and parachute forward; engine aft
@@ -462,7 +462,7 @@ inputs:
     tag: standard
     ref: baseline.yaml#materials_to_use.metals (MIL-HDBK-5G A-basis)
     basis: 'chassis: 6061-T6 extrusions and bulkheads (formable, weldable, corrosion resistant), 2024-T3 shear webs, 7075-T651
-      machined hard points; isolation ply + primer + wet-installed fasteners at every Al/CFRP faying surface (baseline.yaml#fasteners.materials_in_cfrp)'
+      machined load fittings; isolation ply + primer + wet-installed fasteners at every Al/CFRP faying surface (baseline.yaml#fasteners.materials_in_cfrp)'
   turret_x_m:
     value: 0.38
     tag: estimate
@@ -1341,7 +1341,7 @@ trades:
       chassis_kg: 7.79
     decision: aluminium
     reason: 'MIL-HDBK-5 A-basis allowables (no composite qualification programme for the most loaded, most detailed parts:
-      every hard point, gear and engine load path), flat-pattern parts cut and bent from CAD without tooling, visible damage,
+      every load fitting, gear and engine load path), flat-pattern parts cut and bent from CAD without tooling, visible damage,
       field-repairable with rivets and doublers, isotropic fitting design; costs +0.96 h'
   propeller:
     mejzlik_32x18_2B:
@@ -1944,7 +1944,7 @@ mass:
     main_gear_bow_saddle_7075: 0.6
     nose_gear_trunnion_7075: 0.3
     engine_mount_4130_truss: 0.6
-    parachute_hard_point: 0.35
+    parachute_attach_fitting: 0.35
     quarter_turn_receptacles_and_hatch_frames: 0.86
     rivets_bolts_sealant: 0.4
   empty_fraction: 0.61137
@@ -2093,7 +2093,7 @@ mass:
     mass_kg: 0.6
     x_m: 2.4155
     z_m: 0.0
-  - name: chassis_parachute_hard_point
+  - name: chassis_parachute_attach_fitting
     mass_kg: 0.35
     x_m: 0.77
     z_m: 0.0
@@ -3457,7 +3457,7 @@ production_indicators:
   metal_processes:
   - water-jet/laser cutting
   - press-brake bending
-  - CNC milling (7075 hard points)
+  - CNC milling (7075 load fittings)
   - TIG (4130 mount)
   - blind/solid riveting
 sensitivities_endurance_h:

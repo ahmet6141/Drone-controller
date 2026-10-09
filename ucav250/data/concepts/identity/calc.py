@@ -905,7 +905,7 @@ def chassis_items() -> dict:
         "main_gear_bow_clamps_7075": (0.60, "mg"),
         "nose_gear_trunnion_fitting": (0.30, X_NG),
         "engine_mount_frame_4130_truss": (0.60, "hub-0.30"),
-        "parachute_hard_point_tray": (0.35, 0.5 * sum(X_CHUTE)),
+        "parachute_attach_tray": (0.35, 0.5 * sum(X_CHUTE)),
         "floors_trays_equipment_rails": (1.20, 1.10),
         "hatch_frames_quick_release_fasteners": (0.90, 1.40),
         "fuel_bay_liner_supports": (0.40, "tank"),

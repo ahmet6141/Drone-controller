@@ -1420,7 +1420,7 @@ mass:
     main_gear_saddle_clamps_7075: 0.6
     nose_gear_trunnion_fitting: 0.3
     engine_mount_frame_4130_truss: 0.6
-    parachute_hard_point_tray: 0.35
+    parachute_attach_tray: 0.35
     floors_trays_equipment_rails: 1.2
     hatch_frames_quick_release_fasteners: 0.8
     fuel_bay_liner_supports: 0.4
@@ -1544,7 +1544,7 @@ mass:
     mass_kg: 0.618
     x_m: 3.52
     z_m: 0.0
-  - name: chassis_parachute_hard_point_tray
+  - name: chassis_parachute_attach_tray
     mass_kg: 0.3605
     x_m: 0.85
     z_m: 0.0

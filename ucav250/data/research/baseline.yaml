@@ -520,7 +520,7 @@ design_loads:
   emergency_landing_ultimate_g: {forward: 9.0, upward: 3.0, sideward: 1.5, downward: 6.0, source: *s_csvla, tag: standard, clause: "CS-VLA 561(b)(2); downward 6.0 from FAR 23.561 (estimate)", applies_to: "tank, battery, turret, parachute, engine (15 g forward)"}
   parachute_opening_load:
     opening_shock_N: {value: 13100.0, source: *s_grs, tag: manufacturer, note: "at 240 kg and 240 km/h"}
-    load_factor_at_145kg: {value: 9.2, tag: estimate, source: *s_grs, basis: "13100 / (145 x 9.80665); treat as ultimate on a dedicated hard point (CS-LUAS.380)"}
+    load_factor_at_145kg: {value: 9.2, tag: estimate, source: *s_grs, basis: "13100 / (145 x 9.80665); treat as ultimate on a dedicated riser attach fitting (CS-LUAS.380)"}
   flutter:
     clearance_speed_factor: {value: 1.2, applies_to: VD, speed_m_per_s: 68.4, source: *s_csluas, tag: standard, clause: "CS-LUAS.629(c)"}
     min_total_damping: {value: 0.03, source: *s_flutter, tag: paper}
@@ -676,7 +676,7 @@ subsystems:
     mass_estimate_kg: {value: 1.73, tag: estimate, source: *s_cmp}
   recovery_and_safety:
     parachute: {model: Galaxy GRS 4/240 SOFT (rocket-deployed), mass_kg: 5.9, rated_mass_kg: 240.0, vne_m_per_s: 66.7, opening_shock_N: 13100.0, canopy_area_m2: 43.0, descent_rate_m_per_s: 6.9, min_rescue_height_m: 70.0, source: *s_grs, tag: manufacturer}
-    termination_sequence: {value: "engine kill before deployment; canopy exits forward of the pusher disc; dedicated hard point", source: *s_cmp, tag: estimate}
+    termination_sequence: {value: "engine kill before deployment; canopy exits forward of the pusher disc; dedicated riser attach fitting", source: *s_cmp, tag: estimate}
     flight_termination: {value: "Veronte integrated FTS + independent channel (own receiver and backup cell, about 0.15 kg)", source: *s_cmp, tag: estimate}
     lights: {model: "AveoFlashLP LSA x 3 (wing tips + tail)", mass_kg_each: 0.083, source: *s_aveo, tag: datasheet}
     mass_estimate_kg: {value: 6.3, tag: estimate, source: *s_cmp}

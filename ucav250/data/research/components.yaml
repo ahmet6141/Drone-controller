@@ -1634,7 +1634,7 @@ categories:
         tag: estimate
         basis: "GRS 4/240 5.90 + 3 x AveoFlash 0.083 + independent FTS 0.15 = 6.30 kg"
       risks:
-        - Opening shock about 8.9 g at 150 kg means a dedicated hard point and bridle routing in the fuselage structure (ultimate case, CRASH-004).
+        - Opening shock about 8.9 g at 150 kg means a dedicated riser attach fitting and bridle routing in the fuselage structure (ultimate case, CRASH-004).
         - The rocket is a pyrotechnic; storage, transport (dangerous goods) and 6-year exchange add operating cost. UAVOS 200 (ballistic) has similar handling; the non-pyrotechnic Fruity Chutes option is not rated for this mass.
         - Descent 5.5-6.9 m/s will damage the airframe on landing; the parachute is an emergency (ultimate-load) system, not a recovery method for routine use.
 

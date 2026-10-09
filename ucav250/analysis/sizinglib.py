@@ -112,13 +112,17 @@ class Segment:
     bsfc: float = 0.0               # kg/J at the flown power setting
     gamma: float = 0.08             # climb: average flight-path gradient (drag work over the climb distance)
     name: str = ""
+    fraction: float | None = None   # W_end/W_start integrated by the caller (direct fuel-flow integration); overrides
+                                    # the closed-form Breguet/energy fraction when given
 
 
 FIXED = {"warmup": 0.996, "taxi": 0.997, "takeoff": 0.995, "descent": 0.998, "landing": 0.997}
 
 
 def segment_fraction(s: Segment, W: float) -> float:
-    """W_end/W_start for one segment."""
+    """W_end/W_start for one segment (``s.fraction`` when the caller integrated the fuel flow itself)."""
+    if s.fraction is not None:
+        return float(s.fraction)
     if s.kind in FIXED:
         return s.value if s.value else FIXED[s.kind]
     c = s.bsfc * G0                                   # 1/m

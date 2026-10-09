@@ -872,7 +872,7 @@ CHASSIS = {   # chassis items: (mass kg, x m) - estimates (process minimum gauge
     "main_gear_saddle_clamps_7075": (0.60, None),          # at the main gear
     "nose_gear_trunnion_fitting": (0.30, X_NG),
     "engine_mount_frame_4130_truss": (0.60, "hub-0.30"),
-    "parachute_hard_point_tray": (0.35, 0.85),
+    "parachute_attach_tray": (0.35, 0.85),
     "floors_trays_equipment_rails": (1.20, 1.10),
     "hatch_frames_quick_release_fasteners": (0.80, 1.40),
     "fuel_bay_liner_supports": (0.40, None),               # at the tank

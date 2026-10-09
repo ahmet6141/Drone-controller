@@ -248,7 +248,7 @@ X_BATT = rec("battery_pdu_x_m", 0.26, "", basis="14S2P LiFePO4 + PDU in the nose
 X_AVION = rec("avionics_x_m", 0.44, "", basis="autopilot, IMU, GNSS, transponder, datalink tray above the turret bay")
 X_NG = rec("nose_gear_x_m", 0.62, "", basis="nose-leg trunnion on the frame behind the turret bay")
 CHUTE_X = rec("parachute_bay_x_m", [0.64, 1.02], "", basis="Galaxy GRS 4/240 container (0.375 m long) under a top hatch "
-              "in the deepest part of the centre body, ahead of the payload bay; riser to a hard point at the CG so "
+              "in the deepest part of the centre body, ahead of the payload bay; riser to an attach fitting at the CG so "
               "that the aircraft hangs level; canopy leaves upward, far ahead of the pusher disc")
 BAY_HALF_W = rec("payload_bay_half_width_m", 0.19, "", basis="0.38 m wide research payload bay (same width as the "
                  "endurance study) between the two centre-body fuel cells")

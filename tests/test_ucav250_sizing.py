@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[1]
+G = 9.80665
 sys.path.insert(0, str(REPO))
 try:
     import yaml
@@ -27,6 +28,12 @@ except Exception:  # pragma: no cover
     HAVE = False
 
 SPEC_FILE = REPO / "ucav250" / "spec.yaml"
+
+
+def tracked_outputs() -> list:
+    """Repository files the sizing CLI could write: the spec, ucav250/out/*, ucav250/docs/fig/*."""
+    root = REPO / "ucav250"
+    return [SPEC_FILE] + sorted((root / "out").glob("*")) + sorted((root / "docs" / "fig").glob("*.png"))
 BANNED = ("weapon", "hardpoint", "hard point", "hard_point", "hard-point", "pylon", "munition", "release", "bomb",
           "missile", "warhead", "silah", "mühimmat", "muhimmat")
 
@@ -41,6 +48,7 @@ class TestSizingCheck(unittest.TestCase):
         SPEC.load.cache_clear()
         cls.tmp = tempfile.TemporaryDirectory()
         cls.out_dir = Path(cls.tmp.name)
+        cls.tracked = {p: (p.stat().st_mtime_ns, p.read_bytes()) for p in tracked_outputs()}
         cls.rc = Z.main(["--check", "--no-figures", "--out", str(cls.out_dir)])
         cls.out = json.loads((cls.out_dir / "sizing.json").read_text(encoding="utf-8"))
         cls.S = SPEC.load()
@@ -54,6 +62,19 @@ class TestSizingCheck(unittest.TestCase):
         self.assertTrue((self.out_dir / "sizing.md").exists())
         self.assertNotIn("runtime_s", self.out["meta"])
         self.assertNotIn("Çalışma süresi", (self.out_dir / "sizing.md").read_text(encoding="utf-8"))
+
+    def test_tracked_files_untouched(self):
+        """F18: the test run (and --check) does not modify tracked repository files (spec, out/, docs/fig)."""
+        for p, (mt, data) in self.tracked.items():
+            self.assertEqual(p.read_bytes(), data, str(p))
+            self.assertEqual(p.stat().st_mtime_ns, mt, str(p))
+
+    def test_check_is_read_only(self):
+        """F18: --check alone writes nothing; the explicit output command (no flag) and --out write."""
+        P = Z.build_parser()
+        self.assertFalse(Z.outputs_written(P.parse_args(["--check"])))
+        self.assertTrue(Z.outputs_written(P.parse_args(["--check", "--out", "/tmp/x"])))
+        self.assertTrue(Z.outputs_written(P.parse_args([])))
 
     def test_check_exit_code_zero(self):
         self.assertEqual(self.rc, 0)
@@ -94,7 +115,11 @@ class TestSizingCheck(unittest.TestCase):
         for k in ("takeoff_main_gear_load_at_rotation_N", "prop_clear_min_925a_m", "prop_clear_radial_m",
                   "prop_clear_longitudinal_m", "stab_trim_cl_local_max", "stab_hinge_peak_margin", "stab_root_gap_m",
                   "stab_root_body_clearance_m", "fin_root_max_gap_m", "spar_depth_main_ratio", "spar_depth_rear_ratio",
-                  "wing_root_chine_step_m", "flap_inboard_end_outboard_of_joint_m", "generator_margin_loiter"):
+                  "wing_root_chine_step_m", "flap_inboard_end_outboard_of_joint_m", "generator_margin_loiter",
+                  "tail_root_max_gap_m", "stab_hinge_rated_margin_max", "prop_guard_ventral_margin_m",
+                  "prop_plane_behind_cowl_over_D", "prop_clear_wingtip_on_ground_m", "generator_peak_margin_loiter",
+                  "tail_root_interferences", "fcs_speed_limit_margin_m_s", "landing_ground_roll_mtow_m",
+                  "mass_budget_margin_kg"):
             self.assertIn(k, M, k)
         to = self.out["performance"]["takeoff_sl_mtow"]
         self.assertEqual(len(to["cases"]), sum(1 for c in self.out["mass"]["ground_cases_gear_down"]
@@ -108,10 +133,181 @@ class TestSizingCheck(unittest.TestCase):
         self.assertAlmostEqual(g["prop_clear_min_925a"], min(g["prop_clear_static"], g["prop_clear_liftoff"],
                                                              g["prop_clear_touchdown_unloaded"]), places=9)
 
+    def test_propeller_guards_and_spindle(self):
+        """F10: fins and the ventral fin cross the inclined disc plane outside the tip circle; F2/F3: the stabilator
+        spindle sits at the forward end of the vortex-lattice AC band, ahead of the cylinders, inside the stub."""
+        pc = self.out["propeller"]["clearances"]
+        parts = {g["part"] for g in pc["guard_map"]["guards"]}
+        self.assertTrue({"fin", "ventral"} <= parts)
+        for g in pc["guard_map"]["guards"]:
+            if g["part"] in ("fin", "ventral"):
+                self.assertGreaterEqual(g["margin_over_tip_m"], 0.026, g)
+        hm = self.out["stabilator_hinge"]
+        self.assertGreaterEqual(hm["ac_offset_min_m"], -1e-9)                  # never unstable about the spindle
+        self.assertTrue(hm["statically_stable_surface"])
+        st = self.S["tail"]["surfaces"]["stabilator"]
+        vlm = st["controls"]["ac_mac_fraction_vlm"]
+        self.assertAlmostEqual(st["params"]["pivot_mac_fraction"],
+                               min(vlm.values()) - st["controls"]["ac_band_fwd"], delta=2e-3)
+        sc = self.out["packaging"]["stabilator_spindle"]
+        self.assertTrue(sc["ok"], sc)
+
+    def test_fix_round2_checks(self):
+        """Fix round 2: converged closure, generator DC output with the power-electronics efficiency, per-configuration
+        peak-load check (HD59 design mission, E180 growth mission), operating limits, MTOM landing, budget ceiling."""
+        hist = self.out["derived_check"]["closure_history"]
+        self.assertTrue(hist[-1].get("converged"), hist[-3:])
+        gen = self.S["engine"]["generator"]
+        eta_pe = gen["power_electronics_efficiency"]
+        self.assertGreater(eta_pe, 0.5)
+        self.assertLess(eta_pe, 1.0)
+        for k in ("start", "end"):
+            p = self.out["performance"]["mission_loiter_points"][k]
+            self.assertAlmostEqual(p["gen_W"], gen["power_continuous_W"] * p["rpm"] / gen["rated_rpm"] * eta_pe,
+                                   delta=1e-6 * p["gen_W"])
+        el = self.out["electrical"]
+        # fix round 3 (V2-01): R-52 is the v1.2 capability again (E180 peak available throughout the design-mission
+        # loiter), supplied by the generator plus the battery peak-support share; the v1.3 "installed turret only" rule
+        # is withdrawn
+        self.assertEqual(self.S["mission"]["loiter_rpm_floor"], "e180_peak_battery_support")
+        draws = [el["e180_peak_battery_draw_design_mission_Wh"], el["e180_peak_battery_draw_e180_mission_Wh"]]
+        margin = el["battery_peak_share_Wh"] / max(max(draws), 1e-3)          # outputs carry 6 significant digits
+        self.assertAlmostEqual(self.out["metrics"]["e180_peak_support_margin"], margin, delta=1e-5 * margin)
+        self.assertGreaterEqual(self.out["metrics"]["e180_peak_support_margin"], 1.0)
+        self.assertAlmostEqual(el["battery_peak_share_Wh"], el["battery_usable_Wh"] - el["battery_reserve_Wh"],
+                               delta=1e-5 * el["battery_usable_Wh"])
+        EB = self.S["engine"]["electrical_budget"]
+        reserve = EB["battery_reserve_power_W"] * EB["battery_reserve_time_min"] / 60.0
+        self.assertAlmostEqual(el["battery_reserve_Wh"], reserve, delta=1e-5 * reserve)       # 6 significant digits
+        cap = float(self.S["mission"]["peak_support_deficit_cap_W"])
+        self.assertLessEqual(el["e180_peak_deficit_max_design_mission_W"], cap + 0.05)
+        self.assertLessEqual(el["e180_peak_deficit_max_e180_mission_W"], cap + 0.05)
+        self.assertAlmostEqual(self.out["metrics"]["generator_peak_margin_loiter"],
+                               el["margin_peak_e180_at_design_mission_rpm"], places=9)
+        # the battery energy the E180 peak would draw = integral of (peak - generator output) over the loiter steps
+        lo = [r for r in self.out["performance"]["mission_log"] if r["kind"] == "loiter"]
+        draw = sum(max(el["peak_e180_W"] - r["gen_W"], 0.0) * r["dt_s"] / 3600.0 for r in lo)
+        self.assertAlmostEqual(draw, el["e180_peak_battery_draw_design_mission_Wh"], delta=1e-5 * draw)  # 6 digits
+        e180 = self.out["performance"]["e180_growth_mission"]
+        self.assertGreaterEqual(e180["loiter_points"]["end"]["rpm"], el["generator_rpm_floor_e180_mission"] - 1e-6)
+        for k in ("start", "end"):
+            self.assertGreaterEqual(self.out["performance"]["mission_loiter_points"][k]["rpm"],
+                                    el["generator_rpm_floor"] - 1e-6)
+        ol = self.out["loads"]["operating_limits"]
+        self.assertAlmostEqual(ol["VNE_eas"], 0.9 * self.out["loads"]["VD_m_s"], places=9)
+        self.assertLessEqual(ol["VNO_eas"], min(self.out["loads"]["VC_m_s"], 0.89 * ol["VNE_eas"]) + 1e-9)
+        self.assertLessEqual(ol["fcs_speed_limit_eas"], ol["VNO_eas"] + 1e-9)
+        self.assertIn("landing_sl_mtow_takeoff_flap", self.out["performance"])
+        bc = self.out["mass"]["budget_check"]
+        self.assertEqual(bc["groups_over_ceiling"], [])
+        # the fuel for the 10 h mission is solved on the air time itself (return transit at the post-loiter weight)
+        req_h = float(self.S["mission"]["endurance_requirement_h"])
+        self.assertLessEqual(bc["air_time_h_at_fuel_for_10h"], req_h + 1e-9)
+        self.assertGreater(bc["air_time_h_at_fuel_for_10h"], req_h - 1e-3)
+        hm = self.out["stabilator_hinge"]
+        self.assertNotAlmostEqual(hm["CN_max_panel"], hm["trim_rule_clmax_not_used"], places=3)
+        self.assertGreater(hm["CN_max_panel"], 1.0)
+        self.assertGreaterEqual(hm["surface_travel_deg"], 20.0)
+        self.assertEqual(self.out["tail_root_interference"]["n_conflicts"], 0)
+        # R-56 (last: it fails while R-02 is not met, see doc 02 sec. 14)
+        self.assertLessEqual(bc["budget_sum_kg"], bc["empty_kg_at_R02_limit"] - bc["reserve_kg"] + 1e-9)
+
+    def test_fix_round3_checks(self):
+        """Fix round 3: integrated descent at the generator floor (V2-07), consistent lift-off (V2-05), control-surface
+        hinge moments through four-bar linkages (V2-03/V2-06), installation factor at full throttle (V2-04), polars
+        clipped at the trimmed CLmax (V2-08)."""
+        S, out = self.S, self.out
+        log = out["performance"]["mission_log"]
+        de = [r for r in log if r["kind"] == "descent"]
+        self.assertGreater(len(de), 1)
+        self.assertAlmostEqual(sum(r["h_from_m"] - r["h_to_m"] for r in de), S["mission"]["loiter_altitude"], places=6)
+        eb = S["engine"]["electrical_budget"]
+        load = eb["continuous_base_W"] + eb["research_payload_allowance_W"]
+        for r in de:
+            self.assertAlmostEqual(r["gen_W"], load, delta=1e-6 * load)        # the generator carries the load
+            self.assertAlmostEqual(r["dt_s"], (r["h_from_m"] - r["h_to_m"]) / r["sink_m_s"], delta=1e-6 * r["dt_s"])
+            self.assertAlmostEqual(r["fraction"], 1.0 - r["fuel_kg"] * G / r["W_start_N"], delta=1e-6)  # 6 digits
+            if r.get("speed_band_end") is None:
+                self.assertAlmostEqual(r["sink_m_s"], S["mission"]["descent_rate"], places=3)
+        to = out["performance"]["takeoff_sl_mtow"]
+        self.assertGreaterEqual(to["V_lof_m_s"], to["V_R_m_s"])
+        self.assertGreaterEqual(to["V_lof_m_s"], 1.1 * to["VS_TO_m_s"] - 1e-6)
+        self.assertGreaterEqual(to["theta_lof_deg"], to["theta_ground_deg"] - 1e-9)   # no "lift-off below the ground attitude"
+        self.assertGreaterEqual(to["CL_available_lof"], to["CL_wb_lof"] - 1e-3)      # L >= W + T sin(eps) + F_t at lift-off
+        self.assertLessEqual(to["theta_lof_deg"], to["theta_1p1VS_trimmed_deg"] + 1e-6)  # R-16 attitude is the bound
+        sch = to["fcs_stabilator_schedule"]
+        self.assertLessEqual(sch["download_start_m_s"], to["V_R_m_s"])
+        self.assertGreater(to["main_gear_load_at_VR_N"], 0.0)
+        ch = out["control_hinges"]
+        for k in ("aileron", "flap", "rudder", "stabilator"):
+            self.assertTrue(ch[k]["reachable"], k)
+            self.assertGreaterEqual(ch[k]["travel_margin_deg"], 0.0, k)
+            self.assertGreaterEqual(ch[k]["rated_margin_min"], 1.1, k)
+            self.assertGreaterEqual(ch[k]["peak_margin_min"], 1.0, k)
+            self.assertGreaterEqual(ch[k]["ratio_min"], ch[k]["arm_ratio_neutral"] * 0.99, k)
+        self.assertEqual(out["metrics"]["control_actuator_rated_margin_min"],
+                         min(ch[k]["rated_margin_min"] for k in ("aileron", "flap", "rudder")))
+        self.assertGreaterEqual(out["metrics"]["stab_hinge_rated_margin_max"], 1.1)
+        for p in out["aero"]["polars"].values():
+            self.assertLessEqual(p["fit"]["CL_endurance"], p["fit"]["CL_max_trimmed"] + 1e-9)
+            self.assertLessEqual(p["fit"]["CL_LDmax"], p["fit"]["CL_max_trimmed"] + 1e-9)
+
+    def test_turret_field_of_regard_includes_wing(self):
+        """F13: the ray test obstacles include the wing (both sides) as well as the tail surfaces."""
+        with open(SPEC_FILE, encoding="utf-8") as fh:
+            af = Z.Airframe(yaml.safe_load(fh))
+        n_all = len(Z.structure_triangles(af))
+        n_tail = len(Z.structure_triangles(af, include_wing=False))
+        self.assertGreater(n_all, n_tail)
+
     def test_report_written_in_turkish(self):
         md = (self.out_dir / "sizing.md").read_text(encoding="utf-8")
         for w in ("Gereksinim uyumu", "Kütle", "Kararlılık", "Performans", "İniş takımı"):
             self.assertIn(w, md)
+
+
+@unittest.skipUnless(HAVE, "ucav250 dependencies missing")
+class TestLinkagesAndInstallation(unittest.TestCase):
+    """V2-06: four-bar kinematics (a symmetric N:1 crank-rocker cannot pass asin(1/N); the torque ratio grows toward
+    the ends); V2-04: the pusher installation factor at full throttle ramps from 1.0 static to k_inst."""
+
+    def test_fourbar_limits_and_symmetry(self):
+        fb = Z.FourBar(0.015, 3.0, 2.0)                      # long pushrod: close to the r_s sin(t) = r_h sin(p) limit
+        for th in (0.3, 0.8, 1.2):
+            self.assertAlmostEqual(fb.phi(th), math.asin(math.sin(th) / 3.0), delta=2e-3)
+            # symmetric to second order: with a finite pushrod l = d the push and pull sides differ by about
+            # Y^2 / (d r_h cos phi), Y = r_s (cos th - 1) - r_h (cos phi - 1) (lateral offset of the rod ends);
+            # 10 % allowance for the higher-order terms
+            ph = fb.phi(th)
+            Y = fb.r_s * (math.cos(th) - 1.0) - fb.r_h * (math.cos(ph) - 1.0)
+            self.assertLessEqual(abs(fb.phi(-th) + ph), 1.1 * Y * Y / (fb.d * fb.r_h * math.cos(ph)))
+        # v1.3 "3:1 bellcrank, +-28.3 deg": not achievable with a 3:1 four-bar; -20 deg is out of reach in the
+        # long-pushrod limit (asin(1/3) = 19.47 deg) and, with the 100 mm pushrod, reached only at the toggle
+        fb3 = Z.FourBar(0.015, 3.0, 0.1)
+        for d in (-28.3, 28.3):
+            self.assertTrue(math.isnan(fb3.theta(math.radians(d))))
+        self.assertTrue(math.isnan(fb.theta(math.radians(-20.0))))
+        t3 = fb3.theta(math.radians(-20.0))
+        self.assertGreater(abs(math.degrees(t3)), 80.0)
+        self.assertGreater(fb3.ratio(t3), 10.0)
+        fb2 = Z.FourBar(0.015, 2.5, 0.1)
+        t20 = fb2.theta(math.radians(-20.0))
+        self.assertTrue(math.isfinite(t20))
+        self.assertGreater(fb2.ratio(t20), fb2.ratio(0.0))
+        self.assertAlmostEqual(fb2.ratio(0.0), 2.5, delta=0.01)
+        self.assertAlmostEqual(math.degrees(fb2.phi(t20)), -20.0, places=6)
+
+    def test_wot_installation_ramp(self):
+        S = SPEC.load()
+        eng, prop = Z.make_propulsion(S)
+        ki = float(S["propeller"]["k_inst"])
+        self.assertEqual(prop.k_wot_installed(0.0), 1.0)
+        self.assertAlmostEqual(prop.k_wot_installed(float(S["propeller"]["k_inst_wot_ramp_speed"])), ki, places=12)
+        self.assertAlmostEqual(prop.k_wot_installed(40.0), ki, places=12)
+        p0 = Z.Prop(Z.ref_get(S["propeller"]["table_ref"])["rows_rpm_thrust_N_torque_Nm_power_W"],
+                    float(S["propeller"]["diameter"]), float(S["propeller"]["k_wot"]), ki, eng)
+        self.assertAlmostEqual(prop.wot(0.0, 0.0)["T"], p0.wot(0.0, 0.0)["T"], places=9)
+        self.assertAlmostEqual(prop.wot(30.0, 0.0)["T"], ki * p0.wot(30.0, 0.0)["T"], places=9)
 
 
 @unittest.skipUnless(HAVE, "ucav250 dependencies missing")
@@ -232,6 +428,7 @@ class TestSpecSchema(unittest.TestCase):
             groups[i["group"]] = groups.get(i["group"], 0.0) + i["mass_kg"]
         for g, b in M["budget"].items():
             self.assertLessEqual(abs(groups[g] - b["target_kg"]), b["tol_kg"], g)
+            self.assertLessEqual(groups[g], b["target_kg"] + 1e-6, g)                # V1-03: one-sided ceiling
 
     def test_landing_gear_geometry(self):
         LG = self.S["landing_gear"]
@@ -293,6 +490,131 @@ class TestOML(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE, "ucav250 dependencies missing")
+class TestGeometryFixes(unittest.TestCase):
+    """Fix round 2 geometry: LERX/glove morph without airfoil-family switches (V1-06), tail roots trimmed at the OML
+    with an interference check that would catch the buried v1.2 fin root (V1-04)."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(SPEC_FILE, encoding="utf-8") as fh:
+            cls.S = yaml.safe_load(fh)
+        cls.af = Z.Airframe(cls.S)
+
+    def test_glove_airfoil_files_reproducible(self):
+        self.assertEqual(Z.write_glove_airfoils(self.S, check_only=True), [])
+
+    def test_glove_morph_no_family_switch(self):
+        P = self.S["wing"]["planform"]
+        L = Z.lerx_section(P)
+        names = [Z.glove_airfoil_name(w, L) for w in Z.GLOVE_BLEND_STEPS] + ["nlf416"]
+        secs = [s_ for s_ in self.S["wing"]["sections"] if s_["y"] <= P["y_junction"] + 1e-9]
+        idx = [names.index(s_["airfoil"]) for s_ in secs]
+        self.assertEqual(idx, sorted(idx))
+        self.assertTrue(all(b - a <= 1 for a, b in zip(idx, idx[1:])), idx)      # one blend step at a time
+        self.assertEqual(idx[0], 0)
+        self.assertEqual(idx[-1], len(names) - 1)
+
+    def test_naca4_modified_reference(self):
+        """NACA 0012-63 (four-digit modified, I = 6, m = 0.3) is close to the standard NACA 0012."""
+        A = Z.naca4_modified(0.12, 6.0, 0.3)
+        B = oml._naca4("0012", 161)
+        np.testing.assert_allclose(A[:, 1], B[:, 1], atol=2.5e-3)
+        self.assertAlmostEqual(float(np.max(A[:, 1]) * 2), 0.12, places=4)
+
+    def test_tail_root_interference(self):
+        r = Z.tail_root_interference(self.S, self.af)
+        self.assertEqual(r["n_conflicts"], 0, r["conflicts"])
+        S2 = json.loads(json.dumps(self.S))
+        S2["tail"]["root_structure"]["fitting_band_depth"] = 0.40          # untrimmed planar roots: must conflict
+        S2["tail"]["root_structure"]["band_depth_aft_of_firewall"] = 0.40
+        self.assertGreater(Z.tail_root_interference(S2, self.af)["n_conflicts"], 0)
+
+
+@unittest.skipUnless(HAVE, "ucav250 dependencies missing")
+class TestMissionIntegration(unittest.TestCase):
+    """V1-01: the mission fuel of every flown segment equals the time integral of the point fuel flow (bsfc x shaft
+    power incl. the generator at the trimmed point, T = D / cos(eps)), checked independently with fine steps."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(SPEC_FILE, encoding="utf-8") as fh:
+            cls.S = yaml.safe_load(fh)
+        cls.R = Z.evaluate(cls.S, sens=False, light=True)
+        cls.fl = cls.R["_flight"]
+        cls.log = cls.R["performance"]["mission_log"]
+
+    def _fine(self, kind, W0, length, n=24, h=None):
+        fl = self.fl
+        h = fl.h_loiter if h is None else h
+        W, fuel, t = W0, 0.0, 0.0
+        for _ in range(n):
+            if kind == "loiter":
+                pt = lambda W_: fl.best_loiter(W_, h, "loiter", rpm_floor=True)        # noqa: E731
+                d = length / n
+                p0 = pt(W)
+                pm = pt(W - 0.5 * p0["ff_kg_s"] * d * G)
+                f_ = pm["ff_kg_s"] * d
+            else:
+                pt = lambda W_: fl.best_range(W_, h)                                    # noqa: E731
+                d = length / n
+                p0 = pt(W)
+                pm = pt(W - 0.5 * p0["ff_kg_s"] * d / p0["V"] * G)
+                f_ = pm["ff_kg_s"] * d / pm["V"]
+            fuel += f_
+            W -= f_ * G
+        return fuel
+
+    def test_loiter_and_cruise_steps_match_fine_integration(self):
+        lo = next(r for r in self.log if r["kind"] == "loiter")
+        self.assertAlmostEqual(self._fine("loiter", lo["W_start_N"], lo["dt_s"]), lo["fuel_kg"],
+                               delta=0.002 * lo["fuel_kg"])
+        cr = next(r for r in self.log if r["kind"] == "cruise")
+        dist = Z.Flight.STEP_CRUISE_M
+        self.assertAlmostEqual(self._fine("cruise", cr["W_start_N"], dist), cr["fuel_kg"], delta=0.002 * cr["fuel_kg"])
+
+    def test_climb_matches_fine_integration(self):
+        fl = self.fl
+        rows = [r for r in self.log if r["kind"] == "climb"]
+        W, fuel, Vp = rows[0]["W_start_N"], 0.0, None
+        h_top = rows[-1]["h_to_m"]
+        n = 30
+        dh = h_top / n
+        for i in range(n):
+            p = fl.climb_point(W, (i + 0.5) * dh)
+            dhe = dh + (0.0 if Vp is None else (p["V"] ** 2 - Vp ** 2) / (2 * G))
+            f_ = p["ff_kg_h"] / 3600.0 * dhe / p["roc"]
+            fuel += f_
+            W -= f_ * G
+            Vp = p["V"]
+        self.assertAlmostEqual(fuel, sum(r["fuel_kg"] for r in rows), delta=0.005 * fuel)
+
+    def test_step_fuel_consistent_with_point_fuel_flows(self):
+        """Every integrated cruise/loiter/reserve step: fuel = dt x (ff_start + 4 ff_mid + ff_end)/6 within 0.2 %, and
+        the point fuel flow is bsfc x total shaft power (the v1.2 Breguet L/D error was ~1 %)."""
+        for r in self.log:
+            if r["kind"] not in ("cruise", "loiter", "reserve") or r.get("partial_step"):
+                continue
+            simpson = r["dt_s"] / 3600.0 * (r["ff_start_kg_h"] + 4 * r["ff_mid_kg_h"] + r["ff_end_kg_h"]) / 6.0
+            self.assertAlmostEqual(r["fuel_kg"], simpson, delta=0.002 * r["fuel_kg"], msg=r["name"])
+        p = self.fl.best_loiter(self.log[0]["W_start_N"] * 0.97, self.fl.h_loiter, "loiter")
+        self.assertAlmostEqual(p["ff_kg_s"], p["bsfc_g_kWh"] * p["P_total"] / 3.6e9, places=12)
+        lp = self.fl.level_point(1400.0, 33.0, self.fl.h_loiter, "loiter")
+        e = self.fl.eps
+        self.assertAlmostEqual(lp["CL"] * 0.5 * Z.AL.isa(self.fl.h_loiter)["rho"] * 33.0 ** 2 * self.fl.Sw,
+                               1400.0 + lp["D"] * math.tan(e), delta=1e-4 * 1400.0)   # 2-pass fixed point
+
+    def test_mission_fuel_bookkeeping(self):
+        mis = self.R["performance"]
+        frac = 1.0
+        for r in self.log:
+            frac *= r["fraction"]
+        m0 = self.S["mass"]["mtow_kg"]
+        trapped = self.S["mission"]["trapped_fuel_fraction"]
+        self.assertAlmostEqual((1 - frac) * (1 + trapped), mis["mission_fuel_fraction"], places=9)
+        self.assertLessEqual(mis["mission_fuel_fraction"] * m0, self.S["mass"]["fuel_kg"] + 1e-6)
+
+
+@unittest.skipUnless(HAVE, "ucav250 dependencies missing")
 class TestCivilScope(unittest.TestCase):
     """No weapon-related terms anywhere in spec.yaml except the negative scope statement (meta.scope_tr)."""
 
@@ -318,6 +640,67 @@ class TestCivilScope(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE, "ucav250 dependencies missing")
+class TestWording(unittest.TestCase):
+    """F19: no 'hard point' wording in the sizing code, the sizing report, the research hand-over or the reference
+    concepts (negative scope statements such as 'no hardpoints' excepted)."""
+
+    def test_no_hard_point_items(self):
+        root = REPO / "ucav250"
+        files = [root / "analysis" / "sizing.py", root / "docs" / "02_konsept_ve_boyutlandirma.md"] + \
+            sorted((root / "data" / "research").glob("*.yaml")) + sorted((root / "data" / "concepts").rglob("*.py")) + \
+            sorted((root / "data" / "concepts").rglob("*.yaml"))
+        for p in files:
+            text = p.read_text(encoding="utf-8").lower()
+            for w in ("hard_point", "hard point", "hard-point"):
+                self.assertNotIn(w, text, f"{p}: {w}")
+
+
+@unittest.skipUnless(HAVE, "ucav250 dependencies missing")
+class TestDoc02(unittest.TestCase):
+    """F14: the key numbers of doc 02 are those of the spec (no stale figures after a spec update)."""
+
+    def test_key_numbers_match_spec(self):
+        with open(SPEC_FILE, encoding="utf-8") as fh:
+            S = yaml.safe_load(fh)
+        doc = (REPO / "ucav250" / "docs" / "02_konsept_ve_boyutlandirma.md").read_text(encoding="utf-8")
+
+        def tr(x, n):
+            return f"{x:,.{n}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        self.assertIn(f"rev. {S['meta']['revision']}", doc.splitlines()[0])
+        n_req = len(S["requirements"])
+        self.assertIn(f"{n_req} gereksinimin", doc)
+        self.assertIn(f"**{tr(S['performance']['reference']['endurance_h'], 2)} h**", doc)
+        self.assertIn(f"{tr(S['mass']['empty_kg'], 1)} kg", doc)
+        self.assertIn(f"**{tr(S['mass']['mtow_kg'], 1)} kg**", doc)
+        self.assertIn(f"{tr(S['wing']['area'], 3)} m²", doc)
+        self.assertIn(f"{tr(S['tail']['surfaces']['stabilator']['area'], 3)} m²", doc)
+        # V1-08: the design mission's own loiter start/end points are reported; the MTOM point at 3000 m carries its
+        # own label (it is not the mission loiter start)
+        ref = S["performance"]["reference"]
+        self.assertIn(f"{tr(ref['mission_loiter_start_tas_m_s'], 2)} m/s TAS", doc)
+        self.assertIn(f"{tr(ref['mission_loiter_start_eas_m_s'], 2)} m/s EAS", doc)
+        self.assertIn(f"{tr(ref['mission_loiter_start_rpm'], 0)} rpm", doc)
+        self.assertIn(f"{tr(ref['mission_loiter_start_generator_W'], 0)} W", doc)
+        self.assertIn(f"{tr(ref['mission_loiter_end_rpm'], 0)} rpm", doc)
+        self.assertIn(f"{tr(ref['mission_loiter_end_generator_W'], 0)} W", doc)
+        self.assertIn(f"{tr(ref['loiter_rpm'], 0)} rpm", doc)
+        self.assertIn("MTOM'da 3000 m bekleme noktası", doc)
+        self.assertNotIn("Bekleme 3000 m (başlangıç)", doc)
+
+
+@unittest.skipUnless(HAVE, "ucav250 dependencies missing")
+class TestAirfoils(unittest.TestCase):
+    """F17: the ventral fin uses the analytic NACA 0010 (the coarse UIUC naca0010.dat is not read)."""
+
+    def test_ventral_naca0010_analytic(self):
+        with open(SPEC_FILE, encoding="utf-8") as fh:
+            S = yaml.safe_load(fh)
+        name = S["tail"]["surfaces"]["ventral"]["params"]["airfoil"]
+        self.assertEqual(name, "NACA-0010")
+        np.testing.assert_allclose(oml.airfoil_coords(name), oml._naca4("0010"))
+
+
+@unittest.skipUnless(HAVE, "ucav250 dependencies missing")
 class TestReproduction(unittest.TestCase):
     """sizing.py reproduces the propulsion model of the reviewed endurance concept study exactly."""
 
@@ -334,8 +717,10 @@ class TestReproduction(unittest.TestCase):
         D = S["propeller"]["diameter"] if S["propeller"]["table_ref"] == key else \
             S["propeller"]["alternatives"][key]["diameter"]
         eng = Z.Engine(S["engine"], E.P_ELEC, float(S["engine"]["generator"]["efficiency"]))
-        prop = Z.Prop(Z.ref_get(key)["rows_rpm_thrust_N_torque_Nm_power_W"], float(D), float(S["propeller"]["k_wot"]),
-                      float(S["propeller"]["k_inst"]), eng)
+        # same equations with the study's own factors (HANCER uses k_inst 0.93 for its bluff cowl base and the
+        # full-throttle installation ramp, fix round 3; both are checked in TestLinkagesAndInstallation)
+        self.assertAlmostEqual(float(S["propeller"]["k_wot"]), E.K_WOT, places=12)
+        prop = Z.Prop(Z.ref_get(key)["rows_rpm_thrust_N_torque_Nm_power_W"], float(D), E.K_WOT, E.K_INST, eng)
         for V, h in ((0.0, 0.0), (30.0, 0.0), (33.0, 3000.0)):
             a, b = E.PROP.wot(V, h), prop.wot(V, h)
             self.assertAlmostEqual(a["T"], b["T"], places=6)

@@ -43,12 +43,13 @@ RULES = {
 
 def panel(pid, part, name, name_tr, surface, x, y, attach, fastening, material="cfrp_pw_mtm45_as4",
           layup="shell_secondary", mirror=False, rf_window=False, hinge=None, notes="", lands=None, joint=None,
-          outline=None, cutouts=None, free_edges=None, z_band=None):
+          outline=None, cutouts=None, free_edges=None, z_band=None, process=None, thickness=None):
     d = {"id": pid, "part": part, "name": name, "name_tr": name_tr, "surface": surface, "x": r3(x), "y": r3(y),
          "attach": attach, "fastening": fastening, "material": material,
-         "process": "prepreg_ooa_vacbag" if layup else "sheet_metal_aluminium", "layup": layup}
+         "process": process or ("prepreg_ooa_vacbag" if layup else "sheet_metal_aluminium"), "layup": layup}
     if not layup:
-        d["thickness_m"] = 0.0008             # formed 6061-T6 cowl piece 0.8 mm (fix round 2)
+        # formed 6061-T6 cowl piece 0.8 mm (fix round 2); solid laminates give their thickness (fix round 3, PK3-08)
+        d["thickness_m"] = thickness if thickness is not None else 0.0008
     if outline is not None:                 # plan polygon [[x, y], ...] of a non-rectangular panel (x / y = its box)
         d["outline"] = r3(outline)
     if mirror:
@@ -83,6 +84,12 @@ def _frame_edge(x_web, sign):
     return round(float(x_web) + sign * 0.003, 4)
 
 
+RING_X = (_frame_edge(1.1066, -1.0) - 0.022, _frame_edge(1.3334, 1.0) + 0.022)   # turret aperture ring insert x
+RING_Y = 0.125
+X_SB_NOTCH, Y_SB_NOTCH = 1.0706, 0.135      # side-bay / door-access panel notches round the ring (fix round 3, PK3-02)
+X_PH1 = round(1.8134 + 0.010, 4)            # parachute hatch aft edge: FS1810 web aft face + 10 mm (PK3-02)
+
+
 def panels() -> list:
     G = "gfrp_7781_mtm45"
     pay = ZP["payload_bay"]["box"]
@@ -95,7 +102,9 @@ def panels() -> list:
                                               "VPK-10); pitot boss (inserts) at the tip"))
     X.append(panel("P-FWDSKIN", "YK250-SH-351", "forward body skin", "ön gövde kaplaması", "body_full",
                    [0.300, 0.600], [-0.17, 0.17], "fixed", NUT, lands=["ST-FS0300", "ST-FS0600"],
-                   notes="one-piece wrap (upper + lower halves co-cured at the chine edge band); cut-out: P-FWDHATCH",
+                   notes="one-piece wrap (upper + lower halves co-cured at the chine edge band); cut-out: P-FWDHATCH; "
+                         "transponder blade ANT-XPDR (x 0.45, belly) on a bonded copper-mesh ground-plane doubler "
+                         "(fix round 3, PK3-11: the doubler lies in this skin, not in P-NOSE-LOWER)",
                    cutouts=[{"id": "P-FWDHATCH", "kind": "hatch"}]))
     xa, xb = _frame_edge(0.3034, 1.0) - 0.0003, 0.5996
     X.append(panel("P-FWDHATCH", "YK250-SH-353", "forward-bay hatch (buffer battery, FTS unit)",
@@ -110,11 +119,12 @@ def panels() -> list:
     X.append(panel("P-NOSE-LOWER", "YK250-SH-352", "lower nose skin", "alt burun kaplaması", "body_lower",
                    [0.600, 1.110], [-0.30, 0.30], "fixed", NUT, lands=["ST-FS0600", "ST-FS1110", "M-CHINE",
                                                                        "M-KEELWALL"],
-                   notes="cut-outs: keel slot (nose-gear clamshell doors), side-bay access panels; transponder blade on "
-                         "a bonded copper-mesh doubler at x 0.45",
+                   notes="cut-outs: keel slot (nose-gear clamshell doors), side-bay access panels, turret ring "
+                         "insert (forward edge)",
                    cutouts=[{"id": "NOSE-KEEL-SLOT", "kind": "gear door opening",
                              "outline": "layout.mechanisms.door_outlines.nose_door_R/L (closed)"},
-                            {"id": "P-SIDEBAY-L", "kind": "hatch"}, {"id": "P-SIDEBAY-R", "kind": "hatch"}]))
+                            {"id": "P-SIDEBAY-L", "kind": "hatch"}, {"id": "P-SIDEBAY-R", "kind": "hatch"},
+                            {"id": "P-TURRETRING", "kind": "aperture insert (forward edge on the FS1110 cap)"}]))
     X.append(panel("P-AVHATCH", "YK250-SH-354", "avionics hatch (RF window GNSS 1)", "aviyonik kapağı (GNSS 1 RF penceresi)",
                    "body_upper", [_frame_edge(0.6, 1.0), _frame_edge(1.11, -1.0)], [-0.135, 0.135], "removable", CAM,
                    material=G, rf_window=True, lands=["ST-FS0600", "ST-FS1110", "P-NOSE-UPPER"],
@@ -131,37 +141,51 @@ def panels() -> list:
              "efficiency; thermal check open)"),
             ("R", [0.050, 0.200], "starboard side-bay access panel", "sağ yan bölme kapağı", G, True,
              "access to autopilot, datalinks, transponder (fix round 1: the Remote ID beacon moved to the nose cone)")):
+        sg = -1.0 if sd == "L" else 1.0
+        xb_ = _frame_edge(1.11, -1.0)
+        ol = [[0.830, sg * 0.050], [X_SB_NOTCH, sg * 0.050], [X_SB_NOTCH, sg * Y_SB_NOTCH], [xb_, sg * Y_SB_NOTCH],
+              [xb_, sg * 0.200], [0.830, sg * 0.200]]
         X.append(panel(f"P-SIDEBAY-{sd}", f"YK250-SH-{357 if sd == 'L' else 358}", nm, ntr, "body_lower",
-                       [0.830, _frame_edge(1.11, -1.0)], ys, "removable", CAM, material=mat_, rf_window=rf,
+                       [0.830, xb_], ys, "removable", CAM, material=mat_, rf_window=rf, outline=ol,
                        lands=["M-KEELWALL", "ST-FS1110", "P-NOSE-LOWER"],
                        notes=note + "; fix round 1 (VPK-03): forward edge moved to x 0.830 and aft edge onto the FS1110 "
-                                    "cap so that every side-bay unit lies under the clear opening"))
+                                    f"cap so that every side-bay unit lies under the clear opening; fix round 3 (PK3-02): "
+                                    f"inboard of |y| {Y_SB_NOTCH} the aft edge ends at x {X_SB_NOTCH} on the joggled land "
+                                    "of P-NOSE-LOWER (the turret ring insert P-TURRETRING owns the FS1110 cap there)"))
     X.append(panel("P-MID-UPPER", "YK250-SH-360", "upper mid skin", "üst orta kaplama", "body_upper", [1.110, X_PFF],
-                   [-0.37, 0.37], "fixed", NUT, lands=["ST-FS1110", "ST-FS1330", "ST-FS1490", "M-CHINE"]))
+                   [-0.37, 0.37], "fixed", NUT, lands=["ST-FS1110", "ST-FS1330", "ST-FS1490", "M-CHINE"],
+                   cutouts=[{"id": "P-PARAHATCH", "kind": "hatch edge (FS1490 cap, |y| <= 0.188)"}]))
     X.append(panel("P-MID-LOWER", "YK250-SH-361", "lower mid skin (turret bay cut-out)", "alt orta kaplama",
                    "body_lower", [1.110, X_PFF], [-0.37, 0.37], "fixed", NUT, lands=["ST-FS1110", "ST-FS1330",
                                                                                       "ST-FS1490", "M-TURRETWALL"],
                    cutouts=[{"id": "P-TURRETRING", "kind": "aperture insert"},
                             {"id": "P-TDOORACC", "kind": "hatch (L/R)"}]))
-    xr0, xr1 = _frame_edge(1.1066, -1.0) - 0.022, _frame_edge(1.3334, 1.0) + 0.022
+    xr0, xr1 = RING_X
     X.append(panel("P-TURRETRING", "YK250-SH-363", "turret aperture ring insert (HD59, 157 mm opening)",
-                   "taret açıklık halkası (HD59)", "body_lower", [round(xr0, 4), round(xr1, 4)], [-0.125, 0.125],
+                   "taret açıklık halkası (HD59)", "body_lower", [round(xr0, 4), round(xr1, 4)], [-RING_Y, RING_Y],
                    "removable", dict(INS, spec="14 x ISO 7380 M4 A2-70 into potted M4 inserts in the frame caps (fore/aft) "
-                                               "and in the bay-wall outward flanges (sides): pitch about 67 mm",
+                                               "and in the bonded side land doublers of the lower skin under the door "
+                                               "rail plane (sides, fix round 3 PK3-09): pitch about 67 mm",
                                      pitch=[0.060, 0.080], edge_margin=0.012), layup=None,
+                   process="prepreg_ooa_vacbag", thickness=0.0020,
                    lands=["ST-FS1110", "ST-FS1330", "M-TURRETWALL"],
-                   notes="fix round 1 (VPK-08): flush skin insert 271 x 250 mm, CFRP solid laminate 2.0 mm, landing on the "
-                         "outward caps of FS1110 / FS1330 and the outward flanges of the bay walls; the fastener rows "
+                   notes=f"fix round 1 (VPK-08): flush skin insert {(xr1 - xr0) * 1000:.0f} x {2 * RING_Y * 1000:.0f} mm, "
+                         "CFRP solid laminate 2.0 mm (10 plies PW, prepreg_ooa_vacbag; fix round 3 PK3-08), landing on the "
+                         "outward caps of FS1110 / FS1330 and the side land doublers (M-TURRETWALL.side_land); the fastener rows "
                          "lie >= 17 mm from the interchangeable E180 ring's 0.19 m opening (YK250-SH-364) and >= 30 mm "
                          "from the HD59 opening (ball radius + payload.turret.bay.aperture_ring.radial_clearance); the "
                          "ring land (2.0 mm insert + 1.6 mm flange) stays within the 5.8 mm skin thickness and the "
                          "inserts are flush, so nothing protrudes into the band of the sliding doors "
                          "(layout.mechanisms.door_outlines.turret_door_R/L)"))
+    xt0_, xt1_ = _frame_edge(1.33, 1.0) - 0.003, _frame_edge(1.49, -1.0) + 0.003
     X.append(panel("P-TDOORACC", "YK250-SH-365", "turret-door drive access panel (lower skin aft of FS1330)",
-                   "taret kapağı tahrik erişim kapağı", "body_lower", [_frame_edge(1.33, 1.0) - 0.003,
-                                                                       _frame_edge(1.49, -1.0) + 0.003],
+                   "taret kapağı tahrik erişim kapağı", "body_lower", [xt0_, xt1_],
                    [0.100, 0.220], "removable", CAM, mirror=True, lands=["ST-FS1330", "ST-FS1490", "P-MID-LOWER"],
-                   notes="fix round 1 (VPK-08): moved out of the band swept by the sliding doors: framed cut-out "
+                   outline=[[round(xr1 + 0.010, 4), 0.100], [xt1_, 0.100], [xt1_, 0.220], [xt0_, 0.220],
+                            [xt0_, Y_SB_NOTCH], [round(xr1 + 0.010, 4), Y_SB_NOTCH]],
+                   notes="fix round 3 (PK3-02): inboard of |y| 0.135 the forward edge starts 10 mm aft of the turret "
+                         "ring insert (on the joggled land of P-MID-LOWER), so that the ring alone owns the FS1330 cap "
+                         "there; fix round 1 (VPK-08): moved out of the band swept by the sliding doors: framed cut-out "
                          "between the caps of FS1330 and FS1490 under the door actuator EQ-TDOORACT (aft face of "
                          "FS1330, drive shaft through C-TDOOR-SHAFT to the pinion on the door rack); clear opening "
                          "about 110 x 70 mm; the racks and rails are inspected from inside the bay with the aperture "
@@ -170,7 +194,7 @@ def panels() -> list:
                    "body_upper", [X_PFF, X_PFR], [-0.40, 0.40], "fixed", NUT, lands=["ST-FS1490", "ST-FS1810",
                                                                                      "M-PARAWALL", "M-CHINE"],
                    cutouts=[{"id": "P-PARAHATCH", "kind": "hatch (tethered lift-off)"}]))
-    xh0, xh1 = round(1.4866 - 0.0246, 4), round(1.8134 + 0.0246, 4)
+    xh0, xh1 = round(1.4866 - 0.0246, 4), X_PH1           # fix round 3 (PK3-02): aft edge 10 mm aft of the FS1810 web
     X.append(panel("P-PARAHATCH", "YK250-SH-367", "parachute hatch (dorsal, tethered lift-off)",
                    "paraşüt kapağı (sırt, bağlı fırlatmalı)", "body_upper", [xh0, xh1], [-0.188, 0.188], "removable",
                    {"type": "latch+tether", "spec": "no hinge (fix round 1, VPK-11): four locating tongues + one "
@@ -178,10 +202,13 @@ def panels() -> list:
                     "the deploying canopy pack lifts the hatch straight off; 1.5 m aramid tether to FS1810 keeps it "
                     "attached", "pitch": None, "edge_margin": 0.012}, joint="para_hatch",
                    lands=["ST-FS1490", "ST-FS1810", "M-PARAWALL"],
-                   notes="fix round 1 (VPK-03): 376 x 376 mm hatch on the outward flanges of FS1490 / FS1810 and of the "
-                         "bay walls (outside the 300 x 300 mm container footprint): clear opening 313 x 312 mm between "
-                         "the frame and wall faces; the hatch follows the V roof (one-piece GFRP/CFRP sandwich, no "
-                         "hinge line)"))
+                   notes=f"fix round 1 (VPK-03): {(xh1 - xh0) * 1000:.0f} x 376 mm hatch on the outward flanges of "
+                         "FS1490 / FS1810 and of the bay walls (outside the 300 x 300 mm container footprint): clear "
+                         "opening 313 x 312 mm between the frame and wall faces; the hatch follows the V roof (one-piece "
+                         "GFRP/CFRP sandwich, no hinge line); fix round 3 (PK3-02): at FS1810 the hatch edge band lies on "
+                         "the web and the first 10 mm of the aft flange, the tear-away strip P-SPINE starts 1 mm aft of it "
+                         "on the rest of the flange (side by side, neither on top); P-MID-UPPER and P-MB-UPPER are cut "
+                         "round the hatch over |y| <= 0.188"))
     X.append(panel("P-PARA-LOWER", "YK250-SH-368", "lower skin parachute bay", "paraşüt bölmesi alt kaplaması",
                    "body_lower", [X_PFF, X_PFR], [-0.40, 0.40], "fixed", NUT, lands=["ST-FS1490", "ST-FS1810"]))
     X.append(panel("P-MB-UPPER", "YK250-SH-370", "upper skin mission bay (structural)", "görev bölmesi üst kaplaması",
@@ -189,7 +216,11 @@ def panels() -> list:
                    lands=["ST-FS1810", "ST-FS-FUEL", "M-CHINE", "M-SPINE"],
                    notes="structural skin screwed (M4 nutplates, 25 mm pitch) to the spine-channel flanges, the frames "
                          "and the chine longerons: shear path of the net bridle x-component (structures P-SPINE-SKIN); "
-                         "GNSS 2 window cut-out", cutouts=[{"id": "P-GNSS2", "kind": "RF window insert"}]))
+                         "GNSS 2 window cut-out; fix round 3 (PK3-02): cut round the parachute hatch edge (FS1810 cap) "
+                         "and the tear-away strip P-SPINE (over the spine channel)",
+                   cutouts=[{"id": "P-GNSS2", "kind": "RF window insert"},
+                            {"id": "P-PARAHATCH", "kind": "hatch edge (FS1810 cap, |y| <= 0.188)"},
+                            {"id": "P-SPINE", "kind": "cover strip (spine channel)"}]))
     X.append(panel("P-GNSS2", "YK250-SH-372", "GNSS 2 RF window", "GNSS 2 RF penceresi", "body_upper",
                    r3([X_GNSS2 - 0.040, X_GNSS2 + 0.040]), [0.110, 0.190], "removable", INS, material=G, rf_window=True,
                    lands=["P-MB-UPPER"], notes="outboard of the spine flanges (no carbon above the antenna)"))
@@ -204,7 +235,7 @@ def panels() -> list:
                    [X_PFR, X_FUELF], [-0.40, 0.40], "fixed", NUT, lands=["ST-FS1810", "ST-FS-FUEL", "M-CHINE"],
                    cutouts=[{"id": "P-MBHATCH", "kind": "hatch"}]))
     X.append(panel("P-SPINE", "YK250-SH-376", "tear-away bridle cover strip (over the spine channel)",
-                   "yırtılır kayış örtüsü (sırt kanalı üstü)", "body_upper", [_frame_edge(X_PFR, 1.0), X_RS0 + 0.016],
+                   "yırtılır kayış örtüsü (sırt kanalı üstü)", "body_upper", [round(X_PH1 + 0.001, 4), X_RS0 + 0.016],
                    [-0.045, 0.045], "removable", TEAR, material=G,
                    lands=["M-SPINE", "ST-FS1810", "ST-FS-RS"],
                    notes="fix round 1 (VPK-04/S1-04): non-structural GFRP cover strip, lands on the inner 25 mm of the "

@@ -49,6 +49,18 @@ def fin_spar_root(frac, depth=0.015):
     raise RuntimeError("fin spar root not found")
 
 
+DUCT_SHIFT = 0.0035                            # payload-bay aft wall ahead of the zone end (PK3-05: duct >= 30 mm)
+Y_WK = 0.015                                   # inner face of the well keel webs (PK3-05: 30 mm harness channel)
+CHINE_FWD1 = spar_x(0.38, 0.25) - 0.030        # end of the forward chine piece (30 mm ahead of FS-MS)
+CHINE_AFT0 = spar_x(0.38, 0.72) + 0.030        # start of the aft chine piece (30 mm aft of FS-RS)
+SPL_PITCH, SPL_EDGE = 0.018, 0.015             # chine splices: 4 x M6 at 3 D pitch, 2.5 D composite edge (PK3-04)
+
+
+def _frame_edge_x(x_web, sign):
+    """x of a panel edge on a frame cap (b_shell._frame_edge)."""
+    return round(float(x_web) + sign * 0.003, 4)
+
+
 def _wd() -> dict:
     """structures.sizing.wing of the loaded spec (the ply schedule the cap geometry is drawn with)."""
     return ((S.get("structures") or {}).get("sizing") or {}).get("wing") or {}
@@ -99,21 +111,50 @@ def members() -> list:
     nw = ZP["nose_gear_well"]["box"]
     # ---------------------------------------------------------------- longitudinal primary members
     x_ms38, x_rs38 = spar_x(0.38, 0.25), spar_x(0.38, 0.72)
+    spl = []
+    for sid, xs_, sg, txt in (("SPL-CH-FWD", CHINE_FWD1, -1.0, "forward piece end"),
+                              ("SPL-CH-AFT", CHINE_AFT0, 1.0, "aft piece start")):
+        pts = [[r3(xs_ + sg * (SPL_EDGE + k * SPL_PITCH)), r3(chine_halfwidth(xs_) - 0.020 + 0.5 * 0.035), 0.0]
+               for k in range(4)]
+        spl.append({"id": sid, "with": "M-SOB", "piece": txt, "d": 0.006, "axis": [0.0, 1.0, 0.0],
+                    "spec": "M6 Ti-6Al-4V (NAS1956 type) + self-locking nut, axis y, through the chine-longeron web "
+                            "(J outboard leg, 2.4 mm) and the 16-ply solid land of the side-of-body rib",
+                    "pitch_m": SPL_PITCH, "edge_m": SPL_EDGE, "bolts": pts})
     M.append(member("M-CHINE", "YK250-CH-020", "chine longeron", "kenar çizgisi uzun kirişi",
                     "primary longitudinal member on the chine line (z = chine plane): body bending (with the dorsal "
                     "ridge skin and the belly), upper/lower skin attachment land at the chine, LERX/glove root "
                     "attachment between FS1810 and the main-spar frame; forward piece FS0600 -> main-spar frame, "
-                    "aft piece rear-spar frame -> forward face of the firewall FS3670, spliced to the side-of-body rib "
-                    "of the wing box with 2 x 4 M6 bolts; fix round 1 (VPK-01/VPK-06): no carbon aft of the firewall - "
-                    "the aft end is spliced (2 x M5 Ti) to the forward tongue of the metallic stabilator node fitting "
-                    "F-SPINDLE-NODE, which is through-bolted with the firewall stack",
+                    "aft piece rear-spar frame -> forward face of the firewall FS3670; both pieces are spliced to the "
+                    "side-of-body rib of the wing box with 4 x M6 Ti each (fix round 3, PK3-04: splices SPL-CH-FWD / "
+                    "SPL-CH-AFT; the side-of-body rib extends aft of the rear spar as the aft splice land), so that "
+                    "the axial longeron load passes through the side-of-body rib past the spar frames; the pieces "
+                    "pass the frames they cross in longeron notches open to the frame edge (layout.stations C-CHINE: "
+                    "placed laterally after the frames, 7075 shear clip, U-doubler); fix round 1 (VPK-01/VPK-06): no "
+                    "carbon aft of the firewall - the aft end is spliced (2 x M5 Ti) to the forward tongue of the "
+                    "metallic stabilator node fitting F-SPINDLE-NODE, which is through-bolted with the firewall stack",
                     "cfrp_ud_mtm45_as4", "prepreg_ooa_vacbag",
                     {"type": "J-section, UD caps + PW web/flanges (spar_cap_ud / spar_web)", "w": 0.035, "h": 0.030,
                      "t": 0.0024},
-                    {"paths": [chine_path(0.6034, x_ms38 - 0.030), chine_path(x_rs38 + 0.030, X_FW_FWD - 0.0010)]},
+                    {"paths": [chine_path(0.6034, CHINE_FWD1), chine_path(CHINE_AFT0, X_FW_FWD - 0.0010)],
+                     "splices": spl},
                     "skins (shear) -> chine longeron (axial) -> frames / wing box side-of-body rib",
                     mirror=True, layup="spar_cap_ud", touch=["ST-*", "M-SOB", "M-DECK-NOSE", "M-WELLROOF",
                                                             "M-FWDDECK", "M-MIDFLOOR", "F-SPINDLE-NODE"]))
+    # fix round 3 (PK3-02): slot-end sill between the keel walls = aft land of the nose clamshell doors, which end
+    # 1 mm ahead of the turret ring insert (the ring owns the FS1110 forward cap)
+    xd1 = round(_frame_edge_x(1.1066, -1.0) - 0.022 - 0.001, 4)
+    xs0_ = round(xd1 - 0.013, 4)
+    M.append(member("M-NGSILL", "YK250-CH-038", "nose-gear slot-end sill", "burun takımı yarık sonu eşiği",
+                    "fix round 3 (PK3-02): CFRP channel 13 mm wide across the keel slot at its aft end, bonded to the "
+                    "two keel walls and to the forward flange of FS1110 at the skin line: aft land (12 mm edge band) "
+                    "of the nose clamshell doors; the turret ring insert lands on the FS1110 cap 1 mm aft of it",
+                    "cfrp_pw_mtm45_as4", "prepreg_ooa_vacbag",
+                    {"type": "U-channel 13 x 10 mm, 8 plies PW (1.6 mm)", "w": 0.013, "h": 0.010, "t": 0.0016},
+                    {"box": r3([[xs0_, -0.0415, z_bot(xs0_, 0.0415) + SKIN], [xd1, 0.0415,
+                                                                             z_bot(xs0_, 0.0415) + SKIN + 0.010]]),
+                     "bottom": "skin"},
+                    "door edge (air loads, seal pressure) -> sill -> keel walls / FS1110", layup="spar_web",
+                    thickness=0.0016, touch=["M-KEELWALL", "ST-FS1110"]))
     z_nw_top = float(nw[1][2])
     M.append(member("M-KEELWALL", "YK250-CH-021", "nose-gear keel wall", "burun takımı omurga duvarı",
                     "vertical keel walls on both sides of the nose-gear slot: nose-gear pivot bushings and "
@@ -262,7 +303,10 @@ def members() -> list:
                     "aft wall of the payload bay (keel beam to keel beam); forward wall of the lateral harness duct",
                     "cfrp_pw_mtm45_as4", "prepreg_ooa_vacbag", {"type": "solid laminate wall 1.6 mm (8 plies PW)",
                                                                "t": 0.0016},
-                    {"box": r3([[X_PB1, -0.2040, -0.215], [X_PB1 + 0.0016, 0.2040, -0.0532]]), "bottom": "skin"},
+                    {"box": r3([[X_PB1 - DUCT_SHIFT, -0.2040, -0.215], [X_PB1 - DUCT_SHIFT + 0.0016, 0.2040, -0.0532]]),
+                     "bottom": "skin",
+                     "notes": "fix round 3 (PK3-05): 3.5 mm ahead of the payload-bay zone end so that the lateral harness "
+                              "duct is >= 30 mm wide (H-MAIN 20 mm + the 10 mm corridor of layout.systems.harness.rules)"},
                     "secondary (closes the bay; payload loads go to the keel beams and the deck)",
                     layup="spar_web", thickness=0.0016, touch=["M-KEEL", "M-FWDDECK", "M-WELLROOF", "ST-FS-RS"]))
     M.append(member("M-WELLWALL-FWD", "YK250-CH-035", "main-well forward wall", "ana takım kuyusu ön duvarı",
@@ -279,7 +323,11 @@ def members() -> list:
                     "cfrp_pw_mtm45_as4", "prepreg_ooa_vacbag",
                     {"type": "solid laminate web 1.0 mm (5 plies PW, 0/90 and +-45 alternating) with bonded edge "
                              "flanges, one per side of the harness channel", "t": 0.0010},
-                    {"box": r3([[X_W0, 0.0105, -0.1868], [X_GEARF - 0.0034, 0.0115, -0.0668]])},
+                    {"box": r3([[X_W0, Y_WK, -0.1868], [X_GEARF - 0.0034, Y_WK + 0.0010, -0.0668]]),
+                     "notes": "fix round 3 (PK3-05): webs at y +-0.015..0.016 (was +-0.0105..0.0115): 30 mm clear channel "
+                              "= H-MAIN 20 mm + the 10 mm harness corridor; the stowed tyre envelopes incl. their 12 mm "
+                              "clearance start at |y| 0.0189, so each tyre keeps >= 14.9 mm to its web; the inner-door "
+                              "hinge brackets on the lower-edge flanges reach 5 mm inboard to the hinge lines y +-0.010"},
                     "well-roof pressure / inner-door hinge loads -> keel webs -> well forward wall + FS-GEAR",
                     mirror=True, layup="spar_web", thickness=0.0010,
                     touch=["ST-FS-GEAR", "M-WELLROOF", "M-WELLWALL-FWD"]))
@@ -438,10 +486,22 @@ def members() -> list:
              "rear-spar slot fitting, blind-mate wing connector CN-WING (between the spars), joint seal land")):
         x0 = float(af.wing.interpolate_section(y)["x_le"]) + 0.004
         x1 = spar_x(y, 0.72) + 0.013
+        geo = {}
+        if mid == "M-SOB":
+            # fix round 3 (PK3-04): aft extension behind the rear spar (glove trailing-edge closing) = splice land of
+            # the aft chine piece (4 x M6 Ti, M-CHINE.splices SPL-CH-AFT)
+            x1 = CHINE_AFT0 + 0.090
+            role = role + ("; fix round 3 (PK3-04): extended aft of the rear spar to x %.3f as the closing rib of the "
+                           "glove trailing-edge bay and the splice land of the aft chine piece; 16-ply solid lands at "
+                           "both chine splices (4 x M6 Ti each, M-CHINE.splices)" % x1)
+            geo["lands"] = [{"x": r3([CHINE_FWD1 - 0.075, CHINE_FWD1]), "z": [-0.016, 0.016],
+                             "text": "forward chine splice land (16 plies)"},
+                            {"x": r3([CHINE_AFT0, x1]), "z": [-0.016, 0.016],
+                             "text": "aft chine splice land (16 plies)"}]
+        geo.update({"box": r3([[x0, y - T_SW / 2, -0.050], [x1, y + T_SW / 2, 0.052]]), "contour": "wing_loft"})
         M.append(member(mid, part, nm, ntr, role, "cfrp_pw_mtm45_as4", "prepreg_ooa_vacbag",
                         {"type": "flanged sandwich rib (rib_panel), solid laminate at fittings", "t": T_SW},
-                        {"box": r3([[x0, y - T_SW / 2, -0.050], [x1, y + T_SW / 2, 0.052]]), "contour": "wing_loft"},
-                        "glove skins / fittings -> rib -> spars", mirror=True, layup="rib_panel",
+                        geo, "glove skins / fittings -> rib -> spars", mirror=True, layup="rib_panel",
                         touch=["M-CTBOX", "M-CHINE", "F-FORK", "F-REARSLOT", "P-GLOVE-*"]))
     return M
 

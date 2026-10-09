@@ -131,10 +131,8 @@ def stations() -> list:
     add("FS-FUEL", X_FUELF, "forward fuel-bay bulkhead (vapour-tight): forward wall of the forward fuel cell, aft "
         "wall of the mission-computer bay, forward end of the keel beams and payload-bay roof deck", "bulkhead",
         "YK250-CH-008",
-        [cut("C-FUEL-FUEL", "fuel interconnect/vent lines (sealed bulkhead unions)", [-0.040, 0.040],
-             [0.100, 0.130]),
-         cut("C-HARN-FUEL", "harness trunk (below the fuel cell floor, sealed grommet)", [0.240, 0.300],
-             [-0.110, -0.070], mirror=True),
+        [cut("C-HARN-FUEL", "harness trunk (below the fuel cell floor, sealed grommet; fix round 3: lowered with "
+             "the trunk, PK3-01/05)", [0.240, 0.300], [-0.120, -0.080], mirror=True),
          notch("C-SPINE-FUEL", "dorsal spine channel M-SPINE (sealed trough, bridle aft leg inside; the leg tears out "
                "upward)", [-0.024, 0.024], 0.159, "P-SPINE")], name_tr="ön yakıt bölmesi perdesi",
         notes="fix round 1 (VPK-13): no wing-harness notch in this vapour-tight bulkhead; the wing branch H-WING "
@@ -144,10 +142,15 @@ def stations() -> list:
         "fuel bay; below the box only the outboard posts (payload bay open)", "spar frame", "YK250-CH-009",
         [cut("C-PAYLOAD-MS", "payload bay (open, below the box)", [-0.205, 0.205], [-0.215, zb0 - 0.004],
              kind="bay"),
-         cut("C-FUEL-MS", "fuel interconnect (sealed union)", [-0.040, 0.040], [0.080, 0.110]),
+         cut("C-FUEL-MS", "saddle fill / overflow line FL-FILL-S (sealed union)", [-0.040, 0.040], [0.080, 0.110]),
+         cut("C-FUEL-MS-LO", "bottom fuel interconnect FL-XFER-LO under the box (sealed union; fix round 3, PK3-01)",
+             [0.325, 0.355], [-0.085, -0.055], mirror=True),
+         cut("C-VENT-MS", "top vent interconnect FL-VENT-1 (sealed union; fix round 3, PK3-01)", [0.024, 0.048],
+             [0.126, 0.150]),
          notch("C-SPINE-MS", "dorsal spine channel M-SPINE (sealed trough; the bridle aft leg tears out upward)",
                [-0.024, 0.024], 0.159, "P-SPINE"),
-         cut("C-HARN-MS", "harness trunk (sealed grommet)", [0.250, 0.310], [-0.118, -0.068], mirror=True)],
+         cut("C-HARN-MS", "harness trunks H-MAIN / H-COAX / H-WING (sealed grommet; fix round 3: lowered with the "
+             "trunks, PK3-01/05)", [0.255, 0.315], [-0.122, -0.078], mirror=True)],
         sweep=SW_MS, notes="the box itself (spar caps and webs) is part YK250-CH-001; this part is the frame above "
         "and below the box (fuel-bay wall and outboard posts) bonded and bolted to the spar web",
         name_tr="ana kiriş çerçevesi")
@@ -156,8 +159,14 @@ def stations() -> list:
         "and of the well roof deck", "spar frame", "YK250-CH-010",
         [cut("C-PAYLOAD-RS", "payload bay (open, below the box)", [-0.205, 0.205], [-0.215, zb0 - 0.004],
              kind="bay"),
-         cut("C-FUEL-RS", "fuel interconnect (sealed union)", [-0.040, 0.040], [0.080, 0.110]),
-         cut("C-HARN-RS", "harness trunk (sealed grommet)", [0.250, 0.310], [-0.118, -0.068], mirror=True)],
+         cut("C-FUEL-SAD", "saddle drain line FL-XFER-SA at the saddle floor (sealed union; fix round 3, PK3-01)",
+             [-0.020, 0.020], [0.044, 0.072]),
+         cut("C-FUEL-RS-LO", "bottom fuel interconnect FL-XFER-LO under the box (sealed union; fix round 3, PK3-01)",
+             [0.325, 0.355], [-0.085, -0.055], mirror=True),
+         cut("C-VENT-RS", "top vent interconnect FL-VENT-2 (sealed union; fix round 3, PK3-01)", [0.024, 0.048],
+             [0.126, 0.150]),
+         cut("C-HARN-RS", "harness trunks H-MAIN / H-COAX (sealed grommet; fix round 3: lowered with the trunks, "
+             "H-COAX descending to its lower tier, PK3-01/05)", [0.255, 0.315], [-0.142, -0.078], mirror=True)],
         sweep=SW_RS, name_tr="arka kiriş çerçevesi")
     add("FS-GEAR", X_GEARF, "aft main-gear frame + aft fuel-bay bulkhead (vapour-tight): aft ends of the gear beams "
         "and trunnion fittings, inner-door actuator mounts (aft face), forward wall of the aft equipment bay",
@@ -214,4 +223,37 @@ def stations() -> list:
                                "process": "cnc_milling_metal", "part": "YK250-CH-015"}},
         notes="x = stabilator pivot station (tail.surfaces.stabilator.pivot); U-ring below z 0.176",
         name_tr="motor bölmesi alt U halkası")
+    chine_notches(st)
     return st
+
+
+CHINE_W, CHINE_H = 0.035, 0.030          # M-CHINE J-section (b_chassis.members)
+
+
+def chine_ranges() -> list:
+    """x ranges of the two chine-longeron pieces (b_chassis.members M-CHINE paths)."""
+    return [(0.6034, spar_x(0.38, 0.25) - 0.030), (spar_x(0.38, 0.72) + 0.030, X_FW_FWD - 0.0010)]
+
+
+def chine_notches(st: list) -> None:
+    """Fix round 3 (PK3-04): every frame whose web the chine longeron M-CHINE crosses gets a longeron notch open to
+    the frame edge: the J-section (35 x 30 mm) + 1 mm all round, so that the longeron is placed laterally (from
+    outboard) into the notches of the frames already in the jig; a 7075 shear clip ties the frame web to the longeron
+    web and a bonded U-doubler carries the frame edge band round the notch (layout_check C02)."""
+    for s_ in st:
+        x = float(s_["x"])
+        t = float(s_.get("t", 0.0068))
+        if s_.get("sweep_deg") or not any(a + 0.5 * t < x < b - 0.5 * t for a, b in chine_ranges()):
+            continue
+        yc, zz = chine_halfwidth(x) - 0.020, zc(x)
+        s_["cutouts"].append({
+            "id": "C-CHINE", "purpose": "chine longeron M-CHINE (J 35 x 30 mm) crossing the frame web",
+            "kind": "longeron notch", "member": "M-CHINE", "mirror": True,
+            "y": r3([yc - 0.5 * CHINE_W - 0.001, chine_halfwidth(x) + 0.010]),
+            "z": r3([zz - 0.5 * CHINE_H - 0.001, zz + 0.5 * CHINE_H + 0.001]),
+            "insertion": "lateral, from outboard (the notch is open to the frame edge): the longeron piece is placed "
+                         "after the frames are pinned in the jig",
+            "clip": "7075-T651 shear clip (angle 20 x 20 x 1.6 mm, 40 mm long): 2 x M4 Ti to the frame web land, "
+                    "2 x M4 Ti to the longeron web",
+            "doubler": "bonded U-doubler PW 16 plies (3.2 mm) x 20 mm round the notch, ends 25 mm past the notch "
+                       "corners into the edge band"})

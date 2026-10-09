@@ -153,6 +153,36 @@ class TestChecks(unittest.TestCase):
         self.assertEqual([v["parts"] for v in at], [["FLOAT"]])
         self.assertEqual(C.check_thickness(reg), [])
 
+    def test_coupled_joints_swept_only_along_sequences(self):
+        """Fix round 3 (PK3-03): a joint with an expr (gear leg / door) is swept only through the registered sequence
+        states, never alone: a leg that would pass through its closed door when swept alone is clear when the sequence
+        opens the door first; a clearance rule naming the coupled joint uses the sequence states too."""
+        from ucav250.analysis import checks as C
+        reg = Registry({"materials": {"al": {"density": 2700.0, "kind": "metal"}},
+                        "processes": {"cnc": {"min_thickness": 0.001}},
+                        "layout": {"clearances": [{"name": "leg vs door", "a": ["LEG"], "b": ["DOOR"], "min_mm": 1.0,
+                                                   "joints": ["leg"]}]}})
+        reg.add(Part(id="BASE", name="base", name_tr="taban", group="chassis", material="al", process="cnc",
+                     thickness=0.01, mesh_fn=lambda: G.box((0.4, 0.4, 0.01), center=(0.0, 0.0, 0.3))))
+        # sliding door: rest 0 = closed over the opening (y -0.025..0.025), 0.1 = open (y 0.075..0.125)
+        reg.add_joint(Joint("door", "prismatic", (0.0, 0.0, 0.0), (0, 1, 0), 0.0, 0.1, expr="0.1*gear_up"))
+        reg.add(Part(id="DOOR", name="door", name_tr="kapak", group="gear", material="al", process="cnc",
+                     thickness=0.004, joint="door", parent="BASE",
+                     mesh_fn=lambda: G.box((0.06, 0.05, 0.004), center=(0.0, 0.0, 0.0))))
+        # leg: rest 0 = down (z -0.15..-0.01), 0.17 = up (z 0.02..0.16): swept alone it crosses the closed door
+        reg.add_joint(Joint("leg", "prismatic", (0.0, 0.0, 0.0), (0, 0, 1), 0.0, 0.17, expr="0.17*gear_up"))
+        reg.add(Part(id="LEG", name="leg", name_tr="bacak", group="gear", material="al", process="cnc",
+                     thickness=0.01, joint="leg", parent="BASE",
+                     mesh_fn=lambda: G.box((0.02, 0.02, 0.14), center=(0.0, 0.0, -0.08))))
+        reg.add_sequence("gear", [{"door": 0.0, "leg": 0.0}, {"door": 0.1, "leg": 0.0}, {"door": 0.1, "leg": 0.085},
+                                  {"door": 0.1, "leg": 0.17}, {"door": 0.0, "leg": 0.17}])
+        labels = [lab for lab, _ in C._states(reg, 5)]
+        self.assertTrue(labels and all(lab.startswith("seq:") for lab in labels), labels)
+        self.assertEqual([v for v in C.check_swept(reg, n=5) if set(v["parts"]) == {"DOOR", "LEG"}], [])
+        self.assertEqual([v for v in C.check_clearances(reg) if set(v["parts"]) == {"DOOR", "LEG"}], [])
+        # the same leg swept alone (no expr: an independent joint) does hit the closed door - the check is not vacuous
+        reg.joints["leg"].expr = ""
+        self.assertTrue([v for v in C.check_swept(reg, n=5) if set(v["parts"]) == {"DOOR", "LEG"}])
 
 if __name__ == "__main__":
     unittest.main()

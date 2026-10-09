@@ -480,48 +480,63 @@ def gear_actuators() -> list:
                     "lower skin)"}]
 
 
+Z_HL = -0.100                          # lower route of the main / coax / wing trunks under the fuel decks (PK3-01/05)
+Z_HC = -0.125                          # coax trunk tier in the duct and the centre-line channel (PK3-05)
+Y_WRISE = 0.250                        # wing branch rises into the box inboard of the fuel interconnect (PK3-01)
+X_DUCT_C = None                        # lateral duct centre: set from the layout walls (PK3-05)
+
+
 def harness() -> dict:
+    global X_DUCT_C
+    from .b_chassis import DUCT_SHIFT
+    X_DUCT_C = round(0.5 * ((X_PB1 - DUCT_SHIFT + 0.0016) + (X_W0 - 0.0016)), 4)
     def P(*pts):
         return [r3(p) for p in pts]
     trunks = [
         {"id": "H-MAIN", "part": "YK250-SY-750", "name": "main power/data trunk", "diameter": 0.020,
          "path": P([0.950, -0.110, 0.031], [1.110, -0.143, 0.035], [1.330, -0.1475, 0.049], [X_PFF, -0.195, 0.035],
-                   [X_PFR, -0.195, 0.035], [2.000, -0.270, -0.090], [X_FUELF, -0.270, -0.090],
-                   [X_MS0 + 0.040, -0.280, -0.090], [X_DUCT, -0.290, -0.090], [X_DUCT, -0.150, -0.080],
-                   [X_DUCT, 0.0, -0.080], [X_GEARF + 0.020, 0.0, -0.080], [X_GEARF + 0.180, 0.0, 0.030]),
-         "penetrations": [{"member": "M-WELLWALL-FWD", "point": r3([X_W0 - 0.0008, 0.0, -0.080]),
+                   [X_PFR, -0.195, 0.035], [2.000, -0.270, Z_HL], [X_FUELF, -0.270, Z_HL],
+                   [X_MS0 + 0.040, -0.280, Z_HL], [X_DUCT_C, -0.290, Z_HL], [X_DUCT_C, -0.150, Z_HL],
+                   [X_DUCT_C, 0.0, Z_HL], [X_GEARF + 0.020, 0.0, Z_HL], [X_GEARF + 0.180, 0.0, 0.030]),
+         "penetrations": [{"member": "M-WELLWALL-FWD", "point": r3([X_W0 - 0.0008, 0.0, Z_HL]),
                            "kind": "sealed conduit entry (centre-line channel)"}],
+         "supports": ["M-DECK-NOSE", "M-TURRETWALL", "M-PARAWALL", "M-MIDFLOOR"],
          "text": "PDU (+ generator AC lines from the SG750, ECU-engine lines from the mission bay, two brake lines) -> "
                  "port side of the turret and parachute bays -> mission bay -> outboard of the port keel beam under "
                  "the forward fuel deck -> lateral duct between the payload-bay aft wall and the main-well forward "
-                 "wall (both 1.6 mm solid laminate) -> centre-line channel between the main wells (sealed CFRP conduit "
-                 "through the well forward wall; the stowed tyre envelopes incl. their 12 mm clearance are 37.9 mm "
-                 "apart) -> through FS-GEAR (C-HARN-CL) -> aft equipment bay; no route inside a fuel cell"},
+                 "wall (both 1.6 mm solid laminate; >= 30 mm wide, fix round 3 PK3-05) -> centre-line channel between "
+                 "the main wells (sealed CFRP conduit through the well forward wall; keel webs at y +-0.015, 30 mm "
+                 "clear = 20 mm trunk + the 10 mm corridor; H-COAX in a lower tier) -> through FS-GEAR (C-HARN-CL) -> "
+                 "aft equipment bay; no route inside a fuel cell; clamped (P-clamps <= 150 mm) to the members listed "
+                 "in 'supports'"},
         {"id": "H-COAX", "part": "YK250-SY-751", "name": "coax / data trunk (starboard)", "diameter": 0.016,
          "path": P([1.000, 0.150, -0.010], [1.110, 0.145, -0.005], [1.200, 0.1475, 0.049], [1.330, 0.1475, 0.049],
-                   [X_PFF, 0.195, 0.035], [X_PFR, 0.195, 0.035], [2.000, 0.270, -0.090], [X_FUELF, 0.270, -0.090],
-                   [X_DUCT, 0.290, -0.105], [X_DUCT, 0.150, -0.103], [X_DUCT, 0.0, -0.103],
-                   [X_GEARF + 0.020, 0.0, -0.103], [X_GEARF + 0.100, 0.0, -0.050]),
-         "penetrations": [{"member": "M-WELLWALL-FWD", "point": r3([X_W0 - 0.0008, 0.0, -0.103]),
+                   [X_PFF, 0.195, 0.035], [X_PFR, 0.195, 0.035], [2.000, 0.270, Z_HL], [X_FUELF, 0.270, Z_HL],
+                   [X_MS0 + 0.040, 0.280, Z_HL], [X_DUCT_C, 0.290, Z_HC], [X_DUCT_C, 0.150, Z_HC],
+                   [X_DUCT_C, 0.0, Z_HC], [X_GEARF + 0.020, 0.0, Z_HC], [X_GEARF + 0.100, 0.0, -0.050]),
+         "penetrations": [{"member": "M-WELLWALL-FWD", "point": r3([X_W0 - 0.0008, 0.0, Z_HC]),
                            "kind": "sealed conduit entry (centre-line channel, lower tier)"}],
+         "supports": ["M-DECK-NOSE", "M-TURRETWALL", "M-PARAWALL", "M-MIDFLOOR"],
          "text": "avionics side bay -> under the avionics deck to FS1110 -> starboard side of the turret and parachute "
                  "bays -> mirror of the main trunk -> shares the lateral duct and the centre-line channel (lower tier, "
                  "shielded coax) -> aft equipment bay -> fin-tip antennas (C2-B, backup) via the fin branches"},
         {"id": "H-WING", "part": "YK250-SY-752", "name": "wing branch (each side)", "diameter": 0.012, "mirror": True,
-         "path": P([X_FUELF - 0.040, 0.270, -0.090], [X_FUELF + 0.040, 0.285, -0.090],
-                   [spar_x(0.300, 0.25) - 0.030, 0.300, -0.090], [spar_x(0.300, 0.25) + 0.030, 0.300, -0.090],
-                   [2.640, 0.340, -0.060], [2.680, 0.360, -0.046], [2.685, 0.370, -0.020], [2.700, 0.400, -0.015],
-                   [2.715, 0.550, -0.012], [2.725, 0.690, -0.010]),
-         "penetrations": [{"member": "M-CTBOX", "point": r3([2.682, 0.364, Z_BOX[0]]),
+         "path": P([X_FUELF - 0.040, 0.270, Z_HL], [X_FUELF + 0.040, 0.285, Z_HL],
+                   [spar_x(0.300, 0.25) - 0.030, 0.300, Z_HL], [spar_x(0.300, 0.25) + 0.030, 0.290, Z_HL],
+                   [2.600, Y_WRISE, -0.075], [2.620, Y_WRISE, -0.052], [2.630, Y_WRISE, -0.025],
+                   [2.670, 0.300, -0.015], [2.700, 0.400, -0.015], [2.715, 0.550, -0.012], [2.725, 0.690, -0.010]),
+         "penetrations": [{"member": "M-CTBOX", "point": r3([2.625, Y_WRISE, Z_BOX[0]]),
                            "kind": "sealed grommet in the lower box cover (inside the body, outboard of the payload "
-                                   "bay)"},
+                                   "bay and the keel beam; fix round 3 PK3-01: inboard of the bottom fuel "
+                                   "interconnect)"},
                           {"member": "M-SOB", "point": r3([2.700, Y_SOB, -0.015]),
                            "kind": "grommet in the side-of-body rib between the spars"},
                           {"member": "M-GLOVERIB", "point": r3([2.715, 0.550, -0.012]),
                            "kind": "grommet in the glove rib between the spars"}],
          "text": "fix round 1 (VPK-13): from the trunk in the mission bay under the forward fuel deck (outside the "
                  "vapour-tight bay, C-HARN-FUEL / C-HARN-MS with the main/coax trunk) to below the centre wing box, "
-                 "up through the lower box cover into a bonded conduit between the spars, through the side-of-body "
+                 "up through the lower box cover at y +-0.25 (inboard of the bottom fuel interconnect, fix round 3 "
+                 "PK3-01) into a bonded conduit between the spars, through the side-of-body "
                  "and glove ribs to the blind-mate MIL-DTL-38999 receptacle CN-WING on the joint rib between the "
                  "spars; no harness inside a fuel bay, no LERX rib or pin corridor crossed"},
         {"id": "H-TAIL", "part": "YK250-SY-753", "name": "tail branch (each side)", "diameter": 0.016, "mirror": True,
@@ -535,10 +550,14 @@ def harness() -> dict:
                  "(engine side in fire sleeve, >= 50 mm from the exhaust)"},
         {"id": "H-NOSE", "part": "YK250-SY-755", "name": "nose branch", "diameter": 0.012,
          "path": P([0.795, 0.082, 0.034], [0.700, 0.082, 0.034], [0.640, 0.0625, 0.030], [0.600, 0.0625, 0.030],
-                   [0.395, 0.055, 0.030], [0.335, 0.0, 0.012], [0.300, 0.0, 0.010]),
+                   [0.395, 0.055, 0.030], [0.370, 0.055, 0.030], [0.335, 0.0, 0.012], [0.300, 0.0, 0.010]),
+         "supports": ["M-DECK-NOSE"],
          "text": "FTS, nose-cone antennas (coax), transponder blade feed, pitot heater; pitot lines alongside"}]
     return {"trunks": trunks,
-            "rules": "trunks are keep-out corridors (diameter + 10 mm); grommets at every frame (cut-outs in "
+            "rules": "trunks are keep-out corridors (diameter + 10 mm: no object within 5 mm of the trunk surface, "
+                     "layout_check C04, fix round 3 PK3-05) except the members a trunk is clamped to ('supports'), "
+                     "its declared penetrations (grommets / conduit entries) and its two terminations (connectors, "
+                     "30 mm); grommets at every frame (cut-outs in "
                      "layout.stations); power and RF coax separated by >= 20 mm except in the shared centre-line "
                      "channel (shielded coax); >= 50 mm from the exhaust; no harness inside a fuel bay; wing and tail "
                      "branches separable at MIL-DTL-38999 connectors in the access bays",
@@ -552,49 +571,172 @@ def harness() -> dict:
                             "fire-resistant circular connector (engine side) / grommet"}]}
 
 
+Y_XLO, Z_XLO = 0.340, -0.070           # bottom interconnect: lateral position and height under the deck / box (PK3-01)
+OUTLET_ABOVE_FLOOR = 0.001             # flush outlet / sump fittings: inlet 1 mm above the bladder floor
+
+
 def fuel_lines() -> list:
-    """Fuel line routes (fix round 1, VPK-09): refuel, transfer, feed / return, vent and drain, with diameters and the
-    frame / deck penetrations they use (layout_check C02 / C04)."""
+    """Fuel line routes (fix round 1, VPK-09; re-plumbed in fix round 3, PK3-01): refuel, saddle fill, bottom
+    interconnects (forward -> aft, saddle -> aft) with check valves, feed / return, top vents of every cell to one vent
+    line with an anti-siphon high loop, sump drains, with diameters and the frame / deck penetrations they use
+    (layout_check C02 / C03 / C04)."""
     fc = {c["name"]: c for c in S["layout"]["fuel_cells"]}
     xf, xs, xa = fc["forward_cell"]["x"], fc["saddle_cell"]["x"], fc["aft_cell"]["x"]
+    zf0, zs0, za0 = (float(fc[k]["z"][0]) for k in ("forward_cell", "saddle_cell", "aft_cell"))
     zr = round(z_bot(2.340, 0.320) + 0.035, 4)
+    t8, t48 = math.tan(math.radians(SW_MS)), math.tan(math.radians(SW_RS))
+    x_ms_y, x_rs_y = X_MS0 + Y_XLO * t8, X_RS0 + Y_XLO * t48             # spar frames at the interconnect y
+    x_in_f = round(xf[1] + Y_XLO * t8 - 0.025, 4)                        # forward-cell outlet (aft-outboard corner)
+    x_in_a = round(xa[0] + Y_XLO * t48 + 0.022, 4)                       # aft-cell inlet (forward-outboard corner)
 
-    def L(lid, part, name, name_tr, d, path, pens=(), text="", end_fitting=None):
+    def L(lid, part, name, name_tr, d, path, pens=(), text="", end_fitting=None, mirror=False, valves=(), role=None):
         d_ = {"id": lid, "part": part, "name": name, "name_tr": name_tr, "diameter": d, "path": [r3(q) for q in path],
               "penetrations": [{"member": m, "point": r3(q), "kind": k} for m, q, k in pens], "text": text}
+        if mirror:
+            d_["mirror"] = True
         if end_fitting:
             d_["end_fitting"] = end_fitting          # the line ends in a fitting in the skin (layout_check C03)
+        if valves:
+            d_["valves"] = [{"id": vid, "type": vt, "point": r3(vp)} for vid, vt, vp in valves]
+        if role:
+            d_["role"] = role
         return d_
-    return [
+    xg = X_GEARF
+    out = [
         L("FL-REFUEL", "YK250-FU-580", "refuel line (OBP dry-break AN6 -> forward cell)", "yakıt ikmal hattı", 0.016,
           [[2.340, -0.320, zr], [2.340, -0.320, -0.064], [2.340, -0.320, -0.050]],
           [("M-FWDDECK", [2.340, -0.320, -0.0566], "sealed bulkhead union in the forward fuel deck")],
           "coupling on a bracket under the forward fuel deck (P-REFUEL door), straight up through the deck into the "
-          "forward cell bottom fitting; outboard of the port keel beam and 32 mm from the main trunk H-MAIN"),
-        L("FL-XFER-1", "YK250-FU-581", "transfer line forward -> saddle cell", "aktarma hattı ön -> eyer", 0.012,
-          [[xf[1] - 0.010, 0.0, 0.095], [xs[0] + 0.010, 0.0, 0.095]], (), "through FS-MS C-FUEL-MS (sealed union)"),
-        L("FL-XFER-2", "YK250-FU-582", "transfer line saddle -> aft cell", "aktarma hattı eyer -> arka", 0.012,
-          [[xs[1] - 0.010, 0.0, 0.095], [xa[0] + 0.010, 0.0, 0.095]], (), "through FS-RS C-FUEL-RS (sealed union)"),
-        L("FL-FEED-1", "YK250-FU-583", "feed line aft-cell sump -> pump", "besleme hattı (sump -> pompa)", 0.012,
-          [[xa[1] - 0.010, 0.040, -0.040], [X_GEARF - 0.010, 0.040, -0.025], [X_GEARF + 0.0040, 0.040, -0.025]],
-          (), "aft-cell sump fitting -> FS-GEAR C-FUEL-FEED (sealed union) -> EFI pump inlet"),
+          "forward cell bottom fitting; outboard of the port keel beam and 32 mm from the main trunk H-MAIN; the "
+          "forward cell fills the aft cell through the bottom interconnects and the saddle cell through FL-FILL-S",
+          role="refuel"),
+        L("FL-FILL-S", "YK250-FU-581", "saddle fill / overflow line forward -> saddle cell (check valve)",
+          "eyer doldurma hattı (ön -> eyer, çek valfli)", 0.012,
+          [[xf[1] - 0.010, 0.0, 0.095], [xs[0] + 0.010, 0.0, 0.095]], (),
+          "through FS-MS C-FUEL-MS (sealed union): during refuelling the forward cell overflows into the saddle cell "
+          "once its level passes z 0.095; flapper check valve CV-FS at the saddle end (no back-flow into the forward "
+          "cell); not a feed path (fix round 3, PK3-01)", role="fill",
+          valves=[("CV-FS", "flapper check valve (forward -> saddle)", [xs[0] + 0.010, 0.0, 0.095])]),
+        L("FL-XFER-LO", "YK250-FU-582", "bottom interconnect forward -> aft cell (check valve, each side)",
+          "alt ara bağlantı hattı ön -> arka (çek valfli, her iki yanda)", 0.010,
+          [[x_in_f, Y_XLO, zf0 + 0.002], [x_in_f, Y_XLO, Z_XLO], [x_ms_y, Y_XLO, Z_XLO], [x_rs_y, Y_XLO, Z_XLO],
+           [x_in_a, Y_XLO, Z_XLO], [x_in_a, Y_XLO, za0 + 0.002]],
+          [("M-FWDDECK", [x_in_f, Y_XLO, -0.0566], "sealed bulkhead union in the forward fuel deck"),
+           ("M-WELLROOF", [x_in_a, Y_XLO, -0.0634], "sealed bulkhead union in the well roof (aft-cell floor)")],
+          "fix round 3 (PK3-01): from the flush bottom fitting at the aft-outboard low corner of the forward cell "
+          "(outlet in the bladder floor) down through the forward fuel deck, aft under the deck and the lower cover "
+          "of the centre wing box outboard of the keel beam (clear of the wing branch H-WING, which rises into the "
+          "box further inboard), through FS-MS C-FUEL-MS-LO and FS-RS C-FUEL-RS-LO (sealed unions), up through the "
+          "well roof into the flush bottom fitting at the forward-outboard low corner of the aft cell with a flapper "
+          "check valve CV-FA (forward -> aft only): the forward cell drains to the feed cell by gravity down to its "
+          "floor", mirror=True, role="interconnect",
+          valves=[("CV-FA", "flapper check valve (forward -> aft)", [x_in_a, Y_XLO, za0 + 0.002])]),
+        L("FL-XFER-SA", "YK250-FU-584", "saddle drain line saddle -> aft cell (check valve)",
+          "eyer boşaltma hattı eyer -> arka (çek valfli)", 0.012,
+          [[xs[1] - 0.010, 0.0, zs0 + 0.007], [xa[0] + 0.012, 0.0, zs0 + 0.007]], (),
+          "fix round 3 (PK3-01): from the flush sump fitting at the aft low point of the saddle cell (on the box upper "
+          "cover) through FS-RS C-FUEL-SAD (sealed union) into the aft cell with a flapper check valve CV-SA (saddle "
+          "-> aft only): the saddle drains completely by gravity into the aft (feed) cell; its water and sediment "
+          "collect in the aft-cell sump and leave through FL-DRAIN-A", role="interconnect",
+          valves=[("CV-SA", "flapper check valve (saddle -> aft)", [xa[0] + 0.012, 0.0, zs0 + 0.007])]),
+        L("FL-FEED-1", "YK250-FU-583", "feed line aft-cell collector -> pump", "besleme hattı (toplayıcı -> pompa)",
+          0.012, [[xa[1] - 0.010, 0.040, -0.040], [xg - 0.010, 0.040, -0.025], [xg + 0.0040, 0.040, -0.025]],
+          (), "flop pickup at the bottom of the rigid collector (0.3 L, the header tank of components.yaml fuel_system) "
+              "at the aft-cell low point, fed through flapper inlets 1 mm above the bladder floor -> FS-GEAR "
+              "C-FUEL-FEED (sealed union) -> EFI pump inlet", role="feed"),
         L("FL-FEED-2", "YK250-FU-585", "feed line pump -> shut-off valve", "besleme hattı (pompa -> kesme vanası)",
-          0.012, [[X_GEARF + 0.116, 0.060, -0.020], [3.300, 0.060, -0.010], [3.594, 0.040, 0.020]], (),
-          "along the aft equipment bay floor angles, through the FS3480 ring opening"),
+          0.012, [[xg + 0.116, 0.060, -0.020], [3.300, 0.060, -0.010], [3.594, 0.040, 0.020]], (),
+          "along the aft equipment bay floor angles, through the FS3480 ring opening", role="feed"),
         L("FL-FEED-3", "YK250-FU-586", "feed line shut-off valve -> engine (fire sleeve)",
           "besleme hattı (kesme vanası -> motor)", 0.012,
           [[3.646, 0.040, 0.030], [X_FW + 0.035, 0.040, 0.030]], (),
-          "through the firewall C-FW-FUEL (fireproof bulkhead union + fire sleeve)"),
+          "through the firewall C-FW-FUEL (fireproof bulkhead union + fire sleeve)", role="feed"),
         L("FL-RETURN", "YK250-FU-587", "return line engine regulator -> aft cell", "dönüş hattı", 0.010,
           [[X_FW + 0.030, 0.052, 0.042], [3.648, 0.052, 0.042], [3.630, 0.080, 0.050], [3.300, 0.105, 0.000],
-           [X_GEARF + 0.030, 0.105, -0.017], [X_GEARF - 0.010, 0.105, -0.017], [xa[1] - 0.010, 0.090, 0.000]], (),
+           [xg + 0.030, 0.105, -0.017], [xg - 0.010, 0.105, -0.017], [xa[1] - 0.010, 0.090, 0.000]], (),
           "firewall C-FW-FUEL (above the feed line) -> over the shut-off valve -> aft equipment bay outboard of the "
-          "pump -> FS-GEAR C-FUEL-RET (sealed union) -> aft-cell return fitting"),
-        L("FL-VENT", "YK250-FU-588", "vent line (cells -> flush NACA vent)", "havalandırma hattı", 0.010,
-          [[xa[1] - 0.015, 0.075, 0.140], [X_GEARF + 0.020, 0.075, 0.115], [3.235, 0.075, 0.000],
+          "pump -> FS-GEAR C-FUEL-RET (sealed union) -> aft-cell return fitting", role="return"),
+        L("FL-VENT-1", "YK250-FU-590", "top vent interconnect forward <-> saddle cell",
+          "üst havalandırma bağlantısı ön <-> eyer", 0.010,
+          [[xf[1] - 0.030, Y_VENT, 0.150], [xf[1] + Y_VENT * t8 - 0.004, Y_VENT, Z_VENT],
+           [xs[0] + Y_VENT * t8 + 0.004, Y_VENT, Z_VENT], [xs[0] + 0.040, Y_VENT, 0.146]], (),
+          "fix round 3 (PK3-01): float / roll-over vent valves FV-F and FV-S in the top fittings of the forward and "
+          "saddle cells, joined through FS-MS C-VENT-MS (sealed union): both cells vent from their tops into the vent "
+          "line", role="vent",
+          valves=[("FV-F", "float / roll-over vent valve (forward cell top)", [xf[1] - 0.030, Y_VENT, 0.150]),
+                  ("FV-S", "float / roll-over vent valve (saddle cell top)", [xs[0] + 0.040, Y_VENT, 0.146])]),
+        L("FL-VENT-2", "YK250-FU-591", "top vent interconnect saddle <-> aft cell", "üst havalandırma bağlantısı eyer "
+          "<-> arka", 0.010,
+          [[xs[1] - 0.040, Y_VENT, 0.146], [xs[1] + Y_VENT * t48 + 0.004, Y_VENT, Z_VENT],
+           [xa[0] + Y_VENT * t48 + 0.012, Y_VENT, Z_VENT], [xa[0] + 0.040, Y_VENT, 0.150]], (),
+          "fix round 3 (PK3-01): saddle-cell top (second float valve FV-S2) through FS-RS C-VENT-RS (sealed union) to "
+          "the aft-cell top fitting (float valve FV-A)", role="vent",
+          valves=[("FV-S2", "float / roll-over vent valve (saddle cell top, aft)", [xs[1] - 0.040, Y_VENT, 0.146]),
+                  ("FV-A", "float / roll-over vent valve (aft cell top)", [xa[0] + 0.040, Y_VENT, 0.150])]),
+        L("FL-VENT", "YK250-FU-588", "vent line (cell tops -> anti-siphon loop -> flush NACA vent)",
+          "havalandırma hattı", 0.010,
+          [[xa[1] - 0.030, Y_VENT, 0.150], [xg - 0.004, 0.050, 0.150], [xg + 0.040, 0.060, Z_VLOOP],
+           [3.170, 0.075, Z_VLOOP - 0.010], [3.235, 0.075, 0.000],
            [3.235, 0.150, round(z_bot(3.235, 0.150) + 0.012, 4)]], (),
-          "from the aft-cell top (the cells are interconnected at the top by FL-XFER) through FS-GEAR C-FUEL-VENT "
-          "(sealed union) down to the flush NACA vent in P-AFT-LOWER", end_fitting="skin"),
+          "fix round 3 (PK3-01): from the aft-cell top fitting (with FL-VENT-1/-2 every cell vents from its top) "
+          f"through FS-GEAR C-FUEL-VENT (sealed union) up into an anti-siphon high loop (top z {Z_VLOOP}, above the "
+          "highest fuel level of every cell) in the aft equipment bay, then down to the flush NACA vent with flame "
+          "arrestor in P-AFT-LOWER: the float / roll-over valves close the cell tops in manoeuvres, the loop keeps "
+          "the vent from siphoning", end_fitting="skin", role="vent",
+          valves=[("FV-A2", "float / roll-over vent valve (aft cell top)", [xa[1] - 0.030, Y_VENT, 0.150])]),
+        L("FL-DRAIN-F", "YK250-FU-592", "forward-cell sump drain", "ön hücre sump boşaltma hattı", 0.008,
+          [[xf[1] - 0.030, Y_FDRAIN, zf0 + 0.003], [xf[1] - 0.030, Y_FDRAIN, -0.070],
+           [xf[1] - 0.030, Y_FDRAIN, round(z_bot(xf[1] - 0.030, Y_FDRAIN) + 0.010, 4)]],
+          [("M-FWDDECK", [xf[1] - 0.030, Y_FDRAIN, -0.0566], "sealed bulkhead union in the forward fuel deck")],
+          "fix round 3 (PK3-01): sump fitting at the aft-outboard low corner of the forward cell (starboard) straight "
+          "down through the forward fuel deck outboard of the keel beam to a flush quick-drain valve in the fixed "
+          "lower centre skin P-CENTRE-LOWER (daily water check without opening a hatch)", end_fitting="skin",
+          role="drain"),
+        L("FL-DRAIN-A", "YK250-FU-593", "aft-cell sump drain (collector)", "arka hücre sump boşaltma hattı", 0.008,
+          [[xa[1] - 0.012, -0.050, za0 + 0.003], [xg - 0.004, -0.050, -0.048], [xg + 0.050, -0.070, -0.060],
+           [xg + 0.050, -0.070, round(z_bot(xg + 0.050, 0.070) + 0.010, 4)]], (),
+          "fix round 3 (PK3-01): drain fitting at the bottom of the aft-cell collector (the low point of the feed "
+          "cell, into which the forward and saddle cells drain) through FS-GEAR C-FUEL-DRN (sealed union) to a flush "
+          "quick-drain valve in the aft equipment hatch P-AFTHATCH", end_fitting="skin", role="drain"),
         L("FL-DRAIN", "YK250-FU-589", "gascolator / filter drain", "filtre boşaltma hattı", 0.008,
-          [[X_GEARF + 0.060, 0.060, -0.066], [X_GEARF + 0.060, 0.060, round(z_bot(X_GEARF + 0.060, 0.060) + 0.010, 4)]],
-          (), "drain valve flush with the aft equipment hatch P-AFTHATCH", end_fitting="skin")]
+          [[xg + 0.060, 0.060, -0.066], [xg + 0.060, 0.060, round(z_bot(xg + 0.060, 0.060) + 0.010, 4)]],
+          (), "drain valve flush with the aft equipment hatch P-AFTHATCH", end_fitting="skin", role="drain")]
+    return out
+
+
+Y_VENT, Z_VENT = 0.036, 0.138          # top vent interconnect: lateral position / height at the frame (PK3-01)
+Z_VLOOP = 0.185                        # anti-siphon loop top (PK3-01): above every cell top (0.158) + 20 mm
+Y_FDRAIN = 0.330                       # forward-cell sump drain (starboard, outboard of the keel beam and H-COAX)
+
+
+def fuel_system() -> dict:
+    """Per-cell fuel system summary (fix round 3, PK3-01): outlet (sump) level, top vent, drain path, the lines that
+    leave the cell; layout_check C02 checks every cell for a top vent and a sump, computes the usable volume above
+    each outlet and compares the unusable fuel with the trapped fuel of the sizing mission model."""
+    fc = {c["name"]: c for c in S["layout"]["fuel_cells"]}
+    cells = {}
+    for name, vent, sump, drain, outs in (
+            ("forward_cell", "FV-F (FL-VENT-1)", "FL-XFER-LO pickup / FL-DRAIN-F", "FL-DRAIN-F (external quick drain)",
+             ["FL-XFER-LO"]),
+            ("saddle_cell", "FV-S / FV-S2 (FL-VENT-1 / -2)", "FL-XFER-SA outlet",
+             "gravity through FL-XFER-SA into the aft-cell sump (drained by FL-DRAIN-A)", ["FL-XFER-SA"]),
+            ("aft_cell", "FV-A / FV-A2 (FL-VENT-2, FL-VENT)", "collector (FL-FEED-1 pickup, FL-DRAIN-A)",
+             "FL-DRAIN-A (external quick drain)", ["FL-FEED-1"])):
+        cells[name] = {"outlet_z": r3(float(fc[name]["z"][0]) + OUTLET_ABOVE_FLOOR, 4), "top_vent": vent,
+                       "sump": sump, "drain": drain, "outlet_lines": outs}
+    return {"cells": cells,
+            "concept": "fix round 3 (PK3-01): the aft cell is the feed cell (collector with flop pickup); the forward "
+                       "cell drains into it through two bottom interconnects (check valves forward -> aft) and the "
+                       "saddle cell through a floor drain (check valve saddle -> aft); refuelling into the forward cell "
+                       "fills the aft cell through the bottom interconnects and the saddle through the overflow line "
+                       "FL-FILL-S; every cell vents from its top through float / roll-over valves into the vent line "
+                       "with an anti-siphon high loop; every cell has a sump at its low point, drained externally "
+                       "(forward, aft) or by gravity into the aft-cell sump (saddle)",
+            "unusable_basis": "unusable fuel = the layer below each outlet (flush fittings, inlet 1 mm above the "
+                              "bladder floor) x tank volume efficiency + the contents of the lines that do not drain "
+                              "to the feed; compared in layout_check C02 with the trapped fuel of the sizing mission "
+                              "model (mission.trapped_fuel_fraction of the burned fuel)",
+            "mass_basis": "parts within the fuel-system allowance of the mass model (components.yaml fuel_system "
+                          "1.73 kg: header / collector 0.15, vent valves 0.10, lines and fittings 0.30; + 0.50 kg for "
+                          "the interconnection of three cells, endurance study): 5 check / float valves, two sump "
+                          "drains and about 1.3 m of additional line (estimate, no mass change)"}

@@ -160,6 +160,7 @@ def build() -> tuple[dict, dict]:
                       "air_data_lights": b_systems.air_data_lights(), "actuators": b_systems.wing_actuators(),
                       "harness": b_systems.harness()}
     out["fuel_lines"] = b_systems.fuel_lines()
+    out["fuel_system"] = b_systems.fuel_system()
     out["keep_outs"] += b_mech.sweep_keep_outs(out)
     out["heat_protection"] = b_mech.heat_protection(out["keep_outs"])
     out["chassis"]["engine_mount"]["firewall_stackup"]["mass"] = b_loads.firewall_mass(out)

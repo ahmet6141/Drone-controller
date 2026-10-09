@@ -115,21 +115,40 @@ def check_static(reg: Registry, cache: _ManCache | None = None, tol: float = VOL
 # =====================================================================================================================
 # 3. swept interference
 # =====================================================================================================================
+def _coupled(reg: Registry, name: str) -> bool:
+    """A coupled joint (Joint.expr set: gear legs and doors, turret elevator and bay doors) moves only along its
+    registered sequence; sweeping it alone or in independent extreme pairs poses states that never occur (e.g. a leg
+    swinging through a closed door) - fix round 3, PK3-03."""
+    j = reg.joints.get(name)
+    return bool(j is not None and getattr(j, "expr", ""))
+
+
+def _seq_states(reg: Registry, name: str) -> list[dict[str, float]]:
+    """Every registered sequence state that sets joint ``name``."""
+    return [st for seq in reg.sequences.values() for st in seq if name in st]
+
+
 def _states(reg: Registry, n: int) -> list[tuple[str, dict[str, float]]]:
-    """Single-joint sweeps, extreme combinations of joints whose moving parts are near each other, and registered
-    coupled sequences."""
+    """Single-joint sweeps of the independent joints, extreme combinations of independent joints whose moving parts are
+    near each other, and the registered coupled sequences (coupled joints - those with an expr - are swept only along
+    their sequences; a child of a coupled joint is swept at the parent's rest value)."""
     out = []
     for j in reg.joints.values():
+        if _coupled(reg, j.name):
+            continue
         if j.parent is not None:
-            # child joints are swept together with their parent extremes as well
-            for pv in (reg.joints[j.parent].lo, reg.joints[j.parent].hi):
+            if _coupled(reg, j.parent):
+                pvs = (reg.joints[j.parent].rest,)
+            else:                     # child joints are swept together with their parent extremes as well
+                pvs = (reg.joints[j.parent].lo, reg.joints[j.parent].hi)
+            for pv in pvs:
                 for v in j.samples(n):
                     out.append((f"{j.parent}={pv:.3f},{j.name}", {j.parent: pv, j.name: v}))
         for v in j.samples(n):
             out.append((j.name, {j.name: v}))
     # neighbouring independent joints at their extremes (e.g. aileron vs flap, ruddervator L vs R)
     movers = {name: [p.id for p in reg.moving_parts(name)] for name in reg.joints}
-    names = [n_ for n_ in reg.joints if reg.joints[n_].parent is None and movers[n_]]
+    names = [n_ for n_ in reg.joints if reg.joints[n_].parent is None and movers[n_] and not _coupled(reg, n_)]
     def swept_box(name):
         j = reg.joints[name]
         los, his = [], []
@@ -166,7 +185,9 @@ def check_swept(reg: Registry, n: int = 9, cache: _ManCache | None = None, tol: 
             for q in reg.parts:
                 if q == pid or reg.parts[q].process == "consumable":
                     continue
-                key = (label, *sorted((pid, q)))
+                # the key holds the state values: a single-joint sweep has one label for all its samples (fix round
+                # 3: only the first sample of every sweep was evaluated before)
+                key = (label, tuple(sorted(state.items())), *sorted((pid, q)))
                 if key in seen:
                     continue
                 seen.add(key)
@@ -216,7 +237,8 @@ def _select(reg: Registry, sel) -> list[str]:
 
 def check_clearances(reg: Registry, cache: _ManCache | None = None) -> list[dict]:
     """``spec.layout.clearances``: list of {name, a, b, min_mm, joints?: [...]} -> minimum gap between the two
-    selections (rest pose, and over the listed joints' extremes if given). Pairs listed as contacts are skipped."""
+    selections (rest pose, and over the listed joints' extremes if given; a coupled joint - Joint.expr - over the
+    registered sequence states that set it instead, fix round 3 PK3-03). Pairs listed as contacts are skipped."""
     cache = cache or _ManCache(reg)
     rules = (reg.spec.get("layout", {}) or {}).get("clearances", []) or []
     out = []
@@ -231,8 +253,13 @@ def check_clearances(reg: Registry, cache: _ManCache | None = None) -> list[dict
                     out.append(_violation("clearance", [A[0], B[0]], None, f"joint {jn} registered",
                                           f"{r.get('name', '')}: joint not registered"))
                 continue
-            states += [{jn: j.lo}, {jn: j.hi}]
+            if _coupled(reg, jn):
+                states += [st for st in _seq_states(reg, jn) if st not in states]
+            else:
+                states += [{jn: j.lo}, {jn: j.hi}]
         for st in states:
+            moved = {p.id for name in st for p in reg.moving_parts(name)} if st else set()
+            posed_b = {}
             for a in A:
                 ma = reg.posed_mesh(reg.parts[a], st) if st else reg.parts[a].mesh
                 ba = ma.bounds()
@@ -240,9 +267,16 @@ def check_clearances(reg: Registry, cache: _ManCache | None = None) -> list[dict
                 for b in B:
                     if a == b or _allowed_contact(reg.parts[a], reg.parts[b]):
                         continue
-                    if not _boxes_overlap(ba, cache.box(b), pad=need):
+                    if b in moved:             # B moves in this state too (sequence states pose several joints)
+                        if b not in posed_b:
+                            mb_ = reg.posed_mesh(reg.parts[b], st)
+                            posed_b[b] = (mb_.bounds(), mb_.to_manifold())
+                        bb, manb = posed_b[b]
+                    else:
+                        bb, manb = cache.box(b), cache.man(b)
+                    if not _boxes_overlap(ba, bb, pad=need):
                         continue
-                    gap = float(mana.min_gap(cache.man(b), need * 1.5 + 1e-4))
+                    gap = float(mana.min_gap(manb, need * 1.5 + 1e-4))
                     if gap < need - 1e-6:
                         out.append(_violation("clearance", [a, b], round(gap * 1000, 2), f">= {r['min_mm']} mm",
                                               f"{r.get('name', '')} {st or 'rest'}"))

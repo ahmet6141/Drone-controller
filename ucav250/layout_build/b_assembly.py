@@ -27,6 +27,31 @@ GENERAL = [
 ]
 
 
+_CACHE = {}
+
+
+def _fittings() -> dict:
+    if "fit" not in _CACHE:
+        from . import b_chassis
+        _CACHE["fit"] = {f["id"]: f for f in b_chassis.fittings()}
+    return _CACHE["fit"]
+
+
+def shield_mm() -> str:
+    """Stainless firewall shield thickness from layout.stations FS3670 (fix round 3, PK3-11: generated, not typed)."""
+    from . import b_stations
+    fw = [s_ for s_ in b_stations.stations() if s_["id"] == "FS3670"][0]
+    return f"{float(fw['shield_t']) * 1000:.1f}".replace(".", ",")
+
+
+def bolt_text(fid: str, group: str) -> str:
+    """'n x Mx <class>' of one bolt group of a fitting of layout.chassis.fittings (fix round 3, PK3-11)."""
+    bl = [b_ for b_ in _fittings()[fid]["bolts"] if b_.get("group") == group]
+    d = {round(float(b_["d"]) * 1000) for b_ in bl}
+    grade = "12.9" if all("12.9" in b_["spec"] for b_ in bl) else ""
+    return f"{len(bl)} x M{'/'.join(str(v) for v in sorted(d))}" + (f" {grade}" if grade else "")
+
+
 def step(n, title_tr, sub, text, tools, checks):
     return {"step": n, "title_tr": title_tr, "subassembly": sub, "text": text, "tools": tools, "checks": checks}
 
@@ -85,12 +110,15 @@ def steps() -> list:
                   "yerleştirilir. Taret bölmesi kapak rayları için duvar alt kenarındaki yarık bırakılır.",
                   ["yapıştırıcı", "kare mastar"], ["taret bölmesi iç ölçüsü 0,212 x 0,212 m", "paraşüt bölmesi iç ölçüsü "
                                                                                          ">= 0,300 x 0,312 m"]))
-    S.append(step(9, "Kenar çizgisi uzun kirişleri", "YK250-CH-020 (L/R)",
-                  "Kenar çizgisi uzun kirişleri FS0600'den ana kiriş çerçevesine ve arka kiriş çerçevesinden yangın "
-                  "perdesinin ön yüzüne uzanır; kutu bölgesinde gövde yanı kaburgasına 2 x 4 M6 ile eklenir. Arka uçtaki "
-                  "7075 uç bağlantısı adım 13'te perdeden geçen cıvatalarla stabilatör düğüm bağlantısına eklenir; "
-                  "motor bölmesine karbon parça geçmez.", ["matkap şablonları", "tork anahtarı"],
-                  ["kenar çizgisi hattı OML'ye göre 20 mm içeride ±0,5 mm", "ek cıvataları torklu"]))
+    S.append(step(9, "Kenar çizgisi uzun kirişleri (ön parçalar)", "YK250-CH-020 (L/R), ön parça",
+                  "Kenar çizgisi uzun kirişinin ön parçası (FS0600'den ana kiriş çerçevesinin 30 mm önüne) tezgâhtaki "
+                  "çerçevelerin kenara açık uzun kiriş çentiklerine (layout.stations C-CHINE) dışarıdan yanlamasına "
+                  "yerleştirilir; her çerçevede 7075 kesme köşebendi 2 x M4 Ti çerçeve bandına, 2 x M4 Ti uzun kiriş "
+                  "gövdesine bağlanır. Ön parça gövde yanı kaburgasına 4 x M6 Ti ile eklenir (M-CHINE.splices "
+                  "SPL-CH-FWD; kaburganın 16 katlı dolu bandı). Arka parça adım 12'de, arka çerçeveler ve yangın perdesi "
+                  "tezgâhta iken takılır.", ["matkap şablonları", "tork anahtarı"],
+                  ["kenar çizgisi hattı OML'ye göre 20 mm içeride ±0,5 mm", "çentik boşluğu her yanda >= 1 mm",
+                   "ek cıvataları (4 x M6 Ti) torklu, kenar mesafesi >= 2,5 D"]))
     S.append(step(10, "Omurga kirişleri, güverteler ve ana takım yapısı",
                    "omurga kirişleri, ön yakıt güvertesi, kuyu tavanı, ana takım kirişleri, mafsal bağlantıları",
                    "Yük bölmesi kenarındaki iki omurga kirişi, ön yakıt bölmesi tabanı, kuyu tavanı ve iki ana takım "
@@ -105,13 +133,22 @@ def steps() -> list:
                    "bağlantısı ve üç ventral bağlantısı matkap şablonlarından delinerek bağlanır.",
                    ["kuyruk bağlantı şablonları", "tork anahtarı"],
                    ["dikey kök bağlantı noktaları layout.chassis.fittings ±0,3 mm", "ventral bağlantıları aynı hatta"]))
-    S.append(step(12, "Yangın perdesi ve motor bağlantı parçaları", "FS3670",
-                   "Kompozit sandviç perde takılır; 12 paslanmaz ara parça üzerine 0,5 mm AISI 304 kalkan perçinlenir. "
-                   "İki köşe bağlantısı (motor üst ayağı 2 x M8, dikey arka kiriş çatalı 2 x M6, sırt uzun kirişi eki) "
-                   "ve iki alt motor ayağı (2 x M8) 7075 destek plakaları ve paslanmaz ara borularla perdeye bağlanır. "
-                   "Kablo, yakıt ve itme çubuğu geçişlerine yanmaz rondela/körük takılır.",
-                   ["perçin tabancası", "tork anahtarı"], ["paslanmaz kalkan >= 0,38 mm (FIRE-001), açık delik yok",
-                                                           "motor bağlantı parçası konumları ±0,3 mm"]))
+    S.append(step(12, "Yangın perdesi, motor bağlantı parçaları ve arka kenar çizgisi uzun kirişleri",
+                   "FS3670, YK250-CH-020 (L/R) arka parça",
+                   f"Kompozit sandviç perde takılır; 12 paslanmaz ara parça üzerine {shield_mm()} mm AISI 304 kalkan "
+                   "perçinlenir. İki köşe bağlantısı (motor üst ayağı 2 x M8, dikey arka kiriş çatalı 2 x M6, sırt uzun "
+                   "kirişi eki) ve iki alt motor ayağı (2 x M8) 7075 destek plakaları ve paslanmaz ara borularla perdeye "
+                   "bağlanır. Kablo, yakıt ve itme çubuğu geçişlerine yanmaz rondela/körük takılır. Ardından kenar "
+                   "çizgisi uzun kirişinin arka parçası (arka kiriş çerçevesinin 30 mm arkasından perdenin ön yüzüne) "
+                   "FS-GEAR ve FS3480'in kenara açık uzun kiriş çentiklerine dışarıdan yanlamasına yerleştirilir "
+                   "(çerçeveler ve perde tezgâhta), her çerçevede 7075 kesme köşebendiyle bağlanır ve gövde yanı "
+                   "kaburgasının arka uzantısına 4 x M6 Ti ile eklenir (M-CHINE.splices SPL-CH-AFT); arka uçtaki 7075 "
+                   "uç bağlantısı adım 13'te perdeden geçen cıvatalarla stabilatör düğüm bağlantısına eklenir; motor "
+                   "bölmesine karbon parça geçmez.",
+                   ["perçin tabancası", "tork anahtarı", "matkap şablonları"],
+                   ["paslanmaz kalkan >= 0,38 mm (FIRE-001), açık delik yok",
+                    "motor bağlantı parçası konumları ±0,3 mm",
+                    "arka kenar çizgisi ek cıvataları (4 x M6 Ti) torklu, kenar mesafesi >= 2,5 D"]))
     S.append(step(13, "Stabilatör düğüm bağlantıları ve motor bölmesi alt U halkası", "F-SPINDLE-NODE, FS3738",
                    "İşlenmiş 7075 stabilatör düğüm bağlantıları (iç yatak yuvası işlenmiş halde) mil hizalama "
                    "fikstürüyle (sahte mil + FS3480 kök parçası ön bağlantısı deliklerine bağlanan şablon) "
@@ -126,9 +163,12 @@ def steps() -> list:
                    "kayış bağlantıları, asansör ray bağlantıları, yakıt bölmesi astarları, tepsiler",
                    "Sırt omurga kanalı (M-SPINE) FS1810 ile arka kiriş çerçevesi arasına, çerçeve kesiklerinden "
                    "geçirilerek sızdırmaz yapıştırılır ve vidalanır; paraşüt ön ve arka kayış bağlantıları kanalın iki "
-                   "ucuna (taban 4 x M5, çerçeve 2 x M5), konteyner bağlama braketleri, taret asansör ray ve motor "
+                   f"ucuna (taban {bolt_text('F-RISER-FWD', 'spine floor')}, çerçeve "
+                   f"{bolt_text('F-RISER-FWD', 'frame')}), konteyner bağlama braketleri, taret asansör ray ve motor "
                    "bağlantıları, yakıt bölmesi astarları ve hücre askıları, aviyonik/arka teçhizat tepsileri takılır.",
-                   ["tork anahtarı"], ["kayış bağlantıları 6 x M5 12.9 torklu", "astarlarda keskin kenar yok"]))
+                   ["tork anahtarı"], [f"kayış bağlantıları her biri {bolt_text('F-RISER-FWD', 'spine floor')} + "
+                                       f"{bolt_text('F-RISER-FWD', 'frame')} torklu",
+                                       "astarlarda keskin kenar yok"]))
     S.append(step(15, "Şasi muayenesi ve tezgâhtan ayırma", "şasi",
                    "Şasi lazer izleyiciyle ölçülür, yapışmalar tıklama/ultrason testiyle denetlenir, şasi tartılır ve "
                    "elektriksel bağlama hattının sürekliliği ölçülür. Şasi kendi kendini taşır; tezgâh ayrılır, şasi "

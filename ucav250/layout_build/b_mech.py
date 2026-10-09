@@ -118,14 +118,15 @@ def mechanisms() -> dict:
     y_th = round(Y_GB + T_SW_GB, 4)                    # outboard lower edge of the gear beam (skin corner)
     o_t = np.array([x_w, y_th, z_bot(float(MG["trunnion"][0]), y_th) + 0.002])
     a_tdoor = 125.0 * DEG
-    J.append(joint("main_trunnion_door_R", "revolute", o_t, [1.0, 0.0, 0.0], 0.0, a_tdoor, prop="", scale=1.0,
-                   expr=f"{a_tdoor:.5f}*(1-clamp((gear_up-0.85)/0.15,0,1))", side="R",
+    J.append(joint("main_trunnion_door_R", "revolute", o_t, [1.0, 0.0, 0.0], 0.0, a_tdoor, rest=a_tdoor, prop="",
+                   scale=1.0, expr=f"{a_tdoor:.5f}*(1-clamp((gear_up-0.85)/0.15,0,1))", side="R",
                    moves="YK250-LG-673-R", hinge_parent="M-GEARBEAM", hinge_zone_m=0.015,
                    notes="hinged on the lower edge of the gear beam (axis along x), + = free edge down and outboard; "
                          "open 125 deg whenever the gear is not up-locked (the down leg passes through its strip), "
-                         "closed after the leg is up (gear_up 0.85 -> 1)"))
+                         "closed after the leg is up (gear_up 0.85 -> 1); fix round 3 (PK3-03): rest = open (the gear-"
+                         "down state), modelled open; value 0 = closed (door_outlines closed_at lo)"))
     J.append(joint("main_trunnion_door_L", "revolute", o_t * np.array([1, -1, 1]), [-1.0, 0.0, 0.0], 0.0, a_tdoor,
-                   prop="", scale=1.0, expr=f"{a_tdoor:.5f}*(1-clamp((gear_up-0.85)/0.15,0,1))",
+                   rest=a_tdoor, prop="", scale=1.0, expr=f"{a_tdoor:.5f}*(1-clamp((gear_up-0.85)/0.15,0,1))",
                    side="L", mirror_of="main_trunnion_door_R", moves="YK250-LG-673-L", hinge_parent="M-GEARBEAM",
                    hinge_zone_m=0.015))
     # ---------------------------------------------------------------- nose gear (+ steering, clamshell doors)
@@ -145,13 +146,15 @@ def mechanisms() -> dict:
     q1 = np.array([xs1, yh, z_bot(xs1, yh) + 0.002])
     for sd, sgn in (("R", 1.0), ("L", -1.0)):
         J.append(joint(f"nose_door_{sd}", "revolute", q0 * np.array([1, sgn, 1]),
-                       sgn * unit(q1 - q0) * np.array([1, sgn, 1]), 0.0, 90.0 * DEG, prop="", scale=1.0,
+                       sgn * unit(q1 - q0) * np.array([1, sgn, 1]), 0.0, 90.0 * DEG, rest=90.0 * DEG, prop="", scale=1.0,
                        expr=f"{90 * DEG:.5f}*(1-clamp((gear_up-0.85)/0.15,0,1))", side=sd,
                        moves=f"YK250-LG-674-{sd}",
                        notes="clamshell hinged at the keel-slot edge; open (90 deg, hanging) whenever the gear is not "
                              "up-locked, closed for gear_up > 0.85 + 0.15; driven together with the other door by one "
                              "DA 22 (EQ-NDOORACT, centre-line bellcrank and links NDOOR-LINKAGE; fix round 2 PK2-13: a "
-                             "leg-driven link cannot close the doors while the leg stands still)"))
+                             "leg-driven link cannot close the doors while the leg stands still); fix round 3 (PK3-03): "
+                             "rest = open (gear-down state), modelled open; value 0 = closed (door_outlines closed_at "
+                             "lo)"))
     # ---------------------------------------------------------------- turret elevator + sliding bay doors
     xt = X_TUR
     zr = float(TU["ball_center_retracted_z"])
@@ -218,8 +221,12 @@ def mechanisms() -> dict:
              "para_hatch": {"range": [0, 1], "unit": "-", "text": "parachute hatch lift-off (deployment only; 1 = "
                                                                   "0.15 m clear of the hatch seat)"},
              "prop_deg": {"range": [0, 120], "unit": "deg", "text": "propeller phase"}}
-    return {"rules": "Joint = core.parts.Joint in the REST pose (all joints at rest = 0: gear down, turret in, "
-                     "surfaces neutral, hatch closed). Producers register these names exactly (checks.py and "
+    return {"rules": "Joint = core.parts.Joint in the REST pose = a physical state: gear down and locked (legs at 0, "
+                     "main inner doors closed, main trunnion doors and nose clamshell doors OPEN at their gear-down "
+                     "value: rest = hi, fix round 3 PK3-03), turret in, surfaces neutral, hatch closed; the rest pose "
+                     "equals the state at control value 0 of every sequence (layout_check C12). Joints with an 'expr' "
+                     "are coupled: they move only along their sequence (checks.py sweeps them through the registered "
+                     "sequences, never alone). Producers register these names exactly (checks.py and "
                      "layout.clearances refer to them); a port joint is the mirrored starboard joint with the axis "
                      "chosen so that the same prop value gives the same physical motion. 'expr' is the Blender simple "
                      "expression of a coupled joint (control properties of YK250_Root); 'sequences' are the sampled "
@@ -255,6 +262,8 @@ def door_outlines() -> dict:
     slot = 0.5 * float(MG["leg_frontal_width"]) + 0.0225
     nw = ZP["nose_gear_well"]["box"]
     xs0, xs1, yh = float(nw[0][0]), float(nw[1][0]), float(nw[1][1])
+    from .b_shell import RING_X
+    xs1 = min(xs1, round(RING_X[0] - 0.001, 4))           # fix round 3 (PK3-02): 1 mm ahead of the turret ring insert
     tb = ZP["turret_bay"]["box"]
     tx0, tx1 = float(tb[0][0]) + 0.003, float(tb[1][0]) - 0.003
     out = {
@@ -274,10 +283,12 @@ def door_outlines() -> dict:
                                                 [xt0 + 0.032, Y_GB + 0.0068], [xt0 - 0.032, Y_GB + 0.0068]]),
                                  "text": "trunnion door hinged on the lower edge of the gear beam: closes the leg-slot "
                                          f"strip y {Y_LEGDOOR}-{Y_GB} when the gear is up (fix round 2, PK2-03)"},
-        "nose_door_R": {"joint": "nose_door_R", "thickness": 0.004,
+        "nose_door_R": {"joint": "nose_door_R", "thickness": 0.004, "closed_at": "lo",
                         "outline": r3([[xs0, 0.0005], [xs1, 0.0005], [xs1, yh], [xs0, yh]]),
                         "text": "clamshell door hinged at the keel-slot edge (y = slot half width), meets its "
-                                "partner on the centre line"},
+                                "partner on the centre line; fix round 3 (PK3-02): aft edge 1 mm ahead of the turret "
+                                "ring insert P-TURRETRING, its 12 mm edge band on the slot-end sill M-NGSILL (the ring "
+                                "lands on the FS1110 cap)"},
         "turret_door_R": {"joint": "turret_door_R", "thickness": float(TU["bay"]["door_thickness"]),
                           "outline_closed": r3([[tx0, 0.0], [tx1, 0.0], [tx1, 0.105], [tx0, 0.105]]),
                           "travel_along_skin": 0.120,
@@ -601,10 +612,13 @@ def sweep_keep_outs(L: dict) -> list:
     tr = [t["id"] for t in L["systems"]["harness"]["trunks"]]
     K.append({"id": "KO-CORRIDOR-HARNESS", "kind": "corridor (harness trunks)", "trunks": tr,
               "radius": "trunk diameter / 2 + radial_margin", "radial_margin": cv["harness_to_moving_parts"],
+              "corridor_diameter": "trunk diameter + 10 mm (static objects; layout.systems.harness.rules)",
               "exhaust_margin": cv["harness_to_exhaust"],
               "text": "routing corridors of the harness trunks (layout.systems.harness.trunks: path + diameter): "
-                      "the trunk passes every frame through its declared cut-out; no moving part within 10 mm, no "
-                      "exhaust part within 50 mm; clamps at <= 150 mm on the frames / decks"})
+                      "the trunk passes every frame through its declared cut-out; corridor = diameter + 10 mm free of "
+                      "static objects except the clamping members ('supports'), declared penetrations and the "
+                      "terminations (layout_check C04, fix round 3 PK3-05); no moving part within 10 mm, no exhaust "
+                      "part within 50 mm; clamps at <= 150 mm on the frames / decks"})
     rods = []
     for e in L["systems"]["equipment"]:
         lk = e.get("linkage")

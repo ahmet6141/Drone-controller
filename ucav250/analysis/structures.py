@@ -75,12 +75,14 @@ DESIGN = {
         "skin_solid_over_caps_m": 0.001,
         "main_cap": {"material": "cfrp_ud_mtm45_as4", "width_body_glove_m": 0.040, "width_outer_m": 0.030,
                      # fix round 3 (VS3-01 + mass closure): breaks at the SOB cap ramp end (inner pin, y 0.463),
-                     # 0.10 m ply-drop zones inside the CT box (outside the kink-fitting bond |y| <= 0.05), 0.05 m
-                     # zones on the outer panel to y 2.10 (internal 1:20 ply drops, model factor 1.10 kept)
-                     "zone_breaks_y_m": [0.0, 0.10, 0.20, 0.30, 0.40, 0.463, 0.50, 0.55, 0.625, 0.70, 0.75, 0.80,
-                                         0.85, 0.90, 0.95, 1.00, 1.05, 1.10, 1.15, 1.20, 1.25, 1.30, 1.35, 1.40,
-                                         1.45, 1.50, 1.55, 1.60, 1.65, 1.70, 1.75, 1.80, 1.85, 1.90, 1.95, 2.00,
-                                         2.05, 2.10, 2.20, 3.60],
+                     # 0.05 m ply-drop zones inside the CT box (the 58-ply zone covers the kink-fitting bond |y| <=
+                     # 0.05), finer glove zones (LERX root, cap ramp, tongue-moment share), 0.05 m zones on the outer
+                     # panel to y 2.10; zone counts are minima, the 1:20 ramps lie on the thinner side (model factor
+                     # 1.10 on the cap mass for ply drops and overlaps kept)
+                     "zone_breaks_y_m": [0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.43, 0.463, 0.48, 0.50,
+                                         0.525, 0.55, 0.59, 0.625, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 1.00, 1.05,
+                                         1.10, 1.15, 1.20, 1.25, 1.30, 1.35, 1.40, 1.45, 1.50, 1.55, 1.60, 1.65,
+                                         1.70, 1.75, 1.80, 1.85, 1.90, 1.95, 2.00, 2.05, 2.10, 2.20, 3.60],
                      "min_plies": 10,
                      "interleaf": "none: no fastener passes through a main-spar cap (fix round 1, S1-05): the outer-panel "
                                   "joint is a pinned CFRP tongue / fork whose bores are in solid [+-45/0/90] boss blocks "
@@ -128,6 +130,13 @@ DESIGN = {
                                             "through the 16-ply solid land of the centre-line rib; the opposite kink "
                                             "forces of the upper and lower caps form a couple carried by the rib in "
                                             "its plane to FS-MS / FS-RS"},
+                   "centre_rib": {"layup": "rib_panel", "land_plies": 16, "land_l_m": 0.10, "land_h_m": 0.030,
+                                  "flange_w_m": 0.020, "flange_plies": 2, "web_doubler_plies_per_face": 1,
+                                  "text": "fix round 3 (VS3-03): centre-line rib M-CLRIB (layout) between the main and "
+                                          "rear caps and the covers: rib_panel sandwich web with one +-45 PW ply added "
+                                          "on each face (in-plane shear of the kink couple, CT-KINK-RIBWEB), two 16-ply "
+                                          "solid lands 100 x 30 mm under the kink-fitting tabs, 20 mm 2-ply flanges "
+                                          "bonded to the covers and to the frame webs FS-MS / FS-RS"},
                    "web_doubler_plies_per_face": {"FS-MS": 1, "FS-RS": 0},
                    "web_doubler": "+-45 PW ply added on both faces of the main-spar frame web FS-MS between the caps "
                                   "(y -0.40..0.40); none on FS-RS"},
@@ -338,9 +347,10 @@ DESIGN = {
                          "stem_t_m": 0.0025, "text": "payload-tray rails 6061-T6 T-section 20 x 20 x 2.5 mm at y +-0.10, "
                                                      "FS-FUEL to the main-spar frame, bonded + M4 screws at 50 mm to "
                                                      "the deck underside"},
-        "well_web_t_m": 0.001, "well_web_y_m": 0.0105, "well_web_height_m": 0.12,
+        "well_web_t_m": 0.001, "well_web_y_m": 0.015, "well_web_height_m": 0.12,
         "well_web": "M-WELLKEEL: two keel webs 1.0 mm solid PW laminate (5 plies, 0/90 and +-45 alternating) at "
-                    "y +-0.0105..0.0115, the walls of the centre-line harness channel between the two main wells "
+                    "y +-0.015..0.016 (fix round 3, PK3-05: 30 mm harness channel), the walls of the centre-line "
+                    "harness channel between the two main wells "
                     "(well forward wall to FS-GEAR, well roof to 0.12 m below it): halve the span of the well roof under "
                     "the aft fuel cell; the inner-door hinge brackets (hinge lines y +-0.01) are bolted to their "
                     "lower-edge flanges"},
@@ -1996,15 +2006,31 @@ def check_ct_box(c: Ctx, R: Rows, sized: dict) -> dict:
            "wing design case (limit)", "kanat tasarım durumu (limit)", F_k, "N",
            "F = 2 F_cap sin(kink); taken by the kink fitting into the sandwich covers and the FS-MS web (detail design)",
            part="YK250-CH-001")
+    # fix round 3 (VS3-03): the sandwich covers kink at the centre line as well: chordwise kink force of the cover
+    # resultant (cover strain at y = 0 x face stiffness x cover width), main-spar kink angle (conservative); it enters
+    # the centre-line rib along its cover flanges and is added to the rib land / bolt bearing / rib-web checks
+    skc = sec0["skin"]
+    e_cov = max(abs(section_strains(sec0, at(L, "M", 0.0))["skin_top"]),
+                abs(section_strains(sec0, at(L, "M_neg", 0.0))["skin_bot"]))
+    w_cov = x_rs - x_ms - 0.5 * (c.D["wing"]["main_cap"]["width_body_glove_m"] + c.D["wing"]["rear_cap"]["width_m"])
+    F_cov = e_cov * (skc["E_out"] * skc["t_out"] + skc["E_in"] * skc["t_in"]) * w_cov
+    F_kc = 2 * F_cov * math.sin(k_ang)
+    R.info("CT-KINK-COVER", "CT box", "centre kink of the sandwich covers: chordwise kink force per cover",
+           "kutu kapaklarının orta kırığı: kapak başına veter yönü kırılma kuvveti", "wing design case (limit)",
+           "kanat tasarım durumu (limit)", F_kc, "N",
+           f"F = 2 N_cover w sin(kink), N_cover {F_cov / w_cov / 1e3:.1f} N/mm over w {w_cov * 1000:.0f} mm; added to "
+           "CT-KINK-RIB / -BR / -RIBWEB (fix round 3, VS3-03)", part="YK250-CH-055")
     KF = c.D["wing"]["ct_box"].get("kink_fitting")
     if KF:
         kfm = mat(c, KF["material"])
         nkb, dkb = int(KF["bolts"]), float(KF["bolt_d_m"])
         t_rl = int(KF["rib_land_plies"]) * pp["t"]
         ckt = (f"wing design case (limit): chevron kink force per main cap {F_k:.0f} N (F = 2 F_cap sin(kink), "
-               f"F_cap {F_cap0:.0f} N at y = 0)")
+               f"F_cap {F_cap0:.0f} N at y = 0) + cover kink force {F_kc:.0f} N (fix round 3, VS3-03)")
         ckt_tr = (f"kanat tasarım durumu (limit): ana başlık başına ok kırılma kuvveti {F_k:.0f} N (F = 2 F_başlık "
-                  f"sin(kırık), y = 0'da F_başlık {F_cap0:.0f} N)")
+                  f"sin(kırık), y = 0'da F_başlık {F_cap0:.0f} N) + kapak kırılma kuvveti {F_kc:.0f} N (düzeltme turu "
+                  "3, VS3-03)")
+        F_kt = F_k + F_kc
         R.add("CT-KINK-BOLTS", "CT box", f"kink fitting tab to the centre-line rib: {nkb} x M{dkb * 1000:.0f} Ti, single "
               "shear", f"kırık bağlantısı kulağı - orta hat kaburgası: {nkb} x M{dkb * 1000:.0f} Ti, tek kesme", ckt,
               ckt_tr, F_k / nkb, float(ti["Fsu"]) * math.pi * dkb ** 2 / 4, "N", total_factor(c, fit=True),
@@ -2012,16 +2038,32 @@ def check_ct_box(c: Ctx, R: Rows, sized: dict) -> dict:
         R.add("CT-KINK-BR", "CT box", f"kink fitting bolts: bearing in the {int(KF['rib_land_plies'])}-ply solid land of "
               f"the centre-line rib ({t_rl * 1000:.1f} mm)", f"kırık bağlantısı cıvataları: orta hat kaburgasının "
               f"{int(KF['rib_land_plies'])} katlı dolu bandında ezilme ({dec(t_rl * 1000, 1)} mm)", ckt, ckt_tr,
-              F_k / nkb, dkb * t_rl * qi["bearing_Pa"], "N", total_factor(c, fit=True, comp=True), "QI bearing ETW",
-              part="YK250-CH-001")
+              F_kt / nkb, dkb * t_rl * qi["bearing_Pa"], "N", total_factor(c, fit=True, comp=True),
+              "QI bearing ETW; cover kink share added (conservative: it enters along the cover flanges)",
+              part="YK250-CH-055")
         land = face_laminate(c, "+-45,0/90", int(KF["rib_land_plies"]) // 2)
-        q_k = F_k / float(KF["length_m"])
+        q_k = F_kt / float(KF["length_m"])
         fpk = ST.first_ply_failure(land, (0.0, 0.0, q_k), restrained=True)
         R.add("CT-KINK-RIB", "CT box", f"centre-line rib solid land: in-plane shear of the kink force over the fitting "
               f"length ({float(KF['length_m']) * 1000:.0f} mm), first-ply failure", f"orta hat kaburgası dolu bandı: "
               f"kırılma kuvvetinin bağlantı boyunca ({float(KF['length_m']) * 1000:.0f} mm) düzlem içi kesmesi, ilk "
               "katman hasarı", ckt, ckt_tr, q_k / 1e3, fpk["R"] * q_k / 1e3, "N/mm", total_factor(c, fit=True, comp=True),
-              "CLT (50 % +-45 land)", part="YK250-CH-001")
+              "CLT (50 % +-45 land); cap + cover kink force over the fitting length", part="YK250-CH-055")
+        # rib web: the opposite kink forces of the upper and lower caps / covers form a couple about y carried by the
+        # rib web in shear between the two spar frames
+        CR = c.D["wing"]["ct_box"].get("centre_rib") or {}
+        rib_ = skin_faces(c, CR.get("layup", "rib_panel"))
+        q_rw = F_kt / w_cov
+        n_rd = int(CR.get("web_doubler_plies_per_face", 0))
+        face_ = ST.laminate_abd([(pl[0], pl[1], pl[2]) for pl in rib_["outer"]["plies"]] + [(pp, 45.0, pp["t"])] * n_rd)
+        fpr = ST.first_ply_failure(face_, (0.0, 0.0, q_rw / 2), restrained=True)
+        R.add("CT-KINK-RIBWEB", "CT box", f"centre-line rib web (rib_panel sandwich + {n_rd} +-45 ply per face, length "
+              f"{w_cov * 1000:.0f} mm): in-plane shear of the kink couple, face first-ply failure",
+              f"orta hat kaburgası gövdesi (rib_panel sandviç + yüz başına {n_rd} kat ±45, uzunluk "
+              f"{w_cov * 1000:.0f} mm): kırık çiftinin düzlem içi kesmesi, yüz ilk katman hasarı", ckt, ckt_tr,
+              q_rw / 1e3, fpr["R"] * q_rw / 1e3, "N/mm", total_factor(c, comp=True),
+              "q = F / L (couple of the upper and lower kink forces between the spar frames, end reactions F h / L); "
+              "CLT, two faces share - fix round 3, VS3-03", part="YK250-CH-055")
         A_kp = float(KF["w_m"]) * float(KF["plate_t_m"])
         R.add("CT-KINK-PLATE", "CT box", f"kink fitting plate {float(KF['w_m']) * 1000:.0f} x "
               f"{float(KF['plate_t_m']) * 1000:.0f} mm 7075: kink force in tension / compression", f"kırık bağlantısı "
@@ -4368,12 +4410,26 @@ def mass_tally(c: Ctx, sized: dict) -> dict:
     w_bx_j = (float(c.P["rear_spar_frac"]) - float(c.P["main_spar_frac"])) * float(c.T["c"](yj + 0.5 * L_db))
     n_fc = 1 if TRN.get("root_bay_doubler_faces", "both") == "outer" else 2
     m_rbd = 2 * 2 * n_fc * n_db * t_pw * w_bx_j * L_db * rho_pw       # 2 panels x 2 skins x faces
-    bu_A = m_caps + m_rcaps + m_web + m_rweb + joint_outer + m_bx + m_rbd
+    # fix round 3 (VS3-04): glove LERX upper skin of the first bay with the thicker core (lerx_skin_upper_root): core
+    # delta over the LERX area ahead of the main cap between the SOB rib and the glove rib (both sides)
+    m_lx = 0.0
+    lay_lx = D["wing"].get("lerx_upper_first_bay_layup")
+    if lay_lx and lay_lx != D["wing"]["skin_layup"]:
+        mem_ = {m_["id"]: m_ for m_ in S["layout"]["chassis"]["members"]}
+        y_a = float(mem_["M-SOB"]["box"][1][1]) if "M-SOB" in mem_ else Y_SOB
+        y_b = float(mem_["M-GLOVERIB"]["box"][0][1]) if "M-GLOVERIB" in mem_ else 0.55
+        yy_ = np.linspace(y_a, y_b, 25)
+        wl_ = [max(float(c.T["xle"](y_) + float(c.P["main_spar_frac"]) * c.T["c"](y_)) - 0.5 *
+                   D["wing"]["main_cap"]["width_body_glove_m"] - section_le(c, y_)[0], 0.0) for y_ in yy_]
+        A_lx = 2 * float(np.trapz(wl_, yy_))
+        f1, f0 = skin_faces(c, lay_lx), skin_faces(c, D["wing"]["skin_layup"])
+        m_lx = A_lx * (f1["c"] * float(f1["core"]["density"]) - f0["c"] * float(f0["core"]["density"]))
+    bu_A = m_caps + m_rcaps + m_web + m_rweb + joint_outer + m_bx + m_rbd + m_lx
     out["A_wing_primary"] = {"bottom_up_kg": bu_A, "allocation_kg": alloc_A, "delta_kg": bu_A - alloc_A,
                              "items": {"main_caps": m_caps, "rear_caps": m_rcaps, "main_webs": m_web, "rear_webs": m_rweb,
                                        "outer_joint_parts_pair": joint_outer, "tongue_each": m_tongue,
                                        "rear_lug_each": m_lug, "box_skin_upper_core_delta": m_bx,
-                                       "root_bay_skin_doublers_pair": m_rbd},
+                                       "root_bay_skin_doublers_pair": m_rbd, "lerx_root_core_delta": m_lx},
                              "model_items": {"caps": ws["caps"], "webs": ws["webs"], "rear_spar": ws["rear_spar"],
                                              "joints": ws["joints"]}}
     # (B) carry-through box and CFRP forks
@@ -4428,12 +4484,25 @@ def mass_tally(c: Ctx, sized: dict) -> dict:
         m_rdb = 2 * 2 * 2 * int(TDs.get("rib_face_doubler_plies", 0)) * t_pw * float(TDs.get("rib_doubler_band_m", 0.0)) * \
             (s0_["x_rear"] - s0_["x_main"]) * rho_pw                  # 2 sides x 2 edges x 2 faces
         m_sob = m_land + m_fill + m_rdb
-    bu_B = m_cov + m_dbl + 2 * m_fork + 4 * m_pin + 2 * (m_rpin + m_slot) + m_kink + m_sob
+    # fix round 3 (VS3-03): centre-line rib M-CLRIB (web, kink-fitting lands, flanges to the covers and the frames)
+    CR = D["wing"]["ct_box"].get("centre_rib")
+    m_clr = 0.0
+    if CR:
+        rb_ = skin_faces(c, CR["layup"])
+        a_rb = (rb_["t_out"] + rb_["t_in"]) * rho_pw + rb_["c"] * float(rb_["core"]["density"])
+        ctm = ctbox_member(c)
+        h_rb = float(ctm["z"][1]) - float(ctm["z"][0]) - 2 * (sk["t_out"] + sk["c"] + sk["t_in"])
+        m_clr = w_box * h_rb * a_rb + 2 * float(CR["land_l_m"]) * float(CR["land_h_m"]) * \
+            (int(CR["land_plies"]) * t_pw * rho_pw - a_rb) + \
+            (2 * w_box + 2 * h_rb) * float(CR["flange_w_m"]) * int(CR["flange_plies"]) * t_pw * rho_pw + \
+            2 * int(CR.get("web_doubler_plies_per_face", 0)) * t_pw * rho_pw * w_box * h_rb
+    bu_B = m_cov + m_dbl + 2 * m_fork + 4 * m_pin + 2 * (m_rpin + m_slot) + m_kink + m_sob + m_clr
     alloc_B = float(S["mass"]["rules"]["carry_through_kg"])
     out["B_carry_through"] = {"bottom_up_kg": bu_B, "allocation_kg": alloc_B, "delta_kg": bu_B - alloc_B,
                               "items": {"sandwich_covers": m_cov, "web_doublers": m_dbl, "cfrp_forks_pair": 2 * m_fork,
                                         "main_pins_4": 4 * m_pin, "rear_pins_slot_fittings_2": 2 * (m_rpin + m_slot),
-                                        "kink_fittings_2": m_kink, "sob_ramp_lands_fillers": m_sob}}
+                                        "kink_fittings_2": m_kink, "sob_ramp_lands_fillers": m_sob,
+                                        "centre_line_rib": m_clr}}
     # (C) chassis members added / changed in this phase
     mem = {m_["id"]: m_ for m_ in S["layout"]["chassis"]["members"]}
     FD = D["fuel_bay"]
@@ -4800,6 +4869,28 @@ def interface_checks(S: dict, D: dict) -> list:
         abs(float(fr.get("bore", 0)) - D["parachute"]["shackle_pin_d_m"]) < 1e-9 and
         abs(float(fr.get("t_m", 0)) - D["parachute"]["lug_ear_t_m"]) < 1e-9 and
         abs(float(fr.get("e_m", 0)) - D["parachute"]["lug_e_m"]) < 1e-9)
+    # fix round 3 (VS3-01): the layout cap geometry (M-CTBOX main_spar_caps_z / _t: centroids and thicknesses at the
+    # spar-line points) equals the section model of wing_section with the sized ply zones (within 0.5 mm)
+    ctm = mem.get("M-CTBOX", {})
+    ok_cz, worst_cz = False, None
+    if ctm.get("main_spar_caps_z") and ctm.get("main_spar_caps_t") and ctm.get("sob_transition"):
+        try:
+            c_ = Ctx(S, design=D)
+            zones = D["wing"]["main_cap"]["zones"]
+            yj_ = float(S["wing"]["planform"]["y_junction"])
+            worst_cz = 0.0
+            for p_, zc_, tc_ in zip(ctm["main_spar_line"], ctm["main_spar_caps_z"], ctm["main_spar_caps_t"]):
+                yq = float(p_[1]) - 1e-6 if float(p_[1]) >= yj_ - 1e-9 else float(p_[1])
+                sq = wing_section(c_, yq, cap_plies_at(zones, yq))
+                worst_cz = max(worst_cz, abs(sq["z_cap_main"][1] - float(zc_[0])), abs(sq["z_cap_main"][0] - float(zc_[1])),
+                               abs(sq["t_main_cap"] - float(tc_)))
+            ok_cz = worst_cz <= 0.0005
+        except Exception:                          # noqa: BLE001 - reported as a failed interface check
+            ok_cz = False
+    chk("I-CAPZ", "layout M-CTBOX main-cap centroids and thicknesses = the wing_section model with the sized ply zones "
+        f"(<= 0.5 mm; worst {(worst_cz or 0.0) * 1000:.2f} mm)", ok_cz)
+    chk("I-CLRIB", "layout centre-line rib M-CLRIB and kink fittings F-KINK-UP / -LO exist (structures.sizing.wing."
+        "ct_box.centre_rib / kink_fitting)", "M-CLRIB" in mem and {"F-KINK-UP", "F-KINK-LO"} <= set(fit))
     ud = S["materials"].get("cfrp_ud_mtm45_as4", {})
     chk("I-UD-BEARING", "materials.cfrp_ud_mtm45_as4 carries no bearing allowable (S1-05)", "Fbru" not in ud)
     for key, lay in LAYUPS.items():

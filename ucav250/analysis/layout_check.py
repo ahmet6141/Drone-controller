@@ -3456,6 +3456,28 @@ def check_mech_defs(ctx: Ctx) -> list:
                     bad.append(f"sequence {name}: {k}={v} out of range")
     R.append(_row("C12", f"mechanism definitions ({len(J)} joints, {len(me['sequences'])} sequences): fields, ranges, "
                   "props, expressions, L/R pairs, sequence states", not bad, len(bad), 0, "; ".join(bad[:8])))
+    # fix round 3 (PK3-03): the rest pose is a physical state - it equals the state at control value 0 of every
+    # sequence (gear down: legs down, inner doors closed, trunnion / nose doors open; turret in, bay doors closed), and
+    # every coupled joint (expr) appears in a sequence (checks.py sweeps coupled joints only along their sequences)
+    bad = []
+    in_seq = set()
+    for name, sq in me["sequences"].items():
+        vals = sq.get("values") or []
+        if not vals or abs(float(vals[0])) > 1e-9:
+            bad.append(f"sequence {name}: first state is not control value 0")
+            continue
+        for k, v in sq["states"][0].items():
+            in_seq.add(k)
+            if k in J and abs(float(J[k]["rest"]) - float(v)) > 1e-5:
+                bad.append(f"{name}[0] {k} = {float(v):.5f} != rest {float(J[k]['rest']):.5f}")
+        for s_ in sq["states"]:
+            in_seq |= set(s_)
+    for j in me["joints"]:
+        if j.get("expr") and j["name"] not in in_seq:
+            bad.append(f"coupled joint {j['name']} in no sequence")
+    R.append(_row("C12", "rest pose = state at control value 0 of every sequence (physical gear-down / turret-in state); "
+                  "every coupled joint (expr) is in a sequence (fix round 3, PK3-03)", not bad, len(bad), 0,
+                  "; ".join(bad[:8])))
     # declarative swept volumes / corridors: references resolve and the ranges are the joint ranges
     bad = []
     trunks = {tr["id"] for tr in L["systems"]["harness"]["trunks"]}

@@ -248,13 +248,18 @@ class Registry:
 
 def layup_props(spec: dict, key: str) -> dict:
     """Thickness (m) and areal mass (kg/m^2) of a layup in spec["layups"]:
-    ``{plies: [[material, angle_deg, count], ...], core: material|null, core_t: m}``; ply materials must define
-    ``ply_t`` (cured ply thickness, m) and ``density`` (kg/m^3)."""
+    ``{plies: [[material, angle_deg, count], ...], inner_plies: [...], core: material|null, core_t: m}`` (``plies`` =
+    outer face, ``inner_plies`` = inner face of a sandwich); ply materials must define ``ply_t`` (cured ply thickness,
+    m) and ``density`` (kg/m^3)."""
     lay = spec["layups"][key]
     mats = spec["materials"]
     t = 0.0
     am = 0.0
-    for mat, _angle, count in lay.get("plies", []):
+    # both sandwich faces count: ``plies`` is the outer (tool-side) face, ``inner_plies`` the inner face
+    for mat, _angle, count in list(lay.get("plies", []) or []) + list(lay.get("inner_plies", []) or []):
+        if not isinstance(count, (int, float)):
+            raise ValueError(f"layup {key}: ply count {count!r} is sized from the loads, not a number - give the part "
+                             "an explicit thickness and a material instead of this layup")
         m = mats[mat]
         t += m["ply_t"] * count
         am += m["ply_t"] * m["density"] * count

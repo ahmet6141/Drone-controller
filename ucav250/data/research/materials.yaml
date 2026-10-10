@@ -2276,6 +2276,19 @@ spec_ready:
       notes: K-factor 0.33-0.5 by R/t (estimate)
       tag: standard
       source: *u_ac43
+    sheet_metal_steel:
+      name: Sheet-metal cutting, brake forming and riveting (stainless / carbon steel sheet)
+      name_tr: Celik / paslanmaz sac kesme, abkant bukum ve percinleme
+      min_thickness: 0.38e-3
+      tolerance: "ISO 2768-mK linear; bend angle +/-1 deg (estimate)"
+      draft_deg: 0.0
+      min_bend_radius_t: {ss_304_annealed: 0.5, steel_4130_N: 1.5}
+      min_bend_radius_note: "materials.yaml sheet_metal.steel_titanium_bend_radius_over_t (typical shop limits, estimate)"
+      edge_distance_D: 2.0
+      hole_to_bend: "2.5 t + R"
+      notes: "thinnest gauge = the CS-VLA 1191 fireproof stainless firewall sheet (standards.yaml FIRE-001, >= 0.38 mm without test); shear / laser cut, brake-formed edge angles, Monel or stainless blind rivets"
+      tag: estimate
+      source: *u_ac43
     tig_welding_4130:
       name: TIG welding of 4130 normalised tube (engine mount, gear frames)
       name_tr: 4130 boru TIG kaynagi

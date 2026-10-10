@@ -1725,6 +1725,15 @@ def aft_panels(sc: SC, pans: dict) -> None:
     st_.region = rect(sx0 + GAP, X_AFT - GAP, 0.0, 1.0)
     st_.x1 = X_AFT
     st_.cut = [stub_cut[0]]
+    # inner-face pockets over the nuts of the stub root-fitting bolts (layout F-SPINDLE-NODE, group 'stub root',
+    # M6 along +y): d 15 mm, the skin keeps 1.5 mm
+    for b in sc.fit["F-SPINDLE-NODE"]["bolts"]:
+        if b.get("group") != "stub root":
+            continue
+        q = np.asarray(b["point"], float)
+        g_ = LineString([(0.0, float(q[2])), (1.0, float(q[2]))]).intersection(sc.sec(float(q[0])))
+        y_o = float(g_.bounds[2]) if not g_.is_empty else float(q[1]) + 0.03
+        st_.cut.append(G.cylinder(0.0075, (q[0], q[1] - 0.01, q[2]), (q[0], y_o - 0.0015, q[2]), n=32))
 
 
 # =====================================================================================================================
@@ -1936,8 +1945,8 @@ RIVET_D = 3.2                   # their diameter: the end-rib T-flanges are 20 m
 RIB_FL = 0.020                  # glove rib T-flange width (chassis rib convention, 1.6 mm)
 LAND_T_JA = 0.0024              # joggled land under the joint access panel: 12 plies (the glove nose is curved, a
 #                                 flat Camloc seat plane stays 2.5 D inside a thicker land)
-REAR_HOLE_D, REAR_CAP_D, REAR_CB = 0.018, 0.030, 0.0022   # rear-pin port: hole, cap, counterbore depth
-REAR_CAP_T, REAR_SPIGOT = 0.0020, (0.0085, 0.0065, 0.0035)  # cap disc, spigot (outer r, inner r, length)
+REAR_HOLE_D, REAR_CAP_D = 0.018, 0.030   # rear-pin port: hole, bayonet cap
+REAR_CAP_T = 0.0020             # cap disc at most (less where the rear pin's lower end is closer to the OML)
 
 
 def _mono(chain: np.ndarray):
@@ -2178,8 +2187,11 @@ def glove_parts(sc: SC, pans: dict) -> Glove:
     # stays the 1.0 mm solid laminate)
     x_cte = float(sc.xr(rc[1])) + 0.5 * sc.w_rear + 0.0005
     aft_of_cap = box3((x_cte, rc[1] - 0.05, zlo - 0.06), (rc[0] + 0.05, rc[1] + 0.05, zlo + 0.05))
-    rcuts.append(man_and(G.cylinder(0.5 * REAR_CAP_D + GAP, (rc[0], rc[1], zlo - 0.05), (rc[0], rc[1], zlo + REAR_CB),
-                                    n=64), aft_of_cap))
+    rp_ = sc.L["chassis"]["wing_joint"]["rear_spar"]["pin"]
+    t_cap = min(REAR_CAP_T, float(rp_["position"][2]) - 0.5 * float(rp_["length"]) - 0.0002 - zlo)
+    cbore = man_sub(G.cylinder(0.5 * REAR_CAP_D + GAP, (rc[0], rc[1], zlo - 0.05), (rc[0], rc[1], zlo + 0.012),
+                               n=64), [gl.env(t_cap + 0.0002)])          # counterbore parallel to the OML
+    rcuts.append(man_and(cbore, aft_of_cap))
     jcut = man_and(prism_z(ja.buffer(GAP, join_style=2)), box3((1.7, 0.3, -1), (3.1, 0.75, 1)))
     pans["P-GLOVE-LO"] = Pan(key="P-GLOVE-LO", num=int(lo["part"].split("-")[2]), name=lo["name"],
                              name_tr=lo["name_tr"], surf="L", region=plan, mirror=True, layup="wing_skin_primary",
@@ -2190,9 +2202,10 @@ def glove_parts(sc: SC, pans: dict) -> Glove:
     band = band.difference(glove_rib_pads(sc, gl, False).buffer(0.0015, join_style=2))
     t_ja = sc.t_skin
     half = gl.chord_half(False)
-    land = man_and(gl.layer(t_ja + SEAL, t_ja + SEAL + LAND_T_JA), half, prism_z(band))
+    land = man_and(gl.layer(t_ja + SEAL, t_ja + SEAL + LAND_T_JA), half, prism_z(band.intersection(plan)))
     reach = man_and(gl.layer(t_up - OV, t_ja + SEAL + OV), half, prism_z(band.difference(ja.buffer(GAP,
-                                                                                                    join_style=2))))
+                                                                                                    join_style=2))
+                                                                       .intersection(plan)))
     ribs_all = [gl.rib_env(w, 0.0002) for w in ("SOB", "GLOVE", "JOINT")]
     pans["P-GLOVE-LO"].mesh_override = lambda: finish(pieces_above(man_add([
         man_sub(man_add([skin(False), reach]), [gl.cap_keepout(False), jcut] + rcuts + ribs_all),
@@ -2216,24 +2229,21 @@ def glove_parts(sc: SC, pans: dict) -> Glove:
     pans["P-JOINTACCESS"].mesh_override = ja_mesh
     # rear-pin bayonet cap: flush disc in the counterbore, spigot in the 18 mm hole
     raS = S["P-REARACCESS"]
+    # the cap stays below the lower end of the rear pin P-REAR (layout wing_joint.rear_spar.pin: position + length
+    # along +z, head down): flush disc of the remaining depth, bayonet lugs in the counterbore rim (not modelled)
 
     def cap_mesh():
-        z_in = zlo + REAR_CAP_T
-        disc = G.cylinder(0.5 * REAR_CAP_D - GAP, (rc[0], rc[1], zlo - 0.004), (rc[0], rc[1], z_in), n=64)
-        disc = man_and(disc, gl.env(0.0), box3((x_cte + GAP, rc[1] - 0.05, zlo - 0.06),
-                                                (rc[0] + 0.05, rc[1] + 0.05, zlo + 0.05)))
-        spig = man_sub(G.cylinder(REAR_SPIGOT[0], (rc[0], rc[1], z_in - OV), (rc[0], rc[1], z_in + REAR_SPIGOT[2]),
-                                  n=48),
-                       [G.cylinder(REAR_SPIGOT[1], (rc[0], rc[1], z_in), (rc[0], rc[1], z_in + 0.02), n=48),
-                        box3((rc[0] - 0.05, rc[1] - 0.05, zlo - 0.06), (x_cte + GAP, rc[1] + 0.05, zlo + 0.05))])
-        return finish(man_add([disc, spig]))
+        disc = G.cylinder(0.5 * REAR_CAP_D - GAP, (rc[0], rc[1], zlo - 0.01), (rc[0], rc[1], zlo + 0.01), n=64)
+        disc = man_and(disc, gl.layer(0.0, t_cap), box3((x_cte + GAP, rc[1] - 0.05, zlo - 0.06),
+                                                         (rc[0] + 0.05, rc[1] + 0.05, zlo + 0.05)))
+        return finish(disc)
     pans["P-REARACCESS"] = Pan(key="P-REARACCESS", num=int(raS["part"].split("-")[2]), name=raS["name"],
                                name_tr=raS["name_tr"], surf="L", region=ra, mirror=True, layup=None,
-                               thickness=REAR_CAP_T, t=REAR_CAP_T, x0=float(ra.bounds[0]), x1=float(ra.bounds[2]),
+                               thickness=round(t_cap, 6), t=t_cap, x0=float(ra.bounds[0]), x1=float(ra.bounds[2]),
                                step=STEP["joint"], removable=True, parent=pans["P-GLOVE-LO"].key,
                                explode=(0.0, 0.0, -0.25), land_refs=tuple(raS["lands"]),
-                               notes="flush bayonet cap d 30 mm (2.0 mm solid CFRP + spigot) in a 2.2 mm counterbore "
-                                     "round the d 18 mm port")
+                               notes=f"flush bayonet cap d 30 mm ({t_cap * 1000:.1f} mm solid CFRP, clear of the rear "
+                                     f"pin end) in a counterbore round the d 18 mm port")
     pans["P-REARACCESS"].mesh_override = cap_mesh
     return gl
 

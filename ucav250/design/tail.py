@@ -53,6 +53,7 @@ from . import structgen as SG
 # module-private detailing constants (docs/detail/tail.md)
 # =====================================================================================================================
 RING_N = 160                # points per lofted section ring
+STUB_N = 320                # stub rings (two stations only): 3.4 mm spacing, chord sag at the inner nose < 0.25 mm
 TRIM = 0.001                # tail lofts end 1 mm above the body OML (sealant fillet line; avoids a tangent cut)
 BOND = 0.0001               # bond line between bonded parts (contact <= 0.3 mm, no volume overlap)
 OV = 2e-4                   # boolean overlap of fused features
@@ -66,7 +67,14 @@ REAR_CAP = (0.0008, 0.020)  # fin rear (hinge) spar caps: 6 plies UD x 20 mm
 FIN_FRONT_XC = 0.241        # layout F-FIN-FRONT fin_chord_fraction
 FIN_REAR_DH = 0.040         # rear (hinge) spar web 40 mm ahead of the hinge line in every section (parallel to it): the
                             # DA 26 case (aft face 17.7 mm aft of its shaft) clears the rear-spar cap for the servo hatch
-STUB_FRONT_XC = 0.25
+# stub front-spar root fitting in F-STUB-FRONT (CH-098): chassis detailing agreement for the clevis = 4 mm ears either
+# side of an 8 mm slot open outboard, slot floor 10 mm outboard of the frame bolts B1/B2 (chassis.build_stub_front)
+SF_EAR, SF_FLOOR_DY = 0.004, 0.010
+SF_D = 0.005                # lug bolts M5 12.9 (layout B3/B4 M6): 10 mm = 2 D to the slot floor and to the ear edge
+SF_LUG_E = 0.011            # lug edge above / below the bolts
+SF_NECK_Y1 = 0.268          # 7.8 mm lug/neck zone ends here; 5 mm flange zone outboard of it
+SF_FL_Y, SF_FL_END = 0.303, 0.012   # flange bolt station (12.5 mm+ from the web root and tip ends) and flange end beyond
+SF_FL_HZ, SF_FL_DZ, SF_FL_T = 0.021, 0.010, 0.005   # flange half height, flange bolts +-10 mm about the stub plane, t
 RUDDER_GAP_END = 0.006      # spanwise gap rudder ends / fixed fin (rudder top swings 3.9 mm toward the tip cap)
 CAP_SKIRT = 0.025           # tip-cap skirt length below the cap joint (2 x M3 into nutplates on the fin skin)
 COVE_GAP = 0.002            # radial cove gap round the rudder nose
@@ -96,7 +104,8 @@ HATCH_X0 = 3.729            # servo hatch opening forward edge (x); aft edge 1 m
 HATCH_ETA = (0.412, 0.540)  # opening span range
 HATCH_T = 0.0010            # cover: 5 plies PW in a joggled monolithic land (core ramped out), flush with the OML
 HATCH_LAND = 0.020          # land width above / below the opening (2 x 2.5 D for M4)
-HATCH_SCREW_X = ((3.742, 3.775), (3.760, 3.795))   # lower / upper screw pairs (upper pair aft of the front-spar cap)
+HATCH_SCREW_X = ((3.742, 3.775), (3.766, 3.801))   # lower / upper screw pairs (upper pair and its nutplate strip aft
+                                                    # of the front-spar cap)
 SPINDLE_R = 0.01247         # spindle OD 25 (polygon-safe radius inside the 25 H7 bores)
 SPINDLE_NECK_R = 0.0105     # neck OD 21 through the node cheek hole (>= 5 mm moving-part clearance, layout.clearances)
 SPINDLE_ID = 0.022          # bore 22 (wall 1.5 = processes.cnc_milling_metal.min_thickness; structures 1.2)
@@ -106,13 +115,15 @@ BRG_RO = 0.01847            # outer race radius inside a 37 H7 bore modelled wit
 BRG_RI = 0.01253            # inner race bore
 WASHER_R = 0.0134           # moving parts inside the node boss stay >= 5 mm off the 37 mm bore
 DEG = math.pi / 180.0
+SLEEVE_T = 0.002            # sleeve tube wall (OD 49): 65 MPa at the ultimate outboard-bearing moment (tail.md)
 # stabilator drive (EQ-STABACT): DA 30 lying along y on the firewall forward face, shaft along +y at the outboard end
 DA30 = dict(L=0.1585, H=0.085, W=0.030, holes=(0.077, 0.018), axis_from_holes=0.0216, mass=0.630)
 DA30_SHIFT = (-0.0025, -0.0095)   # case moved 2.5 mm forward (base-bolt heads behind the case) and 9.5 mm inboard
                                   # (output arm in the pushrod plane y 0.18) from the layout box
 STUD_L_S = 0.0045           # stabilator ball centre to the arm / horn plate face
 CRADLE_T = 0.003            # 7075 cradle plates
-HORN_HUB = (0.170, 0.190, 0.0195)   # spindle horn pinch hub: y range, outer radius
+CRADLE_WIN = 0.009          # cradle lightening windows stay 9 mm inside the DA 30 lug-bolt rows
+HORN_HUB = (0.170, 0.190, 0.0175)   # spindle horn pinch hub: y range, outer radius (wall 5 mm)
 HORN_EARS = (0.035, 0.0125, 0.011)  # pinch ears forward of the spindle: x reach, x start, half height
 # ventral fin (F-VENTRAL-1..3): tongue in the chassis clevis slot, fork cheeks on the mid-plane web (1, 2) or tongue in a
 # slot of the solid trailing-edge region (3); replaceable PA12 skid shoe on a 4130 strap round the tip
@@ -120,7 +131,8 @@ V_SLOT = (0.004, -0.0655)   # chassis clevis slot half width (y) and slot top z 
 V_LUG_HX = 0.0158           # tongue half length along x (fitting box 32 mm, 0.2 mm off the firewall sheet)
 V_WEB_T = 0.003             # mid-plane web: 15 plies PW
 V_CHEEK_T = 0.003
-V_FORK_DX = (0.026, 0.0)     # fork-bolt pair x offset from the fitting point (fitting 1: aft, where the cavity takes the nut)
+V_FORK_DX = (0.018, 0.0)     # fork-bolt pair x offset from the fitting point (fitting 1: 18 mm aft, where the cavity
+                            # takes the nut; its cheeks end 3.5 mm ahead of fitting 2)
 V_CAVITY_XC = 0.80          # sandwich cavity forward of 0.80 c; core-filled trailing-edge closeout aft of it
 SKID = dict(x=(4.054, 4.114), strap_t=0.002, shoe_side=0.004, shoe_top=0.025, strap_top=0.035, height=0.012)
 # fin spar root fittings (7075, machined): chassis clevis slots from the layout boxes (F-FIN-FRONT: 6 mm ears either side
@@ -243,6 +255,8 @@ class Surf:
         # leading-edge line slope at both ends: frames outside the surface continue the straight LE (cutting tools)
         self._d0 = (self.s.frame_at(self.e0 + h)[0] - o) / h
         self._d1 = (self.s.frame_at(self.e1)[0] - self.s.frame_at(self.e1 - h)[0]) / h
+        self._c0 = (self.s.chord_at(self.e0 + h) - self.s.chord_at(self.e0)) / h
+        self._c1 = (self.s.chord_at(self.e1) - self.s.chord_at(self.e1 - h)) / h
 
     def clamp(self, eta):
         return min(max(eta, self.e0), self.e1)
@@ -257,7 +271,15 @@ class Surf:
         return o, self.c, self.u
 
     def chord(self, eta) -> float:
-        return self.s.chord_at(self.clamp(eta))
+        """Chord at eta; outside the surface the end taper continues linearly (like ``frame``), so chord-fraction
+        lines (spar webs) stay straight in the cutting tools that reach past the ends."""
+        e = self.clamp(eta)
+        c = self.s.chord_at(e)
+        if eta < e:
+            c += (eta - e) * self._c0
+        elif eta > e:
+            c += (eta - e) * self._c1
+        return c
 
     def poly(self, eta, inset: float = 0.0) -> Polygon:
         """OML section (s, t) at eta (clamped to the surface), optionally inset (mitred)."""
@@ -293,7 +315,7 @@ class Surf:
     def half_t(self, eta, xc, inset=0.0) -> tuple[float, float]:
         """(upper t, lower t) of the section at chord fraction xc."""
         p = self.poly(eta, inset)
-        x = xc * self.chord(eta)
+        x = xc * self.chord(self.clamp(eta))
         g = LineString([(x, -1.0), (x, 1.0)]).intersection(p)
         ys = np.asarray(g.coords)[:, 1] if hasattr(g, "coords") else np.concatenate(
             [np.asarray(q.coords)[:, 1] for q in g.geoms])
@@ -643,11 +665,11 @@ class StabGeo:
         # (x, z) region extruded along +y from the cheek face
         fl = extrude_cs(fl2, f1 - f0, (0.0, f1, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0))
         y_tip = self.y_stub_tip
-        tube = ring(0.0215, 0.0245, a(f1 - OV), a(y_tip - 0.020))
+        tube = ring(0.0245 - SLEEVE_T, 0.0245, a(f1 - OV), a(y_tip - 0.020))
         seat = ring(0.0160, 0.0245, a(y_tip - 0.020 - OV), a(y_tip))
         body = U([fl, tube, seat])
         body = D(body, [cyl(BRG_RO + 0.000045, a(self.brg_out[0]), a(y_tip + 0.001))])     # 37 H7 seat to the tip
-        env = U([C.stub.loft(C.stub.e0 - 0.01, C.stub.e1 + 0.01, f_oml(C.t_skin + BOND)),
+        env = U([C.stub.loft(C.stub.e0 - 0.01, C.stub.e1 + 0.01, f_oml(C.t_skin + BOND), n=STUB_N),
                  box3((self.x0 - 0.06, f0 - 0.001, self.z0 - 0.06), (self.x0 + 0.06, f1 + 0.0005, self.z0 + 0.06))])
         return I(body, env)
 
@@ -709,7 +731,15 @@ class StabDrive:
         top = box3((x0, y0, hi[2] + BOND), (xb + OV, y1, hi[2] + BOND + CRADLE_T))
         bot = box3((x0, y0, lo[2] - BOND - CRADLE_T), (xb + OV, y1, lo[2] - BOND))
         base = box3((xb, y0, lo[2] - BOND - CRADLE_T - 0.0145), (xb + CRADLE_T, y1, hi[2] + BOND + CRADLE_T))
-        return U([top, bot, base])
+        # lightening windows (r 4 mm corners): plates keep 9 mm round the lug bolts (> 2 D) and a frame to the base;
+        # the base keeps its screw strip below the case and the plate roots
+        ys = sorted(y for _x, y in self.da30_holes())
+        wy = (ys[0] + CRADLE_WIN, ys[-1] - CRADLE_WIN)
+        win = sbox(x0 + 0.007, wy[0], xb - 0.006, wy[1]).buffer(-0.004, join_style=1).buffer(0.004, join_style=1)
+        cut_p = extrude_cs(win, 0.08, (0.0, 0.0, lo[2] - 0.04), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0))
+        bw = sbox(wy[0], lo[2] + 0.004, wy[1], hi[2] - 0.004).buffer(-0.004, join_style=1).buffer(0.004, join_style=1)
+        cut_b = extrude_cs(bw, 0.02, (xb - 0.01, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
+        return D(U([top, bot, base]), [cut_p, cut_b])
 
     def base_bolts(self):
         """(head point on the base forward face, axis +x) of the 4 base screws into the firewall inserts."""
@@ -939,11 +969,11 @@ class StubPanelGeo:
     def stub_inner(self, extra=0.0):
         C = self.C
         return self.m(("stub_in", extra), lambda: C.stub.loft(C.stub.e0 - 0.01, C.stub.e1 + 0.01,
-                                                              f_oml(C.t_skin + extra)))
+                                                              f_oml(C.t_skin + extra), n=STUB_N))
 
     def stub_skin(self) -> G.Mesh:
         C = self.C
-        outer = C.stub.loft(C.stub.e0, C.stub.e1, f_oml())
+        outer = C.stub.loft(C.stub.e0, C.stub.e1, f_oml(), n=STUB_N)
         return pieces_above(D(outer, [self.stub_inner(), C.body(TRIM)]))
 
     def sleeve_clear(self, r=0.0245 + BOND, y0=None, y1=None):
@@ -953,7 +983,7 @@ class StubPanelGeo:
     def stub_root_rib(self) -> list[G.Mesh]:
         C = self.C
         band = D(C.body(TRIM + C.t_rib, 3.38, 4.0), [C.body(TRIM, 3.36, 4.0)])
-        rib = D(I(self.stub_inner(BOND), band), [self.sleeve_clear()])
+        rib = D(I(self.stub_inner(BOND), band), [self.sleeve_clear(), self.stub_fitting(BOND)])
         return _split(rib)
 
     def stub_tip_rib(self) -> list[G.Mesh]:
@@ -965,11 +995,42 @@ class StubPanelGeo:
         reg = reg.difference(Point(hole2[0], hole2[1]).buffer(0.0245 + BOND, 64))
         return [C.stub.plate(e0, e1, p) for p in sorted(polys(reg), key=lambda q: -q.area)]
 
+    # ------------------------------------------------------------ stub front-spar root fitting (F-STUB-FRONT)
+    def sf(self) -> dict:
+        """Stub front-fitting interface from layout F-STUB-FRONT: clevis slot (ears SF_EAR either side, floor
+        SF_FLOOR_DY outboard of the frame bolts), lug bolt stations, fitting plate x range and the spar web line."""
+        C = self.C
+        f = C.fit["F-STUB-FRONT"]
+        lo, hi = np.asarray(f["box"][0], float), np.asarray(f["box"][1], float)
+        y_floor = max(float(b["point"][1]) for b in f["bolts"] if b["group"] == "frame") + SF_FLOOR_DY
+        bz = sorted(float(b["point"][2]) for b in f["bolts"] if b["group"] == "stub clevis")
+        slot = (float(lo[0]) + SF_EAR, float(hi[0]) - SF_EAR)
+        xa, xb = slot[0] + BOND, slot[1] - BOND
+        zc = float(C.T["stabilator_stub"]["params"]["z"])
+        return dict(slot=slot, y_floor=y_floor, y_ear=float(hi[1]), z_ear=(float(lo[2]), float(hi[2])), bz=bz,
+                    y_lug=float(hi[1]) - 2 * SF_D, xa=xa, xb=xb, x_web=xb + BOND + 0.5 * T_WEB, zc=zc,
+                    fl_bz=(zc - SF_FL_DZ, zc + SF_FL_DZ))
+
+    def stub_fitting(self, grow=0.0) -> G.Mesh:
+        """7075 plate fitting (machined): 7.8 mm lug in the CH-098 clevis slot (end face on the slot floor), neck
+        through the body side and the stub root rib, 5 mm flange on the forward face of the stub front-spar web."""
+        d = self.sf()
+        zlo, zhi = d["bz"][0] - SF_LUG_E, d["bz"][1] + SF_LUG_E
+        lug = sbox(d["y_floor"] - grow, zlo - grow, SF_NECK_Y1 + grow, zhi + grow)
+        fl = sbox(SF_NECK_Y1 - 0.006 - grow, d["zc"] - SF_FL_HZ - grow, SF_FL_Y + SF_FL_END + grow,
+                  d["zc"] + SF_FL_HZ + grow)
+        fl = fl.buffer(-0.004, join_style=1).buffer(0.004, join_style=1)      # 4 mm corner radii
+        a = extrude_cs(lug, d["xb"] - d["xa"] + 2 * grow, (d["xa"] - grow, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
+        b = extrude_cs(fl, SF_FL_T + 2 * grow, (d["xb"] - SF_FL_T - grow, 0.0, 0.0), (0.0, 1.0, 0.0),
+                       (0.0, 0.0, 1.0))
+        return U([a, b])
+
     def stub_front_spar(self) -> G.Mesh:
         C = self.C
         e1 = C.stub.e1 - C.t_rib - BOND
-        sp = C.stub.channel(C.stub.e0 - 0.005, e1, lambda eta: STUB_FRONT_XC * C.stub.chord(eta), C.t_skin + BOND,
-                            aft=False)
+        x_web = self.sf()["x_web"]
+        sp = C.stub.channel(C.stub.e0 - 0.005, e1, lambda eta: x_web - C.stub.frame(eta)[0][0], C.t_skin + BOND,
+                            aft=True, inner=self.stub_inner(BOND))
         return pieces_above(D(sp, [C.body(TRIM + C.t_rib + BOND, 3.38, 4.0)]))
 
     # ------------------------------------------------------------ stabilator panel
@@ -1495,6 +1556,31 @@ class FinGeo:
             hulls.append(G.hull(np.asarray(pts)))
         return self.m(("rodsweep", grow), lambda: U(hulls))
 
+    def horn_sweep(self, grow=0.0015, aft=0.010) -> G.Mesh:
+        """Volume swept over the rudder travel by the forward part of the horn (ball, plate within ``aft`` of the hinge
+        line) and by the pushrod's horn-end socket, grown by ``grow`` (hulls of neighbouring states): the horn
+        clearance notch cut from the cove lip of the fixed fin skin."""
+        def build():
+            lk = self.linkage()
+            F = self.F
+            hm = self.m("horn_mesh", self.horn)
+            e0, e1 = self.horn_eta()
+            fwd = I(hm, F.slab(e0 - 0.05, e1 + 0.05, self.s_hinge, -0.10, aft))   # clipped: no long plate facets
+            keep = list(fwd.V)
+            n_s = 24
+            sph = [lk.B0 + (BALL[2] + grow) * np.array([math.cos(a) * math.cos(b), math.sin(a) * math.cos(b),
+                                                         math.sin(b)])
+                   for a in np.linspace(0, 2 * math.pi, n_s, endpoint=False) for b in np.linspace(-1.4, 1.4, 7)]
+            P = np.vstack([np.asarray(keep)] + [np.asarray(keep) + grow * d for d in
+                                                np.vstack([np.eye(3), -np.eye(3)])] + [np.asarray(sph)])
+            ds = [d for d, *_ in self.rudder_states()]
+            hulls = []
+            for d1, d2 in zip(ds, ds[1:]):
+                Q = np.vstack([G.rotate_about(P, self.h_o, self.h_a, d1), G.rotate_about(P, self.h_o, self.h_a, d2)])
+                hulls.append(G.hull(Q))
+            return U(hulls)
+        return self.m(("hornsweep", grow, aft), build)
+
     def eta_of(self, P) -> float:
         F = self.F
         return float(F.e0 + (np.asarray(P, float) - F.frame(F.e0)[0]) @ F.w)
@@ -1548,14 +1634,13 @@ class FinGeo:
 
     def horn_bolts(self):
         """(point on the pad outer surface, axis into the rudder) of the two M3 horn screws (beside the horn plate)."""
-        F = self.F
         e0, e1 = self.horn_eta()
-        out = []
+        pts = []
         for eta in (e0 - 0.004, e1 + 0.004):
             s_ = 0.5 * sum(self.horn_pad_s(eta))
-            tu, _tl = SG._span_t(F.poly(eta), s_)
-            out.append((F.p3(eta, s_, tu + 0.0025), -F.u))
-        return out
+            pts.append((self.oml_point(eta, s_), self.oml_normal(eta, s_)))
+        n = unit(pts[0][1] + pts[1][1])                 # common normal: flat backing plate under both screws
+        return [(p + 0.0025 * n, -n) for p, _n in pts]
 
     def rod(self) -> G.Mesh:
         lk = self.linkage()
@@ -1647,15 +1732,28 @@ class FinGeo:
         hb = self.horn_bolts()
         return nut_strip([p for p, _a in hb], hb[0][1], self.rudder_inner(BOND), half_w=0.010, margin=0.008)
 
+    def oml_point(self, eta, s) -> np.ndarray:
+        """Point of the inboard (+u) OML face at span coordinate eta, section chord coordinate s."""
+        tu, _tl = SG._span_t(self.F.poly(eta), s)
+        return self.F.p3(eta, s, tu)
+
+    def oml_normal(self, eta, s, h=0.003) -> np.ndarray:
+        """Outward unit normal of the inboard OML face at (eta, s): screw axes are laid along it so the flat head and
+        the nutplate seat square on the curved skin."""
+        ps = self.oml_point(eta, s + h) - self.oml_point(eta, s - h)
+        pe = self.oml_point(eta + h, s) - self.oml_point(eta - h, s)
+        n = unit(np.cross(ps, pe))
+        return n if n @ self.F.u > 0 else -n
+
     def hatch_screws(self):
-        """(point on the cover outer surface, axis into the fin) of the 4 x M4 cover screws."""
+        """(point on the cover outer surface, axis into the fin) of the 4 x M4 cover screws; each pair shares the
+        mean surface normal (one flat nutplate strip per pair)."""
         F = self.F
         out = []
         for eta, xs in zip((HATCH_ETA[0] - 0.011, HATCH_ETA[1] + 0.011), HATCH_SCREW_X):
             o = F.frame(eta)[0]
-            for x in xs:
-                tu, _tl = SG._span_t(F.poly(eta), x - o[0])
-                out.append((F.p3(eta, x - o[0], tu), -F.u))
+            ax = -unit(sum(self.oml_normal(eta, x - o[0]) for x in xs))
+            out += [(self.oml_point(eta, x - o[0]), ax) for x in xs]
         return out
 
     # ---------------------------------------------------------------- spar root fittings
@@ -1775,9 +1873,24 @@ M7075, MTI, MSTEEL = "al_7075_t651_plate", "ti_6al_4v_annealed_sheet", "steel_41
 CFRP_PW, CFRP_UD, GFRP, CORE = "cfrp_pw_mtm45_as4", "cfrp_ud_mtm45_as4", "gfrp_7781_mtm45", "core_rohacell_51wf"
 P_CNC, P_PREPREG, P_SLS, P_BUY = "cnc_milling_metal", "prepreg_ooa_vacbag", "sls_pa12", "purchased"
 G129 = "12.9"
+TI = "Ti-6Al-4V"          # bolts in composite stacks and secondary joints (galvanically compatible with CFRP)
 EX_FIN, EX_RUD, EX_ACT = (0.0, 0.10, 0.28), (0.12, 0.10, 0.28), (0.0, 0.22, 0.22)
 EX_STUB, EX_STAB, EX_SPIN, EX_DRV, EX_VEN = (0.0, 0.18, 0.0), (0.0, 0.40, 0.0), (0.0, 0.28, 0.0), (-0.15, 0.05, 0.10), \
     (0.0, 0.0, -0.25)
+
+
+def _dedupe_holes(p: Part) -> None:
+    """Drop repeated identical cylinder cutters (coincident boolean cutters leave slivers in the result)."""
+    seen, keep = set(), []
+    for h in p.holes:
+        if isinstance(h, G.Mesh):
+            keep.append(h)
+            continue
+        k = tuple(np.round(np.r_[h[0], h[1], h[2]], 9))
+        if k not in seen:
+            seen.add(k)
+            keep.append(h)
+    p.holes[:] = keep
 
 
 def _port(pid: str) -> str:
@@ -1864,6 +1977,8 @@ class _Fast:
             fid = self.fid(own)
             kw.setdefault("step", self.step_of(list(pids) + [kw.get("insert_part"), kw.get("tapped_part")]))
             fst = J.bolt(self.reg, fid, size, head, a, stack, owner=own, **kw)
+            for pid in dict.fromkeys(p for p, _t in stack):         # a part met twice in the stack (both ears of a
+                _dedupe_holes(self.reg.parts[pid])                  # clevis, a shoe round a strap): one bore
             q = fst.position + fst.grip * fst.axis
             if pocket is not None:                                  # nut pocket in a neighbouring part (core)
                 self.reg.parts[pocket[0]].add_hole(q - 0.0002 * fst.axis, q + pocket[1] * fst.axis, pocket[2])
@@ -2070,7 +2185,7 @@ class _TailReg:
           notes="7075 C-section 2 mm nested in the rear spar over +-40 mm round the pushrod slot (carries the inboard "
                 "cap round the slot), bonded + 4 blind rivets per cap (rivets: drawing note)")
         A("skin", 250, "R", "tail", "fin skin, starboard", "dikey kaplaması, sağ", CFRP_PW, P_PREPREG,
-          lambda: pieces_above(D(f.skin_raw(), [f.hatch_recess(), f.hatch_opening(), f.rod_sweep(),
+          lambda: pieces_above(D(f.skin_raw(), [f.hatch_recess(), f.hatch_opening(), f.rod_sweep(), f.horn_sweep(),
                                                f.cap_flange(BOND)])),
           layup="tail_skin", parent=self.P("fspar"), step=32, explode=EX_FIN,
           contacts=(self.P("fspar"), self.P("rspar"), self.P("rrib"), self.P("brib1"), self.P("brib2"),
@@ -2181,7 +2296,16 @@ class _TailReg:
               explode=EX_STUB, contacts=(self.P("stskin"), self.P("sleeve")))
         A("stspar", 275, "R", "tail", "stub front spar, starboard", "sabit kök ön kirişi, sağ", CFRP_UD, P_PREPREG,
           sp.stub_front_spar, thickness=T_WEB, parent=self.P("stskin"), step=31, explode=EX_STUB,
-          contacts=(self.P("stskin"),), notes="C-channel at 0.25 c, caps forward")
+          contacts=(self.P("stskin"),),
+          notes="C-channel in the plane of the F-STUB-FRONT slot (0.141 c), caps aft; the root fitting flange is bolted "
+                "to the forward face of its web")
+        ch98 = C.fit["F-STUB-FRONT"]["part"] + "-R"
+        A("sffit", 265, "R", "tail", "stub front-spar root fitting, starboard", "sabit kök ön kiriş kök bağlantısı, sağ",
+          M7075, P_CNC, sp.stub_fitting, thickness=SF_FL_T, parent=ch98, step=31, explode=EX_STUB,
+          contacts=(ch98, self.P("stspar")),
+          notes="7075-T651 plate machined: 7.8 mm lug in the F-STUB-FRONT clevis (end face seated on the slot floor, "
+                "2 x M5 12.9 double shear, heads through the FS3480 access holes), neck through the body side and the "
+                "stub root rib (shell slot: interface item), 5 mm flange on the front-spar web (2 x M5)")
 
     # ------------------------------------------------------------------------------------------------------- spindle + panel
     def stabilator(self):
@@ -2337,17 +2461,17 @@ class _TailReg:
         # ---- web flanges (2 x M5 each), nyloc nuts behind the webs
         for front, spar, fit in ((True, P("fspar"), P("ffit")), (False, P("rspar"), P("rfit"))):
             for pt, ax in f.flange_bolts(front):
-                Fa.sym(5, pt, ax, [fit, spar], window=(-0.002, 0.0065), grade=G129, owner=fit,
+                Fa.sym(5, pt, ax, [fit, spar], window=(-0.002, 0.0065), grade=TI, owner=fit,
                        label=f"fin {'front' if front else 'rear'} flange")
         # ---- hinge clevises (2 x M3 into nutplates on the rear-spar web) and tongues (2 x M3 into core inserts)
         for i in range(3):
             for pt, ax in f.clevis(i)["bolts"]:
-                Fa.sym(3, pt, ax, [P(f"clevis{i}"), P("rspar")], window=(-0.001, 0.0045), nut="nutplate",
+                Fa.sym(3, pt, ax, [P(f"clevis{i}"), P("rspar")], window=(-0.001, 0.0045), nut="nutplate", grade=TI,
                        label=f"clevis {i}")
             for pt, ax in f.tongue(i)["bolts"]:
-                Fa.sym(3, pt, ax, [P(f"tongue{i}"), P("rspar2")], window=(-0.001, 0.0045), pocket=(P("rcore"), 0.009,
-                                                                                                  0.0045),
-                       label=f"tongue {i}", notes="nyloc nut in a machined core pocket (installed before closing)")
+                Fa.sym(3, pt, ax, [P(f"tongue{i}"), P("rspar2")], window=(-0.001, 0.0045), grade=TI,
+                       pocket=(P("rcore"), 0.009, 0.0045), label=f"tongue {i}",
+                       notes="nyloc nut in a machined core pocket (installed before closing)")
             # hinge pin through clevis lug, tongue, clevis lug (3 mm, H7/g6)
             a = f.h_a
             p0 = f.axis_at(f.hinge_eta(i)) - (0.5 * HINGE.lug_t + HINGE.gap + HINGE.lug_t) * a
@@ -2357,21 +2481,21 @@ class _TailReg:
                        notes="rudder hinge pin, washer + split pin")
         # ---- rudder horn: 2 x M3 through pad, skin and spar cap into core inserts
         for pt, ax in f.horn_bolts():
-            Fa.sym(3, pt, ax, [P("rhorn"), P("rskin"), P("hplate")], window=(-0.001, 0.012), on_axis=True,
+            Fa.sym(3, pt, ax, [P("rhorn"), P("rskin"), P("hplate")], window=(-0.001, 0.012), on_axis=True, grade=TI,
                    pocket=(P("rcore"), 0.009, 0.0045), label="rudder horn",
                    notes="nyloc nut on the backing plate in a machined core pocket (horn fitted before closing)")
         # ---- DA 26 on the servo rib (4 x M3 into nutplates)
         for pt, ax in f.da26_holes():
-            Fa.sym(3, pt, ax, [P("da26")], window=(-0.001, 0.0031), nut="tapped", tapped_part=P("srib"),
+            Fa.sym(3, pt, ax, [P("da26")], window=(-0.001, 0.0031), nut="tapped", grade=TI, tapped_part=P("srib"),
                    tapped_depth=0.0085, hole_d=0.0041, label="DA 26 flange",
                    notes="M3 helical insert in the servo-rib boss")
         # ---- servo hatch cover (4 x M4 into nutplates) and tip cap skirt (2 x M3 into nutplates)
         for k, (pt, ax) in enumerate(f.hatch_screws()):
             Fa.sym(4, pt, ax, [P("hatch"), P("skin"), P(f"hstrip{k // 2}")], window=(-0.001, 0.012), nut="nutplate",
-                   on_axis=True, label="servo hatch")
+                   grade=TI, on_axis=True, label="servo hatch")
         for k, (pt, ax) in enumerate(f.cap_screws()):
             Fa.sym(3, pt, ax, [P("cap"), P("skin"), P(f"cstrip{k}")], window=(-0.001, 0.012), nut="nutplate",
-                   on_axis=True, label="tip cap")
+                   grade=TI, on_axis=True, label="tip cap")
         # ---- stub sleeve flange to the node outboard cheek (layout B8..B11, M6 12.9), head in the horn space
         for b in C.fit["F-SPINDLE-NODE"]["bolts"]:
             if b["group"] != "stub root":
@@ -2379,6 +2503,27 @@ class _TailReg:
             p_ = np.asarray(b["point"], float)
             Fa.sym(6, (p_[0], g.cheek_y[0], p_[2]), (0.0, 1.0, 0.0), [node, P("sleeve")], window=(-0.001, 0.0135),
                    grade=G129, label=f"stub root {b['id']}", notes=f"layout F-SPINDLE-NODE {b['id']}")
+        # ---- stub front-spar fitting: lug in the F-STUB-FRONT clevis (2 x M5 12.9 double shear, heads through FS3480
+        #      access holes) and flange on the front-spar web (2 x M5, nyloc nuts aft of the web, fitted before closing)
+        d = self.sp.sf()
+        ch98 = C.fit["F-STUB-FRONT"]["part"] + "-R"
+        x_lo = float(C.fit["F-STUB-FRONT"]["box"][0][0])
+        for z in d["bz"]:
+            Fa.sym(5, (0.5 * (d["xa"] + d["xb"]), d["y_lug"], z), (1.0, 0.0, 0.0), [ch98, P("sffit")],
+                   window=(-0.0085, 0.0085), grade=G129, hole_d=0.0053, owner=P("sffit"), label=f"stub front lug z{z}",
+                   notes="F-STUB-FRONT B3/B4 (layout M6, 2 mm outboard): M5 for 2 D lug / ear edge distance; head "
+                         "through the FS3480 access hole")
+            for sgn in (1.0, -1.0):
+                reg.parts[ch12].add_hole((x_lo + 0.0005, sgn * d["y_lug"], z), (x_lo - 0.0105, sgn * d["y_lug"], z),
+                                         0.00525)
+        # pass-through slot for the fitting neck in the FS3480 outer T-cap (0.4 mm round the plate; chassis doubler:
+        # interface item in docs/detail/tail.md)
+        slot = I(self.sp.stub_fitting(0.0004), box3((3.40, d["y_floor"], 0.10), (3.60, 0.32, 0.30)))
+        reg.parts[ch12].holes.append(slot)
+        reg.parts[ch12].holes.append(G.fix_orientation(G.Mesh(slot.V * np.array([1.0, -1.0, 1.0]), slot.F[:, ::-1])))
+        for z in d["fl_bz"]:
+            Fa.sym(5, (d["xa"], SF_FL_Y, z), (1.0, 0.0, 0.0), [P("sffit"), P("stspar")], window=(-0.001, 0.012),
+                   grade=TI, owner=P("sffit"), label=f"stub front flange z{z}")
         # ---- spindle end bolt (M6, tapped into the solid inboard end) and horn pinch bolt (M4)
         Fa.sym(6, g.axis_pt(g.y_in - 0.003), (0.0, 1.0, 0.0), [P("washer")], window=(-0.001, 0.0031), nut="tapped",
                tapped_part=P("spindle"), tapped_depth=0.014, grade=G129, label="spindle end bolt")
@@ -2397,13 +2542,13 @@ class _TailReg:
         # ---- DA 30 lug bolts (4 x M4 through cradle plates and case) and cradle base (4 x M4 into firewall inserts)
         z_top = sd.case_hi[2] + BOND + CRADLE_T
         for x, y in sd.da30_holes():
-            Fa.sym(4, (x, y, z_top), (0.0, 0.0, -1.0), [P("cradle"), P("da30")], window=(-0.001, 0.0363),
-                   hole_d=0.0041, grade=G129, label="DA 30 lug")
+            Fa.sym(4, (x, y, z_top), (0.0, 0.0, -1.0), [P("cradle"), P("da30")], window=(-0.001, 0.0363), grade=TI,
+                   hole_d=0.0041, label="DA 30 lug")
         (x0c, xb), (y0c, y1c) = sd.cradle_dims()
         for z in (sd.case_lo[2] - BOND - CRADLE_T - 0.006,):
             for y in np.linspace(y0c + 0.009, y1c - 0.009, 4):
                 Fa.sym(4, (xb, y, z), (1.0, 0.0, 0.0), [P("cradle")], window=(-0.001, CRADLE_T + 0.0001), nut="insert",
-                       insert_part=fw, insert_depth=0.006, grade=G129, label="cradle base")
+                       insert_part=fw, insert_depth=0.006, grade=TI, label="cradle base")
         # ---- ventral: lug bolts (M5 12.9 double shear), fork / pad bolts, skid bolts
         keel = "YK250-CH-033"
         for i in range(3):
@@ -2415,7 +2560,7 @@ class _TailReg:
                     notes=f"layout F-VENTRAL-{i + 1} B1 (M6 in the layout: M5 for the tongue edge distance)")
             for x, z in v.fork_bolts(i):
                 pids = [P(f"vfit{i}"), P("vweb")] if i < 2 else [P("vskin"), P(f"vfit{i}")]
-                Fa.bolt(5, (x, 0.0, z), (0.0, 1.0, 0.0), pids, window=(-0.02, 0.02), grade=G129, hole_d=0.0053,
+                Fa.bolt(5, (x, 0.0, z), (0.0, 1.0, 0.0), pids, window=(-0.02, 0.02), grade=TI, hole_d=0.0053,
                         owner=P(f"vfit{i}"), label=f"ventral fork {i + 1}", washer_nut=False, on_axis=(i == 2),
                         spot=(P("vskin"), P("vskin")) if i == 2 else (None, None))
         for pt, ax in v.skid_bolts():

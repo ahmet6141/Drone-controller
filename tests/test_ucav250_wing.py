@@ -190,6 +190,39 @@ class TestWingBuild(unittest.TestCase):
             self.assertGreater(k["min_transmission_deg"], 60.0, w)
             self.assertGreaterEqual(min(dg["margins"]), 0.003, w)
 
+    def test_pushrod_column_and_rod_end_on_built_geometry(self):
+        """The structures checks C-PUSHROD / C-RODEND repeated on the as-built linkage (rod length, horn radius and
+        rod section of this module): actuator peak torque x largest linkage ratio at the horn, FoS 1.5 column
+        (Johnson-Euler, pinned ends), rod-end bolt bearing in the 3 mm 7075 horn with the 3.33 push-pull factor."""
+        from ucav250.analysis import structlib as ST
+        op = WG.OP(self.spec)
+        al = self.spec["materials"]["al_7075_t651_plate"]
+        for w in ("flap", "aileron"):
+            dg = WG.drive_geo(op, w)
+            ctl = self.spec["wing"]["controls"][w]
+            F = float(ctl["actuator"]["torque_peak_Nm"]) * float(ctl["checks"]["ratio_max"]) / dg["r_h"]
+            A = math.pi / 4 * (WG.ROD_OD ** 2 - WG.ROD_ID ** 2)
+            I = math.pi / 64 * (WG.ROD_OD ** 4 - WG.ROD_ID ** 4)
+            je = ST.johnson_euler(float(al["E"]), float(al["Fcy"]), A, I, dg["L_rod"])
+            self.assertGreaterEqual(je["P_cr"] / (1.5 * F) - 1.0, 0.0, w)
+            self.assertGreaterEqual(WG.ARM_T * 0.003 * float(al["Fbru"]) / (3.33 * F) - 1.0, 0.0, w)
+
+    def test_root_bay_skin_doubler(self):
+        """structures.sizing.wing_joint.transition: one extra PW ply per box skin between the spars over the first
+        0.12 m of the panel (OML on the loft, inner face stepped), none outboard of the drop-off."""
+        op = WG.OP(self.spec)
+        tr = self.spec["structures"]["sizing"]["wing_joint"]["transition"]
+        t_ply = float(self.spec["materials"]["cfrp_pw_mtm45_as4"]["ply_t"])
+        self.assertAlmostEqual(op.t_dbl, int(tr["root_bay_skin_doubler_plies_per_face"]) * t_ply)
+        for y, full in ((0.75, True), (0.80, True), (0.90, False)):
+            e = op.eta(y)
+            for side in ("up", "lo"):
+                k = op.knots(e, side)
+                s = 0.5 * (k["b6"] + k["b7"])
+                t = float(op.t_skin(e, side, [s])[0])
+                self.assertAlmostEqual(t, op.t_box(e, side) + (op.t_dbl if full else 0.0), delta=1e-9, msg=(y, side))
+        self.assertAlmostEqual(op.y_dbl_end - (WG.ROOT_RIB_Y + WG.T_RIB), float(tr["root_bay_doubler_length_m"]))
+
     def test_coupled_joint_expressions_follow_the_tables(self):
         """The Blender expressions (polynomials in the control property) reproduce the exact four-bar values."""
         for w in ("flap", "aileron"):

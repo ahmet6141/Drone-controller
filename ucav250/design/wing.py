@@ -70,6 +70,7 @@ NOSE_SOLID = 0.012          # chord fraction of the solid nose laminate
 CS_SKIN_T = 0.0006          # control-surface skins: 3 plies PW over a ROHACELL 51 WF core (full depth)
 ROOT_RIB_Y = 0.7049         # root rib inboard face = joint plane 0.70 + chassis joint-rib half thickness + 1.5 mm seal
 TIP_RIB_Y1 = 3.5399         # tip rib outboard face (0.1 mm inboard of the LT-WING light box, layout.systems)
+DBL_DROP = 0.020            # root-bay skin doubler ply drop-off length (structures wing_joint.transition text: 20 mm)
 STEP = 35                   # assembly step: outer wing panels (spec.assembly)
 STEP_RIG = 37               # assembly step: control rigging (spec.assembly)
 
@@ -147,6 +148,12 @@ class OP:
         self.t_skin_primary = float(layup_props(spec, "wing_skin_primary")["thickness"])
         self.t_skin_box_up = float(layup_props(spec, "wing_box_skin_upper")["thickness"])
         self.y_box_up_end = float(self.sz_w["box_skin_upper_y_end_m"])
+        # root-bay skin doubler (structures.sizing.wing_joint.transition, VS2-04): extra PW plies in the outer face of
+        # both box skins between the spars over the first root_bay_doubler_length_m of the panel, the last
+        # DBL_DROP as the ply drop-off; the OML stays on the loft, the inner face steps inward
+        trn = self.sz_j["transition"]
+        self.t_dbl = int(trn["root_bay_skin_doubler_plies_per_face"]) * self.t_pw
+        self.y_dbl_end = ROOT_RIB_Y + T_RIB + float(trn["root_bay_doubler_length_m"])
         self._cv = {}
         self._rear_line()
 
@@ -316,6 +323,11 @@ class OP:
         f = float(np.clip((y - y0) / 0.03, 0.0, 1.0))
         return (1 - f) * self.t_skin_box_up + f * self.t_skin_primary
 
+    def t_doubler(self, eta: float) -> float:
+        """Root-bay skin doubler thickness at a station (full inboard, linear drop-off over DBL_DROP)."""
+        y = self.y_of(eta)
+        return self.t_dbl * float(np.clip((self.y_dbl_end - y) / DBL_DROP, 0.0, 1.0))
+
     def knots(self, eta: float, side: str) -> dict:
         ch = self.chord(eta)
         sm = self.s_main(eta)
@@ -328,7 +340,7 @@ class OP:
 
     def t_skin(self, eta: float, side: str, s) -> np.ndarray:
         k = self.knots(eta, side)
-        tf, tb = self.t_skin_primary, self.t_box(eta, side)
+        tf, tb = self.t_skin_primary, self.t_box(eta, side) + self.t_doubler(eta)
         xs = [k["b0"], k["b1"], k["b2"], k["b3"], k["b4"], k["b5"], k["b6"], k["b7"], k["b8"], k["lip"] + 0.01]
         ts = [T_SOLID, T_SOLID, tf, tf, T_SOLID, T_SOLID, tb, tb, T_SOLID, T_SOLID]
         return np.interp(s, xs, ts)
@@ -422,7 +434,8 @@ def skin_stations(op: OP) -> list:
         if e_lo + 1e-4 < e < e_hi - 1e-4:
             native.add(round(float(e), 7))
     yb = op.y_box_up_end
-    native.update({round(op.eta(yb), 7), round(op.eta(yb + 0.03), 7), round(op.eta(ROOT_TRANS_Y1), 7)})
+    native.update({round(op.eta(yb), 7), round(op.eta(yb + 0.03), 7), round(op.eta(ROOT_TRANS_Y1), 7),
+                   round(op.eta(op.y_dbl_end - DBL_DROP), 7), round(op.eta(op.y_dbl_end), 7)})
     native = sorted(e for e in native if e_lo - 1e-9 <= e <= e_hi + 1e-9)
     if native[0] > e_lo + 1e-6:
         native = [e_lo] + native
@@ -1893,7 +1906,7 @@ def arm_mesh(dg: dict) -> G.Mesh:
 
 
 def rod_mesh(dg: dict) -> G.Mesh:
-    """Push-rod: 7075 tube 6 x 1 with two rod-end eyes (r 6.5, 5 mm) in the rod plane."""
+    """Push-rod: 7075 tube 6 x 1.5 (ROD_OD / ROD_ID) with two rod-end eyes (r 6.5, 5 mm) in the rod plane."""
     A0, B0, a = dg["A0"], dg["B0"], dg["a"]
     a_e0 = a_case_end(dg) + 0.005 + ARM_T + BOND
     ctrA = A0 + (a_e0 - np.dot(A0 - dg["Hd"], a)) * a
@@ -2160,6 +2173,23 @@ def slab_mass(spec: dict, lay: str, Po: np.ndarray, Pi: np.ndarray) -> float:
     return float(np.sum(A * (a_f + rc * np.clip(Tc - t_f, 0.0, None))))
 
 
+def doubler_mass(spec: dict, op: OP) -> dict:
+    """Root-bay doubler plies per box skin: slab_mass books the extra thickness as core, the plies are PW (band
+    between the cap and rear-flange ramp mid-points, integrated over the doubler length incl. the drop-off)."""
+    drho = _rho(spec, MAT_PW) - _rho(spec, CORE51)
+    ys = np.linspace(ROOT_RIB_Y, op.y_dbl_end, 41)
+    out = {}
+    for side in ("up", "lo"):
+        f = []
+        for y in ys:
+            e = op.eta(y)
+            k = op.knots(e, side)
+            sg = op.sig_of_s(e, side, [0.5 * (k["b5"] + k["b6"]), 0.5 * (k["b7"] + k["b8"])])
+            f.append(float(sg[1] - sg[0]) * op.t_doubler(e))
+        out[side] = float(np.trapz(f, ys)) * drho
+    return out
+
+
 def cored_mass(spec: dict, m: G.Mesh, skin_t: float = CS_SKIN_T) -> float:
     """Full-depth foam-core part with a PW skin: core volume + skin over the whole surface."""
     rc, rs = _rho(spec, CORE51), _rho(spec, MAT_PW)
@@ -2226,6 +2256,8 @@ def build_starboard(spec: dict) -> dict:
     out["skin_mass"] = {"le": slab_mass(spec, "wing_skin_primary", *grids["le"]),
                         "up": slab_mass(spec, "wing_box_skin_upper", *grids["up"]),
                         "lo": slab_mass(spec, "wing_skin_primary", *grids["lo"])}
+    for k, dm in doubler_mass(spec, op).items():
+        out["skin_mass"][k] += dm
     # main spar (tongue + transition + outboard) with sub-volume mass
     ob = spar_outboard(op, sts)
     tr = spar_transition(op, tg)
@@ -2358,11 +2390,16 @@ def register(reg: Registry, spec: dict) -> None:
         notes="sandwich 0.6/5/0.4 mm, 1 mm solid laminate over the cap and at the nose")
     add(up, "outer wing upper box skin, starboard", "Dış kanat üst kutu kaplaması, sağ", GROUP_W, MAT_PW, P_PREG,
         B["skin"]["up"], thickness=T_SOLID, layup="wing_box_skin_upper", mass=B["skin_mass"]["up"], parent=spar,
-        contacts=[spar, rear, le, rroot, rtip, tipf] + box + list(te.values()))
+        contacts=[spar, rear, le, rroot, rtip, tipf] + box + list(te.values()),
+        notes=f"layup wing_box_skin_upper to y {op.y_box_up_end:.2f}, wing_skin_primary outboard; 1 mm solid laminate "
+              f"over the caps and at the cove lip; root-bay doubler {op.t_dbl * 1000:.2f} mm (PW) in the outer face "
+              f"between the spars to y {op.y_dbl_end:.4f} (structures wing_joint.transition)")
     add(lo, "outer wing lower box skin, starboard", "Dış kanat alt kutu kaplaması, sağ", GROUP_W, MAT_PW, P_PREG,
         B["skin"]["lo"], thickness=T_SOLID, layup="wing_skin_primary", mass=B["skin_mass"]["lo"], parent=spar,
         contacts=[spar, rear, le, rroot, rtip, tipf] + box + list(te.values()) + list(frame.values()),
-        notes="two servo-hatch openings, drain holes d 4 at the low point of every closed bay")
+        notes=f"layup wing_skin_primary, 1 mm solid laminate over the caps and at the cove lip; root-bay doubler "
+              f"{op.t_dbl * 1000:.2f} mm (PW) in the outer face to y {op.y_dbl_end:.4f}; two servo-hatch openings, "
+              "drain holes d 4 at the low point of every closed bay")
     for i, y in enumerate(RIB_Y):
         mn, mass_n = B["ribs"][("nose", i)]
         mb, mass_b = B["ribs"][("box", i)]
@@ -2383,8 +2420,8 @@ def register(reg: Registry, spec: dict) -> None:
         contacts=[le, up, lo, spar, rear, te["tip"], tipf])
     add(fit, "rear-spar root fitting with lug, starboard", "Arka kiriş kök bağlantısı ve kulağı, sağ", GROUP_W,
         MAT_7075, P_CNC, B["fitting"], thickness=FIT_T, parent=rear, contacts=[rear, rroot, rpin],
-        notes="lug 8 mm, bore 8 H8 (layout rear_spar.lug), web flange bonded to the rear-spar web, 4 x M5 into the "
-              "root rib")
+        notes="lug 8 mm, bore 8 H8 (layout rear_spar.lug), web flange bonded to the rear-spar web, 4 x M4 into "
+              "through-thickness inserts of the root rib")
     for i in (0, 1):
         add(bush[i], f"tongue bush P-MAIN{i + 1} (4130, 16 H8 x OD 22 x 30), starboard",
             f"Dil burcu P-MAIN{i + 1} (4130), sağ", GROUP_W, MAT_4130, P_CNC, B["bush"][i], thickness=0.003,

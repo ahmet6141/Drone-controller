@@ -242,9 +242,10 @@ def round2_edits(S2: dict) -> None:
         cooling_split(S2, COWL_SKIN_M2[0])
     gda = S2["mass"]["rules"]["gear_doors"]["inner_door_actuator"]
     gda["count"] = 3
-    gda["note"] = ("fix round 2 (PK2-13): 2 main inner-door drives (EQ-DOORACT, each also driving the trunnion door "
-                   "through a second crank) + 1 nose clamshell-door drive (EQ-NDOORACT) for both doors through a "
-                   "centre-line bellcrank (mass.rules.gear_doors.nose_door_drive)")
+    gda["note"] = ("fix round 2 (PK2-13): 2 main inner-door drives (EQ-DOORACT, inner door only; fix round 3, PK3-07: "
+                   "the trunnion door is leg-driven through a slotted lost-motion link + opening spring, within "
+                   "linkage_kg_each) + 1 nose clamshell-door drive (EQ-NDOORACT) for both doors through a centre-line "
+                   "bellcrank (mass.rules.gear_doors.nose_door_drive)")
     nde = next(e for e in S2["layout"]["systems"]["equipment"] if e["id"] == "EQ-NDOORACT")["drive_envelope"]
     S2["mass"]["rules"]["gear_doors"]["nose_door_drive"] = {
         "bellcrank_links_kg": nde["mass_kg"], "basis": nde["mass_basis"],

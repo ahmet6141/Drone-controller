@@ -370,7 +370,8 @@ DESIGN = {
                     "shelter when not flying (van transport, assembled on the field, assembly.transport); tie-down "
                     "points and their wind loads are an open item if outdoor parking is required",
         "jacking": "no jacking points: the aircraft is lifted by two persons or rests on the transport cradle saddles "
-                   "(FS1810 / FS-GEAR lower lands, structures TR-PAD / TR-FRAME) for gear work"},
+                   "(split pads on the fixed lower skin over the FS1810 forward / FS-GEAR aft caps, "
+                   "layout.chassis.ground_handling.cradle_pads; structures TR-PAD / TR-FRAME) for gear work"},
     "transport": {
         "factors_limit": {"vertical": 3.0, "fore_aft": 1.5, "lateral": 1.5},
         "basis": ("design choice (no transport load specification in the research files): road transport in the "
@@ -772,6 +773,19 @@ def sob_fraction(c: Ctx, y: float) -> float:
     return min(max((y - y0) / (y1 - y0), 0.0), 1.0)
 
 
+def layout_main_caps(c: "Ctx"):
+    """(y, z_lower, z_upper) of the main-cap centroids of the layout centre box M-CTBOX (fix round 3, VS3-01), or None."""
+    if "layout_caps" not in c.cache:
+        m = next((m for m in c.S.get("layout", {}).get("chassis", {}).get("members", []) if m["id"] == "M-CTBOX"), {})
+        if m.get("main_spar_caps_z") and m.get("main_spar_line"):
+            P = np.asarray(m["main_spar_line"], float)
+            Z = np.asarray(m["main_spar_caps_z"], float)
+            c.cache["layout_caps"] = (P[:, 1], Z[:, 0], Z[:, 1])
+        else:
+            c.cache["layout_caps"] = None
+    return c.cache["layout_caps"]
+
+
 def wing_section(c: Ctx, y: float, n_main: int, n_rear: int | None = None, nx: int = 24) -> dict:
     """Bending section of the wing box at span station y (plane sections, spanwise moduli): main and rear UD spar
     caps under the skins (skin over the caps solid laminate, core ramped out), the box skins between the caps (outer
@@ -821,6 +835,13 @@ def wing_section(c: Ctx, y: float, n_main: int, n_rear: int | None = None, nx: i
     fur, flr = (zur, zlr) if body else (zt + fr * (zur - zt), zb + fr * (zlr - zb))
     z_cmu, z_cml = fum - t_s - tm / 2, flm + t_s + tm / 2
     z_cru, z_crl = fur - t_s - tr / 2, flr + t_s + tr / 2
+    # fix round 3 (VS3-01): where the layout had to move a main cap inward to keep the solid skin over the caps as
+    # TRUE distance below the union OML (body + glove + LERX, layout_check C03), the section uses the as-built (more
+    # inboard) cap centroid; the model never places a cap further out than the layout (interface I-CAPZ)
+    lc_ = layout_main_caps(c)
+    if lc_ is not None and not body and float(lc_[0][0]) <= y <= float(lc_[0][-1]):
+        z_cmu = min(z_cmu, float(np.interp(y, lc_[0], lc_[2])))
+        z_cml = max(z_cml, float(np.interp(y, lc_[0], lc_[1])))
     Eud = ud["E1"]
     els += [(Eud, wm * tm, z_cmu, "main_cap_up"), (Eud, wm * tm, z_cml, "main_cap_lo"),
             (Eud, wr * tr, z_cru, "rear_cap_up"), (Eud, wr * tr, z_crl, "rear_cap_lo"),
@@ -2650,7 +2671,17 @@ def ground_loads(c: Ctx) -> dict:
             "aft_load": (2.25 * nose_static, 1.8 * nose_static, 0.0),
             "forward_load": (3.2 * nose_static, -0.9 * nose_static, 0.0),
             "side_load": (2.25 * nose_static, 0.0, 1.575 * nose_static)}
+    # fix round 3 (VS3-06): rotational inertia of the level two-point landing - the main-gear reaction n_j W acts
+    # behind the CG and pitches the aircraft nose-down (no aerodynamic damping credited): the vertical load factor of a
+    # mass at x is n + theta_dd (x - x_cg) / g; I_yy of the MTOM take-off loading (performance.
+    # takeoff_pitch_inertia_effect), CG of the design case, main-wheel contact x of landing_gear.main.axle_static
+    its = design_case_items(c)
+    x_cg = sum(i[0] * i[1] for i in its) / sum(i[0] for i in its)
+    I_yy = float(S["performance"]["takeoff_pitch_inertia_effect"]["I_yy_kg_m2"])
+    x_mg = float(LG["main"]["axle_static"][0])
+    th_dd = nj * W * (x_mg - x_cg) / I_yy
     return {"V_sink": V, "h_drop": h, "d": d, "ef": ef, "L": Lf, "nj": nj, "n_inertia": nl["n_inertia"],
+            "theta_dd_level": th_dd, "x_cg": x_cg, "I_yy": I_yy, "x_mg": x_mg,
             "tail_down_attitude_deg": math.degrees(th_td),
             "nj_reserve_ultimate": nj_res, "Pv_leg": Pv_leg, "nose_static": nose_static, "main_cases": cases,
             "nose_cases": nose, "W": W, "split_main": split_main,
@@ -2709,6 +2740,19 @@ def check_gear(c: Ctx, R: Rows) -> dict:
               f"n_j {GL['nj']:.2f}, n {GL['n_inertia']:.2f}; per main leg P_v {GL['Pv_leg']:.0f} N (limit)")
     gl_tr = (f"CS-LUAS Ek H: V_çökme {GL['V_sink']:.2f} m/s, d {GL['d'] * 1000:.0f} mm, e_f {GL['ef']:.2f}, "
              f"n_j {GL['nj']:.2f}, n {GL['n_inertia']:.2f}; ana bacak başına P_v {GL['Pv_leg']:.0f} N (limit)")
+    # fix round 3 (VS3-06): the research landing target n <= 4.0 (baseline.yaml, 0.2 m stroke) is not met with the
+    # 80 mm stroke; the design uses the computed n_j / n, and the concentrated aft masses add the pitch acceleration of
+    # the level two-point landing (engine mount E-* landing case; equipment retention uses 1.5 (n_j + 0.67))
+    x_e3 = 3.80
+    n_aft = GL["n_inertia"] + GL["theta_dd_level"] * (x_e3 - GL["x_cg"]) / G
+    R.info("G-LAND-ROT", "gear", "level two-point landing: pitch acceleration from the main-gear reaction behind the CG "
+           f"(I_yy {GL['I_yy']:.0f} kg m2, no aerodynamic damping) and the vertical load factor at x {x_e3:.2f} (engine "
+           "region)", "iki noktalı düz iniş: AM'nin gerisindeki ana takım tepkisinden yunuslama ivmesi (I_yy "
+           f"{GL['I_yy']:.0f} kg m2, aerodinamik sönüm yok) ve x {dec(x_e3, 2)}'de (motor bölgesi) düşey yük katsayısı",
+           gl_txt + f"; theta_dd {GL['theta_dd_level']:.1f} rad/s2 about x_cg {GL['x_cg']:.3f}",
+           gl_tr + f"; theta_dd {dec(GL['theta_dd_level'], 1)} rad/s2, x_AM {dec(GL['x_cg'], 3)}", n_aft, "-",
+           "applied in the engine-mount landing case (E-*); the research target n <= 4.0 needs a ~0.2 m stroke (not "
+           "met with 80 mm + tyre: design n_j / n are the computed values)", part="gear unit")
     v, nm = worst["leg"]
     R.add("G-MLEG", "gear", f"main leg outer cylinder {leg['od_m'] * 1000:.0f} x {leg['wall_m'] * 1000:.1f} mm "
           f"7075 at the trunnion yoke, bending + axial (governing: {nm})", f"ana bacak dış silindiri "
@@ -3110,6 +3154,43 @@ def check_gear(c: Ctx, R: Rows) -> dict:
            "ana iç kapak: kapalı konumda tutma momenti (gereksinim: ölü nokta bağlantısı veya kapak kilidi; DA 22 anma "
            f"torku {da22} N m için bağlantı oranı >= değer / {da22})", case_d, case_dtr, 1.5 * H_door, "N m",
            "ultimate holding moment; the actuator is not relied upon to hold the closed door", part="EQ-DOORACT")
+    # fix round 3 (PK3-07): the main DA 22 drives the inner door only (crank + pushrod, over-centre lock closed; the
+    # servo opens and reverses to close); the trunnion door is leg-driven through a slotted (lost-motion) link
+    H_in_lo = 1.0 * q_LO * A_in * w_in / 2
+    a_in_rad = math.radians(95.0)
+    k_ar = float(S["mass"]["rules"]["gear_doors"]["door_areal_kg_per_m2"])
+    m_door = A_in * k_ar
+    H_in_w = 2.0 * m_door * G * w_in / 2
+    cs_md = (f"main inner door operated at V_LO {V_LO:.1f} m/s EAS: suction |Cp| 1.0 x q {q_LO:.0f} Pa (bound) on "
+             f"{A_in:.4f} m2 + door weight at n 2 ({m_door:.3f} kg): hinge moment {H_in_lo + H_in_w:.2f} N m (limit); "
+             "crank ratio 1.0 (no mechanical-advantage credit)")
+    cs_md_tr = (f"ana iç kapak V_LO {dec(V_LO, 1)} m/s EAS'te işletilir: emme |Cp| 1,0 x q {q_LO:.0f} Pa (üst sınır), "
+                f"{dec(A_in, 4)} m2 + n 2'de kapak ağırlığı ({dec(m_door, 3)} kg): menteşe momenti "
+                f"{dec(H_in_lo + H_in_w, 2)} N m (limit); krank oranı 1,0 (mekanik avantaj sayılmadı)")
+    # the |Cp| 1.0 pressure bound is constant over the stroke, so the door work 1.5 H x 95 deg must come from the
+    # actuator whatever the linkage ratio: compare with the rated torque x 180 deg of output rotation
+    W_req = 1.5 * (H_in_lo + H_in_w) * a_in_rad
+    W_da22 = da22 * math.pi
+    R.info("G-DOOR-DRIVE", "gear", "main inner-door drive (EQ-DOORACT, inner door only; fix round 3, PK3-07): required "
+           f"ultimate hinge moment at the |Cp| 1.0 pressure bound; door work {W_req:.1f} J vs DA 22 rated torque x 180 "
+           f"deg = {W_da22:.1f} J - no linkage ratio closes it: OPEN ITEM (belly pressure at V_LO or a DA 26-class "
+           "drive)", "ana iç kapak tahriki (EQ-DOORACT, yalnız iç kapak; düzeltme turu 3, PK3-07): |Cp| 1,0 basınç üst "
+           f"sınırında gerekli nihai menteşe momenti; kapak işi {dec(W_req, 1)} J / DA 22 anma torku x 180 derece = "
+           f"{dec(W_da22, 1)} J - hiçbir bağlantı oranı kapatmaz: AÇIK KONU (V_LO'da gövde altı basıncı ya da DA 26 "
+           "sınıfı tahrik)", cs_md, cs_md_tr, 1.5 * (H_in_lo + H_in_w), "N m",
+           f"DA 22 rated torque {da22} N m (components.yaml); the closed door is held by the over-centre lock "
+           "(G-DOOR-LOCK)", part="EQ-DOORACT")
+    res_door = {"H_req_ult": 1.5 * (H_in_lo + H_in_w), "W_req": W_req, "W_da22": W_da22, "T_da22": da22}
+    V_td = np.asarray(S["layout"]["mechanisms"]["door_outlines"]["main_trunnion_door_R"]["outline"], float)
+    w_td = float(V_td[:, 1].max() - V_td[:, 1].min())
+    A_td = float(V_td[:, 0].max() - V_td[:, 0].min()) * w_td
+    H_td = 1.0 * q_LO * A_td * w_td / 2 + 2.0 * A_td * k_ar * G * w_td / 2
+    R.info("G-TDOOR-LINK", "gear", "main trunnion door (leg-driven slotted link, opening spring): closing moment the leg "
+           "supplies over the last 18 deg of retraction and the opening-spring preload (>= air load + weight at V_LO, "
+           "limit)", "ana mafsal kapağı (bacakla tahrikli yarıklı bağlantı, açma yayı): toplamanın son 18 derecesinde "
+           "bacağın sağladığı kapatma momenti ve açma yayı ön yükü (V_LO'da hava yükü + ağırlık, limit)", cs_md, cs_md_tr,
+           H_td, "N m", "requirement for the spring / link detail design (small against the main-gear EMA torque "
+           "G-EMA-MAIN)", part="YK250-LG-673")
     # fix round 2 (PK2-13 / mass closure): ONE DA 22 drives both nose clamshell doors through the centre-line bellcrank
     nb_ = np.asarray(LG["nose"]["stowed_envelope"]["box"], float)
     A_nd = gdg["area_nose_m2"] / 2
@@ -3128,6 +3209,7 @@ def check_gear(c: Ctx, R: Rows) -> dict:
           "doors are held by the over-centre lock, not by the actuator", part="EQ-NDOORACT")
     return {"ground": {k: v for k, v in GL.items() if k not in ("main_cases", "nose_cases")}, "V_LO": V_LO,
             "T_main_ema_req": 1.25 * T_main, "T_nose_ema_req": 1.25 * T_nose, "door_hinge_moment": H_door,
+            "inner_door_drive": res_door,
             "main_cases": out["cases"]}
 
 
@@ -3206,7 +3288,10 @@ def engine_mount_cases(c: Ctx) -> dict:
     M_gyro_pitch = es["Ip"] * Om * float(gy["pitch_rate_rad_per_s"])
     W = m * G
     GL = ground_loads(c)
-    n_land = GL["n_inertia"] if GL["n_concentrated_mass"] is not None else 0.0
+    # fix round 3 (VS3-06): + pitch acceleration of the level two-point landing at the engine CG
+    x_e = float(es["cg"][0]) if "cg" in es else float(S["engine"].get("cg_x", GL["x_mg"]))
+    n_rot = GL["theta_dd_level"] * (x_e - GL["x_cg"]) / G
+    n_land = (GL["n_inertia"] + max(n_rot, 0.0)) if GL["n_concentrated_mass"] is not None else 0.0
     para_n = 13100.0 / (c.m_min * G)
     T_fwd = -thrust * u
     zf = np.array([0.0, 0.0, -1.0])
@@ -3228,8 +3313,8 @@ def engine_mount_cases(c: Ctx) -> dict:
             gn * W * zf + T_fwd, np.array([0.0, M_gyro_yaw, M_gyro_pitch]), False,
             f"jiroskopik (sapma {float(gy['yaw_rate_rad_per_s']):g}, yunuslama {float(gy['pitch_rate_rad_per_s']):g} rad/s, "
             f"n {gn:g}) + itki"),
-        "landing n_j + 0.67 (concentrated mass)": (n_land * W * zf, np.zeros(3), False,
-                                                   "iniş n_j + 0,67 (yoğun kütle)"),
+        f"landing n_j + 0.67 + pitch acceleration (concentrated mass, n {n_land:.2f})": (
+            n_land * W * zf, np.zeros(3), False, f"iniş n_j + 0,67 + yunuslama ivmesi (yoğun kütle, n {n_land:.2f})"),
         f"crash {crash:g} g forward (ultimate)": (crash * W * np.array([-1.0, 0.0, 0.0]), np.zeros(3), True,
                                                   f"çarpma {crash:g} g ileri (nihai)"),
         "emergency landing 6 g down (ultimate)": (6.0 * W * zf, np.zeros(3), True, "acil iniş 6 g aşağı (nihai)"),
@@ -4033,22 +4118,33 @@ def check_transport(c: Ctx, R: Rows) -> dict:
     W = m_c * G
     R2 = W * (xcg - x1) / (x2 - x1)
     R1 = W - R2
-    Rmax = max(R1, R2)
-    pad = (0.20, 0.05)
-    p_pad = nv * Rmax / (pad[0] * pad[1])
+    # fix round 3 (PK3-06): split saddle pads from the layout (two per station, on fixed skin over the frame cap)
+    pads = {p_["station"]: p_ for p_ in (S["layout"]["chassis"].get("ground_handling") or {}).get("cradle_pads", [])}
+    def _pad(st):
+        p_ = pads.get(st)
+        if not p_:
+            return (0.20, 0.05, 1)
+        return (abs(p_["y"][1] - p_["y"][0]), abs(p_["x"][1] - p_["x"][0]), 2 if p_.get("mirror") else 1)
+    pa, pb = _pad("FS1810"), _pad("FS-GEAR")
+    p1 = nv * R1 / (pa[0] * pa[1] * pa[2])
+    p2 = nv * R2 / (pb[0] * pb[1] * pb[2])
+    pad, Rmax, npad = (pa, R1, pa[2]) if p1 >= p2 else (pb, R2, pb[2])
+    p_pad = max(p1, p2)
     core = mat(c, "core_rohacell_51wf")
     case = (f"transport cradle, centre body {m_c:.1f} kg (empty, without outer panels, stabilators, propeller), CG x "
             f"{xcg:.2f}: saddle reactions {R1:.0f} / {R2:.0f} N at 1 g; {nv:g} g vertical (design choice)")
     case_tr = (f"taşıma kızağı, orta gövde {m_c:.1f} kg (boş, dış paneller, stabilatörler ve pervane yok), AM x {xcg:.2f}: "
                f"kızak tepkileri 1 g'de {R1:.0f} / {R2:.0f} N; {nv:g} g düşey (tasarım kararı)")
-    R.add("TR-PAD", "transport", f"saddle pad {pad[0] * 1000:.0f} x {pad[1] * 1000:.0f} mm on the lower skin over the frame "
-          "land: core crushing (ROHACELL 51 WF) where the pad overhangs the solid edge band",
-          f"kızak yastığı {pad[0] * 1000:.0f} x {pad[1] * 1000:.0f} mm, çerçeve bandı üzerindeki alt kaplamada: çekirdek "
-          "ezilmesi (ROHACELL 51 WF), yastığın dolu kenar bandı dışına taştığı yerde", case, case_tr, p_pad / 1e6,
+    R.add("TR-PAD", "transport", f"saddle pads {npad} x {pad[0] * 1000:.0f} x {pad[1] * 1000:.0f} mm on the fixed lower skin "
+          "over the frame cap (layout cradle_pads): core crushing (ROHACELL 51 WF) where the pad overhangs the solid "
+          "edge band",
+          f"kızak yastıkları {npad} x {pad[0] * 1000:.0f} x {pad[1] * 1000:.0f} mm, çerçeve başlığı üzerindeki sabit alt "
+          "kaplamada (layout cradle_pads): çekirdek ezilmesi (ROHACELL 51 WF), yastığın dolu kenar bandı dışına taştığı "
+          "yerde", case, case_tr, p_pad / 1e6,
           float(core["Fcu"]) / 1e6, "MPa", total_factor(c, comp=True), "ROHACELL 51 WF minimum Fcu", part="FS1810 / FS-GEAR")
     rib = skin_faces(c, "rib_panel")
     t_f = rib["t_out"] + rib["t_in"]
-    sig = nv * Rmax / (pad[0] * t_f)
+    sig = max(nv * R1 / (pa[0] * pa[2] * t_f), nv * R2 / (pb[0] * pb[2] * t_f))
     R.add("TR-FRAME", "transport", "frame web edge compression over the saddle (rib_panel faces)", "kızak üzerinde çerçeve "
           "gövdesi kenar basısı (rib_panel yüzleri)", case, case_tr, sig / 1e6, qi_design_values(c)["OHC_Pa"] / 1e6, "MPa",
           total_factor(c, comp=True), "OHC (edge band with fastener holes)", part="FS1810 / FS-GEAR")
@@ -4636,7 +4732,42 @@ def open_items(res: dict) -> list:
     S1-07)."""
     F_k = res["ct_box"]["F_kink"] / 1e3
     R38 = res["frames"]["R_FS3738_keel"] / 1e3
-    return [
+    # fix round 3 (VS3-05): core-governed rows (sandwich core allowables are room-temperature manufacturer minimum
+    # values, the faces ETW B-basis): the core property retention at the design temperature that each margin can absorb
+    core_rows = sorted((r for r in res.get("rows", []) if r.get("ms") is not None and re.search(
+        r"CORE|WRINK|CRIMP|SKINBUCK|SEC-CT-7|TR-PAD", r["id"])), key=lambda r: r["ms"])[:8]
+    core_txt = ", ".join(f"{r['id']} MS {r['ms']:.3f} (retention >= {1.0 / (1.0 + r['ms']):.2f})" for r in core_rows)
+    core_txt_tr = ", ".join(f"{r['id']} MS {dec(r['ms'], 3)} (koruma >= {dec(1.0 / (1.0 + r['ms']), 2)})"
+                            for r in core_rows)
+    dd = (res.get("gear") or {}).get("inner_door_drive") or {}
+    door_item = [] if not dd else [(
+        f"main inner-door drive (fix round 3, PK3-07): at the |Cp| 1.0 pressure bound the door needs "
+        f"{dd['H_req_ult']:.1f} N m ultimate over its 95 deg stroke ({dd['W_req']:.1f} J of work) while a DA 22 gives "
+        f"{dd['T_da22']:.1f} N m rated ({dd['W_da22']:.1f} J over 180 deg): no linkage ratio closes this. Either the belly "
+        "pressure at V_LO is established (CFD / flight test; the lower surface is mostly a pressure side) and shown to "
+        "be below about a third of the bound, or the two main inner doors get a DA 26-class drive (+0.28 kg, which the "
+        "mass budget margin does not hold today); the trunnion doors are leg-driven (no actuator)",
+        f"ana iç kapak tahriki (düzeltme turu 3, PK3-07): |Cp| 1,0 basınç üst sınırında kapak 95 derecelik stroku "
+        f"boyunca {dec(dd['H_req_ult'], 1)} N m nihai moment ({dec(dd['W_req'], 1)} J iş) ister; DA 22 anma torku "
+        f"{dec(dd['T_da22'], 1)} N m ({dec(dd['W_da22'], 1)} J, 180 derecede): hiçbir bağlantı oranı bunu kapatmaz. Ya "
+        "V_LO'da gövde altı basıncı (HAD / uçuş testi; alt yüzey çoğunlukla basınç tarafıdır) belirlenip üst sınırın "
+        "yaklaşık üçte birinin altında gösterilmeli ya da iki ana iç kapağa DA 26 sınıfı tahrik verilmeli (+0,28 kg; "
+        "kütle bütçesi payı bugün bunu taşımıyor); mafsal kapakları bacakla tahriklidir (eyleyici yok)")]
+    return door_item + [
+        ("sandwich core allowables (ROHACELL 51 / 71 WF: Ec, Gc, Fsu, Fcu) are room-temperature manufacturer minimum "
+         "values (materials.yaml has no temperature data) while the faces use MTM45-1 ETW B-basis: the core-governed "
+         "margins are not shown at the design environment. Core property retention each margin can absorb (strength "
+         "rows linear in the core property; buckling / wrinkling rows approximately, they scale with a fractional power "
+         f"of Ec and Gc): {core_txt}. Evonik temperature curves for the WF grades at the ETW design temperature must be "
+         "applied to Ec, Gc and Fsu, or the maximum sandwich temperature limited and justified, before the detail "
+         "design (fix round 3, VS3-05)",
+         "sandviç çekirdek izin verilen değerleri (ROHACELL 51 / 71 WF: Ec, Gc, Fsu, Fcu) oda sıcaklığı üretici minimum "
+         "değerleridir (materials.yaml'da sıcaklık verisi yok), yüzeyler ise MTM45-1 ETW B-tabanı kullanır: çekirdeğin "
+         "belirlediği paylar tasarım ortamında gösterilmiyor. Her payın karşılayabildiği çekirdek özellik koruma oranı "
+         "(dayanım satırları çekirdek özelliğiyle doğrusal; burkulma / buruşma satırları yaklaşık, Ec ve Gc'nin kesirli "
+         f"kuvvetiyle ölçeklenir): {core_txt_tr}. Ayrıntılı tasarımdan önce WF sınıflarının ETW tasarım sıcaklığındaki "
+         "Evonik sıcaklık eğrileri Ec, Gc ve Fsu'ya uygulanmalı ya da azami sandviç sıcaklığı sınırlanıp gerekçelendirilmeli "
+         "(düzeltme turu 3, VS3-05)"),
         ("flutter / divergence / aileron reversal not analysed (no stiffness / mass model of the wing and tail yet): GVT "
          "and a flutter analysis (CS-LUAS.629) before the first flight; the +-45-dominated skins raise the torsional "
          "stiffness",
@@ -4878,17 +5009,18 @@ def interface_checks(S: dict, D: dict) -> list:
             c_ = Ctx(S, design=D)
             zones = D["wing"]["main_cap"]["zones"]
             yj_ = float(S["wing"]["planform"]["y_junction"])
-            worst_cz = 0.0
+            worst_cz, worst_out = 0.0, 0.0
             for p_, zc_, tc_ in zip(ctm["main_spar_line"], ctm["main_spar_caps_z"], ctm["main_spar_caps_t"]):
                 yq = float(p_[1]) - 1e-6 if float(p_[1]) >= yj_ - 1e-9 else float(p_[1])
                 sq = wing_section(c_, yq, cap_plies_at(zones, yq))
                 worst_cz = max(worst_cz, abs(sq["z_cap_main"][1] - float(zc_[0])), abs(sq["z_cap_main"][0] - float(zc_[1])),
                                abs(sq["t_main_cap"] - float(tc_)))
-            ok_cz = worst_cz <= 0.0005
+                worst_out = max(worst_out, sq["z_cap_main"][0] - float(zc_[1]), float(zc_[0]) - sq["z_cap_main"][1])
+            ok_cz = worst_cz <= 0.0005 and worst_out <= 1e-6
         except Exception:                          # noqa: BLE001 - reported as a failed interface check
             ok_cz = False
     chk("I-CAPZ", "layout M-CTBOX main-cap centroids and thicknesses = the wing_section model with the sized ply zones "
-        f"(<= 0.5 mm; worst {(worst_cz or 0.0) * 1000:.2f} mm)", ok_cz)
+        f"(<= 0.5 mm; worst {(worst_cz or 0.0) * 1000:.2f} mm; the model cap never outside the layout cap)", ok_cz)
     chk("I-CLRIB", "layout centre-line rib M-CLRIB and kink fittings F-KINK-UP / -LO exist (structures.sizing.wing."
         "ct_box.centre_rib / kink_fitting)", "M-CLRIB" in mem and {"F-KINK-UP", "F-KINK-LO"} <= set(fit))
     ud = S["materials"].get("cfrp_ud_mtm45_as4", {})

@@ -57,8 +57,11 @@ def engine_mount(fittings: list) -> dict:
                 "F-EMOUNT-LO, R/L) -> a "
                 "welded ring (4130 tube 15.9 x 0.89 mm) in a plane 30 mm forward of the crankcase mount face; 4 "
                 "elastomer isolators in the ring cups carry the engine on its 4 rear crankcase bosses",
-        "material": "steel_4130_n", "process": "welded tube truss (TIG, normalised after welding), 12.7 x 0.89 mm "
-                                               "struts (estimate, sized in the detail phase)",
+        "material": "steel_4130_n", "process": "tig_welding_4130",
+        "section": {"type": "welded tube truss (TIG, normalised after welding; fix round 3, PK3-08: process = the "
+                            "spec.processes key)", "strut_tube_od_m": 0.0127, "strut_tube_t_m": 0.00089,
+                    "ring_tube_od_m": 0.0159, "ring_tube_t_m": 0.00089,
+                    "basis": "estimate, sized in the detail phase (structures E-* rows check the struts)"},
         "thrust_axis": {"point": r3(HUB), "direction_aft": r3(D_THRUST),
                         "inclination_deg": float(PR["thrust_line_inclination_deg"]),
                         "text": "crank / thrust axis through propeller.hub, 5 deg aft-up (down-thrust in flight "
@@ -286,9 +289,27 @@ def ground_handling() -> dict:
             "tie_down": "not provided: the aircraft is not parked outdoors tied down (operating concept: field assembly "
                         "from the transport van, stored in its cradle / shelter); outdoor mooring points and their "
                         "wind loads are an open item",
-            "jacking": "no jacking points: two-person lift at the wing roots or the transport cradle saddles on the "
-                       "FS1810 / FS-GEAR lower lands (structures TR-PAD / TR-FRAME) for gear work",
-            "text": "fix round 2 (VS2-12)"}
+            "jacking": "no jacking points: two-person lift at the wing roots or the transport cradle saddles "
+                       "(cradle_pads) for gear work (structures TR-PAD / TR-FRAME)",
+            "cradle_pads": cradle_pads(),
+            "text": "fix round 2 (VS2-12); fix round 3 (PK3-06): split saddle pads on fixed skin over the frame caps, "
+                    "clear of the removable hatches and of the gear doors and tyres, so that the gear can be cycled "
+                    "with the aircraft on the cradle (assembly steps 28-30, 38)"}
+
+
+def cradle_pads() -> list:
+    """Fix round 3 (PK3-06): transport / gear-work cradle saddle pads, two per station (mirrored), each on the
+    fixed lower skin over a frame cap: FS1810 forward cap under the fixed parachute-bay lower skin (outboard of nothing
+    removable, the mission-bay hatch is aft of the web), FS-GEAR aft cap under the fixed aft lower skin, outboard of
+    the aft equipment hatch (|y| <= 0.12) and aft of the main-gear doors (x <= 3.083); checked by layout_check C10
+    and sized by structures TR-PAD / TR-FRAME."""
+    w = 0.025
+    return [{"id": "CR-FS1810", "station": "FS1810", "cap": "forward",
+             "x": r3([X_PFR - 0.0034 - w, X_PFR - 0.0034]), "y": [0.100, 0.300], "mirror": True,
+             "skin": "P-PARA-LOWER (fixed)"},
+            {"id": "CR-FSGEAR", "station": "FS-GEAR", "cap": "aft",
+             "x": r3([X_GEARF + 0.0034, X_GEARF + 0.0034 + w]), "y": [0.150, 0.300], "mirror": True,
+             "skin": "P-AFT-LOWER (fixed)"}]
 
 
 FW_STANDOFFS = (12, 0.004)          # stainless stand-offs + screws of the firewall shield (count, kg each; estimate)

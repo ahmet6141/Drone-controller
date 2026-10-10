@@ -1400,6 +1400,7 @@ def check_ids(ctx: Ctx) -> list:
     root = L.get("root_part")
     R.append(_row("C01", "root_part is a chassis member", root in [m["part"] for m in L["chassis"]["members"]], root,
                   "YK250-CH-...", ""))
+    R.append(material_process_row(ctx))
     # references
     st_ids = {"ST-" + s_["id"] for s_ in L["stations"]}
     mem_ids = {m["id"] for m in L["chassis"]["members"]}
@@ -1503,6 +1504,136 @@ def path_crossings(s_: dict, path) -> list:
             t = fa / (fa - fb)
             out.append(a + t * (b - a))
     return out
+
+
+def _cell_grid(ctx: Ctx, c: dict, h: float = 0.005):
+    """Grid points (h) of the usable bladder volume of a cell (as the C02 volume row) and the plan cell area."""
+    geo = fuel_geometry(ctx, c)
+    g = np.array(np.meshgrid(np.arange(geo["x"][0] - 0.06, geo["x"][1] + 0.08, h),
+                             np.arange(-geo["y_lim"], geo["y_lim"], h),
+                             np.arange(geo["z"][0], geo["z"][1] + 1e-9, h), indexing="ij")).reshape(3, -1).T
+    ins = ctx.af.inside(g, geo["inset"])
+    ay = np.abs(g[:, 1])
+    x0c = geo["x"][0] + ay * math.tan(math.radians(geo["sweeps"][0]))
+    x1c = geo["x"][1] + ay * math.tan(math.radians(geo["sweeps"][1]))
+    return g[ins & (g[:, 0] >= x0c) & (g[:, 0] <= x1c)], geo
+
+
+def _in_cell(ctx: Ctx, c: dict, p, tol: float = 0.012) -> bool:
+    geo = fuel_geometry(ctx, c)
+    x, y, z = (float(v) for v in p)
+    x0c = geo["x"][0] + abs(y) * math.tan(math.radians(geo["sweeps"][0]))
+    x1c = geo["x"][1] + abs(y) * math.tan(math.radians(geo["sweeps"][1]))
+    return x0c - tol <= x <= x1c + tol and abs(y) <= geo["y_lim"] + tol and geo["z"][0] - tol <= z <= geo["z"][1] + tol
+
+
+def fuel_system_rows(ctx: Ctx, need: float) -> list:
+    """Fix round 3 (PK3-01): the fuel system as plumbed. (1) every cell has a top vent (a float / roll-over valve of a
+    vent line in its top 20 mm) and a sump / outlet at its floor (a line end within 10 mm of the floor that drains to
+    the feed cell or overboard); the feed pickup is in the feed cell; every interconnect into the feed cell has a check
+    valve. (2) usable volume = the bladder volume ABOVE each cell's outlet level (layout.fuel_system.cells.outlet_z)
+    x tank efficiency >= the required volume. (3) unusable fuel (the layer below each outlet x efficiency + the
+    contents of every non-vent line) <= the trapped fuel the sizing mission model books
+    (mission.trapped_fuel_fraction of the burned fuel = fuel_kg f / (1 + f))."""
+    L, S_ = ctx.L, ctx.S
+    R = []
+    fsys = (L.get("fuel_system") or {}).get("cells", {})
+    lines = L.get("fuel_lines", [])
+    eff = float(S_["structures"]["fuel"]["tank_volume_efficiency"])
+    rho = float(S_["engine"]["fuel"]["density_kg_per_m3"])
+    bad, vol_use, vol_unus = [], 0.0, 0.0
+    h = 0.005
+    for c in L["fuel_cells"]:
+        name = c["name"]
+        d = fsys.get(name)
+        if not d:
+            bad.append(f"{name}: no layout.fuel_system entry")
+            continue
+        z0, z1 = (float(v) for v in c["z"])
+        vents = [v for fl in lines if fl.get("role") == "vent" for v in fl.get("valves", [])
+                 if _in_cell(ctx, c, v["point"]) and float(v["point"][2]) >= z1 - 0.020]
+        sumps = [fl["id"] for fl in lines if fl.get("role") in ("feed", "interconnect", "drain")
+                 for p in (fl["path"][0],) if _in_cell(ctx, c, p) and float(p[2]) <= z0 + 0.010]
+        if not vents:
+            bad.append(f"{name}: no top vent valve")
+        if not sumps:
+            bad.append(f"{name}: no sump / floor outlet")
+        g, geo = _cell_grid(ctx, c, h)
+        zo = float(d["outlet_z"])
+        if not (z0 - 1e-9 <= zo <= z0 + 0.010):
+            bad.append(f"{name}: outlet z {zo} not at the floor")
+        layer0 = g[np.isclose(g[:, 2], geo["z"][0])]
+        a_floor = float(len(layer0)) * h * h
+        v_cell = float(len(g)) * h ** 3 * eff
+        v_below = a_floor * (zo - z0) * eff
+        vol_use += v_cell - v_below
+        vol_unus += v_below
+    feed = [fl for fl in lines if fl.get("role") == "feed"]
+    aft = next((c for c in L["fuel_cells"] if fsys.get(c["name"], {}).get("outlet_lines") and any(
+        fl["id"] in fsys[c["name"]]["outlet_lines"] for fl in feed)), None)
+    if aft is None or not _in_cell(ctx, aft, feed[0]["path"][0]):
+        bad.append("feed pickup not in a cell listed as feed cell")
+    for fl in lines:
+        if fl.get("role") == "interconnect":
+            end = fl["path"][-1]
+            if aft is not None and _in_cell(ctx, aft, end) and not fl.get("valves"):
+                bad.append(f"{fl['id']}: interconnect into the feed cell without a check valve")
+    R.append(_row("C02", "fuel system plumbing: every cell has a top vent valve and a floor sump / outlet, the feed "
+                  "pickup is in the feed cell, the interconnects into it carry check valves (fix round 3, PK3-01)",
+                  not bad, len(bad), 0, "; ".join(bad[:8])))
+    R.append(_row("C02", "usable fuel volume above the cell outlets (layout.fuel_system.cells.outlet_z) vs required "
+                  "(mass.fuel_kg, expansion space; fix round 3, PK3-01)", vol_use >= need, round(vol_use * 1000, 2),
+                  f">= {need * 1000:.2f} L", f"tank efficiency {eff}; below the outlets {vol_unus * 1000:.2f} L"))
+    v_lines = 0.0
+    for fl in lines:
+        if fl.get("role") == "vent":
+            continue
+        P = np.asarray(fl["path"], float)
+        ln = float(np.linalg.norm(np.diff(P, axis=0), axis=1).sum())
+        v_lines += ln * math.pi / 4 * float(fl["diameter"]) ** 2 * (2 if fl.get("mirror") else 1)
+    f_tr = float(S_["mission"]["trapped_fuel_fraction"])
+    trapped = float(S_["mass"]["fuel_kg"]) * f_tr / (1.0 + f_tr)
+    m_un = (vol_unus + v_lines) * rho
+    R.append(_row("C02", "unusable fuel (layer below the outlets x efficiency + contents of the non-vent lines, line OD "
+                  "as bore: conservative) <= trapped fuel booked by the sizing mission model (fuel_kg f / (1 + f), "
+                  "mission.trapped_fuel_fraction; fix round 3, PK3-01)", m_un <= trapped + 1e-9, round(m_un, 3),
+                  f"<= {trapped:.3f} kg", f"below outlets {vol_unus * rho:.3f} kg, lines {v_lines * rho:.3f} kg"))
+    return R
+
+
+MAT_FAMILY = (("cfrp", "composite"), ("gfrp", "composite"), ("afrp", "composite"), ("core", "core"),
+              ("al_", "aluminium"), ("steel", "steel"), ("ti_", "titanium"), ("ss_", "steel"), ("pa", "polymer"))
+PROC_FAMILIES = {"prepreg_ooa_vacbag": {"composite", "core"}, "wet_layup_vacbag": {"composite", "core"},
+                 "vacuum_infusion": {"composite", "core"}, "cnc_milling_metal": {"aluminium", "steel", "titanium"},
+                 "sheet_metal_aluminium": {"aluminium"}, "tig_welding_4130": {"steel"}, "sls_pa12": {"polymer"},
+                 "fdm_pa_cf": {"polymer"}}
+
+
+def material_process_row(ctx: Ctx) -> dict:
+    """Fix round 3 (PK3-08): every layout part that names a material and a process uses keys of spec.materials /
+    spec.processes, and the pair belongs together (composite -> prepreg / wet layup / infusion, aluminium -> sheet
+    metal / machining, 4130 -> TIG welding / machining, polymers -> SLS / FDM)."""
+    S_, L = ctx.S, ctx.L
+    parts = list(L["stations"]) + list(L["chassis"]["members"]) + list(L["chassis"]["fittings"]) + \
+        list(L["shell"]["panels"]) + [dict(L["chassis"]["engine_mount"], id="ENGINE-MOUNT")]
+    bad, n = [], 0
+    for p_ in parts:
+        mat, proc = p_.get("material"), p_.get("process")
+        if mat is None and proc is None:
+            continue
+        n += 1
+        pid = p_.get("id", p_.get("part", "?"))
+        if mat not in S_["materials"]:
+            bad.append(f"{pid}: material key {mat!r}")
+            continue
+        if proc not in S_["processes"]:
+            bad.append(f"{pid}: process key {str(proc)[:30]!r}")
+            continue
+        fam = next((f for k, f in MAT_FAMILY if str(mat).startswith(k)), None)
+        if fam not in PROC_FAMILIES.get(proc, set()):
+            bad.append(f"{pid}: {mat} with {proc}")
+    return _row("C01", f"material / process pairs ({n} parts): spec.materials and spec.processes keys, material family "
+                "matches the process (fix round 3, PK3-08)", not bad and n > 0, len(bad), 0, "; ".join(bad[:8]))
 
 
 def longeron_notch_row(ctx: Ctx) -> dict:
@@ -1684,8 +1815,9 @@ def check_stations(ctx: Ctx) -> list:
                 gmin = min(gmin, float(d.min()))
     R.append(_row("C02", "fuel bays conform to the swept spar frames (chevron bladders): gap to the frame webs",
                   gmin >= 0.0, round(gmin * 1000, 1), ">= 0 mm", "cell ends follow x + |y| tan(sweep) of the spar frame"))
-    R.append(_row("C02", "usable fuel volume of the chevron bays vs required (mass.fuel_kg, expansion space)",
+    R.append(_row("C02", "fuel bay volume of the chevron bays vs required (mass.fuel_kg, expansion space)",
                   vol >= need, round(vol * 1000, 2), f">= {need * 1000:.2f} L", f"tank efficiency {eff}"))
+    R += fuel_system_rows(ctx, need)
     # every trunk / pushrod / bridle crossing of a frame plane passes a declared cut-out
     paths = []
     for t in L["systems"]["harness"]["trunks"]:
@@ -1703,6 +1835,8 @@ def check_stations(ctx: Ctx) -> list:
                 paths.append((e["id"] + " pushrod@L", np.array([p0, p1]) * [1, -1, 1], 0.005))
     for fl in L.get("fuel_lines", []):
         paths.append((fl["id"], np.asarray(fl["path"], float), 0.5 * float(fl["diameter"])))
+        if fl.get("mirror"):                       # fix round 3 (PK3-01): mirrored lines cross the frames twice
+            paths.append((fl["id"] + "@L", np.asarray(fl["path"], float) * [1, -1, 1], 0.5 * float(fl["diameter"])))
     br = L["chassis"]["parachute"]["bridle"]
     paths.append(("bridle aft leg", np.array([br["forward_leg"]["point"], br["aft_leg"]["point"]], float), 0.008))
     for k in L["keep_outs"]:
@@ -2582,6 +2716,24 @@ def check_assembly_paths(ctx: Ctx, objs: list) -> list:
                  "parts (fix round 1, VPK-02/VPK-09)", not bad, len(bad), 0, "; ".join(bad[:10]))]
 
 
+def prop_plume_row(ctx: Ctx, kx: list) -> dict:
+    """Fix round 3 (PK3-10): the propeller disc keep-out KO-PROP (radius R + 26 mm, axial half-thickness blade tip half
+    extent + 13 mm, outside the spinner) lies outside every exhaust plume cone (static cone model)."""
+    ko = next(k for k in ctx.L["keep_outs"] if k["id"] == "KO-PROP")
+    c, a = np.asarray(ko["centre"], float), _unit(ko["axis"])
+    R_, ht = float(ko["radius"]), float(ko["half_thickness"])
+    e1 = _unit(np.cross(a, [0.0, 1.0, 0.0]))
+    e2 = np.cross(a, e1)
+    ph = np.linspace(0, 2 * math.pi, 240, endpoint=False)
+    P = np.vstack([c + t * a + r * (np.cos(ph)[:, None] * e1 + np.sin(ph)[:, None] * e2)
+                   for t in np.linspace(-ht, ht, 5) for r in np.linspace(float(ko["hub_radius"]), R_, 30)])
+    g = min(float(_plume_sdf(k, P).min()) for k in kx)
+    return _row("C08", "propeller disc keep-out KO-PROP (R + 26 mm, blade half extent + 13 mm) outside the exhaust plume "
+                "cones (fix round 3, PK3-10)", g >= 0.0, round(g * 1000, 1), ">= 0 mm (outside)",
+                "static 15 deg cone; the in-flight plume deflection by the free stream is an open item (blade "
+                "impingement limit from the propeller maker)")
+
+
 def _plume_sdf(k: dict, P: np.ndarray) -> np.ndarray:
     """Approximate signed distance to the exhaust plume cone (apex radius 15 mm at the exit, half angle, length)."""
     e = np.asarray(k["exit"]["point"], float)
@@ -3047,6 +3199,7 @@ def check_keepouts(ctx: Ctx, objs: list) -> list:
     R.append(_row("C08", "ventral fin vs exhaust routing envelopes / plume", gb >= float(cv["composite_to_exhaust"][1])
                   - 1e-9 and gp >= 0.0, round(min(gb, gp) * 1000, 1), f">= {cv['composite_to_exhaust'][1] * 1000:.0f} "
                   "mm (boxes) / outside (plume)", f"boxes {gb * 1000:.1f} mm, plume {gp * 1000:.1f} mm"))
+    R.append(prop_plume_row(ctx, kx))
     R += check_heat(ctx, objs, cyl, ex)
     ko = next(k for k in L["keep_outs"] if k["id"] == "KO-PROP")
     disc = Cyl(ko["centre"], ko["axis"], float(ko["radius"]), float(ko["half_thickness"]))
@@ -3153,6 +3306,8 @@ def check_shell(ctx: Ctx) -> list:
     R.append(_row("C09", "upper body covered by shell panels from the nose to the cowl exit", not gaps_ and
                   x_end >= float(S["propeller"]["plane_x"]) - 0.2, len(gaps_), 0, ", ".join(gaps_)))
     R += check_lands(ctx)
+    R += panel_overlap_rows(ctx)
+    R.append(cradle_pad_row(ctx))
     R += check_root_lines(ctx)
     return R
 
@@ -3160,6 +3315,110 @@ def check_shell(ctx: Ctx) -> list:
 LAND_W = 0.025          # layout.shell.rules: land width under a panel edge band
 RAMP = 0.019            # joggle ramp in the fixed skin outside a removable edge (1.9 mm at 1:10)
 FLANGE_W = 0.028        # default T-flange / cap flange width of members used as lands
+
+
+def panel_overlap_rows(ctx: Ctx) -> list:
+    """Fix round 3 (PK3-02): plan overlaps of the shell pieces on the same surface (shapely). (1) No interior overlap
+    (> 1 mm2) between two non-fixed pieces (removable / hinged panels and the closed gear doors of
+    layout.mechanisms.door_outlines), whether or not they share a land. (2) Every fixed skin declares (cutouts) each
+    removable / hinged panel and each door it overlaps."""
+    from shapely.geometry import Polygon
+    L = ctx.L
+    items = []                                       # (id, surface, attach, polygon)
+    for p_ in L["shell"]["panels"]:
+        for sg in _panel_sides(p_):
+            pid = p_["id"] + ("" if sg > 0 else "@L")
+            items.append((pid, p_["id"], p_["surface"], p_["attach"], Polygon(panel_poly(p_, sg)).buffer(0)))
+    for k, d in (L["mechanisms"].get("door_outlines") or {}).items():
+        if d.get("outline"):
+            V = np.asarray(d["outline"], float)
+            for sg in (1.0, -1.0):
+                items.append((k + ("" if sg > 0 else "@L"), k, "body_lower", "door", Polygon(V * [1, sg]).buffer(0)))
+    decl = {p_["id"]: {c.get("id") for c in p_.get("cutouts", []) or []} for p_ in L["shell"]["panels"]}
+    decl_ol = {p_["id"]: " ".join(str(c.get("outline", "")) for c in p_.get("cutouts", []) or [])
+               for p_ in L["shell"]["panels"]}         # door openings declared by their outline reference
+    bad1, bad2, n1, n2 = [], [], 0, 0
+    for i in range(len(items)):
+        for j in range(i + 1, len(items)):
+            a, b = items[i], items[j]
+            if a[2] != b[2] or a[1] == b[1]:
+                continue
+            fa, fb = a[3] == "fixed", b[3] == "fixed"
+            if a[3] == "fairing" or b[3] == "fairing" or (fa and fb):
+                continue
+            if not a[4].intersects(b[4]):
+                continue
+            ar = a[4].intersection(b[4]).area
+            if not fa and not fb:
+                n1 += 1
+                if ar > 1e-6:
+                    bad1.append(f"{a[0]} / {b[0]}: {ar * 1e6:.0f} mm2")
+            else:
+                fx, nf = (a, b) if fa else (b, a)
+                if ar > 1e-6:
+                    n2 += 1
+                    if nf[1] not in decl.get(fx[1], set()) and nf[1] not in decl_ol.get(fx[1], ""):
+                        bad2.append(f"{fx[1]} overlaps {nf[1]} ({ar * 1e6:.0f} mm2) without declaring it")
+    return [_row("C09", f"no interior overlap between removable / hinged panels and closed gear doors on the same "
+                 f"surface, shared land or not ({n1} touching pairs; fix round 3, PK3-02)", not bad1, len(bad1), 0,
+                 "; ".join(bad1[:8])),
+            _row("C09", f"every fixed skin declares (cutouts) each removable / hinged panel or door it overlaps ({n2} "
+                 f"overlaps; fix round 3, PK3-02)", not bad2, len(bad2), 0, "; ".join(sorted(set(bad2))[:8]))]
+
+
+def cradle_pad_row(ctx: Ctx) -> dict:
+    """Fix round 3 (PK3-06): the transport / gear-work cradle pads (layout.chassis.ground_handling.cradle_pads) lie on
+    fixed lower skin only (no removable / hinged panel, no gear door outline under them), inside a frame cap
+    (web +- flange), and the saddle blocks (60 mm below the skin) keep >= 10 mm from the main tyres in every state of
+    the gear retraction sequence (the gear can be cycled on the cradle)."""
+    from shapely.geometry import Polygon, box
+    L = ctx.L
+    pads = (L["chassis"].get("ground_handling") or {}).get("cradle_pads") or []
+    bad = []
+    lows = [p_ for p_ in L["shell"]["panels"] if p_["surface"] == "body_lower"]
+    doors = [np.asarray(d["outline"], float) for d in (L["mechanisms"].get("door_outlines") or {}).values()
+             if d.get("outline")]
+    st = {s_["id"]: s_ for s_ in L["stations"]}
+    J = {j["name"]: j for j in L["mechanisms"]["joints"]}
+    jm = J.get("main_gear_R", {})
+    angs = np.linspace(float(jm.get("lo", 0.0)), float(jm.get("hi", 0.0)), 9)
+    gmin = 1.0
+    for p_ in pads:
+        for sg in ((1.0, -1.0) if p_.get("mirror") else (1.0,)):
+            ys = sorted([sg * p_["y"][0], sg * p_["y"][1]])
+            b = box(p_["x"][0], ys[0], p_["x"][1], ys[1])
+            for q in lows:
+                for qs in _panel_sides(q):
+                    a_ = Polygon(panel_poly(q, qs)).buffer(0).intersection(b).area
+                    if a_ > 1e-7 and q["attach"] != "fixed":
+                        bad.append(f"{p_['id']} on {q['id']} ({q['attach']})")
+            for V in doors:
+                for ds in (1.0, -1.0):
+                    if Polygon(V * [1, ds]).buffer(0).intersection(b).area > 1e-7:
+                        bad.append(f"{p_['id']} on a gear door")
+            s_ = st.get(p_["station"])
+            if s_ is None:
+                bad.append(f"{p_['id']}: station {p_['station']}")
+            else:
+                f0, f1 = (float(v) for v in s_["x_faces"])
+                fw = float(s_.get("flange_w", FLANGE_W))
+                if not (f0 - fw - 1e-6 <= p_["x"][0] and p_["x"][1] <= f1 + fw + 1e-6):
+                    bad.append(f"{p_['id']} off the {p_['station']} cap")
+            xc, yc = 0.5 * (p_["x"][0] + p_["x"][1]), 0.5 * (ys[0] + ys[1])
+            zs = np.linspace(-0.30, 0.0, 301)
+            ins = ctx.af.inside(np.column_stack([np.full_like(zs, xc), np.full_like(zs, yc), zs]), 0.0)
+            zsk = float(zs[ins].min()) if ins.any() else -0.2
+            blk = [OBB.aabb([[p_["x"][0], ys[0], zsk - 0.060], [p_["x"][1], ys[1], zsk]])]
+            side = "R" if sg > 0 else "L"
+            for a_ in angs:
+                g = gear_prims(ctx, "main", float(a_), side)
+                prims = [q for v in g.values() for q in (v if isinstance(v, list) else [v])]
+                gmin = min(gmin, gap(prims, blk, cutoff=0.1, step=0.004))
+    if gmin < 0.010:
+        bad.append(f"main tyre / leg {gmin * 1000:.1f} mm from a saddle block")
+    return _row("C09", f"cradle pads ({len(pads)} x 2) on fixed lower skin over a frame cap, off the hatches and gear "
+                "doors, saddle blocks >= 10 mm from the main gear over its retraction (fix round 3, PK3-06)",
+                not bad and bool(pads), round(gmin * 1000, 1), ">= 10 mm", "; ".join(bad[:6]))
 
 
 def _surf_side(surface: str) -> str:

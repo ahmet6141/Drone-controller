@@ -5778,6 +5778,14 @@ def evaluate(S: dict, verbose: bool = False, table_key: str | None = None, sens:
     masses = sorted({m0, min(c["m"] for c in cases)})
     gm = gust_matrix(S, masses, lambda m: polars["clean"].clmax["clean_trimmed"], cla_cfg, VD)
     n_wing = max(max(r_["lift_factor_N"] for r_ in gm) / (m0 * G), float(S["structures"]["n_limit_pos"]))
+    # fix round 3 (VS3-02): maximum operating altitude (structures.operating_limits) - the gust envelope (and with it
+    # the wing sizing) covers altitudes up to the top of the gust matrix only; the FCS altitude envelope protection /
+    # geofence keeps the aircraft at or below the maximum operating altitude, which must not exceed that top altitude
+    h_max_op = float(OL.get("max_operating_altitude_m", float("nan")))
+    h_gust = max(r_["altitude_m"] for r_ in gm)
+    op_lim.update({"max_operating_altitude_m": h_max_op, "gust_envelope_top_altitude_m": h_gust,
+                   "fcs_altitude_limit_margin_m": h_gust - h_max_op,
+                   "fcs_altitude_protection_required": bool(fl.ceiling(m0) > h_max_op)})
     tur = turret_checks(S, af, fov=not light)
     fb = body_fineness(S, af)
     wing_m = wing_structure(S, af, m0, n_wing)
@@ -6214,6 +6222,7 @@ def metrics(S: dict, R: dict) -> dict:
         "control_linkage_travel_margin_deg": R["control_hinges"]["summary"]["travel_margin_min_deg"],
         "tail_root_interferences": float(R["tail_root_interference"]["n_conflicts"]),
         "fcs_speed_limit_margin_m_s": R["loads"]["operating_limits"]["fcs_speed_limit_margin_m_s"],
+        "fcs_altitude_limit_margin_m": R["loads"]["operating_limits"]["fcs_altitude_limit_margin_m"],
         "landing_ground_roll_mtow_m": p["landing_sl_mtow"]["ground_roll_m"],
         "mass_budget_margin_kg": m["budget_check"]["margin_kg"],
     }
@@ -7403,6 +7412,12 @@ def write_report(S: dict, R: dict, M: dict, reqs: list, chk: dict | None, figs: 
         w(f"* İşletme sınırları (R-54): VNE {_f(ol['VNE_eas'], 1)} m/s EAS (0,9 VD), VNO {_f(ol['VNO_eas'], 1)} m/s EAS; "
           f"uçuş kontrol sistemi hızı {_f(ol['fcs_speed_limit_eas'], 1)} m/s EAS ile sınırlar. Tam güçte düz uçuş hızı "
           f"{_f(ol['V_max_level_sl_eas'], 1)} m/s (DS) VNE'yi aştığından zarf koruması zorunlu bir işlevdir.")
+        if "max_operating_altitude_m" in ol:
+            w(f"* Azami işletme irtifası (R-61, düzeltme turu 3, VS3-02): {_f(ol['max_operating_altitude_m'], 0)} m; "
+              f"rüzgâr esintisi zarfı (ve kanat boyutlandırması) {_f(ol['gust_envelope_top_altitude_m'], 0)} m'ye "
+              f"kadar hesaplandı. MTOM'da servis tavanı {_f(R['performance']['ceiling_service_m'], 0)} m bu sınırın "
+              "üstünde olduğundan uçuş kontrol sisteminin irtifa zarfı koruması / coğrafi sınırı zorunlu bir işlevdir "
+              "(daha yüksek irtifada esinti yük katsayısı büyür, kanat başlık payları negatife düşer).")
     tri_ = R.get("tail_root_interference", {})
     if tri_:
         w(f"* Kuyruk kökleri (R-53): gövde dış yüzeyinde budanmış kök yapıları (kök bandı {_f(tri_['band_depth_m'] * 1000, 0)} mm, "

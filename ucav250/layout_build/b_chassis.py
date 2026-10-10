@@ -33,6 +33,20 @@ def _true_depth_caps(line, zc, tc) -> None:
                 if d >= t_s - 1e-6:
                     break
                 z_[k] = round(z_[k] - sg * (t_s - d + 0.00002), 4)
+    # between the points: the cap is straight, the loft is not; lower both ends of a segment by its worst shortfall
+    from ..analysis.layout_check import Capsule
+    for i in range(len(line) - 1):
+        r_ = 0.5 * max(tc[i], tc[i + 1])
+        for k, sg in ((1, 1.0), (0, -1.0)):
+            for _ in range(3):
+                a_ = np.array([line[i][0], line[i][1], zc[i][k]])
+                b_ = np.array([line[i + 1][0], line[i + 1][1], zc[i + 1][k]])
+                Q = Capsule(a_, b_, r_).samples(0.001)
+                d = float(ctx.depth(Q).min())
+                if d >= t_s + 0.00005:
+                    break
+                for j in (i, i + 1):
+                    zc[j][k] = round(zc[j][k] - sg * (t_s - d + 0.0001), 4)
 
 
 _CTX: dict = {}
@@ -221,11 +235,23 @@ def members() -> list:
                     layup="rib_panel", touch=["ST-FS0600", "ST-FS1110", "M-KEELWALL", "M-CHINE"]))
     tb = ZP["turret_bay"]["box"]
     M.append(member("M-TURRETWALL", "YK250-CH-023", "turret-bay side wall", "taret bölmesi yan duvarı",
-                    "side walls of the turret bay (box with FS1110 / FS1330 and the bay roof): frame the belly "
-                    "cut-out, guide the sliding bay doors (slot 20 mm above the skin), corner rails of the elevator",
+                    "side walls of the turret bay (box with FS1110 / FS1330 and the bay roof): corner rails of the "
+                    "elevator; fix round 3 (PK3-09): the sliding bay doors cross the wall line in the door rail plane "
+                    "(20 mm above the skin) along the whole door band, so the wall's lower edge is a FREE edge over the "
+                    "band (10 mm end posts at FS1110 / FS1330 only, closed by a bonded edge cap) and the wall does not "
+                    "frame the belly cut-out; the cut-out is framed by FS1110 / FS1330 (fore / aft) and by the bonded "
+                    "CFRP skin doublers of the ring side lands (8 plies PW, 35 mm wide, |y| 0.100-0.135, under the door "
+                    "rail plane, potted inserts for the ring side fasteners), part of the turret-bay frame allowance "
+                    "(mass.rules.turret_bay_frame_kg)",
                     "cfrp_pw_mtm45_as4", "prepreg_ooa_vacbag", {"type": "flat sandwich wall (rib_panel)", "t": T_SW},
-                    {"box": r3([[1.1134, 0.106, -0.165], [1.3266, 0.106 + T_SW, Z_TROOF]]), "bottom": "skin"},
-                    "belly cut-out edge loads + turret inertia -> walls -> FS1110 / FS1330", mirror=True,
+                    {"box": r3([[1.1134, 0.106, -0.165], [1.3266, 0.106 + T_SW, Z_TROOF]]), "bottom": "skin",
+                     "lower_edge": "free over the door band x 1.123-1.317 (door rail plane 20 mm above the skin); end "
+                                   "posts to the skin at FS1110 / FS1330",
+                     "lands": [{"x": [1.1134, 1.3266], "y": [0.100, 0.135], "surface": "lower", "mirror": True,
+                                "text": "side_land: bonded skin doubler (8 plies PW) under the door rail plane = side "
+                                        "land of the turret ring insert (potted M4 inserts)"}]},
+                    "turret inertia + elevator reactions -> walls -> FS1110 / FS1330 (belly cut-out edges: frames + "
+                    "skin doublers, not the walls)", mirror=True,
                     layup="rib_panel", touch=["ST-FS1110", "ST-FS1330", "M-TURRETROOF"]))
     M.append(member("M-TURRETROOF", "YK250-CH-024", "turret-bay roof", "taret bölmesi tavanı",
                     "roof of the turret bay: elevator top mount (BLDC + ball-screw bearing block)",
@@ -564,7 +590,7 @@ PRONG_T = 0.010                                                       # fork pro
 Y_TONGUE_TIP = 0.408                                                  # tongue tip (4.6 mm clear of the SOB rib face)
 Y_PINS = (0.463, 0.645)                                               # >= 2.5 D_bush from the tongue tip / fork mouth
 Y_RS_BODY = [0.30, 0.33, 0.345, 0.36, 0.38]                            # rear-spar points where the body top drops
-Y_RS_GLOVE = [0.42, 0.44, 0.48, 0.525, 0.575, 0.625, 0.675]             # extra rear-spar points: the thin glove loft
+Y_RS_GLOVE = [round(0.4 + 0.0125 * k, 4) for k in range(1, 24)]       # extra rear-spar points: the thin glove loft
 Y_RAMP = Y_PINS[0]                                                    # end of the SOB cap ramp (fix round 3, VS3-01)
 X_REARPIN_AFT = 0.0195                                                # rear pin 19.5 mm aft of the rear-spar line (fix round 2: slot plates >= 6 mm skin to the OML)
 Y_REARPIN = 0.672                                                     # rear pin 28 mm inboard of the joint plane

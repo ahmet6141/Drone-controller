@@ -179,8 +179,9 @@ def stations() -> list:
              [-0.062, -0.036]),
          cut("C-HARN-CL", "centre-line harness conduit (H-MAIN over H-COAX; sealed grommets; fix round 3: 30 mm "
              "channel tiers, PK3-05)", [-0.025, 0.025], [-0.120, -0.068]),
-         cut("C-DOORLINK", "inner-door and trunnion-door drive pushrods (DA 22 crank -> door hinge horns; fix round "
-             "2: raised, corners >= inset + 20 mm edge band)", [0.010, 0.045], [-0.160, -0.142], mirror=True)],
+         cut("C-DOORLINK", "inner-door drive pushrod (DA 22 crank -> inner-door hinge horn; fix round 2: raised, "
+             "corners >= inset + 20 mm edge band; fix round 3, PK3-07: the trunnion door is leg-driven)",
+             [0.010, 0.045], [-0.160, -0.142], mirror=True)],
         name_tr="arka ana takım çerçevesi / arka yakıt perdesi")
     add("FS3480", 3.480, "tail ring frame: fin front-spar fittings, stabilator-stub front-spar fittings, cooling "
         "inlet duct pass-through, aft end of the equipment bay; open centre for the equipment bay and the S-duct",

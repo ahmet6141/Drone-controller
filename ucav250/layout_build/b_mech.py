@@ -113,20 +113,27 @@ def mechanisms() -> dict:
                    side="L", mirror_of="main_inner_door_R", moves="YK250-LG-670-L"))
     # fix round 2 (PK2-03): trunnion door per well, hinged on the lower edge of the gear beam (chine corner), closing the
     # leg-slot strip from the trimmed leg door (y 0.30) to the beam; opens outward-down before the leg moves and closes
-    # after it (slaved to the inner-door DA 22 by a second crank / pushrod, EQ-DOORACT)
+    # after it; fix round 3 (PK3-07): leg-driven through a slotted (lost-motion) link with an opening spring - the
+    # inner-door DA 22 drives the inner door only (open, then reverse to close), so no dual-dwell linkage is needed
     from .b_chassis import Y_GB, T_SW as T_SW_GB
     y_th = round(Y_GB + T_SW_GB, 4)                    # outboard lower edge of the gear beam (skin corner)
     o_t = np.array([x_w, y_th, z_bot(float(MG["trunnion"][0]), y_th) + 0.002])
     a_tdoor = 125.0 * DEG
+    g_e = round(0.15 + 0.70 * TDOOR_ENGAGE_DEG / float(MG["retraction"]["angle_deg"]), 4)   # link engages the door
+    e_td = f"{a_tdoor:.5f}*(1-clamp((gear_up-{g_e})/{round(0.85 - g_e, 4)},0,1))"
     J.append(joint("main_trunnion_door_R", "revolute", o_t, [1.0, 0.0, 0.0], 0.0, a_tdoor, rest=a_tdoor, prop="",
-                   scale=1.0, expr=f"{a_tdoor:.5f}*(1-clamp((gear_up-0.85)/0.15,0,1))", side="R",
+                   scale=1.0, expr=e_td, side="R",
                    moves="YK250-LG-673-R", hinge_parent="M-GEARBEAM", hinge_zone_m=0.015,
                    notes="hinged on the lower edge of the gear beam (axis along x), + = free edge down and outboard; "
-                         "open 125 deg whenever the gear is not up-locked (the down leg passes through its strip), "
-                         "closed after the leg is up (gear_up 0.85 -> 1); fix round 3 (PK3-03): rest = open (the gear-"
-                         "down state), modelled open; value 0 = closed (door_outlines closed_at lo)"))
+                         "open 125 deg while the down leg passes through its strip; fix round 3 (PK3-07): driven by "
+                         "the leg through a slotted (lost-motion) link - an opening spring holds the door on its open "
+                         f"stop until the leg reaches {TDOOR_ENGAGE_DEG:.0f} deg of its retraction, the link pin then "
+                         "takes up the slot and pulls the door shut over the last part of the leg stroke (closed when "
+                         "the leg up-locks, gear_up 0.85; on extension the spring opens it as the pin releases); "
+                         "fix round 3 (PK3-03): rest = open (the gear-down state), modelled open; value 0 = closed "
+                         "(door_outlines closed_at lo)"))
     J.append(joint("main_trunnion_door_L", "revolute", o_t * np.array([1, -1, 1]), [-1.0, 0.0, 0.0], 0.0, a_tdoor,
-                   rest=a_tdoor, prop="", scale=1.0, expr=f"{a_tdoor:.5f}*(1-clamp((gear_up-0.85)/0.15,0,1))",
+                   rest=a_tdoor, prop="", scale=1.0, expr=e_td,
                    side="L", mirror_of="main_trunnion_door_R", moves="YK250-LG-673-L", hinge_parent="M-GEARBEAM",
                    hinge_zone_m=0.015))
     # ---------------------------------------------------------------- nose gear (+ steering, clamshell doors)
@@ -410,6 +417,9 @@ def engine_envelope() -> list:
             {"id": "prop_flange_hub_spacer", "u": [0.0, r3(h0)], "v": [-0.045, 0.045], "w": [-0.045, 0.045]}]
 
 
+TDOOR_ENGAGE_DEG = 90.0     # main-leg retraction angle at which the slotted link takes up the trunnion door (PK3-07)
+
+
 def keep_outs() -> list:
     R = 0.5 * float(PR["diameter"])
     ex_tip = float(PR["clearance_checks"]["blade_tip_axial_half_extent_m"])
@@ -439,14 +449,19 @@ def keep_outs() -> list:
                             r3([[3.800, -0.215, -0.030], [3.900, -0.150, 0.165]]),
                             r3([[3.860, sgn * 0.140, -0.040], [3.960, sgn * 0.215, 0.030]]) if sgn > 0 else
                             r3([[3.860, -0.215, -0.040], [3.960, -0.140, 0.030]])],
-                  "exit": {"point": r3([xe + 0.045, sgn * 0.205, -0.005]), "direction": r3(unit([1.0, sgn * 0.35, -0.30]))},
+                  "exit": {"point": r3([xe + 0.045, sgn * 0.205, -0.005]),
+                           "direction": r3(unit([0.0, sgn * 0.50, -0.866]))},
                   "plume_cone_half_angle_deg": 15.0, "plume_length": 0.30,
                   "margin_composite": 0.050, "margin_composite_shielded": 0.025,
                   "text": "routing envelope of the stack + silencer from the cylinder exhaust port (port location per "
                           "the Limbach installation drawing - open item) down along the outboard side of the "
                           "cylinder to the exit through the lower cowl side; 50 mm to composites, 25 mm behind a "
                           "stainless heat shield (layout.clearance_values.composite_to_exhaust); the plume cone "
-                          "(15 deg, 0.30 m) must not touch the ventral fin, stabilators or the gear"})
+                          "(15 deg, 0.30 m) must not touch the ventral fin, stabilators, the gear or the propeller "
+                          "disc keep-out KO-PROP (fix round 3, PK3-10: the exits point outboard and 60 deg down, "
+                          "square to the flight direction, so that the static cone stays >= 26 mm outside the blade "
+                          "tips; the plume deflection by the free stream in flight and the blade impingement limit of "
+                          "the propeller maker are an open item)"})
     K.append({"id": "KO-TURRET-FOV", "kind": "turret field-of-regard cone", "apex": r3([X_TUR, 0.0,
               float(TU["ball_center_extended_z"])]), "min_clear_elevation_deg": -5.0,
               "text": "R-25: with the turret extended, every external protrusion (antennas, probes, lights, "

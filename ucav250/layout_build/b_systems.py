@@ -142,9 +142,10 @@ def equipment(L: dict) -> list:
                 "iç kapak eyleyicisi DA 22", "gear", [[X_GEARF + 0.0070, 0.030, -0.170], [X_GEARF + 0.0485, 0.052, -0.1041]],
                 0.132, {"zone": "aft face of FS-GEAR", "tray": "YK250-CH-011"},
                 "mass.rules.gear_doors.inner_door_actuator (components.yaml volz_da22_28v 41.5 x 65.9 x 22 mm, "
-                "0.132 kg); crank + pushrod (C-DOORLINK) + over-centre lock to the inner-door hinge horn, and a second "
-                "crank + pushrod to the trunnion door (fix round 2, PK2-03: both doors open before and close after the "
-                "leg moves)", mirror=True))
+                "0.132 kg); crank + pushrod (C-DOORLINK) + over-centre lock to the inner-door hinge horn; drives the "
+                "inner door only (opens, holds, reverses to close); fix round 3 (PK3-07): the trunnion door is "
+                "leg-driven through a slotted lost-motion link with an opening spring (mechanisms "
+                "main_trunnion_door_R/L, structures G-DOOR-DRIVE / G-TDOOR-LINK)", mirror=True))
     nd_src = ("fix round 2 (PK2-13): the clamshell doors open before and close after the leg moves (sequence "
               "gear_retraction), which a leg-driven link cannot do; ONE DA 22 drives both doors (components.yaml "
               "volz_da22_28v 41.5 x 65.9 x 22 mm, 0.132 kg; mass.rules.gear_doors.inner_door_actuator count 3 = 2 main "

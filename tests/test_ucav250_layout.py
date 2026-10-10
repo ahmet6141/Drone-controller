@@ -171,6 +171,34 @@ class TestLayoutContract(unittest.TestCase):
         self.assertIn("R-29", R)
         self.assertIn("R-30", R)
 
+    def test_assembly_fasteners_match_the_layout(self):
+        """Fix round 3 (PK3-11): fastener sizes and counts quoted in the assembly steps equal the layout - the bridle
+        riser fittings (base / frame bolt groups of F-RISER-FWD / -AFT), the chine-longeron splices (M-CHINE.splices)
+        and the firewall shield thickness (layout.stations FS3670 shield_t)."""
+        fit = {f["id"]: f for f in self.L["chassis"]["fittings"]}
+        steps = {s_["step"]: s_["text"] + " " + " ".join(map(str, s_["checks"])) for s_ in self.A["steps"]}
+        for fid in ("F-RISER-FWD", "F-RISER-AFT"):
+            groups = {}
+            for b_ in fit[fid]["bolts"]:
+                groups.setdefault(b_.get("group"), []).append(round(float(b_["d"]) * 1000))
+            for g, ds in groups.items():
+                txt = f"{len(ds)} x M{max(ds)}"
+                self.assertTrue(any(txt in t for t in steps.values()), f"{fid} {g}: '{txt}' not in the assembly steps")
+        bad = [m.group(0) for t in steps.values() for m in re.finditer(r"(\d+) x M(\d+) 12[,.]9", t)
+               if (int(m.group(1)), int(m.group(2))) not in
+               {(len([b_ for b_ in fit[f]["bolts"] if b_.get("group") == g]), d)
+                for f in ("F-RISER-FWD", "F-RISER-AFT") for g in {b_.get("group") for b_ in fit[f]["bolts"]}
+                for d in {round(float(b_["d"]) * 1000) for b_ in fit[f]["bolts"] if b_.get("group") == g}}]
+        self.assertEqual(bad, [], "12.9 bolt groups quoted in the steps that no riser fitting has")
+        chine = next(m for m in self.L["chassis"]["members"] if m["id"] == "M-CHINE")
+        for sp in chine.get("splices", []):
+            txt = f"{len(sp['bolts'])} x M{round(float(sp['d']) * 1000)}"
+            self.assertTrue(any(txt in t for t in steps.values()), f"{sp['id']}: '{txt}' not in the assembly steps")
+        fw = next(s_ for s_ in self.L["stations"] if s_["id"] == "FS3670")
+        sh = f"{float(fw['shield_t']) * 1000:.1f}".replace(".", ",") + " mm"
+        self.assertTrue(any(sh in t for t in steps.values()), f"shield thickness {sh} not in the assembly steps")
+        self.assertFalse(any("0,5 mm AISI" in t for t in steps.values()))
+
     def test_one_nose_door_drive(self):
         """Fix round 2 (PK2-13 + mass closure): one DA 22 drives both nose clamshell doors through a centre-line
         bellcrank whose swept envelope is a layout object; the door-drive mass rule counts 3 actuators + the bellcrank."""
@@ -278,6 +306,64 @@ class TestChecksDetectFaults(unittest.TestCase):
     @staticmethod
     def _failed(rows, prefix):
         return [r for r in rows if r["check"] == prefix and not r["ok"]]
+
+    # ---------------------------------------------------------------- fix round 3 (PK3-*): new checks are not vacuous
+    def test_harness_corridor_violation_detected(self):
+        """PK3-05: the well keel webs back at y +-0.0105 leave the main trunk 0.5 mm per side (< the 5 mm corridor)."""
+        def edit(S):
+            m = next(m for m in S["layout"]["chassis"]["members"] if m["id"] == "M-WELLKEEL")
+            m["box"][0][1], m["box"][1][1] = 0.0105, 0.0115
+        ctx = self._ctx(edit)
+        rows, _ = LC.check_overlaps(ctx, LC.layout_objects(ctx))
+        self.assertTrue(any("harness corridors" in r["item"] for r in self._failed(rows, "C04")))
+
+    def test_cell_without_top_vent_detected(self):
+        """PK3-01: the forward cell without its float vent valve fails the plumbing row."""
+        def edit(S):
+            for fl in S["layout"]["fuel_lines"]:
+                fl["valves"] = [v for v in fl.get("valves", []) if v["id"] != "FV-F"]
+        rows = LC.check_stations(self._ctx(edit))
+        self.assertTrue(any("fuel system plumbing" in r["item"] for r in self._failed(rows, "C02")))
+
+    def test_removable_panel_overlap_detected(self):
+        """PK3-02: the parachute hatch run 25 mm aft over the spine strip is flagged although both use FS1810."""
+        def edit(S):
+            p = next(p for p in S["layout"]["shell"]["panels"] if p["id"] == "P-PARAHATCH")
+            p["x"][1] = round(p["x"][1] + 0.025, 4)
+        rows = LC.panel_overlap_rows(self._ctx(edit))
+        self.assertFalse(rows[0]["ok"])
+
+    def test_cradle_pad_on_hatch_detected(self):
+        """PK3-06: a cradle pad moved inboard onto the aft equipment hatch is flagged."""
+        def edit(S):
+            pd = next(p for p in S["layout"]["chassis"]["ground_handling"]["cradle_pads"] if p["id"] == "CR-FSGEAR")
+            pd["y"] = [0.0, 0.10]
+        self.assertFalse(LC.cradle_pad_row(self._ctx(edit))["ok"])
+
+    def test_material_process_mismatch_detected(self):
+        """PK3-08: a CFRP ring insert with the sheet-metal process (the round-2 state) is flagged."""
+        def edit(S):
+            p = next(p for p in S["layout"]["shell"]["panels"] if p["id"] == "P-TURRETRING")
+            p["process"] = "sheet_metal_aluminium"
+        self.assertFalse(LC.material_process_row(self._ctx(edit))["ok"])
+
+    def test_plume_through_propeller_detected(self):
+        """PK3-10: the round-2 exhaust aim (aft-outboard-down) puts the plume cone through the blade tips."""
+        def edit(S):
+            for k in S["layout"]["keep_outs"]:
+                if k["id"].startswith("KO-EXHAUST"):
+                    sg = 1.0 if k["exit"]["point"][1] > 0 else -1.0
+                    k["exit"]["direction"] = [0.9082, sg * 0.3179, -0.2724]
+        ctx = self._ctx(edit)
+        kx = [k for k in ctx.L["keep_outs"] if k["id"].startswith("KO-EXHAUST")]
+        self.assertFalse(LC.prop_plume_row(ctx, kx)["ok"])
+
+    def test_missing_longeron_notch_detected(self):
+        """PK3-04: a frame the chine longeron crosses without its notch is flagged."""
+        def edit(S):
+            st = next(s_ for s_ in S["layout"]["stations"] if s_["id"] == "FS1490")
+            st["cutouts"] = [c for c in st["cutouts"] if c["id"] != "C-CHINE"]
+        self.assertFalse(LC.longeron_notch_row(self._ctx(edit))["ok"])
 
     def test_missing_cutout_detected(self):
         def edit(S):

@@ -699,7 +699,7 @@ def spar_transition(op: OP, tg: Tongue) -> dict:
     (at the root-rib outboard face) to their loft position at ROOT_TRANS_Y1, thickness 10 mm -> zone plies; web
     25 -> zone plies; tapered ROHACELL 71 WF filler between the skins and the ramped caps."""
     ya, yb = ROOT_RIB_Y + T_RIB - OV, ROOT_TRANS_Y1
-    stb = op.stn(op.eta(yb))
+    stb = op.stn(op.eta(yb) + 0.001)                        # 1 mm into the outboard loft (fused union)
     W2, H2, tf = tg.W / 2, tg.H / 2, tg.tf
     n_lin = np.linspace(-W2, W2, N_CAP)
     out = {}
@@ -718,23 +718,19 @@ def spar_transition(op: OP, tg: Tongue) -> dict:
         out[f"cap_{side}"] = _loft([_strip_ring(ta, ba), _strip_ring(topb, botb)])
         # filler: from the skin inner face (+bond) down into the cap top (0.2 mm overlap)
         sta = op.stp(ya)
-        sm_a = float(np.dot(np.array([np.mean(ta[:, 0]) - op.frame(sta[0])[0][0], 0, 0]), [1, 0, 0]))
         sa = np.linspace(op.s_of_x(sta[0], ta[0, 0]), op.s_of_x(sta[0], ta[-1, 0]), N_CAP)
         Pa = op.inner(sta, side, sa, extra=BOND)[0]
+        Pa[:, 1] = ROOT_RIB_Y + T_RIB + BOND                 # filler bonded to the root-rib outboard face
         fa_bot = ta - sg * OV * np.array([0, 0, 1.0])
+        fa_bot[:, 1] = ROOT_RIB_Y + T_RIB + BOND
         Pb = topb
         fb_bot = topb + (botb - topb) * (0.0003 / max(np.linalg.norm(botb[0] - topb[0]), 1e-9))
         out[f"fill_{side}"] = _loft([_strip_ring(Pa, fa_bot), _strip_ring(Pb, fb_bot)])
         out[f"_bot_{side}"] = (ba, botb)
     # web: tongue web (25 plies) -> zone web
     tw_a, tw_b = tg.tw, op.t_mweb(yb)
-    ba_u, bb_u = out["_bot_up"]
-    ba_l, bb_l = out["_bot_lo"]
     sm_b = op.s_main(stb[0])
-    zu_a = tg.section_at_y(ya, 0, 0, H2 - tf + OV, H2 - tf + OV)[0]
-    zl_a = tg.section_at_y(ya, 0, 0, -(H2 - tf + OV), -(H2 - tf + OV))[0]
     ring_a = np.vstack([tg.section_at_y(ya, -tw_a / 2, tw_a / 2, -(H2 - tf) - OV, (H2 - tf) + OV)])
-    tu = float(np.interp(sm_b, bot2[:, 0], bot2[:, 1]))     # last computed side is 'lo'; recompute both
     _t, _b, _t2, bu2 = cap_rings(op, stb, "up")
     _t, _b, _t2, bl2 = cap_rings(op, stb, "lo")
     tu = float(np.interp(sm_b, bu2[:, 0], bu2[:, 1])) + OV
@@ -744,3 +740,329 @@ def spar_transition(op: OP, tg: Tongue) -> dict:
     for k in [k for k in out if k.startswith("_")]:
         out.pop(k)
     return out
+
+
+# =====================================================================================================================
+# rear spar (C-section, flanges forward)
+# =====================================================================================================================
+N_FL = 6
+RS_Y0 = ROOT_RIB_Y + T_RIB + 0.006 + BOND          # rear-spar root: outboard of the root fitting's rib flange (6 mm)
+
+
+def rear_poly2(op: OP, st) -> np.ndarray:
+    """(s, t) C-polygon of the rear spar at station st: upper flange top (fwd -> aft), web aft face, lower flange
+    bottom (aft -> fwd), lower flange inner face, web forward face, upper flange inner face."""
+    eta = st[0]
+    sr = op.s_rear(eta)
+    tw, tf = op.t_rweb(), op.t_rflange()
+    srf = sr - tw - W_RFL
+    s = np.linspace(srf, sr, N_FL)
+    _P, u2, nu = op.inner(st, "up", s, extra=BOND)
+    _P, l2, nl = op.inner(st, "lo", s, extra=BOND)
+    ub = u2 + tf * nu
+    lb = l2 + tf * nl
+    tu_i = float(np.interp(sr - tw, ub[:, 0], ub[:, 1]))
+    tl_i = float(np.interp(sr - tw, lb[:, 0], lb[:, 1]))
+    ub[-1] = (sr - tw, tu_i)
+    lb[-1] = (sr - tw, tl_i)
+    return np.vstack([u2, l2[::-1], lb, ub[::-1]])
+
+
+def rear_ring(op: OP, st) -> np.ndarray:
+    P2 = rear_poly2(op, st)
+    return op.pt(st, P2[:, 0], P2[:, 1])
+
+
+def rear_spar_mesh(op: OP, sts: list) -> G.Mesh:
+    rings = [rear_ring(op, op.stp(RS_Y0))]
+    for st in sts:
+        y = op.y_of(st[0]) if st[1] is None else st[1]
+        if RS_Y0 + 0.002 < y < TIP_RIB_Y1 - T_RIB - BOND - 0.002 and st[1] is None:
+            rings.append(rear_ring(op, st))
+    rings.append(rear_ring(op, op.stp(TIP_RIB_Y1 - T_RIB - BOND)))
+    return _loft(rings)
+
+
+# =====================================================================================================================
+# ribs
+# =====================================================================================================================
+def knot_seq(k: dict) -> list:
+    """Chord segments LE -> cove lip with every thickness knot as a node (polygons must not cut ramp corners)."""
+    pts = [0.0, k["b1"], k["b2"], k["b3"], k["b4"], k["sm"], k["b5"], k["b6"], k["b7"], k["b8"], k["sr"], k["lip"]]
+    ns = [6, 5, 14, 5, 3, 3, 5, 30, 5, 3, 2]
+    return [(a, b, n) for a, b, n in zip(pts, pts[1:], ns)]
+
+
+def interior_poly(op: OP, st, extra: float = BOND, to_te: bool = False) -> Polygon:
+    """(s, t) polygon of the section interior inside the skins (+ ``extra``), LE to the cove lips; with ``to_te`` the
+    region aft of the lips (no skin there) is bounded by the OML up to the trailing edge."""
+    eta = st[0]
+    su = op.nodes(eta, "up", knot_seq(op.knots(eta, "up")))
+    sl = op.nodes(eta, "lo", knot_seq(op.knots(eta, "lo")))
+    _P, iu, _n = op.inner(st, "up", su, extra=extra)
+    _P, il, _n = op.inner(st, "lo", sl, extra=extra)
+    if not to_te:
+        return SG.largest(Polygon(np.vstack([iu[::-1], il[1:]])).buffer(0))
+    cu, cl = op.curve(eta, "up"), op.curve(eta, "lo")
+    mu = cu["s"] > iu[-1, 0] + 1e-4
+    ml = cl["s"] > il[-1, 0] + 1e-4
+    ring = np.vstack([iu[::-1], il[1:], np.column_stack([cl["s"][ml], cl["t"][ml]]),
+                      np.column_stack([cu["s"][mu], cu["t"][mu]])[::-1]])
+    return SG.largest(Polygon(ring).buffer(0))
+
+
+def cap_polys(op: OP, st, grow: float = BOND) -> list:
+    out = []
+    for side in ("up", "lo"):
+        _t, _b, top2, bot2 = cap_rings(op, st, side)
+        out.append(Polygon(np.vstack([top2, bot2[::-1]])).buffer(grow, join_style=2))
+    return out
+
+
+def rflange_polys(op: OP, st, grow: float = BOND) -> list:
+    return [Polygon(rear_poly2(op, st)).buffer(0).buffer(grow, join_style=2)]
+
+
+R_CONDUIT = 0.007           # harness conduit OD 14 mm (GFRP tube, 1 mm wall)
+
+
+def conduit_st(op: OP, st) -> tuple[float, float]:
+    """Conduit centre (s, t) at a station: bonded along the aft face of the main-spar web at mid-depth."""
+    eta = st[0]
+    y = op.y_of(eta) if st[1] is None else st[1]
+    sm = op.s_main(eta)
+    s = sm + 0.5 * op.t_mweb(max(y, ROOT_TRANS_Y1)) + BOND + R_CONDUIT
+    tu = float(op.t_oml(eta, "up", s))
+    tl = float(op.t_oml(eta, "lo", s))
+    return s, 0.5 * (tu + tl)
+
+
+def strip_nodes(op: OP, st, side: str, s0: float, s1: float, n: int = 6) -> np.ndarray:
+    """Chord nodes s0..s1 with every thickness knot inside the range as a node (same count at every station when the
+    range is defined relative to the knots)."""
+    k = op.knots(st[0], side)
+    inside = [v for kk, v in k.items() if kk in ("b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8", "sr")
+              and s0 + 1e-6 < v < s1 - 1e-6]
+    pts = [s0] + sorted(inside) + [s1]
+    return op.nodes(st[0], side, [(a, b, n) for a, b in zip(pts, pts[1:])])
+
+
+def flange_range(op: OP, st, kind: str) -> tuple[float, float]:
+    """Chord range of a rib T-flange along the skins at station st (clear of the spar caps / rear flange)."""
+    eta = st[0]
+    sm = op.s_main(eta)
+    srf = op.s_rear(eta) - op.t_rweb() - W_RFL
+    if kind == "nose":
+        return op.knots(eta, "up")["b2"] + 0.005, sm - 0.5 * W_CAP - 2 * BOND
+    return sm + 0.5 * W_CAP + 2 * BOND, srf - 2 * BOND
+
+
+def strip_ring(op: OP, st, side: str, s0, s1=None, t: float = RIB_FL_T) -> np.ndarray:
+    """Flange strip along the skin inner face at st; ``s0`` is either a chord value (with s1) or a rib kind."""
+    if isinstance(s0, str):
+        s0, s1 = flange_range(op, st, s0)
+    s = strip_nodes(op, st, side, s0, s1)
+    P = op.inner(st, side, s, extra=BOND)[0]
+    Q = op.inner(st, side, s, extra=BOND + t)[0]
+    return np.vstack([P, Q[::-1]])
+
+
+def map2(op: OP, st_from, st_to, P2) -> np.ndarray:
+    """(s, t) points of station st_from expressed in the section frame of st_to (via 3-D)."""
+    P2 = np.asarray(P2, float)
+    P = op.pt(st_from, P2[:, 0], P2[:, 1])
+    o, c, u, _w = op.frame(st_to[0])
+    if st_to[1] is not None:
+        o = np.array([o[0], st_to[1], o[2]])
+    d = P - o
+    return np.column_stack([d @ c, d @ u])
+
+
+def map_poly(op: OP, st_from, st_to, poly):
+    def one(p):
+        ext = map2(op, st_from, st_to, np.asarray(p.exterior.coords))
+        holes = [map2(op, st_from, st_to, np.asarray(h.coords)) for h in p.interiors]
+        return Polygon(ext, holes)
+    ps = list(poly.geoms) if isinstance(poly, MultiPolygon) else [poly]
+    return unary_union([one(p) for p in ps]).buffer(0)
+
+
+def plate_mesh(op: OP, st, poly, t: float = T_RIB) -> G.Mesh:
+    """Planar plate centred on the station plane (native: the section plane; projected: the plane y = st[1])."""
+    eta, py = st
+    o, c, u, _w = op.frame(eta)
+    if py is None:
+        return G.extrude(poly, t, origin=o, u=c, v=u, centered=True)
+    # projected: map the (s, t) outline into (x, z) and extrude along y
+    def mp(p):
+        P = np.asarray(p.exterior.coords)
+        Q = op.pt(st, P[:, 0], P[:, 1])
+        holes = []
+        for h in p.interiors:
+            H = np.asarray(h.coords)
+            HQ = op.pt(st, H[:, 0], H[:, 1])
+            holes.append(HQ[:, [0, 2]])
+        return Polygon(Q[:, [0, 2]], holes).buffer(0)
+    polys = [mp(p) for p in (poly.geoms if isinstance(poly, MultiPolygon) else [poly])]
+    xz = unary_union(polys)
+    return prism(xz, (0.0, py - 0.5 * t, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0), 0.0, t).transformed(
+        np.diag([1.0, -1.0, 1.0]), (0.0, 2 * py, 0.0))
+
+
+def rib_region(op: OP, st, kind: str) -> Polygon:
+    """Rib piece region at one station (its own frame): inside the skins, between the spar webs, minus caps / flanges."""
+    eta = st[0]
+    y = op.y_of(eta) if st[1] is None else st[1]
+    sm = op.s_main(eta)
+    tw = op.t_mweb(max(y, ROOT_TRANS_Y1))
+    sr = op.s_rear(eta)
+    poly = interior_poly(op, st)
+    if kind == "nose":
+        s0, s1 = -1.0, sm - 0.5 * tw - BOND
+    else:
+        s0, s1 = sm + 0.5 * tw + BOND, sr - op.t_rweb() - BOND
+    reg = poly.intersection(sbox(s0, -1.0, s1, 1.0))
+    for c in cap_polys(op, st) + (rflange_polys(op, st) if kind == "box" else []):
+        reg = reg.difference(c)
+    return SG.largest(reg)
+
+
+def rib_piece(op: OP, eta: float, kind: str, holes=True) -> G.Mesh:
+    """Flanged sandwich rib (rib_panel) piece at a native station: 'nose' (LE skin -> main-spar web) or 'box'
+    (main-spar web -> rear-spar web), notched round the spar caps / flanges, T-flanges 15 mm each side bonded to the
+    skins, lightening holes, conduit hole (box). The plate outline is the intersection of the free regions at its two
+    faces and its mid-plane."""
+    st = op.stn(eta)
+    sm = op.s_main(eta)
+    sr = op.s_rear(eta)
+    srf = sr - op.t_rweb() - W_RFL
+    reg = rib_region(op, st, kind)
+    for dl in (-0.5 * T_RIB - OV, 0.5 * T_RIB + OV):
+        so = op.stn(eta + dl)
+        reg = reg.intersection(map_poly(op, so, st, rib_region(op, so, kind)))
+    reg = SG.largest(reg)
+    if holes:
+        cut = []
+        s0, s1 = reg.bounds[0], reg.bounds[2]
+        if kind == "box":
+            for dl in (-0.5 * T_RIB - OV, 0.0, 0.5 * T_RIB + OV):
+                so = op.stn(eta + dl)
+                sc, tc = conduit_st(op, so)
+                q = map2(op, so, st, [[sc, tc]])[0]
+                cut.append(Point(q[0], q[1]).buffer(R_CONDUIT + 0.0015, 32))
+            a, b = s0 + 0.035, s1 - 0.02
+            n_h = max(1, int((b - a) // 0.08))
+            for k in range(n_h):
+                sx = a + (k + 0.5) * (b - a) / n_h
+                tu, tl = float(op.t_oml(eta, "up", sx)), float(op.t_oml(eta, "lo", sx))
+                d = min(0.42 * (tu - tl - 0.016), 0.6 * (b - a) / n_h)
+                if d > 0.012:
+                    cut.append(Point(sx, 0.5 * (tu + tl)).buffer(0.5 * d, 40))
+        else:
+            sx = 0.55 * s1
+            tu, tl = float(op.t_oml(eta, "up", sx)), float(op.t_oml(eta, "lo", sx))
+            d = min(0.40 * (tu - tl - 0.014), 0.5 * s1)
+            if d > 0.012:
+                cut.append(Point(sx, 0.5 * (tu + tl)).buffer(0.5 * d, 40))
+        for cc in cut:
+            reg = reg.difference(cc)
+        reg = SG.largest(reg)
+    plate = plate_mesh(op, st, reg)
+    fls = []
+    for side in ("up", "lo"):
+        for e0, e1 in ((eta - 0.5 * T_RIB - RIB_FL_W, eta - 0.5 * T_RIB + OV),
+                       (eta + 0.5 * T_RIB - OV, eta + 0.5 * T_RIB + RIB_FL_W)):
+            fls.append(_loft([strip_ring(op, op.stn(e0), side, kind), strip_ring(op, op.stn(e1), side, kind)]))
+    return finish(_union([plate] + fls))
+
+
+# =====================================================================================================================
+# root rib, tip rib, joint hardware
+# =====================================================================================================================
+FIT_T = 0.006               # rear root fitting: rib flange thickness
+FIT_X = (2.776, 2.897)      # rear root fitting: chordwise extent of the rib flange (box bay -> lug)
+FIT_WEB_Y1 = 0.765          # rear root fitting: web flange end (bonded to the rear-spar web root)
+LUG_SLOT = 0.001            # clearance round the lug plate in the root rib
+
+
+def end_rib_region(op: OP, st_a, st_b, kind: str) -> Polygon:
+    """(x, z) region of a projected end rib between the planes y = st_a[1] .. st_b[1]: inside the skins up to the
+    cove lips, the OML aft of them (the rib is the panel's root / tip closure)."""
+    regs = []
+    for st in (st_a, st_b):
+        P2 = np.asarray(interior_poly(op, st, to_te=True).exterior.coords)
+        Q = op.pt(st, P2[:, 0], P2[:, 1])
+        regs.append(Polygon(Q[:, [0, 2]]).buffer(0))
+    reg = regs[0].intersection(regs[1]).buffer(-2e-5, join_style=2).buffer(2e-5, join_style=2)
+    return SG.largest(reg.simplify(2e-6))
+
+
+def end_rib_flange(op: OP, y0: float, y1: float, side: str, excl) -> list:
+    """Flange strip lofts of a projected end rib along the skin (LE 3 % chord -> lip), split round excluded chord
+    ranges ``excl`` [(s0, s1)] given as functions of the station."""
+    out = []
+    sts = [op.stp(y0), op.stp(y1)]
+    rngs = []
+    for st in sts:
+        k = op.knots(st[0], side)
+        cuts = sorted(excl(st))
+        a = k["b2"] + 0.005
+        pieces = []
+        for c0, c1 in cuts:
+            if c0 > a + 0.004:
+                pieces.append((a, c0))
+            a = max(a, c1)
+        if k["lip"] - 0.002 > a + 0.004:
+            pieces.append((a, k["lip"] - 0.002))
+        rngs.append(pieces)
+    for (a0, a1), (b0, b1) in zip(rngs[0], rngs[1]):
+        out.append(_loft([strip_ring(op, sts[0], side, a0, a1), strip_ring(op, sts[1], side, b0, b1)]))
+    return out
+
+
+def root_rib_mesh(op: OP, tg: Tongue, lug_poly_xz: Polygon) -> G.Mesh:
+    """Root rib (YK250-WG-161): flat rib_panel plate in the plane y 0.7049 .. 0.7117 (inboard face on the 1.5 mm seal
+    gap to the centre-section joint rib), full section to the trailing edge, 20-ply solid land round the tongue,
+    openings for the tongue, the rear-spar lug and the blind-mate wing connector plug (CN-WING); T-flanges outboard."""
+    ya, yb = ROOT_RIB_Y, ROOT_RIB_Y + T_RIB
+    reg = end_rib_region(op, op.stp(ya), op.stp(yb), "root")
+    # tongue passage: union of the tongue sections at both faces + bond
+    W2, H2 = 0.5 * tg.W, 0.5 * tg.H
+    t_sec = unary_union([Polygon(tg.section_at_y(y, -W2, W2, -H2, H2)[:, [0, 2]]) for y in (ya - 0.001, yb + 0.001)])
+    reg = reg.difference(t_sec.convex_hull.buffer(BOND, join_style=2))
+    reg = reg.difference(lug_poly_xz.buffer(LUG_SLOT, join_style=2))
+    cn = next(c for c in op.L["systems"]["harness"]["connectors"] if c["id"] == "CN-WING")["point"]
+    reg = reg.difference(Point(cn[0], cn[2]).buffer(0.0155, 48))
+    reg = SG.largest(reg)
+    plate = prism(reg, (0.0, ya, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0), -T_RIB, 0.0)   # extrudes along -y
+    plate = plate.translated((0.0, T_RIB, 0.0)) if plate.bounds()[0][1] < ya - 1e-6 else plate
+
+    def excl(st):
+        eta = st[0]
+        sm = op.s_main(eta)
+        srf = op.s_rear(eta) - op.t_rweb() - W_RFL
+        return [(sm - 0.5 * W_CAP - 0.004, sm + 0.5 * W_CAP + 0.004), (srf - 0.004, 10.0)]
+    fls = []
+    for side in ("up", "lo"):
+        fls += end_rib_flange(op, yb - OV, yb + RIB_FL_W, side, excl)
+    return finish(_union([plate] + fls))
+
+
+def tip_rib_mesh(op: OP) -> G.Mesh:
+    """Tip rib (YK250-WG-178): flat rib_panel plate y 3.5331 .. 3.5399, full section; its outboard face carries the
+    tip fairing and the LT-WING light (layout.systems.air_data_lights); T-flanges inboard."""
+    ya, yb = TIP_RIB_Y1 - T_RIB, TIP_RIB_Y1
+    reg = end_rib_region(op, op.stp(ya), op.stp(yb), "tip")
+    plate = prism(reg, (0.0, ya, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0), -T_RIB, 0.0)
+    if plate.bounds()[0][1] < ya - 1e-6:
+        plate = plate.translated((0.0, T_RIB, 0.0))
+
+    def excl(st):
+        eta = st[0]
+        sm = op.s_main(eta)
+        srf = op.s_rear(eta) - op.t_rweb() - W_RFL
+        return [(sm - 0.5 * W_CAP - 0.004, sm + 0.5 * W_CAP + 0.004), (srf - 0.004, 10.0)]
+    fls = []
+    for side in ("up", "lo"):
+        fls += end_rib_flange(op, ya - RIB_FL_W, ya + OV, side, excl)
+    return finish(_union([plate] + fls))

@@ -62,11 +62,14 @@ T_CAP = 0.0017              # spar caps: 12 plies UD (structures.sizing.tail.*_s
 W_CAP = 0.025               # spar cap width (structures.sizing.tail.*_spar_cap_width_m)
 T_GFRP = 0.002              # fin-tip cap: 8 plies GFRP 7781 (RF window)
 FIN_FRONT_XC = 0.241        # layout F-FIN-FRONT fin_chord_fraction
-FIN_REAR_XC = 0.625         # hinge spar (the layout's 0.56 c rear root fitting reaches forward to it, see doc)
+FIN_REAR_XC = 0.58          # rear (hinge) spar: aft of the DA 26 case, 0.02 c behind the layout's 0.56 c root lug
 STUB_FRONT_XC = 0.25
 RUDDER_GAP_END = 0.006      # spanwise gap rudder ends / fixed fin (rudder top swings 3.9 mm toward the tip cap)
 COVE_GAP = 0.002            # radial cove gap round the rudder nose
 HINGE_S = (0.18, 0.45, 0.68)   # rudder hinge stations: fin span from the root reference section (m)
+HINGE = A.HingeSpec(pin_d=0.003, lug_t=0.004, lug_r=0.0065, gap=0.0005, base_t=0.003, base_w=0.026, base_h=0.018,
+                    bolt_d_mm=3.0, pin_clear=0.00002)
+RUDDER_SPAR_E = 0.011       # rudder spar web front face aft of the hinge axis (clevis lug end r 6.5 + 4.5 mm)
 SPINDLE_R = 0.01247         # spindle OD 25 (polygon-safe radius inside the 25 H7 bores)
 SPINDLE_NECK_R = 0.0105     # neck OD 21 through the node cheek hole (>= 5 mm moving-part clearance, layout.clearances)
 SPINDLE_ID = 0.022          # bore 22 (wall 1.5 = processes.cnc_milling_metal.min_thickness; structures 1.2)

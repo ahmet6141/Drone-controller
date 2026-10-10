@@ -65,10 +65,11 @@ SEAL = 0.0002               # seal line between a removable panel's inner face a
 LAND_FIT = 0.0065 - 0.0002  # inner face of the land pads: 0.2 mm liquid-shim fit to the chassis land (skin line 6.5 mm)
 OV = 0.0002                 # boolean overlap of fused features (ARCHITECTURE §5)
 LAND_T = 0.0016             # joggled land laminate under a removable panel edge (8 plies PW = the solid edge band)
-LAND_W = 0.025              # land width under the neighbouring panel (layout.shell.rules.joggles: land 25 mm)
+LAND_W = 0.028              # land width under the neighbouring panel (layout.shell.rules: land >= 25 mm; 28 mm
+#                             gives the Camloc row 2.5 D to the panel edge and to the land edge, 0.5 mm gap included)
 LAND_REACH = 0.020          # land fused under its own skin
-ROW_CAP = 0.0160            # fastener row offset from a frame web centre line (inside the T-cap, nutplate clear of
-#                             the web)
+ROW_CAP = 0.0150            # fastener row offset from a frame web centre line (T-cap edge 28 mm off the centre
+#                             line: 13 mm = 2.5 D of the Camloc stud + 1 mm; nutplate / receptacle clear of the web)
 EDGE_M4 = 0.0105            # M4 row distance from a panel edge (2.5 D = 10 mm + 0.5 mm)
 EDGE_CAM = 0.0125           # Camloc stud row distance from a panel edge (2.5 D = 12 mm + 0.5 mm)
 PITCH_NUT = 0.028           # structural skins 25-32 mm (layout.shell.rules.concept)
@@ -706,6 +707,7 @@ class Fix:
         self.hw: list = []                     # (lo, hi, manifold) of hardware meshes (existing + committed)
         self.count = {}
         self.dropped = []
+        self._alt = 0
         mats = self.reg.spec.get("materials", {})
         self._kind = lambda p: "composite" if p.layup or mats.get(p.material, {}).get("kind") == "composite" \
             else str(mats.get(p.material, {}).get("kind", "metal"))
@@ -817,6 +819,7 @@ class Fix:
         s0, e0 = iv_p[0]
         if abs(s0) > 0.002:
             return self._drop(c, f"panel face {s0 * 1000:.1f} mm off the OML point")
+        s0 = self._head_seat(c, p, a, s0)
         d_ = 0.0048 if c.kind == "cam" else float(c.size) * 1e-3
         head0 = p + s0 * a
         for (h0, h1, rr, dd) in self.holes.get(c.panel, []):       # quick spacing test in the panel itself
@@ -848,6 +851,9 @@ class Fix:
             stack.append((land, s1, e1))
             prev = e1
         t_end = stack[-1][2]
+        if c.kind in ("nut", "cam") and len(stack) > 1:
+            t_end = self._seat(c, p, a, stack, t_end)
+            stack[-1] = (stack[-1][0], stack[-1][1], t_end)
         # nothing else in the clamped stack
         q0, q1 = p + (s0 - 0.0005) * a, p + (t_end + 0.0005) * a
         lo, hi = np.minimum(q0, q1) - 0.004, np.maximum(q0, q1) + 0.004
@@ -880,6 +886,51 @@ class Fix:
                 if sd < max(need + rr, self.k_edge(pid) * dd + rh, 3.0 * max(d, dd)) + 0.0003:
                     return self._drop(c, f"hole spacing {sd * 1000:.1f} mm in {pid}")
         return {"head": head, "a": a, "stack": stack, "grip": grip, "d": d}
+
+    def _head_seat(self, c: Cand, p, a, s0: float) -> float:
+        """The flat bearing face of the head touches the highest OML point under it (the OML is curved)."""
+        man = self.man(c.panel)
+        if c.kind == "cam":
+            r = 0.5 * FC.QUARTER_TURN["stud_head_d"]
+        elif c.kind == "riv":
+            r = float(c.size) * 1e-3
+        else:
+            r = 0.5 * FC.ISO7380.get(int(c.size), (1.9 * float(c.size) * 1e-3, 0.0))[0]
+        e1, e2 = _perp_basis(a)
+        best = s0
+        for th in np.linspace(0.0, 2 * math.pi, 12, endpoint=False):
+            q = p + r * (math.cos(th) * e1 + math.sin(th) * e2)
+            h = G.ray_hits(man, q + (s0 - 0.003) * a, q + (s0 + 0.003) * a) + (s0 - 0.003)
+            if len(h):
+                best = min(best, float(h[0]))
+        return best - (0.00002 if best < s0 - 1e-7 else 0.0)
+
+    def _seat(self, c: Cand, p, a, stack, t_end: float) -> float:
+        """Seat of the nutplate / receptacle base on the far face of the land: the base is flat, the land face is
+        curved (concave seen from inside the body), so the base is turned to the flatter direction and its seat is
+        the highest far-face point under its corners (the screw grip includes the 0.0x mm the base stands off)."""
+        land = stack[-1][0]
+        man = self.man(land)
+        Lb, Wb = (FC.NUTPLATE[int(c.size)][0], FC.NUTPLATE[int(c.size)][1]) if c.kind == "nut" else \
+            (FC.QUARTER_TURN["rec_plate"][0], FC.QUARTER_TURN["rec_plate"][1])
+        o = np.asarray(c.orient if c.orient is not None else _perp_basis(a)[0], float)
+        o = o - float(o @ a) * a
+        o1 = _unit(o) if np.linalg.norm(o) > 1e-9 else _perp_basis(a)[0]
+        o2 = np.cross(a, o1)
+        opts = []
+        for u, v in ((o1, o2), (o2, -o1)):
+            far = t_end
+            for su, sv in ((-1, -1), (-1, 1), (1, -1), (1, 1), (-1, 0), (1, 0), (0, -1), (0, 1)):
+                q = p + (0.5 * Lb * su) * u + (0.5 * Wb * sv) * v
+                h = G.ray_hits(man, q + (t_end - 0.004) * a, q + (t_end + 0.004) * a) + (t_end - 0.004)
+                for i in range(0, len(h) - 1, 2):
+                    if h[i] < t_end + 0.002 and h[i + 1] > t_end - 0.002:
+                        far = max(far, float(h[i + 1]))
+            opts.append((far, u))
+        opts.sort(key=lambda o: o[0])
+        far, u = opts[min(self._alt, len(opts) - 1)]
+        c.orient = u
+        return far + (0.00005 if far > t_end + 1e-7 else 0.0)
 
     def _drop(self, c: Cand, why: str):
         self.dropped.append((c.panel, c.land, c.kind, np.round(c.p, 4).tolist(), why))
@@ -958,18 +1009,44 @@ class Fix:
             p._mesh, p._n_holes = None, -1
 
     def try_group(self, cands: list[Cand]) -> bool:
-        """Prove and commit a group of candidates together (a symmetric pair): all or nothing."""
+        """Prove and commit a group of candidates together (a symmetric pair): all or nothing. The nutplate /
+        receptacle base is tried along the flatter direction of the land first, then across it."""
         proofs = []
+        dry = []
         for c in cands:
-            pr = self.prove(c)
-            if pr is None:
-                return False
-            f = self.make(c, pr, "DRY", dry=True)
-            if f is None or not self._hw_clear(f, [s[0] for s in pr["stack"]]):
-                if f is not None:
+            ok = None
+            for alt in (0, 1):
+                self._alt = alt
+                pr = self.prove(c)
+                if pr is None:
+                    break
+                f = self.make(c, pr, "DRY", dry=True)
+                if f is not None and self._hw_clear(f, [s[0] for s in pr["stack"]]):
+                    ok = pr
+                    dry.append(f)
+                    break
+                if f is None:
+                    break
+            self._alt = 0
+            if ok is None:
+                if pr is not None and f is not None:
                     self._drop(c, "hardware interference")
                 return False
-            proofs.append(pr)
+            proofs.append(ok)
+        # members of a group (a symmetric pair near the centre line) keep 3 D and the edge distance to each other
+        for i in range(len(proofs)):
+            for j in range(i + 1, len(proofs)):
+                a_, b_ = proofs[i], proofs[j]
+                d_ = max(a_["d"], b_["d"])
+                sd = _seg_dist(a_["head"], a_["head"] + a_["grip"] * a_["a"], b_["head"], b_["head"] + b_["grip"] * b_["a"])
+                if sd < max(3.0 * d_, COMPOSITE_EDGE * d_ + 0.5 * FC.clearance(4)) + 0.0003:
+                    self._drop(cands[i], f"pair spacing {sd * 1000:.1f} mm")
+                    return False
+                ma, mb = self.HW.fastener_mesh(dry[i]).to_manifold(), self.HW.fastener_mesh(dry[j]).to_manifold()
+                v = ma ^ mb
+                if not v.is_empty() and v.volume() > HW_TOL:
+                    self._drop(cands[i], "pair hardware interference")
+                    return False
         # pairs must also keep their spacing to each other (two candidates of a group never share a part closely)
         for c, pr in zip(cands, proofs):
             f = self.make(c, pr, self._fid(c.panel, c.kind), dry=False)
@@ -1850,6 +1927,8 @@ def fairing_parts(sc: SC, pans: dict) -> Pan:
 # =====================================================================================================================
 Y_GLOVE = (0.3995, 0.6995)      # glove skins between the SOB rib web and the joint plane (0.5 mm seal line each)
 RIVET_PITCH = 0.150             # peel-stopper blind rivets at the panel ends (layout.shell.panels P-GLOVE-*)
+RIVET_D = 3.2                   # their diameter: the end-rib T-flanges are 20 mm wide (2.5 D each side of a 4 mm
+#                                 rivet would need 20.4 mm), 1/8 in (3.2 mm) CherryMAX class
 RIB_FL = 0.020                  # glove rib T-flange width (chassis rib convention, 1.6 mm)
 REAR_HOLE_D, REAR_CAP_D, REAR_CB = 0.018, 0.030, 0.0022   # rear-pin port: hole, cap, counterbore depth
 REAR_CAP_T, REAR_SPIGOT = 0.0020, (0.0085, 0.0065, 0.0035)  # cap disc, spigot (outer r, inner r, length)
@@ -2160,6 +2239,8 @@ def glove_parts(sc: SC, pans: dict) -> Glove:
 ROW_KIND = {"nutplate+screw": ("nut", PITCH_NUT), "camloc": ("cam", PITCH_CAM), "insert+screw": ("nut", PITCH_INS),
             "bonded": ("riv", RIVET_PITCH)}
 EDGE = {"nut": EDGE_M4, "cam": EDGE_CAM, "riv": EDGE_M4}
+OWN_MARGIN = 0.0015             # plan margin added to the edge distance when a row point is given to a panel (the
+#                                 edge distance is measured at the laminate mid-plane, the panel edges are cut plumb)
 NO_ROWS = ("P-PARAHATCH", "P-REFUEL", "P-REARACCESS", "P-SPINE", "P-NOSECONE", "P-TURRETRING", "P-GLOVE-UP",
            "P-GLOVE-LO", "P-JOINTACCESS", "P-VENTRALROOT")
 DENSE = 0.002                   # dense sampling step of a row line before the pitch is laid out
@@ -2210,7 +2291,7 @@ class Rows:
             rk = row_kind(sc, key)
             if rk is None or key in NO_ROWS:
                 continue
-            e = EDGE[rk[0]]
+            e = EDGE[rk[0]] + OWN_MARGIN
             regs = [(keys[key], pn.region)]
             if pn.mirror:
                 regs.append((keys[key][:-1] + "L", mirror_poly(pn.region)))
@@ -2238,7 +2319,7 @@ class Rows:
                 continue
             if pr.contains(Point(x, y)):
                 hits.append((pid, key, rk))
-        if len(hits) > 1:
+        if len(hits) > 1 or (hits and self.pans[hits[0][1]].surf == "F"):
             hits = [h for h in hits if self._pierced(h[0], p, n)]
         return hits[0] if hits else None
 
@@ -2306,7 +2387,7 @@ class Rows:
                         own.append(o)
                     self._runs(P, N, T, own, f"{sid} cap row", centre_sym=True)
 
-    def _runs(self, P, N, T, own, note, centre_sym=False):
+    def _runs(self, P, N, T, own, note, centre_sym=False, size: float = 4):
         k = 0
         while k < len(P):
             if own[k] is None:
@@ -2316,9 +2397,15 @@ class Rows:
             while j + 1 < len(P) and own[j + 1] is not None and own[j + 1][0] == own[k][0]:
                 j += 1
             pid, key, (kd, pt) = own[k]
-            sym = centre_sym and abs(float(P[k][1])) < 0.003
-            for i in _resample(P[k:j + 1], N[k:j + 1], pt, sym):
-                self._commit(pid, key, kd, P[k + i], -N[k + i], T[k + i], note)
+            idx = np.arange(k, j + 1)
+            sym = False
+            if centre_sym and abs(float(P[j][1])) < 0.003 <= abs(float(P[k][1])):
+                idx = idx[::-1]                     # the run ends on the centre line: lay it out from there
+            if centre_sym and abs(float(P[idx[0]][1])) < 0.003:
+                sym = True
+            for i in _resample(P[idx], N[idx], pt, sym):
+                ii = int(idx[i])
+                self._commit(pid, key, kd, P[ii], -N[ii], T[ii], note, size=size)
             k = j + 1
 
     def line_rows(self, x0: float, x1: float, y_of_x, half: str, note: str, owner_fixed=None, pitch=None,
@@ -2346,7 +2433,7 @@ class Rows:
                 own.append(self.owner(P[i], N[i]))
         if pitch or kind:
             own = [None if o is None else (o[0], o[1], (kind or o[2][0], pitch or o[2][1])) for o in own]
-        self._runs(P, N, T, own, note)
+        self._runs(P, N, T, own, note, size=size)
 
     def member_rows(self):
         sc = self.sc
@@ -2394,7 +2481,7 @@ class Rows:
                 continue
             kind, pitch = rk
             O_ = o.get(key, pn.region)
-            ring = O_.buffer(-EDGE[kind], join_style=2)
+            ring = O_.buffer(-(EDGE[kind] + OWN_MARGIN), join_style=2)
             if ring.is_empty:
                 continue
             for poly in _as_polys(ring):
@@ -2403,8 +2490,10 @@ class Rows:
                 q = np.arange(0.0, s_[-1], DENSE)
                 xy = np.column_stack([np.interp(q, s_, R[:, 0]), np.interp(q, s_, R[:, 1])])
                 on_cap = np.zeros(len(xy), bool)
-                for sid in sc.st:
-                    on_cap |= np.abs(xy[:, 0] - sc.x_web(sid, xy[:, 1])) < 0.0225
+                for sid in sc.st:                   # cap rows there; the joggled lands stop 1.5 mm short of the caps
+                    on_cap |= np.abs(xy[:, 0] - sc.x_web(sid, xy[:, 1])) < 0.034
+                if key.startswith("P-FUEL"):        # inner edge: M3 row on the spine flange (special_rows)
+                    on_cap |= np.abs(xy[:, 1]) < 0.075
                 P, N = [], []
                 for x, y in xy:
                     p, n = sc.oml_point(float(x), float(y), pn.surf)
@@ -2427,19 +2516,38 @@ class Rows:
     def special_rows(self):
         sc = self.sc
         keys = self.keys
-        # nose cone: 8 x M4 radial into nutplates on the FS0300 forward flange
+        # nose cone: 8 x M4 radial into nutplates on the FS0300 forward flange, 4 a side evenly along the section
+        # arc (centre line -> chine -> keel), shifted off the chine relief band
         x = float(sc.x_web("FS0300", 0.0)) - ROW_CAP
-        for k in range(4):
-            phi = math.radians(22.5 + 45.0 * k)
-            p, n = sc.body_point(x, phi)
-            t = np.cross([1.0, 0.0, 0.0], n)
-            self._commit(keys["P-NOSECONE"], "P-NOSECONE", "nut", p, -n, t, "nose cone radial screw (FS0300)")
+        PU, NU = sc.section_curve(lambda yy: x, "U", n=1200)
+        PL, NL = sc.section_curve(lambda yy: x, "L", n=1200)
+        ku, kl = PU[:, 1] >= 0.0, PL[:, 1] >= 0.0
+        P = np.vstack([PU[ku], PL[kl][::-1]])
+        N = np.vstack([NU[ku], NL[kl][::-1]])
+        s_ = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
+        zc = float(sc.zc(x))
+        i_ch = int(np.argmin(np.abs(P[:, 2] - zc) + 10.0 * (P[:, 1] < 0.5 * P[:, 1].max())))
+        for f_ in (0.125, 0.375, 0.625, 0.875):
+            q = f_ * s_[-1]
+            if abs(q - s_[i_ch]) < 0.016:
+                q = s_[i_ch] + math.copysign(0.016, q - s_[i_ch])
+            i = int(np.argmin(np.abs(s_ - q)))
+            t = np.cross([1.0, 0.0, 0.0], N[i])
+            self._commit(keys["P-NOSECONE"], "P-NOSECONE", "nut", P[i], -N[i], t, "nose cone radial screw (FS0300)")
         # tear-away strip: 4 nylon M3 shear screws into the spine-channel flanges (inner part)
         lx = sc.mem["M-SPINE"]["lands"][0]["x"]
-        for xx in (float(lx[0]) + 0.045, float(lx[1]) - 0.045):
+        for xx in (float(lx[0]) + 0.070, float(lx[1]) - 0.070):
             p, n = sc.oml_point(xx, 0.0325, "U")
             self._commit(keys["P-SPINE"], "P-SPINE", "nut", p, -n, [1.0, 0.0, 0.0],
                          "nylon M3 shear screw (tear-away)", size=3)
+        # fuel-bay panels, inner edge: the spine-channel flange reaches 17.5 mm under the panel (as built), so the
+        # row is M3 (2.5 D = 7.5 mm to the panel edge and to the flange edge) at 22 mm (<= 8 D)
+        o = outlines(sc)
+        for k in ("P-FUEL1", "P-FUEL2", "P-FUEL3"):
+            b = o[k].bounds
+            y_e = float(np.asarray(sc.pan[k]["outline"], float)[:, 1].min())
+            self.line_rows(b[0] + 0.03, b[2] - 0.03, lambda x, y_e=y_e: y_e + GAP + 0.0085, "U",
+                           f"{k} inner edge row (M3)", owner_fixed=(keys[k], k, ("nut", 0.022)), size=3)
         # mission-bay upper skin: crease edge on the junction fairing's joggled land
         xf = float(sc.st["FS-FUEL"]["x"])
         C = sc.crease[(sc.crease[:, 0] > float(sc.st["FS1810"]["x"]) + 0.03) & (sc.crease[:, 0] < xf - 0.03)]
@@ -2493,7 +2601,7 @@ class Rows:
             T = np.gradient(P, axis=0)
             T = T / np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-12)
             own = [(keys[key], key, ("riv", RIVET_PITCH))] * len(P)
-            self._runs(P, N, T, own, "peel-stopper rivet row")
+            self._runs(P, N, T, own, "peel-stopper rivet row (3.2 mm: 20 mm rib flange)", size=RIVET_D)
 
     def run(self, gl):
         self.station_rows()

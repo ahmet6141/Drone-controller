@@ -731,7 +731,42 @@ def sduct_mesh(C: Ctx) -> G.Mesh:
         rings_i.append(_sec_ring(x, 0.0, zc, hy - DUCT_T, hz - DUCT_T, max(r - DUCT_T, 0.002)))
     xi = [xs[0] - 0.002] + list(xs[1:-1]) + [xs[-1] + 0.002]
     rings_i = [ri + np.array([xx - x0, 0, 0]) for ri, xx, x0 in zip(rings_i, xi, xs)]
-    return finish(diff(G.loft(rings_o), [G.loft(rings_i)]))
+    # inlet mouth: between the first two corridor stations the roof is open to the dorsal inlet (P-INLET); the side
+    # walls rise to INLET_BOND_DEPTH under the OML with 12 mm inward bonding flanges on the lip's joggled land, the
+    # roof starts at the throat station with a bulkhead up to the same depth
+    x0, x1 = st[0][0], st[1][0]
+    t = DUCT_T
+    dep = inlet_bond_depth()
+    mo, mi = [], []
+    for x in np.linspace(x0, x1, 11):
+        zc, hy, hz = (float(np.interp(x, X, [s_[k] for s_ in st])) for k in (1, 2, 3))
+        zb, zt = zc + MOUTH_ZB * hz, C.oml_z_top(x, 0.0) + 0.02
+        mo.append(_sec_ring(x, 0.0, 0.5 * (zb + zt), hy, 0.5 * (zt - zb), 0.002))
+    for x in np.linspace(x0 - 0.002, x1 - t, 11):
+        xc = min(max(x, x0), x1)
+        zc, hy, hz = (float(np.interp(xc, X, [s_[k] for s_ in st])) for k in (1, 2, 3))
+        zb, zt = zc + MOUTH_ZB * hz + t, C.oml_z_top(xc, 0.0) + 0.03
+        mi.append(_sec_ring(x, 0.0, 0.5 * (zb + zt), hy - t, 0.5 * (zt - zb), 0.002))
+    env = C.body_env(dep, x0 - 0.01, x1 + 0.01, dx=0.005)
+    mouth_o = inter(G.loft(mo), env)
+    duct = diff(union([G.loft(rings_o), mouth_o]), [G.loft(rings_i), G.loft(mi)])
+    hy0 = float(st[0][2])
+    band = diff(env, [C.body_env(dep + t, x0 - 0.02, x1 + 0.02, dx=0.005)])
+    fl = [inter(band, box3((x0, sv * (hy0 - t - MOUTH_FL) if sv > 0 else -(hy0 - 0.5 * t), 0.2),
+                           (x1 - 0.5 * t, hy0 - 0.5 * t if sv > 0 else -(hy0 - t - MOUTH_FL), 0.4)))
+          for sv in (1.0, -1.0)]
+    return finish(largest_piece(union([duct] + fl)))
+
+
+MOUTH_ZB = 0.3              # mouth side walls start 0.3 half-heights above the duct centre line (crossing, not tangent)
+MOUTH_FL = 0.012            # inward bonding flanges of the mouth walls on the inlet lip land
+
+
+def inlet_bond_depth() -> float:
+    """Depth below the OML of the inlet-lip land's inner face + 0.2 mm bond line: P-INLET (shell_secondary, COWL_SKIN)
+    sits in a joggled recess of P-AFT-UPPER (layout.shell.rules.joggles: depth = panel t + 0.3 mm) on a 1.6 mm solid
+    land (sandwich_edges edge band)."""
+    return COWL_SKIN + 0.0003 + 0.0016 + 0.0002
 
 
 SPIGOT_X0 = 3.621           # transition duct forward end inside the S-duct (32 mm slip joint)

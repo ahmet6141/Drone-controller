@@ -370,8 +370,16 @@ def _cap_notches(C: Ctx, sid: str) -> list[Polygon]:
             out.append(rect(s * DORSAL_Y0, s * DORSAL_Y1, 0.10, 0.45))
     if sid in ("FS3480", "FS3670"):                                # ventral keel strip land flanges
         out.append(rect(-0.0515, 0.0515, -0.30, -0.06))
-    if sid == "FS3670":                                            # chine end fitting at the firewall
-        pass
+    if sid == "FS3670":                                            # aft chine piece J (skin-line flange) ends here
+        m = C.mem["M-CHINE"]
+        P = np.asarray(m["paths"][1], float)
+        w, h = float(m["section"]["w"]), float(m["section"]["h"])
+        xs = np.linspace(float(st["x_faces"][0]) - float(st.get("flange_w", 0.028)) - 0.003, float(st["x_faces"][0]), 5)
+        yc = np.interp(xs, P[:, 0], P[:, 1])
+        zc = np.interp(xs, P[:, 0], P[:, 2])
+        for s in (1, -1):
+            out.append(rect(s * (yc.min() - 0.5 * w - 0.0015), s * 1.0, zc.min() - 0.5 * h - 0.0015,
+                            zc.max() + 0.5 * h + 0.0015))
     return out
 
 
@@ -634,7 +642,7 @@ def cover_shell(C: Ctx, bx: Box, upper: bool, t: float, y_max: float, x_lo_fn, x
     return G.shell_from_grid(P, t, inward=inward)
 
 
-def build_ctbox(C: Ctx, bx: Box, frames: dict) -> G.Mesh:
+def build_ctbox(C: Ctx, bx: Box, frames: dict, parts_out: dict | None = None) -> G.Mesh:
     yE = bx.y_end - 0.5 * T_RIB                                  # caps end on the joint-rib inner face
     y_sob_o = Y_SOB + 0.5 * T_RIB
     t_cov = C.layup_t("ct_box_cover")
@@ -688,7 +696,14 @@ def build_ctbox(C: Ctx, bx: Box, frames: dict) -> G.Mesh:
         for s in (1, -1):
             h = bld(0.055, 0.335, 0.0)
             dbl.append(shear_x(h, k) if s > 0 else shear_x(h, k).mirrored_y())
+    if parts_out is not None:
+        parts_out.update({"caps": caps, "webs": webs, "covers": covers, "doublers": dbl})
+        return None
     body = union(caps + webs + covers + dbl)
+    return _ctbox_finish(C, body, frames)
+
+
+def _ctbox_finish(C: Ctx, body: G.Mesh, frames: dict) -> G.Mesh:
     # the spar-frame webs pass through the caps (caps on both faces of the web); the kink-fitting plates pass under
     # the caps through a relief in the web
     body = diff(body, [frames["FS-MS"], frames["FS-RS"]])
@@ -701,6 +716,22 @@ def build_ctbox(C: Ctx, bx: Box, frames: dict) -> G.Mesh:
     px, py, pz = pen["point"]
     cut = [bore((px, s * py, pz - 0.02), (px, s * py, pz + 0.02), 0.010) for s in (1, -1)]
     return pieces_above(diff(body, cut))
+
+
+def ctbox_mass(C: Ctx, bx: Box, frames: dict) -> tuple[float, dict]:
+    """Mass of the multi-material centre box CH-001: UD spar caps (cfrp_ud density), sandwich covers
+    (layups.ct_box_cover areal mass / thickness), +-45 PW webs, pads and frame-land doublers (cfrp_pw density)."""
+    comp = {}
+    build_ctbox(C, bx, frames, parts_out=comp)
+    mats = C.S["materials"]
+    lay = layup_props(C.S, "ct_box_cover")
+    rho = {"caps": float(mats[MAT_UD]["density"]), "covers": lay["areal_mass"] / lay["thickness"],
+           "webs": float(mats[MAT_PW]["density"]), "doublers": float(mats[MAT_PW]["density"])}
+    out = {}
+    for k, ms in comp.items():
+        m = _ctbox_finish(C, union(ms), frames)
+        out[k] = m.volume() * rho[k]
+    return sum(out.values()), out
 
 
 def ct_envelope(C: Ctx, inset: float) -> G.Mesh:
@@ -1023,6 +1054,10 @@ def build_chine(C: Ctx, piece: int) -> G.Mesh:
     rib inner face. Built from robust lofts (rectangles along the path) and lofted OML envelopes."""
     m = C.mem["M-CHINE"]
     P = np.asarray(m["paths"][piece], float)
+    if piece == 1:                              # the aft piece ends 0.5 mm ahead of its end fitting (firewall)
+        xe = chine_aft_end_x(C)
+        q = [float(np.interp(xe, P[:, 0], P[:, k])) for k in (1, 2)]
+        P = np.vstack([P[P[:, 0] < xe - 1e-4], [xe, q[0], q[1]]])
     w, h, t = float(m["section"]["w"]), float(m["section"]["h"]), float(m["section"]["t"])
     yo = Y_SOB - 0.5 * T_RIB
     x0, x1 = float(P[0, 0]), float(P[-1, 0])
@@ -1114,28 +1149,43 @@ def build_parawall(C: Ctx, fs_a: float, fs_b: float, fw: float) -> G.Mesh:
 
 
 def build_midfloor(C: Ctx) -> G.Mesh:
-    """Mission-bay floor (outer strips, cut-out for TR-MISSION) + two bonded hat stiffeners under it outboard of the
-    tray lip."""
+    """Mission-bay floor: two outer sandwich strips with the framed centre cut-out (closed by the removable tray
+    TR-MISSION, flush with the floor top) + two bonded hat stiffeners (PW 4 plies, 20 x 15 mm) along the cut-out
+    edges: the inner wall lines the cut-out edge, a 20 mm inner flange under the cut-out carries the tray screws, the
+    outer flange is bonded under the floor strip."""
     m = C.mem["M-MIDFLOOR"]
     lo, hi = m["box"]
     co = m["cutout"]
-    floor = box_member(C, lo, hi, cut=[box3((co["x"][0], co["y"][0], lo[2] - 0.01), (co["x"][1], co["y"][1],
-                                                                                    hi[2] + 0.01))])
+    cx0, cx1 = float(co["x"][0]), float(co["x"][1])
+    ye = float(co["y"][1])
+    floor = box_member(C, lo, hi, cut=[box3((cx0, -ye, lo[2] - 0.01), (cx1, ye, hi[2] + 0.01))])
+    z0 = float(lo[2])
+    zt = z0 + MID_TRAY_DROP                                      # inner-flange top = tray underside
+    t = MID_HAT_T
+    xa, xb = float(lo[0]) + 0.002, float(hi[0]) - 0.002
     hats = []
     for s in (1, -1):
-        yc = s * MID_HAT_Y
-        z0 = float(lo[2])
-        crown = box3((lo[0] + 0.002, yc - 0.010, z0 - 0.015), (hi[0] - 0.002, yc + 0.010, z0 - 0.015 + 0.0008))
-        walls = [box3((lo[0] + 0.002, yc + sw * 0.010 - 0.0004, z0 - 0.015), (hi[0] - 0.002, yc + sw * 0.010 + 0.0004,
-                                                                              z0 + OV)) for sw in (1, -1)]
-        fls = [box3((lo[0] + 0.002, yc + sw * 0.010 + (0 if sw > 0 else -0.010), z0 - 0.0008),
-                    (hi[0] - 0.002, yc + sw * 0.010 + (0.010 if sw > 0 else 0), z0 + OV)) for sw in (1, -1)]
-        hats.append(union([crown] + walls + fls))
+        def yy(a, b):
+            return (min(s * a, s * b), max(s * a, s * b))
+        yi = ye - t - 0.0003                                     # inner wall along the cut-out edge (0.3 mm gap)
+        yo = yi + MID_HAT_W
+        zc = z0 - MID_HAT_H
+        ms = [box3((xa, yy(yi, yo)[0], zc), (xb, yy(yi, yo)[1], zc + t)),                 # crown
+              box3((xa, yy(yi, yi + t)[0], zc), (xb, yy(yi, yi + t)[1], z0 + OV)),        # inner wall
+              box3((cx0 + 5e-4, yy(yi, yi + t)[0], z0 - OV), (cx1 - 5e-4, yy(yi, yi + t)[1], zt)),
+              box3((cx0 + 5e-4, yy(yi - MID_HAT_IN_FL, yi + t)[0], zt - t),
+                   (cx1 - 5e-4, yy(yi - MID_HAT_IN_FL, yi + t)[1], zt)),                  # inner flange (tray land)
+              box3((xa, yy(yo - t, yo)[0], zc), (xb, yy(yo - t, yo)[1], z0 + OV)),        # outer wall
+              box3((xa, yy(yo - t, yo + MID_HAT_OUT_FL)[0], z0 - t), (xb, yy(yo - t, yo + MID_HAT_OUT_FL)[1],
+                                                                       z0 + OV))]       # outer flange
+        hats.append(union(ms))
     return union([floor] + hats)
 
 
-MID_HAT_Y = 0.172           # mission-floor hat stiffeners outboard of the 25 mm tray lip (layout text: y +-0.125)
-MID_TRAY_LIP = 0.025
+MID_HAT_W, MID_HAT_H, MID_HAT_T = 0.020, 0.015, 0.0008     # hat 20 x 15, 4 plies PW (layout M-MIDFLOOR.section)
+MID_HAT_IN_FL, MID_HAT_OUT_FL = 0.0227, 0.010              # inner flange under the cut-out (tray screws), outer flange
+MID_TRAY_T = 0.003                                         # TR-MISSION plate 3 mm, top flush with the floor top
+MID_TRAY_DROP = 0.0068 - MID_TRAY_T                        # floor bottom -> tray underside
 
 
 def build_keel(C: Ctx, frames) -> G.Mesh:
@@ -1197,11 +1247,30 @@ def _ms_cap_zone(C: Ctx) -> G.Mesh:
     return G.union([h, h.mirrored_y(), box3((st["x"] - fw, -0.003, -1.0), (st["x"] + fw + 0.001, 0.003, 1.0))])
 
 
+def penetration_cuts(C: Ctx, member: str, axis=(0.0, 0.0, 1.0), margin: float = 0.006, half: float = 0.03):
+    """Bores for the fuel lines / harness trunks of layout.fuel_lines / systems.harness through ``member``
+    (diameter + ``margin`` for the sealed bulkhead union / grommet)."""
+    a = np.asarray(axis, float)
+    out = []
+    items = [(f, p) for f in C.L["fuel_lines"] for p in f.get("penetrations", [])]
+    items += [(t_, p) for t_ in C.L["systems"]["harness"]["trunks"] for p in t_.get("penetrations", [])]
+    for f, p in items:
+        if p["member"] != member:
+            continue
+        c = np.asarray(p["point"], float)
+        r = 0.5 * float(f["diameter"]) + 0.5 * margin
+        out.append(bore(c - half * a, c + half * a, r))
+        if f.get("mirror"):
+            c2 = c * np.array([1.0, -1.0, 1.0])
+            out.append(bore(c2 - half * a, c2 + half * a, r))
+    return out
+
+
 def build_fwddeck(C: Ctx, frames) -> G.Mesh:
     m = C.mem["M-FWDDECK"]
     lo, hi = np.asarray(m["box"][0], float), np.asarray(m["box"][1], float)
     deck = inter(box3(lo, (hi[0] + 0.07, hi[1], hi[2])), C.body_env(MEM_IN, lo[0] - 0.005, hi[0] + 0.08))
-    deck = diff(deck, [_aft_of(C, "FS-MS")])
+    deck = diff(deck, [_aft_of(C, "FS-MS")] + penetration_cuts(C, "M-FWDDECK"))
     return pieces_above(deck)
 
 
@@ -1209,7 +1278,7 @@ def build_wellroof(C: Ctx) -> G.Mesh:
     m = C.mem["M-WELLROOF"]
     lo, hi = np.asarray(m["box"][0], float), np.asarray(m["box"][1], float)
     roof = inter(box3((lo[0] - 0.04, lo[1], lo[2]), hi), C.body_env(MEM_IN, lo[0] - 0.045, hi[0] + 0.005))
-    roof = diff(roof, [_fwd_of(C, "FS-RS")])
+    roof = diff(roof, [_fwd_of(C, "FS-RS")] + penetration_cuts(C, "M-WELLROOF"))
     return pieces_above(roof)
 
 
@@ -1346,7 +1415,7 @@ def build_plain_wall(C: Ctx, mid: str, z_top=None) -> G.Mesh:
     lo, hi = np.asarray(m["box"][0], float), np.asarray(m["box"][1], float)
     if z_top is not None:
         hi[2] = z_top
-    return box_member(C, lo, hi)
+    return box_member(C, lo, hi, cut=penetration_cuts(C, mid, axis=(1.0, 0.0, 0.0), margin=0.002))
 
 
 # =====================================================================================================================
@@ -1369,14 +1438,14 @@ def build_trunnion(C: Ctx) -> G.Mesh:
         if k < 3:                                     # beam flange boxes
             hi[1] = yb
         ms.append(box3(lo - np.array([0, 0, 0]), hi + np.array([OV if k in (3, 4, 5, 6) else 0, 0, 0])))
-    lugs_top = box3((2.9139, 0.326, -0.0868), (3.0379, 0.377 + OV, -0.0668))
+    lugs_top = box3((2.9139, TRUN_ROOF_Y[0] - 0.012, -0.0868), (3.0379, 0.377 + OV, -0.0668))
     m = union(ms + [lugs_top])
     px, py, pz = f["pivot"]
     cuts = [bore((b["x"] - 0.05, py, pz), (b["x"] + 0.05, py, pz), 0.5 * float(b["bore"]) + 0.0000105)
             for b in f["bearings"]]
     for b in f["bolts"]:
         if b["group"] == "well roof":
-            x, y, z = b["point"]
+            x, y, z = trunnion_roof_point(b)
             cuts.append(box3((x - 0.0065, 0.3255, -0.1135), (x + 0.0065, y + 0.0065, -0.0868)))
     ema = next(a for a in C.L["systems"]["actuators"] if a["id"] == "ACT-MLG-EMA")["cylinder"]
     c = np.asarray(ema["center"], float)
@@ -1386,10 +1455,20 @@ def build_trunnion(C: Ctx) -> G.Mesh:
     return diff(m, cuts)
 
 
+TRUN_ROOF_Y = (0.333, 0.362)    # roof bolts B6-B9: rows 29 mm apart (sealed dome nutplates 28 mm long; layout 22 mm)
+
+
+def trunnion_roof_point(b: dict):
+    x, y, z = b["point"]
+    return x, (TRUN_ROOF_Y[0] if y < 0.35 else TRUN_ROOF_Y[1]), z
+
+
 def build_uplock(C: Ctx) -> G.Mesh:
     f = C.fit["F-UPLOCK"]
     lo, hi = f["box"]
-    base = box3((lo[0], lo[1], hi[2] - UPLOCK_BASE_T), hi)
+    xs = sorted({b["point"][0] for b in f["bolts"]})
+    base = box3((xs[0] - 0.010, UPLOCK_BOLT_Y[0] - 0.010, hi[2] - UPLOCK_BASE_T),
+                (xs[-1] + 0.010, UPLOCK_BOLT_Y[1] + 0.010, hi[2]))
     px, py, pz = f["point"]
     boss = box3((px - 0.008, py - 0.012, lo[2]), (px + 0.008, py + 0.012, hi[2] - UPLOCK_BASE_T + OV))
     m = union([base, boss])
@@ -1397,6 +1476,7 @@ def build_uplock(C: Ctx) -> G.Mesh:
 
 
 UPLOCK_BASE_T = 0.005
+UPLOCK_BOLT_Y = (0.237, 0.263)  # 4 x M5 into sealed dome nutplates: 26 mm row pitch > nutplate length (layout 20 mm)
 
 
 def build_ng_pivot(C: Ctx) -> G.Mesh:
@@ -1522,6 +1602,15 @@ def build_riser(C: Ctx, fid: str) -> G.Mesh:
         if k in (3, 4):
             lo[2] -= OV
         ms.append(box3(lo, hi))
+    st = C.st["FS-RS"] if fid == "F-RISER-AFT" else None
+    if st is not None and float(st.get("sweep_deg", 0.0)):
+        # the aft fitting's frame flange follows the chevron forward face of FS-RS (x = x_face + |y| tan(sweep))
+        k = math.tan(math.radians(float(st["sweep_deg"])))
+        lo, hi = B[0][0], B[0][1]
+        ya = float(hi[1])
+        xf = float(hi[0])
+        poly = Polygon([(lo[0], -ya), (xf + k * ya, -ya), (xf, 0.0), (xf + k * ya, ya), (lo[0], ya)])
+        ms[0] = extrude_cs(poly, float(hi[2] - lo[2]), (0.0, 0.0, float(lo[2])), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0))
     m = union(ms)
     px, py, pz = f["point"]
     return diff(m, [bore((px, -0.03, pz + RISER_PIN_DZ), (px, 0.03, pz + RISER_PIN_DZ), 0.004 + 0.00002)])
@@ -1632,50 +1721,6 @@ CUP_ID, CUP_T, CUP_BOTTOM_T = 0.041, 0.0012, 0.0025
 # =====================================================================================================================
 # small parts: frame U-ring legs and lower segment, clips, backing plates, spacers, trays, liners, brackets, anchors
 # =====================================================================================================================
-def build_uring(C: Ctx):
-    """FS3738 engine-bay lower U-ring: 2024-T3 legs (2.0 mm web, 20 mm formed flange at the skin line, below
-    ring_z_max) for |y| >= 0.15 and the machined 7075 lower I-segment (60 mm deep, flanges 20 x 1.6, web 2.0) between
-    y +-0.15 with the aft-keel passage. Both keep >= 10 mm to the engine dynamic envelope."""
-    st = C.st["FS3738"]
-    x0, x1 = st["x_faces"]
-    xm = 0.5 * (x0 + x1)
-    inset = float(st["inset"])
-    depth = float(st["ring_depth"])
-    zmax = float(st["ring_z_max"])
-    seg = st["lower_segment"]
-    ys = float(seg["y"][1])
-    sz = C.S["structures"]["sizing"]["body"]["fs3738_lower_segment"]
-    outer = C.sec(xm, inset)
-    band = outer.difference(C.sec(xm, inset + depth)).intersection(rect(-1, 1, -1, zmax))
-    eng = engine_keepout(C, 0.010 + 0.001)
-    legs = []
-    for s in (1, -1):
-        b = band.intersection(rect(s * (ys - SEG_OVERLAP), s * 1.0, -1, 1))
-        web = prism_x(clean_poly(b), x0, x1)
-        fl_band = outer.difference(C.sec(xm, inset + float(st["flange_w"]) * 0 + 0.0016)).intersection(
-            rect(s * (ys + 0.0005), s * 1.0, -1, zmax))
-        fl = prism_x(clean_poly(fl_band), x0 - 0.020, x0 + OV)
-        legs.append(diff(union([web, fl]), [eng]))
-    # lower segment
-    d = float(sz["depth_m"])
-    tw, tf, fw = float(sz["web_t_m"]), float(sz["flange_t_m"]), float(sz["flange_w_m"])
-    sb = outer.difference(C.sec(xm, inset + d)).intersection(rect(-ys, ys, -1, 0.10))
-    web = prism_x(clean_poly(sb), xm - tw / 2, xm + tw / 2)
-    ofl = outer.difference(C.sec(xm, inset + tf)).intersection(rect(-ys, ys, -1, 0.10))
-    ifl = C.sec(xm, inset + d - tf).difference(C.sec(xm, inset + d)).intersection(rect(-ys, ys, -1, 0.0))
-    k = C.mem["M-AFTKEEL"]
-    yl = float(k["lands"][0]["y"][1]) + 0.0005
-    keel_cut = rect(-0.5 * float(k["section"]["w"]) - 0.0003, 0.5 * float(k["section"]["w"]) + 0.0003, -1,
-                    float(k["box"][1][2]) + 0.0003).union(rect(-yl, yl, -1, float(k["box"][0][2]) + 0.0019))
-    parts = [web, prism_x(clean_poly(ofl.difference(keel_cut)), xm - fw / 2, xm + fw / 2),
-             prism_x(clean_poly(ifl), xm - fw / 2, xm + fw / 2)]
-    segm = diff(union(parts), [prism_x(keel_cut, xm - 0.02, xm + 0.02)])
-    return legs[0], diff(segm, [eng])
-
-
-SEG_OVERLAP = 0.025         # 2024 legs lap the 7075 lower segment ends (3 x M5 splice each end)
-
-
 def engine_keepout(C: Ctx, margin: float) -> G.Mesh:
     """KO-ENGINE boxes (engine axes from the propeller hub along the inclined thrust line) grown by ``margin``."""
     ko = next(k for k in C.L["keep_outs"] if k["id"] == "KO-ENGINE")
@@ -1725,29 +1770,510 @@ CLIP_T, CLIP_L, CLIP_LEG_A, CLIP_LEG_B = 0.002, 0.028, 0.030, 0.020
 CLIP_SIDE = {"FS1110": 1, "FS1330": 1, "FS1490": 1, "FS1810": 1, "FS-FUEL": -1, "FS-GEAR": 1, "FS3480": 1}
 
 
-def build_liner(C: Ctx, fs: dict, cut_meshes, t: float) -> G.Mesh:
-    """Fuel-bay liner tub (CFRP, open top) round the cell envelope of layout.chassis.fuel_supports: floor and side
-    walls inset ``inset_from_oml_m`` from the OML, end walls on the swept boundary planes, from z0 to z1; trimmed
-    clear of the surrounding structure."""
-    z0, z1 = float(fs["z"][0]), float(fs["z"][1])
-    ins = float(fs["inset_from_oml_m"])
-    bf, ba = fs["boundary_fwd"], fs["boundary_aft"]
-    xa, xb = float(bf["x_at_centre_line"]), float(ba["x_at_centre_line"])
-    ka, kb = math.tan(math.radians(float(bf["sweep_deg"]))), math.tan(math.radians(float(ba["sweep_deg"])))
-    yl = float(fs["y_limits_m"][1])
+def bent_l(La: float, Lb: float, t: float, r: float, n: int = 10) -> Polygon:
+    """Cross-section of a bent sheet angle in local (u, v): leg A along +u (outer face v = 0), leg B along +v (outer
+    face u = 0), inside bend radius r (processes.sheet_metal_*.min_bend_radius_t)."""
+    ro = r + t
+    pts = [(La, 0.0), (ro, 0.0)]
+    for a in np.linspace(-0.5 * math.pi, -math.pi, n)[1:-1]:
+        pts.append((ro + ro * math.cos(a), ro + ro * math.sin(a)))
+    pts += [(0.0, ro), (0.0, Lb), (t, Lb), (t, ro)]
+    for a in np.linspace(-math.pi, -0.5 * math.pi, n)[1:-1]:
+        pts.append((ro + r * math.cos(a), ro + r * math.sin(a)))
+    pts += [(ro, t), (La, t)]
+    return Polygon(pts).buffer(0)
 
-    def wedge(xA, xB, zlo, zhi, ylim):
+
+def build_uring(C: Ctx):
+    """FS3738 engine-bay lower U-ring: 2024-T3 legs (2.0 mm web on the station faces, 20 mm flange formed forward at
+    the skin line over the 12 mm bend radius of processes.sheet_metal_aluminium (6 t), below ring_z_max) for
+    |y| >= 0.15 - SEG_OVERLAP, and the machined 7075 lower I-segment (60 mm deep, flanges 20 x 1.6, web 2.0, web on
+    the forward face of the legs) between y +-0.15 with the aft-keel passage; the legs lap the segment web (3 x M5
+    each end). Both keep >= 10 mm to the engine dynamic envelope. Returns (starboard leg, segment)."""
+    st = C.st["FS3738"]
+    x0, x1 = float(st["x_faces"][0]), float(st["x_faces"][1])
+    t = x1 - x0
+    inset = float(st["inset"])
+    depth = float(st["ring_depth"])
+    zmax = float(st["ring_z_max"])
+    ys = float(st["lower_segment"]["y"][1])
+    sz = C.S["structures"]["sizing"]["body"]["fs3738_lower_segment"]
+    r = URING_BEND_R
+    eng = engine_keepout(C, 0.010 + 0.001)
+    lim = rect(ys - SEG_OVERLAP, 1.0, -1.0, zmax)
+    # bend + flange (x0 - flange .. x0): inset between the outer bend surface and the inner bend surface
+    xc = x0 - r                                                   # bend axis (x) of the inside radius
+    rings_o, rings_i = [], []
+    xs = list(np.linspace(x0 - 0.020, xc, 3)) + list(xc + r * np.sin(np.linspace(0.0, 0.5 * math.pi, 9))[1:])
+    for x in xs:
+        dx = max(x - xc, 0.0)
+        n_o = inset + t + r - math.sqrt(max((r + t) ** 2 - dx ** 2, 0.0)) if dx > 0 else inset
+        n_i = inset + t + r - math.sqrt(max(r ** 2 - dx ** 2, 0.0)) if dx > 0 else inset + t
+        rings_o.append((x, C.sec(x, n_o)))
+        rings_i.append((x, C.sec(x, n_i)))
+    rings_o[-1] = (x0 + OV, rings_o[-1][1])
+    E_o = _loft_sections([(x, p) for x, p in rings_o])
+    E_i = _loft_sections([(x, p) for x, p in rings_i[:-1]] + [(x0 + OV + 0.001, rings_i[-1][1])])
+    bend = diff(E_o, [E_i])
+    # web (x0 .. x1): from the outer bend surface to the ring depth
+    rw = []
+    for x in np.linspace(x0, x1, 4):
+        dx = x - xc
+        rw.append((x, C.sec(x, inset + t + r - math.sqrt(max((r + t) ** 2 - dx ** 2, 0.0)))))
+    web = diff(_loft_sections(rw), [prism_x(C.sec(0.5 * (x0 + x1), inset + depth), x0 - 0.01, x1 + 0.01)])
+    keep_fl = prism_x(rect(ys + 0.0005, 1.0, -1.0, zmax), x0 - 0.03, x0 + OV)
+    keep_web = prism_x(lim, x0 - 0.001, x1 + 0.001)
+    leg = union([inter(bend, keep_fl), inter(web, keep_web)])
+    leg = diff(leg, [eng])
+    # lower segment (machined), web on the forward face of the legs
+    xm = x0 - 0.5 * float(sz["web_t_m"])
+    outer = C.sec(xm, inset)
+    d = float(sz["depth_m"])
+    tw, tf, fw = float(sz["web_t_m"]), float(sz["flange_t_m"]), float(sz["flange_w_m"])
+    sb = outer.difference(C.sec(xm, inset + d)).intersection(rect(-ys, ys, -1, 0.10))
+    webs = prism_x(clean_poly(sb), xm - tw / 2, xm + tw / 2)
+    ofl = outer.difference(C.sec(xm, inset + tf)).intersection(rect(-ys, ys, -1, 0.10))
+    ifl = C.sec(xm, inset + d - tf).difference(C.sec(xm, inset + d)).intersection(rect(-ys, ys, -1, 0.0))
+    k = C.mem["M-AFTKEEL"]
+    yl = float(k["lands"][0]["y"][1]) + 0.0005
+    keel_cut = rect(-0.5 * float(k["section"]["w"]) - 0.0003, 0.5 * float(k["section"]["w"]) + 0.0003, -1,
+                    float(k["box"][1][2]) + 0.0003).union(rect(-yl, yl, -1, float(k["box"][0][2]) + 0.0019))
+    parts = [webs, prism_x(clean_poly(ofl.difference(keel_cut)), xm - fw / 2, xm + fw / 2),
+             prism_x(clean_poly(ifl), xm - fw / 2, xm + fw / 2)]
+    segm = diff(union(parts), [prism_x(keel_cut, xm - 0.02, xm + 0.02)])
+    # the legs clear the segment's outer flange in the lap (notch 0.5 mm)
+    leg = diff(leg, [prism_x(C.sec(x0, 0.0).difference(C.sec(x0, inset + tf + 0.0005)).intersection(
+        rect(0.0, ys + 0.0005, -1, 1)), x0 - 0.03, x1 + 0.01)])
+    return pieces_above(leg, 1e-8), diff(segm, [eng])
+
+
+URING_BEND_R = 0.012        # 2024-T3 bend radius >= 6 t (processes.sheet_metal_aluminium.min_bend_radius_t)
+SEG_OVERLAP = 0.050         # 2024 legs lap the 7075 lower segment web from y +-0.10 (3 x M5 at 15 mm pitch)
+
+
+def uring_splice_points(C: Ctx):
+    """Starboard leg-to-segment splice bolts (3 x M5, axis x): on the leg band centre in its flat web part."""
+    st = C.st["FS3738"]
+    x1 = float(st["x_faces"][1])
+    ys = float(st["lower_segment"]["y"][1])
+    inset = float(st["inset"])
+    n = 0.026                                                    # flat web: 15.3 .. 36.5 mm from the OML
+    pts = []
+    for y in (ys - 0.040, ys - 0.025, ys - 0.010):
+        g = LineString([(y, -1.0), (y, 1.0)]).intersection(C.sec(x1, n).exterior)
+        zs = [p.y for p in (g.geoms if hasattr(g, "geoms") else [g])]
+        pts.append((x1, y, min(zs)))
+    return pts
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# firewall-side fittings added by the detail design
+# ---------------------------------------------------------------------------------------------------------------------
+CHE_T = 0.005               # chine end fitting base flange on the firewall forward face
+CHE_TONGUE_T = 0.005        # tongue on the inboard face of the J web
+CHE_TONGUE_X0 = 3.585       # forward end of the tongue (2 x M5 Ti through the J web at x 3.600 / 3.625)
+CHINE_END_GAP = 0.0005      # aft chine piece ends 0.5 mm ahead of the end fitting base
+
+
+def chine_aft_end_x(C: Ctx) -> float:
+    return float(C.st["FS3670"]["x_faces"][0]) - CHE_T - CHINE_END_GAP
+
+
+def _chine_line(C: Ctx, x: float):
+    """(yc, zc) of the aft chine piece centre line at x."""
+    P = np.asarray(C.mem["M-CHINE"]["paths"][1], float)
+    return float(np.interp(x, P[:, 0], P[:, 1])), float(np.interp(x, P[:, 0], P[:, 2]))
+
+
+def chine_web_normal(C: Ctx):
+    """Unit normal (outboard) of the aft chine J web near the firewall (the path's last segment, in plan)."""
+    P = np.asarray(C.mem["M-CHINE"]["paths"][1], float)
+    d = P[-1, :2] - P[-2, :2]
+    d = d / np.linalg.norm(d)
+    return np.array([-d[1], d[0], 0.0]) * (1.0 if d[0] > 0 else -1.0)
+
+
+def build_chine_end(C: Ctx) -> G.Mesh:
+    """Chine-longeron end fitting (7075, starboard): 5 mm base flange on the firewall forward face carrying the outboard
+    column of the stabilator-node bolts (B4-B7 through the firewall stack), and a 5 mm tongue on the inboard face of the
+    J web (2 x M5 Ti through the web): the chine longeron's axial load enters the node on the firewall plane."""
+    m = C.mem["M-CHINE"]
+    w, h = float(m["section"]["w"]), float(m["section"]["h"])
+    xf = float(C.st["FS3670"]["x_faces"][0])
+    f = C.fit["F-SPINDLE-NODE"]
+    pts = [b["point"] for b in f["bolts"] if b["group"] == "firewall" and b["id"] in ("B4", "B5", "B6", "B7")]
+    ys, zs = [p[1] for p in pts], [p[2] for p in pts]
+    base = box3((xf - CHE_T, min(ys) - 0.010, min(zs) - 0.010), (xf, max(ys) + 0.010, max(zs) + 0.010))
+    base = inter(base, C.body_env(MEM_IN, xf - 0.02, xf + 0.01))
+    rings = []
+    for x in (CHE_TONGUE_X0, xf - CHE_T + OV):
+        yc, zc = _chine_line(C, x)
+        yw = yc - 0.5 * w
+        rings.append(np.array([[x, yw - CHE_TONGUE_T, zc - 0.5 * h + 0.002], [x, yw, zc - 0.5 * h + 0.002],
+                               [x, yw, zc + 0.5 * h - 0.002], [x, yw - CHE_TONGUE_T, zc + 0.5 * h - 0.002]]))
+    tongue = G.loft(rings)
+    return union([base, tongue])
+
+
+def chine_end_bolt_points(C: Ctx):
+    """2 x M5 Ti through the tongue and the J web (on the web's inboard face, at the chine centre height)."""
+    w = float(C.mem["M-CHINE"]["section"]["w"])
+    out = []
+    for x in (3.600, 3.625):
+        yc, zc = _chine_line(C, x)
+        out.append((x, yc - 0.5 * w - CHE_TONGUE_T, zc))
+    return out
+
+
+def _dorsal_crown_z(C: Ctx, x: float) -> float:
+    """Underside of the dorsal hat crown at x."""
+    return _dorsal_z(C, x) - 0.5 * DORSAL_H
+
+
+def build_fw_upper_plate(C: Ctx) -> G.Mesh:
+    """Firewall upper backing plate (7075, 5 mm on the sandwich forward face, starboard): forward plate of the corner
+    fitting (engine-mount upper foot M8 x 2, splice M5 x 2), the inboard column of the stabilator-node bolts (B1-B3),
+    and the dorsal-longeron splice tongue under the hat crown (2 x M5 Ti vertical)."""
+    f = C.fit["F-FW-CORNER"]
+    lo, hi = np.asarray(f["boxes"][0][0], float), np.asarray(f["boxes"][0][1], float)
+    xf = float(C.st["FS3670"]["x_faces"][0])
+    nb = {b["id"]: b["point"] for b in C.fit["F-SPINDLE-NODE"]["bolts"]}
+    yb1, zb1, zb2 = nb["B1"][1], nb["B1"][2], nb["B2"][2]
+    yb3, zb3 = nb["B3"][1], nb["B3"][2]
+    poly = unary_union([rect(lo[1], hi[1], lo[2], hi[2]),
+                        rect(yb1 - 0.010, yb1 + 0.010, zb1 - 0.010, lo[2] + OV),
+                        rect(yb1 - 0.010, yb3 + 0.010, zb1 - 0.010, zb3 + 0.010)])
+    zt0 = _dorsal_crown_z(C, DORSAL_SPLICE_X0) - 1e-4
+    poly = poly.difference(rect(0.15 - 0.5 * DORSAL_W - DORSAL_FL - 0.002, 0.15 + 0.5 * DORSAL_W + DORSAL_FL + 0.002,
+                                _dorsal_crown_z(C, xf) - 1e-4 - DORSAL_TONGUE_T, 1.0))
+    plate = prism_x(clean_poly(poly), xf - 0.005, xf)
+    plate = inter(plate, C.body_env(MEM_IN, xf - 0.02, xf + 0.01))
+    rings = []
+    for x in (DORSAL_SPLICE_X0, xf - 0.005 + OV):
+        zt = _dorsal_crown_z(C, x) - 1e-4
+        y0, y1 = 0.15 - 0.5 * DORSAL_W, 0.15 + 0.5 * DORSAL_W
+        rings.append(np.array([[x, y0, zt - DORSAL_TONGUE_T], [x, y1, zt - DORSAL_TONGUE_T], [x, y1, zt],
+                               [x, y0, zt]]))
+    del zt0
+    return union([plate, G.loft(rings)])
+
+
+DORSAL_SPLICE_BOLT_X = (3.625, 3.640)       # 2 x M5 Ti vertical through the hat crown and the tongue
+
+
+def build_emlo_back(C: Ctx) -> G.Mesh:
+    return build_emount_lo(C)[1]
+
+
+FW_SPACER_WALL = 0.001      # stainless spacer tube wall beyond the bolt-probe radius
+
+
+def build_spacers(C: Ctx, pts) -> G.Mesh:
+    """AISI 304 spacer tubes in the firewall air gap (sandwich aft face -> shield forward face), one per through-bolt
+    of the firewall stack: ``pts`` [(y, z, size_mm), ...]."""
+    from .fastener_catalog import clearance
+    xf, xs, xs0, xa = fw_planes(C)
+    ms = []
+    for y, z, size in pts:
+        ri = 0.5 * clearance(size) + 0.0001
+        ro = 1.6 * 0.5 * clearance(size) + FW_SPACER_WALL
+        ms.append(G.tube(ro, ri, (xs, y, z), (xs0, y, z), n=32))
+    return union(ms)
+
+
+def build_standoffs(C: Ctx, keep_out_yz) -> tuple[G.Mesh, list]:
+    """12 AISI 304 stand-offs (d 10 / 3.2 mm, riveted) carrying the shield 7.6 mm aft of the sandwich, spread round the
+    firewall section 30 mm inside the edge band, clear of the fittings / cut-outs (``keep_out_yz`` polygons).
+    Returns (mesh, [(y, z), ...])."""
+    xf, xs, xs0, xa = fw_planes(C)
+    st = C.st["FS3670"]
+    ring = C.sec(xa, float(st["inset"]) + 0.030).exterior
+    bad = unary_union(keep_out_yz).buffer(0.010)
+    L = ring.length
+    cand = [ring.interpolate(s) for s in np.linspace(0.0, L, 241)[:-1]]
+    cand = [(p.x, p.y) for p in cand if p.x > 0.02 and not bad.contains(Point(p.x, p.y))]
+    cand.sort(key=lambda q: math.atan2(q[1], q[0]))
+    k = 6
+    picks = [cand[int(round(i * (len(cand) - 1) / (k - 1)))] for i in range(k)]
+    pts = picks + [(-y, z) for y, z in picks]
+    ms = [G.tube(0.005, 0.0016, (xs, y, z), (xs0, y, z), n=24) for y, z in pts]
+    return union(ms), pts
+
+
+def build_keel_clip(C: Ctx) -> G.Mesh:
+    """Aft keel / U-ring lower segment angle clip (7075, 2 mm, starboard): leg on the segment web forward face, leg on
+    the keel wall outboard face (1 x M5 each), in the free channel bay between F-VENTRAL-1 and -2."""
+    st = C.st["FS3738"]
+    xw = float(st["x_faces"][0]) - float(C.S["structures"]["sizing"]["body"]["fs3738_lower_segment"]["web_t_m"])
+    k = C.mem["M-AFTKEEL"]
+    yo = 0.5 * float(k["section"]["w"])
+    legA = box3((xw - KCLIP_T, yo + 0.0003, KCLIP_Z[0]), (xw, yo + 0.023, KCLIP_Z[1]))
+    legB = box3((xw - KCLIP_L, yo, KCLIP_Z[0]), (xw - OV * 0 - 0.0, yo + KCLIP_T, KCLIP_Z[1]))
+    return union([legA, legB])
+
+
+KCLIP_T, KCLIP_L, KCLIP_Z = 0.002, 0.027, (-0.085, -0.060)
+
+
+def keel_clip_points(C: Ctx):
+    st = C.st["FS3738"]
+    xw = float(st["x_faces"][0]) - float(C.S["structures"]["sizing"]["body"]["fs3738_lower_segment"]["web_t_m"])
+    yo = 0.5 * float(C.mem["M-AFTKEEL"]["section"]["w"])
+    zc = 0.5 * sum(KCLIP_Z)
+    return (xw - KCLIP_T, yo + 0.0128, zc), (xw - KCLIP_L + 0.010, yo + KCLIP_T, zc)
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# equipment trays (layout.chassis.trays), parachute brackets, riser washer plates, turret rail anchors, fuel liners
+# ---------------------------------------------------------------------------------------------------------------------
+TRAY_T = 0.003              # CFRP trays 3 mm (layout.chassis.trays)
+TRAY_FL = 0.030             # bolting flanges of the CFRP trays
+SIDEBAY_PORT_RELIEF = 0.075  # port tray flange on FS1110 stops at |y| 0.072 (nose-door actuator EQ-NDOORACT on FS1110)
+
+
+def build_sidebay_tray(C: Ctx, side: int) -> G.Mesh:
+    """Avionics side-bay tray (CFRP 3 mm, moulded with two bolting flanges): floor of the bay at its lower bound, flange
+    on the keel-wall outboard face and flange on the FS1110 forward face (M4 into potted inserts). ``side`` +1 builds
+    TR-SIDEBAY-R in +y, -1 TR-SIDEBAY-L in -y (with the relief round the nose-door actuator EQ-NDOORACT)."""
+    bb = C.L["rules"]["boxes"]["avionics_side_bays"]
+    z0 = float(bb["z"][0])
+    kw = C.mem["M-KEELWALL"]["box"]
+    yk = float(kw[1][1])                                         # keel wall outboard face
+    xf = float(C.st["FS1110"]["x"]) - 0.5 * float(C.st["FS1110"]["t"])
+    x0 = float(bb["x"][0])
+    plate = box3((x0, yk, z0 - TRAY_T), (xf, 0.30, z0))
+    fl_k = box3((x0, yk, z0 - OV), (xf, yk + TRAY_T, z0 + TRAY_FL))
+    y_fl1 = SIDEBAY_PORT_RELIEF - 0.003 if side < 0 else 0.30
+    fl_f = box3((xf - TRAY_T, yk + TRAY_T - OV, z0 - OV), (xf, y_fl1, z0 + TRAY_FL))
+    m = union([plate, fl_k, fl_f])
+    if side < 0:                                                 # EQ-NDOORACT relief (mirror of the port box)
+        eq = next(e for e in C.L["systems"]["equipment"] if e["id"] == "EQ-NDOORACT")["box"]
+        lo, hi = eq
+        m = diff(m, [box3((lo[0] - 0.003, -hi[1] - 0.003, lo[2] - 0.003), (xf + 0.01, -lo[1] + 0.003, hi[2] + 0.003))])
+    m = inter(m, C.body_env(MEM_IN, x0 - 0.01, xf + 0.01))
+    m = pieces_above(m, 1e-7)
+    return m if side > 0 else m.mirrored_y()
+
+
+def sidebay_tray_points(C: Ctx, side: int):
+    """(keel-wall flange bolts axis -y, frame flange bolts axis +x) for the starboard-modelled tray."""
+    bb = C.L["rules"]["boxes"]["avionics_side_bays"]
+    z0 = float(bb["z"][0])
+    yk = float(C.mem["M-KEELWALL"]["box"][1][1])
+    xf = float(C.st["FS1110"]["x"]) - 0.5 * float(C.st["FS1110"]["t"])
+    x0 = float(bb["x"][0])
+    zb = z0 + 0.5 * TRAY_FL
+    kb = [(x0 + 0.020, yk + TRAY_T, zb), (xf - 0.030, yk + TRAY_T, zb)]
+    yfb = [yk + TRAY_T + 0.012] if side < 0 else [yk + TRAY_T + 0.020, yk + TRAY_T + 0.070]
+    fb = [(xf - TRAY_T, y, zb) for y in yfb]
+    return kb, fb
+
+
+def build_fwdbay_tray(C: Ctx) -> G.Mesh:
+    """Forward-bay tray TR-FWDBAY (CFRP 3 mm): buffer-battery floor between FS0300 and FS0600 (the FTS unit hangs
+    under it), with a downward bolting flange on each frame (M4 into potted inserts); clipped to the OML inset."""
+    bb = C.L["rules"]["boxes"]["forward_bay"]
+    z0 = float(bb["z"][0])
+    xa = float(C.st["FS0300"]["x"]) + 0.5 * float(C.st["FS0300"]["t"])
+    xb = float(C.st["FS0600"]["x"]) - 0.5 * float(C.st["FS0600"]["t"])
+    plate = box3((xa, -0.2, z0 - TRAY_T), (xb, 0.2, z0))
+    fl_a = box3((xa, -0.2, z0 - TRAY_FL), (xa + TRAY_T, 0.2, z0 - TRAY_T + OV))
+    fts = C.L["rules"]["boxes"]["forward_bay_lower"]
+    hw = float(fts["half_width"]) + float(fts["clearance"])
+    fl_b = [box3((xb - TRAY_T, s * hw if s > 0 else -0.2, z0 - TRAY_FL),
+                 (xb, 0.2 if s > 0 else -hw, z0 - TRAY_T + OV)) for s in (1, -1)]
+    m = union([plate, fl_a] + fl_b)
+    return pieces_above(inter(m, C.body_env(MEM_IN, xa - 0.01, xb + 0.01)), 1e-7)
+
+
+def fwdbay_tray_points(C: Ctx):
+    bb = C.L["rules"]["boxes"]["forward_bay"]
+    z0 = float(bb["z"][0])
+    xa = float(C.st["FS0300"]["x"]) + 0.5 * float(C.st["FS0300"]["t"])
+    xb = float(C.st["FS0600"]["x"]) - 0.5 * float(C.st["FS0600"]["t"])
+    zb = z0 - 0.5 * (TRAY_FL + TRAY_T)
+    return [(xa + TRAY_T, 0.0, zb)], [(xb - TRAY_T, s * 0.058, zb) for s in (1, -1)]
+
+
+def build_mission_tray(C: Ctx) -> G.Mesh:
+    """Removable mission-bay tray TR-MISSION (CFRP 3 mm): plug in the floor cut-out, top flush with the floor top,
+    resting on the inner flanges of the two edge hats (8 x M4 captive screws from below into nutplates on the tray)."""
+    m = C.mem["M-MIDFLOOR"]
+    lo, hi = m["box"]
+    co = m["cutout"]
+    ye = float(co["y"][1]) - MID_HAT_T - 0.0003 - 0.0005
+    return box3((float(co["x"][0]) + 0.0005, -ye, float(hi[2]) - MID_TRAY_T), (float(co["x"][1]) - 0.0005, ye,
+                                                                            float(hi[2])))
+
+
+def mission_tray_points(C: Ctx):
+    m = C.mem["M-MIDFLOOR"]
+    co = m["cutout"]
+    z = float(m["box"][0][2]) + MID_TRAY_DROP - MID_HAT_T
+    xs = np.linspace(float(co["x"][0]) + 0.030, float(co["x"][1]) - 0.030, 4)
+    yy = float(co["y"][1]) - MID_HAT_T - 0.0003 - 0.0125
+    return [(float(x), s * yy, z) for s in (1, -1) for x in xs]
+
+
+AFTBAY_T, AFTBAY_R = 0.002, 0.006       # TR-AFTBAY 6061-T6 2 mm, bend radius 3 t (processes.sheet_metal_aluminium)
+
+
+def build_aftbay_tray(C: Ctx) -> G.Mesh:
+    """Aft equipment-bay tray TR-AFTBAY (6061-T6 2 mm): floor of the bay at its lower bound from FS-GEAR to FS3480,
+    flanges bent down (r 6 mm) onto both frames (M4 into potted inserts)."""
+    bb = C.L["rules"]["boxes"]["equipment_bay_aft"]
+    z0 = float(bb["z"][0])
+    hw = float(bb["half_width"])
+    xa = float(C.st["FS-GEAR"]["x"]) + 0.5 * float(C.st["FS-GEAR"]["t"])
+    xb = float(C.st["FS3480"]["x"]) - 0.5 * float(C.st["FS3480"]["t"])
+    La = 0.5 * (xb - xa) + 0.001
+    sec_a = bent_l(La, AFTBAY_FL_A, AFTBAY_T, AFTBAY_R)        # (u = +x from xa, v = -z from z0)
+    sec_b = bent_l(La, AFTBAY_FL_B, AFTBAY_T, AFTBAY_R)        # (u = -x from xb, v = -z from z0)
+    ma = extrude_cs(sec_a, 2 * hw, (xa, -hw, z0), (1.0, 0.0, 0.0), (0.0, 0.0, -1.0))      # u x v = +y
+    mb = extrude_cs(sec_b, 2 * hw, (xb, hw, z0), (-1.0, 0.0, 0.0), (0.0, 0.0, -1.0))      # u x v = -y
+    return union([ma, mb])
+
+
+AFTBAY_FL_A, AFTBAY_FL_B = 0.032, 0.040
+
+
+def aftbay_tray_points(C: Ctx):
+    bb = C.L["rules"]["boxes"]["equipment_bay_aft"]
+    z0 = float(bb["z"][0])
+    xa = float(C.st["FS-GEAR"]["x"]) + 0.5 * float(C.st["FS-GEAR"]["t"])
+    xb = float(C.st["FS3480"]["x"]) - 0.5 * float(C.st["FS3480"]["t"])
+    za = z0 - AFTBAY_FL_A + 0.010
+    zb = z0 - AFTBAY_FL_B + 0.010
+    return [(xa + AFTBAY_T, s * 0.060, za) for s in (1, -1)], [(xb - AFTBAY_T, s * 0.050, zb) for s in (1, -1)]
+
+
+PB_T, PB_FOOT_T, PB_W, PB_FOOT_H, PB_WIN = 0.003, 0.0025, 0.024, 0.020, 0.025
+
+
+def build_para_bracket(C: Ctx, xc: float, zc: float) -> G.Mesh:
+    """Parachute-container strap bracket (7075, starboard wall): two feet on the bay wall (1 x M5 each, through the
+    wall) and a bridge 3 mm standing 2.5 mm off the wall (strap passage), all inside the 6 mm gap between the
+    container envelope and the wall."""
+    yw = float(C.mem["M-PARAWALL"]["box"][0][1])                 # wall inner face
+    yb = yw - PB_FOOT_T
+    hz = 0.5 * PB_WIN + PB_FOOT_H
+    bridge = box3((xc - 0.5 * PB_W, yb - PB_T, zc - hz), (xc + 0.5 * PB_W, yb + OV, zc + hz))
+    feet = [box3((xc - 0.5 * PB_W, yb, z0), (xc + 0.5 * PB_W, yw, z1))
+            for z0, z1 in ((zc - hz, zc - 0.5 * PB_WIN), (zc + 0.5 * PB_WIN, zc + hz))]
+    return union([bridge] + feet)
+
+
+PARA_BRKT_X = (1.560, 1.740)
+PARA_BRKT_Z = -0.080
+
+
+def para_bracket_points(C: Ctx, xc: float, zc: float):
+    yw = float(C.mem["M-PARAWALL"]["box"][0][1])
+    hz = 0.5 * PB_WIN + PB_FOOT_H
+    return [(xc, yw - PB_FOOT_T - PB_T, zc + s * (hz - 0.5 * PB_FOOT_H)) for s in (1, -1)]
+
+
+WASHER_T = 0.003
+
+
+def build_washer_plate(C: Ctx, fid: str) -> G.Mesh:
+    """7075 washer plate 3 mm under the spine-channel floor pad of a bridle fitting (layout F-RISER-*: 48 x 40 x 3 mm),
+    kept forward of the saddle-bay liner wall."""
+    f = C.fit[fid]
+    bp = [b["point"] for b in f["bolts"] if b["group"] == "spine floor"]
+    xs = [p[0] for p in bp]
+    xc = 0.5 * (min(xs) + max(xs))
+    z_top = SPINE_FLOOR_TOP - float(C.mem["M-SPINE"]["section"]["pad_t"])
+    x0, x1 = xc - 0.024, xc + 0.024
+    if fid == "F-RISER-AFT":
+        xr = float(C.st["FS-RS"]["x"]) - 0.5 * float(C.st["FS-RS"]["t"]) - LINER_T - 0.0005
+        x1 = min(x1, xr)
+    return box3((x0, -0.020, z_top - WASHER_T), (x1, 0.020, z_top))
+
+
+def build_rail_anchor(C: Ctx, rail: dict) -> G.Mesh:
+    """Turret-elevator rail anchor (7075 machined corner angle, rail end on the frame): leg on the frame face, leg on
+    the bay-wall inner face with the 5.5 mm rail seat; the MGN9-class rail (payload module) is bonded and screwed
+    (M3 into potted inserts) to the seat. ``rail`` = layout.chassis.turret_elevator.rails[i]."""
+    (x_r, y_r, z_a), (_, _, z_b) = rail["line"]
+    sy = 1.0 if y_r > 0 else -1.0
+    fr = "FS1110" if rail["corner"].startswith("F") else "FS1330"
+    sx = 1.0 if fr == "FS1110" else -1.0                         # +1: anchor aft of FS1110, -1: forward of FS1330
+    xf = float(C.st[fr]["x"]) + sx * 0.5 * float(C.st[fr]["t"])
+    yw = float(C.mem["M-TURRETWALL"]["box"][0][1])               # wall inner face (|y|)
+    z0, z1 = min(z_a, z_b), max(z_a, z_b)
+    seat = abs(y_r) + RAIL_HALF_H                                # rail base plane (|y|)
+    xr_far = x_r + sx * (RAIL_SEAT_X)
+    leg_f = box3((min(xf, xf + sx * RAIL_ANCHOR_T), sy * (yw - RAIL_ANCHOR_LEG) if sy > 0 else -yw,
+                  z0), (max(xf, xf + sx * RAIL_ANCHOR_T), yw if sy > 0 else -(yw - RAIL_ANCHOR_LEG), z1))
+    xa_, xb_ = sorted((xf, xr_far))
+    ya_, yb_ = sorted((sy * seat, sy * yw))
+    leg_w = box3((xa_, ya_, z0), (xb_, yb_, z1))
+    return union([leg_f, leg_w])
+
+
+RAIL_HALF_H = 0.00325       # half the rail height (MGN9 class 6.5 mm, payload module estimate)
+RAIL_SEAT_X = 0.016         # seat leg runs 16 mm beyond the rail centre line
+RAIL_ANCHOR_T = 0.003
+RAIL_ANCHOR_LEG = 0.025
+
+
+def rail_anchor_points(C: Ctx, rail: dict):
+    """(frame-leg bolts axis x, wall-leg bolts axis y) at the anchor's lower / upper ends."""
+    (x_r, y_r, z_a), (_, _, z_b) = rail["line"]
+    sy = 1.0 if y_r > 0 else -1.0
+    fr = "FS1110" if rail["corner"].startswith("F") else "FS1330"
+    sx = 1.0 if fr == "FS1110" else -1.0
+    xf = float(C.st[fr]["x"]) + sx * 0.5 * float(C.st[fr]["t"])
+    yw = float(C.mem["M-TURRETWALL"]["box"][0][1])
+    z0, z1 = min(z_a, z_b), max(z_a, z_b)
+    zs = (z0 + 0.020, z1 - 0.020)
+    fb = [(xf + sx * RAIL_ANCHOR_T, sy * (yw - 0.0125), z) for z in zs]
+    seat = abs(y_r) + RAIL_HALF_H
+    xm = x_r + sx * (RAIL_SEAT_X - 0.010)
+    wb = [(xm, sy * seat, z) for z in (z0 + 0.060, z1 - 0.060)]
+    return fb, wb
+
+
+LINER_T = 0.0006            # fuel-bay liner: 3 plies PW (layout 2 plies 0.4 mm < processes.prepreg_ooa_vacbag 0.6 mm)
+
+
+def build_liner(C: Ctx, fs: dict, z_floor: float, cut_meshes) -> G.Mesh:
+    """Fuel-bay liner tub (CFRP 3 plies PW, open top) of one cell bay: floor on the supporting member (its top face
+    ``z_floor``), end walls on the forward / aft frame faces (bonded), side walls on the cell boundary (OML inset
+    ``inset_from_oml_m``), top at the cell top z1; cut round the structure crossing the bay (``cut_meshes``) and through
+    the frame cut-outs."""
+    z1 = float(fs["z"][1])
+    ins = float(fs["inset_from_oml_m"])
+    t = LINER_T
+    stf, sta = C.st[fs["boundary_fwd"]["station"]], C.st[fs["boundary_aft"]["station"]]
+    xa = float(stf["x"]) + 0.5 * float(stf["t"])
+    xb = float(sta["x"]) - 0.5 * float(sta["t"])
+    ka = math.tan(math.radians(float(stf.get("sweep_deg", 0.0))))
+    kb = math.tan(math.radians(float(sta.get("sweep_deg", 0.0))))
+    yl = 0.6
+
+    def wedge(xA, xB, zlo, zhi):
         half = []
         for s_ in (1, -1):
             V = []
-            for y in (0.0, ylim):
+            for y in (0.0, yl):
                 V += [(xA + y * ka, s_ * y, zlo), (xB + y * kb, s_ * y, zlo), (xB + y * kb, s_ * y, zhi),
                       (xA + y * ka, s_ * y, zhi)]
             half.append(G.hull(np.asarray(V)))
         return G.union(half)
-    outer = inter(wedge(xa - t, xb + t, z0 - t, z1, yl + t), C.body_env(ins - t, xa - 0.03, xb + 0.10))
-    inner = inter(wedge(xa, xb, z0, z1 + 0.05, yl), C.body_env(ins, xa - 0.04, xb + 0.11))
-    tub = diff(outer, [inner] + list(cut_meshes))
+    outer = inter(wedge(xa, xb, z_floor, z1), C.body_env(ins - t, xa - 0.01, xb + 0.11))
+    inner = inter(wedge(xa + t, xb - t, z_floor + t, z1 + 0.05), C.body_env(ins, xa - 0.02, xb + 0.12))
+    cuts = list(cut_meshes)
+    for st_, x_face, k, sgn in ((stf, xa, ka, 1.0), (sta, xb, kb, -1.0)):
+        for c in _cut_polys(st_):
+            x0_, x1_ = (x_face - 0.002, x_face + t + 0.002) if sgn > 0 else (x_face - t - 0.002, x_face + 0.002)
+            pr = prism_x(c, x0_, x1_)
+            if k:
+                cy = 0.5 * (c.bounds[0] + c.bounds[2])
+                pr = shear_x(pr, k if cy > 0 else -k)
+            cuts.append(pr)
+    tub = diff(outer, [inner] + cuts)
     return pieces_above(tub, 1e-7)
 
 
@@ -1759,116 +2285,431 @@ MAT_PW, MAT_UD, MAT_7075, MAT_2024, MAT_6061 = ("cfrp_pw_mtm45_as4", "cfrp_ud_mt
 MAT_4130, MAT_SS = "steel_4130_n", "ss_304_annealed"
 P_PREG, P_CNC, P_SHEET, P_TIG, P_SS = ("prepreg_ooa_vacbag", "cnc_milling_metal", "sheet_metal_aluminium",
                                        "tig_welding_4130", "sheet_metal_steel")
-STRICT = True
-PROBLEMS: list = []
 
-# part numbers allocated by this module beyond the layout ids (sub-ranges of layout.part_numbering.modules.chassis)
-N_POSTS = {}
+# part numbers this module adds to the layout ids (inside layout.part_numbering.modules.chassis.sub_ranges)
 N_CHINE_AFT, N_CHINE_END = 40, 41
 N_CLIPS = {"FS1110": 42, "FS1330": 43, "FS1490": 44, "FS1810": 45, "FS-FUEL": 46, "FS-GEAR": 47, "FS3480": 48}
 N_GLOVE_BOX = 58
-N_SHIELD, N_STANDOFF, N_SPACER = 88, 89, 90
-N_NODE_BACK, N_CORNER_FWD, N_EMLO_BACK, N_VK_SPLICE = 91, 92, 93, 94
-N_WASHER_F, N_WASHER_A = 110, 111
-N_PARA_BRKT_AFT = 123
-N_PAY_RAIL = 124
-N_RAIL_FR, N_RAIL_AL = 125, 126
-N_RING_LAND = 127
+N_SHIELD, N_SPACER, N_UPPER_PLATE, N_EMLO_BACK, N_STANDOFF = 88, 90, 92, 93, 94
+N_KEEL_CLIP = 102
+N_WASHER = {"F-RISER-FWD": 110, "F-RISER-AFT": 111}
+N_PARA_BRKT = (114, 123)
+N_RAIL = {"FR": 125, "AL": 126}
+LINER_N = {"forward_cell": 115, "saddle_cell": 116, "aft_cell": 117}
+TRAY_N = {"TR-SIDEBAY-L": 118, "TR-FWDBAY": 119, "TR-MISSION": 120, "TR-AFTBAY": 121, "TR-SIDEBAY-R": 122}
+
+
+def _port(pid: str) -> str:
+    return pid[:-2] + "-L" if pid.endswith("-R") else pid
 
 
 class _Memo:
+    """Mesh cache shared by parts whose geometry depends on other parts (frames for the box, the chine for the decks)."""
+
     def __init__(self):
         self.d = {}
 
-    def __call__(self, key, fn):
+    def __call__(self, key, fn, clean: bool = True):
         if key not in self.d:
-            self.d[key] = finish(fn())
+            m = fn()
+            self.d[key] = finish(m) if clean and isinstance(m, G.Mesh) else m
         return self.d[key]
 
 
 def register(reg: Registry, spec: dict) -> None:
+    """Register the chassis parts and their fasteners (ARCHITECTURE.md producer contract)."""
+    L = spec["layout"]
+    if L["root_part"] in reg.parts:            # already registered (e.g. checks --modules chassis,chassis)
+        reg.note("chassis: already registered, second call ignored")
+        return
     C = Ctx(reg, spec)
     bx = Box(C)
     M = _Memo()
-    L = C.L
-    PROBLEMS.clear()
+    R = _Reg(C, M, bx)
+    R.frames()
+    R.ct_group()
+    R.members()
+    R.fittings()
+    R.firewall()
+    R.small()
+    R.mirror_all()
+    R.ct_mass()
+    F = _Fast(C)
+    _fasteners(C, R, F, bx)
+    if F.problems:
+        msg = "; ".join(f"{a}: {b}" for a, b in F.problems)
+        if os.environ.get("YK250_CHASSIS_LENIENT"):
+            reg.note("chassis fastener problems: " + msg)
+        else:
+            raise ValueError("chassis fasteners: " + msg)
 
-    def fr(sid):
-        return M(("frame", sid), lambda: build_frame(C, sid))
 
-    def add(num, side, name, name_tr, material, process, fn, **kw):
+class _Reg:
+    """Part registration (starboard parts in +y, mirrored at the end)."""
+
+    def __init__(self, C: Ctx, M: _Memo, bx: Box):
+        self.C, self.M, self.bx = C, M, bx
+        self.root = C.L["root_part"]
+        self.right = []
+
+    # ---------------------------------------------------------------- helpers
+    def fr(self, sid):
+        return self.M(("frame", sid), lambda: build_frame(self.C, sid))
+
+    def add(self, num, side, name, name_tr, material, process, fn, **kw):
         kw.setdefault("explode", (0.0, 0.0, 0.0))
-        return C.add(num, side, name, name_tr, material, process, fn, **kw)
+        p = self.C.add(num, side, name, name_tr, material, process, fn, **kw)
+        if side == "R":
+            self.right.append(p.id)
+        return p
 
-    root = L["root_part"]
-    rid = lambda lid, side="R": C.ref(lid, side)              # noqa: E731
+    def st_part(self, sid):
+        return self.C.st[sid]["part"]
 
-    # ------------------------------------------------------------------ frames (layout.stations)
-    steps = FRAME_STEP
-    for st in L["stations"]:
-        sid = st["id"]
-        if sid == "FS3738":
-            continue
-        num = int(st["part"].split("-")[-1])
-        par = root
-        add(num, "C", f"frame {sid} ({st['type']})", f"{st['role_tr']} ({sid})", st["material"], st["process"],
-            (lambda sid=sid: fr(sid)), layup=st.get("layup"), parent=par, step=steps[sid],
-            explode=(0.0, 0.0, 0.30 if st["x"] < 2.3 else 0.0) if sid not in ("FS-MS", "FS-RS") else (0, 0, 0.12),
-            contacts=(root,), notes=st.get("construction", ""))
-    # FS3738 metallic U-ring: 2024 legs (R/L) + 7075 lower segment
-    st = C.st["FS3738"]
-    legs_seg = lambda: build_uring(C)                          # noqa: E731
-    add(14, "R", "engine-bay lower U-ring leg, starboard (FS3738)", "motor bölmesi alt U halkası bacağı, sağ (FS3738)",
-        MAT_2024, P_SHEET, lambda: M(("uring",), legs_seg)[0] if False else finish(build_uring(C)[0]),
-        thickness=float(st["t"]), parent=st["lower_segment"]["part"], step=13, explode=(0.0, 0.15, -0.05))
-    add(15, "C", "engine-bay lower U-ring segment (FS3738, machined I)",
-        "motor bölmesi alt U halkası alt parçası (FS3738, talaşlı I kesit)", MAT_7075, P_CNC,
-        lambda: finish(build_uring(C)[1]), thickness=0.002, parent=rid("M-AFTKEEL"), step=13, explode=(0.0, 0.0, -0.12))
-    C.mirror(C.pid(14, "R"))
-    # ------------------------------------------------------------------ centre wing box group
-    def ctbox():
-        return build_ctbox(C, bx, {"FS-MS": fr("FS-MS"), "FS-RS": fr("FS-RS")})
-    m_ct = C.mem["M-CTBOX"]
-    reg.add(Part(id=root, name="centre wing box (carry-through)", name_tr=m_ct["name_tr"], group=GROUP,
-                 material=MAT_UD, process=P_PREG, mesh_fn=lambda: M(("ct",), ctbox), thickness=C.layup_t(
-                     "ct_box_cover"), step=2, explode=(0.0, 0.0, 0.0),
-                 notes="multi-material box (UD spar caps, ct_box_cover sandwich covers, +-45 PW glove rear-spar webs "
-                       "and frame-land doublers): mass_kg = sum of the sub-volumes x their densities"))
-    add(55, "C", "CT-box centre-line rib", C.mem["M-CLRIB"]["name_tr"], MAT_PW, P_PREG,
-        lambda: M(("clrib",), lambda: build_clrib(C, bx)), layup="rib_panel", parent=root, step=2,
-        explode=(0.0, 0.0, 0.18), contacts=(root, C.st["FS-MS"]["part"], C.st["FS-RS"]["part"]))
-    for fid, num in (("F-KINK-UP", 56), ("F-KINK-LO", 57)):
-        add(num, "C", C.fit[fid]["name"], C.fit[fid]["name_tr"], MAT_7075, P_CNC,
-            (lambda fid=fid: M(("kink", fid), lambda: build_kink(C, fid))), thickness=0.002, parent=C.pid(55),
-            step=2, explode=(0.0, 0.0, 0.25 if num == 56 else -0.25), contacts=(root, C.pid(55), C.st["FS-MS"]["part"]))
-    ribs = lambda: build_glove_ribs(C, bx)                       # noqa: E731
-    add(53, "R", "outer-panel joint fork, starboard (prongs + bonded 4130 bushes)",
-        "dış panel birleşim çatalı, sağ (kulaklar + yapıştırılmış 4130 burçlar)", MAT_PW, P_PREG,
-        lambda: M(("fork",), lambda: build_fork(C, bx)), thickness=PRONG_T, parent=root, step=5,
-        explode=(0.0, 0.25, 0.0), contacts=(root,),
-        notes="two +-45 PW prongs 1.6 mm padded to 10 mm round the pin bores; 4130 bushes 16 H8 x OD 22 x 10 bonded "
-              "and line-reamed (bores cut here); pins P-MAIN1/2 are the wing module's")
-    add(50, "R", "side-of-body rib, starboard", "gövde yanı kaburgası, sağ", MAT_PW, P_PREG,
-        lambda: M(("ribs",), ribs)["SOB"], layup="rib_panel", parent=root, step=4, explode=(0.0, 0.3, 0.0),
-        contacts=(root, C.pid(53, "R")))
-    add(51, "R", "glove rib, nose piece, starboard", "eldiven kaburgası, burun parçası, sağ", MAT_PW, P_PREG,
-        lambda: M(("ribs",), ribs)["GLOVE_NOSE"], layup="rib_panel", parent=root, step=4, explode=(0.0, 0.35, 0.0),
-        contacts=(root, C.pid(53, "R")))
-    add(N_GLOVE_BOX, "R", "glove rib, box piece, starboard", "eldiven kaburgası, kutu parçası, sağ", MAT_PW, P_PREG,
-        lambda: M(("ribs",), ribs)["GLOVE_BOX"], layup="rib_panel", parent=root, step=4, explode=(0.0, 0.35, 0.0),
-        contacts=(root, C.pid(53, "R")))
-    add(52, "R", "joint rib (centre-section side), starboard", "birleşim kaburgası (orta kesit), sağ", MAT_PW, P_PREG,
-        lambda: M(("ribs",), ribs)["JOINT"], layup="rib_panel", parent=root, step=4, explode=(0.0, 0.4, 0.0),
-        contacts=(root, C.pid(53, "R")))
-    add(54, "R", "rear-spar slot fitting, starboard", "arka kiriş yuva bağlantısı, sağ", MAT_7075, P_CNC,
-        lambda: M(("slot",), lambda: build_slot_fitting(C, bx)), thickness=0.004, parent=root, step=5,
-        explode=(0.0, 0.3, 0.05), contacts=(root, C.pid(52, "R")))
-    for n in (53, 50, 51, N_GLOVE_BOX, 52, 54):
-        C.mirror(C.pid(n, "R"))
-    _register_members(C, M, fr)
-    _register_fittings(C, M, fr, bx)
-    _register_small(C, M, fr)
-    _set_ctbox_mass(C, M, bx)
-    _fasteners(C, bx)
-    if PROBLEMS and STRICT:
-        raise ValueError("chassis fasteners: " + "; ".join(f"{a}: {b}" for a, b in PROBLEMS[:10]))
+    def mirror_all(self):
+        idm = {pid: _port(pid) for pid in self.right}
+        for pid in self.right:
+            self.C.reg.add(mirror_part(self.C.reg.parts[pid], _port(pid), id_map=idm))
+
+    # ---------------------------------------------------------------- frames
+    def frames(self):
+        C, root = self.C, self.root
+        for st in C.L["stations"]:
+            sid = st["id"]
+            if sid == "FS3738":
+                continue
+            num = int(st["part"].split("-")[-1])
+            fwd = float(st["x"]) < 2.4
+            ex = (0.0, 0.0, 0.12) if sid in ("FS-MS", "FS-RS") else (0.0, 0.0, 0.30 if fwd else 0.25)
+            note = st.get("construction", "") or st.get("role", "")
+            if sid == "FS3670":
+                note = ("CFRP sandwich bulkhead (rib_panel) of the firewall stack, forward T-cap only; " + note)
+            self.add(num, "C", f"frame {sid} ({st['type']})", f"{st['role_tr']} ({sid})", st["material"],
+                     st["process"], (lambda sid=sid: self.fr(sid)), layup=st.get("layup"), parent=root,
+                     step=FRAME_STEP[sid], explode=ex, contacts=(root,), notes=note[:400])
+        st = C.st["FS3738"]
+        seg = st["lower_segment"]
+        ur = lambda: self.M(("uring",), lambda: build_uring(C), clean=False)        # noqa: E731
+        self.add(14, "C", "engine-bay lower U-ring legs FS3738 (2024-T3, dash -1 starboard / -2 port)",
+                 "motor bölmesi alt U halkası bacakları FS3738 (2024-T3, -1 sağ / -2 sol)", MAT_2024, P_SHEET,
+                 lambda: finish(union([ur()[0], ur()[0].mirrored_y()])), thickness=float(st["t"]),
+                 parent=seg["part"], step=13, explode=(0.10, 0.0, -0.10),
+                 contacts=(seg["part"], C.ref("F-SPINDLE-NODE", "R"), C.ref("F-SPINDLE-NODE", "L")),
+                 notes="formed flanges r 12 mm (6 t) at the skin line; lap the 7075 lower segment web (3 x M5 each "
+                       "end); upper ends riveted to the node cheek feet; lower cowl Camloc land clips on the web "
+                       "(shell / propulsion module)")
+        self.add(15, "C", "engine-bay lower U-ring segment FS3738 (machined 7075 I-section)",
+                 "motor bölmesi alt U halkası alt parçası FS3738 (talaşlı 7075 I kesit)", seg["material"],
+                 seg["process"], lambda: finish(ur()[1]), thickness=float(
+                     C.S["structures"]["sizing"]["body"]["fs3738_lower_segment"]["web_t_m"]),
+                 parent=C.ref("M-AFTKEEL"), step=13, explode=(0.10, 0.0, -0.18), contacts=(C.ref("M-AFTKEEL"),))
+
+    # ---------------------------------------------------------------- centre wing box group
+    def ct_group(self):
+        C, M, bx, root = self.C, self.M, self.bx, self.root
+        fr2 = lambda: {"FS-MS": self.fr("FS-MS"), "FS-RS": self.fr("FS-RS")}             # noqa: E731
+        m_ct = C.mem["M-CTBOX"]
+        C.reg.add(Part(id=root, name="centre wing box (carry-through)", name_tr=m_ct["name_tr"], group=GROUP,
+                       material=MAT_UD, process=P_PREG, mesh_fn=lambda: M(("ct",), lambda: build_ctbox(C, bx, fr2())),
+                       thickness=C.layup_t("ct_box_cover"), step=2, explode=(0.0, 0.0, 0.0),
+                       notes="one cured assembly: continuous UD spar caps (main 40 -> 52 mm at the fork, rear 25 mm) "
+                             "from joint rib to joint rib, ct_box_cover sandwich covers between the spar frames, "
+                             "+-45 PW glove rear-spar webs with the 16-ply slot-fitting pads, 8-ply frame-land web "
+                             "doublers with nutplates; the spar frames FS-MS / FS-RS are the box webs inside the "
+                             "body; mass from the sub-volumes (ctbox_mass)"))
+        self.add(55, "C", "CT-box centre-line rib", C.mem["M-CLRIB"]["name_tr"], MAT_PW, P_PREG,
+                 lambda: M(("clrib",), lambda: build_clrib(C, bx)), layup="rib_panel", parent=root, step=2,
+                 explode=(0.0, 0.0, 0.18), contacts=(root, self.st_part("FS-MS"), self.st_part("FS-RS")))
+        for fid, num in (("F-KINK-UP", 56), ("F-KINK-LO", 57)):
+            self.add(num, "C", C.fit[fid]["name"], C.fit[fid]["name_tr"], MAT_7075, P_CNC,
+                     (lambda fid=fid: M(("kink", fid), lambda: build_kink(C, fid))), thickness=0.002,
+                     parent=C.pid(55), step=2, explode=(0.0, 0.0, 0.25 if num == 56 else -0.25),
+                     contacts=(root, C.pid(55), self.st_part("FS-MS")),
+                     notes="plate bonded (EA 9394) to the box-side face of the main cap over the chevron kink")
+        ribs = lambda: M(("ribs",), lambda: build_glove_ribs(C, bx), clean=False)        # noqa: E731
+        self.add(53, "R", "outer-panel joint fork, starboard (prongs + bonded 4130 bushes)",
+                 "dış panel birleşim çatalı, sağ (kulaklar + yapıştırılmış 4130 burçlar)", MAT_PW, P_PREG,
+                 lambda: M(("fork",), lambda: build_fork(C, bx)), thickness=PRONG_T, parent=root, step=5,
+                 explode=(0.0, 0.25, 0.0), contacts=(root,),
+                 notes="two +-45 PW prongs 1.6 mm padded to 10 mm (50 mm long) round the pin bores; 4130 bushes "
+                       "16 H8 x OD 22 x 10 bonded and line-reamed with the master tongue (bores cut here); pins "
+                       "P-MAIN1/2 are the wing module's")
+        for key, num, nm, nmtr, ex in (("SOB", 50, "side-of-body rib", "gövde yanı kaburgası", 0.30),
+                                       ("GLOVE_NOSE", 51, "glove rib, nose piece", "eldiven kaburgası, burun parçası",
+                                        0.35),
+                                       ("GLOVE_BOX", N_GLOVE_BOX, "glove rib, box piece",
+                                        "eldiven kaburgası, kutu parçası", 0.35),
+                                       ("JOINT", 52, "joint rib (centre-section side)",
+                                        "birleşim kaburgası (orta kesit)", 0.40)):
+            self.add(num, "R", nm + ", starboard", nmtr + ", sağ", MAT_PW, P_PREG,
+                     (lambda key=key: finish(ribs()[key])), layup="rib_panel", parent=root, step=4,
+                     explode=(0.0, ex, 0.0), contacts=(root, C.pid(53, "R")))
+        self.add(54, "R", "rear-spar slot fitting, starboard", "arka kiriş yuva bağlantısı, sağ", MAT_7075, P_CNC,
+                 lambda: M(("slot",), lambda: build_slot_fitting(C, bx)), thickness=0.004, parent=root, step=5,
+                 explode=(0.0, 0.3, 0.05), contacts=(root, C.pid(52, "R")))
+
+    def ct_mass(self):
+        C = self.C
+        tot, parts = ctbox_mass(C, self.bx, {"FS-MS": self.fr("FS-MS"), "FS-RS": self.fr("FS-RS")})
+        p = C.reg.parts[self.root]
+        p.mass_kg = float(tot)
+        p.notes += " | mass split kg: " + ", ".join(f"{k} {v:.3f}" for k, v in parts.items())
+        self.ct_split = parts
+
+    # ---------------------------------------------------------------- members
+    def members(self):
+        C, M, root = self.C, self.M, self.root
+        mem = C.mem
+        stp = self.st_part
+
+        def lay(mid):
+            m = mem[mid]
+            lk = m.get("layup")
+            if lk and lk in C.S["layups"]:
+                try:
+                    layup_props(C.S, lk)
+                    return {"layup": lk}
+                except ValueError:
+                    pass
+            t = m.get("thickness") or (m.get("section") or {}).get("t")
+            return {"thickness": float(t)}
+
+        def mat(mid):
+            return mem[mid]["material"], mem[mid]["process"]
+
+        chine = lambda k: M(("chine", k), lambda: build_chine(C, k))                    # noqa: E731
+        sec = mem["M-CHINE"]["section"]
+        self.add(20, "R", "chine longeron, forward piece, starboard", "kenar çizgisi uzun kirişi, ön parça, sağ",
+                 MAT_UD, P_PREG, lambda: chine(0), thickness=float(sec["t"]), parent=root, step=9,
+                 explode=(0.0, 0.35, 0.0),
+                 contacts=tuple(stp(s) for s in ("FS0600", "FS1110", "FS1330", "FS1490", "FS1810", "FS-FUEL"))
+                 + (C.ref("M-SOB"), C.ref("M-DECK-NOSE"), C.ref("M-MIDFLOOR")),
+                 notes="J 35 x 30, t 2.4: UD caps + +-45 PW web / skin flange (spar_cap_ud + spar_web); outboard "
+                       "splice leg on the side-of-body rib (SPL-CH-FWD, 4 x M6 Ti)")
+        self.add(N_CHINE_AFT, "R", "chine longeron, aft piece, starboard", "kenar çizgisi uzun kirişi, arka parça, sağ",
+                 MAT_UD, P_PREG, lambda: chine(1), thickness=float(sec["t"]), parent=root, step=12,
+                 explode=(0.0, 0.35, 0.0), contacts=(C.ref("M-SOB"), stp("FS-GEAR"), stp("FS3480"),
+                                                    C.pid(N_CHINE_END, "R"), C.ref("M-WELLROOF")),
+                 notes="J 35 x 30, t 2.4 from the side-of-body rib (SPL-CH-AFT, 4 x M6 Ti) to the firewall, ends on "
+                       "its 7075 end fitting (2 x M5 Ti)")
+        self.add(38, "C", "nose-gear sill", "burun takımı eşiği", *mat("M-NGSILL"),
+                 lambda: M(("ngsill",), lambda: box_member(C, *mem["M-NGSILL"]["box"])), **lay("M-NGSILL"),
+                 parent=C.ref("M-KEELWALL"), step=7, explode=(0.0, 0.0, -0.2),
+                 contacts=(C.ref("M-KEELWALL", "R"), C.ref("M-KEELWALL", "L"), stp("FS1110")))
+        self.add(21, "R", "nose keel wall, starboard", "burun omurga duvarı, sağ", *mat("M-KEELWALL"),
+                 lambda: M(("keelwall",), lambda: build_keelwall(C)), **lay("M-KEELWALL"), parent=stp("FS1110"),
+                 step=7, explode=(0.0, 0.2, -0.2), contacts=(stp("FS0600"), stp("FS1110"), C.ref("M-DECK-NOSE")))
+        chine_env = lambda: union([chine(0), chine(0).mirrored_y()])                    # noqa: E731
+        self.add(22, "C", "avionics deck (nose)", mem["M-DECK-NOSE"]["name_tr"], *mat("M-DECK-NOSE"),
+                 lambda: M(("decknose",), lambda: build_deck_nose(C, chine_env())), **lay("M-DECK-NOSE"),
+                 parent=stp("FS1110"), step=7, explode=(0.0, 0.0, 0.25),
+                 contacts=(stp("FS0600"), stp("FS1110"), C.ref("M-KEELWALL", "R"), C.ref("M-KEELWALL", "L"),
+                           C.pid(20, "R"), C.pid(20, "L")))
+        self.add(23, "R", "turret-bay side wall, starboard", "taret bölmesi yan duvarı, sağ", *mat("M-TURRETWALL"),
+                 lambda: M(("turretwall",), lambda: build_turretwall(C)), **lay("M-TURRETWALL"), parent=stp("FS1110"),
+                 step=8, explode=(0.0, 0.2, 0.0), contacts=(stp("FS1110"), stp("FS1330"), C.ref("M-TURRETROOF")))
+        self.add(24, "C", "turret-bay roof", mem["M-TURRETROOF"]["name_tr"], *mat("M-TURRETROOF"),
+                 lambda: M(("turretroof",), lambda: build_turretroof(C)), **lay("M-TURRETROOF"), parent=stp("FS1110"),
+                 step=8, explode=(0.0, 0.0, 0.25),
+                 contacts=(stp("FS1110"), stp("FS1330"), C.ref("M-TURRETWALL", "R"), C.ref("M-TURRETWALL", "L")))
+        s1490, s1810 = C.st["FS1490"], C.st["FS1810"]
+        self.add(25, "R", "parachute-bay side wall, starboard", "paraşüt bölmesi yan duvarı, sağ", *mat("M-PARAWALL"),
+                 lambda: M(("parawall",), lambda: build_parawall(C, float(s1490["x"]), float(s1810["x"]),
+                                                                 float(s1490.get("flange_w", 0.028)))),
+                 **lay("M-PARAWALL"), parent=stp("FS1490"), step=8, explode=(0.0, 0.2, 0.0),
+                 contacts=(stp("FS1490"), stp("FS1810"), C.ref("M-PARAFLOOR")))
+        self.add(26, "C", "parachute-bay floor", mem["M-PARAFLOOR"]["name_tr"], *mat("M-PARAFLOOR"),
+                 lambda: M(("parafloor",), lambda: box3(*mem["M-PARAFLOOR"]["box"])), **lay("M-PARAFLOOR"),
+                 parent=stp("FS1490"), step=8, explode=(0.0, 0.0, -0.25),
+                 contacts=(stp("FS1490"), stp("FS1810"), C.ref("M-PARAWALL", "R"), C.ref("M-PARAWALL", "L")))
+        self.add(27, "C", "mission-bay floor with cut-out edge hats", mem["M-MIDFLOOR"]["name_tr"],
+                 *mat("M-MIDFLOOR"), lambda: M(("midfloor",), lambda: build_midfloor(C)), **lay("M-MIDFLOOR"),
+                 parent=stp("FS1810"), step=8, explode=(0.0, 0.0, -0.25),
+                 contacts=(stp("FS1810"), stp("FS-FUEL"), C.pid(20, "R"), C.pid(20, "L")),
+                 notes="outer sandwich strips + two bonded hat stiffeners (PW 4 plies, 20 x 15) along the cut-out "
+                       "edges; inner hat flanges carry TR-MISSION (8 x M4)")
+        frames3 = lambda: {s: self.fr(s) for s in ("FS-FUEL", "FS-MS", "FS-RS")}         # noqa: E731
+        self.add(28, "R", "payload-bay keel beam, starboard", "yük bölmesi omurga kirişi, sağ", *mat("M-KEEL"),
+                 lambda: M(("keel",), lambda: build_keel(C, frames3())), **lay("M-KEEL"), parent=root, step=10,
+                 explode=(0.0, 0.15, -0.25),
+                 contacts=(stp("FS-FUEL"), stp("FS-MS"), stp("FS-RS"), root, C.ref("M-FWDDECK"), C.ref("M-WELLROOF")))
+        self.add(29, "C", "forward fuel deck", mem["M-FWDDECK"]["name_tr"], *mat("M-FWDDECK"),
+                 lambda: M(("fwddeck",), lambda: build_fwddeck(C, frames3())), **lay("M-FWDDECK"), parent=root,
+                 step=10, explode=(0.0, 0.0, -0.3),
+                 contacts=(stp("FS-FUEL"), stp("FS-MS"), C.ref("M-KEEL", "R"), C.ref("M-KEEL", "L"), root))
+        self.add(30, "C", "main-gear well roof (aft-cell floor)", mem["M-WELLROOF"]["name_tr"], *mat("M-WELLROOF"),
+                 lambda: M(("wellroof",), lambda: build_wellroof(C)), **lay("M-WELLROOF"), parent=root, step=10,
+                 explode=(0.0, 0.0, -0.3), contacts=(stp("FS-RS"), stp("FS-GEAR"), C.ref("M-GEARBEAM", "R"),
+                                                     C.ref("M-GEARBEAM", "L"), root))
+        self.add(31, "R", "main-gear beam (outboard well wall), starboard", "ana takım kirişi, sağ",
+                 *mat("M-GEARBEAM"), lambda: M(("gearbeam",), lambda: build_gearbeam(C)), **lay("M-GEARBEAM"),
+                 parent=C.ref("M-WELLROOF"), step=10, explode=(0.0, 0.25, -0.2),
+                 contacts=(stp("FS-RS"), stp("FS-GEAR"), C.ref("M-WELLROOF")),
+                 notes="16-ply solid land 1.5 mm proud of the inboard face under the trunnion flange, bonded "
+                       "through-thickness M6 inserts (flush with the outboard face)")
+        fin_x = (float(C.fit["F-FIN-FRONT"]["box"][0][0]), float(C.fit["F-FIN-FRONT"]["box"][1][0]))
+        self.add(32, "R", "dorsal longeron, starboard", "sırt uzun kirişi, sağ", MAT_UD, P_PREG,
+                 lambda: M(("dorsal",), lambda: build_dorsal(C, fin_x)), thickness=DORSAL_T, parent=stp("FS3480"),
+                 step=11, explode=(0.0, 0.1, 0.25), contacts=(stp("FS-GEAR"), stp("FS3480"), C.pid(N_UPPER_PLATE, "R"),
+                                                             C.ref("F-FIN-FRONT")),
+                 notes="hat 25 x 20, t 2.0 (UD crown, +-45 walls), skin flanges 12 mm; crown and walls relieved over "
+                       "the fin front-spar fitting; ends ahead of the firewall on the splice tongue (2 x M5 Ti)")
+        self.add(34, "C", "payload-bay aft wall", mem["M-PAYWALL-AFT"]["name_tr"], *mat("M-PAYWALL-AFT"),
+                 lambda: M(("paywall",), lambda: build_plain_wall(C, "M-PAYWALL-AFT", -0.0668)),
+                 **lay("M-PAYWALL-AFT"), parent=C.ref("M-KEEL"), step=10, explode=(0.0, 0.0, -0.3),
+                 contacts=(C.ref("M-KEEL", "R"), C.ref("M-KEEL", "L"), stp("FS-RS"), C.ref("M-WELLROOF")))
+        self.add(35, "C", "main-gear well forward wall", mem["M-WELLWALL-FWD"]["name_tr"], *mat("M-WELLWALL-FWD"),
+                 lambda: M(("wellwall",), lambda: build_plain_wall(C, "M-WELLWALL-FWD")), **lay("M-WELLWALL-FWD"),
+                 parent=C.ref("M-WELLROOF"), step=10, explode=(0.0, 0.0, -0.3),
+                 contacts=(C.ref("M-WELLROOF"), C.ref("M-GEARBEAM", "R"), C.ref("M-GEARBEAM", "L")))
+        self.add(36, "R", "main-gear well centre web, starboard", "ana takım kuyusu orta duvarı, sağ",
+                 *mat("M-WELLKEEL"), lambda: M(("wellkeel",), lambda: build_wellkeel(C)), **lay("M-WELLKEEL"),
+                 parent=C.ref("M-WELLROOF"), step=10, explode=(0.0, 0.05, -0.3),
+                 contacts=(C.ref("M-WELLROOF"), stp("FS-GEAR"), C.ref("M-WELLWALL-FWD")))
+        self.add(33, "C", "aft keel beam (engine bay)", mem["M-AFTKEEL"]["name_tr"], *mat("M-AFTKEEL"),
+                 lambda: M(("aftkeel",), lambda: build_aftkeel(C)), thickness=float(mem["M-AFTKEEL"]["thickness"]),
+                 parent=stp("FS3670"), step=11, explode=(0.0, 0.0, -0.3), contacts=(stp("FS3670"),))
+        self.add(37, "C", "dorsal spine channel (parachute bridle tie)", mem["M-SPINE"]["name_tr"], *mat("M-SPINE"),
+                 lambda: M(("spine",), lambda: build_spine(C)), thickness=float(mem["M-SPINE"]["thickness"]),
+                 parent=stp("FS1810"), step=14, explode=(0.0, 0.0, 0.35),
+                 contacts=(stp("FS1810"), stp("FS-FUEL"), stp("FS-MS"), stp("FS-RS")),
+                 notes="U 44 x 24, 4 plies PW, 60 mm skin-line flanges, 16-ply floor pads under the bridle fittings; "
+                       "sealed trough through the fuel-bay frames")
+        vk = mem["M-VENTRALKEEL"]
+        self.add(39, "C", "ventral keel strip", vk["name_tr"], *mat("M-VENTRALKEEL"),
+                 lambda: M(("ventralkeel",), lambda: build_ventralkeel(C)), thickness=float(vk["section"]["t"]),
+                 parent=stp("FS3480"), step=11, explode=(0.0, 0.0, -0.3), contacts=(stp("FS3480"), stp("FS3670")))
+
+    # ---------------------------------------------------------------- fittings
+    def fittings(self):
+        C, M = self.C, self.M
+        stp = self.st_part
+        fit = C.fit
+
+        def nm(fid):
+            f = fit[fid]
+            return f.get("name", fid), f.get("name_tr", fid)
+
+        n, ntr = nm("F-TRUNNION")
+        self.add(70, "R", n + ", starboard", ntr + ", sağ", MAT_7075, P_CNC,
+                 lambda: M(("trunnion",), lambda: build_trunnion(C)), thickness=TRUN_FLANGE_T,
+                 parent=C.ref("M-GEARBEAM"), step=10, explode=(0.0, -0.12, -0.2),
+                 contacts=(C.ref("M-GEARBEAM"), C.ref("M-WELLROOF")),
+                 notes="bushings 20 H7 line-reamed in the jig; roof bolts on 29 mm rows (dome nutplates 28 mm)")
+        n, ntr = nm("F-UPLOCK")
+        self.add(72, "R", n + ", starboard", ntr + ", sağ", MAT_7075, P_CNC,
+                 lambda: M(("uplock",), lambda: build_uplock(C)), thickness=UPLOCK_BASE_T,
+                 parent=C.ref("M-WELLROOF"), step=10, explode=(0.0, 0.0, -0.2), contacts=(C.ref("M-WELLROOF"),))
+        n, ntr = nm("F-NG-PIVOT")
+        self.add(71, "C", n + " (pair of blocks)", ntr + " (blok çifti)", MAT_7075, P_CNC,
+                 lambda: M(("ngpivot",), lambda: build_ng_pivot(C)), thickness=0.006,
+                 parent=C.ref("M-KEELWALL"), step=7, explode=(0.0, 0.0, -0.2),
+                 contacts=(C.ref("M-KEELWALL", "R"), C.ref("M-KEELWALL", "L")),
+                 notes="two 7075 blocks on the inboard faces of the keel walls, flanged bushings 16 H7 (OD 22) "
+                       "bonded and line-reamed")
+        n, ntr = nm("F-SPINDLE-NODE")
+        self.add(95, "R", n + ", starboard", ntr + ", sağ", MAT_7075, P_CNC,
+                 lambda: M(("node",), lambda: build_spindle_node(C)), thickness=0.007, parent=stp("FS3670"),
+                 step=13, explode=(0.2, 0.1, 0.1), contacts=(C.pid(N_SHIELD, "C", "propulsion"),),
+                 notes="61805-ZZ bearing seat 37 H7 in the inboard boss (bearings and Ti spindle: tail module)")
+        n, ntr = nm("F-FW-CORNER")
+        self.add(86, "R", n + " (aft part), starboard", ntr + " (arka parça), sağ", MAT_7075, P_CNC,
+                 lambda: M(("corner",), lambda: build_fw_corner(C)), thickness=0.006, parent=stp("FS3670"),
+                 step=12, explode=(0.2, 0.0, 0.15), contacts=(C.pid(N_SHIELD, "C", "propulsion"),),
+                 notes="engine-mount upper foot pad (2 x M8 through the stack), fin rear-spar clevis (tail module "
+                       "lug, 2 x M6 double shear)")
+        self.add(N_UPPER_PLATE, "R", "firewall upper backing plate (corner fwd plate, node backing, dorsal splice), "
+                 "starboard", "yangın perdesi üst destek plakası (köşe ön plakası, düğüm desteği, sırt eki), sağ",
+                 MAT_7075, P_CNC, lambda: M(("upper",), lambda: build_fw_upper_plate(C)), thickness=0.005,
+                 parent=stp("FS3670"), step=12, explode=(-0.2, 0.0, 0.15), contacts=(stp("FS3670"),),
+                 notes="one machined plate per side on the sandwich forward face: engine-foot M8 x 2, node bolts "
+                       "B1-B3, dorsal-longeron splice tongue under the hat crown (2 x M5 Ti)")
+        n, ntr = nm("F-EMOUNT-LO")
+        self.add(87, "R", n + " (foot pad), starboard", ntr + " (ayak pedi), sağ", MAT_7075, P_CNC,
+                 lambda: M(("emlo",), lambda: build_emount_lo(C)[0]), thickness=0.010, parent=stp("FS3670"),
+                 step=12, explode=(0.2, 0.0, -0.1), contacts=(C.pid(N_SHIELD, "C", "propulsion"),))
+        self.add(N_EMLO_BACK, "R", "lower engine-mount backing plate, starboard",
+                 "alt motor bağlantısı destek plakası, sağ", MAT_7075, P_CNC,
+                 lambda: M(("emlob",), lambda: build_emount_lo(C)[1]), thickness=0.005, parent=stp("FS3670"),
+                 step=12, explode=(-0.2, 0.0, -0.1), contacts=(stp("FS3670"),))
+        n, ntr = nm("F-FIN-FRONT")
+        self.add(96, "R", n + ", starboard", ntr + ", sağ", MAT_7075, P_CNC,
+                 lambda: M(("finfront",), lambda: build_fin_front(C)), thickness=0.006, parent=stp("FS3480"),
+                 step=11, explode=(0.15, 0.0, 0.2), contacts=(stp("FS3480"),))
+        n, ntr = nm("F-STUB-FRONT")
+        self.add(98, "R", n + ", starboard", ntr + ", sağ", MAT_7075, P_CNC,
+                 lambda: M(("stubfront",), lambda: build_stub_front(C)), thickness=0.004, parent=stp("FS3480"),
+                 step=11, explode=(0.15, 0.1, 0.1), contacts=(stp("FS3480"),))
+        k = C.mem["M-AFTKEEL"]
+        yi = 0.5 * float(k["section"]["w"]) - float(k["section"]["t"])
+        for fid in ("F-VENTRAL-1", "F-VENTRAL-2", "F-VENTRAL-3"):
+            n, ntr = nm(fid)
+            num = int(fit[fid]["part"].split("-")[-1])
+            self.add(num, "C", n, ntr, MAT_7075, P_CNC,
+                     (lambda fid=fid: M(("ventral", fid), lambda: build_ventral(C, fid, yi))), thickness=0.005,
+                     parent=C.ref("M-AFTKEEL"), step=11, explode=(0.0, 0.0, -0.2), contacts=(C.ref("M-AFTKEEL"),))
+        for fid in ("F-RISER-FWD", "F-RISER-AFT"):
+            n, ntr = nm(fid)
+            num = int(fit[fid]["part"].split("-")[-1])
+            self.add(num, "C", n, ntr, MAT_7075, P_CNC, (lambda fid=fid: M(("riser", fid), lambda: build_riser(C, fid))),
+                     thickness=0.005, parent=C.ref("M-SPINE"), step=14, explode=(0.0, 0.0, 0.3),
+                     contacts=(C.ref("M-SPINE"), stp("FS1810" if fid.endswith("FWD") else "FS-RS")))
+
+    # ---------------------------------------------------------------- firewall stack, engine mount
+    def firewall(self):
+        C, M = self.C, self.M
+        stp = self.st_part
+        eng = C.L["chassis"]["engine_mount"]
+        foot_x = float(C.st["FS3670"]["x"]) + 0.010
+        self.add(85, "C", "engine mount (welded 4130 tube bed mount)", "motor yatağı (kaynaklı 4130 boru)", MAT_4130,
+                 P_TIG, lambda: M(("emount",), lambda: build_engine_mount(C, foot_x)),
+                 thickness=float(eng["section"]["strut_tube_t_m"]), parent=stp("FS3670"), step=12,
+                 explode=(0.3, 0.0, 0.0), contacts=(C.pid(86, "R"), C.pid(86, "L"), C.pid(87, "R"), C.pid(87, "L")),
+                 notes="struts 12.7 x 0.89, ring 15.9 x 0.89, four 4 mm foot plates 56 x 32 (2 x M8 each), four "
+                       "isolator cups ID 41 (Limbach damper shock mounts, engine.yaml estimate envelope); normalised "
+                       "after welding")
+        st = C.st["FS3670"]
+        cut_yz = _cut_polys(st)
+        self.add(N_SHIELD, "C", "firewall heat shield (AISI 304, 0.4 mm, with edge angle)",
+                 "yangın perdesi ısı kalkanı (AISI 304, 0,4 mm, kenar köşebendi ile)", MAT_SS, P_SS,
+                 lambda: M(("shield",), lambda: build_shield(C, cut_yz)), thickness=float(st["shield_t"]),
+                 group="propulsion", parent=stp("FS3670"), step=12, explode=(0.15, 0.0, 0.0),
+                 contacts=(C.pid(N_STANDOFF, "C", "propulsion"),),
+                 notes="fireproof without test (>= 0.38 mm, standards FIRE-001, CS-VLA 1191); riveted to the 0.8 mm "
+                       "edge angle (13 mm aft flange = cowl land); mass booked in the propulsion cooling/firewall item")
+        self.add(N_SPACER, "R", "firewall spacer tubes (AISI 304), starboard", "yangın perdesi ara boruları, sağ", MAT_SS,
+                 P_CNC, lambda: M(("spacers",), lambda: build_spacers(C, self._spacer_pts())), thickness=0.002,
+                 parent=stp("FS3670"), step=12, explode=(0.1, 0.0, 0.0),
+                 contacts=(stp("FS3670"), C.pid(N_SHIELD, "C", "propulsion")),
+                 notes="one tube per through-bolt of the stack in the 7.6 mm air gap (stack held at its design gap)")
+        self.add(N_STANDOFF, "C", "firewall shield stand-offs (12 x AISI 304)",
+                 "yangın perdesi kalkan mesafe parçaları (12 x AISI 304)", MAT_SS, "purchased",
+                 lambda: M(("standoffs",), lambda: build_standoffs(C, self._fw_keepouts())[0]), group="propulsion",
+                 purchased=True, vendor="stainless stand-off d 10 x 7.6 mm with blind rivet (estimate)",
+                 mass_kg=float(st.get("standoff_kg", 0.0)) or 0.048, parent=stp("FS3670"), step=12,
+                 explode=(0.1, 0.0, 0.0), contacts=(stp("FS3670"), C.pid(N_SHIELD, "C", "propulsion")),
+                 notes="layout.chassis.engine_mount.firewall_stackup.mass.standoffs_kg (12 x 4 g, estimate)")
+        self.add(N_CHINE_END, "R", "chine-longeron end fitting (firewall), starboard",
+                 "kenar çizgisi uzun kirişi uç bağlantısı (yangın perdesi), sağ", MAT_7075, P_CNC,
+                 lambda: M(("chineend",), lambda: build_chine_end(C)), thickness=CHE_T, parent=stp("FS3670"), step=12,
+                 explode=(-0.15, 0.1, 0.0), contacts=(stp("FS3670"), C.pid(N_CHINE_AFT, "R")))
+
+    def _spacer_pts(self):
+        """Starboard through-bolts of the firewall stack: node B1-B7 (M5), engine feet (M8)."""
+        out = [(p[1], p[2], 5) for p in node_firewall_points(self.C)]
+        out += [(p[1], p[2], 8) for p in engine_foot_points(self.C)]
+        return out
+
+    def _fw_keepouts(self):
+        C = self.C
+        st = C.st["FS3670"]
+        polys = list(_cut_polys(st))
+        for y, z, size in self._spacer_pts():
+            polys.append(Point(y, z).buffer(0.012))
+            polys.append(Point(-y, z).buffer(0.012))
+        for fid in ("F-SPINDLE-NODE", "F-FW-CORNER", "F-EMOUNT-LO"):
+            lo, hi = C.fit[fid]["box"]
+            polys += [rect(lo[1], hi[1], lo[2], hi[2]), rect(-lo[1], -hi[1], lo[2], hi[2])]
+        lo, hi = C.mem["M-AFTKEEL"]["box"]
+        polys.append(rect(-0.06, 0.06, lo[2] - 0.05, hi[2] + 0.01))
+        return polys

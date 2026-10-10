@@ -358,17 +358,20 @@ def _perp_basis(a):
     return e1, np.cross(a, e1)
 
 
-def _edge_distance_mesh(f, man, extent: float, n_dir: int = 36):
+def _edge_distance_mesh(f, man, extent: float, n_dir: int = 36, r_hole: float | None = None):
     """Edge distance measured on the geometry: radial rays from the fastener axis at the mid-plane of the part's
     material (found with four probe lines parallel to the axis just outside the hole). The first crossing is the hole
     wall (if the hole was cut), the next one the nearest edge/cut-out of the part. Returns (edge distance, pierced);
-    pierced is False when the fastener does not pass through the part's material near its axis."""
+    pierced is False when the fastener does not pass through the part's material near its axis. ``r_hole`` overrides
+    the hole radius (the bore of a potted insert in its receiving panel is larger than the clearance hole)."""
     from ..core.geom import ray_hits
     from ..design.fastener_catalog import clearance, size_from_spec
     a = f.axis
     c = f.position
     size = size_from_spec(f.spec) or round(f.d * 1000)
     r_h = 0.5 * clearance(size) if f.kind not in ("pin", "clevis_pin") else 0.5 * f.d * 1.02
+    if r_hole is not None:
+        r_h = max(r_h, float(r_hole))
     e1, e2 = _perp_basis(a)
     lo = -0.02 - 2 * f.d
     hi = (f.grip if f.grip is not None else f.length) + 0.02 + 2 * f.d
@@ -393,6 +396,15 @@ def _edge_distance_mesh(f, man, extent: float, n_dir: int = 36):
     return best, True
 
 
+def _insert_bore_radius(f, pid: str) -> float | None:
+    """Bore radius of a potted insert in its receiving part (the last joined part of an insert joint, joints.bolt)."""
+    if "insert" not in (f.nut or "").lower() or not f.joins or pid != f.joins[-1]:
+        return None
+    from ..design.fastener_catalog import INSERT, size_from_spec
+    size = size_from_spec(f.spec) or round(f.d * 1000)
+    return 0.5 * INSERT[size][1] + 0.0001 if size in INSERT else None
+
+
 def check_fasteners(reg: Registry) -> list[dict]:
     """Edge distance (>= 2.0 D metal, >= 2.5 D composite) for every fastener in every joined part — from the part
     ``outline`` if given, otherwise measured on the mesh — that the fastener actually pierces each joined part, and
@@ -415,7 +427,7 @@ def check_fasteners(reg: Registry) -> list[dict]:
                     lo, hi = p.mesh.bounds()
                     mans[pid] = (p.mesh.to_manifold(), float(np.linalg.norm(hi - lo)) + 0.01)
                 man, ext = mans[pid]
-                ed, pierced = _edge_distance_mesh(f, man, ext)
+                ed, pierced = _edge_distance_mesh(f, man, ext, r_hole=_insert_bore_radius(f, pid))
                 if not pierced:
                     out.append(_violation("fastener_miss", [f.id, pid], None, "fastener passes through the part",
                                           f.spec))

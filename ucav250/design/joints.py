@@ -195,6 +195,27 @@ def pin(reg: Registry, fid: str, d: float, position, axis, stack, *, owner: str 
     return f
 
 
+RIVET_HOLE_CLEARANCE = 0.0001       # blind-rivet hole = nominal d + 0.1 mm (drill size of the rivet maker's table)
+
+
+def rivet(reg: Registry, fid: str, d: float, position, axis, stack, *, owner: str | None = None,
+          spec: str = "blind rivet", step: int = 0, notes: str = "") -> Fastener:
+    """Blind rivet through ``stack`` [(part_id, thickness_m), ...] (head side first): hole d + 0.1 mm in every part,
+    kind "rivet" (hardware.py draws the shank; the formed blind head lies within 0.6 d beyond the far face). The
+    rivet is set from the head side only, so it needs access on that side alone."""
+    a = unit(axis)
+    p = np.asarray(position, float)
+    grip = float(sum(t for _pid, t in stack))
+    L = math.ceil((grip + 0.6 * d) * 2000.0) / 2000.0          # shank + blind-head formation, 0.5 mm steps
+    for pid, _t in stack:
+        reg.parts[pid].add_hole(p - 0.001 * a, p + (grip + 0.001) * a, 0.5 * d + 0.5 * RIVET_HOLE_CLEARANCE)
+    f = Fastener(id=fid, spec=f"{spec} {d * 1000:g}x{L * 1000:g}", kind="rivet", d=d, length=L, position=p, axis=a,
+                 joins=tuple(pid for pid, _t in stack), nut="blind (self-locking stem)", step=step, notes=notes,
+                 grip=grip)
+    reg.parts[owner or stack[0][0]].fasteners.append(f)
+    return f
+
+
 def quarter_turn(reg: Registry, fid: str, position, axis, panel: str, panel_t: float, structure: str,
                  structure_t: float, *, step: int = 0, notes: str = "") -> Fastener:
     """Quarter-turn panel fastener (Camloc 4002 class): stud with grommet in ``panel``, receptacle riveted to the far

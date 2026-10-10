@@ -139,6 +139,9 @@ def largest_piece(m: G.Mesh) -> G.Mesh:
     return G.Mesh.from_manifold(best)
 
 
+PIECE_VMIN = 1e-6          # trims leave no loose piece below 1 cm^3 (V02: sliver of the chine J)
+
+
 def pieces_above(m: G.Mesh, vmin: float = 2e-8) -> G.Mesh:
     """Drop disconnected slivers smaller than ``vmin`` (m^3) left by trims."""
     import manifold3d as m3
@@ -378,12 +381,13 @@ FRAME_STEP = {"FS-MS": 3, "FS-RS": 3, "FS0300": 6, "FS0600": 6, "FS1110": 6, "FS
               "FS-FUEL": 6, "FS-GEAR": 11, "FS3480": 11, "FS3670": 12, "FS3738": 13}
 
 
-def _sec_common(C: Ctx, xs, inset: float) -> Polygon:
-    """Intersection of the inset sections at the given stations (a prism between them stays inside the OML)."""
+def _sec_common(C: Ctx, xs, inset: float, how: str = "inter") -> Polygon:
+    """Intersection (``how`` "inter": a prism between them stays inside the OML) or union ("union": the envelope a
+    tapered web is cut from) of the inset sections at the given stations."""
     g = None
     for x in xs:
         p = C.sec(x, inset)
-        g = p if g is None else g.intersection(p)
+        g = p if g is None else (g.intersection(p) if how == "inter" else g.union(p))
     return SG.largest(g)
 
 
@@ -406,6 +410,7 @@ def _cap_notch_sides(C: Ctx, sid: str) -> list[tuple[Polygon, str]]:
     spine = {"FS1810": "aft", "FS-FUEL": "both", "FS-MS": "both", "FS-RS": "fwd"}   # spine channel skin flanges
     if sid in spine:
         out.append((rect(-0.0825, 0.0825, 0.150, 0.40), spine[sid]))
+    out += _opening_notches(C, sid)
     if sid in ("FS-GEAR", "FS3480"):                               # dorsal longeron hat (crown + skin flanges)
         for s in (1, -1):
             out.append((rect(s * DORSAL_Y0, s * DORSAL_Y1, 0.10, 0.45), "both"))
@@ -433,16 +438,83 @@ def _cap_notches(C: Ctx, sid: str) -> list[Polygon]:
     return [p for p, _side in _cap_notch_sides(C, sid)]
 
 
+CAP_OPENING_MARGIN = 0.003      # cap reliefs stand 3 mm clear of the opening / envelope they free
+SPAR_FRAME_RELIEF_Y = 0.29   # FS-MS / FS-RS caps relieved outboard of |y| 0.29 within the centre-box depth (+1.5 mm)
+
+
+def _opening_notches(C: Ctx, sid: str) -> list[tuple[Polygon, str]]:
+    """T-cap halves removed where an opening of the layout needs the clear frame-face-to-frame-face width (the cap is a
+    skin land; inside an opening there is no skin):
+
+    * FS1110 aft / FS1330 forward cap over the turret aperture (payload.turret growth envelope + bay wall margin):
+      the turret_removal path and the elevator travel need >= 190 + 2 x 6 mm between the frame faces;
+    * FS1490 aft / FS1810 forward cap over the parachute container (layout.systems.equipment EQ-PARACHUTE): the
+      parachute_removal path lifts the 300 mm container out between the frame faces (313 mm);
+    * FS0600 aft cap over the nose-gear keel slot (the leg at rest keeps >= 10 mm to the frame);
+    * FS-MS / FS-RS both cap halves where the body surface comes down to the centre-box covers near the chine
+      (|y| >= SPAR_FRAME_RELIEF_Y, |z| within the box depth): the box cover, 1 mm under the OML, is the skin land
+      there, so the frame cap would only sever the box cap strips (V12); the relief also opens the chine corner aft
+      of FS-RS for the aft chine splice bolts."""
+    out = []
+    m = CAP_OPENING_MARGIN
+    if sid in ("FS1110", "FS1330"):
+        T = C.S["payload"]["turret"]
+        hw = 0.5 * float(T["growth_envelope"]["diameter"]) + float(T["bay"]["wall_margin"]) + m
+        out.append((rect(-hw, hw, -1.0, -0.05), "aft" if sid == "FS1110" else "fwd"))
+    if sid in ("FS1490", "FS1810"):
+        eq = next(e for e in C.L["systems"]["equipment"] if e["id"] == "EQ-PARACHUTE")["box"]
+        hw = max(abs(float(eq[0][1])), abs(float(eq[1][1]))) + m
+        out.append((rect(-hw, hw, 0.05, 1.0), "aft" if sid == "FS1490" else "fwd"))
+    if sid == "FS0600":
+        yk = float(C.mem["M-KEELWALL"]["box"][0][1])
+        out.append((rect(-yk, yk, -1.0, -0.08), "aft"))
+    if sid in ("FS-MS", "FS-RS"):
+        hz = float(C.mem["M-CTBOX"]["z"][1]) + 0.0015
+        for s in (1, -1):
+            out.append((rect(s * SPAR_FRAME_RELIEF_Y, s * 1.0, -hz, hz), "both"))
+    return out
+
+
+def _cap_trims(C: Ctx, sid: str) -> list[tuple[Polygon, tuple]]:
+    """Partial cap trims ((y, z) zone, (x0, x1) removed): the cap stays as a skin land behind an opening edge.
+
+    * FS-GEAR forward cap ends at the aft edge of the main inner-door opening (layout.mechanisms.door_outlines
+      main_inner_door_R): the tyre swings through the opening during retraction (well clearance 12 mm);
+    * FS0600 forward cap ends 3 mm aft of the buffer-battery box (EQ-BUFFER_BATTERY) under P-FWDHATCH: the
+      battery_removal path lifts the box straight up."""
+    out = []
+    m = CAP_OPENING_MARGIN
+    st = C.st[sid]
+    fw = float(st.get("flange_w", 0.028))
+    x = float(st["x"])
+    if sid == "FS-GEAR":
+        o = np.asarray(C.L["mechanisms"]["door_outlines"]["main_inner_door_R"]["outline"], float)
+        y0, y1, x_end = float(o[:, 1].min()), float(o[:, 1].max()), float(o[:, 0].max())
+        for s in (1, -1):
+            out.append((rect(s * (y0 - m), s * (y1 + m), -1.0, -0.05), (x - fw - 0.003, x_end + 0.0005)))
+    if sid == "FS0600":
+        b = next(e for e in C.L["systems"]["equipment"] if e["id"] == "EQ-BUFFER_BATTERY")["box"]
+        hw = max(abs(float(b[0][1])), abs(float(b[1][1]))) + m
+        out.append((rect(-hw, hw, 0.0, 1.0), (x - fw - 0.003, float(b[1][0]) + m)))
+    return out
+
+
 DORSAL_W, DORSAL_H, DORSAL_T, DORSAL_FL = 0.025, 0.020, 0.002, 0.012     # hat 25 x 20, t 2.0, skin flanges 12 mm
 DORSAL_Y0, DORSAL_Y1 = 0.15 - 0.5 * DORSAL_W - DORSAL_FL - 0.0015, 0.15 + 0.5 * DORSAL_W + DORSAL_FL + 0.0015
 
 
-def frame_web_poly(C: Ctx, sid: str, xs) -> Polygon:
+# ring depth reduced over the crown where the cooling-air S-duct corridor (three 80 mm tubes, KO-COOLING-DUCT) rises aft
+# across the ring web: (depth reduction, half width |y|, lower z of the relief)
+RING_CROWN_RELIEF = {"FS3480": (0.0075, 0.095, 0.20)}
+
+
+def frame_web_poly(C: Ctx, sid: str, xs, how: str = "inter") -> Polygon:
     """Web outline of a composite frame in (y, z): OML inset to the inner face of the T-cap, minus the declared
-    cut-outs (pass-throughs, bays, notches), the ring opening of ring frames and the member crossings."""
+    cut-outs (pass-throughs, bays, notches), the ring opening of ring frames and the member crossings. ``how`` "union"
+    gives the outline of the larger face section (the web is then trimmed by the tapered envelope, build_frame)."""
     st = C.st[sid]
     inset = float(st["inset"])
-    web = _sec_common(C, xs, inset + CAP_T - OV)
+    web = _sec_common(C, xs, inset + CAP_T - OV, how)
     cuts = _cut_polys(st)
     if sid == "FS-MS":
         # the payload-bay opening below the box runs out to the keel beams' outboard faces (the keel beams pass
@@ -454,6 +526,9 @@ def frame_web_poly(C: Ctx, sid: str, xs) -> Polygon:
     if st["type"] == "ring":
         inner = C.sec(xs[0], inset + float(st["ring_depth"]))
         hole = inner
+        if sid in RING_CROWN_RELIEF:                     # cooling-duct corridor KO-COOLING-DUCT under the crown (V13)
+            dr, hw, z0 = RING_CROWN_RELIEF[sid]
+            hole = hole.union(C.sec(xs[0], inset + float(st["ring_depth"]) - dr).intersection(rect(-hw, hw, z0, 1.0)))
         for land in _ring_lands(C, sid):
             hole = hole.difference(land)
         cuts.append(hole)
@@ -540,13 +615,17 @@ def build_frame(C: Ctx, sid: str) -> G.Mesh:
             ms += [prism_x(p, x - OV, cx1 + dxa) for p in _as_polys(cap_a.intersection(keep)) if p.area > 1e-9]
             return union(ms)
         return chevron(build, sweep)
-    web = frame_web_poly(C, sid, [x0, x1])
-    ms = [prism_x(p, x0, x1) for p in _as_polys(web)]
+    # the web follows the body taper over its thickness (envelope inset to 0.2 mm inside the T-cap's inner face): a
+    # constant-section web of the smaller face section left a slit to the cap where the body tapers fast (V14, FS3670)
+    web = frame_web_poly(C, sid, [x0, x1], how="union")
+    env_w = C.body_env(inset + CAP_T - OV, x0 - 0.001, x1 + 0.001, dx=0.02)
+    ms = [inter(prism_x(p, x0, x1), env_w) for p in _as_polys(web)]
     outer = C.body_env(inset, cx0, cx1, dx=0.008)
     inner = C.body_env(inset + CAP_T, cx0 - 0.002, cx1 + 0.002, dx=0.008)
     xr = {"both": (cx0 - 0.003, cx1 + 0.003), "aft": (x, cx1 + 0.003), "fwd": (cx0 - 0.003, x1 if sid == "FS3670"
                                                                                  else x)}
     notches = [prism_x(n, *xr[side]) for n, side in _cap_notch_sides(C, sid)]
+    notches += [prism_x(n, *xx) for n, xx in _cap_trims(C, sid)]
     cap = diff(outer, [inner] + notches)
     return union(ms + [pieces_above(cap)])
 
@@ -613,6 +692,7 @@ SLOT_W, SLOT_H = 0.0304, 0.061
 PRONG_T, PAD_T, PAD_L = 0.0016, 0.010, 0.050
 REAR_WEB_T, REAR_FL_T = 0.0006, 0.0009
 DOUBLER_T = 0.0016          # frame-land web doubler of the box (8 plies +-45 PW)
+DOUBLER_INTO_COVER = 0.001  # the doublers reach 1 mm into the cover / cap inner faces (co-cured, fused)
 BOX_BOLT_Y = (0.10, 0.17, 0.24, 0.31)
 SLOT_PAD_Y0 = 0.596         # rear-spar web pad (16 plies) under the slot fitting, inboard end
 SLOT_WEB_Y = (0.612, 0.6964)    # slot-fitting web plate span (y)
@@ -746,7 +826,11 @@ def build_ctbox(C: Ctx, bx: Box, frames: dict, parts_out: dict | None = None) ->
     covers = [cover_shell(C, bx, u, t_cov, y_cov, x_lo, x_hi) for u in (True, False)]
     # ---- frame-land web doublers inside the box (4 x M6 per side per frame, layout structures body) ----
     dbl = []
-    for sid, sgn, zlim in (("FS-MS", 1.0, 0.0295), ("FS-RS", -1.0, 0.0318)):
+    # the doublers run from cover to cover and are co-cured with the covers / cap strips (1 mm into their inner faces):
+    # with them and the fork prongs the box is one cured assembly whose upper and lower halves are tied by the in-body
+    # web doublers, the fork prongs and the glove rear-spar webs (V12)
+    zlim_d = bx.z_cov - C.layup_t("ct_box_cover") + DOUBLER_INTO_COVER
+    for sid, sgn, zlim in (("FS-MS", 1.0, zlim_d), ("FS-RS", -1.0, zlim_d)):
         st = C.st[sid]
         xf = float(st["x"]) + sgn * 0.5 * float(st["t"])
 
@@ -762,10 +846,12 @@ def build_ctbox(C: Ctx, bx: Box, frames: dict, parts_out: dict | None = None) ->
         for s in (1, -1):
             h = bld(0.055, 0.335, 0.0)
             dbl.append(shear_x(h, k) if s > 0 else shear_x(h, k).mirrored_y())
+    prongs = [build_fork(C, bx)]
+    prongs.append(prongs[0].mirrored_y())
     if parts_out is not None:
-        parts_out.update({"caps": caps, "webs": webs, "covers": covers, "doublers": dbl})
+        parts_out.update({"caps": caps, "covers": covers, "webs": webs, "doublers": dbl, "prongs": prongs})
         return None
-    body = union(caps + webs + covers + dbl)
+    body = union(caps + webs + covers + dbl + prongs)
     return _ctbox_finish(C, body, frames)
 
 
@@ -792,11 +878,15 @@ def ctbox_mass(C: Ctx, bx: Box, frames: dict) -> tuple[float, dict]:
     mats = C.S["materials"]
     lay = layup_props(C.S, "ct_box_cover")
     rho = {"caps": float(mats[MAT_UD]["density"]), "covers": lay["areal_mass"] / lay["thickness"],
-           "webs": float(mats[MAT_PW]["density"]), "doublers": float(mats[MAT_PW]["density"])}
+           "webs": float(mats[MAT_PW]["density"]), "doublers": float(mats[MAT_PW]["density"]),
+           "prongs": float(mats[MAT_PW]["density"])}
     out = {}
-    for k, ms in comp.items():
-        m = _ctbox_finish(C, union(ms), frames)
-        out[k] = m.volume() * rho[k]
+    acc, v_acc = [], 0.0
+    for k in ("caps", "covers", "webs", "doublers", "prongs"):       # co-cured overlaps counted once (in order)
+        acc += comp[k]
+        v = _ctbox_finish(C, union(acc), frames).volume()
+        out[k] = (v - v_acc) * rho[k]
+        v_acc = v
     return sum(out.values()), out
 
 
@@ -830,13 +920,14 @@ def fork_frame(bx: Box):
 
 
 def build_fork(C: Ctx, bx: Box) -> G.Mesh:
-    """Starboard fork (CH-053-R): two +-45 PW prongs 1.6 mm either side of the 30.4 mm slot, full depth between the UD
-    cap faces of CH-001, padded to 10 mm (50 mm long) round the two pin bores, with the bonded 4130 bushes (bores 16 H8
-    cut here; the pins are the wing module's)."""
+    """Starboard fork prongs (part of the co-cured centre box CH-001, layout wing_joint.main_spar.fork): two +-45 PW
+    prongs 1.6 mm either side of the 30.4 mm slot, full depth between the UD cap faces (co-cured into the caps, OV
+    overlap), padded to 10 mm (50 mm long) round the two pin bores; the bores take the bonded 4130 bushes (OD 22 +
+    0.1 mm bond line, YK250-CH-053 bush set, build_fork_bushes)."""
     p0, d, n, Lf = fork_frame(bx)
     pins = C.L["chassis"]["wing_joint"]["main_spar"]["pins"]
     s_pins = [float(np.dot(np.array(p["position"][:2]) - p0, d)) for p in pins]
-    gap = 1e-4
+    gap = -OV                                          # into the cap faces (co-cured)
 
     def zz(xy):
         y = float(xy[1])
@@ -870,9 +961,28 @@ def build_fork(C: Ctx, bx: Box) -> G.Mesh:
     for p in pins:
         c = np.asarray(p["position"], float)
         ax = np.asarray(p["axis"], float)
-        r = 0.5 * float(p["diameter"]) + 0.0000135
-        cut.append(bore(c - 0.04 * ax, c + 0.04 * ax, r))
+        cut.append(bore(c - 0.04 * ax, c + 0.04 * ax, 0.5 * FORK_BUSH_OD + BUSH_BOND, n=48))
     return diff(m, cut)
+
+
+FORK_BUSH_OD, FORK_BUSH_L = 0.022, PAD_T     # layout fork: 4130 bushes 16 H8 x OD 22 x 10 mm
+BUSH_BOND = 0.00005                          # bonded bushes: 0.05 mm radial bond line in the bore
+
+
+def build_fork_bushes(C: Ctx, bx: Box) -> G.Mesh:
+    """Bonded 4130 bush set of the starboard fork (YK250-CH-053-R, layout fork: 4 bushes 16 H8 x OD 22 x 10 mm): one
+    bush per prong per main pin, through the prong and its 10 mm pad, bore 16 H8 (line-reamed with the master tongue)."""
+    _p0, _d, n, _Lf = fork_frame(bx)
+    nn = np.array([n[0], n[1], 0.0])
+    h = 0.5 * SLOT_W
+    ms = []
+    for p in C.L["chassis"]["wing_joint"]["main_spar"]["pins"]:
+        c = np.asarray(p["position"], float)
+        ri = 0.5 * float(p["diameter"]) + 0.0000135
+        for sg in (1, -1):
+            a, b = c + sg * h * nn, c + sg * (h + FORK_BUSH_L) * nn
+            ms.append(G.tube(0.5 * FORK_BUSH_OD, ri, a, b, n=48))
+    return G.union(ms)
 
 
 def build_clrib(C: Ctx, bx: Box) -> G.Mesh:
@@ -904,12 +1014,22 @@ def build_kink(C: Ctx, fid: str) -> G.Mesh:
     return union([plate, tab])
 
 
-def glove_rib_poly(C: Ctx, y: float) -> Polygon:
+def glove_rib_poly(C: Ctx, y: float, x_te: float | None = None) -> Polygon:
     """Glove rib outline (x, z): glove section inset 8.5 mm under the upper skins (LERX root bay 0.6/7/0.4 + bond)
-    and 6.5 mm over the lower skins."""
+    and 6.5 mm over the lower skins; aft of ``x_te`` (the rear-spar cap) the upper skin is the 6 mm glove skin
+    (layout.shell P-GLOVE-UP, wing_skin_primary) and the rib reaches 6.5 mm under it as well."""
     up, _ = C.wing_poly(y, 0.0085)
     lo, _ = C.wing_poly(y, 0.0065)
-    return SG.largest(up.union(lo.intersection(rect(-10, 10, -1.0, 0.0))).buffer(0))
+    reg = up.union(lo.intersection(rect(-10, 10, -1.0, 0.0)))
+    if x_te is not None:
+        reg = reg.union(lo.intersection(rect(x_te, 10, -1.0, 1.0)))
+    return SG.largest(reg.buffer(0))
+
+
+def sob_te_x(bx: "Box") -> float:
+    """x aft of which the side-of-body rib reaches 6.5 mm under the upper glove skin (aft edge of its rear-cap
+    flange relief)."""
+    return float(bx.xr(Y_SOB + 0.024)) + 0.5 * bx.w_rear + 0.0005
 
 
 def _cap_cut_xz(bx: Box, y: float, w_extra=0.0005) -> list[Polygon]:
@@ -979,7 +1099,8 @@ def build_glove_ribs(C: Ctx, bx: Box) -> dict:
     cuts.append(Point(gx, gz).buffer(0.010, 32))
     fl_cuts = [_fork_band_xz(bx, y + 0.0134, 0.5 * SLOT_W + PAD_T + 0.0005, 0.011),
                rect(bx.xr(y) - 0.5 * bx.w_rear - 0.0005, bx.xr(y + 0.024) + 0.5 * bx.w_rear + 0.0005, -1, 1)]
-    out["SOB"] = _rib_plate(C, y, glove_rib_poly(C, y), cuts, sob["box"][0][0], sob["box"][1][0], +1, fl_cuts)
+    out["SOB"] = _rib_plate(C, y, glove_rib_poly(C, y, sob_te_x(bx)), cuts, sob["box"][0][0], sob["box"][1][0], +1,
+                            fl_cuts)
     # --- glove rib: the fork band and the rear spar split it; nose piece and box piece
     gr = C.mem["M-GLOVERIB"]
     y = 0.55
@@ -1160,18 +1281,31 @@ def build_chine(C: Ctx, piece: int) -> G.Mesh:
     outer = inter(box_o, union_env(C, 0.0065, x0 - 0.01, x1 + 0.01))
     inner = inter(box_i, union_env(C, 0.0065 + t, x0 - 0.02, x1 + 0.02))
     J_ = diff(outer, [inner, openb])
-    sp = m["splices"][0 if piece == 0 else 1]
-    bxs = [b[0] for b in (chine_fwd_splice_points(C) if piece == 0 else sp["bolts"])]
-    xa, xb = max(min(bxs) - CHINE_SPLICE_PAD, x0), min(max(bxs) + CHINE_SPLICE_PAD, x1)
-    if piece == 1:                              # aft splice leg reaches forward to the rear-spar cap (2 x M4 Ti)
-        xa = CHINE_AFT_LEG_X0
+    if piece == 0:
+        bxs = [b[0] for b in chine_fwd_splice_points(C)]
+        xa, xb = max(min(bxs) - CHINE_SPLICE_PAD, x0), min(max(bxs) + CHINE_SPLICE_PAD, x1)
+        t_leg = t
+    else:                                       # aft splice leg: forward to the rear-spar frame, padded (V08)
+        xa, xb = CHINE_AFT_LEG_X0, max(CHINE_AFT_SPLICE_X) + CHINE_SPLICE_PAD
+        t_leg = CHINE_AFT_PAD_T
     zc = float(np.interp(0.5 * (xa + xb), P[:, 0], P[:, 2]))
-    leg = inter(box3((xa, yo - t, zc - h / 2), (xb, yo, zc + h / 2)), union_env(C, 0.0065, x0 - 0.01, x1 + 0.01))
-    return pieces_above(union([J_, leg]))
+    env = union_env(C, 0.0065, x0 - 0.01, x1 + 0.01)
+    leg = inter(box3((xa, yo - t_leg, zc - h / 2), (xb, yo, zc + h / 2)), env)
+    ms = [J_, leg]
+    if piece == 0:
+        # splice flange (V02): inside the glove fairing the J's skin flange is clipped away, so the J's top flange is
+        # laid up at its nominal place over the splice zone, joining the web to the outboard leg on the SOB rib face
+        yc = float(np.interp(0.5 * (xa + xb), P[:, 0], P[:, 1]))
+        ms.append(inter(box3((xa, yc - w / 2 + t - OV, zc + h / 2 - t), (xb, yo - t_leg + OV, zc + h / 2)), env))
+    return pieces_above(union(ms), PIECE_VMIN)
 
 
-CHINE_AFT_LEG_X0 = 2.850         # aft splice leg forward end (rear-spar cap at y 0.40 ends at x 2.846)
-CHINE_AFT_SPLICE_X = (2.870, 2.8825)
+CHINE_AFT_LEG_X0 = 2.837         # aft splice leg forward end: 0.8 mm aft of the FS-RS web (cap relieved there)
+# SPL-CH-AFT (V08): 4 x M4 Ti at 12.5 mm pitch (2.5 D + hole radius in the composite) where the SOB rib between the
+# glove skins is >= 20 mm deep (2.5 D each way); the layout's 4 x M6 at x 2.877-2.931 cannot keep 2.5 D in a rib that
+# is only 24-35 mm deep there; the leg is padded to 4.8 mm (bearing, detail_joint_margins SPL-CH-AFT)
+CHINE_AFT_SPLICE_X = (2.8475, 2.8600, 2.8725, 2.8850)
+CHINE_AFT_PAD_T = 0.0048
 KINK_BOLT_X0, KINK_BOLT_PITCH = 2.520, 0.0185       # layout pitch 18 mm < 2.5 D + hole radius in the rib land
 CHINE_FWD_SPLICE_PITCH = 0.0185
 
@@ -1194,16 +1328,13 @@ def chine_fwd_splice_points(C: Ctx):
 
 
 def chine_aft_splice_points(C: Ctx):
-    """2 x M4 Ti through the aft chine splice leg and the SOB rib, at the rib's mid height (glove TE bay)."""
-    yo = Y_SOB - 0.5 * T_RIB - 0.5 * float(C.mem["M-CHINE"]["section"]["t"])
+    """4 x M4 Ti through the padded aft chine splice leg and the SOB rib, at the rib's mid height (glove TE bay)."""
+    yo = Y_SOB - 0.5 * T_RIB - 0.5 * CHINE_AFT_PAD_T
     out = []
     for x in CHINE_AFT_SPLICE_X:
         zu, zl = wing_z(C, [x], Y_SOB)
-        out.append((x, yo, 0.5 * ((float(zu[0]) - 0.0085) + (float(zl[0]) + 0.0065)) + CHINE_AFT_SPLICE_DZ))
+        out.append((x, yo, 0.5 * ((float(zu[0]) - 0.0065) + (float(zl[0]) + 0.0065))))
     return out
-
-
-CHINE_AFT_SPLICE_DZ = 0.00015    # 10.1 mm (2.5 D) to the splice leg's skin-line edge and to the SOB rib's upper edge
 
 
 def box_member(C: Ctx, lo, hi, inset=MEM_IN, cut=()) -> G.Mesh:
@@ -2589,11 +2720,15 @@ LINER_NUT_RELIEF_X = 0.0075  # ... over the washer + ISO 7040 nut height (0.8 + 
 LINER_T = 0.0006            # fuel-bay liner: 3 plies PW (layout 2 plies 0.4 mm < processes.prepreg_ooa_vacbag 0.6 mm)
 
 
+LINER_FL = 0.020            # liner return flanges on the boundary frames and on the bay floor (bonded)
+
+
 def build_liner(C: Ctx, fs: dict, z_floor: float, cut_meshes, gap: float = 0.0002) -> G.Mesh:
-    """Fuel-bay liner tub (CFRP 3 plies PW, open top) of one cell bay: floor on the supporting member (its top face
-    ``z_floor``), end walls on the forward / aft frame faces (bonded), side walls on the cell boundary (OML inset
-    ``inset_from_oml_m``), top at the cell top z1; cut round the structure crossing the bay (``cut_meshes``) and through
-    the frame cut-outs."""
+    """Fuel-bay liner (CFRP 3 plies PW) of one cell bay: the skin-side wall on the cell boundary (OML inset
+    ``inset_from_oml_m``) from the floor (top face ``z_floor``) to the cell top z1, with 20 mm return flanges bonded to
+    the forward / aft frame faces and to the floor (V03: the frame faces, decks, centre-box cover and well roof are
+    smooth sandwich faces already; the liner is kept where the cell would otherwise bear against the skin side and the
+    members along it); cut round the structure crossing the bay (``cut_meshes``) and through the frame cut-outs."""
     z1 = float(fs["z"][1])
     ins = float(fs["inset_from_oml_m"])
     t = LINER_T
@@ -2625,7 +2760,8 @@ def build_liner(C: Ctx, fs: dict, z_floor: float, cut_meshes, gap: float = 0.000
                 cy = 0.5 * (c.bounds[0] + c.bounds[2])
                 pr = shear_x(pr, k if cy > 0 else -k)
             cuts.append(pr)
-    tub = diff(outer, [inner] + cuts)
+    core = C.body_env(ins + LINER_FL, xa - 0.03, xb + 0.13)     # more than LINER_FL inside the skin-side wall
+    tub = diff(outer, [inner, core] + cuts)
     return pieces_above(tub, 1e-7)
 
 
@@ -2764,11 +2900,13 @@ class _Reg:
         C.reg.add(Part(id=root, name="centre wing box (carry-through)", name_tr=m_ct["name_tr"], group=GROUP,
                        material=MAT_UD, process=P_PREG, mesh_fn=lambda: M(("ct",), lambda: build_ctbox(C, bx, fr2())),
                        thickness=C.layup_t("ct_box_cover"), step=2, explode=(0.0, 0.0, 0.0),
-                       notes="one cured assembly: continuous UD spar caps (main 40 -> 52 mm at the fork, rear 25 mm) "
-                             "from joint rib to joint rib, ct_box_cover sandwich covers between the spar frames, "
-                             "+-45 PW glove rear-spar webs with the 16-ply slot-fitting pads, 8-ply frame-land web "
-                             "doublers with nutplates; the spar frames FS-MS / FS-RS are the box webs inside the "
-                             "body; mass from the sub-volumes (ctbox_mass)"))
+                       notes="one co-cured assembly (a single solid): continuous UD main / rear spar caps (main 40 -> 52 mm "
+                             "at the fork, rear 25 mm) from joint rib to joint rib, ct_box_cover sandwich covers "
+                             "between the spar frames, +-45 PW glove rear-spar webs with the 16-ply slot-fitting pads, "
+                             "the +-45 PW fork prongs (1.6 mm, 10 mm pads, OD 22 bush bores) between the main caps "
+                             "outboard of the side-of-body rib, 8-ply in-body web doublers co-cured from cover to cover "
+                             "(nutplates of the spar-frame bolts); the spar frames FS-MS / FS-RS are bonded and bolted "
+                             "to the doublers as the box webs inside the body; mass from the sub-volumes (ctbox_mass)"))
         self.add(55, "C", "CT-box centre-line rib", C.mem["M-CLRIB"]["name_tr"], MAT_PW, P_PREG,
                  lambda: M(("clrib",), lambda: build_clrib(C, bx)), layup="rib_panel", parent=root, step=2,
                  explode=(0.0, 0.0, 0.18), contacts=(root, self.st_part("FS-MS"), self.st_part("FS-RS")))
@@ -2779,13 +2917,13 @@ class _Reg:
                      contacts=(root, C.pid(55), self.st_part("FS-MS")),
                      notes="plate bonded (EA 9394) to the box-side face of the main cap over the chevron kink")
         ribs = lambda: M(("ribs",), lambda: build_glove_ribs(C, bx), clean=False)        # noqa: E731
-        self.add(53, "R", "outer-panel joint fork, starboard (prongs + bonded 4130 bushes)",
-                 "dış panel birleşim çatalı, sağ (kulaklar + yapıştırılmış 4130 burçlar)", MAT_PW, P_PREG,
-                 lambda: M(("fork",), lambda: build_fork(C, bx)), thickness=PRONG_T, parent=root, step=5,
+        self.add(53, "R", "outer-panel joint fork bush set, starboard (4 x 4130, 16 H8 x OD 22 x 10)",
+                 "dış panel birleşim çatalı burç takımı, sağ (4 x 4130, 16 H8 x dış çap 22 x 10)", MAT_4130, P_CNC,
+                 lambda: M(("forkbush",), lambda: build_fork_bushes(C, bx)), thickness=0.003, parent=root, step=5,
                  explode=(0.0, 0.25, 0.0), contacts=(root,),
-                 notes="two +-45 PW prongs 1.6 mm padded to 10 mm (50 mm long) round the pin bores; 4130 bushes "
-                       "16 H8 x OD 22 x 10 bonded and line-reamed with the master tongue (bores cut here); pins "
-                       "P-MAIN1/2 are the wing module's")
+                 notes="layout fork: YK250-CH-053 = bush set; four turned 4130 bushes bonded (EA 9394, 0.05 mm bond "
+                       "line) in the OD 22 bores of the CH-001 fork prongs and pads, 16 H8 line-reamed with the master "
+                       "tongue in the jig; pins P-MAIN1/2 are the wing module's; declared multi-piece set (4 bushes)")
         for key, num, nm, nmtr, ex in (("SOB", 50, "side-of-body rib", "gövde yanı kaburgası", 0.30),
                                        ("GLOVE_NOSE", 51, "glove rib, nose piece", "eldiven kaburgası, burun parçası",
                                         0.35),
@@ -3274,22 +3412,32 @@ class _Fast:
             total = iv[-1][2] - iv[0][1]
             stack[-1] = (stack[-1][0], stack[-1][1] + (total - sum(t for _p, t in stack)))
             fid = self.fid(owner or stack[0][0])
+            kw["step"] = self.step_of(list(pids) + list(bridge) + [kw.get("insert_part"), kw.get("tapped_part")])
             return J.bolt(self.reg, fid, size, head, a, stack, owner=owner, **kw)
         except Exception as exc:                                   # collected, raised at the end of register()
             self.problems.append((label or f"M{size} at {np.round(point, 4).tolist()}", str(exc)))
             return None
 
-    def pin(self, d, point, axis, pids, *, owner=None, label="", **kw):
+    def step_of(self, pids) -> int:
+        """Assembly step of a fastener: the step at which the last of its joined parts is installed (V06)."""
+        return max(int(self.reg.parts[p].step) for p in pids if p)
+
+    def rivet(self, d, point, axis, pids, *, owner=None, label="", max_gap=0.0005, **kw):
+        """Blind rivet (joints.rivet) through the parts along the line (stack measured, gaps checked as for bolts)."""
         try:
             a = np.asarray(axis, float)
             a = a / np.linalg.norm(a)
             iv = self.measure(list(pids), point, a, 0.8 * d)
+            for (p0, _a0, e0), (p1, s1, _e1) in zip(iv, iv[1:]):
+                if s1 - e0 > max_gap:
+                    raise ValueError(f"gap {(s1 - e0) * 1000:.2f} mm between {p0} and {p1}")
             head = np.asarray(point, float) + iv[0][1] * a
             stack = [(pid, e_ - s_) for pid, s_, e_ in iv]
             fid = self.fid(owner or stack[0][0])
-            return J.pin(self.reg, fid, d, head, a, stack, owner=owner, **kw)
+            kw["step"] = self.step_of(pids)
+            return J.rivet(self.reg, fid, d, head, a, stack, owner=owner, **kw)
         except Exception as exc:
-            self.problems.append((label or f"pin d{d * 1000:g} at {np.round(point, 4).tolist()}", str(exc)))
+            self.problems.append((label or f"rivet d{d * 1000:g} at {np.round(point, 4).tolist()}", str(exc)))
             return None
 
     def sym(self, size, point, axis, pids, **kw):
@@ -3306,13 +3454,13 @@ class _Fast:
                        [_port(p) for p in pids], **kw2)
         return f1, f2
 
-    def sym_pin(self, d, point, axis, pids, **kw):
+    def sym_rivet(self, d, point, axis, pids, **kw):
         mp = np.array([1.0, -1.0, 1.0])
-        self.pin(d, point, axis, pids, **kw)
+        self.rivet(d, point, axis, pids, **kw)
         kw2 = dict(kw)
         if kw2.get("owner"):
             kw2["owner"] = _port(kw2["owner"])
-        self.pin(d, np.asarray(point, float) * mp, np.asarray(axis, float) * mp, [_port(p) for p in pids], **kw2)
+        self.rivet(d, np.asarray(point, float) * mp, np.asarray(axis, float) * mp, [_port(p) for p in pids], **kw2)
 
 
 TI = "Ti-6Al-4V"            # bolt material designation (hardware.py: titanium fastener material)
@@ -3338,20 +3486,22 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
         s_ = st[sid]
         k = math.tan(math.radians(float(s_["sweep_deg"])))
         n = np.array([1.0, -k, 0.0]) / math.hypot(1.0, k) * sgn          # from the fuel bay into the box
-        liner = pid(LINER_N["forward_cell"] if sid == "FS-MS" else LINER_N["aft_cell"])
         for y in BOX_BOLT_Y:
             p = (float(s_["x"]) + y * k, y, 0.0)
-            F.sym(6, p, n, [liner, s_["part"], root], nut="nutplate", grade=TI, step=3,
-                  label=f"box bolt {sid} y {y}", notes="through the bay liner, the spar-frame web and the box "
-                                                       "frame-land doubler into a nutplate inside the box")
+            F.sym(6, p, n, [s_["part"], root], nut="nutplate", grade=TI,
+                  label=f"box bolt {sid} y {y}", notes="through the spar-frame web and the box's in-body web doubler "
+                                                       "into a nutplate inside the box (the bay liner keeps clear of the "
+                                                       "heads: skin-side wall + 20 mm flanges only, V06)")
 
     # ---- 3. chine-longeron splices on the side-of-body rib (layout SPL-CH-*, 4 x M6 Ti each)
+    # heads on the SOB rib outboard face (inserted from the open glove bays before the glove skins), nuts on the leg:
+    # inboard of the leg the J web leaves too little room for straight insertion (V02, V07)
     sp = C.mem["M-CHINE"]["splices"][0]
     for p in chine_fwd_splice_points(C):
-        F.sym(6, p, sp["axis"], [pid(20, "R"), C.ref("M-SOB")], grade=TI, washer_head=True, step=9,
+        F.sym(6, p, (0.0, -1.0, 0.0), [C.ref("M-SOB"), pid(20, "R")], grade=TI, washer_head=True,
               label=f"{sp['id']} {np.round(p, 4).tolist()}")
-    for p in chine_aft_splice_points(C):           # the glove trailing-edge bay is only ~20 mm deep at the SOB rib
-        F.sym(4, p, (0.0, 1.0, 0.0), [pid(N_CHINE_AFT, "R"), C.ref("M-SOB")], grade=TI, washer_head=True, step=12,
+    for p in chine_aft_splice_points(C):           # the glove trailing-edge bay is only ~35 mm deep at the SOB rib
+        F.sym(4, p, (0.0, -1.0, 0.0), [C.ref("M-SOB"), pid(N_CHINE_AFT, "R")], grade=TI, washer_head=True,
               label=f"SPL-CH-AFT {np.round(p, 4).tolist()}")
 
     # ---- 4. shear clips at the chine notches (2 x M4 to the frame web, 1 x M4 to the J web)
@@ -3517,9 +3667,9 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
     # ---- 13. parachute strap brackets: 2 flush blind rivets each (no head in the 6 mm container gap)
     for num, xc in zip(N_PARA_BRKT, PARA_BRKT_X):
         for p in para_bracket_points(C, xc, PARA_BRKT_Z):
-            F.sym_pin(PARA_RIVET_D, p, (0.0, 1.0, 0.0), [pid(num, "R"), C.ref("M-PARAWALL")],
-                      spec="blind rivet, countersunk, A286 / CherryMAX class d 4.0 (flush on the bay side, estimate)",
-                      retention="blind (self-locking)", step=14, label="para bracket rivet")
+            F.sym_rivet(PARA_RIVET_D, p, (0.0, 1.0, 0.0), [pid(num, "R"), C.ref("M-PARAWALL")],
+                        spec="blind rivet, countersunk, A286 / CherryMAX class (flush on the bay side, estimate)",
+                        label="para bracket rivet")
 
     # ---- 14. turret rail anchors (M4 into potted inserts of the frame and of the bay wall)
     for rail in C.L["chassis"]["turret_elevator"]["rails"]:

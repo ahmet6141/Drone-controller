@@ -14,6 +14,7 @@ to the first joined part, at the fastener's assembly step.
 from __future__ import annotations
 
 import math
+import re
 
 import numpy as np
 
@@ -126,9 +127,19 @@ _MAT_CANDIDATES = {"ti": ("fastener_ti", "ti_6al_4v_annealed_sheet"),
                    "steel": ("fastener_steel", "steel_4130_n")}
 
 
+_TI_RE = re.compile(r"(^|[-\s/(])Ti(-6Al-4V|-?6-4|\b)")          # titanium grade token (case-sensitive "Ti")
+_SS_RE = re.compile(r"(^|[-\s/(])(A[24]-\d|A-?286\b)", re.IGNORECASE)  # stainless / A-286 superalloy
+
+
 def fastener_material(designation: str, mats: dict) -> str:
-    u = designation.upper()
-    fam = "ti" if "TI" in u else ("stainless" if ("A2-" in u or "A4-" in u) else "steel")
+    """spec.materials key for a fastener designation: the alloy is read from its grade token only ("Ti-6Al-4V",
+    "A2-70" / "A4-80" / "A286"); any other text (e.g. "estimate", "captive") does not select a family."""
+    if _TI_RE.search(designation):
+        fam = "ti"
+    elif _SS_RE.search(designation):
+        fam = "stainless"
+    else:
+        fam = "steel"
     cands = _MAT_CANDIDATES[fam]
     return next((m for m in cands if m in mats), cands[0])
 

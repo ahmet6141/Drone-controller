@@ -76,6 +76,10 @@ def _bolt_mesh(f: Fastener) -> Mesh:
         parts.append(difference(union([base, barrel]), [bore]))
     elif f.grip is not None and "insert" in nut and size in C.INSERT:
         fl, body, ln = C.INSERT[size]
+        import re
+        m_ln = re.search(r"L (\d+(?:\.\d+)?) mm", f.nut)      # shortened through-thickness insert (joints.bolt)
+        if m_ln:
+            ln = min(ln, float(m_ln.group(1)) * 1e-3)
         q = p + f.grip * a                              # panel face: flange flush there, body goes deeper (+axis)
         ins = union([cylinder(fl / 2, q, q + 0.001 * a, n=24), cylinder(body / 2, q + 0.0009 * a, q + ln * a, n=24)])
         parts.append(difference(ins, [cylinder(0.5 * f.d, q - 1e-3 * a, q + (ln + 1e-3) * a, n=24)]))

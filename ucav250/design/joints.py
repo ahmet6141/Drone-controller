@@ -123,10 +123,13 @@ def bolt(reg: Registry, fid: str, size, position, axis, stack, *, owner: str | N
         if L - wh - grip < 1.2 * d:
             raise ValueError(f"{fid}: thread engagement {(L - wh - grip) * 1000:.1f} mm < 1.2 D in the insert")
         q = p + grip * a                      # flush potted insert: flange counterbore + body bore
-        reg.parts[insert_part].add_hole(q - 0.0005 * a, q + (ln + 0.0005) * a, 0.5 * body)
+        # a given insert_depth shorter than the catalogue length is a through-thickness insert of that length
+        # (thin sandwich lands): bore and insert body end there (hardware.py reads "L <mm>" from the nut text)
+        ln_i = depth if insert_depth else ln
+        reg.parts[insert_part].add_hole(q - 0.0005 * a, q + (ln_i + 0.0005) * a, 0.5 * body)
         reg.parts[insert_part].add_hole(q - 0.0005 * a, q + 0.00105 * a, 0.5 * fl + 0.0001)
         ids = ids + [insert_part]
-        nut_desc = f"potted insert M{size:g} (fl {fl * 1000:.0f} mm, L {ln * 1000:.0f} mm)"
+        nut_desc = f"potted insert M{size:g} (fl {fl * 1000:.0f} mm, L {ln_i * 1000:.1f} mm)"
     elif "tapped" in nut_l:
         if tapped_part is None or tapped_depth is None:
             raise ValueError(f"{fid}: tapped joint needs tapped_part and tapped_depth")

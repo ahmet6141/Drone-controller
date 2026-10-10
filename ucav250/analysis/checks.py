@@ -375,15 +375,18 @@ def _edge_distance_mesh(f, man, extent: float, n_dir: int = 36, r_hole: float | 
     e1, e2 = _perp_basis(a)
     lo = -0.02 - 2 * f.d
     hi = (f.grip if f.grip is not None else f.length) + 0.02 + 2 * f.d
-    mids = []
+    g_hi = (f.grip if f.grip is not None else f.length) + 0.001
+    mids, mids_g = [], []
     for d in (e1, -e1, e2, -e2):
         o = c + 1.6 * r_h * d
         h = ray_hits(man, o + lo * a, o + hi * a) + lo
         for i in range(0, len(h) - 1, 2):                      # (enter, exit) pairs along the probe line
             mids.append(0.5 * (h[i] + h[i + 1]))
+            if h[i + 1] > -0.001 and h[i] < g_hi:              # material inside the clamped stack (or the threaded
+                mids_g.append(0.5 * (h[i] + h[i + 1]))         # part next to it), not a wall beyond the nut
     if not mids:
         return math.inf, False
-    t_mid = float(np.median(mids))
+    t_mid = float(np.median(mids_g or mids))
     p0 = c + t_mid * a
     best = math.inf
     for th in np.linspace(0.0, 2 * math.pi, n_dir, endpoint=False):

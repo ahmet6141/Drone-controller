@@ -212,6 +212,9 @@ class Ctx:
         self.mem = {m["id"]: m for m in ch["members"]}
         self.fit = {f["id"]: f for f in ch["fittings"]}
         self.n0, self.n1 = self.L["part_numbers"]["chassis"]
+        mc = self.mem["M-CHINE"]
+        _CHINE_PATHS["p"] = {"paths": [np.asarray(p_, float) for p_ in mc["paths"]],
+                             "w": float(mc["section"]["w"]), "h": float(mc["section"]["h"])}
         self.steps = {s["step"]: s for s in spec["assembly"]["steps"]}
         self._sec = {}
         self._env = {}
@@ -326,6 +329,36 @@ class Ctx:
 WEB_CUT_SKIP = {"C-BRIDLE-F"}   # realised as a T-cap relief only: the web keeps the land of the bridle-fitting bolts
 
 
+CHINE_NOTCH_GAP = 0.0008    # clearance of the chine-longeron notches round the J swept through the frame
+
+
+def _chine_notch(st: dict, c: dict, half: float | None = None):
+    """(y0, y1, z0, z1) of a chine-longeron notch: the layout rectangle grown to contain the J section swept over the
+    frame thickness (or +-``half`` about the frame plane: the T-cap width) - the longeron path is inclined in plan and
+    elevation - + CHINE_NOTCH_GAP."""
+    from ..core import spec as _S  # noqa: F401  (layout read through the station's own data)
+    y0, y1 = map(float, c["y"])
+    z0, z1 = map(float, c["z"])
+    P = _CHINE_PATHS.get("p")
+    if not P:
+        return y0, y1, z0, z1
+    x, t = float(st["x"]), float(st["t"])
+    w, h = P["w"], P["h"]
+    for path in P["paths"]:
+        if path[0, 0] - 0.01 <= x <= path[-1, 0] + 0.01:
+            hw = 0.5 * t + 0.001 if half is None else half
+            xs = np.linspace(x - hw, x + hw, 9)
+            yc = np.interp(xs, path[:, 0], path[:, 1])
+            zc = np.interp(xs, path[:, 0], path[:, 2])
+            y0 = min(y0, float(yc.min()) - 0.5 * w - CHINE_NOTCH_GAP)
+            z0 = min(z0, float(zc.min()) - 0.5 * h - CHINE_NOTCH_GAP)
+            z1 = max(z1, float(zc.max()) + 0.5 * h + CHINE_NOTCH_GAP)
+    return y0, y1, z0, z1
+
+
+_CHINE_PATHS: dict = {}
+
+
 def _cut_polys(st: dict, include=lambda c: True) -> list[Polygon]:
     out = []
     for c in st.get("cutouts", []):
@@ -333,6 +366,8 @@ def _cut_polys(st: dict, include=lambda c: True) -> list[Polygon]:
             continue
         y0, y1 = c["y"]
         z0, z1 = c["z"]
+        if c.get("member") == "M-CHINE":
+            y0, y1, z0, z1 = _chine_notch(st, c)
         out.append(rect(y0, y1, z0, z1))
         if c.get("mirror"):
             out.append(rect(-y0, -y1, z0, z1))
@@ -362,6 +397,9 @@ def _cap_notch_sides(C: Ctx, sid: str) -> list[tuple[Polygon, str]]:
         if c.get("kind") in ("longeron notch", "edge notch"):
             y0, y1 = c["y"]
             z0, z1 = c["z"]
+            if c.get("member") == "M-CHINE":           # J swept over the cap width, notch open to the skin
+                y0, _y1, z0, z1 = _chine_notch(st, c, half=float(st.get("flange_w", 0.028)) + 0.001)
+                y1 = 1.0
             out.append((rect(y0, y1, z0, z1), "both"))
             if c.get("mirror"):
                 out.append((rect(-y0, -y1, z0, z1), "both"))
@@ -424,7 +462,14 @@ def frame_web_poly(C: Ctx, sid: str, xs) -> Polygon:
             lo, hi = C.fit[fid]["boxes"][0]
             cuts.append(rect(lo[1] - 0.0005, hi[1] + 0.0005, lo[2] - 0.0002, hi[2] + 0.0002))
     if sid == "FS3480":                                            # dorsal longeron hat passes the ring band
-        z_d = _dorsal_z(C, float(st["x"]))
+        hx = 0.5 * float(st["t"]) + 0.001                         # crown swept through the web (path rises aft)
+        z_d = min(_dorsal_z(C, float(st["x"]) + d) for d in np.linspace(-hx, hx, 5))
+        deep = None                                                # ... and its skin flanges (2 mm under the skin)
+        for xx in xs:
+            p_ = C.sec(xx, 0.0065 + DORSAL_T + 0.0008)
+            deep = p_ if deep is None else deep.intersection(p_)
+        for s in (1, -1):
+            cuts.append(rect(s * DORSAL_Y0, s * DORSAL_Y1, -1.0, 1.0).difference(deep))
         for s in (1, -1):
             cuts.append(rect(s * (0.15 - 0.5 * DORSAL_W - 0.0008), s * (0.15 + 0.5 * DORSAL_W + 0.0008),
                              z_d - 0.5 * DORSAL_H - 0.0008, 0.50))
@@ -1082,6 +1127,16 @@ def union_env(C: Ctx, inset: float, x0: float, x1: float) -> G.Mesh:
     return C._env[key]
 
 
+def extend_path(P, dx: float):
+    """Path (k, 3) extended by dx in x at both ends along its end segments (linear extrapolation: moving an end point
+    in x alone would bend the end segment)."""
+    P = np.asarray(P, float).copy()
+    d0 = (P[1] - P[0]) / (P[1, 0] - P[0, 0])
+    d1 = (P[-1] - P[-2]) / (P[-1, 0] - P[-2, 0])
+    return np.vstack([P[0] - dx * d0, P[1:-1], P[-1] + dx * d1]) if len(P) > 2 else np.vstack([P[0] - dx * d0,
+                                                                                                P[-1] + dx * d1])
+
+
 def build_chine(C: Ctx, piece: int) -> G.Mesh:
     """Chine longeron piece (J 35 x 30, t 2.4): outer region = the member rectangle inside the union OML inset to the
     skin line (the J's skin-side flange is the land of the chine skins), minus the same region inset by t on the
@@ -1096,9 +1151,7 @@ def build_chine(C: Ctx, piece: int) -> G.Mesh:
     w, h, t = float(m["section"]["w"]), float(m["section"]["h"]), float(m["section"]["t"])
     yo = Y_SOB - 0.5 * T_RIB
     x0, x1 = float(P[0, 0]), float(P[-1, 0])
-    P2 = P.copy()
-    P2[0, 0] -= 0.003
-    P2[-1, 0] += 0.003
+    P2 = extend_path(P, 0.003)
     box_o = _path_loft(C, P, lambda x, yc, zc: rect(yc - w / 2, yo, zc - h / 2, zc + h / 2), n=24)
     box_i = _path_loft(C, P2, lambda x, yc, zc: rect(yc - w / 2 + t, yo + 0.01, zc - h / 2 - 0.01, zc + h / 2 + 0.01),
                        n=24)
@@ -1146,8 +1199,11 @@ def chine_aft_splice_points(C: Ctx):
     out = []
     for x in CHINE_AFT_SPLICE_X:
         zu, zl = wing_z(C, [x], Y_SOB)
-        out.append((x, yo, 0.5 * ((float(zu[0]) - 0.0085) + (float(zl[0]) + 0.0065))))
+        out.append((x, yo, 0.5 * ((float(zu[0]) - 0.0085) + (float(zl[0]) + 0.0065)) + CHINE_AFT_SPLICE_DZ))
     return out
+
+
+CHINE_AFT_SPLICE_DZ = 0.0003     # 10 mm (2.5 D) above the splice leg's skin-line edge
 
 
 def box_member(C: Ctx, lo, hi, inset=MEM_IN, cut=()) -> G.Mesh:
@@ -1169,6 +1225,17 @@ def chevron_slab(C: Ctx, sid: str, side: int, pad: float = 0.0) -> G.Mesh:
         x0, x1 = (xf - 1.0, xf) if side < 0 else (xf, xf + 1.0)
         return box3((x0, y_lo, -1.0), (x1 + dxa, y_hi, 1.0))
     return chevron(b, float(st["sweep_deg"]))
+
+
+def chine_envelope(C: Ctx, piece: int, gap: float) -> G.Mesh:
+    """Solid swept by the chine J box (web line to outboard) grown by ``gap``, both sides (cutter for neighbours)."""
+    m = C.mem["M-CHINE"]
+    P = np.asarray(m["paths"][piece], float)
+    w, h = float(m["section"]["w"]), float(m["section"]["h"])
+    P = extend_path(P, 0.02)
+    env = _path_loft(C, P, lambda x, yc, zc: rect(yc - 0.5 * w - gap, 1.0, zc - 0.5 * h - gap, zc + 0.5 * h + gap),
+                     n=24)
+    return union([env, env.mirrored_y()])
 
 
 def build_deck_nose(C: Ctx, chine_env) -> G.Mesh:
@@ -1199,7 +1266,9 @@ def build_turretwall(C: Ctx) -> G.Mesh:
 
 def build_turretroof(C: Ctx) -> G.Mesh:
     m = C.mem["M-TURRETROOF"]
-    return fuse_boxes(m["boxes"])
+    lo = np.min([b[0] for b in m["boxes"]], axis=0)
+    hi = np.max([b[1] for b in m["boxes"]], axis=0)
+    return pieces_above(inter(fuse_boxes(m["boxes"]), C.body_env(MEM_IN, lo[0] - 0.005, hi[0] + 0.005)))
 
 
 def build_parawall(C: Ctx, fs_a: float, fs_b: float, fw: float) -> G.Mesh:
@@ -1276,6 +1345,7 @@ def build_keel(C: Ctx, frames) -> G.Mesh:
     # between the frame caps the wall is fused with its own skin land flange
     mid = inter(box3((x0, lo[1], lo[2]), (x1, hi[1], float(dk[0][2]))),
                 C.body_env(0.0065 + CAP_T - OV, x0 - 0.005, x1 + 0.005))
+    mid = diff(mid, [_ms_cap_zone(C)])                 # the FS-MS T-cap runs under the wall there
     wall = union([wall, aft, mid])
     wall = diff(wall, [_aft_of(C, "FS-RS", -MEM_GAP)])
     # payload-hatch side land: 1.6 mm flange at the skin line outboard of the wall, between the frame caps
@@ -1368,8 +1438,9 @@ def build_gearbeam(C: Ctx) -> G.Mesh:
                       for k, b in enumerate(m["boxes"])])
     y0, y1 = float(m["box"][0][1]), float(m["box"][1][1])
     f = C.fit["F-TRUNNION"]
-    bb = [b["point"] for b in f["bolts"] if b["group"] == "gear beam"]
-    xs, zs = [p[0] for p in bb], [p[2] for p in bb]
+    bb = [(TRUN_BEAM_X.get(b["id"], b["point"][0]), TRUN_BEAM_Z.get(b["id"], b["point"][2])) for b in f["bolts"]
+          if b["group"] == "gear beam"]
+    xs, zs = [p[0] for p in bb], [p[1] for p in bb]
     xs_o = [x for x in xs if abs(x - 2.9759) > 0.01]
     zs_o = [z for x, z in zip(xs, zs) if abs(x - 2.9759) > 0.01]
     lands = [rect(min(xs_o) - 0.013, 2.9399 - 0.0005, min(zs_o) - 0.013, max(zs_o) + 0.013),
@@ -1446,13 +1517,17 @@ def build_aftkeel(C: Ctx) -> G.Mesh:
     w, t = float(s["w"]), float(s["t"])
     tf = float(s["land_flange_t"])
     yL = float(m["lands"][0]["y"][1])
-    z_top, z_bot = float(hi[2]), float(lo[2])
-    poly = unary_union([rect(-w / 2, w / 2, z_top - t, z_top), rect(-w / 2, -w / 2 + t, z_bot, z_top),
-                        rect(w / 2 - t, w / 2, z_bot, z_top), rect(-yL, yL, z_bot, z_bot + tf)])
-    poly = poly.difference(rect(-w / 2 + t, w / 2 - t, z_bot - 0.01, z_top - t))
+    z_top = float(hi[2])
     x0, x1 = float(lo[0]), float(hi[0])
-    keel = prism_x(clean_poly(poly), x0, x1)
-    return pieces_above(inter(keel, C.body_env(0.0065, x0 - 0.005, x1 + 0.005)))
+    # channel: top web + walls down to the skin line (the V belly)
+    poly = unary_union([rect(-w / 2, w / 2, z_top - t, z_top), rect(-w / 2, -w / 2 + t, -0.30, z_top),
+                        rect(w / 2 - t, w / 2, -0.30, z_top)])
+    chan = inter(prism_x(clean_poly(poly), x0, x1), C.body_env(0.0065 - OV, x0 - 0.005, x1 + 0.005))
+    # lower land flanges of the split lower cowl: the skin-line band (1.6 mm) out to y +-yL, open under the channel
+    band = diff(inter(box3((x0, -yL, -0.30), (x1, yL, z_top - t)), C.body_env(0.0065, x0 - 0.005, x1 + 0.005)),
+                [C.body_env(0.0065 + tf, x0 - 0.01, x1 + 0.01), box3((x0 - 0.01, -(w / 2 - t), -0.31),
+                                                                   (x1 + 0.01, w / 2 - t, z_top))])
+    return pieces_above(union([chan, pieces_above(band)]))
 
 
 def build_ventralkeel(C: Ctx) -> G.Mesh:
@@ -1486,7 +1561,9 @@ def build_spine(C: Ctx) -> G.Mesh:
             for xa, xb in ((xa_, x0 + SPINE_PAD_L), (x1 - SPINE_PAD_L, xb_))]
     U = inter(union([floor] + walls + pads), C.body_env(0.0065, x0 - 0.005, x1 + 0.02))
     fl = diff(inter(box3((x0, -yf, 0.10), (x1 + 0.01, yf, 0.3)), C.body_env(0.0065, x0 - 0.005, x1 + 0.02)),
-              [C.body_env(0.0065 + t, x0 - 0.01, x1 + 0.03), box3((x0 - 0.1, -yw + t, 0.0), (x1 + 0.1, yw - t, 0.4))])
+              [C.body_env(0.0065 + t, x0 - 0.01, x1 + 0.03), box3((x0 - 0.1, -yw + t, 0.0), (x1 + 0.1, yw - t, 0.4)),
+               box3((x0 - 0.01, -RISER_FLANGE_HW - MEM_GAP, 0.0), (xa_, RISER_FLANGE_HW + MEM_GAP, 0.4)),
+               box3((xb_, -RISER_FLANGE_HW - MEM_GAP, 0.0), (x1 + 0.03, RISER_FLANGE_HW + MEM_GAP, 0.4))])
     sp = union([U, pieces_above(fl)])
     return pieces_above(diff(sp, [_aft_of(C, "FS-RS")]))
 
@@ -1500,7 +1577,7 @@ RISER_FLANGE_T = 0.006      # bridle-fitting frame flange (layout 6 mm); the cha
 def build_wellkeel(C: Ctx) -> G.Mesh:
     m = C.mem["M-WELLKEEL"]
     lo, hi = m["box"]
-    return box3(lo, hi)
+    return box_member(C, lo, hi)
 
 
 def build_plain_wall(C: Ctx, mid: str, z_top=None) -> G.Mesh:
@@ -1556,10 +1633,14 @@ def build_trunnion(C: Ctx) -> G.Mesh:
         lo, hi = list(map(float, lo)), list(map(float, hi))
         if k < 3:                                     # beam flange boxes
             hi[1] = yb
+        if k == 2:
+            hi[0] = TRUN_FLANGE_X1
         boxes.append((lo, hi))
-    x0, x1 = float(f["box"][0][0]), float(f["box"][1][0])
-    # top plate on the well roof over the full fitting length (roof bolts fore and aft of the lugs)
-    boxes.append(((x0, TRUN_ROOF_Y[0] - 0.012, -0.0868), (x1, 0.377, -0.0668)))
+    x0, x1 = float(f["box"][0][0]), TRUN_FLANGE_X1
+    # top plate on the well roof extended fore and aft of the lugs for the roof bolts (inboard of the beam bolts)
+    ya, yb = TRUN_ROOF_Y[0] - 0.012, TRUN_ROOF_Y[1] + 0.012
+    boxes.append(((x0, ya, -0.0868), (2.9399, yb, -0.0668)))         # over the lugs (not between them: leg swing)
+    boxes.append(((3.0119, ya, -0.0868), (x1, yb, -0.0668)))
     m = fuse_boxes(boxes)
     px, py, pz = f["pivot"]
     cuts = [bore((b["x"] - 0.05, py, pz), (b["x"] + 0.05, py, pz), 0.5 * float(b["bore"]) + 0.0000105)
@@ -1572,7 +1653,12 @@ def build_trunnion(C: Ctx) -> G.Mesh:
     return diff(m, cuts)
 
 
-TRUN_ROOF_Y = (0.333, 0.362)    # roof bolts B6-B9: rows 29 mm apart (sealed dome nutplates 28 mm long; layout 22 mm)
+TRUN_ROOF_Y = (0.326, 0.355)    # roof bolts B6-B9: rows 29 mm apart (sealed dome nutplates 28 mm long; layout 22 mm)
+TRUN_BEAM_Z = {"B1": -0.092, "B4": -0.092, "B5": -0.1125}   # beam bolts below the roof plate band (layout -0.085),
+# B5 15.5 mm above the beam's skin-line edge; B4 5 mm aft so that B4-B5 are 21 mm apart (insert bores 11 mm:
+# 2.5 D + bore radius = 20.5 mm); the aft flange box grows 2 mm aft for the 2 D edge of B4
+TRUN_BEAM_X = {"B4": 3.0509}
+TRUN_FLANGE_X1 = 3.0629
 TRUN_ROOF_X = (2.9029, 3.0489)  # ... fore / aft of the lugs (layout: in the lugs, above the 20 H7 bores)
 
 
@@ -1598,10 +1684,20 @@ UPLOCK_BOLT_Y = (0.237, 0.263)  # 4 x M5 into sealed dome nutplates: 26 mm row p
 UPLOCK_BOLT_DX = 0.0135         # bolt columns +-13.5 mm about the hook point: heads clear of the hook boss
 
 
+NG_BLOCK_X1_LAYOUT, NG_BLOCK_X1 = 0.682, 0.690
+NG_BOLT_XZ = {"B2": (0.677, -0.1265), "B5": (0.677, -0.1265)}   # 15 mm (2.5 D) above the keel-wall skin edge
+
+
 def build_ng_pivot(C: Ctx) -> G.Mesh:
     """Two 7075 pivot blocks (6 mm) on the inboard faces of the keel walls with the flanged 16 H7 bushings (bores)."""
     f = C.fit["F-NG-PIVOT"]
-    m = fuse_boxes(f["boxes"])
+    boxes = []
+    for lo, hi in f["boxes"]:                       # aft blocks 8 mm longer (B2 / B5 raised and moved aft)
+        hi = list(hi)
+        if abs(float(hi[0]) - NG_BLOCK_X1_LAYOUT) < 1e-6:
+            hi[0] = NG_BLOCK_X1
+        boxes.append((lo, hi))
+    m = fuse_boxes(boxes)
     px, py, pz = f["pivot"]
     return diff(m, [bore((px, -0.05, pz), (px, 0.05, pz), 0.5 * float(f["bore"]) + 0.0000095)])
 
@@ -1634,10 +1730,14 @@ def build_fw_corner(C: Ctx) -> G.Mesh:
     f = C.fit["F-FW-CORNER"]
     B = [np.asarray(b, float) for b in f["boxes"]]
     B[1][0][1] = min(B[1][0][1], engine_foot_points(C)[0][1] - 0.016)      # 2 D edge for the spread foot bolts
+    node_top = max(float(b[1][2]) for b in C.fit["F-SPINDLE-NODE"]["boxes"][:3])
+    B[2][0][2] = max(B[2][0][2], node_top)                 # layout web box reaches 4 mm into the node flange
     base, ear = box3(B[1][0], B[1][1]), box3(B[3][0], B[3][1])
+    ext = box3((B[1][0][0], B[1][0][1], CORNER_BASE_Z0), (B[1][1][0], CORNER_EXT_Y1, B[1][0][2] + OV))
     web = box3(B[2][0], (B[2][1][0], B[2][1][1], B[2][1][2]))
     bridge = box3((B[2][1][0] - OV, B[3][0][1], B[3][0][2]), (B[3][0][0] + OV, B[3][1][1], B[3][0][2] + 0.005))
-    return union([base, web, ear, bridge])
+    m = union([base, ext, web, ear, bridge])
+    return pieces_above(inter(m, C.body_env(MEM_IN, B[1][0][0] - 0.01, B[3][1][0] + 0.01)))
 
 
 DORSAL_TONGUE_T = 0.005
@@ -1686,7 +1786,8 @@ def build_stub_front(C: Ctx) -> G.Mesh:
     m = box3(lo, hi)
     ys = max(b["point"][1] for b in f["bolts"] if b["group"] == "frame") + 0.010
     slot = box3((lo[0] + 0.004, ys, lo[2] - 0.01), (hi[0] - 0.004, hi[1] + 0.01, hi[2] + 0.01))
-    return diff(m, [slot])
+    m = diff(m, [slot])
+    return pieces_above(inter(m, C.body_env(MEM_IN, lo[0] - 0.01, hi[0] + 0.01)))
 
 
 def build_ventral(C: Ctx, fid: str, keel_inner_half: float, lug_t: float = 0.008) -> G.Mesh:
@@ -1733,7 +1834,8 @@ def build_riser(C: Ctx, fid: str) -> G.Mesh:
 RISER_PIN_DZ = 0.0            # shackle pin on the layout point (e = 15.5 mm to the ear top)
 RISER_FLANGE_HW = 0.0235      # frame flange +-23.5 mm (layout +-18): frame bolts B5/B6 outboard of the ears
 RISER_FLANGE_Z0 = 0.1605      # ... reaching down past the channel end (layout 0.165): 12.5 mm frame-web edge
-RISER_FRAME_BOLT = (0.0135, 0.1725)   # |y|, z of B5/B6
+RISER_FRAME_BOLT = (0.0135, 0.174)    # |y|, z of B5/B6 (M4: heads clear of the base strips and the ears)
+RISER_FLOOR_BOLT_DX = 0.013           # floor bolts nearest the frame 13 mm from the flange face (3 D to B5/B6)
 
 
 # =====================================================================================================================
@@ -1806,18 +1908,17 @@ def build_engine_mount(C: Ctx, foot_x: float) -> G.Mesh:
     feet = {}
     for i, ft in enumerate(eng["feet"]):
         yc, zc = engine_foot_centre(C, float(ft[1]), float(ft[2]))
-        s = 1.0 if yc > 0 else -1.0
         hw = 0.5 * FOOT_W
-        if zc > 0.2:                     # upper feet: strut block below the bolt row, on a plate extension
-            ms.append(box3((foot_x, yc - hw, zc - 0.016), (foot_x + FOOT_T, yc + hw, zc + 0.016)))
-            ya, yb = sorted((yc - s * hw, s * FOOT_EXT_Y))
-            ms.append(box3((foot_x, ya, zc - 0.016 - 0.018), (foot_x + FOOT_T, yb, zc - 0.016 + OV)))
-            zb = zc - FOOT_BLOCK_DZ
+        if zc > 0.2:                     # upper feet: vertical bolt pair, strut block between the two heads
+            z0, z1 = FOOT_UPPER_Z
+            ms.append(box3((foot_x, yc - FOOT_UP_HW, z0 - FOOT_UP_HW), (foot_x + FOOT_T, yc + FOOT_UP_HW,
+                                                                         z1 + FOOT_UP_HW)))
+            zb, bhz = zc, FOOT_UP_BLOCK_HZ
         else:                            # lower feet: strut block above the bolt row
             ms.append(box3((foot_x, yc - hw, zc - 0.016), (foot_x + FOOT_T, yc + hw, zc + 0.034)))
-            zb = zc + FOOT_BLOCK_DZ
-        ms.append(box3((foot_x + FOOT_T - OV, yc - FOOT_BLOCK_HW, zb - 0.008), (foot_x + FOOT_T + FOOT_BLOCK,
-                                                                                 yc + FOOT_BLOCK_HW, zb + 0.008)))
+            zb, bhz = zc + FOOT_BLOCK_DZ, 0.008
+        ms.append(box3((foot_x + FOOT_T - OV, yc - FOOT_BLOCK_HW, zb - bhz), (foot_x + FOOT_T + FOOT_BLOCK,
+                                                                               yc + FOOT_BLOCK_HW, zb + bhz)))
         feet[f"foot{i + 1}"] = np.array([foot_x + FOOT_T + FOOT_BLOCK + ro_s, yc, zb])
     for tb in eng["tubes"]:
         a = feet[tb["from"]].copy()
@@ -1845,7 +1946,14 @@ FOOT_BLOCK, FOOT_BLOCK_HW = 0.010, 0.0045   # welded strut block between the two
 
 FOOT_BOLT_PITCH = 0.025     # 2 x M8 per foot 25 mm apart (layout 24 mm < 2.5 D + hole radius in the firewall)
 FOOT_BLOCK_DZ = 0.020       # strut block 20 mm below (upper feet) / above (lower feet) the bolt row
-FOOT_EXT_Y = 0.1395         # upper foot plate extension stays inboard of the corner fitting's clevis bridge
+# upper feet: the fin rear-spar lug slot (x 3.680-3.688, y >= 0.140) and the C-DUCT cut-out edge (y 0.090, M8 2.5 D
+# = 20 mm in the sandwich) leave 0.110-0.1395 in y, too narrow for a 25 mm pair across: the pair stands vertical
+FOOT_UPPER_Y = 0.116        # 26 mm to C-DUCT; plate y 0.0995-0.1325 (lug slot clear)
+FOOT_UPPER_Z = (0.268, 0.293)   # 25 mm pitch; corner base / forward plate extended down to CORNER_BASE_Z0
+FOOT_UP_HW = 0.0165         # foot plate half width / end margin round the bolts (> 2 D = 16 mm in 4130)
+FOOT_UP_BLOCK_HZ = 0.0035   # strut block 7 mm tall between the two ISO 7089 washers (d2 16 mm, 9 mm gap)
+CORNER_BASE_Z0 = 0.250      # corner base / forward plate lower edge inboard of the stabilator-node flange (y < 0.132)
+CORNER_EXT_Y1 = 0.1315      # ... the extension stops 0.5 mm short of the node base flange (y 0.132)
 
 
 def engine_foot_points(C: Ctx):
@@ -1854,6 +1962,9 @@ def engine_foot_points(C: Ctx):
     out = []
     for fid in ("F-FW-CORNER", "F-EMOUNT-LO"):
         pr = [b["point"] for b in C.fit[fid]["bolts"] if b["group"] == "engine foot"]
+        if fid == "F-FW-CORNER":
+            out += [(float(pr[0][0]), FOOT_UPPER_Y, z) for z in FOOT_UPPER_Z]
+            continue
         yc = 0.5 * (pr[0][1] + pr[1][1])
         out += [(float(pr[0][0]), yc - 0.5 * FOOT_BOLT_PITCH, float(pr[0][2])),
                 (float(pr[0][0]), yc + 0.5 * FOOT_BOLT_PITCH, float(pr[0][2]))]
@@ -1869,7 +1980,7 @@ def engine_foot_centre(C: Ctx, y: float, z: float):
     return s * 0.5 * (pair[0][1] + pair[1][1]), 0.5 * (pair[0][2] + pair[1][2])
 
 
-NODE_B46_Y = 0.2085         # node bolts B4 / B6 1.5 mm outboard of the layout: 13.5 mm (>= 2.5 D) to C-FW-PUSHROD
+NODE_B46_Y = 0.2080         # node bolts B4 / B6 1 mm outboard of the layout: 13 mm (>= 2.5 D) to C-FW-PUSHROD
 
 
 def node_firewall_points(C: Ctx):
@@ -1917,7 +2028,7 @@ def _clip_geom(C: Ctx, sid: str, side: int):
     yw = lambda x: float(np.interp(x, P[:, 0], P[:, 1])) - 0.5 * w           # noqa: E731  J web inboard face
     zc = lambda x: float(np.interp(x, P[:, 0], P[:, 2]))                     # noqa: E731
     notch = next(c for c in st["cutouts"] if c.get("kind") == "longeron notch")
-    ya = min(float(notch["y"][0]) - 0.0105, yw(xf) - CLIP_LEG_A + 0.0085)
+    ya = min(_chine_notch(st, notch)[0] - 0.0105, yw(xf) - CLIP_LEG_A + 0.0085)
     return P, xf, yw, zc, ya
 
 
@@ -1929,7 +2040,8 @@ def build_clip(C: Ctx, sid: str, side: int):
     ct, L, la, lb = CLIP_T, CLIP_L, CLIP_LEG_A, CLIP_LEG_B
     z0, z1 = zc(xf) - L / 2, zc(xf) + L / 2
     xa_, xb_ = sorted((xf, xf + side * ct))
-    legA = box3((xa_, yw(xf) - la, z0), (xb_, yw(xf), z1))
+    y_top = min(yw(xf), yw(xf + side * ct))
+    legA = box3((xa_, y_top - la, z0), (xb_, y_top, z1))
     xe = xf + side * lb
     xs = sorted({xf, xe} | {float(v) for v in P[:, 0] if min(xf, xe) < v < max(xf, xe)})
     rings = [np.array([[x, yw(x) - ct, zc(x) - L / 2], [x, yw(x), zc(x) - L / 2], [x, yw(x), zc(x) + L / 2],
@@ -1937,8 +2049,12 @@ def build_clip(C: Ctx, sid: str, side: int):
     legB = G.loft(rings)
     pts_a = [(xf, ya, zc(xf) - CLIP_BOLT_DZ), (xf, ya, zc(xf) + CLIP_BOLT_DZ)]
     xb = xf + side * (lb - 0.0085)
+    for v in P[:, 0]:                                  # washer / nut on one straight run of the J web (no kink)
+        if abs(xb - v) < CLIP_J_VERTEX_CLEAR:
+            xb = float(v) - side * CLIP_J_VERTEX_CLEAR
     pts_b = [(xb, yw(xb), zc(xb))]
-    return union([legA, legB]), pts_a, pts_b, xf
+    m = pieces_above(inter(union([legA, legB]), C.body_env(MEM_IN, xf - 0.03, xf + 0.03)))
+    return m, pts_a, pts_b, xf
 
 
 def clip_web_normal(C: Ctx, sid: str, side: int, x: float):
@@ -1951,6 +2067,7 @@ def clip_web_normal(C: Ctx, sid: str, side: int, x: float):
 
 
 CLIP_T, CLIP_L, CLIP_LEG_A, CLIP_LEG_B = 0.002, 0.030, 0.030, 0.020
+CLIP_J_VERTEX_CLEAR = 0.0045    # longeron bolt >= washer radius + 1 mm from a kink of the J path
 CLIP_BOLT_DZ = 0.0065       # frame-leg bolts at +-6.5 mm (pitch 13 >= 2.5 D + hole radius in the frame)
 CLIP_SIDE = {"FS1110": 1, "FS1330": 1, "FS1490": 1, "FS1810": 1, "FS-FUEL": -1, "FS-GEAR": 1, "FS3480": 1}
 
@@ -2021,8 +2138,10 @@ def build_uring(C: Ctx):
     ifl = C.sec(xm, inset + d - tf).difference(C.sec(xm, inset + d)).intersection(rect(-ys, ys, -1, 0.0))
     k = C.mem["M-AFTKEEL"]
     yl = float(k["lands"][0]["y"][1]) + 0.0005
+    tfk = float(k["section"]["land_flange_t"])
     keel_cut = rect(-0.5 * float(k["section"]["w"]) - 0.0003, 0.5 * float(k["section"]["w"]) + 0.0003, -1,
-                    float(k["box"][1][2]) + 0.0003).union(rect(-yl, yl, -1, float(k["box"][0][2]) + 0.0019))
+                    float(k["box"][1][2]) + 0.0003).union(
+        outer.difference(C.sec(xm, inset + tfk + 0.0003)).intersection(rect(-yl, yl, -1, 1)))
     parts = [webs, prism_x(clean_poly(ofl.difference(keel_cut)), xm - fw / 2, xm + fw / 2),
              prism_x(clean_poly(ifl), xm - fw / 2, xm + fw / 2)]
     segm = diff(union(parts), [prism_x(keel_cut, xm - 0.02, xm + 0.02)])
@@ -2126,6 +2245,7 @@ def build_fw_upper_plate(C: Ctx) -> G.Mesh:
     yb1, zb1 = nb["B1"][1], nb["B1"][2]
     yb3, zb3 = nb["B3"][1], nb["B3"][2]
     poly = unary_union([rect(lo[1], hi[1], lo[2], hi[2]),
+                        rect(lo[1], yb1 - 0.010 + OV, CORNER_BASE_Z0, lo[2] + OV),     # vertical upper-foot pair
                         rect(yb1 - 0.010, yb1 + 0.010, zb1 - 0.010, lo[2] + OV),
                         rect(yb1 - 0.010, yb3 + 0.010, zb1 - 0.010, zb3 + 0.010)])
     plate = prism_x(clean_poly(poly), xf - 0.005, xf)
@@ -2192,7 +2312,7 @@ def build_keel_clip(C: Ctx) -> G.Mesh:
     return union([legA, legB])
 
 
-KCLIP_T, KCLIP_L, KCLIP_Z = 0.002, 0.027, (-0.085, -0.060)
+KCLIP_T, KCLIP_L, KCLIP_Z = 0.002, 0.027, (-0.080, -0.058)
 
 
 def keel_clip_points(C: Ctx):
@@ -2365,9 +2485,11 @@ def build_washer_plate(C: Ctx, fid: str) -> G.Mesh:
     xc = 0.5 * (min(xs) + max(xs))
     z_top = SPINE_FLOOR_TOP - float(C.mem["M-SPINE"]["section"]["pad_t"])
     x0, x1 = xc - 0.024, xc + 0.024
+    fl = f["boxes"][0]
     if fid == "F-RISER-AFT":
-        xr = float(C.st["FS-RS"]["x"]) - 0.5 * float(C.st["FS-RS"]["t"]) - LINER_T - 0.0005
-        x1 = min(x1, xr)
+        x1 = min(x1, float(fl[0][0]) - MEM_GAP)
+    else:
+        x0 = max(x0, float(fl[1][0]) + MEM_GAP)
     return box3((x0, -0.021, z_top - WASHER_T), (x1, 0.021, z_top))
 
 
@@ -2416,6 +2538,8 @@ def rail_anchor_points(C: Ctx, rail: dict):
     return fb, wb
 
 
+LINER_NUT_RELIEF = 0.0060  # liner relief round the clip-bolt nuts (washer ISO 7089 M4 d2 9 mm + 1.5 mm) ...
+LINER_NUT_RELIEF_X = 0.0075  # ... over the washer + ISO 7040 nut height (0.8 + 5.0 mm) + 1.7 mm
 LINER_T = 0.0006            # fuel-bay liner: 3 plies PW (layout 2 plies 0.4 mm < processes.prepreg_ooa_vacbag 0.6 mm)
 
 
@@ -2681,7 +2805,7 @@ class _Reg:
         self.add(21, "R", "nose keel wall, starboard", "burun omurga duvarı, sağ", *mat("M-KEELWALL"),
                  lambda: M(("keelwall",), lambda: build_keelwall(C)), **lay("M-KEELWALL"), parent=stp("FS1110"),
                  step=7, explode=(0.0, 0.2, -0.2), contacts=(stp("FS0600"), stp("FS1110"), C.ref("M-DECK-NOSE")))
-        chine_env = lambda: union([chine(0), chine(0).mirrored_y()])                    # noqa: E731
+        chine_env = lambda: M(("chine_env",), lambda: chine_envelope(C, 0, 0.0005), clean=False)   # noqa: E731
         self.add(22, "C", "avionics deck (nose)", mem["M-DECK-NOSE"]["name_tr"], *mat("M-DECK-NOSE"),
                  lambda: M(("decknose",), lambda: build_deck_nose(C, chine_env())), **lay("M-DECK-NOSE"),
                  parent=stp("FS1110"), step=7, explode=(0.0, 0.0, 0.25),
@@ -3005,6 +3129,18 @@ class _Reg:
         parts = C.reg.parts
         cuts += [parts[pid_].base_mesh for pid_ in (self.root, C.pid(56), C.pid(57), self.st_part(
             fs["boundary_fwd"]["station"]), self.st_part(fs["boundary_aft"]["station"]))]
+        # relief round the nuts of the chine shear-clip frame bolts on the bay side of the boundary frames
+        for sid in (fs["boundary_fwd"]["station"], fs["boundary_aft"]["station"]):
+            if sid not in CLIP_SIDE:
+                continue
+            sd = CLIP_SIDE[sid]
+            _m, pa, _pb, xf = build_clip(C, sid, sd)
+            xo = xf - sd * float(C.st[sid]["t"])                 # bay-side face of the frame (nut side)
+            xr0, xr1 = sorted((xo + sd * 0.001, xo - sd * LINER_NUT_RELIEF_X))
+            zs = [p[2] for p in pa]
+            for s in (1, -1):
+                lo_y, hi_y = sorted((s * (pa[0][1] - LINER_NUT_RELIEF), s * 1.0))
+                cuts.append(box3((xr0, lo_y, min(zs) - LINER_NUT_RELIEF), (xr1, hi_y, max(zs) + LINER_NUT_RELIEF)))
         if cell == "aft_cell":                                   # dome nutplates of the trunnion / up-lock bolts
             for b in C.fit["F-TRUNNION"]["bolts"]:
                 if b["group"] == "well roof":
@@ -3178,12 +3314,11 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
         _m, pa, pb, xf = build_clip(C, sid, side)
         piece = 20 if float(st[sid]["x"]) < 2.6 else N_CHINE_AFT
         clip = pid(num, "R")
-        extra = [pid(LINER_N["forward_cell"])] if sid == "FS-FUEL" else []
-        for p in pa:
-            F.sym(4, p, (-side, 0.0, 0.0), [clip, st[sid]["part"]] + extra, grade=TI, step=9,
+        for p in pa:                                   # fuel-bay frames: the liner is relieved round the nuts
+            F.sym(4, p, (-side, 0.0, 0.0), [clip, st[sid]["part"]], grade=TI, step=9,
                   label=f"clip {sid} frame", washer_nut=True)
-        F.sym(4, pb[0], clip_web_normal(C, sid, side, pb[0][0]), [clip, pid(piece, "R")], grade=TI, step=9,
-              label=f"clip {sid} longeron")
+        F.sym(3, pb[0], clip_web_normal(C, sid, side, pb[0][0]), [clip, pid(piece, "R")], grade=TI, step=9,
+              label=f"clip {sid} longeron", notes="M3: the J web is clipped by the skin line near the chine")
 
     # ---- 5. main-gear trunnion fitting (layout F-TRUNNION B1-B9)
     f = fit["F-TRUNNION"]
@@ -3191,7 +3326,8 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
     land_depth = float(C.mem["M-GEARBEAM"]["box"][1][1] - C.mem["M-GEARBEAM"]["box"][0][1]) + BEAM_LAND_PROUD
     for b in f["bolts"]:
         if b["group"] == "gear beam":
-            pt = (b["point"][0], b["point"][1], TRUN_B3_Z) if b["id"] == "B3" else b["point"]
+            pt = (TRUN_BEAM_X.get(b["id"], b["point"][0]), b["point"][1],
+                  TRUN_B3_Z if b["id"] == "B3" else TRUN_BEAM_Z.get(b["id"], b["point"][2]))
             F.sym(6, pt, (0.0, 1.0, 0.0), [trn], nut="insert", insert_part=beam, insert_depth=land_depth,
                   grade=G129, step=10, label=f"F-TRUNNION {b['id']}",
                   notes="bonded through-thickness M6 insert in the solid land of the gear beam (no nut outboard)")
@@ -3209,6 +3345,8 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
     # ---- 6. nose-gear pivot blocks (layout F-NG-PIVOT B1-B6, through the keel walls)
     for b in fit["F-NG-PIVOT"]["bolts"]:
         x, y, z = b["point"]
+        if b["id"] in NG_BOLT_XZ:
+            x, z = NG_BOLT_XZ[b["id"]]
         s = 1.0 if y > 0 else -1.0
         F.bolt(6, (x, y, z), (0.0, s, 0.0), [pid(71), C.ref("M-KEELWALL", "R" if s > 0 else "L")], grade=G129,
                washer_head=False, step=7, label=f"F-NG-PIVOT {b['id']}")
@@ -3264,17 +3402,27 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
     for fid in ("F-RISER-FWD", "F-RISER-AFT"):
         num = int(fit[fid]["part"].split("-")[-1])
         frame = stp("FS1810") if fid.endswith("FWD") else stp("FS-RS")
+        fl = fit[fid]["boxes"][0]
+        x_face = float(fl[1][0]) if fid.endswith("FWD") else float(fl[0][0])      # flange face toward the strips
+        xs_floor = sorted({b["point"][0] for b in fit[fid]["bolts"] if b["group"] == "spine floor"},
+                          key=lambda v: abs(v - x_face))
         for b in fit[fid]["bolts"]:
             x, y, z = b["point"]
+            if b["group"] == "spine floor" and x == xs_floor[0]:
+                x = x_face + (RISER_FLOOR_BOLT_DX if fid.endswith("FWD") else -RISER_FLOOR_BOLT_DX)
             if b["group"] == "spine floor":
                 y = math.copysign(RISER_FLOOR_BOLT_Y, y)
                 F.bolt(4, (x, y, z), (0.0, 0.0, -1.0), [pid(num), C.ref("M-SPINE"), pid(N_WASHER[fid])],
                        grade=G129, step=14, label=f"{fid} {b['id']}")
             else:
-                sgn = 1.0 if fid.endswith("AFT") else -1.0
                 y = math.copysign(RISER_FRAME_BOLT[0], y)
-                F.bolt(5, (x, y, RISER_FRAME_BOLT[1]), (sgn, 0.0, 0.0), [pid(num), frame], grade=G129, step=14,
-                       label=f"{fid} {b['id']}")
+                if fid.endswith("AFT"):                     # normal to the chevron forward face of FS-RS
+                    k_rs = math.tan(math.radians(float(st["FS-RS"]["sweep_deg"])))
+                    ax = (1.0, -k_rs * math.copysign(1.0, y), 0.0)
+                else:
+                    ax = (-1.0, 0.0, 0.0)
+                F.bolt(4, (x, y, RISER_FRAME_BOLT[1]), ax, [pid(num), frame], grade=G129, step=14,
+                       label=f"{fid} {b['id']}", notes="M4 (layout M5): heads clear of the base strips")
 
     # ---- 10. rear-spar slot fitting to the glove rear-spar web pad (2 x M5 Ti, nuts inside the glove box)
     for y in SLOT_BOLT_Y:

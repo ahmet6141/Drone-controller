@@ -137,7 +137,9 @@ def bolt(reg: Registry, fid: str, size, position, axis, stack, *, owner: str | N
         if L - wh - grip < 1.2 * d:
             raise ValueError(f"{fid}: thread engagement {(L - wh - grip) * 1000:.1f} mm < 1.2 D in the tapped hole")
         q = p + grip * a
-        reg.parts[tapped_part].add_hole(q - 0.0005 * a, q + (L - wh - grip + 2 * pitch) * a, 0.5 * (d - pitch))
+        # the thread is modelled at its nominal diameter (cosmetic thread): the shank (0.98 d, hardware.py) then
+        # does not overlap the tapped part; the tap drill (d - pitch) is a drawing note
+        reg.parts[tapped_part].add_hole(q - 0.0005 * a, q + (L - wh - grip + 2 * pitch) * a, 0.5 * d)
         ids = ids + [tapped_part]
         nut_desc = f"tapped M{size:g} in {tapped_part}"
     else:

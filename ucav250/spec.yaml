@@ -1741,11 +1741,15 @@ landing_gear:
     main: 'per well: a sequenced inner door hinged at the inboard well edge (opens for the gear travel and closes again
       after the up- or down-lock) and a leg door carried by the leg on two standoff brackets that closes the leg slot when
       the gear is up; the strip at the trunnion fitting is part of the leg-door fairing'
-    main_inner_door_outer_edge_y: 0.19
-    note: 'V3-10 (fix round 4): door scheme of the renders and the mass item gear_doors_wells_locks_sensors; an inner door
-      left open would hang about 0.17 m below the belly (58 mm above the ground at the static attitude, less with a flat
-      tyre), hence the sequenced inner doors; the gear-down drag keeps the open-door allowance aero.drag_rules.door_Dq_open
-      (conservative)'
+    main_inner_door_outer_edge_y: 0.245
+    note: 'V3-10 (fix round 4): door scheme of the renders and the mass item gear_doors_wells_locks_sensors; the sequenced
+      inner doors are open only in flight (an open inner door hangs about 0.235 m below the belly, more than the 0.224 m
+      ground clearance at the static attitude: on the ground the doors are opened for maintenance to 60 deg at most); the
+      gear-down drag keeps the open-door allowance aero.drag_rules.door_Dq_open (conservative). Gear detail design (GD-01):
+      outer edge 0.19 -> 0.245 m - the tyre (leg at the static length) crosses the belly plane at up to y 0.231 m between
+      74 and 102 deg of retraction, outside the 64 mm leg slot (12 mm tyre-to-skin-edge clearance), and with the 0.19 m
+      edge the leg door, hanging outboard of the down leg, reached into the tyre; the inner doors open 90 deg (GD-02: at
+      95 deg the two door leaves crossed each other 0.115 m below the hinge lines)'
   rules:
     static_attitude_deg: 2.5
     prop_clear_static_min: 0.18
@@ -8918,25 +8922,25 @@ layout:
       origin: [2.9759, 0.01, -0.2036]
       axis: [-1.0, 0.0, 0.0]
       lo: 0.0
-      hi: 1.658063
+      hi: 1.570796
       rest: 0.0
       prop: ''
       scale: 1.0
-      expr: 1.65806*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))
+      expr: 1.57080*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))
       moves: YK250-LG-670-R
       side: R
-      notes: hinged at the inboard well edge (y = well_gap/2); opens down 95 deg before the leg moves and closes after the
+      notes: hinged at the inboard well edge (y = well_gap/2); opens down 90 deg before the leg moves and closes after the
         up-/down-lock (closed at both ends of the sequence)
     - name: main_inner_door_L
       kind: revolute
       origin: [2.9759, -0.01, -0.2036]
       axis: [1.0, 0.0, 0.0]
       lo: 0.0
-      hi: 1.658063
+      hi: 1.570796
       rest: 0.0
       prop: ''
       scale: 1.0
-      expr: 1.65806*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))
+      expr: 1.57080*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))
       moves: YK250-LG-670-L
       side: L
       mirror_of: main_inner_door_R
@@ -9144,8 +9148,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 0.0
           main_gear_L: 0.0
-          main_inner_door_R: 0.55269
-          main_inner_door_L: 0.55269
+          main_inner_door_R: 0.5236
+          main_inner_door_L: 0.5236
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.0
@@ -9154,8 +9158,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 0.0
           main_gear_L: 0.0
-          main_inner_door_R: 1.10538
-          main_inner_door_L: 1.10538
+          main_inner_door_R: 1.0472
+          main_inner_door_L: 1.0472
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.0
@@ -9164,8 +9168,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 0.0
           main_gear_L: 0.0
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.0
@@ -9174,8 +9178,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 0.13464
           main_gear_L: 0.13464
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.1122
@@ -9184,8 +9188,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 0.26928
           main_gear_L: 0.26928
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.2244
@@ -9194,8 +9198,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 0.40392
           main_gear_L: 0.40392
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.3366
@@ -9204,8 +9208,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 0.53856
           main_gear_L: 0.53856
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.4488
@@ -9214,8 +9218,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 0.6732
           main_gear_L: 0.6732
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.561
@@ -9224,8 +9228,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 0.80784
           main_gear_L: 0.80784
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.6732
@@ -9234,8 +9238,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 0.94248
           main_gear_L: 0.94248
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.7854
@@ -9244,8 +9248,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 1.07712
           main_gear_L: 1.07712
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.8976
@@ -9254,8 +9258,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 1.21176
           main_gear_L: 1.21176
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 1.0098
@@ -9264,8 +9268,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 1.3464
           main_gear_L: 1.3464
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 1.122
@@ -9274,8 +9278,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 1.48104
           main_gear_L: 1.48104
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 1.2342
@@ -9284,8 +9288,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 1.61568
           main_gear_L: 1.61568
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 1.3464
@@ -9294,8 +9298,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 1.75032
           main_gear_L: 1.75032
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 1.4586
@@ -9304,8 +9308,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 1.884956
           main_gear_L: 1.884956
-          main_inner_door_R: 1.65806
-          main_inner_door_L: 1.65806
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 1.570796
@@ -9314,8 +9318,8 @@ layout:
           nose_door_L: 1.570796
         - main_gear_R: 1.884956
           main_gear_L: 1.884956
-          main_inner_door_R: 1.10538
-          main_inner_door_L: 1.10538
+          main_inner_door_R: 1.0472
+          main_inner_door_L: 1.0472
           main_trunnion_door_R: 1.45444
           main_trunnion_door_L: 1.45444
           nose_gear: 1.570796
@@ -9324,8 +9328,8 @@ layout:
           nose_door_L: 1.0472
         - main_gear_R: 1.884956
           main_gear_L: 1.884956
-          main_inner_door_R: 0.55269
-          main_inner_door_L: 0.55269
+          main_inner_door_R: 0.5236
+          main_inner_door_L: 0.5236
           main_trunnion_door_R: 0.72722
           main_trunnion_door_L: 0.72722
           nose_gear: 1.570796
@@ -9402,13 +9406,13 @@ layout:
       main_inner_door_R:
         joint: main_inner_door_R
         thickness: 0.004
-        outline: [[2.8689, 0.01], [3.0829, 0.01], [3.0829, 0.19], [2.8689, 0.19]]
+        outline: [[2.8689, 0.01], [3.0829, 0.01], [3.0829, 0.245], [2.8689, 0.245]]
         text: inner door (well zone x range, from the inboard hinge edge to landing_gear.doors.main_inner_door_outer_edge_y)
       main_leg_door_R:
         joint: main_gear_R
         thickness: 0.004
         closed_at: hi
-        outline: [[2.9439, 0.19], [3.0079, 0.19], [3.0079, 0.3], [2.9439, 0.3]]
+        outline: [[2.9439, 0.245], [3.0079, 0.245], [3.0079, 0.3], [2.9439, 0.3]]
         text: 'leg door carried by the leg on two standoff brackets (closed = gear up): closes the leg slot (64 mm, between
           the bearing lugs of F-TRUNNION) from the inner door edge to y 0.3 (fix round 2, PK2-03: trimmed so that its sweep
           stays outside the fitting and the beam)'
@@ -9779,7 +9783,7 @@ layout:
     mirror: true
     joints:
       main_gear_R: [0.0, 108.0]
-      main_inner_door_R: [0.0, 95.0]
+      main_inner_door_R: [0.0, 90.0]
     sequence: gear_retraction
     envelope:
       tyre:
@@ -11468,16 +11472,16 @@ layout:
       position_sizing_phase: [0.8443, 0.0, -0.1244]
     gear_doors_wells_locks_sensors:
       mode: absolute
-      position: [2.3694, -0.0072, -0.1403]
+      position: [2.3694, -0.0072, -0.1404]
       basis: sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout door
         outlines (closed), well centres and door drives
       components:
       - what: main inner doors
-        fraction: 0.0885
+        fraction: 0.1155
         at: [2.9759, 0.0, -0.2036]
       - what: main leg + trunnion doors
-        fraction: 0.0899
-        at: [2.9759, 0.0, -0.1938]
+        fraction: 0.0628
+        at: [2.9759, 0.0, -0.1929]
       - what: nose clamshell doors
         fraction: 0.0414
         at: [0.8568, 0.0, -0.1939]
@@ -11492,7 +11496,7 @@ layout:
         at: [3.1231, 0.0, -0.1371]
       - what: leg-door brackets
         fraction: 0.0336
-        at: [2.9759, 0.0, -0.2018]
+        at: [2.9759, 0.0, -0.2]
       - what: nose-door DA 22 + crank/pushrod (EQ-NDOORACT)
         fraction: 0.0723
         at: [1.0699, -0.0993, -0.099]

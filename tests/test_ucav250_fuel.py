@@ -202,6 +202,23 @@ class TestFuelBuild(unittest.TestCase):
         for key in FU.CELL_KEYS:
             self.assertGreater(z_vent, float(self.F.cell[key].inner_solid().bounds()[1][2]) + 0.02, key)
 
+    def test_skin_fittings_flush_with_the_oml(self):
+        """The quick drains and the vent outlet end the lines in the lower skin panels the layout names; their outer
+        face is machined to the curved OML (within 0.1 mm all round, no step into the airflow)."""
+        from ucav250.core import geom as G
+        ends = {"YK250-FU-611": "FL-VENT", "YK250-FU-612": "FL-DRAIN-F", "YK250-FU-613": "FL-DRAIN-A",
+                "YK250-FU-614": "FL-DRAIN"}
+        C = self.F.C
+        for pid, lid in ends.items():
+            p = self.F.lines[lid].centerline()[-1]
+            man = self.fuel[pid].mesh.to_manifold()
+            for th in np.linspace(0.0, 2 * math.pi, 12, endpoint=False):
+                x, y = p[0] + 0.0042 * math.cos(th), p[1] + 0.0042 * math.sin(th)
+                h = G.ray_hits(man, (x, y, -0.5), (x, y, 0.5)) - 0.5
+                self.assertTrue(len(h) >= 2, pid)
+                self.assertAlmostEqual(float(h[0]), C.z_bot(x, y), delta=1e-4, msg=f"{pid} at {th:.2f}")
+            self.assertIn(self.reg.parts[pid].parent, (self.F.lines[lid].pid,), pid)
+
     def test_aft_bay_hose_spans_supported(self):
         """FL-FEED-2 and FL-RETURN are held by the support bracket bushes: no unsupported span longer than 0.30 m
         between the pump / FS-GEAR seal, the bracket and the firewall block / shut-off valve."""

@@ -96,6 +96,7 @@ N = dict(collector=573, coupling=574, coupling_bracket=575, fw_block=577, probe_
          cv_sa=605, fv_f=606, fv_s=607, fv_s2=608, fv_a=609, fv_a2=610, vent_out=611, drain_f=612, drain_a=613,
          drain_g=614, support=615, clamps=616, gascolator=617)
 CELL_KEYS = ("forward_cell", "saddle_cell", "aft_cell")
+CELL_TR = {"forward_cell": "ön hücre", "saddle_cell": "eyer hücresi", "aft_cell": "arka hücre"}
 PROBE_AT = {"forward_cell": (2.33, 0.15), "saddle_cell": (2.64, 0.10), "aft_cell": (2.95, 0.15)}   # (x, y)
 RING_TRIES = (256, 244, 268, 232, 280)   # bladder loft ring point counts tried in turn
 
@@ -1123,7 +1124,7 @@ class Fuel:
             raise ValueError("design fuel does not fit the bladders")
         self.fill_fraction = f
         names = {"forward_cell": ("fuel, forward cell", "yakıt, ön hücre", "fuel_f"),
-                 "saddle_cell": ("fuel, saddle cell", "yakıt, eyer hücre", "fuel_s"),
+                 "saddle_cell": ("fuel, saddle cell", "yakıt, eyer hücresi", "fuel_s"),
                  "aft_cell": ("fuel, aft cell", "yakıt, arka hücre", "fuel_a")}
         for key, c in self.cell.items():
             inner = c.inner_solid()
@@ -1271,7 +1272,7 @@ class Fuel:
             head = G.cylinder(PROBE["head_r"], pt + 0.00155 * n, pt + (0.00155 + PROBE["head_h"]) * n, n=32)
             mesh = finish(union([tube, head]))
             self.add(self.pid(key), f"capacitive fuel level probe, {ck.replace('_', ' ')}",
-                     f"kapasitif yakıt seviye algılayıcısı, {c.key.split('_')[0]}", P_BUY, P_BUY,
+                     f"kapasitif yakıt seviye algılayıcısı, {CELL_TR[ck]}", P_BUY, P_BUY,
                      (lambda m=mesh: m), purchased=True, vendor="Gill Sensors miniature capacitive fuel level sensor, "
                      f"custom length {L * 1000:.0f} mm (components.yaml gill_micro_level_sensor)",
                      mass_kg=PROBE["mass"], parent=c.pid, contacts=(c.pid,), explode=(0.0, 0.0, 0.40),
@@ -1659,9 +1660,9 @@ class Fuel:
     def register_skin_fittings(self):
         C = self.C
         items = (("drain_f", "FL-DRAIN-F", "P-CENTRE-LOWER", "flush quick-drain valve, forward-cell sump",
-                  "hızlı boşaltma valfi, ön hücre sump", DRAIN),
+                  "hızlı boşaltma valfi, ön hücre tortu haznesi", DRAIN),
                  ("drain_a", "FL-DRAIN-A", "P-AFTHATCH", "flush quick-drain valve, collector sump",
-                  "hızlı boşaltma valfi, toplayıcı sump", DRAIN),
+                  "hızlı boşaltma valfi, toplayıcı tortu haznesi", DRAIN),
                  ("drain_g", "FL-DRAIN", "P-AFTHATCH", "flush quick-drain valve, gascolator",
                   "hızlı boşaltma valfi, filtre", DRAIN),
                  ("vent_out", "FL-VENT", "P-AFT-LOWER", "flush fuel vent outlet with flame arrestor",

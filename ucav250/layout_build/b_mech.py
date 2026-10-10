@@ -102,11 +102,12 @@ def mechanisms() -> dict:
     y_h = 0.5 * float(MG["well_gap"])
     x_w = 0.5 * (float(ZP["main_gear_wells"]["box"][0][0]) + float(ZP["main_gear_wells"]["box"][1][0]))
     o_d = np.array([x_w, y_h, z_bot(x_w, y_h) + 0.002])
-    a_door = 95.0 * DEG
+    a_door = 90.0 * DEG       # gear detail design (GD-02): at 95 deg the two inner-door leaves crossed below the
+    #                           centre line (their planes contain the hinge lines at y +-0.010)
     J.append(joint("main_inner_door_R", "revolute", o_d, [-1.0, 0.0, 0.0], 0.0, a_door, prop="", scale=1.0,
                    expr=f"{a_door:.5f}*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))", side="R",
                    moves="YK250-LG-670-R",
-                   notes="hinged at the inboard well edge (y = well_gap/2); opens down 95 deg before the leg moves "
+                   notes="hinged at the inboard well edge (y = well_gap/2); opens down 90 deg before the leg moves "
                          "and closes after the up-/down-lock (closed at both ends of the sequence)"))
     J.append(joint("main_inner_door_L", "revolute", o_d * np.array([1, -1, 1]), [1.0, 0.0, 0.0], 0.0, a_door,
                    prop="", scale=1.0, expr=f"{a_door:.5f}*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))",

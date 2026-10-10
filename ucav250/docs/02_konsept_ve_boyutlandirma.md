@@ -465,7 +465,7 @@ Polar eğrileri her yapılandırmanın trimli CLmax'ında biter. L/D ve dayanım
 | CLmax | kanat 1,332 (× cos 8°); trimli temiz 1,292 (en ön AM); 35° kalkış flabıyla 1,532 |
 | CD0 | temiz 0,0350 · taret dışarıda 0,0369 · takım açık 0,0475 |
 | (L/D)maks | 17,3 temiz, 16,8 taret dışarıda |
-| Görev beklemesi başlangıcı (W = 1.416 N, 3000 m) | 32,44 m/s TAS (27,95 m/s EAS), CL 0,92, toplam güç 4,47 kW, 4.851 rpm, 2,55 kg/h, jeneratör 486 W |
+| Görev beklemesi başlangıcı (W = 1.416 N, 3000 m) | 32,44 m/s TAS (27,95 m/s EAS), CL 0,92, toplam güç 4,47 kW, 4.852 rpm, 2,55 kg/h, jeneratör 486 W |
 | Görev beklemesi sonu (W = 1.224 N, 3000 m) | 32,35 m/s TAS (27,87 m/s EAS), CL 0,80, toplam güç 4,09 kW, 4.747 rpm, 2,39 kg/h, jeneratör 476 W |
 | MTOM'da 3000 m bekleme noktası (görevde uçulmaz, karşılaştırma için) | 33,05 m/s TAS (28,47 m/s EAS), CL 0,92, L/D 16,2, mil gücü 4,26 kW, 4.944 rpm, η 0,711, BSFC 563 g/kWh, 2,65 kg/h, jeneratör 496 W |
 

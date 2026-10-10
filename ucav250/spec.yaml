@@ -8941,8 +8941,8 @@ layout:
         the down leg passes through its strip; fix round 3 (PK3-07): driven by the leg through a slotted (lost-motion) link
         - an opening spring holds the door on its open stop until the leg reaches 90 deg of its retraction, the link pin
         then takes up the slot and pulls the door shut over the last part of the leg stroke (closed when the leg up-locks,
-        gear_up 0.85; on extension the spring opens it as the pin releases); fix round 3 (PK3-03): rest = open (the gear-down
-        state), modelled open; value 0 = closed (door_outlines closed_at lo)'
+        gear_up 0.85; on extension the spring opens it as the pin backs off in the slot); fix round 3 (PK3-03): rest = open
+        (the gear-down state), modelled open; value 0 = closed (door_outlines closed_at lo)'
     - name: main_trunnion_door_L
       kind: revolute
       origin: [2.9759, -0.3918, -0.14176]

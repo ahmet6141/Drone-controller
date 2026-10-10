@@ -129,7 +129,7 @@ def mechanisms() -> dict:
                          "the leg through a slotted (lost-motion) link - an opening spring holds the door on its open "
                          f"stop until the leg reaches {TDOOR_ENGAGE_DEG:.0f} deg of its retraction, the link pin then "
                          "takes up the slot and pulls the door shut over the last part of the leg stroke (closed when "
-                         "the leg up-locks, gear_up 0.85; on extension the spring opens it as the pin releases); "
+                         "the leg up-locks, gear_up 0.85; on extension the spring opens it as the pin backs off in the slot); "
                          "fix round 3 (PK3-03): rest = open (the gear-down state), modelled open; value 0 = closed "
                          "(door_outlines closed_at lo)"))
     J.append(joint("main_trunnion_door_L", "revolute", o_t * np.array([1, -1, 1]), [-1.0, 0.0, 0.0], 0.0, a_tdoor,

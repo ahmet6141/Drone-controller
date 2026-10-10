@@ -218,7 +218,11 @@ class TestSizingCheck(unittest.TestCase):
         self.assertEqual(self.S["mission"]["loiter_rpm_floor"], "e180_peak_battery_support")
         draws = [el["e180_peak_battery_draw_design_mission_Wh"], el["e180_peak_battery_draw_e180_mission_Wh"]]
         margin = el["battery_peak_share_Wh"] / max(max(draws), 1e-3)          # outputs carry 6 significant digits
-        self.assertAlmostEqual(self.out["metrics"]["e180_peak_support_margin"], margin, delta=1e-5 * margin)
+        # the quotient of two 6-digit outputs against the 6-digit metric: the exact rounding bound (json_tol of each
+        # operand, relative) + 1e-6 of the value (fix round 3: the former flat 1e-5 was below the rounding bound)
+        tol = margin * (json_tol(el["battery_peak_share_Wh"], rel=0.0) / el["battery_peak_share_Wh"] +
+                        json_tol(max(draws), rel=0.0) / max(draws)) + json_tol(margin, rel=1e-6)
+        self.assertAlmostEqual(self.out["metrics"]["e180_peak_support_margin"], margin, delta=tol)
         self.assertGreaterEqual(self.out["metrics"]["e180_peak_support_margin"], 1.0)
         self.assertAlmostEqual(el["battery_peak_share_Wh"], el["battery_usable_Wh"] - el["battery_reserve_Wh"],
                                delta=1e-5 * el["battery_usable_Wh"])

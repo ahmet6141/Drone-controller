@@ -411,6 +411,9 @@ class TestChecksDetectFaults(unittest.TestCase):
         def edit(S):
             p = next(q for q in S["layout"]["shell"]["panels"] if q["id"] == "P-SIDEBAY-R")
             p["y"] = [0.05, 0.235]
+            if p.get("outline"):                   # fix round 3 (PK3-02): the panel is notched round the ring insert
+                y_out = max(v[1] for v in p["outline"])
+                p["outline"] = [[v[0], 0.235 if abs(v[1] - y_out) < 1e-9 else v[1]] for v in p["outline"]]
         rows = LC.check_shell(self._ctx(edit))
         self.assertTrue(any("on their surface" in r["item"] for r in self._failed(rows, "C09")))
 

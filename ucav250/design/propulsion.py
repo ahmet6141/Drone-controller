@@ -1144,10 +1144,11 @@ def cowl_shield_mesh(C: Ctx) -> G.Mesh:
     return finish(largest_piece(diff(m, [_pipe_cutter(C, HS["hole"] + 0.003)])))
 
 
-def sheet_outline(m: G.Mesh, C: Ctx, cos_min: float = 0.7) -> list[np.ndarray]:
+def sheet_outline(m: G.Mesh, C: Ctx, cos_min: float = 0.7, bend=None) -> list[np.ndarray]:
     """Cut-edge polylines of a formed sheet on the aft body (boundary of its outward-facing face) -> ``Part.outline``:
     the edge-distance check then measures to the real trimmed edges; its radial mid-plane rays would leave a 0.4 mm
-    sheet curved to the boat-tail within a few millimetres. Bend lines (wall roots) count as edges (conservative)."""
+    sheet curved to the boat-tail within a few millimetres. ``bend(points) -> bool mask`` marks boundary points that
+    lie on a bend line (the root of a formed wall), which is not a free edge: those segments are dropped."""
     V, F = m.V, m.F
     a, b, c = V[F[:, 0]], V[F[:, 1]], V[F[:, 2]]
     fn = np.cross(b - a, c - a)
@@ -1179,7 +1180,32 @@ def sheet_outline(m: G.Mesh, C: Ctx, cos_min: float = 0.7) -> list[np.ndarray]:
                 used.add((min(cur, cand[0]), max(cur, cand[0])))
                 prev, cur = cur, cand[0]
             lines.append(V[chain].copy())
-    return lines
+    if bend is None:
+        return lines
+    out = []
+    for L in lines:
+        keep = ~np.asarray(bend(L), bool)
+        seg = []
+        for k in range(len(L)):
+            if keep[k]:
+                seg.append(L[k])
+            else:
+                if len(seg) > 1:
+                    out.append(np.array(seg))
+                seg = []
+        if len(seg) > 1:
+            out.append(np.array(seg))
+    return out
+
+
+def shield_bend_mask(C: Ctx):
+    """Boundary points on the shield's wall roots (the band of the return wall, 3.0..3.4 mm inside the cut-out edge)."""
+    reg = _hp(C, "inserts", "HS-COWL-EXIT")["regions"]
+    lo, hi = -HS["wall_in"] - 0.0004 - 0.0006, -HS["wall_in"] + 0.0006
+
+    def mask(P):
+        return np.array([lo <= box_sdist(p, reg) <= hi for p in P])
+    return mask
 
 
 def shield_rivets(C: Ctx) -> list[tuple]:
@@ -1391,7 +1417,7 @@ class _Reg:
                       "minimum), 5 mm air gap below the thickest cowl laminate over the 25..50 mm band, return wall "
                       "3 mm inside the cut-out edge, flange riveted under the insert (d 2.4 at ~35 mm)")
         ins.outline = sheet_outline(ins.base_mesh, C)
-        shd.outline = sheet_outline(shd.base_mesh, C)
+        shd.outline = sheet_outline(shd.base_mesh, C, bend=shield_bend_mask(C))
         ids["ins_R"], ids["shd_R"] = ins.id, shd.id
         ids["ins_L"] = reg.add(mirror_part(ins, C.pid(520, "L"), id_map={hosts["R"]: hosts["L"]})).id
         ids["shd_L"] = reg.add(mirror_part(shd, C.pid(523, "L"), id_map={ins.id: ids["ins_L"]})).id

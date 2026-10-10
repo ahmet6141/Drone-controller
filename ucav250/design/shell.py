@@ -2154,6 +2154,357 @@ def glove_parts(sc: SC, pans: dict) -> Glove:
 
 
 # =====================================================================================================================
+# fastener rows (layout.shell.rules.concept, panels[*].fastening): laid out on the chassis lands from the layout,
+# every hole proven on the geometry (Fix.prove) before it is drilled
+# =====================================================================================================================
+ROW_KIND = {"nutplate+screw": ("nut", PITCH_NUT), "camloc": ("cam", PITCH_CAM), "insert+screw": ("nut", PITCH_INS),
+            "bonded": ("riv", RIVET_PITCH)}
+EDGE = {"nut": EDGE_M4, "cam": EDGE_CAM, "riv": EDGE_M4}
+NO_ROWS = ("P-PARAHATCH", "P-REFUEL", "P-REARACCESS", "P-SPINE", "P-NOSECONE", "P-TURRETRING", "P-GLOVE-UP",
+           "P-GLOVE-LO", "P-JOINTACCESS", "P-VENTRALROOT")
+DENSE = 0.002                   # dense sampling step of a row line before the pitch is laid out
+
+
+def row_kind(sc: SC, key: str):
+    """(kind, pitch) of a panel's fastener rows from its layout fastening type (fairings: M4 screws; their lands
+    are 1.6 mm solid laminate, too thin for the 1.2 D thread of a potted insert, so floating nutplates are used)."""
+    if key == "P-WRF":
+        return "riv", RIVET_PITCH
+    p = sc.pan.get(key)
+    if not p:
+        return None
+    t = (p.get("fastening") or {}).get("type")
+    if t not in ROW_KIND:
+        return None
+    kind, pitch = ROW_KIND[t]
+    if key.startswith("P-COWL") and kind == "cam":
+        pitch = PITCH_COWL
+    if key.startswith("P-FUEL"):
+        pitch = PITCH_FUEL
+    return kind, pitch
+
+
+def _resample(P, N, pitch: float, centre_sym: bool = False):
+    """Indices of a dense polyline P (k, 3) at ``pitch`` spacing along its arc length, centred in the run;
+    ``centre_sym``: the run starts on the centre line and continues on the other side (positions +-pitch/2, ...)."""
+    s = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
+    L = float(s[-1])
+    if centre_sym:
+        pos = np.arange(0.5 * pitch, L + 1e-9, pitch)
+    else:
+        n = int(math.floor(L / pitch + 1e-9)) + 1
+        pos = 0.5 * (L - (n - 1) * pitch) + pitch * np.arange(n)
+    return [int(np.argmin(np.abs(s - q))) for q in pos]
+
+
+class Rows:
+    """Lays out and drills the shell's fastener rows. Candidates are generated on the starboard half and mirrored;
+    each symmetric pair is proven and committed together (Fix.try_group)."""
+
+    def __init__(self, sc: SC, reg: Registry, pans: dict, keys: dict):
+        from shapely.prepared import prep
+        self.sc, self.reg, self.pans, self.keys = sc, reg, pans, keys
+        self.fix = Fix(sc)
+        self.own = []
+        for key, pn in pans.items():
+            rk = row_kind(sc, key)
+            if rk is None or key in NO_ROWS:
+                continue
+            e = EDGE[rk[0]]
+            regs = [(keys[key], pn.region)]
+            if pn.mirror:
+                regs.append((keys[key][:-1] + "L", mirror_poly(pn.region)))
+            for pid, rg in regs:
+                inner = clean(rg.buffer(-e, join_style=2), 1e-8)
+                if not inner.is_empty:
+                    self.own.append((pid, key, prep(inner), pn.surf, rk))
+        self.done = 0
+
+    # ------------------------------------------------------------------ ownership
+    def _pierced(self, pid: str, p, n) -> bool:
+        h = G.ray_hits(self.fix.man(pid), p + 0.002 * n, p - 0.004 * n)
+        return len(h) > 0 and abs(float(h[0]) - 0.002) < 0.0015
+
+    def owner(self, p, n):
+        """(part id, panel key, (kind, pitch)) of the panel whose plan region (less the edge distance) holds the OML
+        point p and whose material is there."""
+        x, y, z = (float(v) for v in p)
+        zc = float(self.sc.zc(x))
+        hits = []
+        for pid, key, pr, surf, rk in self.own:
+            if surf == "U" and z < zc + 0.001:
+                continue
+            if surf == "L" and z > zc - 0.001:
+                continue
+            if pr.contains(Point(x, y)):
+                hits.append((pid, key, rk))
+        if len(hits) > 1:
+            hits = [h for h in hits if self._pierced(h[0], p, n)]
+        return hits[0] if hits else None
+
+    # ------------------------------------------------------------------ candidates
+    def _mirror_pid(self, pid: str) -> str:
+        if pid.endswith("-R"):
+            return pid[:-1] + "L"
+        return pid
+
+    def _commit(self, pid: str, key: str, kind: str, p, a, orient, note: str, size: float = 4, step=None):
+        st = step if step is not None else self.pans[key].step
+        c1 = Cand(p=np.asarray(p, float), a=_unit(a), kind=kind, panel=pid, land="", size=size,
+                  orient=_unit(orient), note=note, step=st)
+        group = [c1]
+        if abs(float(p[1])) > 0.001:
+            q = np.array([p[0], -p[1], p[2]])
+            aq = np.array([a[0], -a[1], a[2]])
+            oq = np.array([orient[0], -orient[1], orient[2]])
+            group.append(Cand(p=q, a=_unit(aq), kind=kind, panel=self._mirror_pid(pid), land="", size=size,
+                              orient=_unit(oq), note=note, step=st))
+        if self.fix.try_group(group):
+            self.done += len(group)
+            return True
+        return False
+
+    # ------------------------------------------------------------------ row families
+    def station_rows(self):
+        """Rows on the frame T-caps: 16 mm either side of the web centre line for the panels ending on the frame,
+        one row on the aft flange where a panel runs over the frame."""
+        sc = self.sc
+        for sid in sc.st:
+            if sid in ("FS3738",):
+                continue
+            for half in ("U", "L"):
+                curves = {}
+                for s in (-1, 1):
+                    P, N = sc.section_curve(lambda yy, s=s: sc.x_web(sid, yy) + s * ROW_CAP, half, n=1200)
+                    keep = P[:, 1] >= -1e-4
+                    P, N = P[keep], N[keep]
+                    if half == "U":                 # the junction fairing's OML over the body (glove root)
+                        fz = (P[:, 1] >= sc.y_in) & (P[:, 1] <= sc.y_root + 1e-3)
+                        for i in np.where(fz)[0]:
+                            P[i], N[i] = sc.oml_point(float(P[i, 0]), float(P[i, 1]), "U")
+                    s_ = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
+                    q = np.arange(0.0, s_[-1], DENSE)
+                    idx = np.unique([int(np.argmin(np.abs(s_ - v))) for v in q])
+                    curves[s] = (P[idx], N[idx])
+                for s in (-1, 1):
+                    P, N = curves[s]
+                    T = np.gradient(P, axis=0)
+                    T = T / np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-12)
+                    zc = sc.zc(P[:, 0])
+                    ok = np.abs(P[:, 2] - zc) > 0.012           # chine relief band + J corner
+                    if half == "U":
+                        ok &= ~((P[:, 1] < RIDGE_CLEAR))           # V-roof ridge
+                    own = []
+                    for i in range(len(P)):
+                        o = self.owner(P[i], N[i]) if ok[i] else None
+                        if o is not None and s == -1:          # panel running over the frame: aft flange only
+                            Q, M = curves[1]
+                            j = int(np.argmin(np.linalg.norm(Q[:, 1:] - P[i, 1:], axis=1)))
+                            o2 = self.owner(Q[j], M[j])
+                            if o2 is not None and o2[0] == o[0]:
+                                o = None
+                        own.append(o)
+                    self._runs(P, N, T, own, f"{sid} cap row", centre_sym=True)
+
+    def _runs(self, P, N, T, own, note, centre_sym=False):
+        k = 0
+        while k < len(P):
+            if own[k] is None:
+                k += 1
+                continue
+            j = k
+            while j + 1 < len(P) and own[j + 1] is not None and own[j + 1][0] == own[k][0]:
+                j += 1
+            pid, key, (kd, pt) = own[k]
+            sym = centre_sym and abs(float(P[k][1])) < 0.003
+            for i in _resample(P[k:j + 1], N[k:j + 1], pt, sym):
+                self._commit(pid, key, kd, P[k + i], -N[k + i], T[k + i], note)
+            k = j + 1
+
+    def line_rows(self, x0: float, x1: float, y_of_x, half: str, note: str, owner_fixed=None, pitch=None,
+                  kind=None, size: float = 4):
+        """Longitudinal row at plan y = y_of_x(x) on the upper / lower half."""
+        sc = self.sc
+        xs = np.arange(x0, x1 + 1e-9, DENSE)
+        P, N = [], []
+        for x in xs:
+            p, n = sc.oml_point(float(x), float(y_of_x(x)), half)
+            P.append(p)
+            N.append(n)
+        P, N = np.asarray(P), np.asarray(N)
+        T = np.gradient(P, axis=0)
+        T = T / np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-12)
+        zc = sc.zc(P[:, 0])
+        own = []
+        for i in range(len(P)):
+            if abs(P[i, 2] - zc[i]) <= 0.012:
+                own.append(None)
+                continue
+            if owner_fixed is not None:
+                own.append(owner_fixed)
+            else:
+                own.append(self.owner(P[i], N[i]))
+        if pitch or kind:
+            own = [None if o is None else (o[0], o[1], (kind or o[2][0], pitch or o[2][1])) for o in own]
+        self._runs(P, N, T, own, note)
+
+    def member_rows(self):
+        sc = self.sc
+        M = sc.mem
+        # spine-channel flanges: the skins round the tear-away strip land on the outer part of the flanges
+        x0, x1 = (float(v) for v in M["M-SPINE"]["lands"][0]["x"])
+        self.line_rows(x0 + 0.004, x1 - 0.004, lambda x: 0.045 + GAP + EDGE_M4, "U", "M-SPINE flange row")
+        # parachute-bay wall top flanges: surround skin outboard of the hatch
+        ld = M["M-PARAWALL"]["lands"][0]
+        self.line_rows(ld["x"][0] + 0.004, ld["x"][1] - 0.004, lambda x: 0.188 + GAP_LIFT + EDGE_M4, "U",
+                       "M-PARAWALL flange row")
+        # ventral keel hat flanges: aft lower skin either side of the ventral root strip
+        ld = M["M-VENTRALKEEL"]["lands"][0]
+        self.line_rows(ld["x"][0] + 0.004, ld["x"][1] - 0.004, lambda x: 0.037, "L", "M-VENTRALKEEL flange row")
+        # keel-beam land: centre lower skin outboard of the payload hatch
+        b = np.asarray(M["M-KEEL"]["box"], float)
+        yk = float(b[0][1])
+        self.line_rows(b[0][0] + 0.02, b[1][0] + 0.02, lambda x: yk + 0.0255 + GAP + EDGE_M4, "L",
+                       "M-KEEL land row")
+        # dorsal longeron hat flanges
+        P = np.asarray(M["M-DORSAL"]["paths"][0], float)
+        hw = 0.5 * float(M["M-DORSAL"]["section"]["w"])
+        for yy in (float(P[0, 1]) - hw - 0.006, float(P[0, 1]) + hw + 0.006):
+            self.line_rows(P[0, 0] + 0.004, P[-1, 0] - 0.004, lambda x, yy=yy: yy, "U", "M-DORSAL flange row")
+        # chine longeron (J) top flange under the upper skins, outside the junction fairing
+        for P in M["M-CHINE"]["paths"]:
+            P = np.asarray(P, float)
+            a, b_ = float(P[0, 0]) + 0.004, float(P[-1, 0]) - 0.004
+            segs = [(a, min(b_, sc.gx0 - 0.03)), (max(a, sc.gx1 + 0.03), b_)]
+            for s0, s1 in segs:
+                if s1 > s0 + 0.03:
+                    self.line_rows(s0, s1, lambda x, P=P: float(np.interp(x, P[:, 0], P[:, 1])) - 0.005, "U",
+                                   "M-CHINE J flange row")
+
+    def ring_rows(self):
+        """Removable panels and fairings: a row 2.5 D + 0.5 mm inside the outline, on the joggled lands and member
+        flanges (the frame-cap edges are covered by the cap rows)."""
+        sc = self.sc
+        o = outlines(sc)
+        for key, pn in self.pans.items():
+            rk = row_kind(sc, key)
+            if rk is None or key in NO_ROWS or pn.surf not in ("U", "L") or not (pn.removable or
+                                                                                sc.pan.get(key, {}).get("attach") ==
+                                                                                "fairing" or key == "P-INLET"):
+                continue
+            kind, pitch = rk
+            O_ = o.get(key, pn.region)
+            ring = O_.buffer(-EDGE[kind], join_style=2)
+            if ring.is_empty:
+                continue
+            for poly in _as_polys(ring):
+                R = np.asarray(poly.exterior.coords)
+                s_ = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(R, axis=0), axis=1))]
+                q = np.arange(0.0, s_[-1], DENSE)
+                xy = np.column_stack([np.interp(q, s_, R[:, 0]), np.interp(q, s_, R[:, 1])])
+                on_cap = np.zeros(len(xy), bool)
+                for sid in sc.st:
+                    on_cap |= np.abs(xy[:, 0] - sc.x_web(sid, xy[:, 1])) < 0.0225
+                P, N = [], []
+                for x, y in xy:
+                    p, n = sc.oml_point(float(x), float(y), pn.surf)
+                    P.append(p)
+                    N.append(n)
+                P, N = np.asarray(P), np.asarray(N)
+                T = np.gradient(P, axis=0)
+                T = T / np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-12)
+                pid = self.keys[key]
+                own = [None if on_cap[i] else (pid, key, rk) for i in range(len(P))]
+                # a closed ring: start the runs at a cap gap so that a run is not split at the seam
+                if not on_cap.any():
+                    self._runs(P, N, T, own, f"{key} edge row")
+                else:
+                    k0 = int(np.argmax(on_cap))
+                    sh = lambda A: np.roll(A, -k0, axis=0)          # noqa: E731
+                    self._runs(sh(P), sh(N), sh(T), list(np.roll(np.array(own, dtype=object), -k0)),
+                               f"{key} edge row")
+
+    def special_rows(self):
+        sc = self.sc
+        keys = self.keys
+        # nose cone: 8 x M4 radial into nutplates on the FS0300 forward flange
+        x = float(sc.x_web("FS0300", 0.0)) - ROW_CAP
+        for k in range(4):
+            phi = math.radians(22.5 + 45.0 * k)
+            p, n = sc.body_point(x, phi)
+            t = np.cross([1.0, 0.0, 0.0], n)
+            self._commit(keys["P-NOSECONE"], "P-NOSECONE", "nut", p, -n, t, "nose cone radial screw (FS0300)")
+        # tear-away strip: 4 nylon M3 shear screws into the spine-channel flanges (inner part)
+        lx = sc.mem["M-SPINE"]["lands"][0]["x"]
+        for xx in (float(lx[0]) + 0.045, float(lx[1]) - 0.045):
+            p, n = sc.oml_point(xx, 0.0325, "U")
+            self._commit(keys["P-SPINE"], "P-SPINE", "nut", p, -n, [1.0, 0.0, 0.0],
+                         "nylon M3 shear screw (tear-away)", size=3)
+        # mission-bay upper skin: crease edge on the junction fairing's joggled land
+        xf = float(sc.st["FS-FUEL"]["x"])
+        C = sc.crease[(sc.crease[:, 0] > float(sc.st["FS1810"]["x"]) + 0.03) & (sc.crease[:, 0] < xf - 0.03)]
+        if len(C) > 3:
+            self.line_rows(float(C[0, 0]), float(C[-1, 0]),
+                           lambda x: float(np.interp(x, C[:, 0], C[:, 1])) - GAP - EDGE_M4, "U",
+                           "crease row (fairing land)")
+        # lower cowl halves: Camloc row on the aft-keel land flanges (layout: receptacles at y +-0.040)
+        ld = sc.mem["M-AFTKEEL"]["lands"][0]
+        self.line_rows(float(ld["x"][0]) + 0.012, float(ld["x"][1]) - 0.012, lambda x: 0.040, "L",
+                       "aft-keel land row", owner_fixed=(keys["P-COWL-LO"], "P-COWL-LO", ("cam", PITCH_COWL)))
+        # turret aperture ring: 14 x M4 on the ring mid-circle into the lower-skin rebate
+        T = sc.S["payload"]["turret"]
+        xc = float(T["bay_center_x"])
+        ring = outlines(sc)["P-TURRETRING"]
+        r_open = 0.5 * float(T["ball_diameter"]) + float(T["bay"]["aperture_ring"]["radial_clearance"])
+        r_out = float(ring.exterior.distance(Point(xc, 0.0)))
+        rm = 0.5 * (r_open + r_out)
+        for k in range(7):
+            th = math.pi * (k + 0.5) / 7.0
+            xx, yy = xc + rm * math.cos(th), rm * math.sin(th)
+            p, n = sc.oml_point(xx, yy, "L")
+            t = np.array([-math.sin(th), math.cos(th), 0.0])
+            self._commit(keys["P-TURRETRING"], "P-TURRETRING", "nut", p, -n, t, "turret ring screw")
+
+    def glove_rows(self, gl):
+        """Peel-stopper blind rivets (M4, 150 mm) at the glove skin ends: on the SOB-rib and joint-rib flanges."""
+        sc = self.sc
+        keys = self.keys
+        sob = sc.mem["M-SOB"]["box"]
+        jr = sc.mem["M-JOINTRIB"]["box"]
+        for y, upper in ((float(sob[1][1]) + 0.010, True), (float(sob[1][1]) + 0.010, False),
+                         (float(jr[0][1]) - 0.010, True), (float(jr[0][1]) - 0.010, False)):
+            poly = gl.poly(y)
+            x0, _z0, x1, _z1 = poly.bounds
+            key = "P-GLOVE-UP" if upper else "P-GLOVE-LO"
+            xs = np.arange(x0 + 0.03, x1 - 0.03, DENSE)
+            P, N = [], []
+            for x in xs:
+                g = LineString([(x, -1.0), (x, 1.0)]).intersection(poly)
+                if g.is_empty:
+                    continue
+                zz = float(g.bounds[3] if upper else g.bounds[1])
+                g2 = LineString([(x + 0.001, -1.0), (x + 0.001, 1.0)]).intersection(poly)
+                zz2 = float(g2.bounds[3] if upper else g2.bounds[1])
+                dz = (zz2 - zz) / 0.001
+                n = _unit([-dz, 0.0, 1.0]) if upper else _unit([dz, 0.0, -1.0])
+                P.append([x, y, zz])
+                N.append(n)
+            P, N = np.asarray(P), np.asarray(N)
+            T = np.gradient(P, axis=0)
+            T = T / np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-12)
+            own = [(keys[key], key, ("riv", RIVET_PITCH))] * len(P)
+            self._runs(P, N, T, own, "peel-stopper rivet row")
+
+    def run(self, gl):
+        self.station_rows()
+        self.member_rows()
+        self.ring_rows()
+        self.special_rows()
+        self.glove_rows(gl)
+        return self.done
+
+
+# =====================================================================================================================
 # registration
 # =====================================================================================================================
 CONTACT_GAP = 0.00028           # declared contacts touch (analysis.checks CONTACT_TOL 0.3 mm)
@@ -2227,9 +2578,15 @@ def register(reg: Registry, spec: dict) -> None:
                  mesh_fn=lambda a=pa, b=pb: G.cylinder(HINGE_PIN_R, a, b, n=20), parent=keys["P-CENTRE-LOWER"],
                  step=STEP["fuel"], explode=(0.0, -0.05, -0.3),
                  contacts=(keys["P-CENTRE-LOWER"], keys["P-REFUEL"])))
-    reg.note(f"shell: {len([p for p in reg.parts.values() if p.group == GROUP])} parts")
     sc.pans, sc.keys, sc.info = pans, keys, info
     _contacts(sc, reg)
+    # ------------------------------------------------------------------ fastener rows (after the contacts: holes
+    # do not change whether two parts touch)
+    rows = Rows(sc, reg, pans, keys)
+    n_f = rows.run(info["glove"])
+    sc.rows = rows
+    reg.note(f"shell: {len([p for p in reg.parts.values() if p.group == GROUP])} parts, {n_f} fasteners "
+             f"({len(rows.fix.dropped)} candidate holes not drilled)")
 
 
 def _contacts(sc: SC, reg: Registry) -> None:

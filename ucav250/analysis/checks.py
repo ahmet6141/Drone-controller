@@ -457,18 +457,59 @@ def check_fasteners(reg: Registry) -> list[dict]:
 # =====================================================================================================================
 # 7. attachment graph
 # =====================================================================================================================
-def check_attachment(reg: Registry) -> list[dict]:
+CONTACT_TOL = 0.0003       # declared contacts / parent links must physically touch (gap <= 0.3 mm)
+
+
+def _touching(cache, a: str, b: str) -> bool:
+    if not _boxes_overlap(cache.box(a), cache.box(b), pad=CONTACT_TOL):
+        return False
+    return float(cache.man(a).min_gap(cache.man(b), 0.001)) <= CONTACT_TOL
+
+
+def check_contacts(reg: Registry, cache: _ManCache | None = None) -> list[dict]:
+    """Every declared contact must exist in the geometry (gap <= CONTACT_TOL at rest). A contact that does not touch
+    would whitelist overlaps and fake a load path in the attachment graph."""
+    cache = cache or _ManCache(reg)
+    out, seen = [], set()
+    for p in reg.parts.values():
+        if p.process == "consumable":
+            continue
+        for c in p.contacts:
+            if c not in reg.parts:
+                out.append(_violation("contact", [p.id, c], None, "contact part exists", "unknown part id"))
+                continue
+            k = tuple(sorted((p.id, c)))
+            if k in seen:
+                continue
+            seen.add(k)
+            if not _touching(cache, p.id, c):
+                gap = float(cache.man(p.id).min_gap(cache.man(c), 0.05))
+                out.append(_violation("contact", [p.id, c], round(gap * 1000, 2), f"<= {CONTACT_TOL*1000:.1f} mm",
+                                      "declared contact does not touch"))
+    return out
+
+
+def check_attachment(reg: Registry, cache: _ManCache | None = None) -> list[dict]:
+    """Physical attachment graph: fastener stacks, and contacts/parent links that really touch (bonded or seated
+    faces). Every part must reach spec.layout.root_part through such links (nothing floats)."""
+    cache = cache or _ManCache(reg)
     root = (reg.spec.get("layout", {}) or {}).get("root_part")
     if not root or root not in reg.parts:
         return [_violation("attachment", [], root, "spec.layout.root_part exists")]
     adj = defaultdict(set)
+    touch = {}
+
+    def real(a, b):
+        k = tuple(sorted((a, b)))
+        if k not in touch:
+            touch[k] = a in reg.parts and b in reg.parts and _touching(cache, a, b)
+        return touch[k]
     for p in reg.parts.values():
-        if p.parent:
-            adj[p.id].add(p.parent)
-            adj[p.parent].add(p.id)
-        for c in p.contacts:
-            adj[p.id].add(c)
-            adj[c].add(p.id)
+        links = list(p.contacts) + ([p.parent] if p.parent else [])
+        for c in links:
+            if c and (p.process == "consumable" or real(p.id, c)):
+                adj[p.id].add(c)
+                adj[c].add(p.id)
     for f in reg.fasteners():
         ids = list(f.joins)
         for a, b in zip(ids, ids[1:]):
@@ -482,7 +523,7 @@ def check_attachment(reg: Registry) -> list[dict]:
             if y not in seen:
                 seen.add(y)
                 dq.append(y)
-    return [_violation("attachment", [p], "not connected", f"reachable from {root}") for p in reg.parts
+    return [_violation("attachment", [p], "not connected", f"physically reachable from {root}") for p in reg.parts
             if p not in seen]
 
 
@@ -496,11 +537,13 @@ CHECKS = {
     "clearance": lambda reg, c, q: check_clearances(reg, c),
     "thickness": lambda reg, c, q: check_thickness(reg, sample=not q),
     "fastener": lambda reg, c, q: check_fasteners(reg),
-    "attachment": lambda reg, c, q: check_attachment(reg),
+    "contact": lambda reg, c, q: check_contacts(reg, c),
+    "attachment": lambda reg, c, q: check_attachment(reg, c),
 }
 
 TR = {"mesh": "Ağ geçerliliği", "static": "Durağan girişim", "swept": "Hareket taraması", "clearance": "Açıklıklar",
-      "thickness": "Et kalınlığı", "fastener": "Bağlantı elemanları", "attachment": "Bağlantı grafiği"}
+      "thickness": "Et kalınlığı", "fastener": "Bağlantı elemanları", "contact": "Beyan edilen temaslar",
+      "attachment": "Bağlantı grafiği"}
 
 
 def run_all(reg: Registry, quick: bool = False, only: list[str] | None = None, write: bool = True,

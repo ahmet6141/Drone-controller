@@ -136,6 +136,13 @@ class TestChecks(unittest.TestCase):
                      thickness=0.01, parent="A", mesh_fn=lambda: G.box((0.01, 0.1, 0.01), center=(0.14, 0.05, 0.03))))
         reg.add(Part(id="FLOAT", name="float", name_tr="float", group="systems", material="al", process="cnc",
                      thickness=0.01, mesh_fn=lambda: G.box((0.01, 0.01, 0.01), center=(1, 1, 1))))
+        # the hinge pin and the stop bracket bolt are the physical links of FLAP and STOP (a parent alone that does
+        # not touch is not a load path for the attachment check)
+        reg.parts["A"].fasteners += [
+            Fastener("F-hinge", "ISO 2341-B 3x16", "clevis_pin", 0.003, 0.016, (0.1, 0.0, 0.004), (0, 1, 0),
+                     ("A", "FLAP")),
+            Fastener("F-stop", "ISO 4762 M4x10", "screw", 0.004, 0.010, (0.14, 0.05, 0.035), (0, 0, -1),
+                     ("STOP", "A"))]
         return reg
 
     def test_each_check_catches_its_defect(self):
@@ -148,9 +155,22 @@ class TestChecks(unittest.TestCase):
         cl = C.check_clearances(reg)
         self.assertTrue(any(set(v["parts"]) == {"FLAP", "STOP"} for v in cl), cl)
         fe = C.check_fasteners(reg)
-        self.assertEqual({v["parts"][0] for v in fe if v["check"] == "edge_distance"}, {"F-edge"})
+        self.assertEqual({v["parts"][0] for v in fe if v["check"] == "edge_distance"
+                          and v["parts"][0] in ("F-ok", "F-edge")}, {"F-edge"})
         at = C.check_attachment(reg)
         self.assertEqual([v["parts"] for v in at], [["FLOAT"]])
+        self.assertEqual(C.check_contacts(reg), [])                       # A-B contact is real
+
+    def test_declared_contact_must_touch(self):
+        """A contact declared between parts that do not touch is reported, and a parent link that does not touch is
+        not a load path (the part floats)."""
+        from ucav250.analysis import checks as C
+        reg = self._reg()
+        reg.parts["FLOAT"].contacts = ("A",)
+        reg.parts["FLOAT"].parent = "A"
+        cv = C.check_contacts(reg)
+        self.assertEqual([sorted(v["parts"]) for v in cv], [["A", "FLOAT"]])
+        self.assertEqual([v["parts"] for v in C.check_attachment(reg)], [["FLOAT"]])
         self.assertEqual(C.check_thickness(reg), [])
 
     def test_coupled_joints_swept_only_along_sequences(self):

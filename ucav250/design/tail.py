@@ -64,17 +64,38 @@ T_GFRP = 0.001              # fin-tip cap: 4 plies GFRP 7781 (RF window, 1.0 mm)
 T_CAP_TIP = 0.0006          # spar caps taper (ply drops 1:20) to 4 plies UD at the tip
 REAR_CAP = (0.0008, 0.020)  # fin rear (hinge) spar caps: 6 plies UD x 20 mm
 FIN_FRONT_XC = 0.241        # layout F-FIN-FRONT fin_chord_fraction
-FIN_REAR_DH = 0.060         # rear (hinge) spar web 60 mm ahead of the hinge line in every section (parallel to it)
+FIN_REAR_DH = 0.040         # rear (hinge) spar web 40 mm ahead of the hinge line in every section (parallel to it): the
+                            # DA 26 case (aft face 17.7 mm aft of its shaft) clears the rear-spar cap for the servo hatch
 STUB_FRONT_XC = 0.25
 RUDDER_GAP_END = 0.006      # spanwise gap rudder ends / fixed fin (rudder top swings 3.9 mm toward the tip cap)
+CAP_SKIRT = 0.025           # tip-cap skirt length below the cap joint (2 x M3 into nutplates on the fin skin)
 COVE_GAP = 0.002            # radial cove gap round the rudder nose
 HINGE_S = (0.18, 0.45, 0.68)   # rudder hinge stations: fin span from the root reference section (m)
-HINGE = A.HingeSpec(pin_d=0.003, lug_t=0.004, lug_r=0.0065, gap=0.0005, base_t=0.003, base_w=0.026, base_h=0.018,
+BOX_RIBS = (0.35, 0.70)     # fin box ribs (span coordinate eta), clear of the hinge-bracket nutplates and the servo bay
+HINGE = A.HingeSpec(pin_d=0.003, lug_t=0.004, lug_r=0.0062, gap=0.0005, base_t=0.003, base_w=0.026, base_h=0.018,
                     bolt_d_mm=3.0, pin_clear=0.00002)
 RUDDER_SPAR_E = 0.011       # rudder spar web front face 11 mm aft of the hinge line in the section (9.8 mm normal)
 RUDDER_CAP = (0.0010, 0.032)   # rudder spar caps: 7 plies UD x 32 mm
-HORN_R = 0.0268             # rudder horn ball 26.8 mm off the 26.6 deg swept hinge axis = 24 mm lever in the rod plane
-ROD_D = 0.006               # rudder pushrod: 7075 tube 6 x 1
+HORN_R = 0.0268             # rudder horn ball 26.8 mm off the 26.6 deg swept hinge axis (24 mm lever in the rod plane)
+HORN_ANG = -10.0            # horn ball 10 deg forward of the inboard normal (deg about the hinge axis, toward -cp)
+ARM_ANG = -10.0             # servo arm 10 deg forward of the inboard normal at neutral: 1.98:1 at neutral, servo
+                            # -58.7/+55.3 deg at +-25 deg rudder (sizing checks: -57.1/+58.4 deg, ratio 2.0 min)
+ROD_D = 0.006               # rudder pushrod: 7075 rod 6 mm (machined, ball sockets integral)
+BALL = (0.0035, 0.00365, 0.0055, 0.0015)   # rudder ball joints: ball r, socket cavity r, socket outer r, stud r
+BALL_S = (0.0040, 0.00415, 0.0065, 0.0018)  # stabilator ball joints (pushrod force ~0.55 kN)
+SOCKET_OPEN = 60.0          # socket opening half angle (deg): stud free for +-35 deg relative tilt, ball captured
+STUD_L = 0.0047             # ball centre to the arm / horn plate face (socket rim clear at 20 deg tilt)
+PLATE_T = 0.003             # arm and horn plates (7075)
+HORN_PAD_W = 0.010          # rudder horn pad: 10 mm either side of the horn plate (span), 28 mm along the chord
+DA26 = dict(L=0.054, H=0.1028, W=0.026, shaft_edge=0.0177, holes=(0.0612, 0.016), hole_d=0.0041, mass=0.270)
+DA26_ETA0 = 0.4278          # case bottom face (output end) span coordinate: 7.8 mm above the arm mid-plane
+DA26_FLANGE = (0.003, 0.0367, 0.0141)   # case mounting flange at the top end: thickness, half length (x), half width (t)
+SERVO_RIB_T = 0.003         # 7075 servo rib (machined, bonded between the spars)
+HATCH_X0 = 3.729            # servo hatch opening forward edge (x); aft edge 1 mm ahead of the rear-spar cap
+HATCH_ETA = (0.412, 0.540)  # opening span range
+HATCH_T = 0.0010            # cover: 5 plies PW in a joggled monolithic land (core ramped out), flush with the OML
+HATCH_LAND = 0.020          # land width above / below the opening (2 x 2.5 D for M4)
+HATCH_SCREW_X = (3.742, 3.775)
 SPINDLE_R = 0.01247         # spindle OD 25 (polygon-safe radius inside the 25 H7 bores)
 SPINDLE_NECK_R = 0.0105     # neck OD 21 through the node cheek hole (>= 5 mm moving-part clearance, layout.clearances)
 SPINDLE_ID = 0.022          # bore 22 (wall 1.5 = processes.cnc_milling_metal.min_thickness; structures 1.2)
@@ -84,6 +105,22 @@ BRG_RO = 0.01847            # outer race radius inside a 37 H7 bore modelled wit
 BRG_RI = 0.01253            # inner race bore
 WASHER_R = 0.0134           # moving parts inside the node boss stay >= 5 mm off the 37 mm bore
 DEG = math.pi / 180.0
+# stabilator drive (EQ-STABACT): DA 30 lying along y on the firewall forward face, shaft along +y at the outboard end
+DA30 = dict(L=0.1585, H=0.085, W=0.030, holes=(0.077, 0.018), axis_from_holes=0.0216, mass=0.630)
+DA30_SHIFT = (-0.0025, -0.0095)   # case moved 2.5 mm forward (base-bolt heads behind the case) and 9.5 mm inboard
+                                  # (output arm in the pushrod plane y 0.18) from the layout box
+STUD_L_S = 0.0045           # stabilator ball centre to the arm / horn plate face
+CRADLE_T = 0.003            # 7075 cradle plates
+HORN_HUB = (0.170, 0.190, 0.0195)   # spindle horn pinch hub: y range, outer radius
+HORN_EARS = (0.035, 0.0125, 0.011)  # pinch ears forward of the spindle: x reach, x start, half height
+# ventral fin (F-VENTRAL-1..3): tongue in the chassis clevis slot, fork cheeks on the mid-plane web (1, 2) or tongue in a
+# slot of the solid trailing-edge region (3); replaceable PA12 skid shoe on a 4130 strap round the tip
+V_SLOT = (0.004, -0.0655)   # chassis clevis slot half width (y) and slot top z (CH-099..101 ears 5.3 mm, slot 8 mm)
+V_LUG_HX = 0.0158           # tongue half length along x (fitting box 32 mm, 0.2 mm off the firewall sheet)
+V_WEB_T = 0.003             # mid-plane web: 15 plies PW
+V_CHEEK_T = 0.003
+V_CAVITY_XC = 0.80          # sandwich cavity forward of 0.80 c; core-filled trailing-edge closeout aft of it
+SKID = dict(x=(4.065, 4.125), strap_t=0.002, shoe_side=0.004, shoe_top=0.025, strap_top=0.035, height=0.012)
 # fin spar root fittings (7075, machined): chassis clevis slots from the layout boxes (F-FIN-FRONT: 6 mm ears either side
 # of an 8 mm slot; F-FW-CORNER: slot x 3.680-3.688 between the firewall-side web and the 6 mm aft ear, chassis.md
 # interface table), lug faces 0.1 mm off the ears, flange on the spar web
@@ -99,6 +136,7 @@ RF_NECK_X0 = 3.6835         # neck / upper block start aft of the firewall heat-
 RF_EAR_TOP = 0.3045         # upper block above the aft ear (top z 0.304)
 RF_BOLTS = ((0.1505, 0.2745), (0.161, 0.2925))    # 2 x M5 12.9 (y, z), head on the aft ear, tapped into the web
 FL_T, FL_W, FL_LEN = 0.005, 0.012, 0.060          # web flange: thickness, half width (along t), length along the span
+DBL_T = 0.002               # rear-spar slot doubler (7075 C-section)
 
 
 def unit(v) -> np.ndarray:
@@ -616,6 +654,237 @@ class StabGeo:
         return I(body, env)
 
 
+class StabDrive:
+    """DA 30 + cradle, servo arm, pushrod and spindle horn of the starboard stabilator (planar four-bar in y = 0.18)."""
+
+    def __init__(self, C: Ctx, g: StabGeo):
+        self.C, self.g = C, g
+        lk = C.eq["EQ-STABACT"]["linkage"]
+        S0 = np.asarray(lk["servo_axis"], float)
+        self.S = S0 + np.array([DA30_SHIFT[0], 0.0, 0.0])
+        self.yl = float(S0[1])                                   # pushrod plane
+        self.arm_l = float(lk["servo_arm_m"])
+        self.horn_l = float(lk["horn_m"])
+        box = np.asarray(C.eq["EQ-STABACT"]["box"], float)
+        self.case_lo = box[0] + np.array([DA30_SHIFT[0], DA30_SHIFT[1], 0.0])
+        self.case_hi = box[1] + np.array([DA30_SHIFT[0], DA30_SHIFT[1], 0.0])
+        self.A0 = self.S + np.array([0.0, 0.0, self.arm_l])
+        self.H = g.axis_pt(self.yl)
+        self.B0 = self.H + np.array([0.0, 0.0, self.horn_l])
+        self.lk = Linkage(self.S, (0.0, 1.0, 0.0), self.A0, self.H, (0.0, 1.0, 0.0), self.B0)
+        # firewall forward face (layout FS3670 x_faces[0]): cradle base behind the case
+        self.x_fw = float(C.st["FS3670"]["x_faces"][0])
+
+    def da30(self) -> G.Mesh:
+        lo, hi = self.case_lo, self.case_hi
+        case = box3(lo, hi)
+        stub = cyl(0.005, (self.S[0], hi[1] - OV, self.S[2]), (self.S[0], self.arm_y()[0] - BOND, self.S[2]), n=32)
+        return U([case, stub])
+
+    def da30_holes(self):
+        """Lug-pattern bolt lines along z (datasheet 77 x 18 mm, 21.6 mm from the output axis)."""
+        hy, hx = DA30["holes"]
+        yc = 0.5 * (self.case_lo[1] + self.case_hi[1])
+        x1 = self.S[0] - DA30["axis_from_holes"]
+        return [(x, yc + sy * 0.5 * hy) for x in (x1, x1 - hx) for sy in (-1, 1)]
+
+    def cradle_dims(self):
+        xs = [x for x, _y in self.da30_holes()]
+        ys = [y for _x, y in self.da30_holes()]
+        return (min(xs) - 0.009, self.x_fw - BOND - CRADLE_T), (min(ys) - 0.008, max(ys) + 0.008)
+
+    def cradle(self) -> G.Mesh:
+        lo, hi = self.case_lo, self.case_hi
+        (x0, xb), (y0, y1) = self.cradle_dims()
+        top = box3((x0, y0, hi[2] + BOND), (xb + OV, y1, hi[2] + BOND + CRADLE_T))
+        bot = box3((x0, y0, lo[2] - BOND - CRADLE_T), (xb + OV, y1, lo[2] - BOND))
+        base = box3((xb, y0, lo[2] - BOND - CRADLE_T - 0.012), (xb + CRADLE_T, y1, hi[2] + BOND + CRADLE_T))
+        return U([top, bot, base])
+
+    def base_bolts(self):
+        """(head point on the base forward face, axis +x) of the 4 base screws into the firewall inserts."""
+        (x0, xb), (y0, y1) = self.cradle_dims()
+        z = self.case_lo[2] - BOND - CRADLE_T - 0.006
+        return [((xb, y, z), (1.0, 0.0, 0.0)) for y in (y0 + 0.010, y1 - 0.010)]
+
+    def arm_y(self):
+        y1 = self.yl - STUD_L_S
+        return y1 - PLATE_T, y1
+
+    def arm(self) -> G.Mesh:
+        y0, y1 = self.arm_y()
+        reg = unary_union([Point(self.S[0], self.S[2]).buffer(0.008, 48), Point(self.A0[0], self.A0[2]).buffer(0.006, 48),
+                           LineString([(self.S[0], self.S[2]), (self.A0[0], self.A0[2])]).buffer(0.005, cap_style=2)])
+        plate = extrude_cs(reg, y1 - y0, (0.0, y1, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0))
+        stud = cyl(BALL_S[3], self.A0, (self.A0[0], y1 - OV, self.A0[2]), n=24)
+        return U([plate, stud, G.sphere(BALL_S[0], self.A0, n=32)])
+
+    def rod(self) -> G.Mesh:
+        return rod_mesh(self.A0, self.B0, 0.004, BALL_S, ((0.0, -1.0, 0.0), (0.0, 1.0, 0.0)))
+
+    def horn_plate_y(self):
+        y0 = self.yl + STUD_L_S
+        return y0, y0 + PLATE_T
+
+    def horn(self) -> G.Mesh:
+        g = self.g
+        x0, z0 = g.x0, g.z0
+        hy0, hy1, ro = HORN_HUB
+        hub = ring(SPINDLE_R + BOND, ro, g.axis_pt(hy0), g.axis_pt(hy1), n=64)
+        ex, es, eh = HORN_EARS
+        ears = box3((x0 - ex, hy0, z0 - eh), (x0 - es, hy1, z0 + eh))
+        body = D(U([hub, ears]), [cyl(SPINDLE_R + BOND, g.axis_pt(hy0 - 0.001), g.axis_pt(hy1 + 0.001), n=64),
+                                  box3((x0 - ex - 0.001, hy0 - 0.001, z0 - 0.0005), (x0 - 0.010, hy1 + 0.001, z0 + 0.0005))])
+        py0, py1 = self.horn_plate_y()
+        reg = unary_union([Point(x0, z0).buffer(ro - 0.001, 64), Point(self.B0[0], self.B0[2]).buffer(0.006, 48)]).convex_hull
+        reg = reg.difference(Point(x0, z0).buffer(SPINDLE_R + 0.002, 64))
+        plate = extrude_cs(reg, py1 - py0, (0.0, py1, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0))
+        stud = cyl(BALL_S[3], self.B0, (self.B0[0], py0 + OV, self.B0[2]), n=24)
+        return U([body, plate, stud, G.sphere(BALL_S[0], self.B0, n=32)])
+
+    def pinch_bolt(self):
+        """(head point on the upper ear, axis -z, ear stack thickness) of the horn pinch bolt."""
+        g = self.g
+        ex, _es, eh = HORN_EARS
+        return (g.x0 - ex + 0.009, 0.5 * (HORN_HUB[0] + HORN_HUB[1]), g.z0 + eh), (0.0, 0.0, -1.0), 2 * eh
+
+
+class VenGeo:
+    """Ventral fin (centre line): sandwich skin, root rib, mid-plane web, root fittings, two monolithic CFRP lug pads
+    (third root lug, skid), skid strap and shoe."""
+
+    def __init__(self, C: Ctx):
+        self.C = C
+        self.V = C.ven
+        self.fits = [C.fit[f"F-VENTRAL-{i}"] for i in (1, 2, 3)]
+        self._m = {}
+
+    def m(self, key, fn):
+        if key not in self._m:
+            self._m[key] = fn()
+        return self._m[key]
+
+    def cavity(self, extra=0.0):
+        """Sandwich cavity forward of 0.80 c (core-filled trailing-edge closeout aft of it)."""
+        V, C = self.V, self.C
+
+        def fn(poly, ch, eta):
+            return SG.largest(poly.buffer(-(C.t_skin + extra), join_style=2).intersection(
+                sbox(-1.0, -1.0, V_CAVITY_XC * ch, 1.0)))
+        return self.m(("cav", extra), lambda: V.loft(V.e0 - 0.01, V.e1 - C.t_skin - extra, fn, step=0.01))
+
+    def z_oml(self, x) -> float:
+        p = SG.fuselage_section2d(self.C.fus, float(x), 0.0, n=256)
+        g = LineString([(0.0, -1.0), (0.0, 0.0)]).intersection(p)
+        zs = np.asarray(g.coords)[:, 1] if hasattr(g, "coords") else np.concatenate([np.asarray(q.coords)[:, 1]
+                                                                                       for q in g.geoms])
+        return float(zs.min())
+
+    def outer(self):
+        """OML with the trailing edge cut square at 0.995 c (1.3 mm trailing-edge land: no knife edge at the root trim)."""
+        V = self.V
+        return self.m("outer", lambda: V.loft(V.e0, V.e1, lambda p, ch, eta: SG.largest(
+            p.intersection(sbox(-1.0, -1.0, 0.995 * ch, 1.0))), step=0.01))
+
+    def zones(self, grow=0.0) -> list:
+        """Monolithic CFRP lug pad of the third root lug (the skid bolts sit in the core-filled trailing edge)."""
+        x3 = self.fit_x(2)
+        z3 = self.fork_bolt_z(2)[-1] - 0.016
+        return [box3((x3 - 0.030 - grow, -0.05, z3 - grow), (x3 + 0.030 + grow, 0.05, 0.0))]
+
+    def skin_raw(self) -> G.Mesh:
+        C = self.C
+        return pieces_above(D(self.outer(), [self.cavity(), C.body(TRIM, 3.40, 4.2), self.slot3()]))
+
+    def pad(self, k) -> G.Mesh:
+        C = self.C
+        cut = [C.body(TRIM, 3.40, 4.2)] + ([self.slot3()] if k == 0 else [])
+        return pieces_above(D(I(self.cavity(BOND), self.zones()[k]), cut))
+
+    def root_rib(self) -> G.Mesh:
+        C = self.C
+        band = D(C.body(TRIM + C.t_rib, 3.45, 4.1), [C.body(TRIM, 3.43, 4.1)])
+        return pieces_above(D(I(self.cavity(BOND), band), self.zones(BOND) + self.rib_holes()))
+
+    def web(self) -> G.Mesh:
+        C = self.C
+        w = I(self.cavity(BOND), box3((3.4, -0.5 * V_WEB_T, -0.4), (4.3, 0.5 * V_WEB_T, 0.0)))
+        return pieces_above(D(w, [C.body(TRIM + C.t_rib + BOND, 3.43, 4.1)] + [self.crotch_clear(i) for i in (0, 1)]
+                              + self.zones(BOND)))
+
+    def fit_x(self, i) -> float:
+        return float(self.fits[i]["point"][0])
+
+    def z_crotch(self, i) -> float:
+        x = self.fit_x(i)
+        return min(self.z_oml(x + dx) for dx in (-V_LUG_HX, 0.0, V_LUG_HX)) - TRIM - self.C.t_rib - 0.002
+
+    def crotch_clear(self, i) -> G.Mesh:
+        x, zc = self.fit_x(i), self.z_crotch(i)
+        return box3((x - V_LUG_HX - BOND, -0.02, zc - 0.006 - BOND), (x + V_LUG_HX + BOND, 0.02, 0.0))
+
+    def fitting(self, i) -> G.Mesh:
+        x = self.fit_x(i)
+        hy, ztop = V_SLOT[0] - BOND, V_SLOT[1] - BOND
+        if i < 2:
+            zc = self.z_crotch(i)
+            tongue = box3((x - V_LUG_HX, -hy, zc - OV), (x + V_LUG_HX, hy, ztop))
+            crotch = box3((x - V_LUG_HX, -(0.5 * V_WEB_T + BOND + V_CHEEK_T), zc - 0.006),
+                          (x + V_LUG_HX, 0.5 * V_WEB_T + BOND + V_CHEEK_T, zc))
+            cheeks = [box3((x - V_LUG_HX, s0, zc - 0.046), (x + V_LUG_HX, s1, zc - 0.006 + OV))
+                      for s0, s1 in ((0.5 * V_WEB_T + BOND, 0.5 * V_WEB_T + BOND + V_CHEEK_T),
+                                     (-(0.5 * V_WEB_T + BOND + V_CHEEK_T), -(0.5 * V_WEB_T + BOND)))]
+            return U([tongue, crotch] + cheeks)
+        zb = self.fork_bolt_z(i)[-1] - 0.0105
+        return box3((x - V_LUG_HX, -hy, zb), (x + V_LUG_HX, hy, ztop))
+
+    def fork_bolt_z(self, i):
+        if i < 2:
+            zc = self.z_crotch(i)
+            return [zc - 0.006 - 0.0125 - BOND, zc - 0.006 - 0.0285]
+        z0 = self.z_oml(self.fit_x(i)) - TRIM - 0.0135
+        return [z0, z0 - 0.016]
+
+    def slot3(self) -> G.Mesh:
+        x = self.fit_x(2)
+        return box3((x - V_LUG_HX - BOND, -V_SLOT[0], self.fork_bolt_z(2)[-1] - 0.0105 - BOND),
+                    (x + V_LUG_HX + BOND, V_SLOT[0], 0.0))
+
+    def rib_holes(self) -> list:
+        out = []
+        for i in (0, 1, 2):
+            x = self.fit_x(i)
+            hw = (0.5 * V_WEB_T + BOND + V_CHEEK_T + BOND) if i < 2 else V_SLOT[0]
+            out.append(box3((x - V_LUG_HX - BOND, -hw, -0.4), (x + V_LUG_HX + BOND, hw, 0.0)))
+        return out
+
+    # ------------------------------------------------------------ skid
+    def tip_loft(self, e0, e1, off):
+        V = self.V
+        return V.loft(e0, e1, lambda p, ch, eta: p.buffer(off, join_style=2))
+
+    def strap(self) -> G.Mesh:
+        V = self.V
+        x0, x1 = SKID["x"]
+        t = SKID["strap_t"]
+        outer = self.tip_loft(V.e1 - SKID["strap_top"], V.e1 + t, t)
+        inner = self.tip_loft(V.e1 - SKID["strap_top"] - 0.01, V.e1 + BOND, BOND)
+        return I(D(outer, [inner]), box3((x0, -0.05, -0.4), (x1, 0.05, 0.0)))
+
+    def shoe(self) -> G.Mesh:
+        V = self.V
+        x0, x1 = SKID["x"]
+        t = SKID["strap_t"]
+        outer = self.tip_loft(V.e1 - SKID["shoe_top"], V.e1 + SKID["height"], t + BOND + SKID["shoe_side"])
+        inner = self.tip_loft(V.e1 - SKID["shoe_top"] - 0.01, V.e1 + t + BOND, t + BOND)
+        return I(D(outer, [inner]), box3((x0 + 0.001, -0.05, -0.4), (x1 - 0.001, 0.05, 0.0)))
+
+    def skid_bolts(self):
+        V = self.V
+        z = float(V.frame(V.e1)[0][2]) + 0.012
+        return [((x, -0.05, z), (0.0, 1.0, 0.0)) for x in (4.088, 4.110)]
+
+
 def build_stab_geo(C: Ctx) -> StabGeo:
     return StabGeo(C)
 
@@ -723,6 +992,26 @@ class StubPanelGeo:
     def stab_mid_rib(self) -> G.Mesh:
         e = float(self.C.T["stabilator"]["sections"][1]["y"])
         return self._fwd_rib(e, e + self.C.t_rib)
+
+
+def socket_mesh(c, r_i, r_o, opening, half_angle_deg=SOCKET_OPEN) -> G.Mesh:
+    """Snap-on ball socket (DIN 71802 type) of a pushrod end: spherical shell r_i..r_o round the ball centre c, open
+    toward the stud (``opening``) with a cone of ``half_angle_deg``; the opening (r_i sin a) is smaller than the ball."""
+    shell = D(G.sphere(r_o, c, n=32), [G.sphere(r_i, c, n=32)])
+    L = r_o + 0.002
+    cone = G.cylinder(1e-5, c, np.asarray(c, float) + L * unit(opening), n=32,
+                      r1=L * math.tan(math.radians(half_angle_deg)))
+    return D(shell, [cone])
+
+
+def rod_mesh(A, B, r_rod, ball, studs) -> G.Mesh:
+    """Pushrod with a ball socket at each end (ball centres A and B, sockets open toward the studs)."""
+    _r_b, r_i, r_o, _r_s = ball
+    A, B = np.asarray(A, float), np.asarray(B, float)
+    d = unit(B - A)
+    off = math.sqrt(max(r_o ** 2 - r_rod ** 2, 0.0)) - 0.0003
+    return U([socket_mesh(A, r_i, r_o, studs[0]), socket_mesh(B, r_i, r_o, studs[1]),
+              cyl(r_rod, A + off * d, B - off * d, n=24)])
 
 
 # =====================================================================================================================
@@ -939,10 +1228,46 @@ class FinGeo:
         inner = F.loft(self.e_cap - 0.01, F.e1 - T_GFRP, f_oml(T_GFRP))
         return D(outer, [inner])
 
-    def cap_base(self) -> G.Mesh:
+    def _fixed3d(self, e0, e1, grow=0.0):
+        """Fixed part of the section forward of the cove, 2 mm (- grow) clear of the cove disc."""
         F = self.F
-        e0, e1 = self.e_cap, self.e_cap + T_GFRP
-        return F.plate(e0, e1, SG.largest(F.inner_common(e0, e1, T_GFRP + BOND)))
+
+        def fn(poly, ch, eta):
+            s, t = self.hinge_fn(poly, ch)
+            tu, tl = SG._span_t(poly, s)
+            r = min(tu - t, t - tl)
+            big = poly.buffer(0.01, join_style=2)
+            return SG.largest(big.intersection(sbox(-1.0, -1.0, s, 1.0)).difference(
+                Point(s, t).buffer(r + COVE_GAP + 0.002 - grow, 96)))
+        return F.loft(e0, e1, fn)
+
+    def cap_flange(self, grow=0.0) -> G.Mesh:
+        """Skirt of the tip cap (GFRP, T_GFRP) in a joggled recess of the fixed-fin skin below the cap joint, forward of
+        the cove (the cap drops onto the tapering fin from above); ``grow`` > 0 gives the recess cutter."""
+        F = self.F
+        e0, e1 = self.e_cap - CAP_SKIRT - grow, self.e_cap + (OV if grow == 0 else 0.002)
+        band = D(F.loft(e0, e1, lambda p, ch, eta: p.buffer(0.001 if grow else 0.0, join_style=2)),
+                 [F.loft(e0 - 0.01, e1 + 0.01, f_oml(T_GFRP + grow))])
+        return I(band, self._fixed3d(e0 - 0.001, e1 + 0.001, grow))
+
+    def tip_cap(self) -> G.Mesh:
+        """GFRP tip cap (antenna window): closed shell above the cap joint plus the skirt below it (forward of the cove)."""
+        F = self.F
+        e0 = self.e_cap - CAP_SKIRT
+        outer = F.loft(e0, F.e1, f_oml())
+        inner = F.loft(e0 - 0.01, F.e1 - T_GFRP, f_oml(T_GFRP))
+        aft = D(F.loft(e0 - 0.01, self.e_cap, lambda p, ch, eta: p.buffer(0.01, join_style=2)),
+                [self._fixed3d(e0 - 0.02, self.e_cap + 0.001)])
+        return D(outer, [inner, aft])
+
+    def cap_screws(self):
+        """(point on the skirt outer surface, axis into the fin) of the two M3 cap screws (inboard / outboard face)."""
+        F = self.F
+        eta = self.e_cap - CAP_SKIRT + 0.009
+        o = F.frame(eta)[0]
+        s_ = 0.35 * F.chord(eta)
+        tu, tl = SG._span_t(F.poly(eta), s_)
+        return [(F.p3(eta, s_, tu), -F.u), (F.p3(eta, s_, tl), F.u)]
 
     # ---------------------------------------------------------------- rudder
     def rudder_outer(self):
@@ -985,6 +1310,207 @@ class FinGeo:
     def rudder_skin_raw(self) -> G.Mesh:
         return D(self.rudder_outer(), [self.rudder_inner()])
 
+    # ---------------------------------------------------------------- hinges (clevis on the rear spar, tongue on the rudder spar)
+    def hinge_eta(self, i) -> float:
+        return self.F.e0 + HINGE_S[i]
+
+    def clevis(self, i) -> dict:
+        reach = (FIN_REAR_DH - 0.5 * T_WEB) * self.aw - BOND
+        return self.m(("clevis", i), lambda: A.hinge_bracket_fixed(self.axis_at(self.hinge_eta(i)), self.h_a, self.cp,
+                                                                   HINGE, reach))
+
+    def tongue(self, i) -> dict:
+        reach = RUDDER_SPAR_E * self.aw - BOND
+        return self.m(("tongue", i), lambda: A.hinge_bracket_moving(self.axis_at(self.hinge_eta(i)), self.h_a, -self.cp,
+                                                                    HINGE, reach))
+
+    def nose_notch(self, i, deg=29.0, n=13) -> G.Mesh:
+        """Cut-out in the rudder nose skin for the clevis lugs over the travel (clevis envelope + 1 mm, rotated through
+        -deg..+deg about the hinge axis in the rudder frame)."""
+        p = self.axis_at(self.hinge_eta(i))
+        ef = -self.cp
+        ea = self.h_a
+        et = np.cross(ef, ea)
+        span = HINGE.lug_t * 1.5 + HINGE.gap + 0.001 + 0.0005
+        half_t = 0.5 * min(HINGE.base_h, 2.2 * HINGE.lug_r) + 0.001
+        bx = obox(p + 0.017 * ef, [ef, ea, et], [0.017, span + 0.0015, half_t])
+        return U([G.Mesh(G.rotate_about(bx.V, p, ea, a), bx.F) for a in np.radians(np.linspace(-deg, deg, n))])
+
+    # ---------------------------------------------------------------- rudder drive (DA 26, arm, rod, horn)
+    def linkage(self) -> "Linkage":
+        F = self.F
+        a, b = math.radians(ARM_ANG), math.radians(HORN_ANG)
+        A0 = self.Ssh + float(self.C.act["ACT-RUDDER"]["linkage"]["servo_arm_m"]) * (math.cos(a) * F.u + math.sin(a) * F.c)
+        B0 = self.Hp + HORN_R * (math.cos(b) * F.u + math.sin(b) * self.cp)
+        return Linkage(self.Ssh, -F.w, A0, self.h_o, self.h_a, B0)
+
+    def rudder_states(self, n=13):
+        """[(delta, theta, phi1, phi2)] of the rudder four-bar over the joint range (n steps per side)."""
+        j = self.C.mech["rudder_R"]
+        return self.m(("states", n), lambda: self.linkage().sweep(float(j["lo"]), float(j["hi"]), n=n))
+
+    def rod_sweep(self, grow=0.0015, cut0=0.0095, cut1=0.0085) -> G.Mesh:
+        """Volume swept by the pushrod tube (radius + grow) between its sockets over the travel (hulls of neighbouring
+        states): cut from the fixed fin skin and the rear spar (rod slot)."""
+        lk = self.linkage()
+        segs = [(lk.A(th), lk.B(d)) for d, th, _p1, _p2 in self.rudder_states()]
+        r = ROD_D / 2 + grow
+        hulls = []
+        for (A1, B1), (A2, B2) in zip(segs, segs[1:]):
+            pts = []
+            for A_, B_ in ((A1, B1), (A2, B2)):
+                d = unit(B_ - A_)
+                e1, e2 = J._perp(d)
+                for P in (A_ + cut0 * d, B_ - cut1 * d):
+                    for k in range(16):
+                        a = 2 * math.pi * k / 16
+                        pts.append(P + r * (math.cos(a) * e1 + math.sin(a) * e2))
+            hulls.append(G.hull(np.asarray(pts)))
+        return self.m(("rodsweep", grow), lambda: U(hulls))
+
+    def eta_of(self, P) -> float:
+        F = self.F
+        return float(F.e0 + (np.asarray(P, float) - F.frame(F.e0)[0]) @ F.w)
+
+    def arm_eta(self):
+        e1 = DA26_ETA0 - BOND
+        return e1 - PLATE_T, e1
+
+    def arm(self) -> G.Mesh:
+        F = self.F
+        lk = self.linkage()
+        e0, e1 = self.arm_eta()
+        hub = F.to2d(e0, [self.Ssh])[0]
+        tip = F.to2d(e0, [lk.A0])[0]
+        reg = unary_union([Point(*hub).buffer(0.007, 48), Point(*tip).buffer(0.005, 48),
+                           LineString([hub, tip]).buffer(0.004, cap_style=2)])
+        plate = F.plate(e0, e1, reg)
+        stud = cyl(BALL[3], lk.A0, lk.A0 + (e0 - self.e_L + OV) * F.w, n=24)
+        return U([plate, stud, G.sphere(BALL[0], lk.A0, n=32)])
+
+    def horn_eta(self):
+        eB = self.eta_of(self.linkage().B0)
+        return eB + STUD_L, eB + STUD_L + PLATE_T
+
+    def horn_pad_s(self, eta):
+        sh = self.s_hinge(eta)
+        return sh + 0.013, sh + 0.041
+
+    def horn(self) -> G.Mesh:
+        F = self.F
+        lk = self.linkage()
+        e0, e1 = self.horn_eta()
+        s1, s2 = self.horn_pad_s(e0)
+
+        def pad_fn(poly, ch, eta):
+            band = poly.buffer(0.0025, join_style=2).difference(poly)
+            return SG.largest(band.intersection(sbox(s1, 0.0, s2, 1.0)))
+        pad = F.loft(e0 - HORN_PAD_W, e1 + HORN_PAD_W, pad_fn, n=160)
+        poly = F.poly(e0)
+        bst = F.to2d(e0, [lk.B0])[0]
+        top = []
+        for s_ in np.linspace(s1 + 0.003, s2 - 0.003, 5):
+            tu, _tl = SG._span_t(poly, s_)
+            top.append((s_, tu + 0.0024))
+        hull = unary_union([Point(*bst).buffer(0.005, 48)] + [Point(*q).buffer(0.0001, 8) for q in top]).convex_hull
+        reg = SG.largest(hull.difference(poly.buffer(0.0023, join_style=2)))
+        plate = F.plate(e0, e1, reg)
+        stud = cyl(BALL[3], lk.B0, lk.B0 + (STUD_L + OV) * F.w, n=24)
+        return U([pad, plate, stud, G.sphere(BALL[0], lk.B0, n=32)])
+
+    def horn_bolts(self):
+        """(point on the pad outer surface, axis into the rudder) of the two M3 horn screws (beside the horn plate)."""
+        F = self.F
+        e0, e1 = self.horn_eta()
+        out = []
+        for eta in (e0 - 0.004, e1 + 0.004):
+            s_ = self.s_hinge(eta) + 0.027
+            tu, _tl = SG._span_t(F.poly(eta), s_)
+            out.append((F.p3(eta, s_, tu + 0.0025), -F.u))
+        return out
+
+    def rod(self) -> G.Mesh:
+        lk = self.linkage()
+        return rod_mesh(lk.A0, lk.B0, ROD_D / 2, BALL, (self.C.fin.w, self.C.fin.w))
+
+    def da26(self) -> G.Mesh:
+        F = self.F
+        L, H, W = DA26["L"], DA26["H"], DA26["W"]
+        e0, e1 = DA26_ETA0, DA26_ETA0 + H
+        xa = self.Ssh[0] + DA26["shaft_edge"]                      # case aft face: shaft 17.7 mm from it
+        xc = xa - 0.5 * L
+        oc = F.frame(e0)[0][0]
+        reg = sbox(xa - L - oc, -0.5 * W, xa - oc, 0.5 * W)
+        case = F.plate(e0, e1, reg)
+        ft, fl, fw = DA26_FLANGE
+        of = F.frame(e1 - ft)[0][0]
+        fl2 = sbox(xc - fl - of, -fw, xc + fl - of, fw)
+        flange = F.plate(e1 - ft, e1, fl2)
+        return U([case, flange])
+
+    def da26_holes(self):
+        """(point on the flange bottom face, axis) of the four mounting screws (datasheet pattern 61.2 x 16)."""
+        F = self.F
+        e1 = DA26_ETA0 + DA26["H"]
+        xc = self.Ssh[0] + DA26["shaft_edge"] - 0.5 * DA26["L"]
+        oc = F.frame(e1)[0][0]
+        hx, ht = DA26["holes"]
+        return [(F.p3(e1 - DA26_FLANGE[0], xc + sx * 0.5 * hx - oc, st * 0.5 * ht), F.w) for sx in (-1, 1)
+                for st in (-1, 1)]
+
+    def servo_rib_eta(self):
+        e0 = DA26_ETA0 + DA26["H"] + BOND
+        return e0, e0 + SERVO_RIB_T
+
+    def servo_rib(self) -> G.Mesh:
+        return self.box_rib(*self.servo_rib_eta())
+
+    # ---------------------------------------------------------------- servo hatch (inboard face)
+    def cap_front_x(self, eta) -> float:
+        return float(self.F.frame(eta)[0][0] + self.s_rear(eta) + 0.5 * T_WEB - REAR_CAP[1])
+
+    def _footprint(self, x0, eta0, eta1, aft_off, t0=0.0, t1=0.06) -> G.Mesh:
+        F = self.F
+        pts = []
+        for eta in (eta0, eta1):
+            ox = F.frame(eta)[0][0]
+            for x in (x0, self.cap_front_x(eta) + aft_off):
+                for t in (t0, t1):
+                    pts.append(F.p3(eta, x - ox, t))
+        return G.hull(np.asarray(pts))
+
+    def hatch_cover_fp(self, grow=0.0):
+        e0, e1 = HATCH_ETA
+        return self._footprint(HATCH_X0 - 0.003 - grow, e0 - 0.0225 - grow, e1 + 0.0225 + grow, 0.002 + grow)
+
+    def hatch_opening(self):
+        return self._footprint(HATCH_X0, HATCH_ETA[0], HATCH_ETA[1], -0.001, t0=-0.001)
+
+    def hatch_band(self, depth):
+        F = self.F
+        e0, e1 = HATCH_ETA[0] - 0.04, HATCH_ETA[1] + 0.04
+        return D(F.loft(e0, e1, f_oml()), [F.loft(e0 - 0.01, e1 + 0.01, f_oml(depth))])
+
+    def hatch_cover(self) -> G.Mesh:
+        return I(self.hatch_band(HATCH_T), self.hatch_cover_fp())
+
+    def hatch_recess(self) -> G.Mesh:
+        F = self.F
+        e0, e1 = HATCH_ETA[0] - 0.04, HATCH_ETA[1] + 0.04
+        outer = F.loft(e0, e1, lambda p, ch, eta: p.buffer(0.002, join_style=2))
+        return I(D(outer, [F.loft(e0 - 0.01, e1 + 0.01, f_oml(HATCH_T + BOND))]), self.hatch_cover_fp(BOND))
+
+    def hatch_screws(self):
+        """(point on the cover outer surface, axis into the fin) of the 4 x M4 cover screws."""
+        F = self.F
+        out = []
+        for eta in (HATCH_ETA[0] - 0.011, HATCH_ETA[1] + 0.011):
+            o = F.frame(eta)[0]
+            for x in HATCH_SCREW_X:
+                tu, _tl = SG._span_t(F.poly(eta), x - o[0])
+                out.append((F.p3(eta, x - o[0], tu), -F.u))
+        return out
+
     # ---------------------------------------------------------------- spar root fittings
     def eta_on_rib(self, s_fn, t=0.0, h=None) -> float:
         """Span coordinate where the line (s_fn(eta), t) leaves the root rib (OML + TRIM + t_rib + BOND)."""
@@ -1006,7 +1532,7 @@ class FinGeo:
 
     def flange_span(self, s_fn):
         eb = self.eta_on_rib(s_fn)
-        return eb - 0.010, eb + FL_LEN
+        return eb - 0.004, eb + FL_LEN
 
     def flange(self, s_fn, front_face=True) -> tuple:
         """(mesh, (eta0, eta1), (d0, d1)) of the 5 mm web flange on the web front face of the spar along s_fn."""
@@ -1019,24 +1545,71 @@ class FinGeo:
         bot = [F.p3(e0, s_fn(e0) + d, t) for d in (d0, d1) for t in (-FL_W, FL_W)]
         return G.hull(np.asarray(list(top_pts) + bot))
 
+    def _fitting_pieces(self, front: bool) -> list:
+        """Convex pieces of a spar root fitting (vertex sets): lug / neck boxes, bridge hull, web flange."""
+        def bx(lo, hi):
+            return [(x, y, z) for x in (lo[0], hi[0]) for y in (lo[1], hi[1]) for z in (lo[2], hi[2])]
+        F = self.F
+        if front:
+            x0, x1 = FF_SLOT[0] + BOND, FF_SLOT[1] - BOND
+            (y0, y1), zt = FF_LUG
+            (ny0, ny1), zn = FF_NECK
+            pcs = [bx((x0, y0, FF_FLOOR + BOND), (x1, y1, zt)), bx((x0, ny0, zt - OV), (x1, ny1, zn))]
+            top = [(x, y, zn - OV) for x in (x0, x1) for y in (ny0, ny1)]
+            s_fn = self.s_front
+        else:
+            x0, x1 = RF_SLOT[0] + BOND, RF_SLOT[1] - BOND
+            (ya, za), (yb, zb) = RF_LUG
+            ze = RF_EAR_TOP + 0.008
+            pcs = [bx((x0, ya[0], za[0]), (x1, ya[1], za[1])), bx((x0, yb[0], za[1] - OV), (x1, yb[1], zb[1])),
+                   bx((RF_NECK_X0, 0.142, zb[1] - OV), (x1, 0.165, RF_EAR_TOP + OV)),
+                   bx((RF_NECK_X0, 0.142, RF_EAR_TOP), (RF_SLOT[1] + 0.0035, 0.165, ze))]
+            top = [(x, y, ze - OV) for x in (RF_NECK_X0, RF_SLOT[1] + 0.0035) for y in (0.142, 0.165)]
+            s_fn = self.s_rear
+        e0, e1 = self.flange_span(s_fn)
+        d0, d1 = -0.5 * T_WEB - BOND - FL_T, -0.5 * T_WEB - BOND
+        bot = [tuple(F.p3(e0, s_fn(e0) + d, t)) for d in (d0, d1) for t in (-FL_W, FL_W)]
+        pcs.append(top + bot)
+        pcs.append([tuple(F.p3(e, s_fn(e) + d, t)) for e in (e0, e1) for d in (d0, d1) for t in (-FL_W, FL_W)])
+        return pcs
+
+    def fitting(self, front: bool, grow: float = 0.0) -> G.Mesh:
+        out = []
+        for pts in self._fitting_pieces(front):
+            P = np.asarray(pts, float)
+            if grow > 0:
+                P = np.vstack([P + grow * d for d in np.vstack([np.eye(3), -np.eye(3)])])
+            out.append(G.hull(P))
+        return U(out)
+
     def front_fitting(self) -> G.Mesh:
-        x0, x1 = FF_SLOT[0] + BOND, FF_SLOT[1] - BOND
-        (y0, y1), zt = FF_LUG
-        (ny0, ny1), zn = FF_NECK
-        lug = box3((x0, y0, FF_FLOOR + BOND), (x1, y1, zt))
-        neck = box3((x0, ny0, zt - OV), (x1, ny1, zn))
-        fl, (e0, _e1), (d0, d1) = self.flange(self.s_front)
-        top = [(x, y, zn - OV) for x in (x0, x1) for y in (ny0, ny1)]
-        return U([lug, neck, self._bridge(top, self.s_front, e0, d0, d1), fl])
+        return self.fitting(True)
 
     def rear_fitting(self) -> G.Mesh:
-        x0, x1 = RF_SLOT[0] + BOND, RF_SLOT[1] - BOND
-        (ya, za), (yb, zb) = RF_LUG
-        a = box3((x0, ya[0], za[0]), (x1, ya[1], za[1]))
-        b = box3((x0, yb[0], za[1] - OV), (x1, yb[1], zb[1]))
-        neck = box3((RF_NECK_X0, 0.142, zb[1] - OV), (x1, 0.165, RF_EAR_TOP + OV))
-        ze = RF_EAR_TOP + 0.008
-        e = box3((RF_NECK_X0, 0.142, RF_EAR_TOP), (RF_SLOT[1] + 0.0035, 0.165, ze))
-        fl, (e0, _e1), (d0, d1) = self.flange(self.s_rear)
-        top = [(x, y, ze - OV) for x in (RF_NECK_X0, RF_SLOT[1] + 0.0035) for y in (0.142, 0.165)]
-        return U([a, b, neck, e, self._bridge(top, self.s_rear, e0, d0, d1), fl])
+        return self.fitting(False)
+
+    def flange_bolts(self, front: bool):
+        """(point on the flange outer face, axis through flange then web) of the two M5 flange bolts."""
+        F = self.F
+        s_fn = self.s_front if front else self.s_rear
+        e0, _e1 = self.flange_span(s_fn)
+        eb = e0 + 0.004
+        out = []
+        for e in (eb + 0.016, eb + 0.046):
+            p0 = F.p3(e, s_fn(e) - 0.5 * T_WEB - BOND - FL_T, 0.0)
+            dp = F.p3(e + 1e-3, s_fn(e + 1e-3), 0.0) - F.p3(e - 1e-3, s_fn(e - 1e-3), 0.0)
+            n = unit(np.cross(dp, F.u))
+            n = n if n @ F.c > 0 else -n
+            out.append((p0, n))
+        return out
+
+    def slot_doubler(self) -> G.Mesh:
+        """7075 C-section doubler nested in the rear spar round the pushrod slot (carries the inboard cap round it)."""
+        F = self.F
+        e0, e1 = self.e_L - 0.040, self.e_L + 0.040
+        ti = self.ti + REAR_CAP[0] + BOND
+        outer_l = F.loft(e0 - 0.01, e1 + 0.01, f_oml(ti))
+        inner_l = F.loft(e0 - 0.02, e1 + 0.02, f_oml(ti + DBL_T))
+        a = F.slab(e0, e1, self.s_rear, -0.5 * T_WEB - BOND - 0.018, -0.5 * T_WEB - BOND)
+        b = F.slab(e0 - 0.01, e1 + 0.01, self.s_rear, -0.05, -0.5 * T_WEB - BOND - DBL_T)
+        return pieces_above(D(D(I(outer_l, a), [I(inner_l, b)]), [self.rod_sweep()]))

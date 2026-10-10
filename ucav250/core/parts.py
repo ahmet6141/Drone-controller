@@ -51,10 +51,14 @@ class Fastener:
     grip: float | None = None   # clamped stack thickness (m): nut/nutplate sits at position + grip * axis
     washer_head: bool = False   # ISO 7089 washer under the head
     washer_nut: bool = True     # ISO 7089 washer under the nut (ignored for nutplates/inserts)
+    orient: np.ndarray | None = None  # long-axis direction of a nutplate / receptacle base in the land plane (None:
+    #                                   hardware.py default); a producer aligns it with the land (frame cap, flange)
 
     def __post_init__(self):
         self.position = np.asarray(self.position, float)
         self.axis = unit(self.axis)
+        if self.orient is not None:
+            self.orient = unit(self.orient)
 
 
 @dataclass
@@ -298,7 +302,8 @@ def mirror_part(p: Part, new_id: str, joint: str | None = None, id_map: dict[str
     fs = [Fastener(id=f.id.replace(p.id, new_id), spec=f.spec, kind=f.kind, d=f.d, length=f.length,
                    position=mvec(f.position), axis=mvec(f.axis),
                    joins=tuple(id_map.get(j, j) for j in f.joins), nut=f.nut, torque_nm=f.torque_nm,
-                   step=f.step, notes=f.notes, grip=f.grip, washer_head=f.washer_head, washer_nut=f.washer_nut)
+                   step=f.step, notes=f.notes, grip=f.grip, washer_head=f.washer_head, washer_nut=f.washer_nut,
+                   orient=None if f.orient is None else mvec(f.orient))
           for f in p.fasteners]
 
     def mhole(h):

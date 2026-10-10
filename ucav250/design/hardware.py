@@ -23,6 +23,18 @@ from ..core.parts import Fastener, Part, Registry
 from . import fastener_catalog as C
 
 
+def _base_dir(f: Fastener, a: np.ndarray) -> np.ndarray:
+    """Long-axis direction of a nutplate / receptacle base: the producer's ``Fastener.orient`` projected into the plane
+    normal to the axis, else the default (horizontal for a steep axis, along y for a near-vertical one)."""
+    if f.orient is not None:
+        o = np.asarray(f.orient, float)
+        o = o - np.dot(o, a) * a
+        if np.linalg.norm(o) > 1e-6:
+            return unit(o)
+    ref = np.array([0, 0, 1.0]) if abs(a[2]) < 0.9 else np.array([1.0, 0, 0])
+    return unit(np.cross(a, ref))
+
+
 def _prism_n(radius: float, p0, p1, n: int) -> Mesh:
     """n-sided prism (hex head/nut) between p0 and p1, circumradius ``radius``."""
     return cylinder(radius, p0, p1, n=n)
@@ -69,8 +81,7 @@ def _bolt_mesh(f: Fastener) -> Mesh:
     elif f.grip is not None and "nutplate" in nut and size in C.NUTPLATE:
         L, W, H, _pitch = C.NUTPLATE[size]
         q = p + f.grip * a
-        ref = np.array([0, 0, 1.0]) if abs(a[2]) < 0.9 else np.array([1.0, 0, 0])
-        e1 = unit(np.cross(a, ref))
+        e1 = _base_dir(f, a)
         e2 = np.cross(a, e1)
         R = np.column_stack([e1, e2, a])
         base = box((L, W, 0.0008), center=q + 0.0004 * a, R=R)
@@ -101,8 +112,7 @@ def _quarter_turn_mesh(f: Fastener) -> Mesh:
     if f.grip is not None:
         q = p + f.grip * a
         L, W, t = Q["rec_plate"]
-        ref = np.array([0, 0, 1.0]) if abs(a[2]) < 0.9 else np.array([1.0, 0, 0])
-        e1 = unit(np.cross(a, ref))
+        e1 = _base_dir(f, a)
         R = np.column_stack([e1, np.cross(a, e1), a])
         bd, bh = Q["rec_barrel"]
         rec = union([box((L, W, t), center=q + 0.5 * t * a, R=R), cylinder(bd / 2, q + (t - 1e-4) * a, q + bh * a, n=24)])

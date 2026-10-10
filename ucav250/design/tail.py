@@ -6,32 +6,40 @@ structure, FC 300-349 controls; the ids fixed by the layout are kept: fin TL-250
 stabilator TL-256, fin-tip cap TL-258, bumper skid TL-260, spindle TL-301, rudder FC-300, DA 30 FC-302, DA 26 FC-303):
 
 * fin: closed sandwich skin (``layups.tail_skin``) trimmed at the body OML, front spar (0.241 c) and rear (hinge) spar
-  (0.625 c) CFRP C-channels, contoured root rib on the OML, servo rib, box ribs, aft closure rib under the rudder root,
-  tip rib, GFRP antenna tip cap with its base plate, removable servo hatch cover on the inboard face, and two machined
-  7075 spar root fittings whose lugs enter the chassis clevises F-FIN-FRONT (FS3480) and F-FW-CORNER (firewall);
-* rudder: round-nose CFRP skin (cove on the fin), C-channel spar at the hinge, ROHACELL core, three hinges (clevis on
-  the rear spar, tongue on the rudder spar, M4 shoulder-bolt pins), surface horn on potted inserts, DA 26 actuator on the
-  servo rib (case above the output shaft), servo arm and pushrod (spatial four-bar, ``rudder_R`` + coupled joints);
+  (40 mm ahead of and parallel to the hinge line) CFRP C-channels, contoured root rib on the OML, 7075 servo rib, box
+  ribs, aft closure rib under the rudder root, tip rib, GFRP antenna tip cap (skirt on nutplate pads), removable servo
+  hatch cover on the inboard face (nutplate strips), pushrod-slot doubler, and two machined 7075 spar root fittings
+  whose lugs enter the chassis clevises F-FIN-FRONT (FS3480) and F-FW-CORNER (firewall);
+* rudder: round-nose CFRP skin (cove on the fin), C-channel spar aft of the hinge, ROHACELL core, three hinges (clevis
+  on the rear spar, tongue on the rudder spar, 3 mm ISO 2341-B pins), surface horn (2 x M3 to a backing plate), DA 26
+  actuator on the servo rib (case above the output shaft), servo arm and pushrod (spatial four-bar, ``rudder_R`` +
+  coupled joints);
 * stabilator stub: sandwich skin trimmed at the OML, 7075 spindle sleeve (root flange on the node outboard cheek with
-  4 x M6 12.9 = layout F-SPINDLE-NODE B8..B11, outboard 61805 bearing seat at its tip), front spar, root and tip ribs;
+  4 x M6 12.9 = layout F-SPINDLE-NODE B8..B11, OD 49 x 2 tube, outboard 61805 bearing seat at its tip), front spar in the
+  plane of the F-STUB-FRONT slot with a 7075 plate root fitting (lug in the CH-098 clevis, 2 x M5 12.9 double shear;
+  flange on the spar web, 2 x M5 Ti; neck through a slot cut in the FS3480 outer cap), root and tip ribs;
 * spindle: Ti-6Al-4V, machined from bar, OD 25 (neck OD 21 through the node cheek hole), inboard 61805-ZZ bearing in the
   node boss with two DIN 472 circlips, end washer + M6 bolt, outboard bearing in the sleeve, collar outboard of it;
 * stabilator panel: sandwich skin (closed tip), CFRP spar, root rib, socket rib, mid rib, 7075 root fitting (socket
   29 x 2 with the cross-bolt bosses), Ti end plug; cross bolt M5 from the lower skin;
 * stabilator drive: DA 30 in a 7075 cradle on the firewall forward face (potted inserts), 15 mm arm, 8 mm pushrod through
   the firewall window C-FW-PUSHROD, 37.5 mm horn clamped on the spindle spline (planar 2.5:1 four-bar, coupled joints);
-* ventral fin: sandwich skin trimmed at the OML, CFRP spar, contoured root rib, three 7075 root lugs in F-VENTRAL-1..3
-  (M5 12.9, double shear), 4130 strap with a replaceable PA12 skid shoe at the tip under the propeller disc.
+* ventral fin: sandwich skin trimmed at the OML, CFRP mid-plane web, contoured root rib, three 7075 root lugs in
+  F-VENTRAL-1..3 (M5 12.9, double shear; fork cheeks on the web or a tongue in the monolithic lug zone), 4130 strap with a
+  replaceable PA12 skid shoe at the tip under the propeller disc.
 
 Interfaces read (never another module's geometry): ``spec.tail.surfaces`` (OML), ``spec.fuselage`` (body OML for the
-root trim), ``spec.layout`` (part numbers, chassis fittings F-FIN-FRONT / F-FW-CORNER / F-SPINDLE-NODE / F-VENTRAL-*,
-mechanisms joints, systems actuators EQ-STABACT / ACT-RUDDER, stations FS3670), ``spec.structures.sizing.tail``
+root trim), ``spec.layout`` (part numbers, chassis fittings F-FIN-FRONT / F-FW-CORNER / F-STUB-FRONT / F-SPINDLE-NODE /
+F-VENTRAL-*, mechanisms joints, systems actuators EQ-STABACT / ACT-RUDDER, stations FS3480 / FS3670, clearances), ``spec.structures.sizing.tail``
 (spindle, socket, spar caps), ``spec.tail.surfaces.*.controls`` (linkage arms, actuator data), ``spec.layups`` /
 ``spec.processes`` / ``spec.materials``.
 
 Module-private detailing constants and the documented deviations from the layout are listed in
-``ucav250/docs/detail/tail.md`` (bolt positions shifted inside the chassis clevises for lug edge distance, DA 26 case
-above its output shaft per the datasheet shaft offset, spindle wall 1.5 mm = CNC minimum, ventral lug bolts M5).
+``ucav250/docs/detail/tail.md`` (bolt positions shifted inside the chassis clevises for lug edge distance, F-STUB-FRONT /
+F-FW-CORNER / F-VENTRAL lug bolts M5, DA 26 case above its output shaft per the datasheet shaft offset, spindle wall
+1.5 mm = CNC minimum). Bolts in composite stacks and secondary joints are Ti-6Al-4V (galvanic compatibility), primary
+lug / root bolts 12.9 steel. Screw axes on curved skins follow the local surface normal (flat head and nutplate
+seats); the cove lip of the fin skin carries a clearance notch for the swept rudder horn and pushrod socket.
 """
 from __future__ import annotations
 
@@ -1554,9 +1562,9 @@ class FinGeo:
                         a = 2 * math.pi * k / 16
                         pts.append(P + r * (math.cos(a) * e1 + math.sin(a) * e2))
             hulls.append(G.hull(np.asarray(pts)))
-        return self.m(("rodsweep", grow), lambda: U(hulls))
+        return self.m(("rodsweep", grow, cut0, cut1), lambda: U(hulls))
 
-    def horn_sweep(self, grow=0.0015, aft=0.010) -> G.Mesh:
+    def horn_sweep(self, grow=0.002, aft=0.010) -> G.Mesh:
         """Volume swept over the rudder travel by the forward part of the horn (ball, plate within ``aft`` of the hinge
         line) and by the pushrod's horn-end socket, grown by ``grow`` (hulls of neighbouring states): the horn
         clearance notch cut from the cove lip of the fixed fin skin."""
@@ -1905,8 +1913,9 @@ def _horner(var: str, coef) -> str:
     return f"{var}*{expr}"
 
 
-def _fit(x, y, deg=5) -> np.ndarray:
-    """Least-squares polynomial through the origin: y = sum c_k x^(k+1), k = 0..deg-1."""
+def _fit(x, y, deg=7) -> np.ndarray:
+    """Least-squares polynomial through the origin: y = sum c_k x^(k+1), k = 0..deg-1 (degree 7: < 1e-3 rad from the
+    exact four-bar table over the whole range)."""
     X = np.column_stack([np.asarray(x, float) ** (k + 1) for k in range(deg)])
     return np.linalg.lstsq(X, np.asarray(y, float), rcond=None)[0]
 
@@ -2185,7 +2194,7 @@ class _TailReg:
           notes="7075 C-section 2 mm nested in the rear spar over +-40 mm round the pushrod slot (carries the inboard "
                 "cap round the slot), bonded + 4 blind rivets per cap (rivets: drawing note)")
         A("skin", 250, "R", "tail", "fin skin, starboard", "dikey kaplaması, sağ", CFRP_PW, P_PREPREG,
-          lambda: pieces_above(D(f.skin_raw(), [f.hatch_recess(), f.hatch_opening(), f.rod_sweep(), f.horn_sweep(),
+          lambda: pieces_above(D(f.skin_raw(), [f.hatch_recess(), f.hatch_opening(), f.rod_sweep(cut1=0.0), f.horn_sweep(),
                                                f.cap_flange(BOND)])),
           layup="tail_skin", parent=self.P("fspar"), step=32, explode=EX_FIN,
           contacts=(self.P("fspar"), self.P("rspar"), self.P("rrib"), self.P("brib1"), self.P("brib2"),

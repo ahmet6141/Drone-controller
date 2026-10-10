@@ -91,7 +91,7 @@ def bolt(reg: Registry, fid: str, size, position, axis, stack, *, owner: str | N
          grade: str = "A2-70", nut: str = "ISO 7040", washer_head: bool = False, washer_nut: bool = True,
          insert_part: str | None = None, insert_depth: float | None = None, tapped_part: str | None = None,
          tapped_depth: float | None = None, step: int = 0, notes: str = "", torque_nm: float | None = None,
-         hole_d: float | None = None) -> Fastener:
+         hole_d: float | None = None, orient=None) -> Fastener:
     """Bolted joint through ``stack`` [(part_id, thickness_m), ...] (head side first). ``nut`` selects the far side:
 
     * ``"ISO 7040"`` (nyloc nut, default) or ``"ISO 4032"``: length = grip + washers + nut + >= 1 thread protrusion;
@@ -154,7 +154,7 @@ def bolt(reg: Registry, fid: str, size, position, axis, stack, *, owner: str | N
     # length = shank length measured from that face, grip = clamped part stack.
     f = Fastener(id=fid, spec=_spec(head, size, L, grade), kind="bolt", d=d, length=L - wh, position=p, axis=a,
                  joins=tuple(ids), nut=nut_desc, torque_nm=tq, step=step, notes=notes, grip=grip,
-                 washer_head=washer_head, washer_nut=washer_nut and "ISO" in nut)
+                 washer_head=washer_head, washer_nut=washer_nut and "ISO" in nut, orient=orient)
     reg.parts[owner or stack[0][0]].fasteners.append(f)
     return f
 
@@ -217,7 +217,7 @@ def rivet(reg: Registry, fid: str, d: float, position, axis, stack, *, owner: st
 
 
 def quarter_turn(reg: Registry, fid: str, position, axis, panel: str, panel_t: float, structure: str,
-                 structure_t: float, *, step: int = 0, notes: str = "") -> Fastener:
+                 structure_t: float, *, step: int = 0, notes: str = "", orient=None) -> Fastener:
     """Quarter-turn panel fastener (Camloc 4002 class): stud with grommet in ``panel``, receptacle riveted to the far
     face of the ``structure`` flange. Holes: stud clearance through both."""
     Q = C.QUARTER_TURN
@@ -229,6 +229,6 @@ def quarter_turn(reg: Registry, fid: str, position, axis, panel: str, panel_t: f
         reg.parts[pid].add_hole(p - 0.001 * a, p + (grip + 0.001) * a, 0.5 * Q["stud_d"] + 0.0004)
     f = Fastener(id=fid, spec="Camloc 4002 stud + 2600 receptacle (quarter-turn)", kind="camloc", d=Q["stud_d"],
                  length=L, position=p, axis=a, joins=(panel, structure), nut="Camloc 2600 receptacle (riveted)",
-                 step=step, notes=notes, grip=grip)
+                 step=step, notes=notes, grip=grip, orient=orient)
     reg.parts[panel].fasteners.append(f)
     return f

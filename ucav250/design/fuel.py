@@ -1573,20 +1573,46 @@ class Fuel:
                 trayp.holes.append(cut)
 
     # ------------------------------------------------------------------ skin-end fittings (drains, flush vent)
-    def skin_fitting(self, ln: Line, r_body: float, nut_r: float, nut_h: float, hex_: bool):
+    def skin_fitting(self, ln: Line, r_body: float, nut_r: float, nut_h: float, hex_: bool, skin: str | None = None):
+        """Flush skin-end fitting at the end of ``ln``: body flush with the OML, socket for the line, jam nut / flange on
+        the inner skin face. With the shell built (``skin`` = panel part id) the faces are measured on the panel and a
+        contoured washer fills the space between the curved inner skin face and the flat nut (0.05 mm above the
+        skin); otherwise the OML and the shell_secondary laminate thickness give the faces."""
         C = self.C
         Q = ln.centerline()
         p = Q[-1]
         d = G.unit(Q[-1] - Q[-2])
         z_oml = C.z_bot(p[0], p[1])
         z_in = z_oml + C.skin_t
+        pad = None
+        if skin is not None:
+            man = self.reg.parts[skin].mesh.to_manifold()
+            outs, ins = [], []
+            for rr in (r_body + 0.001, 0.5 * (r_body + nut_r), nut_r + 0.0005):
+                for th in np.linspace(0.0, 2 * math.pi, 24, endpoint=False):
+                    q = (p[0] + rr * math.cos(th), p[1] + rr * math.sin(th))
+                    h = G.ray_hits(man, (q[0], q[1], z_oml - 0.02), (q[0], q[1], z_oml + 0.03)) + z_oml - 0.02
+                    if len(h) >= 2:
+                        outs.append(h[0])
+                        ins.append(h[1])
+            if not ins:
+                raise ValueError(f"{ln.lid}: skin panel {skin} not found under the fitting")
+            z_oml = float(np.median(outs[:24]))
+            z_in_lo, z_in = float(min(ins)), float(max(ins))
+            # the undrilled panel lifted 0.05 mm trims the washer and the nut (the body passes the drilled hole)
+            skin_cut = inter(self.reg.parts[skin].mesh.translated((0.0, 0.0, 0.00005)),
+                             box3((p[0] - 0.03, p[1] - 0.03, z_oml - 0.03), (p[0] + 0.03, p[1] + 0.03, z_in + 0.01)))
+            pad = diff(G.tube(nut_r, r_body - OV, (p[0], p[1], z_in_lo - 0.0005), (p[0], p[1], z_in + 0.00005 + OV),
+                              n=32), [skin_cut])
         body = G.cylinder(r_body, (p[0], p[1], z_oml), (p[0], p[1], max(p[2], z_in + nut_h + 0.001)), n=32)
         sock = G.cylinder(ln.ro + 0.0015, p - 0.0002 * d, p - 0.009 * d, n=32)
         nut = G.cylinder(nut_r, (p[0], p[1], z_in + 0.00005), (p[0], p[1], z_in + nut_h), n=6 if hex_ else 32)
+        if pad is not None:
+            nut = diff(nut, [skin_cut])
         bore = rod(trim(Q, 0.0, 0.0), ln.ro + BORE_CLR)
         local = inter(bore, box3(p - 0.03, p + 0.03))
         flow = G.cylinder(min(ln.ri, r_body - 0.0015), (p[0], p[1], z_oml - 0.001), p + 0.001 * d, n=24)
-        return finish(diff(union([body, sock, nut]), [local, flow])), (p, z_oml, z_in)
+        return finish(diff(union([body, sock, nut, pad]), [local, flow])), (p, z_oml, z_in)
 
     def register_skin_fittings(self):
         C = self.C
@@ -1600,15 +1626,18 @@ class Fuel:
                   "alev tutuculu gömme yakıt havalandırma çıkışı", VENT_OUT))
         for key, lid, panel, name, name_tr, D in items:
             ln = self.lines[lid]
-            if key == "vent_out":
-                mesh, (p, z_oml, z_in) = self.skin_fitting(ln, D["r"], D["flange_r"], D["flange_h"], False)
-            else:
-                mesh, (p, z_oml, z_in) = self.skin_fitting(ln, D["r"], D["nut_r"], D["nut_h"], True)
             pid = self.pid(key)
             sk = C.panels[panel]["part"]
+            skin = sk if sk in self.reg.parts else None
+            if key == "vent_out":
+                mesh, (p, z_oml, z_in) = self.skin_fitting(ln, D["r"], D["flange_r"], D["flange_h"], False, skin)
+            else:
+                mesh, (p, z_oml, z_in) = self.skin_fitting(ln, D["r"], D["nut_r"], D["nut_h"], True, skin)
             cont = [ln.part_id]
             if sk in self.reg.parts:            # shell built: drill the skin, the nut / flange bears on it
-                self.reg.parts[sk].add_hole((p[0], p[1], z_oml - 0.002), (p[0], p[1], z_in + 0.002), D["r"] + 0.00005)
+                # hole = 24-gon (Part.holes) circumscribing the body + 0.05 mm
+                self.reg.parts[sk].add_hole((p[0], p[1], z_oml - 0.002), (p[0], p[1], z_in + 0.002),
+                                            (D["r"] + 0.00005) / math.cos(math.pi / 24))
                 cont.append(sk)
             self.add(pid, name, name_tr, P_BUY, P_BUY, (lambda m=mesh: m), purchased=True,
                      vendor=("flush quick-drain valve (push-to-drain, FKM seal), AN thread" if key != "vent_out" else

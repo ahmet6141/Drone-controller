@@ -84,10 +84,15 @@ def _frame_edge(x_web, sign):
     return round(float(x_web) + sign * 0.003, 4)
 
 
-RING_X = (_frame_edge(1.1066, -1.0) - 0.022, _frame_edge(1.3334, 1.0) + 0.022)   # turret aperture ring insert x
+# turret aperture ring insert x: forward edge 9 mm ahead of the FS1110 cap edge (fix round 3, PK3-02: the nose-gear
+# slot-end sill M-NGSILL, the aft land of the nose doors, lies ahead of it and clear of the nose-tyre swing by 12 mm)
+RING_X = (round(_frame_edge(1.1066, -1.0) - 0.009, 4), _frame_edge(1.3334, 1.0) + 0.022)
 RING_Y = 0.125
 X_SB_NOTCH, Y_SB_NOTCH = 1.0706, 0.135      # side-bay / door-access panel notches round the ring (fix round 3, PK3-02)
-X_PH1 = round(1.8134 + 0.010, 4)            # parachute hatch aft edge: FS1810 web aft face + 10 mm (PK3-02)
+# parachute hatch aft edge 0.5 mm aft of the FS1810 web mid-plane (fix round 3, PK3-02): the hatch lands on the forward
+# half of the FS1810 cap (and still covers the bridle notch C-BRIDLE-F in the web top), the tear-away spine strip
+# P-SPINE on the aft half, 1 mm gap between them; neither lies on top of the other
+X_PH1 = round(1.8100 + 0.0005, 4)
 
 
 def panels() -> list:
@@ -194,7 +199,7 @@ def panels() -> list:
                    "body_upper", [X_PFF, X_PFR], [-0.40, 0.40], "fixed", NUT, lands=["ST-FS1490", "ST-FS1810",
                                                                                      "M-PARAWALL", "M-CHINE"],
                    cutouts=[{"id": "P-PARAHATCH", "kind": "hatch (tethered lift-off)"}]))
-    xh0, xh1 = round(1.4866 - 0.0246, 4), X_PH1           # fix round 3 (PK3-02): aft edge 10 mm aft of the FS1810 web
+    xh0, xh1 = round(1.4866 - 0.0246, 4), X_PH1           # fix round 3 (PK3-02): aft edge on the FS1810 web mid-plane
     X.append(panel("P-PARAHATCH", "YK250-SH-367", "parachute hatch (dorsal, tethered lift-off)",
                    "paraşüt kapağı (sırt, bağlı fırlatmalı)", "body_upper", [xh0, xh1], [-0.188, 0.188], "removable",
                    {"type": "latch+tether", "spec": "no hinge (fix round 1, VPK-11): four locating tongues + one "

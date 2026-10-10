@@ -263,7 +263,8 @@ def door_outlines() -> dict:
     nw = ZP["nose_gear_well"]["box"]
     xs0, xs1, yh = float(nw[0][0]), float(nw[1][0]), float(nw[1][1])
     from .b_shell import RING_X
-    xs1 = min(xs1, round(RING_X[0] - 0.001, 4))           # fix round 3 (PK3-02): 1 mm ahead of the turret ring insert
+    xs1 = round(RING_X[0] - 0.001, 4)    # fix round 3 (PK3-02): aft edge on the slot-end sill M-NGSILL (aft of the well
+    #                                       box end), 1 mm ahead of the turret ring insert
     tb = ZP["turret_bay"]["box"]
     tx0, tx1 = float(tb[0][0]) + 0.003, float(tb[1][0]) - 0.003
     out = {

@@ -18,6 +18,32 @@ def chine_path(x0, x1, n=None, inset=0.020):
     return [[float(x), r3(chine_halfwidth(x) - inset), r3(zc(x))] for x in xs]
 
 
+def _true_depth_caps(line, zc, tc) -> None:
+    """Fix round 3 (VS3-01): the cap faces are drawn on the spar-depth profile of the loft; where the union OML of the
+    layout check (body + wing, true 3-D distance) lies closer, the cap centroid is moved inward until the cap outer face
+    keeps the solid skin over the caps (skin_solid_over_caps_m) as true distance. The shift is a fraction of a
+    millimetre (interface check I-CAPZ of ucav250.analysis.structures allows 0.5 mm)."""
+    from ..analysis.layout_check import Ctx
+    ctx = _CTX.setdefault("lc", Ctx(S))
+    t_s = float(_wd().get("skin_solid_over_caps_m", 0.001))
+    for p_, z_, t in zip(line, zc, tc):
+        for k, sg in ((1, 1.0), (0, -1.0)):
+            for _ in range(3):
+                d = float(ctx.depth(np.array([[p_[0], p_[1], z_[k] + sg * 0.5 * t]]))[0])
+                if d >= t_s - 1e-6:
+                    break
+                z_[k] = round(z_[k] - sg * (t_s - d + 0.00002), 4)
+
+
+_CTX: dict = {}
+
+
+def chine_paths() -> list:
+    """The two chine-longeron pieces (forward: nose-gear bay -> 30 mm ahead of FS-MS; aft: 30 mm aft of FS-RS -> the
+    firewall forward face); used for M-CHINE and for the longeron notches of the frames (b_stations.chine_notches)."""
+    return [chine_path(0.6034, CHINE_FWD1), chine_path(CHINE_AFT0, X_FW_FWD - 0.0010)]
+
+
 def member(mid, part, name, name_tr, role, material, process, section, geometry, load_path, mirror=False,
            layup=None, thickness=None, notes="", touch=()):
     d = {"id": mid, "part": part, "name": name, "name_tr": name_tr, "role": role, "material": material,
@@ -102,6 +128,16 @@ def cap_centroids(prof: list, y: float, which: str) -> tuple:
         m = float(np.interp(y, yy, [r["mid"] for r in prof])) + float(P.get("z_root", 0.0))
         f = min(max((y - Y_SOB) / (Y_RAMP - Y_SOB), 0.0), 1.0)
         fu, fl = zb1 + f * (m + 0.5 * d - zb1), zb0 + f * (m - 0.5 * d - zb0)
+    if which == "rear" and y <= Y_RAMP + 1e-9:
+        # the body upper surface drops to the glove loft near the chine aft of mid-chord (|y| > 0.33 at the rear
+        # spar): the rear caps (and the upper cover there) follow the OML under the solid skin over the caps
+        yy = np.array([r["y"] for r in prof])
+        d = float(np.interp(y, yy, [r["depth"] for r in prof]))
+        m = float(np.interp(y, yy, [r["mid"] for r in prof])) + float(P.get("z_root", 0.0))
+        x = spar_x(y, float(P["rear_spar_frac"]))
+        top = max(float(z_top(x, y)) if y < Y_SOB else -1.0, m + 0.5 * d)
+        bot = min(float(z_bot(x, y)) if y < Y_SOB else 1.0, m - 0.5 * d)
+        fu, fl = min(fu, top), max(fl, bot)
     return r3([fl + t_s + 0.5 * t, fu - t_s - 0.5 * t]), t
 
 
@@ -135,26 +171,29 @@ def members() -> list:
                     "cfrp_ud_mtm45_as4", "prepreg_ooa_vacbag",
                     {"type": "J-section, UD caps + PW web/flanges (spar_cap_ud / spar_web)", "w": 0.035, "h": 0.030,
                      "t": 0.0024},
-                    {"paths": [chine_path(0.6034, CHINE_FWD1), chine_path(CHINE_AFT0, X_FW_FWD - 0.0010)],
+                    {"paths": chine_paths(),
                      "splices": spl},
                     "skins (shear) -> chine longeron (axial) -> frames / wing box side-of-body rib",
                     mirror=True, layup="spar_cap_ud", touch=["ST-*", "M-SOB", "M-DECK-NOSE", "M-WELLROOF",
                                                             "M-FWDDECK", "M-MIDFLOOR", "F-SPINDLE-NODE"]))
     # fix round 3 (PK3-02): slot-end sill between the keel walls = aft land of the nose clamshell doors, which end
-    # 1 mm ahead of the turret ring insert (the ring owns the FS1110 forward cap)
-    xd1 = round(_frame_edge_x(1.1066, -1.0) - 0.022 - 0.001, 4)
+    # 1 mm ahead of the turret ring insert (b_shell.RING_X: the ring owns the aft part of the FS1110 forward cap); the
+    # sill starts >= 12 mm aft of the nose-tyre swing at the skin line (layout_check C05)
+    xd1 = round(_frame_edge_x(1.1066, -1.0) - 0.009 - 0.001, 4)
     xs0_ = round(xd1 - 0.013, 4)
-    M.append(member("M-NGSILL", "YK250-CH-038", "nose-gear slot-end sill", "burun takımı yarık sonu eşiği",
-                    "fix round 3 (PK3-02): CFRP channel 13 mm wide across the keel slot at its aft end, bonded to the "
-                    "two keel walls and to the forward flange of FS1110 at the skin line: aft land (12 mm edge band) "
-                    "of the nose clamshell doors; the turret ring insert lands on the FS1110 cap 1 mm aft of it",
+    M.append(member("M-NGSILL", "YK250-CH-038", "nose-gear slot-end land strip", "burun takımı yarık sonu kenar şeridi",
+                    "fix round 3 (PK3-02): flat CFRP land strip 13 mm wide across the keel slot at its aft end, bonded "
+                    "to the forward T-flange of FS1110 and to the two keel-wall lands at the skin line: aft land (12 mm "
+                    "edge band) of the nose clamshell doors; flat (2.4 mm) so that the nose-door bellcrank / links "
+                    "(NDOOR-LINKAGE, >= 10 mm above the skin) pass over it; the turret ring insert lands on the FS1110 "
+                    "cap 1 mm aft of it; >= 12 mm aft of the nose-tyre swing (layout_check C05)",
                     "cfrp_pw_mtm45_as4", "prepreg_ooa_vacbag",
-                    {"type": "U-channel 13 x 10 mm, 8 plies PW (1.6 mm)", "w": 0.013, "h": 0.010, "t": 0.0016},
+                    {"type": "flat strip 13 x 2.4 mm, 12 plies PW", "w": 0.013, "h": 0.0024, "t": 0.0024},
                     {"box": r3([[xs0_, -0.0415, z_bot(xs0_, 0.0415) + SKIN], [xd1, 0.0415,
-                                                                             z_bot(xs0_, 0.0415) + SKIN + 0.010]]),
+                                                                             z_bot(xs0_, 0.0415) + SKIN + 0.0024]]),
                      "bottom": "skin"},
-                    "door edge (air loads, seal pressure) -> sill -> keel walls / FS1110", layup="spar_web",
-                    thickness=0.0016, touch=["M-KEELWALL", "ST-FS1110"]))
+                    "door edge (air loads, seal pressure) -> land strip -> FS1110 forward flange / keel walls",
+                    layup="spar_web", thickness=0.0024, touch=["M-KEELWALL", "ST-FS1110"]))
     z_nw_top = float(nw[1][2])
     M.append(member("M-KEELWALL", "YK250-CH-021", "nose-gear keel wall", "burun takımı omurga duvarı",
                     "vertical keel walls on both sides of the nose-gear slot: nose-gear pivot bushings and "
@@ -397,14 +436,21 @@ def members() -> list:
     # fix round 3 (VS3-01): the glove caps follow the glove loft outboard of a defined cap ramp at the side-of-body rib
     # (the layout and the section model of ucav250.analysis.structures use the same cap geometry)
     ygl = [Y_SOB, Y_RAMP, 0.50, 0.55, 0.60, 0.65, yj]
-    ms = [[r3(X_MS0), 0.0, 0.0]] + [[r3(spar_x(y_, 0.25)), y_, 0.0] for y_ in ygl]
-    rs = [[r3(X_RS0), 0.0, 0.0]] + [[r3(spar_x(y_, 0.72)), y_, r3(-0.006 - 0.006 * (y_ - Y_SOB) / (yj - Y_SOB))]
-                                    for y_ in ygl]
+    # main-spar points also at every cap ply-zone break between the SOB rib and the joint rib (the cap capsules of
+    # layout_check C03 then carry the local cap thickness)
+    zb_ = [float(v) for v in ((_wd().get("main_cap") or {}).get("zone_breaks_y_m") or [])]
+    yms = sorted(set(ygl) | {round(v, 4) for v in zb_ if Y_SOB < v < yj})
+    ms = [[r3(X_MS0), 0.0, 0.0]] + [[r3(spar_x(y_, 0.25)), y_, 0.0] for y_ in yms]
+    rs = [[r3(X_RS0), 0.0, 0.0]] + [[r3(spar_x(y_, 0.72)), y_, r3(-0.006 * y_ / Y_SOB)] for y_ in Y_RS_BODY] + \
+         [[r3(spar_x(y_, 0.72)), y_, r3(-0.006 - 0.006 * (y_ - Y_SOB) / (yj - Y_SOB))]
+          for y_ in sorted(set(ygl) | set(Y_RS_GLOVE))]
     prof_m = Z.spar_depth_profile(S, af, float(P["main_spar_frac"]))["rows"]
     prof_r = Z.spar_depth_profile(S, af, float(P["rear_spar_frac"]))["rows"]
     z_caps_m, t_caps_m = zip(*[cap_centroids(prof_m, p[1], "main") for p in ms])
     z_caps_r, t_caps_r = zip(*[cap_centroids(prof_r, p[1], "rear") for p in rs])
     z_caps_m, z_caps_r = [list(v) for v in z_caps_m], [list(v) for v in z_caps_r]
+    _true_depth_caps(ms, z_caps_m, t_caps_m)
+    _true_depth_caps(rs, z_caps_r, t_caps_r)
     zbox0 = min([zb0] + [v[0] - 0.5 * t for v, t in zip(z_caps_m, t_caps_m)])
     zbox1 = max([zb1] + [v[1] + 0.5 * t for v, t in zip(z_caps_m, t_caps_m)])
     M.append(member("M-CTBOX", "YK250-CH-001", "centre wing box (carry-through)", "orta kanat kutusu (geçiş kutusu)",
@@ -421,7 +467,10 @@ def members() -> list:
                      "main_cap_width": 0.040, "rear_cap_width": 0.025, "depth_in_body": r3(zb1 - zb0)},
                     {"main_spar_line": ms, "rear_spar_line": rs, "z": r3([zb0, zb1]),
                      "z_note": "outer surfaces of the box covers inside the body (|y| < y_sob); outboard of the side-of-"
-                               "body rib the caps follow the glove loft (sob_transition)",
+                               "body rib the caps follow the glove loft (sob_transition); near the chine aft of "
+                               "mid-chord (|y| > 0.33 at the rear spar) the body upper surface drops to the glove "
+                               "loft, and the rear caps and the aft part of the upper cover follow the OML under the "
+                               "solid skin over the caps (rear_spar_caps_z)",
                      "y_extent": [-yj, yj],
                      "main_spar_caps_z": z_caps_m, "main_spar_caps_t": [r3(t, 5) for t in t_caps_m],
                      "rear_spar_caps_z": z_caps_r, "rear_spar_caps_t": [r3(t, 5) for t in t_caps_r],
@@ -466,7 +515,7 @@ def members() -> list:
                              "fitting tabs, 20 mm flanges bonded to the box covers", "t": T_SW,
                      "land_plies": 16, "land_mm": [100, 30]},
                     {"box": r3([[xr0, -T_SW / 2, zb0 + t_cov], [xr1, T_SW / 2, zb1 - t_cov]]),
-                     "lands": [{"x": r3([xr0, xr0 + 0.100]), "z": r3([zb1 - t_cov - 0.030, zb1 - t_cov]),
+                     "fitting_lands": [{"x": r3([xr0, xr0 + 0.100]), "z": r3([zb1 - t_cov - 0.030, zb1 - t_cov]),
                                 "text": "upper kink-fitting land"},
                                {"x": r3([xr0, xr0 + 0.100]), "z": r3([zb0 + t_cov, zb0 + t_cov + 0.030]),
                                 "text": "lower kink-fitting land"}]},
@@ -494,7 +543,7 @@ def members() -> list:
             role = role + ("; fix round 3 (PK3-04): extended aft of the rear spar to x %.3f as the closing rib of the "
                            "glove trailing-edge bay and the splice land of the aft chine piece; 16-ply solid lands at "
                            "both chine splices (4 x M6 Ti each, M-CHINE.splices)" % x1)
-            geo["lands"] = [{"x": r3([CHINE_FWD1 - 0.075, CHINE_FWD1]), "z": [-0.016, 0.016],
+            geo["fitting_lands"] = [{"x": r3([CHINE_FWD1 - 0.075, CHINE_FWD1]), "z": [-0.016, 0.016],
                              "text": "forward chine splice land (16 plies)"},
                             {"x": r3([CHINE_AFT0, x1]), "z": [-0.016, 0.016],
                              "text": "aft chine splice land (16 plies)"}]
@@ -514,6 +563,8 @@ BUSH_OD = 0.022                                                       # bonded s
 PRONG_T = 0.010                                                       # fork prong thickness at the bushes
 Y_TONGUE_TIP = 0.408                                                  # tongue tip (4.6 mm clear of the SOB rib face)
 Y_PINS = (0.463, 0.645)                                               # >= 2.5 D_bush from the tongue tip / fork mouth
+Y_RS_BODY = [0.30, 0.33, 0.345, 0.36, 0.38]                            # rear-spar points where the body top drops
+Y_RS_GLOVE = [0.42, 0.44, 0.48, 0.525, 0.575, 0.625, 0.675]             # extra rear-spar points: the thin glove loft
 Y_RAMP = Y_PINS[0]                                                    # end of the SOB cap ramp (fix round 3, VS3-01)
 X_REARPIN_AFT = 0.0195                                                # rear pin 19.5 mm aft of the rear-spar line (fix round 2: slot plates >= 6 mm skin to the OML)
 Y_REARPIN = 0.672                                                     # rear pin 28 mm inboard of the joint plane

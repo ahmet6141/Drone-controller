@@ -481,7 +481,8 @@ def gear_actuators() -> list:
 
 
 Z_HL = -0.100                          # lower route of the main / coax / wing trunks under the fuel decks (PK3-01/05)
-Z_HC = -0.125                          # coax trunk tier in the duct and the centre-line channel (PK3-05)
+Z_CH = -0.085                          # main trunk in the duct / centre-line channel: 8 mm under the well roof (PK3-05)
+Z_HC = -0.107                          # coax trunk tier below it in the duct and the centre-line channel (PK3-05)
 Y_WRISE = 0.250                        # wing branch rises into the box inboard of the fuel interconnect (PK3-01)
 X_DUCT_C = None                        # lateral duct centre: set from the layout walls (PK3-05)
 
@@ -496,9 +497,9 @@ def harness() -> dict:
         {"id": "H-MAIN", "part": "YK250-SY-750", "name": "main power/data trunk", "diameter": 0.020,
          "path": P([0.950, -0.110, 0.031], [1.110, -0.143, 0.035], [1.330, -0.1475, 0.049], [X_PFF, -0.195, 0.035],
                    [X_PFR, -0.195, 0.035], [2.000, -0.270, Z_HL], [X_FUELF, -0.270, Z_HL],
-                   [X_MS0 + 0.040, -0.280, Z_HL], [X_DUCT_C, -0.290, Z_HL], [X_DUCT_C, -0.150, Z_HL],
-                   [X_DUCT_C, 0.0, Z_HL], [X_GEARF + 0.020, 0.0, Z_HL], [X_GEARF + 0.180, 0.0, 0.030]),
-         "penetrations": [{"member": "M-WELLWALL-FWD", "point": r3([X_W0 - 0.0008, 0.0, Z_HL]),
+                   [X_MS0 + 0.040, -0.280, Z_HL], [X_DUCT_C, -0.290, Z_HL], [X_DUCT_C, -0.150, Z_CH],
+                   [X_DUCT_C, 0.0, Z_CH], [X_GEARF + 0.020, 0.0, Z_CH], [X_GEARF + 0.180, 0.0, 0.030]),
+         "penetrations": [{"member": "M-WELLWALL-FWD", "point": r3([X_W0 - 0.0008, 0.0, Z_CH]),
                            "kind": "sealed conduit entry (centre-line channel)"}],
          "supports": ["M-DECK-NOSE", "M-TURRETWALL", "M-PARAWALL", "M-MIDFLOOR"],
          "text": "PDU (+ generator AC lines from the SG750, ECU-engine lines from the mission bay, two brake lines) -> "

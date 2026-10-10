@@ -166,16 +166,19 @@ def stations() -> list:
          cut("C-VENT-RS", "top vent interconnect FL-VENT-2 (sealed union; fix round 3, PK3-01)", [0.024, 0.048],
              [0.126, 0.150]),
          cut("C-HARN-RS", "harness trunks H-MAIN / H-COAX (sealed grommet; fix round 3: lowered with the trunks, "
-             "H-COAX descending to its lower tier, PK3-01/05)", [0.255, 0.315], [-0.142, -0.078], mirror=True)],
+             "H-COAX descending to its lower tier, PK3-01/05)", [0.255, 0.315], [-0.122, -0.078], mirror=True)],
         sweep=SW_RS, name_tr="arka kiriş çerçevesi")
     add("FS-GEAR", X_GEARF, "aft main-gear frame + aft fuel-bay bulkhead (vapour-tight): aft ends of the gear beams "
         "and trunnion fittings, inner-door actuator mounts (aft face), forward wall of the aft equipment bay",
         "bulkhead", "YK250-CH-011",
         [cut("C-FUEL-FEED", "engine feed line (sealed union)", [0.020, 0.060], [-0.040, -0.010]),
          cut("C-FUEL-RET", "fuel return line (sealed union)", [0.093, 0.117], [-0.031, -0.003]),
-         cut("C-FUEL-VENT", "fuel vent line (sealed union)", [0.063, 0.087], [0.105, 0.135]),
-         cut("C-HARN-CL", "centre-line harness conduit (H-MAIN, H-COAX; sealed grommets)", [-0.025, 0.025],
-             [-0.115, -0.066]),
+         cut("C-FUEL-VENT", "fuel vent line FL-VENT from the aft-cell top to the anti-siphon loop (sealed union; fix "
+             "round 3, PK3-01)", [0.038, 0.064], [0.140, 0.166]),
+         cut("C-FUEL-DRN", "aft-cell sump drain FL-DRAIN-A (sealed union; fix round 3, PK3-01)", [-0.064, -0.040],
+             [-0.062, -0.036]),
+         cut("C-HARN-CL", "centre-line harness conduit (H-MAIN over H-COAX; sealed grommets; fix round 3: 30 mm "
+             "channel tiers, PK3-05)", [-0.025, 0.025], [-0.120, -0.068]),
          cut("C-DOORLINK", "inner-door and trunnion-door drive pushrods (DA 22 crank -> door hinge horns; fix round "
              "2: raised, corners >= inset + 20 mm edge band)", [0.010, 0.045], [-0.160, -0.142], mirror=True)],
         name_tr="arka ana takım çerçevesi / arka yakıt perdesi")
@@ -240,12 +243,15 @@ def chine_notches(st: list) -> None:
     the frame edge: the J-section (35 x 30 mm) + 1 mm all round, so that the longeron is placed laterally (from
     outboard) into the notches of the frames already in the jig; a 7075 shear clip ties the frame web to the longeron
     web and a bonded U-doubler carries the frame edge band round the notch (layout_check C02)."""
+    from .b_chassis import chine_paths
+    paths = [np.asarray(p, float) for p in chine_paths()]
     for s_ in st:
         x = float(s_["x"])
         t = float(s_.get("t", 0.0068))
         if s_.get("sweep_deg") or not any(a + 0.5 * t < x < b - 0.5 * t for a, b in chine_ranges()):
             continue
-        yc, zz = chine_halfwidth(x) - 0.020, zc(x)
+        P = next(p for p in paths if p[0, 0] < x < p[-1, 0])          # the piece crossing this frame (its polyline)
+        yc, zz = float(np.interp(x, P[:, 0], P[:, 1])), float(np.interp(x, P[:, 0], P[:, 2]))
         s_["cutouts"].append({
             "id": "C-CHINE", "purpose": "chine longeron M-CHINE (J 35 x 30 mm) crossing the frame web",
             "kind": "longeron notch", "member": "M-CHINE", "mirror": True,

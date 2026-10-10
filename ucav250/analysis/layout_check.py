@@ -1081,7 +1081,7 @@ def ctbox_prims(m: dict) -> list:
             for i in range(len(P) - 1):
                 a = np.array([P[i, 0], P[i, 1], C[i, k]])
                 b = np.array([P[i + 1, 0], P[i + 1, 1], C[i + 1, k]])
-                out.append(Capsule(a, b, 0.5 * max(T_[i], T_[i + 1], 0.001)))
+                out.append(Capsule(a, b, 0.5 * max(T_[i], T_[i + 1])))
     return out
 
 
@@ -1505,6 +1505,52 @@ def path_crossings(s_: dict, path) -> list:
     return out
 
 
+def longeron_notch_row(ctx: Ctx) -> dict:
+    """Fix round 3 (PK3-04): a longeron that crosses frame webs passes them in declared longeron notches. Every
+    straight frame inside the x range of a piece of the member has a notch for it; the member section (w x h round
+    the path) lies inside the notch with >= 0.5 mm all round; the notch is open to the frame edge (its outboard
+    corners are outside the OML, so the piece is placed laterally into the jigged frames); insertion, shear clip and
+    U-doubler are declared."""
+    L = ctx.L
+    mem = {m["id"]: m for m in L["chassis"]["members"]}
+    bad, n = [], 0
+    for s_ in L["stations"]:
+        if s_.get("sweep_deg"):
+            continue
+        x = float(s_["x"])
+        notches = [c for c in s_.get("cutouts", []) if c.get("kind") == "longeron notch"]
+        for mid in sorted({c.get("member") for c in notches} | {"M-CHINE"}):
+            m = mem.get(mid)
+            if m is None:
+                bad.append(f"{s_['id']}: notch member {mid} unknown")
+                continue
+            w, h = float(m["section"]["w"]), float(m["section"]["h"])
+            for P in (np.asarray(pth, float) for pth in m.get("paths", [])):
+                t2 = 0.5 * float(s_.get("t", 0.0068))
+                if not (P[0, 0] + t2 < x < P[-1, 0] - t2):
+                    continue
+                n += 1
+                yc, zc_ = float(np.interp(x, P[:, 0], P[:, 1])), float(np.interp(x, P[:, 0], P[:, 2]))
+                c = next((c for c in notches if c.get("member") == mid), None)
+                if c is None:
+                    bad.append(f"{s_['id']}: {mid} crosses the web at y {yc:.3f} z {zc_:.3f} without a notch")
+                    continue
+                y0, y1 = sorted(float(v) for v in c["y"])
+                z0, z1 = sorted(float(v) for v in c["z"])
+                inside = (y0 + 0.0005 - 1e-6 <= yc - 0.5 * w and yc + 0.5 * w <= y1 - 0.0005 + 1e-6 and
+                          z0 + 0.0005 - 1e-6 <= zc_ - 0.5 * h and zc_ + 0.5 * h <= z1 - 0.0005 + 1e-6)
+                Q = np.array([[x, y1, z0], [x, y1, z1]])
+                open_ = bool((ctx.depth(Q, wing=False) <= 1e-6).all())     # beyond the frame web edge (body section)
+                decl = all(c.get(k) for k in ("insertion", "clip", "doubler")) and (c.get("mirror") or not m.get(
+                    "mirror"))
+                if not (inside and open_ and decl):
+                    bad.append(f"{s_['id']}.{c['id']}: section inside {inside}, open to the edge {open_}, "
+                               f"insertion/clip/doubler/mirror {decl}")
+    return _row("C02", f"longeron notches ({n} member crossings of straight frame webs): every crossing in a declared "
+                "notch open to the frame edge, member section inside with >= 0.5 mm, insertion + shear clip + "
+                "U-doubler declared (fix round 3, PK3-04)", not bad and n > 0, len(bad), 0, "; ".join(bad[:8]))
+
+
 def check_stations(ctx: Ctx) -> list:
     S, L, af = ctx.S, ctx.L, ctx.af
     R = []
@@ -1535,7 +1581,7 @@ def check_stations(ctx: Ctx) -> list:
     for s_ in st:
         need = float(s_.get("inset", 0.0065)) + EDGE_BAND
         for c in s_.get("cutouts", []):
-            if c.get("kind") in ("bay", "edge notch"):
+            if c.get("kind") in ("bay", "edge notch", "longeron notch"):
                 continue
             Q = []
             for sg in ((1.0, -1.0) if c.get("mirror") else (1.0,)):
@@ -1571,6 +1617,7 @@ def check_stations(ctx: Ctx) -> list:
                            f"{bool(c.get('doubler'))})")
     R.append(_row("C02", f"edge notches at the frame tops ({n_n}): <= 50 mm wide, under a removable cover, U-doubler "
                   "declared (fix round 2, PK2-02)", not bad, len(bad), 0, "; ".join(bad)))
+    R.append(longeron_notch_row(ctx))
     # frames do not cut fuel / turret / gear / payload / parachute / equipment volumes
     Zp = L["zones_preliminary"]
     vols = {"fuel:" + c["name"]: (c["x"], None) for c in L["fuel_cells"]}
@@ -1868,6 +1915,8 @@ def _allowed(a: Obj, b: Obj) -> float | None:
         return 0.0 if not _declared_touch(a, b) else None     # fix round 1 (VPK-06): only declared contacts
     if "fuel_line" in pair:
         other = b if ka == "fuel_line" else a
+        if other.kind == "harness":
+            return HARNESS_CORRIDOR            # fix round 3 (PK3-05): harness corridor = diameter + 10 mm
         if other.kind in ("fuel",):
             return None                        # the line ends in the cell fitting
         if other.kind == "engine":
@@ -1883,10 +1932,11 @@ def _allowed(a: Obj, b: Obj) -> float | None:
         other = b if ka == "harness" else a
         h = a if ka == "harness" else b
         if other.kind == "engine":
-            return None if h.id.startswith("H-ENGINE") else 0.0
-        if other.kind in ("content", "structure", "linkage"):
-            return -0.003                      # trunks start at equipment and run along members (clamped)
-        return 0.0
+            return None if h.id.startswith("H-ENGINE") else HARNESS_CORRIDOR
+        # fix round 3 (PK3-05): the trunk is a keep-out corridor of diameter + 10 mm (layout.systems.harness.rules,
+        # KO-CORRIDOR-HARNESS): 5 mm free round the trunk, except the members it is clamped to ('supports'), its
+        # declared penetrations and its terminations (_harness_exempt)
+        return HARNESS_CORRIDOR
     if ka == "linkage" and kb == "linkage":
         return None                            # pushrod on its own horn / servo arm
     if "linkage" in pair:
@@ -1914,6 +1964,48 @@ def _allowed(a: Obj, b: Obj) -> float | None:
 
 
 TOUCH: dict = {}
+HARNESS_CORRIDOR = 0.005       # m free round a trunk: corridor diameter = trunk diameter + 10 mm (PK3-05)
+HARNESS_TERMINATION = 0.030    # m round the first / last path point (connector / equipment termination)
+HARNESS_CLAMP = -0.003         # contact tolerance on a clamping member / at a termination
+
+
+def _harness_exempt(ctx: "Ctx", a: Obj, b: Obj, req: float) -> tuple[bool, str]:
+    """Fix round 3 (PK3-05): the samples of a trunk closer than ``req`` to the other object are all exempt: at a
+    declared penetration of that member (any depth), or within the clamp tolerance on a member listed in the trunk's
+    'supports' or within 30 mm of a termination (first / last path point)."""
+    h, o = (a, b) if a.kind == "harness" else (b, a)
+    tid = _base(h.id)
+    side = h.id.split("@")[1] if "@" in h.id else ""
+    t = next((t for t in ctx.L["systems"]["harness"]["trunks"] if t["id"] == tid), None)
+    if t is None:
+        return False, ""
+    fy = np.array([1.0, -1.0, 1.0]) if side == "L" else np.ones(3)
+    path = np.asarray(t["path"], float) * fy
+    ends = path[[0, -1]]
+    r = 0.5 * float(t["diameter"])
+    sup = any(_base(o.id) == s_ or (s_.endswith("*") and _base(o.id).startswith(s_[:-1]))
+              for s_ in t.get("supports", ()))
+    pens = [np.asarray(pn["point"], float) * fy for pn in t.get("penetrations", [])
+            if pn["member"] == _base(o.id)]
+    P = np.vstack([p.samples(0.004) for p in h.prims])
+    d = np.min(np.vstack([pr.sdf(P) for pr in o.prims]), axis=0)
+    idx = np.nonzero(d < req - 1e-9)[0]
+    why = set()
+    for i in idx:
+        q, di = P[i], float(d[i])
+        if pens and min(float(np.linalg.norm(q - c)) for c in pens) <= r + 0.035:
+            why.add("penetration")
+            continue
+        if di < HARNESS_CLAMP - 1e-9:
+            return False, ""
+        if sup:
+            why.add("clamped")
+            continue
+        if min(float(np.linalg.norm(q - e)) for e in ends) <= r + HARNESS_TERMINATION:
+            why.add("termination")
+            continue
+        return False, ""
+    return True, "/".join(sorted(why))
 
 
 def _base(i: str) -> str:
@@ -1959,8 +2051,8 @@ def check_overlaps(ctx: Ctx, objs: list) -> tuple[list, list]:
     for m in ctx.L["chassis"]["members"] + ctx.L["chassis"]["fittings"]:
         TOUCH[m["id"]] = tuple(m.get("touch", ()))
     B = {o.id: _bounds(o.prims) for o in objs}
-    viol, viol_s = [], []
-    n = ns = 0
+    viol, viol_s, viol_h, ex_h = [], [], [], {}
+    n = ns = nh = 0
     for i in range(len(objs)):
         for j in range(i + 1, len(objs)):
             a, b = objs[i], objs[j]
@@ -1976,8 +2068,18 @@ def check_overlaps(ctx: Ctx, objs: list) -> tuple[list, list]:
                 ns += 1
             else:
                 n += 1
-            g = gap(a.prims, b.prims, cutoff=0.02, step=0.004 if ss else 0.006)
+            hp = "harness" in (a.kind, b.kind)
+            g = gap(a.prims, b.prims, cutoff=0.02, step=0.004 if ss else (0.004 if hp else 0.006))
             pairs.append((a.id, b.id, g, req))
+            if hp:
+                nh += 1
+                if g < req - 1e-9:
+                    ok, why = _harness_exempt(ctx, a, b, req)
+                    if ok:
+                        ex_h[why] = ex_h.get(why, 0) + 1
+                    else:
+                        viol_h.append(f"{a.id} / {b.id}: {g * 1000:.1f} mm")
+                continue
             if g < req - 1e-9 and _penetration_ok(ctx, a, b, req):
                 continue
             if ss and g < -0.0006:               # sampling tolerance of abutting faces
@@ -1987,6 +2089,11 @@ def check_overlaps(ctx: Ctx, objs: list) -> tuple[list, list]:
     R.append(_row("C04", f"no overlaps between contents (equipment, fuel cells, fuel lines, harness, turret, stowed "
                   f"gear, engine, mount, exhaust, linkages) and with structure ({n} close pairs evaluated)", not viol,
                   len(viol), 0, "; ".join(viol[:12])))
+    R.append(_row("C04", f"harness corridors: trunk diameter + 10 mm free of every other object except the clamping "
+                  f"members ('supports'), declared penetrations and the 30 mm terminations (layout.systems.harness."
+                  f"rules, KO-CORRIDOR-HARNESS; fix round 3, PK3-05) ({nh} close pairs)", not viol_h, len(viol_h), 0,
+                  "; ".join(viol_h[:12]) if viol_h else "exempt pairs: " + ", ".join(f"{k} {v}" for k, v in
+                                                                                  sorted(ex_h.items()))))
     R.append(_row("C04", f"structure vs structure (members, fittings): overlap only where the parts declare the contact "
                   f"('touch'; fix round 1, VPK-01/VPK-06) ({ns} close undeclared pairs evaluated)", not viol_s,
                   len(viol_s), 0, "; ".join(viol_s[:12])))

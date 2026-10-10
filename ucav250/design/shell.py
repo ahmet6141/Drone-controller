@@ -1,37 +1,45 @@
-"""Shell producer (YK-250 HANÇER): every body skin, hatch, access door, fairing, RF window, the nose cone, the cowl
+"""Shell producer (YK-250 HANCER): every body skin, hatch, access door, fairing, RF window, the nose cone, the cowl
 pieces, the LERX/glove skins and the wing-root fairing (``spec.layout.shell``), fastened to the chassis lands.
 
-What it builds (part numbers from ``spec.layout.part_numbers.shell`` 350-499, ids fixed by ``layout.shell.panels``):
+What it builds (part numbers from ``spec.layout.part_numbers.shell`` 350-499; the ids fixed by ``layout.shell.panels``
+are kept, the extra detail parts use free numbers of the range, see ``docs/detail/shell.md``):
 
-* body skins (``body_upper`` / ``body_lower`` / ``body_full``): OML patches thickened inward by the layup thickness in
-  the section plane (the convention of the chassis frames: ``fuselage_section2d`` inset, mitred at the chine), split at
-  the chine, cut round every removable panel, gear-door opening, root cut line and the wing-root fairing; 1.0 mm panel
-  gaps; sacrificial land pads (3 plies PW, machined to fit) on the inner face over every chassis land so that the skin
-  bears on the frame T-caps / longeron flanges; joggled lands (1.6 mm solid laminate, 25 mm under the removable
-  panel's edge band) round every cut-out whose edge is not on a chassis land;
-* removable panels and hatches: same construction, Camloc 4002 quarter-turn studs (75-100 mm, cowl 70-90 mm) into
-  receptacles riveted to the land (frame cap, member flange or the joggled land of the surrounding skin); fuel-bay
-  panels M4 + nutplates at 25-30 mm (gasket); RF windows GFRP (no carbon);
-* the parachute hatch (lift-off, ``layout.mechanisms.joints.para_hatch``, prismatic) with its four locating tongues,
-  the refuel door (hinged, ``layout.shell.panels[P-REFUEL].hinge``) with a flush piano hinge and its pin;
-* the turret aperture ring insert (2.0 mm solid CFRP, HD59 opening = ball radius + radial clearance);
-* the LERX/glove upper and lower skins (``wing_skin_primary``; ``lerx_skin_upper_root`` in the first LERX bay,
-  ``wing_box_skin_upper`` between the spar caps, 1 mm solid laminate over the spar caps), the wing-root fairing
+* body skins (``body_upper`` / ``body_lower`` / ``body_full``): the union OML (body + wing-root junction fairing)
+  thickened inward by the layup thickness in the section plane (the convention of the chassis frames:
+  ``structgen.fuselage_section2d`` inset, mitred at the chine), split at the chine plane ``z = zc(x)``, cut round every
+  removable panel, gear-door opening, root cut line and the wing-root fairing; 1.0 mm panel gaps; land pads on the
+  inner face over the chassis lands (frame T-caps, member flanges: 0.55 mm solid build-up of the edge band, machined
+  to a 0.15 mm liquid-shim fit) so that the skin bears on the structure it is screwed to; joggled lands (1.6 mm solid
+  laminate doubler, 25 mm under the neighbouring removable panel's edge band, 20 mm under its own skin) round every
+  cut-out edge that does not lie on a chassis land; over the centre wing box the skin is the 1.0 mm solid laminate the
+  box covers / caps are designed for (box outer face 1 mm under the OML, ``M-CTBOX.oml_clearance_m``);
+* removable panels and hatches: the same construction, Camloc 4002 quarter-turn studs into receptacles riveted to the
+  land (frame cap, member flange or the joggled land of the surrounding skin); fuel-bay panels M4 + nutplates
+  (gasket); RF windows GFRP (no carbon);
+* the parachute hatch (lift-off, ``layout.mechanisms.joints.para_hatch``, prismatic) and the refuel door (hinged,
+  ``layout.shell.panels[P-REFUEL].hinge``, revolute) with its flush hinge;
+* the turret aperture ring insert (2.0 mm solid CFRP, HD59 opening = ball radius + radial clearance) in the rebate of
+  the lower skins;
+* the LERX/glove upper and lower skins (primary wing skins, bonded, peel-stopper blind rivets), the wing-root fairing
   (``layout.shell.wing_root_fairing``), the wing-joint access panel and the rear-pin bayonet cap;
-* the cowl pieces (aft lip ring at the propeller hub, firewall land on the stainless edge angle, lower halves on
-  the aft keel land flanges), the root strips (fin, stabilator stub, ventral), the dorsal cooling-inlet lip.
+* the cowl pieces, the fin / stub / ventral root strips and the dorsal cooling-inlet lip.
 
-Interfaces read (never another module's geometry): ``spec.layout`` (part_numbers, stations: x, sweep, inset,
-flange_w, cut-outs; chassis members: chine path / section, member ``lands``, CT box spar lines and cap levels;
-shell panels / root_cut_lines / wing_root_fairing; mechanisms joints para_hatch and door_outlines; heat_protection
-insert regions; keep-outs KO-COOLING-DUCT), ``spec.fuselage`` / ``spec.wing`` (OML), ``spec.payload.turret``,
-``spec.layups`` / ``materials`` / ``processes``.
+Interfaces read (never another module's geometry for placement): ``spec.layout`` (part_numbers, stations: x, sweep,
+inset, flange_w, cut-outs; chassis members: chine path / section, member ``lands``, CT box spar lines and cap levels;
+shell panels / root_cut_lines / wing_root_fairing; mechanisms joints and door_outlines; heat_protection insert regions;
+keep-outs), ``spec.fuselage`` / ``spec.wing`` (OML), ``spec.payload.turret``, ``spec.layups`` / ``materials`` /
+``processes``. Fastener rows are laid out from these interfaces; every candidate is then checked the way the drilling
+jig is proven (the same ray probes ``joints.bolt_through`` and ``analysis.checks`` use): the line must clamp solid
+land material within 0.5 mm, keep the 2.5 D / 2.0 D edge distance in every clamped part, keep 3 D + hole radius to
+every existing hole of those parts and the nutplate / receptacle must clear the structure behind the land; a
+candidate that fails is not drilled (the row closes up round it).
 
 Module-private detailing constants (reflected in ``docs/detail/shell.md``) are listed below.
 """
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass, field
 
 import numpy as np
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
@@ -39,7 +47,7 @@ from shapely.geometry import box as sbox
 from shapely.ops import unary_union
 
 from ..core import geom as G
-from ..core.parts import Joint, Part, Registry, layup_props, mirror_part, part_number
+from ..core.parts import Fastener, Joint, Part, Registry, layup_props, mirror_part, part_number
 from . import fastener_catalog as FC
 from . import joints as J
 from . import oml as O
@@ -51,36 +59,35 @@ GROUP = "shell"
 # module-private detailing constants (docs/detail/shell.md)
 # ---------------------------------------------------------------------------------------------------------------------
 GAP = 0.0005                # half of the 1.0 mm panel gap (layout.shell.rules.joggles: 1.0 +- 0.3 mm)
-GAP_LIFT = 0.0002           # lift-off parachute hatch: 0.2 mm trimmed fit to its neighbours (contacts; seal in the land)
-SEAL = 0.0002               # sealant / seal line between a removable panel's inner face and its joggled land
-FIT = 0.00015               # bond line of the sacrificial land pads on the chassis lands (liquid-shim class fit)
+GAP_LIFT = 0.0002           # lift-off parachute hatch: 0.2 mm trimmed fit to its neighbours (seal in the land)
+SEAL = 0.0002               # seal line between a removable panel's inner face and the joggled land under it
+LAND_FIT = 0.0065 - 0.0002  # inner face of the land pads: 0.2 mm liquid-shim fit to the chassis land (skin line 6.5 mm)
 OV = 0.0002                 # boolean overlap of fused features (ARCHITECTURE §5)
-LAND_T = 0.0016             # joggled land laminate under a removable panel edge (8 plies PW, = the solid edge band)
-LAND_W = 0.025              # land width under the removable panel (layout.shell.rules.joggles: land 25 mm)
-LAND_REACH = 0.020          # land fused under the surrounding fixed skin
-ROW_CAP = 0.016             # nutplate row offset from a frame web centre (nutplate clear of the web, inside the cap)
-EDGE_NUT = 0.0105           # M4 row distance from a panel edge (2.5 D = 10 mm + 0.5 mm)
+LAND_T = 0.0016             # joggled land laminate under a removable panel edge (8 plies PW = the solid edge band)
+LAND_W = 0.025              # land width under the neighbouring panel (layout.shell.rules.joggles: land 25 mm)
+LAND_REACH = 0.020          # land fused under its own skin
+ROW_CAP = 0.0160            # fastener row offset from a frame web centre line (inside the T-cap, nutplate clear of
+#                             the web)
+EDGE_M4 = 0.0105            # M4 row distance from a panel edge (2.5 D = 10 mm + 0.5 mm)
 EDGE_CAM = 0.0125           # Camloc stud row distance from a panel edge (2.5 D = 12 mm + 0.5 mm)
-EDGE_LAND = 0.0105          # M4 distance from the end of a land (frame cap end, flange edge)
-PITCH_NUT = (0.025, 0.032)  # structural skins (layout.shell.rules.concept)
-PITCH_FUEL = (0.025, 0.030)
-PITCH_CAM = (0.075, 0.100)
-PITCH_COWL = (0.070, 0.090)
-PITCH_INS = (0.060, 0.100)
-MIN_SEP = 0.0135            # minimum spacing between two fasteners of one panel (3 D = 12 mm + margin)
+PITCH_NUT = 0.028           # structural skins 25-32 mm (layout.shell.rules.concept)
+PITCH_FUEL = 0.028          # fuel-bay panels 25-30 mm
+PITCH_CAM = 0.085           # hatches 75-100 mm
+PITCH_COWL = 0.080          # cowl 70-90 mm
+PITCH_INS = 0.080           # fairings 60-100 mm
+RIDGE_CLEAR = 0.012         # no fastener within 12 mm of the V-roof ridge (mid-plane ray leaves the laminate there)
+BOX_BOND = 0.0001           # skin to centre-box cover / cap bond line (1.0 mm solid skin over the box = 0.9 + 0.1)
 RING_N = 288                # ring points of the lofted section envelopes
 DX = 0.01                   # x spacing of the lofted section envelopes
-SKIN_T_THIN = 0.0009        # solid laminate over the CT-box covers / caps (structures skin_solid_over_caps 1.0 mm
-#                             minus the 0.1 mm bond line)
-RAMP = 3.0                  # core ramp 1:3 (layout.shell.rules.sandwich_edges)
+T_RING = 0.002              # turret aperture ring insert (layout P-TURRETRING thickness_m)
+T_AL = 0.0008               # P-COWL-UPS aluminium sheet (layout thickness_m)
 
-STEP_SKIN, STEP_GLOVE, STEP_FUEL, STEP_ANT, STEP_PARA, STEP_RING = 16, 17, 18, 21, 22, 24
-STEP_STUB, STEP_FIN, STEP_VENTRAL, STEP_CLOSE = 31, 32, 33, 36
+STEP = {"skin": 16, "glove": 17, "fuel": 18, "ant": 21, "para": 22, "ring": 24, "stub": 31, "fin": 32,
+        "ventral": 33, "joint": 35, "close": 36}
 
-MAT_PW, MAT_GF, MAT_UD = "cfrp_pw_mtm45_as4", "gfrp_7781_mtm45", "cfrp_ud_mtm45_as4"
-MAT_6061, MAT_7075, MAT_SS, MAT_TI = "al_6061_t6_sheet", "al_7075_t651_plate", "ss_304_annealed", \
-    "ti_6al_4v_annealed_sheet"
-P_PREG, P_SHEET, P_CNC = "prepreg_ooa_vacbag", "sheet_metal_aluminium", "cnc_milling_metal"
+MAT_PW, MAT_GF = "cfrp_pw_mtm45_as4", "gfrp_7781_mtm45"
+P_PREG, P_SHEET = "prepreg_ooa_vacbag", "sheet_metal_aluminium"
+NUT_SPEC = dict(head="ISO 7380", grade="A2-70")
 
 
 # =====================================================================================================================
@@ -135,9 +142,16 @@ def prism_x(poly_yz, x0: float, x1: float) -> G.Mesh:
     return extrude_cs(poly_yz, x1 - x0, (x0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
 
 
+def box3(lo, hi) -> G.Mesh:
+    lo, hi = np.asarray(lo, float), np.asarray(hi, float)
+    return G.box(hi - lo, center=0.5 * (lo + hi))
+
+
 def man_and(a: G.Mesh, *bs: G.Mesh) -> G.Mesh | None:
     m = a.to_manifold()
     for b in bs:
+        if b is None:
+            continue
         m = m ^ b.to_manifold()
         if m.is_empty():
             return None
@@ -146,6 +160,8 @@ def man_and(a: G.Mesh, *bs: G.Mesh) -> G.Mesh | None:
 
 def man_sub(a: G.Mesh, cutters) -> G.Mesh | None:
     cutters = [c for c in cutters if c is not None]
+    if a is None:
+        return None
     if not cutters:
         return a
     import manifold3d as m3
@@ -154,30 +170,27 @@ def man_sub(a: G.Mesh, cutters) -> G.Mesh | None:
     return None if r.is_empty() else G.Mesh.from_manifold(r)
 
 
-def man_add(ms) -> G.Mesh:
+def man_add(ms) -> G.Mesh | None:
     ms = [m for m in ms if m is not None]
+    if not ms:
+        return None
     if len(ms) == 1:
         return ms[0]
     return G.union(ms)
 
 
-def pieces_above(m: G.Mesh, vmin: float = 2e-8) -> G.Mesh:
+def pieces_above(m: G.Mesh, vmin: float = 2e-8) -> G.Mesh | None:
     """Drop disconnected slivers smaller than ``vmin`` (m^3) left by the trims."""
     import manifold3d as m3
+    if m is None:
+        return None
     allp = m.to_manifold().decompose()
     parts = [p for p in allp if p.volume() >= vmin]
     if not parts:
-        raise ValueError("no piece left")
+        return None
     if len(parts) == len(allp):
         return m
     return G.Mesh.from_manifold(parts[0] if len(parts) == 1 else m3.Manifold.compose(parts))
-
-
-def largest_piece(m: G.Mesh) -> G.Mesh:
-    parts = m.to_manifold().decompose()
-    if len(parts) <= 1:
-        return m
-    return G.Mesh.from_manifold(max(parts, key=lambda p: p.volume()))
 
 
 def finish(m: G.Mesh) -> G.Mesh:
@@ -202,6 +215,20 @@ def _unit(v) -> np.ndarray:
     return G.unit(np.asarray(v, float))
 
 
+def resample_line(P, step: float, margin: float = 0.0) -> np.ndarray:
+    """Points evenly spaced (about ``step``) along the open polyline P (k, d), ``margin`` kept free at both ends and the
+    spacing stretched so that the end points sit exactly at the margins."""
+    P = np.asarray(P, float)
+    seg = np.linalg.norm(np.diff(P, axis=0), axis=1)
+    cum = np.r_[0.0, np.cumsum(seg)]
+    L = cum[-1] - 2 * margin
+    if L < 0:
+        return np.zeros((0, P.shape[1]))
+    n = max(1, int(math.floor(L / step + 0.5)) + 1)
+    s = np.array([cum[-1] / 2]) if L < 1e-9 or n == 1 else np.linspace(margin, cum[-1] - margin, n)
+    return np.column_stack([np.interp(s, cum, P[:, k]) for k in range(P.shape[1])])
+
+
 # =====================================================================================================================
 # context: OML (body + wing-root fairing + glove), envelopes, land footprints
 # =====================================================================================================================
@@ -222,11 +249,16 @@ class SC:
         self.pan = {p["id"]: p for p in self.L["shell"]["panels"]}
         self.n0, self.n1 = self.L["part_numbers"]["shell"]
         self.t_skin = self.layup_t("shell_secondary")
-        self.inset = float(self.st["FS1110"]["inset"])          # skin line of every chassis land (frame T-caps)
-        self.pad_bot = self.inset - FIT                          # inner face of the land pads
+        self.t_gfrp = self.gfrp_props()[0]
         self._sec, self._env, self._cache = {}, {}, {}
         self._groot_table()
         self._crease_table()
+        B = self.mem["M-CTBOX"]
+        self.ms_line = np.asarray(B["main_spar_line"], float)
+        self.rs_line = np.asarray(B["rear_spar_line"], float)
+        self.z_cov = float(B["z"][1])
+        self.w_main = float(B["section"]["main_cap_width"])
+        self.w_rear = float(B["section"]["rear_cap_width"])
 
     # ------------------------------------------------------------------ ids / materials
     def pid(self, num: int, side: str = "C") -> str:
@@ -236,6 +268,18 @@ class SC:
 
     def layup_t(self, key: str) -> float:
         return float(layup_props(self.S, key)["thickness"])
+
+    def gfrp_props(self) -> tuple[float, float]:
+        """(thickness, areal mass) of the RF-window sandwich: the shell_secondary schedule laid up in 7781 E-glass
+        (2 plies / ROHACELL core / 2 plies, layout.shell.rules.layups) - no carbon in the window."""
+        lay = self.S["layups"]["shell_secondary"]
+        mats = self.S["materials"]
+        g = mats[MAT_GF]
+        n = sum(int(c) for _m, _a, c in list(lay["plies"]) + list(lay.get("inner_plies") or []))
+        core = mats[lay["core"]]
+        t = n * float(g["ply_t"]) + float(lay["core_t"])
+        am = n * float(g["ply_t"]) * float(g["density"]) + float(lay["core_t"]) * float(core["density"])
+        return t, am
 
     def ref(self, lid: str, side: str = "R") -> str:
         """Part id of a layout object (ST-*, M-*, F-*, P-*); mirrored objects get the side suffix."""
@@ -301,7 +345,7 @@ class SC:
 
     def groot_poly(self, d: float = 0.0) -> Polygon:
         if d <= 0:
-            return self.groot if d == 0 else self.groot.buffer(-d, join_style=2)
+            return self.groot
         return SG.largest(self.groot.buffer(-d, join_style=2))
 
     def _crease_table(self):
@@ -366,12 +410,11 @@ class SC:
             return None
         key = ("f", round(d, 7), round(lo, 4), round(hi, 4))
         if key not in self._env:
-            poly = self.groot_poly(d).intersection(rect(x0, x1, -1, 1))
-            poly = clean(poly, 1e-8)
+            poly = clean(self.groot_poly(d).intersection(rect(x0, x1, -1, 1)), 1e-8)
             if poly.is_empty:
                 self._env[key] = None
             else:
-                f = prism_y(poly, self.y_in, self.y_root + 0.001)
+                f = prism_y(poly, self.y_in - 0.002, self.y_root + 0.001)
                 self._env[key] = G.union([f, f.mirrored_y()])
         return self._env[key]
 
@@ -388,31 +431,97 @@ class SC:
         """Shell layer between the union OML inset by d0 and by d1 (section plane), x0..x1."""
         key = ("l", round(d0, 7), round(d1, 7), round(x0, 4), round(x1, 4))
         if key not in self._env:
-            a = self.env(d0, x0, x1) if d0 > 0 else self.env(0.0, x0, x1)
+            a = self.env(max(d0, 0.0), x0, x1)
             b = self.env(d1, x0 - 0.01, x1 + 0.01)
             self._env[key] = man_sub(a, [b])
         return self._env[key]
 
     def half(self, side: str, x0: float, x1: float, gap: float = GAP) -> G.Mesh:
-        """Solid above (side 'U') or below ('L') the chine line z = zc(x) +- gap."""
+        """Solid above (side 'U') or below ('L') the chine plane z = zc(x) +- gap ('F': everything)."""
         key = ("h", side, round(x0, 4), round(x1, 4), round(gap, 6))
         if key not in self._env:
             xs = np.linspace(x0, x1, max(2, int(math.ceil((x1 - x0) / 0.01)) + 1))
             rings = []
             for x in xs:
                 z = float(self.zc(x))
-                za, zb = (z + gap, 2.0) if side == "U" else (-2.0, z - gap)
+                za, zb = (z + gap, 2.0) if side == "U" else ((-2.0, z - gap) if side == "L" else (-2.0, 2.0))
                 rings.append(np.array([[x, -2.0, za], [x, 2.0, za], [x, 2.0, zb], [x, -2.0, zb]]))
             self._env[key] = G.fix_orientation(G.loft(rings))
         return self._env[key]
+
+    # ------------------------------------------------------------------ centre wing box keep-out (layout M-CTBOX)
+    def xm(self, y):
+        return np.interp(np.abs(y), self.ms_line[:, 1], self.ms_line[:, 0])
+
+    def xr(self, y):
+        return np.interp(np.abs(y), self.rs_line[:, 1], self.rs_line[:, 0])
+
+    def box_keepout(self) -> G.Mesh:
+        """Solid below the centre-box outer surface + bond line inside the body (|y| <= SOB rib inner face): the box
+        covers / caps lie at min(z_cov, union OML - 1 mm) (layout M-CTBOX z, oml_clearance_m) between the main-cap
+        leading edge and the rear-cap trailing edge; skins keep the 0.1 mm bond line above it."""
+        if "box" in self._cache:
+            return self._cache["box"]
+        clr = float(self.mem["M-CTBOX"].get("oml_clearance_m", 0.001))
+        y_sob = float(self.mem["M-SOB"]["box"][0][1]) + 0.0005
+        ys = np.linspace(-y_sob, y_sob, 161)
+        nx = 41
+        P = np.zeros((nx, len(ys), 3))
+        for j, y in enumerate(ys):
+            xa = float(self.xm(y)) - 0.5 * self.w_main - 0.0015
+            xb = float(self.xr(y)) + 0.5 * self.w_rear + 0.0015
+            xs = np.linspace(xa, xb, nx)
+            zt = self.z_up(xs, np.full(nx, y))
+            P[:, j, 0], P[:, j, 1] = xs, y
+            P[:, j, 2] = np.minimum(self.z_cov, zt - clr) + BOX_BOND
+        inward = np.zeros_like(P)
+        inward[..., 2] = -1.0
+        self._cache["box"] = G.shell_from_grid(P, 0.03, inward=inward)
+        return self._cache["box"]
+
+    # ------------------------------------------------------------------ stations
+    def x_faces(self, sid: str):
+        s = self.st[sid]
+        return s.get("x_faces") or [s["x"] - 0.5 * s["t"], s["x"] + 0.5 * s["t"]]
+
+    def x_web(self, sid: str, y) -> np.ndarray:
+        """Frame web mid-plane x at plan y (chevron frames on the swept spar lines)."""
+        xf = self.x_faces(sid)
+        xc = 0.5 * (float(xf[0]) + float(xf[1]))
+        return xc + math.tan(math.radians(float(self.st[sid].get("sweep_deg", 0.0)))) * np.abs(np.asarray(y, float))
+
+    def x_line(self, sid: str, y) -> np.ndarray:
+        """Station reference line x(y) (the layout x, swept with the frame)."""
+        return float(self.st[sid]["x"]) + math.tan(math.radians(float(self.st[sid].get("sweep_deg", 0.0)))) * \
+            np.abs(np.asarray(y, float))
+
+    def web_half(self, sid: str) -> float:
+        xf = self.x_faces(sid)
+        return 0.5 * (float(xf[1]) - float(xf[0]))
+
+    def cap_fp(self, sid: str, grow: float = 0.0) -> Polygon:
+        """Plan footprint of a frame T-cap: web centre line +- (half web + flange_w) (+ grow)."""
+        s = self.st[sid]
+        fw = float(s.get("flange_w", 0.028)) + self.web_half(sid) + grow
+        ys = np.linspace(-0.6, 0.6, 61)
+        a = np.column_stack([self.x_web(sid, ys) - fw, ys])
+        b = np.column_stack([self.x_web(sid, ys[::-1]) + fw, ys[::-1]])
+        return Polygon(np.vstack([a, b])).buffer(0)
+
+    def station_band(self, sid: str, lo: float, hi: float) -> Polygon:
+        """Plan band x_web(y) + lo .. x_web(y) + hi."""
+        ys = np.linspace(-0.6, 0.6, 61)
+        a = np.column_stack([self.x_web(sid, ys) + lo, ys])
+        b = np.column_stack([self.x_web(sid, ys[::-1]) + hi, ys[::-1]])
+        return Polygon(np.vstack([a, b])).buffer(0)
 
     # ------------------------------------------------------------------ surface points / normals
     def phi_of(self, x: float, y: float, side: str) -> float:
         w, h, zc, nt, nb = (float(v) for v in self.section(x))
         r = min(abs(y) / max(0.5 * w, 1e-9), 1.0)
         if side == "U":
-            return math.copysign(math.asin(r ** (nt / 2)), y if y != 0 else 1.0)
-        return math.copysign(math.pi - math.asin(r ** (nb / 2)), y if y != 0 else 1.0)
+            return math.copysign(math.asin(min(1.0, r ** (nt / 2))), y if y != 0 else 1.0)
+        return math.copysign(math.pi - math.asin(min(1.0, r ** (nb / 2))), y if y != 0 else 1.0)
 
     def body_point(self, x: float, phi: float):
         p = self.fus.point(x, phi)
@@ -429,102 +538,17 @@ class SC:
             return np.array([x, y, z]), _unit([-dz, 0.0, 1.0])
         return self.body_point(x, self.phi_of(x, y, side))
 
-    # ------------------------------------------------------------------ stations / chassis land footprints (plan)
-    def x_web(self, sid: str, y) -> np.ndarray:
-        """Frame web mid-plane x at plan y (chevron frames on the swept spar lines)."""
-        s = self.st[sid]
-        xf = s.get("x_faces") or [s["x"] - 0.5 * s["t"], s["x"] + 0.5 * s["t"]]
-        xc = 0.5 * (float(xf[0]) + float(xf[1]))
-        return xc + math.tan(math.radians(float(s.get("sweep_deg", 0.0)))) * np.abs(np.asarray(y, float))
-
-    def web_half(self, sid: str) -> float:
-        s = self.st[sid]
-        xf = s.get("x_faces") or [s["x"] - 0.5 * s["t"], s["x"] + 0.5 * s["t"]]
-        return 0.5 * (float(xf[1]) - float(xf[0]))
-
-    def cap_fp(self, sid: str, lo: float | None = None, hi: float | None = None) -> Polygon:
-        """Plan footprint of a frame T-cap: x_web(y) - lo .. x_web(y) + hi (default: half web + flange_w each side;
-        the firewall stack has its CFRP cap forward only, the FS3738 U-ring flanges aft)."""
-        s = self.st[sid]
-        fw = float(s.get("flange_w", 0.028))
-        h = self.web_half(sid)
-        if lo is None:
-            lo = h + fw
-        if hi is None:
-            hi = h + fw
-        if sid == "FS3670":                         # firewall: the CFRP sandwich (forward of the stack) has its cap
-            xf0 = float(s["x_faces"][0])            # forward only; aft of it the air gap and the stainless shield
-            xc = float(self.x_web(sid, 0.0))
-            lo, hi = xc - (xf0 - fw), xf0 + self.layup_t(s["layup"]) - xc
-        ys = np.linspace(-0.6, 0.6, 61)
-        a = np.column_stack([self.x_web(sid, ys) - lo, ys])
-        b = np.column_stack([self.x_web(sid, ys[::-1]) + hi, ys[::-1]])
-        return Polygon(np.vstack([a, b])).buffer(0)
-
-    def member_land_fps(self, side: str) -> list[tuple[str, Polygon]]:
-        """(part id, plan polygon) of the chassis member lands offered to the skins on side 'U' / 'L' (explicit
-        layout 'lands' of the chassis members; the chine J skin flange; the keel-beam caps)."""
-        key = ("mfp", side)
-        if key in self._cache:
-            return self._cache[key]
-        out = []
-        sname = "upper" if side == "U" else "lower"
-        for mid in ("M-SPINE", "M-PARAWALL", "M-AFTKEEL", "M-VENTRALKEEL"):
-            m = self.mem[mid]
-            for ld in m.get("lands", []) or []:
-                if ld.get("surface", "any") not in ("any", sname):
-                    continue
-                (x0, x1), (y0, y1) = ld["x"], sorted(ld["y"])
-                if ld.get("mirror") or m.get("mirror"):
-                    out.append((self.ref(mid, "R"), rect(x0, x1, y0, y1)))
-                    out.append((self.ref(mid, "L"), rect(x0, x1, -y1, -y0)))
-                else:
-                    out.append((self.ref(mid), rect(x0, x1, y0, y1)))
-        # chine J: the skin-side flange from the web to the chine, outside the wing-root fairing
-        for k, pth in enumerate(self.mem["M-CHINE"]["paths"]):
-            P = np.asarray(pth, float)
-            w = float(self.mem["M-CHINE"]["section"]["w"])
-            xs = np.linspace(P[0, 0], P[-1, 0], 80)
-            if side == "U":
-                xs = xs[(xs < self.crease[0, 0] - 0.002) | (xs > self.crease[-1, 0] + 0.002)]
-            if len(xs) < 2:
-                continue
-            ok = np.diff(xs) < 0.03
-            segs, cur = [], [xs[0]]
-            for a_, b_, o_ in zip(xs, xs[1:], ok):
-                if o_:
-                    cur.append(b_)
-                else:
-                    segs.append(cur)
-                    cur = [b_]
-            segs.append(cur)
-            for sx in segs:
-                if len(sx) < 2:
-                    continue
-                sx = np.asarray(sx)
-                yi = np.interp(sx, P[:, 0], P[:, 1]) - 0.5 * w
-                poly = Polygon(np.vstack([np.column_stack([sx, yi]), [[sx[-1], 1.0], [sx[0], 1.0]]])).buffer(0)
-                part = "YK250-CH-020" if k == 0 else "YK250-CH-040"
-                out.append((part + "-R", poly))
-                out.append((part + "-L", mirror_poly(poly)))
-        if side == "L":                                  # payload-bay keel beams: UD cap outboard of the web at the skin
-            m = self.mem["M-KEEL"]
-            b = np.asarray(m["box"], float)
-            fw = float(self.st["FS1110"].get("flange_w", 0.028))
-            out.append((self.ref("M-KEEL", "R"), rect(b[0][0], b[1][0], b[1][1], b[1][1] + fw)))
-            out.append((self.ref("M-KEEL", "L"), rect(b[0][0], b[1][0], -b[1][1] - fw, -b[1][1])))
-        self._cache[key] = out
-        return out
-
-    def cap_parts(self) -> list[tuple[str, str]]:
-        """(station id, part id) of the composite / metal frames whose caps are skin lands."""
-        return [(sid, s["part"]) for sid, s in self.st.items()]
-
-    def all_land_fp(self, side: str, grow: float = 0.0) -> Polygon:
-        key = ("alf", side, round(grow, 5))
-        if key not in self._cache:
-            ps = [self.cap_fp(sid) for sid in self.st if sid != "FS3738"]
-            ps += [p for _pid, p in self.member_land_fps(side)]
-            u = unary_union(ps)
-            self._cache[key] = u.buffer(grow, join_style=2) if grow else u
-        return self._cache[key]
+    def section_curve(self, x_of_y, side: str, n: int = 400):
+        """OML points (k, 3) along the curve x = x_of_y(y) on the upper ('U') or lower ('L') half, ordered from port
+        to starboard by the polar angle (fixed-point iteration on x for swept frames)."""
+        if side == "U":
+            ph = np.linspace(-0.5 * math.pi + 1e-4, 0.5 * math.pi - 1e-4, n)
+        else:
+            ph = np.linspace(-0.5 * math.pi - 1e-4, -1.5 * math.pi + 1e-4, n)
+        x = np.array([float(x_of_y(0.0))] * n)
+        for _ in range(4):
+            P = self.fus.point(x, ph)
+            x = np.array([float(x_of_y(abs(py))) for py in P[:, 1]])
+        P = self.fus.point(x, ph)
+        N = self.fus.normal(x, ph)
+        return P, N / np.linalg.norm(N, axis=1, keepdims=True)

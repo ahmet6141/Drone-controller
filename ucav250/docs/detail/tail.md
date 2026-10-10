@@ -25,7 +25,7 @@ taşıma ya da bırakma düzeneği yoktur ve öngörülmemiştir.
 | Kuyruk grubu kütlesi (registry) | **7,230 kg** — bütçe tavanı 7,35 ± 0,22 kg (−0,120 kg, bkz. §9) |
 | Kumanda grubu (kuyruk payı) | **3,037 kg** — bütçe kalemleri toplamı 3,047 kg (−0,010 kg) |
 | Kuyruk bağlantı elemanları (grup `hardware`) | 0,462 kg |
-| Üçgen sayısı (kuyruk parçaları) | ≈ 208 000 |
+| Üçgen sayısı (kuyruk parçaları) | 207 490 |
 
 Önizlemeler (`python3 -m ucav250.blender.build --modules chassis,tail --previews --no-blend`): ön, yan, üst, alt, iki
 izometrik ve patlatılmış izometrik görünüş, ayrıca kuyruğa yakın arka 3/4, iç yan, alt 3/4 ve patlatılmış görünüşler

@@ -91,8 +91,8 @@ FILTER_R, FILTER_W = 0.044, -0.190
 CROSS_SHAFT_W = -0.148
 # --- SG750 + adapter ---------------------------------------------------------------------------------------------
 SG750_R, SG750_T = 0.0505, 0.0286   # engine.yaml installation_items.sg750 (101 mm dia x 28.6 mm)
-ADAPTER_T, ADAPTER_R = 0.010, 0.040
-SG_BOLT_R = 0.032           # 4 x M4 through the generator into the adapter
+ADAPTER_T, ADAPTER_R = 0.010, 0.0295   # adapter stays >= 13 mm off the mount ring (dynamic margin 10 mm)
+SG_BOLT_R = 0.021           # 4 x M4 through the generator hub into the adapter (between the housing screws)
 # --- isolators (layout: conical elastomer d 40 x 25 envelope, estimate) ------------------------------------------
 ISO_R_BASE, ISO_R_TOP, ISO_SLEEVE_R, ISO_BORE = 0.020, 0.015, 0.007, 0.0040
 ELASTOMER_DENSITY = 1200.0  # natural-rubber class (estimate; spec.materials has no elastomer)
@@ -101,7 +101,8 @@ SPACER = dict(r_fl_f=0.0365, t_fl_f=0.008, r_o=0.035, r_i=0.0325, r_fl_a=0.044, 
               pcd_f=0.024, pcd_a=0.031, access_r=0.003)
 BACKPLATE_T = 0.002
 CRUSH_T, CRUSH_R = 0.005, 0.044
-STANDOFF_RO, STANDOFF_RI, STANDOFF_SOLID = 0.0105, 0.0075, 0.012
+STANDOFF_RO, STANDOFF_RI, STANDOFF_SOLID = 0.0105, 0.0060, 0.012   # end boss OD 21 (M5 2 D), bore 12
+STANDOFF_TUBE = 0.0080      # stand-off tube OD 16 x 2 mm
 HUB_R, HUB_BORE = 0.050, 0.011
 SPINNER_T, SPINNER_TIP_T, SPINNER_TIP_R = 0.0008, 0.004, 0.016
 BLADE_CLEAR = 0.003         # spinner slot clearance round the blade
@@ -437,12 +438,13 @@ def spool_mesh(C: Ctx) -> G.Mesh:
 
 
 def sg750_mesh(C: Ctx) -> G.Mesh:
-    """ePropelled SG750 starter-generator envelope (101 x 28.6 mm) with a cable boss, ahead of the adapter."""
+    """ePropelled SG750 starter-generator envelope (101 x 28.6 mm) with a cable boss (starboard, clear of the lower
+    mount struts), ahead of the adapter."""
     u0 = C.u_coupling + ADAPTER_T
     u1 = u0 + SG750_T
     body = G.revolve([(0.0, u0), (SG750_R - 0.003, u0), (SG750_R, u0 + 0.003), (SG750_R, u1 - 0.003),
                       (SG750_R - 0.003, u1), (0.0, u1)], n=64, axis_origin=(0, 0, 0), axis=(1, 0, 0), ref=(0, 0, 1))
-    boss = box3((u0 + 0.006, -0.012, -SG750_R - 0.008), (u1 - 0.006, 0.012, -SG750_R + 0.004))
+    boss = box3((u0 + 0.006, SG750_R - 0.004, -0.012), (u1 - 0.006, SG750_R + 0.008, 0.012))   # cable boss (+v)
     return finish(C.to_air(union([body, boss])))
 
 
@@ -519,8 +521,10 @@ def crush_mesh(C: Ctx) -> G.Mesh:
     u1 = -C.S["propeller"]["hub_half_thickness"]
     u0 = u1 - CRUSH_T
     tip_in = SPINNER_BASE_U - SPINNER_L + SPINNER_TIP_T
-    prof = [(STANDOFF_RI, u1), (CRUSH_R, u1), (CRUSH_R, u0), (STANDOFF_RO, u0), (STANDOFF_RO, tip_in),
-            (0.0, tip_in), (0.0, tip_in + STANDOFF_SOLID), (STANDOFF_RI, tip_in + STANDOFF_SOLID)]
+    e0 = tip_in + STANDOFF_SOLID + 0.004               # end boss (M5 edge distance) -> slim tube
+    prof = [(STANDOFF_RI, u1), (CRUSH_R, u1), (CRUSH_R, u0), (STANDOFF_TUBE, u0), (STANDOFF_TUBE, e0 + 0.003),
+            (STANDOFF_RO, e0), (STANDOFF_RO, tip_in), (0.0, tip_in), (0.0, tip_in + STANDOFF_SOLID),
+            (STANDOFF_RI, tip_in + STANDOFF_SOLID)]
     return finish(C.to_air(G.revolve(prof, n=48, axis_origin=(0, 0, 0), axis=(1, 0, 0), ref=(0, 0, 1))))
 
 
@@ -1001,6 +1005,203 @@ NODE_BAFFLE = dict(v=(0.128, 0.198), w=(-0.025, 0.035), t=0.0004)
 
 
 # =====================================================================================================================
+# heat protection in the lower cowl (layout.heat_protection: HS-COWL-EXIT insert PR-520, HS-COWL-SHIELD PR-523)
+# =====================================================================================================================
+HS = dict(lift=0.0001, lap=0.020, hole=0.010, band_t=0.0016, standoff=0.005, wall_in=0.003, fl_w=0.014,
+          rivet_d=0.0032, rivet_out=0.010, rivet_pitch=0.025, fl_rivet_d=0.0024, fl_rivet_in=0.010, fl_pitch=0.035,
+          edge=0.0005, x0=3.70, phi0=0.42 * math.pi, nx=150, nphi=110)
+#   lift: the external insert lies 0.1 mm off the cowl OML (bond / sealant line); lap: riveted lap round the cowl
+#   cut-out (layout 20 mm); hole: radial clearance of the tail pipe in the insert (layout 5 mm stand-off ring raised to
+#   the 10 mm engine dynamic margin, layout.clearance_values.engine_keep_out: the pipe moves with the engine);
+#   band_t: cowl solid edge band at the riveted cut-out edge (layout.shell.rules.sandwich_edges 1.6 mm);
+#   standoff: shield air gap below the thickest cowl laminate (layout 5 mm); wall_in / fl_w: the shield's return wall
+#   3 mm inside the cut-out edge and its 14 mm flange riveted to the insert; edge: margin to the P-COWL-LO panel edges
+
+
+def _boxes(regions, grow: float):
+    return [(np.asarray(a, float) - grow, np.asarray(b, float) + grow) for a, b in regions]
+
+
+def _box_union(regions, grow: float) -> G.Mesh:
+    return union([box3(lo, hi) for lo, hi in _boxes(regions, grow)])
+
+
+def box_sdist(p, regions, grow: float = 0.0) -> float:
+    """Signed distance (outside > 0) of point p to the union of the (grown) region boxes."""
+    best = math.inf
+    for lo, hi in _boxes(regions, grow):
+        out = np.maximum(np.maximum(lo - p, 0.0), p - hi)
+        d = float(np.linalg.norm(out)) if np.any(out > 0) else -float(min((p - lo).min(), (hi - p).min()))
+        best = min(best, d)
+    return best
+
+
+def _hp(C: Ctx, kind: str, hid: str) -> dict:
+    return next(i for i in C.L["heat_protection"][kind] if i["id"] == hid)
+
+
+def _cowl_lo(C: Ctx) -> dict:
+    return next(p for p in C.L["shell"]["panels"] if p["id"] == "P-COWL-LO")
+
+
+def _oml_band(C: Ctx, d0: float, d1: float) -> G.Mesh:
+    """Solid between depths d0 < d1 below the OML (negative = outside) over the lower starboard aft body (one grid
+    for every heat-protection part, so their faces coincide where they touch)."""
+    fus = C.fus
+    x1 = fus.x1 - 0.001
+    xs = np.linspace(HS["x0"], x1, HS["nx"])
+    ph = np.linspace(HS["phi0"], math.pi, HS["nphi"])
+    X, PH = np.meshgrid(xs, ph, indexing="ij")
+    P = fus.point(X, PH)
+    N = fus.normal(X, PH)
+    return G.shell_from_grid(P - d0 * N, d1 - d0, inward=-N)
+
+
+def _cowl_clip(C: Ctx, extra: float = 0.0) -> G.Mesh:
+    """P-COWL-LO extents (layout x, z_band, inner y edge), less the edge margin (+ extra)."""
+    pan = _cowl_lo(C)
+    x0, x1 = pan["x"]
+    z0, z1 = pan["z_band"]
+    e = HS["edge"] + extra
+    return box3((x0 + e, float(pan["y"][0]) + e, z0 - 0.1), (x1 + 0.1, 0.5, z1 - e))
+
+
+def _pipe_cutter(C: Ctx, clear: float) -> G.Mesh:
+    pa = exhaust_paths(C)
+    path = np.vstack([pa["tail"][:-1], pa["tail"][-1] + np.outer([0.0, 0.03, 0.06], pa["exit_dir"])])
+    return G.sweep_circle(path, TAIL_R + clear, n=32)
+
+
+def cowl_insert_mesh(C: Ctx) -> G.Mesh:
+    """HS-COWL-EXIT (PR-520-R): AISI 304 0.4 mm external insert over the cowl cut-out (the layout insert regions, cut
+    from the lower cowl by the shell) and its 20 mm riveted lap, 0.1 mm off the OML; tail-pipe exit slot with 10 mm
+    radial clearance."""
+    hp = _hp(C, "inserts", "HS-COWL-EXIT")
+    t = float(hp["t"])
+    m = inter(inter(_oml_band(C, -HS["lift"] - t, -HS["lift"]), _box_union(hp["regions"], HS["lap"])), _cowl_clip(C))
+    return finish(largest_piece(diff(m, [_pipe_cutter(C, HS["hole"])])))
+
+
+def _surface_samples(C: Ctx, nx: int = 300, nphi: int = 240):
+    xs = np.linspace(HS["x0"], C.fus.x1 - 0.002, nx)
+    ph = np.linspace(HS["phi0"], math.pi, nphi)
+    X, PH = np.meshgrid(xs, ph, indexing="ij")
+    return C.fus.point(X, PH).reshape(-1, 3), X.ravel(), PH.ravel()
+
+
+def _greedy(points, pitch: float):
+    out = []
+    for p, x, ph in points:
+        if all(np.linalg.norm(p - q) >= pitch for q, _x, _ph in out):
+            out.append((p, x, ph))
+    return out
+
+
+def _pipe_dist(C: Ctx, p) -> float:
+    pa = exhaust_paths(C)
+    path = np.vstack([pa["tail"], pa["tail"][-1] + np.outer([0.03, 0.06], pa["exit_dir"])])
+    a, b = path[:-1], path[1:]
+    ab = b - a
+    tt = np.clip(np.einsum("ij,ij->i", p - a, ab) / np.maximum(np.einsum("ij,ij->i", ab, ab), 1e-12), 0.0, 1.0)
+    return float(np.min(np.linalg.norm(a + tt[:, None] * ab - p, axis=1))) - TAIL_R
+
+
+def cowl_insert_rivets(C: Ctx) -> list[tuple]:
+    """Lap rivets insert -> cowl (OML point, inward axis): 10 mm outside the cut-out edge (2.5 D in the cowl band,
+    10 mm to the insert edge), ~25 mm pitch, >= 2.5 D + margin inside the cowl panel edges."""
+    hp = _hp(C, "inserts", "HS-COWL-EXIT")
+    pan = _cowl_lo(C)
+    P, X, PH = _surface_samples(C)
+    e = 2.5 * HS["rivet_d"] + 0.004
+    cand = []
+    for p, x, ph in zip(P, X, PH):
+        if abs(box_sdist(p, hp["regions"]) - HS["rivet_out"]) > 0.0006:
+            continue
+        if p[2] > pan["z_band"][1] - e or p[0] > pan["x"][1] - e or p[1] < pan["y"][0] + e:
+            continue
+        cand.append((p, x, ph))
+    return [(p, -C.fus.normal(x, ph)) for p, x, ph in _greedy(cand, HS["rivet_pitch"])]
+
+
+def cowl_shield_mesh(C: Ctx) -> G.Mesh:
+    """HS-COWL-SHIELD (PR-523-R): AISI 304 sheet (0.4 mm, process minimum; layout foil 0.1 mm) 5 mm inside the
+    thickest cowl laminate over the shield band (25..50 mm from the stack envelope), with a return wall 3 mm inside the
+    cut-out edge and a 14 mm flange riveted under the insert: the shield hangs from the insert, the cowl inner face
+    keeps its air gap whatever its edge build-up."""
+    sh = _hp(C, "shields", "HS-COWL-SHIELD")
+    reg = _hp(C, "inserts", "HS-COWL-EXIT")["regions"]
+    t = float(_hp(C, "inserts", "HS-COWL-EXIT")["t"])
+    d0 = COWL_SKIN + HS["standoff"]
+    w0 = HS["wall_in"]
+    clip = _cowl_clip(C, 0.002)
+    # the three pieces overlap by half a sheet thickness (no coplanar faces in the union)
+    pan_ = inter(_oml_band(C, d0, d0 + t), diff(_box_union(sh["regions"], 0.0), [_box_union(reg, -w0 - 0.5 * t)]))
+    wall = inter(_oml_band(C, -HS["lift"] + 0.5 * t, d0 + 0.5 * t),
+                 diff(_box_union(reg, -w0), [_box_union(reg, -w0 - t)]))
+    fl = inter(_oml_band(C, -HS["lift"], -HS["lift"] + t),
+               diff(_box_union(reg, -w0 - 0.5 * t), [_box_union(reg, -w0 - HS["fl_w"])]))
+    m = inter(union([pan_, wall, fl]), clip)
+    return finish(largest_piece(diff(m, [_pipe_cutter(C, HS["hole"] + 0.003)])))
+
+
+def sheet_outline(m: G.Mesh, C: Ctx, cos_min: float = 0.7) -> list[np.ndarray]:
+    """Cut-edge polylines of a formed sheet on the aft body (boundary of its outward-facing face) -> ``Part.outline``:
+    the edge-distance check then measures to the real trimmed edges; its radial mid-plane rays would leave a 0.4 mm
+    sheet curved to the boat-tail within a few millimetres. Bend lines (wall roots) count as edges (conservative)."""
+    V, F = m.V, m.F
+    a, b, c = V[F[:, 0]], V[F[:, 1]], V[F[:, 2]]
+    fn = np.cross(b - a, c - a)
+    fn /= np.maximum(np.linalg.norm(fn, axis=1, keepdims=True), 1e-18)
+    cen = (a + b + c) / 3.0
+    w, h, zc, _nt, _nb = (np.asarray(q, float) for q in C.fus.section(cen[:, 0]))
+    tf = np.asarray(C.fus.top_frac(cen[:, 0]), float)
+    hh = np.where(cen[:, 2] >= zc, tf * h, (1.0 - tf) * h)
+    phi = np.arctan2(2.0 * cen[:, 1] / w, (cen[:, 2] - zc) / hh)          # exact for the n = 2 aft sections
+    sel = np.einsum("ij,ij->i", fn, C.fus.normal(cen[:, 0], phi)) > cos_min
+    E = np.sort(np.vstack([F[sel][:, [0, 1]], F[sel][:, [1, 2]], F[sel][:, [2, 0]]]), axis=1)
+    uq, cnt = np.unique(E, axis=0, return_counts=True)
+    adj: dict[int, list[int]] = {}
+    for i, j in uq[cnt == 1]:
+        adj.setdefault(int(i), []).append(int(j))
+        adj.setdefault(int(j), []).append(int(i))
+    lines, used = [], set()
+    for start in adj:
+        for nxt in adj[start]:
+            if (min(start, nxt), max(start, nxt)) in used:
+                continue
+            chain, prev, cur = [start], start, nxt
+            used.add((min(start, nxt), max(start, nxt)))
+            while True:
+                chain.append(cur)
+                cand = [k for k in adj[cur] if (min(cur, k), max(cur, k)) not in used]
+                if not cand:
+                    break
+                used.add((min(cur, cand[0]), max(cur, cand[0])))
+                prev, cur = cur, cand[0]
+            lines.append(V[chain].copy())
+    return lines
+
+
+def shield_rivets(C: Ctx) -> list[tuple]:
+    """Shield flange rivets (through the insert, set from outside): 10 mm inside the cut-out edge, ~35 mm pitch,
+    clear of the pipe slot."""
+    reg = _hp(C, "inserts", "HS-COWL-EXIT")["regions"]
+    pan = _cowl_lo(C)
+    P, X, PH = _surface_samples(C)
+    e = 2.0 * HS["fl_rivet_d"] + 0.003
+    cand = []
+    for p, x, ph in zip(P, X, PH):
+        if abs(box_sdist(p, reg) + HS["fl_rivet_in"]) > 0.0006:
+            continue
+        if p[2] > pan["z_band"][1] - e or p[0] > pan["x"][1] - e:
+            continue
+        if _pipe_dist(C, p) < HS["hole"] + 0.003 + e:
+            continue
+        cand.append((p, x, ph))
+    return [(p, -C.fus.normal(x, ph)) for p, x, ph in _greedy(cand, HS["fl_pitch"])]
+
+
+# =====================================================================================================================
 # registration
 # =====================================================================================================================
 class _Reg:
@@ -1165,6 +1366,57 @@ class _Reg:
                      "cylinder head and the stabilator node boss, riveted to the plenum front skirt")
         ids["nb_R"] = nb.id
         ids["nb_L"] = self.reg.add(mirror_part(nb, C.pid(524, "L"))).id
+
+    # ------------------------------------------------------------------ heat protection (lower cowl)
+    def heat_protection(self) -> bool:
+        """HS-COWL-EXIT (PR-520-R/L) and HS-COWL-SHIELD (PR-523-R/L) ride on the lower cowl halves: registered only
+        when the shell has registered them (YK250-SH-451-R/L). PR-521 / PR-522 are not required (the stub-root
+        strip and the stabilator stub keep >= 50 mm from the exhaust, docs/detail/propulsion.md)."""
+        C, A, ids, reg = self.C, self.add, self.ids, self.reg
+        hosts = {side: _cowl_lo(C)["part"] + "-" + side for side in ("R", "L")}
+        if not all(h in reg.parts for h in hosts.values()):
+            reg.note("propulsion: lower cowl halves not registered - heat-protection parts PR-520 / PR-523 skipped")
+            return False
+        hp, sh = _hp(C, "inserts", "HS-COWL-EXIT"), _hp(C, "shields", "HS-COWL-SHIELD")
+        ins = A(520, "R", "exhaust exit insert, starboard lower cowl", "egzoz çıkış levhası, sağ alt kaporta", MAT_SS,
+                P_SHEET_ST, lambda: cowl_insert_mesh(C), thickness=float(hp["t"]), parent=hosts["R"],
+                step=STEP_CLOSE, explode=(0.0, 0.10, -0.25), contacts=(hosts["R"],), color="hardware",
+                notes="layout HS-COWL-EXIT: AISI 304 0.4 mm (FIRE-001 fireproof without test), formed to the OML, "
+                      "external over the cowl cut-out (layout insert regions) with a 20 mm lap, blind rivets d 3.2 "
+                      "at ~25 mm; tail-pipe exit slot with 10 mm radial clearance")
+        shd = A(523, "R", "cowl heat shield, starboard", "kaporta ısı kalkanı, sağ", MAT_SS, P_SHEET_ST,
+                lambda: cowl_shield_mesh(C), thickness=float(hp["t"]), parent=ins.id, step=STEP_CLOSE,
+                explode=(0.0, 0.05, -0.20), contacts=(ins.id,), color="hardware",
+                notes=f"layout {sh['id']}: AISI 304 0.4 mm (layout foil 0.1 mm is below the sheet_metal_steel "
+                      "minimum), 5 mm air gap below the thickest cowl laminate over the 25..50 mm band, return wall "
+                      "3 mm inside the cut-out edge, flange riveted under the insert (d 2.4 at ~35 mm)")
+        ins.outline = sheet_outline(ins.base_mesh, C)
+        shd.outline = sheet_outline(shd.base_mesh, C)
+        ids["ins_R"], ids["shd_R"] = ins.id, shd.id
+        ids["ins_L"] = reg.add(mirror_part(ins, C.pid(520, "L"), id_map={hosts["R"]: hosts["L"]})).id
+        ids["shd_L"] = reg.add(mirror_part(shd, C.pid(523, "L"), id_map={ins.id: ids["ins_L"]})).id
+        ids["cowl_R"], ids["cowl_L"] = hosts["R"], hosts["L"]
+        return True
+
+    def fasteners_heat(self):
+        C, ids, reg = self.C, self.ids, self.reg
+        t = float(_hp(C, "inserts", "HS-COWL-EXIT")["t"])
+        lap = cowl_insert_rivets(C)
+        fl = shield_rivets(C)
+        for side, sv in (("R", 1.0), ("L", -1.0)):
+            M = np.array([1.0, sv, 1.0])
+            for i, (p, a) in enumerate(lap):
+                n = -a
+                J.rivet(reg, f"{ids['ins_' + side]}-R{i + 1}", HS["rivet_d"], M * (p + (HS["lift"] + t) * n), M * a,
+                        [(ids["ins_" + side], t + HS["lift"]), (ids["cowl_" + side], HS["band_t"])],
+                        spec="blind rivet stainless (Monel) d 3.2", step=STEP_CLOSE,
+                        notes="insert lap -> lower cowl solid edge band (sandwich_edges 1.6 mm)")
+            for i, (p, a) in enumerate(fl):
+                n = -a
+                J.rivet(reg, f"{ids['shd_' + side]}-R{i + 1}", HS["fl_rivet_d"], M * (p + (HS["lift"] + t) * n), M * a,
+                        [(ids["ins_" + side], t), (ids["shd_" + side], t + HS["lift"])],
+                        spec="blind rivet stainless (Monel) d 2.4", step=STEP_CLOSE,
+                        notes="shield flange under the insert, set from outside")
 
     # ------------------------------------------------------------------ accessories and equipment
     def accessories(self):
@@ -1342,3 +1594,5 @@ def register(reg: Registry, spec: dict) -> None:
     R.fasteners_core()
     R.fasteners_cooling()
     R.fasteners_accessories()
+    if R.heat_protection():
+        R.fasteners_heat()

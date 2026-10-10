@@ -59,7 +59,8 @@ GROUP = "shell"
 # module-private detailing constants (docs/detail/shell.md)
 # ---------------------------------------------------------------------------------------------------------------------
 GAP = 0.0005                # half of the 1.0 mm panel gap (layout.shell.rules.joggles: 1.0 +- 0.3 mm)
-GAP_LIFT = 0.0002           # lift-off parachute hatch: 0.2 mm trimmed fit to its neighbours (seal in the land)
+GAP_LIFT = 0.0001           # lift-off parachute hatch: 0.2 mm trimmed fit to its neighbours (edge seal, declared
+#                             contacts: they stay side by side while it lifts straight off)
 SEAL = 0.0002               # seal line between a removable panel's inner face and the joggled land under it
 LAND_FIT = 0.0065 - 0.0002  # inner face of the land pads: 0.2 mm liquid-shim fit to the chassis land (skin line 6.5 mm)
 OV = 0.0002                 # boolean overlap of fused features (ARCHITECTURE §5)
@@ -461,6 +462,26 @@ class SC:
             self._env[key] = G.fix_orientation(G.loft(rings))
         return self._env[key]
 
+    def body_env_normal(self, t: float, zref: float, x0: float, x1: float) -> G.Mesh:
+        """Body OML inset by t measured along the 3-D surface normal of the side wall at z = zref (section-plane
+        inset t sqrt(1 + (dw/dx)^2)): thin sheet parts on the steep cowl closure keep their gauge."""
+        key = ("bn", round(t, 7), round(zref, 4), round(x0, 4), round(x1, 4))
+        if key not in self._env:
+            def w(x):
+                g = LineString([(0.0, zref), (2.0, zref)]).intersection(self.sec(x))
+                return float(g.bounds[2]) if not g.is_empty else 0.0
+            n = max(2, int(math.ceil((x1 - x0) / 0.005)) + 1)
+            rings = []
+            for x in np.linspace(x0, x1, n):
+                h = 0.002
+                sl = (w(x + h) - w(x - h)) / (2 * h)
+                d = min(t * math.sqrt(1.0 + sl * sl), 3.0 * t)
+                poly = self.sec(float(x), d)
+                P2 = SG.resample_ring(poly, RING_N, start_dir=(0.0, 1.0))
+                rings.append(np.column_stack([np.full(len(P2), x), P2[:, 0], P2[:, 1]]))
+            self._env[key] = G.fix_orientation(G.loft(rings))
+        return self._env[key]
+
     def fair_env(self, d: float, x0: float, x1: float) -> G.Mesh | None:
         """Wing-root fairing envelope (glove root profile inset by d, extruded from y_inner to the wing root), both
         sides; None outside the glove root chord."""
@@ -796,7 +817,25 @@ class Fix:
         s0, e0 = iv_p[0]
         if abs(s0) > 0.002:
             return self._drop(c, f"panel face {s0 * 1000:.1f} mm off the OML point")
+        d_ = 0.0048 if c.kind == "cam" else float(c.size) * 1e-3
+        head0 = p + s0 * a
+        for (h0, h1, rr, dd) in self.holes.get(c.panel, []):       # quick spacing test in the panel itself
+            sd = _seg_dist(head0 - 0.001 * a, head0 + (e0 - s0 + 0.001) * a, h0, h1)
+            if sd < 3.0 * max(d_, dd) + 0.0003:
+                return self._drop(c, f"hole spacing {sd * 1000:.1f} mm in {c.panel}")
         lands = [c.land] if c.land else []
+        if not lands:                       # the land is the first part behind the panel (chassis or joggle)
+            q0, q1 = p + (e0 - 0.0005) * a, p + (e0 + 0.003) * a
+            best = None
+            for pid in self.parts_near(np.minimum(q0, q1) - 0.004, np.maximum(q0, q1) + 0.004):
+                if pid == c.panel:
+                    continue
+                iv = [v for v in self.intervals(pid, p, a) if v[1] > e0 + 1e-5]
+                if iv and (best is None or iv[0][0] < best[1]):
+                    best = (pid, iv[0][0])
+            if best is None:
+                return self._drop(c, "no land behind the panel")
+            lands = [best[0]]
         stack = [(c.panel, s0, e0)]
         prev = e0
         for land in lands:
@@ -967,12 +1006,14 @@ class Pan:
     extra: list = field(default_factory=list)   # meshes fused to the panel (lugs, tongues, ribs)
     cut: list = field(default_factory=list)     # meshes subtracted
     zband: tuple | None = None
+    keep: list = field(default_factory=list)    # meshes intersected (trim solids)
     areal: float | None = None  # areal mass of a non-layup laminate (GFRP sandwich windows)
     joint: str | None = None
     notes: str = ""
     land_refs: tuple = ()       # layout land ids (doc / BOM)
     keep_box: bool = True       # subtract the centre-box keep-out
     relief: bool = True         # chine relief of the inner face (chine_relief)
+    t_normal: float | None = None   # z of the side wall where t is measured along the 3-D normal (sheet parts)
     color: str = ""
     rows: list = field(default_factory=list)    # fastener row specs (see Rows)
     cutouts: tuple = ()         # layout ids cut out of this panel (doc)
@@ -1048,7 +1089,11 @@ def build_panel_mesh(sc: SC, pn: Pan) -> G.Mesh:
     half = sc.half(pn.surf, x0, x1)
     reg = pn.region
     pz = prism_z(reg)
-    parts = [man_and(sc.layer(0.0, pn.t, x0, x1), half, pz)]
+    if pn.t_normal is not None:             # true-normal gauge (sheet metal on the steep cowl closure)
+        lay = man_sub(sc.body_env(0.0, x0, x1), [sc.body_env_normal(pn.t, pn.t_normal, x0 - 0.01, x1 + 0.01)])
+    else:
+        lay = sc.layer(0.0, pn.t, x0, x1)
+    parts = [man_and(lay, half, pz)]
     if pn.pads is not None and not pn.pads.is_empty:
         pads = clean(pn.pads.intersection(reg.buffer(-0.0005, join_style=2)), 1e-6)
         if not pads.is_empty:
@@ -1066,6 +1111,8 @@ def build_panel_mesh(sc: SC, pn: Pan) -> G.Mesh:
     m = man_add(parts)
     if pn.zband is not None:
         m = man_and(m, box3((x0 - 0.1, -2, pn.zband[0]), (x1 + 0.1, 2, pn.zband[1])))
+    for k in pn.keep:
+        m = man_and(m, k)
     cut = list(pn.cut)
     if pn.relief:
         cr = chine_relief(sc, x0, x1, pn.t)
@@ -1326,8 +1373,12 @@ def body_panels(sc: SC) -> dict[str, Pan]:
     # ---------------------------------------------------------------- mission bay
     ffuel = st("FS-FUEL")
     spine = o["P-SPINE"]
+    # the tear-away strip starts 0.2 mm aft of the hatch edge (layout: 1 mm, side by side on the FS1810 flange)
+    hx1, (sx0_, _sx1), (sy0_, sy1_) = float(para.bounds[2]), S["P-SPINE"]["x"], S["P-SPINE"]["y"]
+    sp_ext = rect(hx1 + GAP_LIFT, sx0_ + GAP + 0.001, sy0_ + GAP, sy1_ - GAP)
     mb_reg = full(f1810 + GAP, ffuel - GAP).difference(para.buffer(GAP_LIFT, join_style=2)).difference(
-        spine.buffer(GAP, join_style=2)).difference(grow("P-GNSS2")).difference(fair2)
+        spine.buffer(GAP, join_style=2)).difference(sp_ext.buffer(GAP, join_style=2)).difference(
+        grow("P-GNSS2")).difference(fair2)
     mb = add("P-MB-UPPER", "U", mb_reg, f1810, ffuel, pads=up_pads(f1810, ffuel), step=STEP["skin"],
              parent=sc.st["FS1810"]["part"], explode=(0.0, 0.0, 0.22))
     add("P-GNSS2", "U", o["P-GNSS2"].buffer(-GAP, join_style=2), 2.03, 2.15, step=STEP["ant"], parent=mb.key,
@@ -1347,7 +1398,7 @@ def body_panels(sc: SC) -> dict[str, Pan]:
     cu_reg = clean(cu_reg.buffer(-0.002, join_style=2).buffer(0.002, join_style=2).intersection(cu_reg), 1e-6)
     cu = add("P-CENTRE-UPPER", "U", cu_reg, ffuel, fgear, pads=up_pads(ffuel, fgear), step=STEP["skin"],
              parent=sc.st["FS-FUEL"]["part"], explode=(0.0, 0.0, 0.22))
-    sp = add("P-SPINE", "U", spine.buffer(-GAP, join_style=2), f1810, 2.82, pads=up_pads(f1810, 2.82),
+    sp = add("P-SPINE", "U", spine.buffer(-GAP, join_style=2).union(sp_ext), f1810, 2.82, pads=up_pads(f1810, 2.82),
              step=STEP["para"], parent=sc.ref("M-SPINE"), explode=(0.0, 0.0, 0.35))
     for fid in ("F-RISER-FWD", "F-RISER-AFT"):          # relief pocket over the bridle U-lugs (layout fitting boxes;
         lo_, hi_ = (np.asarray(v, float) for v in sc.fit[fid]["box"])   # frame flange widened to +-24.5 mm by the
@@ -1364,7 +1415,7 @@ def body_panels(sc: SC) -> dict[str, Pan]:
     for pn in (out["P-PARA-LOWER"], mbl):
         pn.cut.append(glove_root_cutter(sc))
     cl_reg = full(ffuel + GAP, fgear - GAP).difference(grow("P-PAYHATCH")).difference(
-        unary_union(doors[2:]).buffer(GAP, join_style=2)).difference(grow("P-REFUEL"))
+        unary_union(doors[2:]).buffer(GAP, join_style=2))      # refuel door opening: refuel_parts
     cl = add("P-CENTRE-LOWER", "L", cl_reg, ffuel, fgear, pads=lo_pads(ffuel, fgear), step=STEP["skin"],
              parent=sc.st["FS-FUEL"]["part"], explode=(0.0, 0.0, -0.22))
     cl.cut.append(glove_root_cutter(sc))
@@ -1403,6 +1454,7 @@ FUEL_SPLIT = LAND_W + GAP     # fuel-panel land: outboard band (fairing) / inboa
 ROOT_CLEAR = 0.003          # skin / strip cut-out round a tail-surface root (sealant fillet, fittings pass through)
 X_AFT = 3.9635              # common aft end of the fin-root fairings, outer upper cowl pieces and stub strips (layout
 #                             3.962 / 3.965): the centre cowl piece and the lower halves close the cowl aft of it
+X_UPS_LAND = 3.92           # the land under the outer cowl piece stops ahead of the steep cowl closure
 X_COWL = 3.668              # split aft skins / cowl: 1.5 mm ahead of the firewall aft face so that the cowl's
 #                             forward screw row (M3) keeps 2.5 D to its edge on the 13 mm firewall edge angle
 
@@ -1431,6 +1483,51 @@ def inlet_opening() -> Polygon:
     return Polygon(np.vstack([np.column_stack([xs, -hw]), np.column_stack([xs[::-1], hw[::-1]])])).buffer(0)
 
 
+BAND_LI, BAND_LO = 0.012, 0.03   # stub-band trim lines: reach inside / outside the OML along the normal
+
+
+def stub_band(sc: SC) -> dict:
+    """Stub-root strip band (layout P-STUBROOT: y >= y0 and z_band) trimmed normal to the skin: in every section the
+    OML arc where the band holds is bounded by two lines along the surface normal (the strip and its neighbours get
+    square edges, no feather edges where the z planes would cut the inclined side). 'keep': between the lines less
+    the gap (the strip), 'clear': plus the gap (cut from the neighbours); both sides."""
+    if "band" in sc._cache:
+        return sc._cache["band"]
+    sb = sc.pan["P-STUBROOT"]
+    (sx0, _sx1), (sy0, _sy1), (sz0, sz1) = sb["x"], sb["y"], sb["z_band"]
+    rk, rc = [], []
+    xs = np.arange(sx0 - 0.002, X_AFT + GAP + 0.004, 0.004)
+    last = None
+    for x in xs:
+        R = SG.resample_ring(sc.sec(float(x)), 3000, start_dir=(0.0, -1.0))
+        R = R[:int(np.argmax(R[:, 1])) + 1]                       # starboard half: bottom -> top
+        ok = np.where((R[:, 1] >= sz0) & (R[:, 1] <= sz1) & (R[:, 0] >= sy0))[0]
+        if len(ok) < 3:
+            if last is not None:
+                break
+            continue
+        ib, it = int(ok[0]), int(ok[-1])
+
+        def frame(i):
+            a, b = R[max(i - 2, 0)], R[min(i + 2, len(R) - 1)]
+            tau = _unit(b - a)
+            return R[i], tau, np.array([-tau[1], tau[0]])
+        pb, tb, nb = frame(ib)
+        pt, tt, nt = frame(it)
+        for out, g in ((rk, -GAP), (rc, GAP)):
+            qb, qt = pb - g * tb, pt + g * tt
+            Q = np.array([qb - BAND_LO * nb, qb + BAND_LI * nb, qt + BAND_LI * nt, qt - BAND_LO * nt])
+            out.append(np.column_stack([np.full(4, x), Q[:, 0], Q[:, 1]]))
+        last = x
+    res = {}
+    for k, rings in (("keep", rk), ("clear", rc)):
+        m = G.fix_orientation(G.loft(rings))
+        res[k] = G.union([m, m.mirrored_y()])
+    res["x1"] = float(last)
+    sc._cache["band"] = res
+    return res
+
+
 def aft_panels(sc: SC, pans: dict) -> None:
     S = sc.pan
     t = sc.t_skin
@@ -1449,8 +1546,8 @@ def aft_panels(sc: SC, pans: dict) -> None:
     # stub-root strip band (body_side z band) as a box: the aft skins and cowl pieces are cut round it
     sb = S["P-STUBROOT"]
     (sx0, sx1), (sy0, sy1), (sz0, sz1) = sb["x"], sb["y"], sb["z_band"]
-    stub_box = [box3((sx0 - GAP, sy0 - GAP, sz0 - GAP), (X_AFT + GAP, 1.0, sz1 + GAP))]
-    stub_box.append(stub_box[0].mirrored_y())
+    band = stub_band(sc)
+    stub_box = [band["clear"]] + stub_cut
     # --- aft skins: trim at the cowl split, cut round the inlet, fin-root strips, stub strip, ventral strip
     au, al = pans["P-AFT-UPPER"], pans["P-AFT-LOWER"]
     fr = S["P-FINROOT"]
@@ -1494,9 +1591,9 @@ def aft_panels(sc: SC, pans: dict) -> None:
                                       "44 mm strip cannot take a sandwich core")
     # --- stub-root strips (body side z band, removable for stub removal)
     pans["P-STUBROOT"] = Pan(key="P-STUBROOT", num=num("P-STUBROOT"), name=sb["name"], name_tr=sb["name_tr"],
-                             surf="F", region=rect(sx0 + GAP, X_AFT - GAP, sy0 + GAP, 1.0), mirror=True, t=t,
+                             surf="F", region=rect(sx0 + GAP, X_AFT - GAP, 0.0, 1.0), mirror=True, t=t,
                              x0=sx0, x1=X_AFT, step=STEP["stub"], parent=sc.st["FS3480"]["part"],
-                             explode=(0.0, 0.3, 0.0), removable=True, zband=(sz0 + GAP, sz1 - GAP),
+                             explode=(0.0, 0.3, 0.0), removable=True, keep=[band["keep"]],
                              pads=up_pads(sx0, sx1).union(lo_pads(sx0, sx1)), cut=[stub_cut[0]],
                              land_refs=("ST-FS3480", "ST-FS3670"))
     # --- cowl (x 3.668 .. 4.0): split by the layout outlines and z bands round the fin roots and the stub strips;
@@ -1514,26 +1611,29 @@ def aft_panels(sc: SC, pans: dict) -> None:
                             explode=(0.15, 0.0, 0.35), removable=True, cut=[below_band],
                             pads=up_pads(X_COWL, xe), land_refs=tuple(cu["lands"]))
     pans["P-FINROOT-AFT"] = Pan(key="P-FINROOT-AFT", num=num("P-FINROOT-AFT"), name=fra["name"],
-                                name_tr=fra["name_tr"], surf="F",
+                                name_tr=fra["name_tr"], surf="U",
                                 region=clean(rect(X_COWL + GAP, X_AFT - GAP, y_up + GAP, y_ups - GAP).difference(
                                     fin), 1e-6), mirror=True, t=t, x0=X_COWL, x1=X_AFT, step=STEP["fin"],
                                 parent=sc.st["FS3670"]["part"], explode=(0.0, 0.05, 0.35),
-                                pads=up_pads(X_COWL, X_AFT), land_refs=("ST-FS3670",), cut=[below_band])
+                                pads=up_pads(X_COWL, X_AFT), land_refs=("ST-FS3670",))
     # joggled land under the inboard edge of the aluminium outer piece (its Camloc row)
     ups_o = rect(X_COWL, X_AFT, y_ups, 0.40)
-    pans["P-FINROOT-AFT"].lands.append(_strip(pans["P-FINROOT-AFT"].region, ups_o, sc, "U", T_AL))
-    above = box3((X_COWL - 0.1, -1.0, -1.0), (xe + 0.1, 1.0, sz1 + GAP))
+    pans["P-FINROOT-AFT"].lands.append(_strip(pans["P-FINROOT-AFT"].region, ups_o, sc, "U", T_AL,
+                                              extra_cut=[rect(X_UPS_LAND, 5.0, -1.0, 1.0)]))
+    # outer upper piece: above the stub band's upper trim line (above the chine aft of the band's end)
     pans["P-COWL-UPS"] = Pan(key="P-COWL-UPS", num=num("P-COWL-UPS"), name=cus["name"], name_tr=cus["name_tr"],
-                             surf="F", region=rect(X_COWL + GAP, X_AFT - GAP, y_ups + GAP, 1.0), mirror=True,
+                             surf="U", region=rect(X_COWL + GAP, X_AFT - GAP, y_ups + GAP, 1.0), mirror=True,
                              material=cus["material"], layup=None, thickness=T_AL, t=T_AL, process=P_SHEET,
                              x0=X_COWL, x1=X_AFT, step=STEP["close"], parent=sc.st["FS3670"]["part"],
-                             explode=(0.0, 0.3, 0.2), removable=True, cut=[above], keep_box=False,
-                             land_refs=tuple(cus["lands"]))
-    below = box3((X_COWL - 0.1, -1.0, sz0 - GAP), (xe + 0.1, 1.0, 1.0))
+                             explode=(0.0, 0.3, 0.2), removable=True, cut=list(stub_box), keep_box=False,
+                             land_refs=tuple(cus["lands"]), relief=False, t_normal=0.5 * (sz1 + 0.30))
+    # lower halves: below the band's lower trim line / the chine ahead of X_AFT, below z_band[0] aft of it
+    below = box3((X_AFT, -1.0, sz0 - GAP), (xe + 0.1, 1.0, 1.0))
     pans["P-COWL-LO"] = Pan(key="P-COWL-LO", num=num("P-COWL-LO"), name=clo["name"], name_tr=clo["name_tr"],
                             surf="F", region=rect(X_COWL + GAP, xe + 0.01, y_lo + GAP, 1.0), mirror=True, t=t,
                             x0=X_COWL, x1=xe, step=STEP["close"], parent=sc.ref("M-AFTKEEL"),
-                            explode=(0.05, 0.15, -0.35), removable=True, pads=lo_pads(X_COWL, xe), cut=[below],
+                            explode=(0.05, 0.15, -0.35), removable=True, pads=lo_pads(X_COWL, xe),
+                            cut=[below, sc.half("U", X_COWL - 0.01, X_AFT, gap=-GAP)] + list(stub_box),
                             land_refs=tuple(clo["lands"]))
     kb = np.asarray(sc.mem["M-AFTKEEL"]["box"], float)        # aft keel channel (layout box) + bond line
     pans["P-VENTRALROOT"].cut.append(box3(kb[0] - 0.0003, kb[1] + 0.0003))
@@ -1541,7 +1641,7 @@ def aft_panels(sc: SC, pans: dict) -> None:
     pans["P-VENTRALROOT"].region = clean(rect(float(vr["x"][0]) + GAP, xe + 0.01, -(y_lo - GAP), y_lo - GAP)
                                          .difference(ven), 1e-6)
     st_ = pans["P-STUBROOT"]
-    st_.region = rect(sx0 + GAP, X_AFT - GAP, sy0 + GAP, 1.0)
+    st_.region = rect(sx0 + GAP, X_AFT - GAP, 0.0, 1.0)
     st_.x1 = X_AFT
     st_.cut = [stub_cut[0]]
 
@@ -1635,14 +1735,26 @@ def refuel_parts(sc: SC, pans: dict) -> dict:
     O_ = lay_outline(sc, "P-REFUEL")
     q0, q1, d, depth = refuel_axis(sc)
     ya, yb = sorted(S["y"])
-    # cove radius: every door point that can swing forward of the hinge line stays inside it
+    # cove radius: every door point that can swing forward of the hinge line stays inside it. The straight axis
+    # lies a = 2.0 .. 4.3 mm inside the curved belly; opened to theta the door's outer face crosses the OML level
+    # a tan(theta / 2) ahead of the axis, at the radius a / cos(theta / 2); the hinge-edge corners swing on their own
+    # radius (an elastomer cove seal closes the slot ahead of the door, layout P-REFUEL hinge)
+    th = math.radians(float(S["hinge"]["range_deg"][1]))
     w_o = []
-    for yy in np.linspace(ya, yb, 9):
+    for yy in np.linspace(ya, yb, 13):
         p, n = sc.oml_point(float(S["x"][0]), float(yy), "L")
         c = q0 + d * float(np.dot(p - q0, d))
-        w_o.append(float(np.linalg.norm(p - c)))
+        a_ = float(np.linalg.norm(p - c))
+        w_o.append(a_ / math.cos(0.5 * th))
+        for q in (p, p - t * n):                  # outer and inner corner of the door's hinge edge
+            c = q0 + d * float(np.dot(q - q0, d))
+            w_o.append(float(np.linalg.norm(q - c)))
     r_cove = 1.02 * max(w_o) + GAP
-    door_reg = O_.buffer(-GAP, join_style=2)
+    # door ends and opening ends normal to the hinge axis (the axis follows the belly curve, 13 deg to y): a door end
+    # in a y plane would swing into the skin beyond it
+    door_reg = rect(O_.bounds[0] + GAP, O_.bounds[2] - GAP, ya - 0.006, yb + 0.006)
+    slab_door = G.cylinder(0.15, q0 + GAP * d, q1 - GAP * d, n=64)
+    slab_open = G.cylinder(0.15, q0 - GAP * d, q1 + GAP * d, n=64)
     x0, x1 = float(O_.bounds[0]), float(O_.bounds[2])
     tube_ends = (q0 + d * (GAP + 0.0002), q1 - d * (GAP + 0.0002))
     tube = man_sub(G.cylinder(HINGE_R, tube_ends[0], tube_ends[1], n=32), [G.cylinder(
@@ -1650,14 +1762,16 @@ def refuel_parts(sc: SC, pans: dict) -> dict:
     door = Pan(key="P-REFUEL", num=int(S["part"].split("-")[2]), name=S["name"], name_tr=S["name_tr"], surf="L",
                region=door_reg, t=t, x0=x0 - 0.01, x1=x1, step=STEP["fuel"], removable=True,
                parent=pans["P-CENTRE-LOWER"].key, explode=(0.0, -0.05, -0.3), joint="refuel_door",
-               extra=[tube], cut=[G.cylinder(HINGE_BORE, q0 - 0.02 * d, q1 + 0.02 * d, n=24)],
+               extra=[tube], cut=[G.cylinder(HINGE_BORE, q0 - 0.02 * d, q1 + 0.02 * d, n=24)], keep=[slab_door],
                land_refs=tuple(S["lands"]), notes="flush hinge: knuckle tube on the door nose, pin in the skin")
     pans["P-REFUEL"] = door
     # lower skin: cove round the hinge line over the door width, pin bores beyond, joggled land on 3 sides
     cl = pans["P-CENTRE-LOWER"]
     cove = G.cylinder(r_cove, q0 - (GAP + 0.0001) * d, q1 + (GAP + 0.0001) * d, n=48)
-    cl.cut += [cove, G.cylinder(HINGE_BORE, q0 - (HINGE_PIN_END + 0.003) * d, q1 + (HINGE_PIN_END + 0.003) * d,
-                                n=24)]
+    opening = man_and(prism_z(rect(O_.bounds[0] - GAP, O_.bounds[2] + GAP, ya - 0.006, yb + 0.006)), slab_open)
+    opening = man_sub(opening, [sc.env(t + 0.0001, x0 - 0.02, x1 + 0.02)])     # skin layer only (lands stay)
+    cl.cut += [opening, cove, G.cylinder(HINGE_BORE, q0 - (HINGE_PIN_END + 0.003) * d,
+                                         q1 + (HINGE_PIN_END + 0.003) * d, n=24)]
     hinge_side = rect(x0 - 0.05, x0 + 0.004, ya - 0.05, yb + 0.05)
     cl.lands.append(_strip(cl.region, O_, sc, "L", t, extra_cut=[hinge_side]))
     pin = (q0 - HINGE_PIN_END * d, q1 + HINGE_PIN_END * d)

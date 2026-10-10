@@ -573,7 +573,9 @@ def harness() -> dict:
                             "fire-resistant circular connector (engine side) / grommet"}]}
 
 
-Y_XLO, Z_XLO = 0.340, -0.070           # bottom interconnect: lateral position and height under the deck / box (PK3-01)
+Y_XLO, Z_XLO = 0.340, -0.0735          # bottom interconnect: lateral position and height under the deck / box (PK3-01;
+                                       # fuel detail design: 1.7 mm under the well roof, was -0.070 = 1.8 mm into it)
+XLO_WELL_GAP = 0.011                    # bottom interconnect up-leg forward of the main-well forward wall (fuel detail)
 OUTLET_ABOVE_FLOOR = 0.001             # flush outlet / sump fittings: inlet 1 mm above the bladder floor
 
 
@@ -589,7 +591,10 @@ def fuel_lines() -> list:
     t8, t48 = math.tan(math.radians(SW_MS)), math.tan(math.radians(SW_RS))
     x_ms_y, x_rs_y = X_MS0 + Y_XLO * t8, X_RS0 + Y_XLO * t48             # spar frames at the interconnect y
     x_in_f = round(xf[1] + Y_XLO * t8 - 0.025, 4)                        # forward-cell outlet (aft-outboard corner)
-    x_in_a = round(xa[0] + Y_XLO * t48 + 0.022, 4)                       # aft-cell inlet (forward-outboard corner)
+    # aft-cell inlet (forward-outboard corner); fuel detail design: the up-leg stays forward of the main-well
+    # forward wall M-WELLWALL-FWD (the horizontal leg under the well roof crossed that wall, which has no fuel-line
+    # penetration) - XLO_WELL_GAP from the wall's forward face to the line centre
+    x_in_a = round(min(xa[0] + Y_XLO * t48 + 0.022, X_W0 - 0.0016 - XLO_WELL_GAP), 4)
 
     def L(lid, part, name, name_tr, d, path, pens=(), text="", end_fitting=None, mirror=False, valves=(), role=None):
         d_ = {"id": lid, "part": part, "name": name, "name_tr": name_tr, "diameter": d, "path": [r3(q) for q in path],
@@ -629,11 +634,12 @@ def fuel_lines() -> list:
           "(outlet in the bladder floor) down through the forward fuel deck, aft under the deck and the lower cover "
           "of the centre wing box outboard of the keel beam (clear of the wing branch H-WING, which rises into the "
           "box further inboard), through FS-MS C-FUEL-MS-LO and FS-RS C-FUEL-RS-LO (sealed unions), up through the "
-          "well roof into the flush bottom fitting at the forward-outboard low corner of the aft cell with a flapper "
+          "well roof (forward of the main-well forward wall, fuel detail design) into the flush bottom fitting at the "
+          "forward-outboard low corner of the aft cell with a flapper "
           "check valve CV-FA (forward -> aft only): the forward cell drains to the feed cell by gravity down to its "
           "floor", mirror=True, role="interconnect",
           valves=[("CV-FA", "flapper check valve (forward -> aft)", [x_in_a, Y_XLO, za0 + 0.002])]),
-        L("FL-XFER-SA", "YK250-FU-584", "saddle drain line saddle -> aft cell (check valve)",
+        L("FL-XFER-SA", "YK250-FU-594", "saddle drain line saddle -> aft cell (check valve)",
           "eyer boşaltma hattı eyer -> arka (çek valfli)", 0.012,
           [[xs[1] - 0.010, 0.0, zs0 + 0.007], [xa[0] + 0.012, 0.0, zs0 + 0.007]], (),
           "fix round 3 (PK3-01): from the flush sump fitting at the aft low point of the saddle cell (on the box upper "

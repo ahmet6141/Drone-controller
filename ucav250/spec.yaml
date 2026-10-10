@@ -10724,29 +10724,29 @@ layout:
     name: bottom interconnect forward -> aft cell (check valve, each side)
     name_tr: alt ara bağlantı hattı ön -> arka (çek valfli, her iki yanda)
     diameter: 0.01
-    path: [[2.4798, 0.34, -0.05], [2.4798, 0.34, -0.07], [2.5348, 0.34, -0.07], [2.8286, 0.34, -0.07], [2.8806, 0.34, -0.07],
-      [2.8806, 0.34, -0.05]]
+    path: [[2.4798, 0.34, -0.05], [2.4798, 0.34, -0.0735], [2.5348, 0.34, -0.0735], [2.8286, 0.34, -0.0735], [2.8563, 0.34,
+        -0.0735], [2.8563, 0.34, -0.05]]
     penetrations:
     - member: M-FWDDECK
       point: [2.4798, 0.34, -0.0566]
       kind: sealed bulkhead union in the forward fuel deck
     - member: M-WELLROOF
-      point: [2.8806, 0.34, -0.0634]
+      point: [2.8563, 0.34, -0.0634]
       kind: sealed bulkhead union in the well roof (aft-cell floor)
     text: 'fix round 3 (PK3-01): from the flush bottom fitting at the aft-outboard low corner of the forward cell (outlet
       in the bladder floor) down through the forward fuel deck, aft under the deck and the lower cover of the centre wing
       box outboard of the keel beam (clear of the wing branch H-WING, which rises into the box further inboard), through
-      FS-MS C-FUEL-MS-LO and FS-RS C-FUEL-RS-LO (sealed unions), up through the well roof into the flush bottom fitting
-      at the forward-outboard low corner of the aft cell with a flapper check valve CV-FA (forward -> aft only): the forward
-      cell drains to the feed cell by gravity down to its floor'
+      FS-MS C-FUEL-MS-LO and FS-RS C-FUEL-RS-LO (sealed unions), up through the well roof (forward of the main-well forward
+      wall, fuel detail design) into the flush bottom fitting at the forward-outboard low corner of the aft cell with a
+      flapper check valve CV-FA (forward -> aft only): the forward cell drains to the feed cell by gravity down to its floor'
     mirror: true
     valves:
     - id: CV-FA
       type: flapper check valve (forward -> aft)
-      point: [2.8806, 0.34, -0.05]
+      point: [2.8563, 0.34, -0.05]
     role: interconnect
   - id: FL-XFER-SA
-    part: YK250-FU-584
+    part: YK250-FU-594
     name: saddle drain line saddle -> aft cell (check valve)
     name_tr: eyer boşaltma hattı eyer -> arka (çek valfli)
     diameter: 0.012

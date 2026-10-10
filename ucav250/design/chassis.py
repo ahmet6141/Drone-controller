@@ -2383,6 +2383,8 @@ def build_engine_mount(C: Ctx, foot_x: float) -> G.Mesh:
         ms.append(G.cylinder(CUP_ID / 2 + CUP_T, c0 - CUP_BOTTOM_T * d, c0 + 0.0003 * d, n=36))
         nd = nodes[int(np.argmin(np.linalg.norm(nodes - c, axis=1)))]
         ms.append(G.tube(0.006, 0.0045, nd, c0 + 0.003 * d + 0.4 * (nd - c0 - 0.003 * d), n=14))
+        # the gusset end is trimmed at the cup wall: the cup cavity (ID 41 above the floor) holds the isolator
+        voids.append(G.cylinder(CUP_ID / 2, c0 + 0.0003 * d, c0 + 0.0125 * d, n=36))
     m = diff(union(ms), voids)
     cut = [G.cylinder(0.0045, np.asarray(ic, float) - 0.03 * d, np.asarray(ic, float) - 0.0125 * d + 0.001 * d, n=24)
            for ic in eng["isolators"]["centres"]]

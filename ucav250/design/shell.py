@@ -194,15 +194,55 @@ def pieces_above(m: G.Mesh, vmin: float = 2e-8) -> G.Mesh | None:
     return G.Mesh.from_manifold(parts[0] if len(parts) == 1 else m3.Manifold.compose(parts))
 
 
+def _fix_degenerate(m: G.Mesh) -> G.Mesh:
+    """Remove zero-area (cap / needle) triangles left by a boolean: collapse a sub-0.1 um edge, otherwise flip the
+    longest edge with its neighbour."""
+    V, F = m.V.copy(), m.F.copy()
+    for _ in range(50):
+        a, b, c = V[F[:, 0]], V[F[:, 1]], V[F[:, 2]]
+        areas = 0.5 * np.linalg.norm(np.cross(b - a, c - a), axis=1)
+        bad = np.where(areas < 1e-13)[0]
+        if not len(bad):
+            break
+        f = int(bad[0])
+        tri = F[f]
+        L = [np.linalg.norm(V[tri[(k + 1) % 3]] - V[tri[k]]) for k in range(3)]
+        k_s, k_l = int(np.argmin(L)), int(np.argmax(L))
+        if L[k_s] < 1e-7:
+            i, j = int(tri[k_s]), int(tri[(k_s + 1) % 3])
+            F[F == j] = i
+            F = F[(F[:, 0] != F[:, 1]) & (F[:, 1] != F[:, 2]) & (F[:, 2] != F[:, 0])]
+            continue
+        ea, eb, ec = int(tri[k_l]), int(tri[(k_l + 1) % 3]), int(tri[(k_l + 2) % 3])
+        hit = np.where(((F[:, 0] == eb) & (F[:, 1] == ea)) | ((F[:, 1] == eb) & (F[:, 2] == ea)) |
+                       ((F[:, 2] == eb) & (F[:, 0] == ea)))[0]
+        if len(hit) != 1:
+            break
+        g = int(hit[0])
+        ed = int([v for v in F[g] if v not in (ea, eb)][0])
+        F[f] = (ec, ea, ed)
+        F[g] = (ec, ed, eb)
+    used, inv = np.unique(F, return_inverse=True)
+    return G.Mesh(V[used], inv.reshape(F.shape))
+
+
 def finish(m: G.Mesh) -> G.Mesh:
     """Merge sub-micron sliver edges / zero-area faces of a boolean result (manifold simplify at growing tolerance,
-    at most 0.1 mm) so that the mesh check (degenerate faces, self-intersections) passes."""
+    at most 0.1 mm; zero-area caps left over are flipped / collapsed) so that the mesh check (degenerate faces,
+    self-intersections) passes."""
     man = m.to_manifold()
     out = None
+    first = None
     for tol in (1e-7, 1e-6, 4e-6, 1e-5, 2e-5, 5e-5, 1e-4):
         out = G.Mesh.from_manifold(man.simplify(tol))
-        if out.check(self_intersect=True)["ok"]:
+        c = out.check(self_intersect=True)
+        if c["ok"]:
             return out
+        if c["degenerate"] and not c["self_intersections"] and c["unpaired"] == 0 and c["dup_directed"] == 0:
+            fx = _fix_degenerate(out)
+            if fx.check(self_intersect=True)["ok"]:
+                return fx
+        first = first or out
     return out
 
 
@@ -475,28 +515,36 @@ class SC:
     def xr(self, y):
         return np.interp(np.abs(y), self.rs_line[:, 1], self.rs_line[:, 0])
 
-    def box_keepout(self) -> G.Mesh:
-        """Solid below the centre-box outer surface + bond line inside the body (|y| <= SOB rib inner face): the box
-        covers / caps lie at min(z_cov, union OML - 1 mm) (layout M-CTBOX z, oml_clearance_m) between the main-cap
-        leading edge and the rear-cap trailing edge; skins keep the 0.1 mm bond line above it."""
-        if "box" in self._cache:
-            return self._cache["box"]
+    def box_keepout(self, lower: bool = False) -> G.Mesh:
+        """Solid inside the centre-box outer surface + bond line, out to the wing root (the SOB rib web and the caps
+        run on to the glove): the box covers / caps lie at min(z_cov, union OML - 1 mm) (layout M-CTBOX z,
+        oml_clearance_m) between the main-cap leading edge and the rear-cap trailing edge; skins keep the 0.25 mm bond
+        line off it. ``lower``: the lower cover (z >= -z_cov - bond, up to the chine plane): the body side-wall skin
+        below the glove root passes outboard of the cover end (spot-faced to the cover end + bond)."""
+        key = ("box", lower)
+        if key in self._cache:
+            return self._cache[key]
         clr = float(self.mem["M-CTBOX"].get("oml_clearance_m", 0.001))
-        y_sob = float(self.mem["M-SOB"]["box"][0][1]) + 0.0005
-        ys = np.linspace(-y_sob, y_sob, 161)
+        y_e = self.y_root + 0.0008
+        ys = np.linspace(-y_e, y_e, 641)          # 1.25 mm: the union OML kinks at the crease
         nx = 41
         P = np.zeros((nx, len(ys), 3))
         for j, y in enumerate(ys):
             xa = float(self.xm(y)) - 0.5 * self.w_main - 0.0015
             xb = float(self.xr(y)) + 0.5 * self.w_rear + 0.0015
             xs = np.linspace(xa, xb, nx)
-            zt = self.z_up(xs, np.full(nx, y))
             P[:, j, 0], P[:, j, 1] = xs, y
-            P[:, j, 2] = np.minimum(self.z_cov, zt - clr) + BOX_BOND
+            if lower:
+                P[:, j, 2] = -self.z_cov - BOX_BOND
+            else:
+                zt = self.z_up(xs, np.full(nx, y))
+                P[:, j, 2] = np.minimum(self.z_cov, zt - clr) + BOX_BOND
         inward = np.zeros_like(P)
-        inward[..., 2] = -1.0
-        self._cache["box"] = G.shell_from_grid(P, 0.03, inward=inward)
-        return self._cache["box"]
+        inward[..., 2] = 1.0 if lower else -1.0
+        Q = P[:, ::-1] if lower else P
+        self._cache[key] = G.shell_from_grid(Q, self.z_cov if lower else 0.03,
+                                             inward=inward[:, ::-1] if lower else inward)
+        return self._cache[key]
 
     # ------------------------------------------------------------------ stations
     def x_faces(self, sid: str):
@@ -924,6 +972,7 @@ class Pan:
     notes: str = ""
     land_refs: tuple = ()       # layout land ids (doc / BOM)
     keep_box: bool = True       # subtract the centre-box keep-out
+    relief: bool = True         # chine relief of the inner face (chine_relief)
     color: str = ""
     rows: list = field(default_factory=list)    # fastener row specs (see Rows)
     cutouts: tuple = ()         # layout ids cut out of this panel (doc)
@@ -964,6 +1013,32 @@ def chine_zone(sc: SC, x0: float, x1: float) -> G.Mesh:
     return sc._env[key]
 
 
+CHINE_RELIEF = (0.0012, 0.008, 0.004)   # inner-face relief along the chine: depth, below / above the chine plane
+
+
+def chine_relief(sc: SC, x0: float, x1: float, t: float) -> G.Mesh | None:
+    """Relief of the skin inner face along the chine corner (both sides, over the chine-longeron run): the J's skin
+    flange wraps the corner at the 6.5 mm skin line, whose sharp mitred rings sag differently from the skin rings
+    between stations; the skin is spot-faced 1.2 mm there (no bond pad within the band either)."""
+    P0 = np.asarray(sc.mem["M-CHINE"]["paths"][0], float)
+    P1 = np.asarray(sc.mem["M-CHINE"]["paths"][-1], float)
+    a, b = max(x0, float(P0[0, 0]) - 0.01), min(x1, float(P1[-1, 0]) + 0.01)
+    if b <= a + 1e-4:
+        return None
+    key = ("cr", round(a, 4), round(b, 4), round(t, 6))
+    if key not in sc._env:
+        rings = []
+        dz0, dz1 = CHINE_RELIEF[1], CHINE_RELIEF[2]
+        for x in np.linspace(a, b, max(2, int(math.ceil((b - a) / 0.01)) + 1)):
+            w, z = float(sc.w2(x)), float(sc.zc(x))
+            rings.append(np.array([[x, w - 0.04, z - dz0], [x, 1.0, z - dz0], [x, 1.0, z + dz1],
+                                   [x, w - 0.04, z + dz1]]))
+        m = G.fix_orientation(G.loft(rings))
+        slab = G.union([m, m.mirrored_y()])
+        sc._env[key] = man_and(sc.body_env(t - CHINE_RELIEF[0], a - 0.01, b + 0.01), slab)
+    return sc._env[key]
+
+
 def build_panel_mesh(sc: SC, pn: Pan) -> G.Mesh:
     """Skin layer (OML .. t) inside the plan region and the surface half, plus land pads and joggled lands, minus the
     centre-box keep-out and the cutters."""
@@ -985,15 +1060,22 @@ def build_panel_mesh(sc: SC, pn: Pan) -> G.Mesh:
             continue
         parts.append(man_and(sc.layer(t_n + SEAL, t_n + SEAL + LAND_T, x0, x1), half, prism_z(strip)))
         rch = clean(reach, 1e-6)
-        if not rch.is_empty:
+        if not rch.is_empty and t_n + SEAL + OV > pn.t - OV + 1e-5:    # (a land deeper than the owner skin)
             parts.append(man_and(sc.layer(pn.t - OV, t_n + SEAL + OV, x0, x1), half, prism_z(rch)))
     parts += pn.extra
     m = man_add(parts)
     if pn.zband is not None:
         m = man_and(m, box3((x0 - 0.1, -2, pn.zband[0]), (x1 + 0.1, 2, pn.zband[1])))
     cut = list(pn.cut)
+    if pn.relief:
+        cr = chine_relief(sc, x0, x1, pn.t)
+        if cr is not None:
+            cut.append(cr)
     if pn.keep_box and x0 < 3.0 and x1 > 2.4:
-        cut.append(sc.box_keepout())
+        if pn.surf in ("U", "F"):
+            cut.append(sc.box_keepout())
+        if pn.surf in ("L", "F"):
+            cut.append(sc.box_keepout(lower=True))
     m = man_sub(m, cut)
     m = pieces_above(m, 2e-8)
     if m is None:
@@ -1100,12 +1182,15 @@ def land_fps(sc: SC, side: str, pads: bool = False) -> list[tuple[str, Polygon]]
         out.append((sc.ref("M-KEEL", "R"), rect(b[0][0], b[1][0] + 0.03, b[0][1], b[1][1] + 0.040)))
         out.append((sc.ref("M-KEEL", "L"), rect(b[0][0], b[1][0] + 0.03, -b[1][1] - 0.040, -b[0][1])))
     else:
-        m = sc.mem["M-DORSAL"]
-        P = np.asarray(m["paths"][0], float)
-        hw = 0.5 * float(m["section"]["w"]) + 0.012
+        m = sc.mem["M-DORSAL"]          # hat skin flanges (12 mm each side, layout section text): the pads stop
+        P = np.asarray(m["paths"][0], float)    # 1 mm off the webs, whose corners sag between loft stations
+        hw = 0.5 * float(m["section"]["w"])
         yc = float(P[0, 1])
-        out.append((sc.ref("M-DORSAL", "R"), rect(P[0, 0], P[-1, 0], yc - hw, yc + hw)))
-        out.append((sc.ref("M-DORSAL", "L"), rect(P[0, 0], P[-1, 0], -yc - hw, -yc + hw)))
+        bands = ((yc - hw - 0.012, yc - hw - 0.001), (yc + hw + 0.001, yc + hw + 0.012)) if pads else \
+            ((yc - hw - 0.012, yc + hw + 0.012),)      # (joggled lands keep off the whole hat)
+        for a, b in bands:
+            out.append((sc.ref("M-DORSAL", "R"), rect(P[0, 0], P[-1, 0], a, b)))
+            out.append((sc.ref("M-DORSAL", "L"), rect(P[0, 0], P[-1, 0], -b, -a)))
     sc._cache[key] = out
     return out
 
@@ -1153,6 +1238,8 @@ def body_panels(sc: SC) -> dict[str, Pan]:
     t = sc.t_skin
     fair = sc.fair_region().buffer(GAP, join_style=2)
     fair2 = unary_union([fair, mirror_poly(fair)])
+    g_out = rect(sc.gx0 - 0.002, sc.gx1 + 0.001, sc.y_root + 0.0005, 1.0)
+    g_out = unary_union([g_out, mirror_poly(g_out)])
     doors = doors_cut(sc)
     lam = lambda lid: dict(material=MAT_GF, layup=None, t=tg, thickness=tg, areal=ag) if S[lid]["material"] == MAT_GF \
         else dict(material=S[lid]["material"], layup=S[lid].get("layup") or "shell_secondary", t=t)   # noqa: E731
@@ -1163,6 +1250,8 @@ def body_panels(sc: SC) -> dict[str, Pan]:
         num = int(p["part"].split("-")[2]) if p else kw.pop("num")
         base = lam(lid) if p else {}
         base.update({k: kw.pop(k) for k in list(kw) if k in ("material", "layup", "t", "thickness", "areal")})
+        if surf == "U":             # inside the glove root (outboard of the junction fairing): wing structure
+            region = region.difference(g_out)
         pn = Pan(key=lid, num=num, name=kw.pop("name", p.get("name", lid)), name_tr=kw.pop("name_tr", p.get("name_tr",
                  lid)), surf=surf, region=clean(region, 1e-7), x0=x0, x1=x1,
                  removable=p.get("attach") in ("removable", "hinged"), land_refs=tuple(p.get("lands") or ()),
@@ -1262,14 +1351,16 @@ def body_panels(sc: SC) -> dict[str, Pan]:
              step=STEP["para"], parent=sc.ref("M-SPINE"), explode=(0.0, 0.0, 0.35))
     for fid in ("F-RISER-FWD", "F-RISER-AFT"):          # relief pocket over the bridle U-lugs (layout fitting boxes;
         lo_, hi_ = (np.asarray(v, float) for v in sc.fit[fid]["box"])   # frame flange widened to +-24.5 mm by the
-        sp.cut.append(box3((lo_[0] - 0.0015, -0.032, -1.0), (hi_[0] + 0.0015, 0.032, hi_[2] + 0.0006)))  # chassis
+        sp.cut.append(box3((lo_[0] - 0.0025, -0.032, -1.0), (hi_[0] + 0.0025, 0.032, hi_[2] + 0.0006)))  # chassis
     for k in ("P-FUEL1", "P-FUEL2", "P-FUEL3"):
         add(k, "U", o[k].buffer(-GAP, join_style=2), float(o[k].bounds[0]), float(o[k].bounds[2]),
             pads=up_pads(*o[k].bounds[0::2]), mirror=True, step=STEP["fuel"], parent=cu.key,
             explode=(0.0, 0.08, 0.3))
+        y_f = float(o[k].bounds[3])
         for sgn in (1, -1):         # outboard edges: on the fairing's land (fairing_parts); fore / aft on the caps
+            ob = rect(0.0, 5.0, y_f - FUEL_SPLIT - 0.0015, 1.0)
             cu.lands.append(_strip(cu.region, o[k] if sgn > 0 else mirror_poly(o[k]), sc, "U", t,
-                                   extra_cut=[fair2.buffer(0.001, join_style=2)]))
+                                   extra_cut=[fair2.buffer(0.001, join_style=2), ob, mirror_poly(ob)]))
     for pn in (out["P-PARA-LOWER"], mbl):
         pn.cut.append(glove_root_cutter(sc))
     cl_reg = full(ffuel + GAP, fgear - GAP).difference(grow("P-PAYHATCH")).difference(
@@ -1277,6 +1368,13 @@ def body_panels(sc: SC) -> dict[str, Pan]:
     cl = add("P-CENTRE-LOWER", "L", cl_reg, ffuel, fgear, pads=lo_pads(ffuel, fgear), step=STEP["skin"],
              parent=sc.st["FS-FUEL"]["part"], explode=(0.0, 0.0, -0.22))
     cl.cut.append(glove_root_cutter(sc))
+    for b in sc.fit["F-TRUNNION"]["bolts"]:      # spot-faces d12 x 0.8 over the gear-beam bolt tips (outboard face)
+        if abs(float(b["axis"][1])) > 0.9:
+            q = np.asarray(b["point"], float)
+            for sg in (1.0, -1.0):
+                a_ = (q[0], sg * (q[1] - 0.002), q[2])
+                b_ = (q[0], sg * (q[1] + 0.0075), q[2])
+                cl.cut.append(G.cylinder(0.006, a_, b_, n=32))
     add("P-PAYHATCH", "L", o["P-PAYHATCH"].buffer(-GAP, join_style=2), ffuel, 2.86, pads=lo_pads(ffuel, 2.86),
         step=STEP["close"], parent=cl.key, explode=(0.0, 0.0, -0.45))
     cl.lands.append(_strip(cl.region, o["P-PAYHATCH"], sc, "L", t))
@@ -1301,6 +1399,7 @@ def body_panels(sc: SC) -> dict[str, Pan]:
 # =====================================================================================================================
 # aft body strips, cowl (layout.shell.root_cut_lines, cowl_upper / cowl_lower / body_side panels)
 # =====================================================================================================================
+FUEL_SPLIT = LAND_W + GAP     # fuel-panel land: outboard band (fairing) / inboard part (centre skin)
 ROOT_CLEAR = 0.003          # skin / strip cut-out round a tail-surface root (sealant fillet, fittings pass through)
 X_AFT = 3.9635              # common aft end of the fin-root fairings, outer upper cowl pieces and stub strips (layout
 #                             3.962 / 3.965): the centre cowl piece and the lower halves close the cowl aft of it
@@ -1343,7 +1442,7 @@ def aft_panels(sc: SC, pans: dict) -> None:
     stub_cut = [prism_y(stub_xz, 0.18, 0.40)]
     stub_cut.append(stub_cut[0].mirrored_y())
     ven = roots["ventral"].buffer(ROOT_CLEAR, join_style=2)
-    up_pads = lambda x0, x1: land_union(sc, "U").intersection(rect(x0 - 0.05, x1 + 0.05, -1, 1))   # noqa: E731
+    up_pads = lambda x0, x1: land_union(sc, "U", pads=True).intersection(rect(x0 - 0.05, x1 + 0.05, -1, 1))  # noqa
     lo_pads = lambda x0, x1: land_union(sc, "L", pads=True).intersection(rect(x0 - 0.05, x1 + 0.05, -1, 1))  # noqa
     fgear, xfw = st("FS-GEAR"), st("FS3670")
     num = lambda lid: int(S[lid]["part"].split("-")[2])                               # noqa: E731
@@ -1407,7 +1506,7 @@ def aft_panels(sc: SC, pans: dict) -> None:
     y_up = -float(cu["outline"][0][1])             # 0.125: centre piece / fin-root fairing split
     y_ups = float(fra["y"][1])                     # 0.197: fin-root fairing / outer piece split
     y_lo = float(clo["y"][0])                      # 0.022: lower halves / ventral strip split
-    below_band = box3((X_AFT, -1.0, -1.0), (xe + 0.1, 1.0, sz0 + GAP))
+    below_band = box3((X_COWL - 0.1, -1.0, -1.0), (xe + 0.1, 1.0, sz0 + GAP))
     pans["P-COWL-UP"] = Pan(key="P-COWL-UP", num=num("P-COWL-UP"), name=cu["name"], name_tr=cu["name_tr"],
                             surf="F", region=unary_union([rect(X_COWL + GAP, X_AFT - GAP, -(y_up - GAP), y_up - GAP),
                                                           rect(X_AFT + GAP, xe + 0.01, -1.0, 1.0)]),
@@ -1419,7 +1518,10 @@ def aft_panels(sc: SC, pans: dict) -> None:
                                 region=clean(rect(X_COWL + GAP, X_AFT - GAP, y_up + GAP, y_ups - GAP).difference(
                                     fin), 1e-6), mirror=True, t=t, x0=X_COWL, x1=X_AFT, step=STEP["fin"],
                                 parent=sc.st["FS3670"]["part"], explode=(0.0, 0.05, 0.35),
-                                pads=up_pads(X_COWL, X_AFT), land_refs=("ST-FS3670",))
+                                pads=up_pads(X_COWL, X_AFT), land_refs=("ST-FS3670",), cut=[below_band])
+    # joggled land under the inboard edge of the aluminium outer piece (its Camloc row)
+    ups_o = rect(X_COWL, X_AFT, y_ups, 0.40)
+    pans["P-FINROOT-AFT"].lands.append(_strip(pans["P-FINROOT-AFT"].region, ups_o, sc, "U", T_AL))
     above = box3((X_COWL - 0.1, -1.0, -1.0), (xe + 0.1, 1.0, sz1 + GAP))
     pans["P-COWL-UPS"] = Pan(key="P-COWL-UPS", num=num("P-COWL-UPS"), name=cus["name"], name_tr=cus["name_tr"],
                              surf="F", region=rect(X_COWL + GAP, X_AFT - GAP, y_ups + GAP, 1.0), mirror=True,
@@ -1433,6 +1535,8 @@ def aft_panels(sc: SC, pans: dict) -> None:
                             x0=X_COWL, x1=xe, step=STEP["close"], parent=sc.ref("M-AFTKEEL"),
                             explode=(0.05, 0.15, -0.35), removable=True, pads=lo_pads(X_COWL, xe), cut=[below],
                             land_refs=tuple(clo["lands"]))
+    kb = np.asarray(sc.mem["M-AFTKEEL"]["box"], float)        # aft keel channel (layout box) + bond line
+    pans["P-VENTRALROOT"].cut.append(box3(kb[0] - 0.0003, kb[1] + 0.0003))
     pans["P-VENTRALROOT"].x1 = xe
     pans["P-VENTRALROOT"].region = clean(rect(float(vr["x"][0]) + GAP, xe + 0.01, -(y_lo - GAP), y_lo - GAP)
                                          .difference(ven), 1e-6)
@@ -1560,6 +1664,35 @@ def refuel_parts(sc: SC, pans: dict) -> dict:
     return {"axis": (q0, q1, d), "pin": pin, "r_cove": r_cove}
 
 
+def chine_keepout(sc: SC, x0: float, x1: float) -> G.Mesh | None:
+    """Envelope of the chine longeron (layout M-CHINE paths, J w x h about the path, out to the wing root) inside
+    the union OML inset by 6.3 mm, grown 0.3 mm: inside the junction fairing the J's top flange lies at the skin line
+    only near the fairing nose (thin glove root profile); the fairing's lands and pads keep off it."""
+    key = ("ck", round(x0, 4), round(x1, 4))
+    if key in sc._env:
+        return sc._env[key]
+    m = sc.mem["M-CHINE"]
+    w, h = float(m["section"]["w"]), float(m["section"]["h"])
+    ms = []
+    for P in m["paths"]:
+        P = np.asarray(P, float)
+        a, b = max(x0, float(P[0, 0])), min(x1, float(P[-1, 0]))
+        if b <= a + 1e-4:
+            continue
+        rings = []
+        for x in np.linspace(a, b, max(2, int(math.ceil((b - a) / 0.004)) + 1)):
+            yc, zc = float(np.interp(x, P[:, 0], P[:, 1])), float(np.interp(x, P[:, 0], P[:, 2]))
+            y0, y1, z0, z1 = yc - 0.5 * w - 0.0003, sc.y_root + 0.01, zc - 0.5 * h - 0.0003, zc + 0.5 * h + 0.0003
+            rings.append(np.array([[x, y0, z0], [x, y1, z0], [x, y1, z1], [x, y0, z1]]))
+        r = G.fix_orientation(G.loft(rings))
+        ms += [r, r.mirrored_y()]
+    if not ms:
+        sc._env[key] = None
+        return None
+    sc._env[key] = man_and(man_add(ms), sc.env(0.0063, x0 - 0.01, x1 + 0.01))
+    return sc._env[key]
+
+
 def fairing_parts(sc: SC, pans: dict) -> Pan:
     """Wing-root junction fairing (layout.shell.wing_root_fairing): glove root profile extruded inboard to the crease
     with the body, bonded on the SOB-rib flange and the centre-box cover (1.0 mm solid over the box); over the fuel
@@ -1577,7 +1710,10 @@ def fairing_parts(sc: SC, pans: dict) -> Pan:
              t=t, x0=x0, x1=x1, step=STEP["glove"], parent=sc.ref("M-SOB"), explode=(0.0, 0.2, 0.25),
              pads=land_union(sc, "U", pads=True).intersection(rect(x0, x1, -1, 1)),
              land_refs=("M-SOB", "M-CTBOX", "M-CHINE"), cut=[below_j, gl.rib_env("SOB", 0.0002)],
-             notes=W.get("construction", ""))
+             notes=W.get("construction", ""), relief=False)
+    ck = chine_keepout(sc, x0 - 0.005, x1 + 0.005)
+    if ck is not None:
+        pn.cut.append(ck)
     # land under the mission-bay skin's crease edge (FS1810 .. FS-FUEL)
     xf = float(sc.st["FS-FUEL"]["x"])
     crease = LineString(sc.crease[sc.crease[:, 0] <= xf - 0.002])
@@ -1588,8 +1724,9 @@ def fairing_parts(sc: SC, pans: dict) -> Pan:
     reach = band.intersection(fside).intersection(reg)
     pn.lands.append((clean(under_body.union(reach), 2e-6), clean(reach, 2e-6), sc.t_skin))
     o = outlines(sc)
-    for k in ("P-FUEL1", "P-FUEL2", "P-FUEL3"):
-        pn.lands.append(_strip(reg, o[k], sc, "U", sc.t_skin))
+    y_f = float(np.asarray(sc.pan["P-FUEL1"]["outline"], float)[:, 1].max())
+    for k in ("P-FUEL1", "P-FUEL2", "P-FUEL3"):     # the outboard edge band only (fore / aft edges: centre skin)
+        pn.lands.append(_strip(reg, o[k], sc, "U", sc.t_skin, extra_cut=[rect(0.0, 5.0, -1.0, y_f - FUEL_SPLIT)]))
     pans["P-WRF"] = pn
     return pn
 
@@ -1601,7 +1738,14 @@ Y_GLOVE = (0.3995, 0.6995)      # glove skins between the SOB rib web and the jo
 RIVET_PITCH = 0.150             # peel-stopper blind rivets at the panel ends (layout.shell.panels P-GLOVE-*)
 RIB_FL = 0.020                  # glove rib T-flange width (chassis rib convention, 1.6 mm)
 REAR_HOLE_D, REAR_CAP_D, REAR_CB = 0.018, 0.030, 0.0022   # rear-pin port: hole, cap, counterbore depth
-REAR_CAP_T, REAR_SPIGOT = 0.0020, (0.0088, 0.0065, 0.0035)  # cap disc, spigot (outer r, inner r, length)
+REAR_CAP_T, REAR_SPIGOT = 0.0020, (0.0085, 0.0065, 0.0035)  # cap disc, spigot (outer r, inner r, length)
+
+
+def _mono(chain: np.ndarray):
+    """(x, z) of a surface chain from leading to trailing edge, made monotonic in x for interpolation."""
+    x = np.maximum.accumulate(chain[:, 0])
+    k = np.r_[True, np.diff(x) > 1e-9]
+    return x[k], chain[k, 1]
 
 
 class Glove:
@@ -1647,21 +1791,33 @@ class Glove:
         return self._env[key]
 
     def chord_half(self, upper: bool) -> G.Mesh:
-        """Solid above (upper) / below the chord line of every section (the upper / lower skin split)."""
+        """Solid above (upper) / below the camber line of every section (the upper / lower skin split; the reflexed
+        root sections have lower surfaces above the chord line near the trailing edge)."""
         key = ("h", upper)
         if key not in self._env:
             rings = []
+            nc = 48
             for y in self.ys:
-                P = np.asarray(self.poly(y).exterior.coords)
+                P = np.asarray(self.poly(y).exterior.coords)[:-1]
                 i_le, i_te = int(np.argmin(P[:, 0])), int(np.argmax(P[:, 0]))
-                (xa, za), (xb, zb) = P[i_le], P[i_te]
-                k = (zb - za) / (xb - xa)
+                R = np.roll(P, -i_le, axis=0)
+                j = (i_te - i_le) % len(P)
+                ca, cb = R[:j + 1], np.vstack([R[j:], R[:1]])[::-1]
+                xa, xb = R[0, 0], R[j, 0]
+                xs = xa + (xb - xa) * 0.5 * (1.0 - np.cos(np.linspace(0.0, np.pi, nc)))
+                za = np.interp(xs, *_mono(ca))
+                zb = np.interp(xs, *_mono(cb))
+                zm = 0.5 * (za + zb)
                 ext = 0.3
-                z0, z1 = za - k * ext, zb + k * ext
+                k0 = (zm[1] - zm[0]) / max(xs[1] - xs[0], 1e-9)
+                k1 = (zm[-1] - zm[-2]) / max(xs[-1] - xs[-2], 1e-9)
+                k0, k1 = np.clip([k0, k1], -0.3, 0.3)
                 zz = 1.0 if upper else -1.0
                 g = GAP if upper else -GAP
-                rings.append(np.array([[xa - ext, y, z0 + g], [xb + ext, y, z1 + g], [xb + ext, y, zz],
-                                       [xa - ext, y, zz]]))
+                line = np.vstack([[xa - ext, zm[0] - k0 * ext], np.column_stack([xs, zm]),
+                                  [xb + ext, zm[-1] + k1 * ext]])
+                ring = np.vstack([line + [0.0, g], [[xb + ext, zz], [xa - ext, zz]]])
+                rings.append(np.column_stack([ring[:, 0], np.full(len(ring), y), ring[:, 1]]))
             self._env[key] = G.fix_orientation(G.loft(rings))
         return self._env[key]
 
@@ -1819,7 +1975,12 @@ def glove_parts(sc: SC, pans: dict) -> Glove:
     big = 0.3
     rcuts = [G.cylinder(0.5 * REAR_HOLE_D, (rc[0], rc[1], -big), (rc[0], rc[1], big), n=48)]
     zlo = float(LineString([(rc[0], -1), (rc[0], 1)]).intersection(gl.poly(rc[1])).bounds[1])
-    rcuts.append(G.cylinder(0.5 * REAR_CAP_D + GAP, (rc[0], rc[1], zlo - 0.05), (rc[0], rc[1], zlo + REAR_CB), n=64))
+    # counterbore / cap: D-shaped, flat forward edge 0.5 mm aft of the rear-cap trailing edge (the skin over the cap
+    # stays the 1.0 mm solid laminate)
+    x_cte = float(sc.xr(rc[1])) + 0.5 * sc.w_rear + 0.0005
+    aft_of_cap = box3((x_cte, rc[1] - 0.05, zlo - 0.06), (rc[0] + 0.05, rc[1] + 0.05, zlo + 0.05))
+    rcuts.append(man_and(G.cylinder(0.5 * REAR_CAP_D + GAP, (rc[0], rc[1], zlo - 0.05), (rc[0], rc[1], zlo + REAR_CB),
+                                    n=64), aft_of_cap))
     jcut = man_and(prism_z(ja.buffer(GAP, join_style=2)), box3((1.7, 0.3, -1), (3.1, 0.75, 1)))
     pans["P-GLOVE-LO"] = Pan(key="P-GLOVE-LO", num=int(lo["part"].split("-")[2]), name=lo["name"],
                              name_tr=lo["name_tr"], surf="L", region=plan, mirror=True, layup="wing_skin_primary",
@@ -1860,10 +2021,12 @@ def glove_parts(sc: SC, pans: dict) -> Glove:
     def cap_mesh():
         z_in = zlo + REAR_CAP_T
         disc = G.cylinder(0.5 * REAR_CAP_D - GAP, (rc[0], rc[1], zlo - 0.004), (rc[0], rc[1], z_in), n=64)
-        disc = man_and(disc, gl.env(0.0))
+        disc = man_and(disc, gl.env(0.0), box3((x_cte + GAP, rc[1] - 0.05, zlo - 0.06),
+                                                (rc[0] + 0.05, rc[1] + 0.05, zlo + 0.05)))
         spig = man_sub(G.cylinder(REAR_SPIGOT[0], (rc[0], rc[1], z_in - OV), (rc[0], rc[1], z_in + REAR_SPIGOT[2]),
                                   n=48),
-                       [G.cylinder(REAR_SPIGOT[1], (rc[0], rc[1], z_in), (rc[0], rc[1], z_in + 0.02), n=48)])
+                       [G.cylinder(REAR_SPIGOT[1], (rc[0], rc[1], z_in), (rc[0], rc[1], z_in + 0.02), n=48),
+                        box3((rc[0] - 0.05, rc[1] - 0.05, zlo - 0.06), (x_cte + GAP, rc[1] + 0.05, zlo + 0.05))])
         return finish(man_add([disc, spig]))
     pans["P-REARACCESS"] = Pan(key="P-REARACCESS", num=int(raS["part"].split("-")[2]), name=raS["name"],
                                name_tr=raS["name_tr"], surf="L", region=ra, mirror=True, layup=None,

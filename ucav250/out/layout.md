@@ -2,7 +2,7 @@
 
 Bu rapor `python3 -m ucav250.analysis.layout_check` tarafından `ucav250/spec.yaml` (`layout`, `assembly`) bölümlerinden üretilir; ayrıntılı tasarım modülleri (şasi, kanat, kuyruk, kabuk, itki, yakıt, takım, sistemler, faydalı yük) birbirlerinin geometrisini okumadan bu arayüzden çalışır. Açıklama ve gerekçeler: `docs/03_yerlesim_ve_yapi_konsepti.md`.
 
-**Sonuç: 88/88 kontrol geçti** (145 yerleşim nesnesi, 243 yakın çift).
+**Sonuç: 99/99 kontrol geçti** (155 yerleşim nesnesi, 285 yakın çift).
 
 ## 1. Kontrol özeti
 
@@ -12,43 +12,49 @@ Bu rapor `python3 -m ucav250.analysis.layout_check` tarafından `ucav250/spec.ya
 | C01 | parça kimlikleri YK250-<KOD>-NNN kuralına ve modül aralığına uyuyor | 0 | 0 | GEÇTİ |
 | C01 | parça kimlikleri yerleşim içinde tekil | 0 | 0 | GEÇTİ |
 | C01 | kök parça (orta kanat kutusu) bir şasi elemanı | YK250-CH-001 | YK250-CH-... | GEÇTİ |
+| C01 | material / process pairs (99 parts): spec.materials and spec.processes keys, material family matches the process (fix round 3, PK3-08) | 0 | 0 | GEÇTİ |
 | C01 | çapraz başvurular çözülüyor (temas, iniş yüzeyleri, RF pencereleri, mafsallar, açıklık seçicileri, kütle kalemleri, erişim kapakları) | 0 | 0 | GEÇTİ |
 | C02 | istasyonlar x boyunca sıralı, kimlikler tekil | – | – | GEÇTİ |
 | C02 | istasyon türü, malzeme/süreç/katman anahtarları, kalınlık >= süreç alt sınırı, yüzler | 0 | 0 | GEÇTİ |
-| C02 | geçiş kesikleri çerçeve gövdesi içinde | 1,5 | >= 0 mm margin | GEÇTİ |
+| C02 | geçiş kesikleri çerçeve gövdesi içinde | 0,9 | >= 0 mm margin | GEÇTİ |
 | C02 | edge notches at the frame tops (3): <= 50 mm wide, under a removable cover, U-doubler declared (fix round 2, PK2-02) | 0 | 0 | GEÇTİ |
+| C02 | longeron notches (7 member crossings of straight frame webs): every crossing in a declared notch open to the frame edge, member section inside with >= 0.5 mm, insertion + shear clip + U-doubler declared (fix round 3, PK3-04) | 0 | 0 | GEÇTİ |
 | C02 | çerçeveler yakıt, taret, takım kuyusu, yük/paraşüt/teçhizat hacimlerini kesmiyor | 0 | 0 | GEÇTİ |
 | C02 | yakıt bölmeleri ok açılı kiriş çerçevelerini izliyor (çerçeve gövdesine boşluk) | 6,7 | >= 0 mm | GEÇTİ |
-| C02 | ok açılı bölmelerin kullanılabilir yakıt hacmi >= gerekli hacim | 50,94 | >= 41,72 L | GEÇTİ |
+| C02 | fuel bay volume of the chevron bays vs required (mass.fuel_kg, expansion space) | 50,94 | >= 41,75 L | GEÇTİ |
+| C02 | fuel system plumbing: every cell has a top vent valve and a floor sump / outlet, the feed pickup is in the feed cell, the interconnects into it carry check valves (fix round 3, PK3-01) | 0 | 0 | GEÇTİ |
+| C02 | ok açılı bölmelerin kullanılabilir yakıt hacmi >= gerekli hacim | 50,51 | >= 41,75 L | GEÇTİ |
+| C02 | unusable fuel (layer below the outlets x efficiency + contents of the non-vent lines, line OD as bore: conservative) <= trapped fuel booked by the sizing mission model (fuel_kg f / (1 + f), mission.trapped_fuel_fraction; fix round 3, PK3-01) | 0,494 | <= 0,594 kg | GEÇTİ |
 | C02 | kablo, yakıt hattı, itme çubuğu ve kayış geçişleri tanımlı çerçeve kesiklerinden | 0 | 0 | GEÇTİ |
 | C03 | teçhizat zarfları dış yüzeyin (OML) içinde, 10 mm pay | 1,1 | >= max(10 mm, skin + 2 mm) (value: worst margin, mm) | GEÇTİ |
-| C03 | şasi elemanları OML içinde (kaplamaya oturan yüzler hariç) | 0,3 | >= skin (skin faces trimmed) (value: worst margin, mm) | GEÇTİ |
+| C03 | şasi elemanları OML içinde (kaplamaya oturan yüzler hariç) | 0 | >= skin (skin faces trimmed) (value: worst margin, mm) | GEÇTİ |
 | C03 | bağlantı parçaları OML / kuyruk içinde | 0,3 | >= skin (value: worst margin, mm) | GEÇTİ |
 | C03 | kanat / dikey eyleyicileri kesit içinde, 3 mm pay | 0,7 | >= skin + 2 mm (value: worst margin, mm) | GEÇTİ |
 | C03 | antenna envelopes inside the inner skin surface (true distance to the OML vs the local skin; fix round 2, PK2-01/06/10) | 0,1 | >= skin + 2 mm (value: worst margin, mm) | GEÇTİ |
-| C03 | kablo demetleri OML içinde (yarıçap + 3 mm) | 4,3 | >= 0 mm margin | GEÇTİ |
-| C03 | yakıt hatları OML içinde (yarıçap + 3 mm) | 17,2 | >= 0 mm margin | GEÇTİ |
+| C03 | kablo demetleri OML içinde (yarıçap + 3 mm) | 6 | >= 0 mm margin | GEÇTİ |
+| C03 | yakıt hatları OML içinde (yarıçap + 3 mm) | 12,1 | >= 0 mm margin | GEÇTİ |
 | C03 | motor bağlantı kafesi kaporta içinde | 18,4 | >= 0 mm margin | GEÇTİ |
 | C03 | taret büyüme zarfı (toplanmış) OML içinde | 0 | 0 | GEÇTİ |
 | C04 | içerik / yapı çakışması yok | 0 | 0 | GEÇTİ |
+| C04 | harness corridors: trunk diameter + 10 mm free of every other object except the clamping members ('supports'), declared penetrations and the 30 mm terminations (layout.systems.harness.rules, KO-CORRIDOR-HARNESS; fix round 3, PK3-05) (114 close pairs) | 0 | 0 | GEÇTİ |
 | C04 | yapı – yapı (elemanlar, bağlantı parçaları): çakışma yalnız parçaların bildirdiği temaslarda ('touch'; düzeltme turu 1, VPK-01/VPK-06) | 0 | 0 | GEÇTİ |
 | C04 | bağlantı parçası zarfları kendi cıvata düzenlerini taşıyor: kenar >= 2 D metal / 2,5 D kompozit, aralık >= 3 D (düzeltme turu 1, VPK-07) | 0 | 0 | GEÇTİ |
 | C05 | takım toplama dizisi (21 durum): ana takım lastiği – yapı / içerik | 12 | >= 12 mm | GEÇTİ |
-| C05 | takım toplama dizisi (21 durum): burun takımı lastiği – yapı / içerik | 14,2 | >= 12 mm | GEÇTİ |
-| C05 | takım toplama dizisi (21 durum): ana takım bacağı – yapı / içerik | 11,9 | >= 10 mm | GEÇTİ |
+| C05 | takım toplama dizisi (21 durum): burun takımı lastiği – yapı / içerik | 13,5 | >= 12 mm | GEÇTİ |
+| C05 | takım toplama dizisi (21 durum): ana takım bacağı – yapı / içerik | 12 | >= 10 mm | GEÇTİ |
 | C05 | takım toplama dizisi (21 durum): burun takımı bacağı – yapı / içerik | 15,8 | >= 10 mm | GEÇTİ |
 | C05 | takım toplama dizisi (21 durum): ana takım bacağı door – yapı / içerik | 28,6 | >= 10 mm | GEÇTİ |
 | C05 | takım toplama dizisi (21 durum): main trunnion door – yapı / içerik | 10,4 | >= 10 mm | GEÇTİ |
 | C05 | takım toplama dizisi (21 durum): nose steering actuator – yapı / içerik | 14,5 | >= 10 mm | GEÇTİ |
 | C05 | takım toplama dizisi (21 durum): ana takım iç kapağı – hareketli takım | 22,7 | >= 10 mm | GEÇTİ |
 | C05 | takım toplama dizisi (21 durum): main trunnion door – hareketli takım | 12,3 | >= 10 mm | GEÇTİ |
-| C05 | takım toplama dizisi (21 durum): nose doors – hareketli takım | 13,6 | >= 10 mm | GEÇTİ |
+| C05 | takım toplama dizisi (21 durum): nose doors – hareketli takım | 13 | >= 10 mm | GEÇTİ |
 | C05 | taret E180 zarfı strok boyunca bölme duvarları / tavan / çerçevelere | 16,1 | >= 6 mm | GEÇTİ |
 | C05 | taret E180 zarfı asansör raylarına / bilyalı vidaya | 30,3 | >= 5 mm | GEÇTİ |
 | C05 | taret E180 zarfı kayar kapaklara (bağlı dizi) | 9 | >= 5 mm | GEÇTİ |
 | C05 | HD59 topu ile açıklık halkası arası (radyal) | 5 | >= 5 mm | GEÇTİ |
 | C05 | stabilatörler (tüm sapma) egzoz zarflarına | 123,5 | >= 50 mm | GEÇTİ |
-| C05 | stabilatörler egzoz duman konisinin dışında | 190,9 | >= 0 | GEÇTİ |
+| C05 | stabilatörler egzoz duman konisinin dışında | 193 | >= 0 | GEÇTİ |
 | C05 | kanatçık / flap (tüm sapma) kanat eyleyicilerine | 74,4 | >= 3 mm | GEÇTİ |
 | C05 | paraşüt kapağı (bağlı kapak, prizmatik kalkış, V çatı zarfı) dış antenlere, sondalara, ışıklara | 100 | >= 10 mm | GEÇTİ |
 | C05 | dümen kökü (dikey açıklığının eta0 kesri) tüm sapmada gövde / kaporta yüzeyine | 19,6 | >= 8 mm | GEÇTİ |
@@ -71,6 +77,7 @@ Bu rapor `python3 -m ucav250.analysis.layout_check` tarafından `ucav250/spec.ya
 | C08 | egzoz zarfı ile kalkansız kompozit yapı arası | 100 | >= 50 mm | GEÇTİ |
 | C08 | egzoz zarfı ile kablo demetleri arası | 100 | >= 50 mm | GEÇTİ |
 | C08 | ventral kanatçık ile egzoz zarfı / duman konisi | 137,3 | >= 50 mm (kutular) / koni dışında (duman) | GEÇTİ |
+| C08 | pervane diski yasak bölgesi boş | 86,9 | >= 0 mm (outside) | GEÇTİ |
 | C08 | composite shell panels and exposed tail lofts vs the cylinder-head envelope (KO-CYL-HOT; fix round 2, PK2-09) | 33,7 | >= 25 mm | GEÇTİ |
 | C08 | composite shell panels and exposed tail lofts vs the exhaust routing envelopes (50 mm, 25 mm under a declared heat shield; declared stainless inserts replace the composite) | 0,1 | >= 0 mm over the required margin | GEÇTİ |
 | C08 | hardware inside the hot zones (25 mm of the heads, 50 mm of the exhaust) is declared metal-only with its temperature basis (layout.heat_protection.hardware) | 0 | 0 | GEÇTİ |
@@ -82,6 +89,9 @@ Bu rapor `python3 -m ucav250.analysis.layout_check` tarafından `ucav250/spec.ya
 | C09 | panel kenar oturma yüzeyleri: sökülebilir / menteşeli her panelin kenar bandı listelenen bir oturma yüzeyinde (düzeltme turu 1, VPK-04/VPK-12) | 0 | 0 | GEÇTİ |
 | C09 | panel 'lands' başvuruları geometrik: listelenen her oturma yüzeyi bir kenarın bir kısmını taşıyor | 0 | 0 | GEÇTİ |
 | C09 | sökülebilir paneller arasındaki sabit kaplama şeritleri >= 2 × 19 mm rampa + 20 mm bağlantı sırası ya da ortak yapısal oturma yüzeyi | 0 | 0 | GEÇTİ |
+| C09 | no interior overlap between removable / hinged panels and closed gear doors on the same surface, shared land or not (6 touching pairs; fix round 3, PK3-02) | 0 | 0 | GEÇTİ |
+| C09 | every fixed skin declares (cutouts) each removable / hinged panel or door it overlaps (37 overlaps; fix round 3, PK3-02) | 0 | 0 | GEÇTİ |
+| C09 | cradle pads (2 x 2) on fixed lower skin over a frame cap, off the hatches and gear doors, saddle blocks >= 10 mm from the main gear over its retraction (fix round 3, PK3-06) | 27,9 | >= 10 mm | GEÇTİ |
 | C09 | sabit kuyruk yüzeyleri (dikey, kök parçası ve ventral kök kesim çizgileri) hiçbir sökülebilir panelden geçmiyor (düzeltme turu 1, VPK-05) | 0 | 0 | GEÇTİ |
 | C10 | bakım: her teçhizat ve yakıt hücresi bir kapaktan sökülebilir: aynı yüz, açık geçiş (panel − 2 × 25 mm oturma) >= kalemin kesiti, söküm prizması boş (düzeltme turu 1, VPK-03) | 0 | 0 | GEÇTİ |
 | C10 | kanat birleşimi erişim kapakları mevcut (ana pimler, arka pim) | 0 | 0 | GEÇTİ |
@@ -92,6 +102,7 @@ Bu rapor `python3 -m ucav250.analysis.layout_check` tarafından `ucav250/spec.ya
 | C11 | outer-panel transport envelope >= loft extents in the panel frame (span, chord-wise, normal) | [3,199; 0,728; 0,11] | [2,904; 0,728; 0,096] | GEÇTİ |
 | C11 | sahada montaj ve bakım matrisi mevcut | 7 | – | GEÇTİ |
 | C12 | mekanizma tanımları (alanlar, aralıklar, özellikler, ifadeler, L/R çiftleri, diziler) | 0 | 0 | GEÇTİ |
+| C12 | rest pose = state at control value 0 of every sequence (physical gear-down / turret-in state); every coupled joint (expr) is in a sequence (fix round 3, PK3-03) | 0 | 0 | GEÇTİ |
 | C12 | süpürme hacmi / koridor yasak bölgeleri (takım, kumanda yüzeyleri, kablo, itme çubukları) kayıtlı mafsallara ve aralıklarına başvuruyor | 0 | 0 | GEÇTİ |
 | C12 | layout.clearances checks.py LISTE biçiminde | 26 | – | GEÇTİ |
 | C12 | montaj yolları (eksen, strok, zarf), kapak / ray dış hatları ve panel kesikleri açık geometriyle tanımlı (düzeltme turu 1, VPK-09) | 0 | 0 | GEÇTİ |
@@ -99,7 +110,7 @@ Bu rapor `python3 -m ucav250.analysis.layout_check` tarafından `ucav250/spec.ya
 
 ## 2. Kütle yerleşimi ve ağırlık merkezi
 
-Boş kütle 101,6 kg; spec kalemlerinden AM [2,629; -0,0003; 0,0482] m, yerleşim nesnelerinden AM [2,629; -0,0003; 0,0482] m. Aşağıdaki kalemlerin konumu boyutlandırma evresinde varsayımdı; yerleşim evresinde yerleştirilen nesnelerin ağırlık merkezinden hesaplanır (`layout.mass_placement`) ve `sizing.mass_items` bunu uygular. Boyutlandırma evresi konumları `position_sizing_phase` alanındadır.
+Boş kütle 101,6 kg; spec kalemlerinden AM [2,629; -0,0003; 0,048] m, yerleşim nesnelerinden AM [2,629; -0,0003; 0,048] m. Aşağıdaki kalemlerin konumu boyutlandırma evresinde varsayımdı; yerleşim evresinde yerleştirilen nesnelerin ağırlık merkezinden hesaplanır (`layout.mass_placement`) ve `sizing.mass_items` bunu uygular. Boyutlandırma evresi konumları `position_sizing_phase` alanındadır.
 
 | Kütle kalemi | Boyutlandırma evresi x (m) | Yerleşim x (m) | Δx (m) | Esas |
 |---|---|---|---|---|
@@ -111,18 +122,18 @@ Boş kütle 101,6 kg; spec kalemlerinden AM [2,629; -0,0003; 0,0482] m, yerleşi
 | wiring_harness_connectors_coax | 1,9 | 2,301 | 0,4006 | cables 70 % (estimate) by trunk length x diameter^2 (layout.systems.harness) + outer-panel harnesses; connecto |
 | flight_termination_lights | 1,684 | 2,32 | 0,6365 | FTS 0.15 kg + 3 x AveoFlash 0.083 kg at their installed places |
 | keel_beams_longerons | 2 | 2,243 | 0,2427 | length-weighted centroid of the longitudinal members (chine longerons, keel walls, keel beams, dorsal longeron |
-| frames_bulkheads | 1,88 | 2,407 | 0,5271 | 13 stations, mass ~ net web area (section inside the 6 mm skin inset minus the declared cut-outs and, for the  |
+| frames_bulkheads | 1,88 | 2,408 | 0,5283 | 13 stations, mass ~ net web area (section inside the 6 mm skin inset minus the declared cut-outs and, for the  |
 | engine_mount_4130 | 3,67 | 3,716 | 0,046 | mean of the truss tube mid-points and the ring nodes (layout.chassis.engine_mount) |
 | parachute_attach_fitting | 1,65 | 2,272 | 0,6223 | dorsal spine channel (structures P-SPINE-*, about 65 % of the bottom-up mass) + two bridle fittings (Y-bridle) |
 | floors_trays_rails | 1,4 | 1,766 | 0,3658 | area-weighted decks/floors + trays |
-| hatch_frames_quick_access_fasteners | 1,5 | 2,344 | 0,8444 | perimeter-weighted removable panels/hatches (frame lands, Camlocs, nutplates) |
+| hatch_frames_quick_access_fasteners | 1,5 | 2,346 | 0,846 | perimeter-weighted removable panels/hatches (frame lands, Camlocs, nutplates) |
 | fin_ventral_root_fittings | 3,572 | 3,606 | 0,0341 | fin, stub and ventral root fittings at the frames |
 | actuators_ailerons_2x_DA26 | 3,1 | 2,831 | -0,2685 | item basis: 2 x DA 26 datasheet + horns/pushrods 0.10 at the layout actuators (fix round 2, PK2-07) |
 | actuators_flaps_2x_DA30 | 3,006 | 2,782 | -0,2242 | item basis: 2 x DA 30 datasheet + installation 0.10 + hinges/horns 0.20 at the layout actuators |
 | actuators_rudders_2x_DA26 | 3,921 | 3,764 | -0,1572 | item basis: 2 x DA 26 datasheet + linkages 0.06 at the layout actuators (fin boxes) |
-| main_gear_legs_wheels_brakes_emas_pair | 3,001 | 2,97 | -0,0301 | SAGITTA main leg 4.0 kg each (components.yaml) split as TOST wheel assembly 1.79 kg (research estimate) + DA-2 |
+| main_gear_legs_wheels_brakes_emas_pair | 3,001 | 2,97 | -0,0302 | SAGITTA main leg 4.0 kg each (components.yaml) split as TOST wheel assembly 1.79 kg (research estimate) + DA-2 |
 | nose_gear_leg_wheel_steering | 0,8443 | 0,8419 | -0,0024 | SAGITTA nose leg 3.5 kg (components.yaml) split as TOST nose wheel 0.365 + tyre 0.45 + tube 0.08 kg + DA-26-cl |
-| gear_doors_wells_locks_sensors | 2,499 | 2,369 | -0,1295 | sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout door  |
+| gear_doors_wells_locks_sensors | 2,499 | 2,369 | -0,1293 | sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout door  |
 | turret_lift_mechanism_doors | 1,22 | 1,245 | 0,0254 | item basis split (mass.rules.turret_mechanism_kg, estimates) at the layout objects, turret retracted |
 | parachute_uavos_200 | 1,65 | 1,65 | 0 | container box centre (components.yaml compartment 0.300 x 0.300 x 0.275 m) |
 | fuel_system_3_cells | 2,642 | 2,607 | -0,0353 | components.yaml fuel_system + three-cell interconnection; the item has no published split, so it is placed at  |
@@ -152,15 +163,15 @@ Yöntem: kapalı biçimli pim kesme / eğilme / ezilme ve cıvata grubu kesmesi,
 |---|---|---|---|---|---|
 | FS0300 | 0,3 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-PITOT, C-COAX-NC |
 | FS0600 | 0,6 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-HARN-FWD |
-| FS1110 | 1,11 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-HARN-1110, C-COAX-1110 |
-| FS1330 | 1,33 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-HARN-1330, C-TDOOR-SHAFT |
-| FS1490 | 1,49 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-HARN-1490 |
-| FS1810 | 1,81 | fitting frame | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-HARN-1810, C-BRIDLE-F |
-| FS-FUEL | 2,189 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-FUEL-FUEL, C-HARN-FUEL, C-SPINE-FUEL |
-| FS-MS | 2,487 | fitting frame / spar frame | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-PAYLOAD-MS, C-FUEL-MS, C-SPINE-MS, C-HARN-MS |
-| FS-RS | 2,8 | fitting frame / spar frame | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-PAYLOAD-RS, C-FUEL-RS, C-HARN-RS |
-| FS-GEAR | 3,095 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-FUEL-FEED, C-FUEL-RET, C-FUEL-VENT, C-HARN-CL, C-DOORLINK |
-| FS3480 | 3,48 | ring | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | – |
+| FS1110 | 1,11 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-HARN-1110, C-COAX-1110, C-CHINE |
+| FS1330 | 1,33 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-HARN-1330, C-TDOOR-SHAFT, C-CHINE |
+| FS1490 | 1,49 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-HARN-1490, C-CHINE |
+| FS1810 | 1,81 | fitting frame | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-HARN-1810, C-BRIDLE-F, C-CHINE |
+| FS-FUEL | 2,189 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-HARN-FUEL, C-SPINE-FUEL, C-CHINE |
+| FS-MS | 2,487 | fitting frame / spar frame | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-PAYLOAD-MS, C-FUEL-MS, C-FUEL-MS-LO, C-VENT-MS, C-SPINE-MS, C-HARN-MS |
+| FS-RS | 2,8 | fitting frame / spar frame | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-PAYLOAD-RS, C-FUEL-SAD, C-FUEL-RS-LO, C-VENT-RS, C-HARN-RS |
+| FS-GEAR | 3,095 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-FUEL-FEED, C-FUEL-RET, C-FUEL-VENT, C-FUEL-DRN, C-HARN-CL, C-DOORLINK, C-CHINE |
+| FS3480 | 3,48 | ring | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-CHINE |
 | FS3670 | 3,67 | bulkhead / firewall | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 14,8 | C-DUCT, C-FW-FUEL, C-FW-HARN, C-FW-PUSHROD |
 | FS3738 | 3,738 | ring | al_2024_t3_sheet / sheet_metal_aluminium / – | 2 | – |
 
@@ -169,9 +180,10 @@ Yöntem: kapalı biçimli pim kesme / eğilme / ezilme ve cıvata grubu kesmesi,
 | Kimlik | Parça | Ad | Malzeme | Yük yolu |
 |---|---|---|---|---|
 | M-CHINE | YK250-CH-020 (L/R) | kenar çizgisi uzun kirişi | cfrp_ud_mtm45_as4 | skins (shear) -> chine longeron (axial) -> frames / wing box side-of-body rib |
+| M-NGSILL | YK250-CH-038 | burun takımı yarık sonu kenar şeridi | cfrp_pw_mtm45_as4 | door edge (air loads, seal pressure) -> land strip -> FS1110 forward flange / keel walls |
 | M-KEELWALL | YK250-CH-021 (L/R) | burun takımı omurga duvarı | cfrp_pw_mtm45_as4 | nose-gear loads -> pivot bushings -> keel walls -> FS0600 / FS1110 + avionics deck -> chine longerons |
 | M-DECK-NOSE | YK250-CH-022 | aviyonik güverte | cfrp_pw_mtm45_as4 | equipment inertia -> deck -> keel walls + chine longerons -> FS0600 / FS1110 |
-| M-TURRETWALL | YK250-CH-023 (L/R) | taret bölmesi yan duvarı | cfrp_pw_mtm45_as4 | belly cut-out edge loads + turret inertia -> walls -> FS1110 / FS1330 |
+| M-TURRETWALL | YK250-CH-023 (L/R) | taret bölmesi yan duvarı | cfrp_pw_mtm45_as4 | turret inertia + elevator reactions -> walls -> FS1110 / FS1330 (belly cut-out edges: frames + skin doublers, not the wa |
 | M-TURRETROOF | YK250-CH-024 | taret bölmesi tavanı | cfrp_pw_mtm45_as4 | turret elevator reaction -> roof -> walls / frames |
 | M-PARAWALL | YK250-CH-025 (L/R) | paraşüt bölmesi yan duvarı | cfrp_pw_mtm45_as4 | container inertia -> walls/floor -> FS1490 / FS1810 |
 | M-PARAFLOOR | YK250-CH-026 | paraşüt bölmesi tabanı | cfrp_pw_mtm45_as4 | container inertia -> floor -> FS1490 / FS1810 / walls |
@@ -188,6 +200,7 @@ Yöntem: kapalı biçimli pim kesme / eğilme / ezilme ve cıvata grubu kesmesi,
 | M-SPINE | YK250-CH-037 | sırt omurga kanalı (paraşüt kayış bağı) | cfrp_pw_mtm45_as4 | bridle legs -> F-RISER-FWD / F-RISER-AFT -> channel (axial) -> screws -> P-MB-UPPER (shear) -> chine longerons; vertical |
 | M-VENTRALKEEL | YK250-CH-039 | ventral omurga şeridi (FS3480 -> yangın perdesi) | cfrp_pw_mtm45_as4 | ventral forward root (side loads) -> keel strip -> FS3480 / firewall |
 | M-CTBOX | YK250-CH-001 | orta kanat kutusu (geçiş kutusu) | cfrp_ud_mtm45_as4 | outer panel -> tongue + pins -> fork -> spar caps (bending couple) / webs (shear) -> box -> spar frames + side-of-body r |
+| M-CLRIB | YK250-CH-055 | orta kutu orta hat kaburgası (ok kırığı kaburgası) | cfrp_pw_mtm45_as4 | main-cap kink forces -> kink fittings -> bolts -> rib solid lands -> rib web (in-plane couple) -> end clips -> FS-MS / F |
 | M-SOB | YK250-CH-050 (L/R) | gövde yanı kaburgası | cfrp_pw_mtm45_as4 | glove skins / fittings -> rib -> spars |
 | M-GLOVERIB | YK250-CH-051 (L/R) | eldiven kaburgası | cfrp_pw_mtm45_as4 | glove skins / fittings -> rib -> spars |
 | M-JOINTRIB | YK250-CH-052 (L/R) | birleşim kaburgası (orta kesit) | cfrp_pw_mtm45_as4 | glove skins / fittings -> rib -> spars |
@@ -202,6 +215,8 @@ Yöntem: kapalı biçimli pim kesme / eğilme / ezilme ve cıvata grubu kesmesi,
 | F-VENTRAL-1 | YK250-CH-099 | ventral kök bağlantısı 1 | al_7075_t651_plate | clevis fitting 32 x 24 mm on the aft keel beam (1 x M6 axis z): ventral root lug 1 x M6 12.9 (double shear, axis y) |
 | F-VENTRAL-2 | YK250-CH-100 | ventral kök bağlantısı 2 | al_7075_t651_plate | clevis fitting 32 x 24 mm on the aft keel beam (1 x M6 axis z): ventral root lug 1 x M6 12.9 (double shear, axis y) |
 | F-VENTRAL-3 | YK250-CH-101 | ventral kök bağlantısı 3 | al_7075_t651_plate | clevis fitting 32 x 24 mm on the aft keel beam (1 x M6 axis z): ventral root lug 1 x M6 12.9 (double shear, axis y) |
+| F-KINK-UP | YK250-CH-056 | orta kutu kırık bağlantısı, üst ana başlık | al_7075_t651_plate | fix round 3 (VS3-03): machined 7075-T651 L-fitting: plate 40 x 100 x 2 mm bonded (EA 9394) to the box-side face of the m |
+| F-KINK-LO | YK250-CH-057 | orta kutu kırık bağlantısı, alt ana başlık | al_7075_t651_plate | fix round 3 (VS3-03): machined 7075-T651 L-fitting: plate 40 x 100 x 2 mm bonded (EA 9394) to the box-side face of the m |
 | F-FORK | YK250-CH-053 (L/R) | dış panel birleşim çatalı (eldiven ana kiriş kutusu, CFRP) | cfrp_pw_mtm45_as4 | layout.chassis.wing_joint.main_spar.fork (the glove main-spar box of the centre wing box: UD caps, two +-45 prongs padde |
 | F-REARSLOT | YK250-CH-054 (L/R) | arka kiriş yuva bağlantısı (dış panel kulağı, düşey pim) | al_7075_t651_plate | layout.chassis.wing_joint.rear_spar.slot_fitting |
 | F-RISER-FWD | YK250-CH-112 | paraşüt ön kayış bağlantısı | al_7075_t651_plate | U-lug fitting in the dorsal spine channel M-SPINE: flange 6 mm on the frame face with 2 x M5 12.9 (axis x) into the fram |
@@ -229,8 +244,8 @@ Paraşüt: Y-kayış, ön ayak 1,598 m (F-RISER-FWD), arka ayak 1,36 m (F-RISER-
 | main_gear_L | revolute | [1.0, 0.0, 0.0] | 0 / 1,885 | gear_up `1.88496*clamp((gear_up-0.15)/0.7,0,1)` |
 | main_inner_door_R | revolute | [-1.0, 0.0, 0.0] | 0 / 1,658 |  `1.65806*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))` |
 | main_inner_door_L | revolute | [1.0, 0.0, 0.0] | 0 / 1,658 |  `1.65806*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))` |
-| main_trunnion_door_R | revolute | [1.0, 0.0, 0.0] | 0 / 2,182 |  `2.18166*(1-clamp((gear_up-0.85)/0.15,0,1))` |
-| main_trunnion_door_L | revolute | [-1.0, 0.0, 0.0] | 0 / 2,182 |  `2.18166*(1-clamp((gear_up-0.85)/0.15,0,1))` |
+| main_trunnion_door_R | revolute | [1.0, 0.0, 0.0] | 0 / 2,182 |  `2.18166*(1-clamp((gear_up-0.7333)/0.1167,0,1))` |
+| main_trunnion_door_L | revolute | [-1.0, 0.0, 0.0] | 0 / 2,182 |  `2.18166*(1-clamp((gear_up-0.7333)/0.1167,0,1))` |
 | nose_gear | revolute | [0.0, -1.0, 0.0] | 0 / 1,571 |  `1.57080*clamp((gear_up-0.15)/0.7,0,1)` |
 | nose_steer | revolute | [0.0, 0.0, -1.0] | -0,3491 / 0,3491 | steer_deg  |
 | nose_door_R | revolute | [0.996, 0.0, -0.088] | 0 / 1,571 |  `1.57080*(1-clamp((gear_up-0.85)/0.15,0,1))` |
@@ -279,7 +294,7 @@ Panel sayısı (L/R ayrı): sökülebilir 31, sabit 18, menteşeli 1, fileto 7; 
 
 ## 9. Montaj ve taşıma
 
-42 montaj adımı (spec.assembly.steps): 1. Ana montaj tezgâhının hazırlanması; 2. Orta kanat kutusunun yerleştirilmesi (kök parça); 3. Ana ve arka kiriş çerçeveleri; 4. Gövde yanı, eldiven ve birleşim kaburgaları; 5. Kompozit kanat çatalı burçları ve arka kiriş yuva bağlantısı; 6. Ön gövde çerçeveleri; 7. Burun kutusu: omurga duvarları, aviyonik güverte, burun takımı mafsalı; 8. Taret, paraşüt ve görev bölmeleri; 9. Kenar çizgisi uzun kirişleri; 10. Omurga kirişleri, güverteler ve ana takım yapısı; 11. Arka gövde: sırt uzun kirişleri, kuyruk ve ventral bağlantıları; 12. Yangın perdesi ve motor bağlantı parçaları; 13. Stabilatör düğüm bağlantıları ve motor bölmesi alt U halkası; 14. Paraşüt, taret asansörü, yakıt bölmesi ve teçhizat bağlantıları; 15. Şasi muayenesi ve tezgâhtan ayırma; 16. Sabit gövde kaplamaları; 17. LERX/eldiven kaplamalarının yapıştırılması; 18. Yakıt sistemi; 19. Elektrik tesisatı; 20. Aviyonik ve güç dağıtımı; 21. Antenler ve hava verisi; 22. Paraşüt sistemi; 23. Görev bilgisayarı ve yük tepsisi rayları; 24. Taret asansörü, kayar kapaklar ve HD59; 25. Motorun takılması; 26. Egzoz, soğutma, motor yardımcıları; 27. Pervane göbeği, pervane ve spinner; 28. Ana iniş takımı; 29. Burun iniş takımı; 30. Takım kapakları ve sıralama; 31. Stabilatör kök parçaları, milleri ve eyleyicileri; 32. Dikey kuyruklar ve dümenler; 33. Ventral kanatçık ve tampon kızağı; 34. Stabilatörlerin takılması; 35. Dış kanat panelleri (ilk takma); 36. Kabuğun kapatılması; 37. Kumanda yüzeylerinin ayarı; 38. Fonksiyon testleri; 39. Tartı ve denge; 40. Son muayene ve kabul; 41. Taşıma için sökme; 42. Sahada montaj.
+42 montaj adımı (spec.assembly.steps): 1. Ana montaj tezgâhının hazırlanması; 2. Orta kanat kutusunun yerleştirilmesi (kök parça); 3. Ana ve arka kiriş çerçeveleri; 4. Gövde yanı, eldiven ve birleşim kaburgaları; 5. Kompozit kanat çatalı burçları ve arka kiriş yuva bağlantısı; 6. Ön gövde çerçeveleri; 7. Burun kutusu: omurga duvarları, aviyonik güverte, burun takımı mafsalı; 8. Taret, paraşüt ve görev bölmeleri; 9. Kenar çizgisi uzun kirişleri (ön parçalar); 10. Omurga kirişleri, güverteler ve ana takım yapısı; 11. Arka gövde: sırt uzun kirişleri, kuyruk ve ventral bağlantıları; 12. Yangın perdesi, motor bağlantı parçaları ve arka kenar çizgisi uzun kirişleri; 13. Stabilatör düğüm bağlantıları ve motor bölmesi alt U halkası; 14. Paraşüt, taret asansörü, yakıt bölmesi ve teçhizat bağlantıları; 15. Şasi muayenesi ve tezgâhtan ayırma; 16. Sabit gövde kaplamaları; 17. LERX/eldiven kaplamalarının yapıştırılması; 18. Yakıt sistemi; 19. Elektrik tesisatı; 20. Aviyonik ve güç dağıtımı; 21. Antenler ve hava verisi; 22. Paraşüt sistemi; 23. Görev bilgisayarı ve yük tepsisi rayları; 24. Taret asansörü, kayar kapaklar ve HD59; 25. Motorun takılması; 26. Egzoz, soğutma, motor yardımcıları; 27. Pervane göbeği, pervane ve spinner; 28. Ana iniş takımı; 29. Burun iniş takımı; 30. Takım kapakları ve sıralama; 31. Stabilatör kök parçaları, milleri ve eyleyicileri; 32. Dikey kuyruklar ve dümenler; 33. Ventral kanatçık ve tampon kızağı; 34. Stabilatörlerin takılması; 35. Dış kanat panelleri (ilk takma); 36. Kabuğun kapatılması; 37. Kumanda yüzeylerinin ayarı; 38. Fonksiyon testleri; 39. Tartı ve denge; 40. Son muayene ve kabul; 41. Taşıma için sökme; 42. Sahada montaj.
 
 Taşıma dört parçalıdır: kanat eldiveni, dikeyler, kök parçaları ve ventral ile birlikte orta gövde (1,40 m genişlik, 4,23 m boy, takım içeride 1,29 m yükseklik), iki dış kanat paneli (2,90 m açıklık, dil dahil 3,20 m), iki stabilatör ve pervane.
 

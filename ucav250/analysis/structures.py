@@ -5016,11 +5016,12 @@ def interface_checks(S: dict, D: dict) -> list:
                 worst_cz = max(worst_cz, abs(sq["z_cap_main"][1] - float(zc_[0])), abs(sq["z_cap_main"][0] - float(zc_[1])),
                                abs(sq["t_main_cap"] - float(tc_)))
                 worst_out = max(worst_out, sq["z_cap_main"][0] - float(zc_[1]), float(zc_[0]) - sq["z_cap_main"][1])
-            ok_cz = worst_cz <= 0.0005 and worst_out <= 1e-6
+            ok_cz = worst_cz <= 0.0005 and worst_out <= 0.0001 + 1e-9     # layout z rounded to 0.1 mm
         except Exception:                          # noqa: BLE001 - reported as a failed interface check
             ok_cz = False
     chk("I-CAPZ", "layout M-CTBOX main-cap centroids and thicknesses = the wing_section model with the sized ply zones "
-        f"(<= 0.5 mm; worst {(worst_cz or 0.0) * 1000:.2f} mm; the model cap never outside the layout cap)", ok_cz)
+        f"(<= 0.5 mm; worst {(worst_cz or 0.0) * 1000:.2f} mm; the model cap never more than the 0.1 mm rounding "
+        "outside the layout cap)", ok_cz)
     chk("I-CLRIB", "layout centre-line rib M-CLRIB and kink fittings F-KINK-UP / -LO exist (structures.sizing.wing."
         "ct_box.centre_rib / kink_fitting)", "M-CLRIB" in mem and {"F-KINK-UP", "F-KINK-LO"} <= set(fit))
     ud = S["materials"].get("cfrp_ud_mtm45_as4", {})

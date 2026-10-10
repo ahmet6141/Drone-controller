@@ -262,5 +262,7 @@ def chine_notches(st: list) -> None:
                          "after the frames are pinned in the jig",
             "clip": "7075-T651 shear clip (angle 20 x 20 x 1.6 mm, 40 mm long): 2 x M4 Ti to the frame web land, "
                     "2 x M4 Ti to the longeron web",
-            "doubler": "bonded U-doubler PW 16 plies (3.2 mm) x 20 mm round the notch, ends 25 mm past the notch "
-                       "corners into the edge band"})
+            "doubler": "bonded U-doubler PW 8 plies (1.6 mm, = the solid edge band of the web) x 20 mm round the "
+                       "notch, ends 25 mm past the notch corners into the edge band",
+            "mass_note": "clip + 4 x M4 Ti + U-doubler about 25 g per notch (estimate), inside the frame allowance "
+                         "mass.rules.frames_kg (rule mass, not bottom-up; doc 03 sec. 16)"})

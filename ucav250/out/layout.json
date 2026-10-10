@@ -34,6 +34,14 @@
   },
   {
    "check": "C01",
+   "item": "material / process pairs (99 parts): spec.materials and spec.processes keys, material family matches the process (fix round 3, PK3-08)",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C01",
    "item": "references (touch, lands, windows, joints, clearance selectors, mass items, access panels) resolve",
    "ok": true,
    "value": 0,
@@ -60,13 +68,21 @@
    "check": "C02",
    "item": "cut-outs (pass-throughs): all corners >= frame inset + 20 mm edge band from the OML (true distance; fix round 2, PK2-02)",
    "ok": true,
-   "value": 1.5,
+   "value": 0.9,
    "limit": ">= 0 mm margin",
-   "detail": "worst FS3670.C-FW-PUSHROD"
+   "detail": "worst FS-MS.C-VENT-MS"
   },
   {
    "check": "C02",
    "item": "edge notches at the frame tops (3): <= 50 mm wide, under a removable cover, U-doubler declared (fix round 2, PK2-02)",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C02",
+   "item": "longeron notches (7 member crossings of straight frame webs): every crossing in a declared notch open to the frame edge, member section inside with >= 0.5 mm, insertion + shear clip + U-doubler declared (fix round 3, PK3-04)",
    "ok": true,
    "value": 0,
    "limit": 0,
@@ -90,15 +106,39 @@
   },
   {
    "check": "C02",
-   "item": "usable fuel volume of the chevron bays vs required (mass.fuel_kg, expansion space)",
+   "item": "fuel bay volume of the chevron bays vs required (mass.fuel_kg, expansion space)",
    "ok": true,
    "value": 50.94,
-   "limit": ">= 41.72 L",
+   "limit": ">= 41.75 L",
    "detail": "tank efficiency 0.85"
   },
   {
    "check": "C02",
-   "item": "harness / fuel-line / push-rod / bridle crossings of frame webs pass declared cut-outs (58 crossings)",
+   "item": "fuel system plumbing: every cell has a top vent valve and a floor sump / outlet, the feed pickup is in the feed cell, the interconnects into it carry check valves (fix round 3, PK3-01)",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C02",
+   "item": "usable fuel volume above the cell outlets (layout.fuel_system.cells.outlet_z) vs required (mass.fuel_kg, expansion space; fix round 3, PK3-01)",
+   "ok": true,
+   "value": 50.51,
+   "limit": ">= 41.75 L",
+   "detail": "tank efficiency 0.85; below the outlets 0.42 L"
+  },
+  {
+   "check": "C02",
+   "item": "unusable fuel (layer below the outlets x efficiency + contents of the non-vent lines, line OD as bore: conservative) <= trapped fuel booked by the sizing mission model (fuel_kg f / (1 + f), mission.trapped_fuel_fraction; fix round 3, PK3-01)",
+   "ok": true,
+   "value": 0.494,
+   "limit": "<= 0.594 kg",
+   "detail": "below outlets 0.313 kg, lines 0.182 kg"
+  },
+  {
+   "check": "C02",
+   "item": "harness / fuel-line / push-rod / bridle crossings of frame webs pass declared cut-outs (65 crossings)",
    "ok": true,
    "value": 0,
    "limit": 0,
@@ -116,9 +156,9 @@
    "check": "C03",
    "item": "member envelopes inside the inner skin surface (true distance to the OML vs the local skin; fix round 2, PK2-01/06/10)",
    "ok": true,
-   "value": 0.3,
+   "value": 0.0,
    "limit": ">= skin (skin faces trimmed) (value: worst margin, mm)",
-   "detail": "worst M-CTBOX: 2.3 mm vs 2.0 mm at [2.847, -0.534, 0.005]"
+   "detail": "worst M-CTBOX: 1.0 mm vs 1.0 mm at [2.569, -0.59, 0.047]"
   },
   {
    "check": "C03",
@@ -148,7 +188,7 @@
    "check": "C03",
    "item": "harness trunks inside the inner skin surface (true distance >= skin + radius + 3 mm)",
    "ok": true,
-   "value": 4.3,
+   "value": 6.0,
    "limit": ">= 0 mm margin",
    "detail": ""
   },
@@ -156,7 +196,7 @@
    "check": "C03",
    "item": "fuel lines inside the inner skin surface (true distance >= skin + radius + 3 mm)",
    "ok": true,
-   "value": 17.2,
+   "value": 12.1,
    "limit": ">= 0 mm margin",
    "detail": ""
   },
@@ -178,7 +218,7 @@
   },
   {
    "check": "C04",
-   "item": "no overlaps between contents (equipment, fuel cells, fuel lines, harness, turret, stowed gear, engine, mount, exhaust, linkages) and with structure (220 close pairs evaluated)",
+   "item": "no overlaps between contents (equipment, fuel cells, fuel lines, harness, turret, stowed gear, engine, mount, exhaust, linkages) and with structure (260 close pairs evaluated)",
    "ok": true,
    "value": 0,
    "limit": 0,
@@ -186,7 +226,15 @@
   },
   {
    "check": "C04",
-   "item": "structure vs structure (members, fittings): overlap only where the parts declare the contact ('touch'; fix round 1, VPK-01/VPK-06) (23 close undeclared pairs evaluated)",
+   "item": "harness corridors: trunk diameter + 10 mm free of every other object except the clamping members ('supports'), declared penetrations and the 30 mm terminations (layout.systems.harness.rules, KO-CORRIDOR-HARNESS; fix round 3, PK3-05) (114 close pairs)",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": "exempt pairs: clamped 2, penetration 6, termination 6"
+  },
+  {
+   "check": "C04",
+   "item": "structure vs structure (members, fittings): overlap only where the parts declare the contact ('touch'; fix round 1, VPK-01/VPK-06) (25 close undeclared pairs evaluated)",
    "ok": true,
    "value": 0,
    "limit": 0,
@@ -194,7 +242,7 @@
   },
   {
    "check": "C04",
-   "item": "fitting envelopes hold their bolt patterns (73 holes): edge >= 2 D metal / 2.5 D composite, pitch >= 3 D (fix round 1, VPK-07)",
+   "item": "fitting envelopes hold their bolt patterns (83 holes): edge >= 2 D metal / 2.5 D composite, pitch >= 3 D (fix round 1, VPK-07)",
    "ok": true,
    "value": 0,
    "limit": 0,
@@ -212,15 +260,15 @@
    "check": "C05",
    "item": "gear retraction sequence (21 states): nose tyre vs structure/contents",
    "ok": true,
-   "value": 14.2,
+   "value": 13.5,
    "limit": ">= 12 mm",
-   "detail": "NDOOR-LINKAGE"
+   "detail": "M-NGSILL"
   },
   {
    "check": "C05",
    "item": "gear retraction sequence (21 states): main leg vs structure/contents",
    "ok": true,
-   "value": 11.9,
+   "value": 12.0,
    "limit": ">= 10 mm",
    "detail": "M-GEARBEAM@R at main_gear 0.00"
   },
@@ -276,9 +324,9 @@
    "check": "C05",
    "item": "gear retraction sequence (21 states): nose doors vs moving gear",
    "ok": true,
-   "value": 13.6,
+   "value": 13.0,
    "limit": ">= 10 mm",
-   "detail": "nose_gear 1.23"
+   "detail": "nose_gear 1.35"
   },
   {
    "check": "C05",
@@ -324,7 +372,7 @@
    "check": "C05",
    "item": "stabilators (whole range) outside the exhaust plume cones",
    "ok": true,
-   "value": 190.9,
+   "value": 193.0,
    "limit": ">= 0",
    "detail": ""
   },
@@ -358,7 +406,7 @@
    "ok": true,
    "value": 18.0,
    "limit": ">= 10 mm",
-   "detail": "cut-outs in the band: []; 14 fasteners, pitch 68 mm (declared 60-80)"
+   "detail": "cut-outs in the band: []; 14 fasteners, pitch 67 mm (declared 60-80)"
   },
   {
    "check": "C05",
@@ -402,7 +450,7 @@
     -0.0
    ],
    "limit": "<= 1 mm",
-   "detail": "spec CG [2.629, -0.0003, 0.0482] m, layout CG [2.629, -0.0003, 0.0482] m, empty 101.63 kg"
+   "detail": "spec CG [2.6289, -0.0003, 0.048] m, layout CG [2.6289, -0.0003, 0.048] m, empty 101.61 kg"
   },
   {
    "check": "C07",
@@ -506,7 +554,15 @@
    "ok": true,
    "value": 137.3,
    "limit": ">= 50 mm (boxes) / outside (plume)",
-   "detail": "boxes 137.3 mm, plume 198.2 mm"
+   "detail": "boxes 137.3 mm, plume 197.0 mm"
+  },
+  {
+   "check": "C08",
+   "item": "propeller disc keep-out KO-PROP (R + 26 mm, blade half extent + 13 mm) outside the exhaust plume cones (fix round 3, PK3-10)",
+   "ok": true,
+   "value": 86.9,
+   "limit": ">= 0 mm (outside)",
+   "detail": "static 15 deg cone; the in-flight plume deflection by the free stream is an open item (blade impingement limit from the propeller maker)"
   },
   {
    "check": "C08",
@@ -574,7 +630,7 @@
   },
   {
    "check": "C09",
-   "item": "panel edge lands: every edge band of a removable / hinged panel on a listed land (414 edge points; fix round 1, VPK-04/VPK-12)",
+   "item": "panel edge lands: every edge band of a removable / hinged panel on a listed land (432 edge points; fix round 1, VPK-04/VPK-12)",
    "ok": true,
    "value": 0,
    "limit": 0,
@@ -594,6 +650,30 @@
    "ok": true,
    "value": 0,
    "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C09",
+   "item": "no interior overlap between removable / hinged panels and closed gear doors on the same surface, shared land or not (6 touching pairs; fix round 3, PK3-02)",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C09",
+   "item": "every fixed skin declares (cutouts) each removable / hinged panel or door it overlaps (37 overlaps; fix round 3, PK3-02)",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C09",
+   "item": "cradle pads (2 x 2) on fixed lower skin over a frame cap, off the hatches and gear doors, saddle blocks >= 10 mm from the main gear over its retraction (fix round 3, PK3-06)",
+   "ok": true,
+   "value": 27.9,
+   "limit": ">= 10 mm",
    "detail": ""
   },
   {
@@ -692,6 +772,14 @@
   },
   {
    "check": "C12",
+   "item": "rest pose = state at control value 0 of every sequence (physical gear-down / turret-in state); every coupled joint (expr) is in a sequence (fix round 3, PK3-03)",
+   "ok": true,
+   "value": 0,
+   "limit": 0,
+   "detail": ""
+  },
+  {
+   "check": "C12",
    "item": "swept-volume / corridor keep-outs (gear, control surfaces, harness, pushrods) reference registered joints with their ranges, trunks and actuators",
    "ok": true,
    "value": 0,
@@ -724,8 +812,8 @@
   }
  ],
  "ok": true,
- "n_pass": 88,
- "n": 88,
+ "n_pass": 99,
+ "n": 99,
  "presizing": [
   {
    "item": "wing joint main pin, double shear",
@@ -836,19 +924,19 @@
    "basis_tr": "N; kaynakl\u0131 kafes bas\u0131yla ta\u015f\u0131r (4130 borular\u0131n ayr\u0131nt\u0131l\u0131 boyutland\u0131rmas\u0131)"
   }
  ],
- "n_objects": 145,
- "close_pairs": 243,
+ "n_objects": 155,
+ "close_pairs": 285,
  "cg": {
   "cg_spec": [
-   2.629,
+   2.6289,
    -0.0003,
-   0.0482
+   0.048
   ],
   "cg_layout": [
-   2.629,
+   2.6289,
    -0.0003,
-   0.0482
+   0.048
   ],
-  "empty_kg": 101.63
+  "empty_kg": 101.611
  }
 }

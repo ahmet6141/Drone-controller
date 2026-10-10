@@ -372,6 +372,24 @@ class TestStructures(unittest.TestCase):
         dt = next(r for r in self.rows if r["id"] == "DT-COND")
         self.assertLess(dt["applied"], 0.50)
 
+    def test_fix_round_3_rows_present(self):
+        """Fix round 3: SOB cap ramp kinks and offset (VS3-01), LERX skins (VS3-04), centre-line rib web (VS3-03),
+        rotational landing (VS3-06), door drives (PK3-07), split cradle pads (PK3-06); the core-temperature open item
+        (VS3-05) lists the core-governed rows with the property retention each margin absorbs."""
+        ids = {r["id"] for r in self.rows}
+        for i in ("W-SOB-KINK-RIB", "W-SOB-KINK-PRONG", "W-SOB-KINK-ILSS", "W-SOB-OFFSET", "W-SKINBUCK-LERX-UP",
+                  "W-SKINDT-LERX-UP", "CT-KINK-COVER", "CT-KINK-RIBWEB", "G-LAND-ROT", "G-DOOR-DRIVE", "G-TDOOR-LINK",
+                  "TR-PAD", "TR-FRAME"):
+            self.assertIn(i, ids, i)
+        rot = next(r for r in self.rows if r["id"] == "G-LAND-ROT")
+        n_land = self.res["gear"]["ground"]["n_inertia"]
+        self.assertGreater(rot["applied"], n_land)                     # the pitch acceleration adds load aft
+        items = " ".join(a for a, _ in SS.open_items(self.res))
+        self.assertIn("retention >=", items)
+        self.assertIn("DA 22", items)
+        pad = next(r for r in self.rows if r["id"] == "TR-PAD")
+        self.assertIn("2 x", pad["member"])
+
     def test_firewall_cutout_across_the_land_edge_detected(self):
         """Fix round 2 (re-closure): a firewall cut-out crossing the land-edge circle of a lower engine foot
         interrupts the core-shear perimeter - the engine-harness cut-out C-FW-HARN back at its round-1 place

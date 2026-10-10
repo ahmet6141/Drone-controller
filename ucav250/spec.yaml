@@ -1059,13 +1059,13 @@ wing:
         landing 0 deg (touch-down attitude R-20)'
       checks:
         H_design_Nm: 11.1422
-        V_eas_m_s: 39.5761
+        V_eas_m_s: 39.576
         servo_angle_at_range_deg: [-43.0306, 43.2957]
         travel_margin_deg: 41.7043
         ratio_min: 2.0
         ratio_max: 2.61689
-        rated_margin_min: 1.50947
-        peak_margin_min: 2.41516
+        rated_margin_min: 1.50948
+        peak_margin_min: 2.41517
         surface_rate_min_deg_s: 57.3199
         surface_rate_neutral_deg_s: 75.0
   sections:
@@ -1561,10 +1561,10 @@ tail:
     stabilator_trim_cl_max: 0.7
     cn_beta_target: 0.0585
   type: twin outward-canted fins with rudders + all-moving stabilators + ventral fin (tail bumper)
-  volume_h: 0.436861
-  volume_v: 0.0274046
+  volume_h: 0.436858
+  volume_v: 0.0274045
   arm_h: 1.12888
-  arm_v: 1.12508
+  arm_v: 1.12507
   sources:
     e_tail: endurance study
     fin_endplate_ar_factor: endurance study (end-plate effect)
@@ -1715,7 +1715,7 @@ landing_gear:
       stowed_axle_direction: [0.0, -0.30902, -0.95106]
       wheel_attitude_stowed: tilted 18 deg from flat (= leg splay), leg horizontal under the wing box, wells side by side
     stowed_envelope:
-      box: [[2.8689, 0.01893, -0.18904], [3.0829, 0.37283, -0.07283]]
+      box: [[2.8689, 0.01893, -0.18904], [3.0829, 0.37283, -0.07284]]
       note: bounding box of the tyre envelope (+ well clearance) and the trunnion fitting, starboard well (port mirrored)
   nose:
     axle_x: 0.68
@@ -1773,25 +1773,25 @@ landing_gear:
     wheelbase: 2.2959
     h_cg: 0.468461
     static_attitude_deg: 2.49997
-    tipback_deg: 38.6394
-    turnover_deg: 54.0001
-    nose_load_aft_cg: 0.163115
-    nose_load_fwd_cg: 0.172404
+    tipback_deg: 38.6389
+    turnover_deg: 54.0
+    nose_load_aft_cg: 0.163112
+    nose_load_fwd_cg: 0.172401
     prop_clear_level: 0.25626
     prop_clear_static: 0.207856
     prop_clear_liftoff: 0.183603
-    prop_clear_touchdown_unloaded: 0.203495
+    prop_clear_touchdown_unloaded: 0.203494
     prop_clear_min_925a: 0.183603
     gear_unloaded_extension_m: 0.042
     prop_clear_flat_tyre_bottomed: 0.0584305
     prop_strike_deg: 13.0669
     bumper_contact_deg: 9.16776
-    theta_lof_deg: 3.74471
-    theta_td_deg: 4.86773
-    theta_flare_deg: 6.86773
+    theta_lof_deg: 3.74472
+    theta_td_deg: 4.86779
+    theta_flare_deg: 6.86779
     wingtip_ground_roll_deg: 10.2002
     prop_clear_wingtip_on_ground_m: 0.320016
-    static_load_split_main_aft_cg: 0.836885
+    static_load_split_main_aft_cg: 0.836888
   sources:
     tyre: components.yaml#landing_gear (TOST 200x50, SAGITTA)
     main.stroke: components.yaml#landing_gear SAGITTA shock stroke 0.070 m (+ margin)
@@ -1946,19 +1946,19 @@ aero:
     cn_beta_min: 0.057
     stabilator_clmax: 0.9
   reference:
-    cd0_clean: 0.0349758
-    k_clean: 0.0237168
-    e_clean: 0.838028
-    ld_max_clean: 17.3325
+    cd0_clean: 0.0349757
+    k_clean: 0.0237164
+    e_clean: 0.83804
+    ld_max_clean: 17.3326
     cd0_loiter_turret_extended: 0.0369244
-    ld_max_loiter: 16.8371
+    ld_max_loiter: 16.8373
     cd0_gear_down: 0.0474332
     CL_alpha_per_rad: 5.69603
     CL_0: 0.493624
     clmax_wing: 1.33135
-    clmax_clean_trimmed: 1.2928
-    clmax_to_trimmed: 1.53379
-    clmax_ld_trimmed: 1.2928
+    clmax_clean_trimmed: 1.29281
+    clmax_to_trimmed: 1.5338
+    clmax_ld_trimmed: 1.29281
   drag_build_up_clean_cd:
     body: 0.00759626
     aft_body_upsweep: 0.00118026
@@ -1968,7 +1968,7 @@ aero:
     tail_ventral: 0.000163782
     landing_gear: 0.000396427
     eo_ir_turret: 9.26813e-05
-    engine_cooling: 0.00186155
+    engine_cooling: 0.00186154
     aft_closure_base: 0.00215532
     wing_body_junctions: 0.000244779
     tail_body_junctions: 0.000569271
@@ -1985,26 +1985,26 @@ aero:
       of joint) and the sealed control-surface hinge gaps (0.0002 CD per pair = 0.00065 m2 for about 2.5 m of hinge line);
       applied with gear_doors_sealed (flush doors with perimeter seals, v1.2) instead of the 10 % residual of the extended-gear
       drag
-  cd0: 0.0349758
-  e: 0.838028
-  k: 0.0237168
-  ld_max: 17.3325
-  clmax_clean: 1.2928
-  clmax_to: 1.53379
-  clmax_ld: 1.2928
+  cd0: 0.0349757
+  e: 0.83804
+  k: 0.0237164
+  ld_max: 17.3326
+  clmax_clean: 1.29281
+  clmax_to: 1.5338
+  clmax_ld: 1.29281
   polars:
     clean: out/sizing.json#aero.polars.clean (trimmed CL-CD table, design CG; fit cd0/k/e)
     loiter: out/sizing.json#aero.polars.loiter (trimmed CL-CD table, design CG; fit cd0/k/e)
     gear_down: out/sizing.json#aero.polars.gear_down (trimmed CL-CD table, design CG; fit cd0/k/e)
   power_on_trim:
-    max_abs_tail_cl_local: 0.693824
+    max_abs_tail_cl_local: 0.69378
     governing:
       case: e180_growth_turret_full_fuel
-      V: 24.1854
+      V: 24.1853
       T: 331.628
-      tail_cl_local: 0.693824
-      thrust_arm_m: 0.0706306
-      x_cg: 2.58008
+      tail_cl_local: 0.69378
+      thrust_arm_m: 0.0706327
+      x_cg: 2.58009
       CL_wb: 1.40955
       gear: extended
   flaps:
@@ -2027,13 +2027,13 @@ aero:
 mass:
   mtow_kg: 149.9
   mtow_cap_kg: 149.9
-  empty_kg: 101.603
-  fuel_kg: 30.297
+  empty_kg: 101.611
+  fuel_kg: 30.2891
   payload_kg: 18.0
   fuel_cg: [2.6155, 0.0, 0.0712]
   budget:
     chassis:
-      target_kg: 12.46
+      target_kg: 12.61
       tol_kg: 0.37
     controls:
       target_kg: 8.29
@@ -2060,7 +2060,7 @@ mass:
       target_kg: 7.35
       tol_kg: 0.22
     wing:
-      target_kg: 15.34
+      target_kg: 15.18
       tol_kg: 0.46
   budget_rules:
     reserve_kg: 0.05
@@ -2108,21 +2108,21 @@ mass:
     payload: [eo_ir_turret_hd59_mount, mission_computer_recorder, payload_tray_harness, research_payload_allowance]
     note: 'payload: list of mass.payload_items names (truthy = with payload for analysis/mass.py)'
   - name: mtow_max_payload_turret_retracted
-    fuel_fraction: 0.933987
+    fuel_fraction: 0.93397
     fuel_rule: mtom
     turret: retracted
     payload: [eo_ir_turret_hd59_mount, mission_computer_recorder, payload_tray_harness, research_payload_allowance, research_payload_max_increment]
     note: 'payload: list of mass.payload_items names (truthy = with payload for analysis/mass.py); fuel_rule mtom: fuel
       fraction = (MTOM - zero-fuel mass) / mass.fuel_kg (derived)'
   - name: mtow_max_payload_turret_extended
-    fuel_fraction: 0.933987
+    fuel_fraction: 0.93397
     fuel_rule: mtom
     turret: extended
     payload: [eo_ir_turret_hd59_mount, mission_computer_recorder, payload_tray_harness, research_payload_allowance, research_payload_max_increment]
     note: 'payload: list of mass.payload_items names (truthy = with payload for analysis/mass.py); fuel_rule mtom: fuel
       fraction = (MTOM - zero-fuel mass) / mass.fuel_kg (derived)'
   - name: full_fuel_baseline_sensors_only
-    fuel_fraction: 1.18331
+    fuel_fraction: 1.18362
     fuel_rule: capacity
     turret: retracted
     payload: [eo_ir_turret_hd59_mount, mission_computer_recorder, payload_tray_harness]
@@ -2567,8 +2567,8 @@ mass:
     basis: solid-laminate edge band along both chines 8.25 m x 0.04 kg/m (identity study)
   - name: wing_structure_pair
     group: wing
-    mass_base_kg: 14.4444
-    mass_kg: 15.1666
+    mass_base_kg: 14.4517
+    mass_kg: 15.1743
     x: 2.772
     y: 0.0
     z: 0.0425
@@ -2609,8 +2609,8 @@ mass:
     basis: tail sandwich + replaceable skid shoe (identity study 0.30 kg fitting + skid)
   - name: fasteners_inserts_nutplates
     group: hardware
-    mass_base_kg: 1.4323
-    mass_kg: 1.5039
+    mass_base_kg: 1.4325
+    mass_kg: 1.5041
     x: 1.95
     y: 0.0
     z: 0.0
@@ -2697,61 +2697,61 @@ stability:
   mac: 0.48431
   mac_le_x: 2.57831
   np_x: 2.65431
-  cg_design: [2.60519, -0.000181608, 0.0322092]
-  cg_range_x: [2.58404, 2.60537]
-  static_margin_range: [0.101038, 0.145073]
+  cg_design: [2.6052, -0.000181608, 0.0322077]
+  cg_range_x: [2.58405, 2.60538]
+  static_margin_range: [0.101024, 0.145058]
   cases_cg:
   - name: mtow_design_payload_turret_retracted
     m: 149.9
-    x: 2.60519
-    z: 0.0322092
+    x: 2.6052
+    z: 0.0322077
   - name: mtow_design_payload_turret_extended
     m: 149.9
-    x: 2.60519
-    z: 0.0307149
+    x: 2.6052
+    z: 0.0307133
   - name: mtow_max_payload_turret_retracted
     m: 149.9
-    x: 2.60537
-    z: 0.0295421
+    x: 2.60538
+    z: 0.0295405
   - name: mtow_max_payload_turret_extended
     m: 149.9
-    x: 2.60537
-    z: 0.0280478
+    x: 2.60538
+    z: 0.0280462
   - name: full_fuel_baseline_sensors_only
-    m: 140.704
-    x: 2.60311
-    z: 0.0506164
+    m: 140.712
+    x: 2.60312
+    z: 0.0506159
   - name: zero_fuel_design_payload
-    m: 119.603
-    x: 2.60258
-    z: 0.0204595
+    m: 119.611
+    x: 2.60259
+    z: 0.0204609
   - name: zero_fuel_max_payload
-    m: 121.603
-    x: 2.60301
-    z: 0.0180063
+    m: 121.611
+    x: 2.60302
+    z: 0.0180078
   - name: reserve_fuel_design_payload
-    m: 123.239
-    x: 2.60296
-    z: 0.023774
+    m: 123.246
+    x: 2.60297
+    z: 0.0237748
   - name: minimum_flying_turret_only
-    m: 106.383
-    x: 2.60531
-    z: 0.0462895
+    m: 106.39
+    x: 2.60532
+    z: 0.046289
   - name: e180_growth_turret_full_fuel
     m: 149.9
-    x: 2.58404
-    z: 0.0292454
+    x: 2.58405
+    z: 0.0292438
   computed:
     np_x: 2.65431
     np_x_classic: 2.66483
     np_x_vlm: 2.65431
     x_ac_wing_body: 2.57267
     Cm0_wing_body: -0.122817
-    volume_h: 0.436861
-    volume_v: 0.0274046
-    cn_beta_per_rad: 0.058561
-    static_margin_min: 0.101038
-    static_margin_max: 0.145073
+    volume_h: 0.436858
+    volume_v: 0.0274045
+    cn_beta_per_rad: 0.0585604
+    static_margin_min: 0.101024
+    static_margin_max: 0.145058
     downwash_gradient: 0.385296
   method: NP = forward of (lifting-line wing AC + Multhopp lifting body + tails) and the vortex-lattice configuration NP
     (sizing.py)
@@ -2761,34 +2761,34 @@ stability:
 # ---------------------------------------------------------------------------------------------------------------------
 performance:
   reference:
-    endurance_h: 10.3275
-    loiter_time_h: 8.01959
-    range_km: 1148.84
-    ceiling_service_m: 7113.69
-    roc_sl_m_s: 4.21804
-    roc_3000m_m_s: 2.38754
+    endurance_h: 10.3244
+    loiter_time_h: 8.01658
+    range_km: 1148.48
+    ceiling_service_m: 7113.73
+    roc_sl_m_s: 4.21805
+    roc_3000m_m_s: 2.38756
     takeoff_ground_roll_m: 178.167
-    takeoff_distance_15m_m: 324.784
-    landing_ground_roll_m: 182.872
+    takeoff_distance_15m_m: 324.783
+    landing_ground_roll_m: 182.88
     vs_clean_sl_mtow_m_s: 23.9484
     v_max_sl_m_s: 54.0102
-    loiter_tas_3000m_m_s: 33.051
-    loiter_eas_m_s: 28.4727
+    loiter_tas_3000m_m_s: 33.0509
+    loiter_eas_m_s: 28.4726
     climb_time_to_loiter_altitude_min: 15.2729
-    endurance_max_payload_h: 9.55306
-    loiter_fuel_flow_kg_h: 2.64897
-    loiter_power_W: 4703.2
-    loiter_rpm: 4944.15
-    mtow_for_10h_mission_kg: 147.803
-    mission_loiter_start_tas_m_s: 32.4449
-    mission_loiter_start_eas_m_s: 27.9505
-    mission_loiter_start_rpm: 4851.76
-    mission_loiter_start_fuel_flow_kg_h: 2.55359
-    mission_loiter_start_generator_W: 486.47
-    mission_loiter_end_tas_m_s: 32.3524
-    mission_loiter_end_eas_m_s: 27.8708
+    endurance_max_payload_h: 9.55006
+    loiter_fuel_flow_kg_h: 2.64895
+    loiter_power_W: 4703.16
+    loiter_rpm: 4944.14
+    mtow_for_10h_mission_kg: 147.823
+    mission_loiter_start_tas_m_s: 32.4448
+    mission_loiter_start_eas_m_s: 27.9504
+    mission_loiter_start_rpm: 4851.75
+    mission_loiter_start_fuel_flow_kg_h: 2.55358
+    mission_loiter_start_generator_W: 486.468
+    mission_loiter_end_tas_m_s: 32.3521
+    mission_loiter_end_eas_m_s: 27.8705
     mission_loiter_end_rpm: 4747.34
-    mission_loiter_end_fuel_flow_kg_h: 2.38581
+    mission_loiter_end_fuel_flow_kg_h: 2.38584
     mission_loiter_end_generator_W: 476.0
     takeoff_rotation_speed_m_s: 24.74
     takeoff_liftoff_speed_m_s: 25.1299
@@ -2797,17 +2797,17 @@ performance:
     prop_clear_radial_m: 0.0307391
     prop_clear_longitudinal_m: 0.0286183
     generator_margin_loiter: 1.27614
-    stab_trim_cl_local_max: 0.693824
+    stab_trim_cl_local_max: 0.69378
     stab_hinge_peak_margin: 1.88453
   payload_endurance:
   - payload_kg: 3.25
     fuel_kg: 35.8508
-    takeoff_mass_kg: 140.704
-    endurance_h: 12.9069
-    loiter_time_h: 10.5566
+    takeoff_mass_kg: 140.712
+    endurance_h: 12.9067
+    loiter_time_h: 10.5563
     fuel_volume_limited: true
     turret: true
-    static_margin_range: [0.105699, 0.114443]
+    static_margin_range: [0.105682, 0.11442]
     permitted_loading: true
     e180_set_fits: false
     e180_peak_battery_draw_Wh: null
@@ -2815,12 +2815,12 @@ performance:
     e180_peak_share_exceeded: null
   - payload_kg: 5.0
     fuel_kg: 35.8508
-    takeoff_mass_kg: 142.454
-    endurance_h: 12.8403
-    loiter_time_h: 10.4908
+    takeoff_mass_kg: 142.462
+    endurance_h: 12.8401
+    loiter_time_h: 10.4906
     fuel_volume_limited: true
     turret: true
-    static_margin_range: [0.105045, 0.113426]
+    static_margin_range: [0.105028, 0.113402]
     permitted_loading: true
     e180_set_fits: false
     e180_peak_battery_draw_Wh: null
@@ -2828,160 +2828,160 @@ performance:
     e180_peak_share_exceeded: null
   - payload_kg: 7.5
     fuel_kg: 35.8508
-    takeoff_mass_kg: 144.954
-    endurance_h: 12.7365
-    loiter_time_h: 10.3941
+    takeoff_mass_kg: 144.962
+    endurance_h: 12.7362
+    loiter_time_h: 10.3938
     fuel_volume_limited: true
     turret: true
-    static_margin_range: [0.104138, 0.112029]
+    static_margin_range: [0.104121, 0.112006]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 175.915
-    e180_peak_supported_loiter_h: 7.37168
+    e180_peak_battery_draw_Wh: 175.904
+    e180_peak_supported_loiter_h: 7.372
     e180_peak_share_exceeded: true
   - payload_kg: 10.0
     fuel_kg: 35.8508
-    takeoff_mass_kg: 147.454
-    endurance_h: 12.6059
-    loiter_time_h: 10.2882
+    takeoff_mass_kg: 147.462
+    endurance_h: 12.6056
+    loiter_time_h: 10.2879
     fuel_volume_limited: true
     turret: true
-    static_margin_range: [0.103262, 0.110694]
+    static_margin_range: [0.103245, 0.110672]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 169.678
-    e180_peak_supported_loiter_h: 7.63261
+    e180_peak_battery_draw_Wh: 169.656
+    e180_peak_supported_loiter_h: 7.63357
     e180_peak_share_exceeded: true
   - payload_kg: 12.0
     fuel_kg: 35.8508
-    takeoff_mass_kg: 149.454
-    endurance_h: 12.5105
-    loiter_time_h: 10.1959
+    takeoff_mass_kg: 149.462
+    endurance_h: 12.5101
+    loiter_time_h: 10.1955
     fuel_volume_limited: true
     turret: true
-    static_margin_range: [0.102582, 0.109669]
+    static_margin_range: [0.102566, 0.109647]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 161.92
-    e180_peak_supported_loiter_h: 7.99663
+    e180_peak_battery_draw_Wh: 161.887
+    e180_peak_supported_loiter_h: 7.99823
     e180_peak_share_exceeded: true
-  - payload_kg: 12.4462
+  - payload_kg: 12.4383
     fuel_kg: 35.8508
     takeoff_mass_kg: 149.9
     endurance_h: 12.4875
     loiter_time_h: 10.1743
     fuel_volume_limited: true
     turret: true
-    static_margin_range: [0.102433, 0.109445]
+    static_margin_range: [0.102419, 0.109428]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 159.801
-    e180_peak_supported_loiter_h: 8.09966
+    e180_peak_battery_draw_Wh: 159.806
+    e180_peak_supported_loiter_h: 8.09943
     e180_peak_share_exceeded: true
   - payload_kg: 12.5
-    fuel_kg: 35.797
+    fuel_kg: 35.7891
     takeoff_mass_kg: 149.9
-    endurance_h: 12.4664
-    loiter_time_h: 10.1533
+    endurance_h: 12.4633
+    loiter_time_h: 10.1502
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.102423, 0.109418]
+    static_margin_range: [0.102408, 0.109397]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 159.446
-    e180_peak_supported_loiter_h: 8.09955
+    e180_peak_battery_draw_Wh: 159.399
+    e180_peak_supported_loiter_h: 8.09931
     e180_peak_share_exceeded: true
   - payload_kg: 15.0
-    fuel_kg: 33.297
+    fuel_kg: 33.2891
     takeoff_mass_kg: 149.9
-    endurance_h: 11.4917
-    loiter_time_h: 9.18054
+    endurance_h: 11.4886
+    loiter_time_h: 9.17751
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.101961, 0.108197]
+    static_margin_range: [0.101947, 0.108176]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 142.996
-    e180_peak_supported_loiter_h: 8.09451
+    e180_peak_battery_draw_Wh: 142.949
+    e180_peak_supported_loiter_h: 8.09427
     e180_peak_share_exceeded: true
   - payload_kg: 17.5
-    fuel_kg: 30.797
+    fuel_kg: 30.7891
     takeoff_mass_kg: 149.9
-    endurance_h: 10.5218
-    loiter_time_h: 8.21263
+    endurance_h: 10.5187
+    loiter_time_h: 8.20962
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.1015, 0.107027]
+    static_margin_range: [0.101485, 0.107007]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 126.627
-    e180_peak_supported_loiter_h: 8.08946
+    e180_peak_battery_draw_Wh: 126.58
+    e180_peak_supported_loiter_h: 8.08922
     e180_peak_share_exceeded: true
   - payload_kg: 18.0
-    fuel_kg: 30.297
+    fuel_kg: 30.2891
     takeoff_mass_kg: 149.9
-    endurance_h: 10.3275
-    loiter_time_h: 8.01959
+    endurance_h: 10.3244
+    loiter_time_h: 8.01658
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.101408, 0.106799]
+    static_margin_range: [0.101393, 0.106779]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 123.363
+    e180_peak_battery_draw_Wh: 123.316
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   - payload_kg: 18.5
-    fuel_kg: 29.797
+    fuel_kg: 29.7891
     takeoff_mass_kg: 149.9
-    endurance_h: 10.1333
-    loiter_time_h: 7.82699
+    endurance_h: 10.1302
+    loiter_time_h: 7.82399
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.101315, 0.106573]
+    static_margin_range: [0.1013, 0.106552]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 120.106
+    e180_peak_battery_draw_Wh: 120.059
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   - payload_kg: 20.0
-    fuel_kg: 28.297
+    fuel_kg: 28.2891
     takeoff_mass_kg: 149.9
-    endurance_h: 9.55306
-    loiter_time_h: 7.24994
+    endurance_h: 9.55006
+    loiter_time_h: 7.24694
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.101038, 0.105905]
+    static_margin_range: [0.101024, 0.105885]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 110.35
+    e180_peak_battery_draw_Wh: 110.303
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   sensitivities_endurance_h:
-    bsfc_minus_12pct: 11.7654
-    bsfc_plus_12pct: 9.19737
-    cd0_plus_10pct_all_drag: 9.78032
-    empty_plus_5pct: 8.36773
-    loiter_at_1000m: 9.75467
-    no_transit_loiter_only: 10.2775
-    turret_retracted_whole_mission: 10.4573
-    k_inst_0p90: 10.1351
-    k_inst_0p95: 10.4497
-    k_inst_0p97: 10.567
-    low_load_fuel_flow_willans_line: 10.2668
+    bsfc_minus_12pct: 11.762
+    bsfc_plus_12pct: 9.19466
+    cd0_plus_10pct_all_drag: 9.77743
+    empty_plus_5pct: 8.36458
+    loiter_at_1000m: 9.75191
+    no_transit_loiter_only: 10.2745
+    turret_retracted_whole_mission: 10.4542
+    k_inst_0p90: 10.1321
+    k_inst_0p95: 10.4467
+    k_inst_0p97: 10.5639
+    low_load_fuel_flow_willans_line: 10.2638
   loiter_3000m:
-    V: 33.051
-    EAS: 28.4727
-    CL: 0.919554
-    LD: 16.1755
-    P_shaft: 4261.4
-    P_total: 4703.2
+    V: 33.0509
+    EAS: 28.4726
+    CL: 0.91956
+    LD: 16.1757
+    P_shaft: 4261.35
+    P_total: 4703.16
     eta: 0.711375
-    rpm: 4944.15
-    power_fraction: 0.261289
-    bsfc_g_kWh: 563.227
-    ff_kg_h: 2.64897
-    gen_W: 495.734
-    tip_mach: 0.628467
+    rpm: 4944.14
+    power_fraction: 0.261286
+    bsfc_g_kWh: 563.228
+    ff_kg_h: 2.64895
+    gen_W: 495.732
+    tip_mach: 0.628465
   note: reference copy of out/sizing.json (sizing --check compares it)
   payload_design_rule:
     rule: largest payload on a 0.5 kg grid (rounded down) with endurance >= 10.25 h (10.00 h + 0.25 h robustness margin),
@@ -2992,49 +2992,49 @@ performance:
     step_kg: 0.5
     spec_kg: 18.0
     derived_kg: 18.0
-    endurance_at_derived_h: 10.3275
+    endurance_at_derived_h: 10.3244
     next_step_kg: 18.5
-    endurance_at_next_step_h: 10.1333
+    endurance_at_next_step_h: 10.1302
     consistent: true
-    endurance_margin_to_target_h: 0.0774645
-    empty_mass_headroom_kg: 0.199717
-    payload_at_target_kg_linear: 18.1994
-    payload_headroom_kg: 0.199438
+    endurance_margin_to_target_h: 0.0744327
+    empty_mass_headroom_kg: 0.191571
+    payload_at_target_kg_linear: 18.1916
+    payload_headroom_kg: 0.191634
   max_payload_mission:
     payload_kg: 20.0
-    fuel_kg: 28.297
+    fuel_kg: 28.2891
     takeoff_mass_kg: 149.9
-    endurance_h: 9.55306
-    loiter_time_h: 7.24994
+    endurance_h: 9.55006
+    loiter_time_h: 7.24694
     requirement_h: 9.5
     case: mtow_max_payload_turret_retracted
   low_load_bsfc_bound:
-    endurance_h_bsfc_line: 10.3275
-    endurance_h_willans_line: 10.2668
-    descent_fuel_kg_bsfc_line: 0.236307
-    descent_power_fraction_range_bsfc_line: [0.0512487, 0.0641342]
-    descent_fuel_kg_willans_line: 0.361142
-    descent_power_fraction_range_willans_line: [0.0513806, 0.0642569]
-    reserve_fuel_kg_bsfc_line: 2.0319
-    reserve_power_fraction_range_bsfc_line: [0.17771, 0.178902]
-    reserve_fuel_kg_willans_line: 2.04968
-    reserve_power_fraction_range_willans_line: [0.177762, 0.178961]
+    endurance_h_bsfc_line: 10.3244
+    endurance_h_willans_line: 10.2638
+    descent_fuel_kg_bsfc_line: 0.236302
+    descent_power_fraction_range_bsfc_line: [0.0512476, 0.0641329]
+    descent_fuel_kg_willans_line: 0.361139
+    descent_power_fraction_range_willans_line: [0.0513795, 0.0642556]
+    reserve_fuel_kg_bsfc_line: 2.03136
+    reserve_power_fraction_range_bsfc_line: [0.177716, 0.178908]
+    reserve_fuel_kg_willans_line: 2.04912
+    reserve_power_fraction_range_willans_line: [0.177768, 0.178967]
     lowest_bsfc_point_power_fraction: 0.2
   payload_permitted_loadings:
     static_margin_min_rule: 0.1
     x_cg_aft_limit_m: 2.60587
     baseline_set_kg: 3.25
-    fuel_volume_break_payload_kg: 12.4462
+    fuel_volume_break_payload_kg: 12.4383
     fuel_capacity_kg: 35.8508
     e180_set_kg: 5.5
     no_payload:
-      static_margin_range: [0.0525235, 0.0597225]
+      static_margin_range: [0.0525039, 0.0597075]
       permitted: false
-      nose_ballast_at_turret_mount_kg: 1.93472
+      nose_ballast_at_turret_mount_kg: 1.93555
       ballast_x_m: 1.22
     turret_only:
-      static_margin_range_full_tanks: [0.0962027, 0.10178]
-      fuel_max_for_R09_kg: 9.25508
+      static_margin_range_full_tanks: [0.0961859, 0.101757]
+      fuel_max_for_R09_kg: 9.13582
     rule_tr: izin verilen en hafif yükleme temel EO/IR setidir (taret + görev bilgisayarı + tepsi); yalnız taretle yakıt
       fuel_max_for_R09_kg ile sınırlıdır
   takeoff_pitch_inertia_effect:
@@ -3052,7 +3052,7 @@ performance:
       V_R_m_s: 25.06
       ground_roll_m: 179.679
       V_lof_m_s: 25.2099
-      download_margin_min_N: 1.91487
+      download_margin_min_N: 1.92831
     delta_V_R_m_s: 0.16
     delta_ground_roll_m: 3.00834
 
@@ -3137,18 +3137,18 @@ structures:
     cl_alpha_configuration_per_rad: 6.21206
     n_limit_wing_design: 5.45984
     gust_matrix:
-    - mass_kg: 106.383
+    - mass_kg: 106.39
       altitude_m: 0.0
-      n_pos: 6.49242
-      n_neg: -4.49242
-    - mass_kg: 106.383
+      n_pos: 6.49214
+      n_neg: -4.49214
+    - mass_kg: 106.39
       altitude_m: 3000.0
-      n_pos: 6.83724
-      n_neg: -4.83724
-    - mass_kg: 106.383
+      n_pos: 6.83692
+      n_neg: -4.83692
+    - mass_kg: 106.39
       altitude_m: 4500.0
-      n_pos: 6.99493
-      n_neg: -4.99493
+      n_pos: 6.9946
+      n_neg: -4.9946
     - mass_kg: 149.9
       altitude_m: 0.0
       n_pos: 5.17563
@@ -3177,7 +3177,7 @@ structures:
       fcs_speed_limit_eas: 45.0
       fcs_speed_limit_margin_m_s: 0.0
       V_max_level_sl_eas: 54.0102
-      V_max_level_3000m_eas: 44.1599
+      V_max_level_3000m_eas: 44.16
       fcs_protection_required: true
       max_operating_altitude_m: 4500.0
       gust_envelope_top_altitude_m: 4500.0
@@ -3262,13 +3262,13 @@ structures:
           carries no bearing allowable'
         fork_zone: 'glove caps y 0.40-0.70 sized for the glove-box moment: the total moment minus the tongue moment (the
           tongue carries the joint moment to the pins; between the pins it falls linearly to zero at the inner pin)'
-        zones: [[0.0, 0.05, 57], [0.05, 0.1, 54], [0.1, 0.15, 51], [0.15, 0.2, 49], [0.2, 0.25, 46], [0.25, 0.3, 44], [
-            0.3, 0.35, 42], [0.35, 0.4, 39], [0.4, 0.43, 59], [0.43, 0.463, 38], [0.463, 0.48, 31], [0.48, 0.5, 27], [0.5,
-            0.525, 23], [0.525, 0.55, 18], [0.55, 0.59, 12], [0.59, 0.625, 10], [0.625, 0.7, 10], [0.7, 0.75, 35], [0.75,
-            0.8, 34], [0.8, 0.85, 34], [0.85, 0.9, 33], [0.9, 0.95, 32], [0.95, 1.0, 31], [1.0, 1.05, 30], [1.05, 1.1, 28],
-          [1.1, 1.15, 27], [1.15, 1.2, 26], [1.2, 1.25, 24], [1.25, 1.3, 23], [1.3, 1.35, 22], [1.35, 1.4, 22], [1.4, 1.45,
-            21], [1.45, 1.5, 20], [1.5, 1.55, 19], [1.55, 1.6, 18], [1.6, 1.65, 17], [1.65, 1.7, 16], [1.7, 1.75, 15], [
-            1.75, 1.8, 14], [1.8, 1.85, 13], [1.85, 1.9, 12], [1.9, 1.95, 11], [1.95, 2.0, 11], [2.0, 2.05, 10], [2.05,
+        zones: [[0.0, 0.05, 58], [0.05, 0.1, 55], [0.1, 0.15, 53], [0.15, 0.2, 50], [0.2, 0.25, 47], [0.25, 0.3, 45], [
+            0.3, 0.35, 43], [0.35, 0.4, 41], [0.4, 0.43, 60], [0.43, 0.463, 39], [0.463, 0.48, 32], [0.48, 0.5, 28], [0.5,
+            0.525, 23], [0.525, 0.55, 18], [0.55, 0.59, 13], [0.59, 0.625, 10], [0.625, 0.7, 10], [0.7, 0.75, 36], [0.75,
+            0.8, 35], [0.8, 0.85, 35], [0.85, 0.9, 34], [0.9, 0.95, 33], [0.95, 1.0, 32], [1.0, 1.05, 30], [1.05, 1.1, 29],
+          [1.1, 1.15, 28], [1.15, 1.2, 26], [1.2, 1.25, 25], [1.25, 1.3, 24], [1.3, 1.35, 23], [1.35, 1.4, 22], [1.4, 1.45,
+            21], [1.45, 1.5, 21], [1.5, 1.55, 20], [1.55, 1.6, 19], [1.6, 1.65, 17], [1.65, 1.7, 16], [1.7, 1.75, 15], [
+            1.75, 1.8, 14], [1.8, 1.85, 13], [1.85, 1.9, 12], [1.9, 1.95, 12], [1.95, 2.0, 11], [2.0, 2.05, 10], [2.05,
             2.1, 10], [2.1, 2.2, 10], [2.2, 3.6, 10]]
       sob_transition:
         rib_land_plies: 12
@@ -3688,13 +3688,13 @@ structures:
         lands, stabilator node fittings and bearings, nose-gear pivot fitting, parachute spine and fittings) and sizing.tail_structure
         (stabilator spindle + socket)
       wing:
-        caps_kg: 2.269
-        webs_kg: 0.512
+        caps_kg: 2.315
+        webs_kg: 0.511
         rear_spar_kg: 0.344
-        joints_kg: 1.112
+        joints_kg: 1.111
         skins_add_kg: 0.084
       chassis:
-        carry_through_kg: 2.111
+        carry_through_kg: 2.112
         keel_beams_longerons_add_kg: 0.148
         floors_trays_rails_add_kg: 0.257
         frames_bulkheads_add_kg: 0.301
@@ -3704,17 +3704,17 @@ structures:
       tail:
         stabilator_fittings_kg_each: 0.18
       delta_vs_concept_allocation_kg:
-        A_wing_primary: -1.121
-        B_carry_through: 0.511
+        A_wing_primary: -1.077
+        B_carry_through: 0.512
         C_chassis_changes: 0.706
         D_spindles: -0.144
         E_allocation_replacements: -0.02
-      delta_total_kg: -0.068
+      delta_total_kg: -0.024
     summary:
       n_margins: 300
       n_requirements: 23
-      ms_min: 0.001
-      ms_min_id: W-CAP-08
+      ms_min: 0.0
+      ms_min_id: W-CAP-24
       report: out/structures.md, out/structures.json, docs/04_yapi_hesaplari.md
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -4655,7 +4655,7 @@ layout:
       clearance: 0.0
       content: spar box through the body
     main_gear_wells:
-      box: [[2.8689, 0.0, -0.18904], [3.0829, 0.37283, -0.07283]]
+      box: [[2.8689, 0.0, -0.18904], [3.0829, 0.37283, -0.07284]]
       symmetric: true
       clearance: 0.0
       content: stowed main wheels side by side + trunnion fittings; checked on the tyre envelopes (gear_stowage)
@@ -4950,8 +4950,10 @@ layout:
         are pinned in the jig'
       clip: '7075-T651 shear clip (angle 20 x 20 x 1.6 mm, 40 mm long): 2 x M4 Ti to the frame web land, 2 x M4 Ti to the
         longeron web'
-      doubler: bonded U-doubler PW 16 plies (3.2 mm) x 20 mm round the notch, ends 25 mm past the notch corners into the
-        edge band
+      doubler: bonded U-doubler PW 8 plies (1.6 mm, = the solid edge band of the web) x 20 mm round the notch, ends 25 mm
+        past the notch corners into the edge band
+      mass_note: clip + 4 x M4 Ti + U-doubler about 25 g per notch (estimate), inside the frame allowance mass.rules.frames_kg
+        (rule mass, not bottom-up; doc 03 sec. 16)
     x_faces: [1.1066, 1.1134]
   - id: FS1330
     x: 1.33
@@ -4993,8 +4995,10 @@ layout:
         are pinned in the jig'
       clip: '7075-T651 shear clip (angle 20 x 20 x 1.6 mm, 40 mm long): 2 x M4 Ti to the frame web land, 2 x M4 Ti to the
         longeron web'
-      doubler: bonded U-doubler PW 16 plies (3.2 mm) x 20 mm round the notch, ends 25 mm past the notch corners into the
-        edge band
+      doubler: bonded U-doubler PW 8 plies (1.6 mm, = the solid edge band of the web) x 20 mm round the notch, ends 25 mm
+        past the notch corners into the edge band
+      mass_note: clip + 4 x M4 Ti + U-doubler about 25 g per notch (estimate), inside the frame allowance mass.rules.frames_kg
+        (rule mass, not bottom-up; doc 03 sec. 16)
     x_faces: [1.3266, 1.3334]
   - id: FS1490
     x: 1.49
@@ -5030,8 +5034,10 @@ layout:
         are pinned in the jig'
       clip: '7075-T651 shear clip (angle 20 x 20 x 1.6 mm, 40 mm long): 2 x M4 Ti to the frame web land, 2 x M4 Ti to the
         longeron web'
-      doubler: bonded U-doubler PW 16 plies (3.2 mm) x 20 mm round the notch, ends 25 mm past the notch corners into the
-        edge band
+      doubler: bonded U-doubler PW 8 plies (1.6 mm, = the solid edge band of the web) x 20 mm round the notch, ends 25 mm
+        past the notch corners into the edge band
+      mass_note: clip + 4 x M4 Ti + U-doubler about 25 g per notch (estimate), inside the frame allowance mass.rules.frames_kg
+        (rule mass, not bottom-up; doc 03 sec. 16)
     x_faces: [1.4866, 1.4934]
   - id: FS1810
     x: 1.81
@@ -5075,8 +5081,10 @@ layout:
         are pinned in the jig'
       clip: '7075-T651 shear clip (angle 20 x 20 x 1.6 mm, 40 mm long): 2 x M4 Ti to the frame web land, 2 x M4 Ti to the
         longeron web'
-      doubler: bonded U-doubler PW 16 plies (3.2 mm) x 20 mm round the notch, ends 25 mm past the notch corners into the
-        edge band
+      doubler: bonded U-doubler PW 8 plies (1.6 mm, = the solid edge band of the web) x 20 mm round the notch, ends 25 mm
+        past the notch corners into the edge band
+      mass_note: clip + 4 x M4 Ti + U-doubler about 25 g per notch (estimate), inside the frame allowance mass.rules.frames_kg
+        (rule mass, not bottom-up; doc 03 sec. 16)
     x_faces: [1.8066, 1.8134]
   - id: FS-FUEL
     x: 2.1895
@@ -5120,8 +5128,10 @@ layout:
         are pinned in the jig'
       clip: '7075-T651 shear clip (angle 20 x 20 x 1.6 mm, 40 mm long): 2 x M4 Ti to the frame web land, 2 x M4 Ti to the
         longeron web'
-      doubler: bonded U-doubler PW 16 plies (3.2 mm) x 20 mm round the notch, ends 25 mm past the notch corners into the
-        edge band
+      doubler: bonded U-doubler PW 8 plies (1.6 mm, = the solid edge band of the web) x 20 mm round the notch, ends 25 mm
+        past the notch corners into the edge band
+      mass_note: clip + 4 x M4 Ti + U-doubler about 25 g per notch (estimate), inside the frame allowance mass.rules.frames_kg
+        (rule mass, not bottom-up; doc 03 sec. 16)
     notes: 'fix round 1 (VPK-13): no wing-harness notch in this vapour-tight bulkhead; the wing branch H-WING runs below
       the forward fuel deck and enters the centre wing box through its lower cover'
     x_faces: [2.1861, 2.1929]
@@ -5289,8 +5299,10 @@ layout:
         are pinned in the jig'
       clip: '7075-T651 shear clip (angle 20 x 20 x 1.6 mm, 40 mm long): 2 x M4 Ti to the frame web land, 2 x M4 Ti to the
         longeron web'
-      doubler: bonded U-doubler PW 16 plies (3.2 mm) x 20 mm round the notch, ends 25 mm past the notch corners into the
-        edge band
+      doubler: bonded U-doubler PW 8 plies (1.6 mm, = the solid edge band of the web) x 20 mm round the notch, ends 25 mm
+        past the notch corners into the edge band
+      mass_note: clip + 4 x M4 Ti + U-doubler about 25 g per notch (estimate), inside the frame allowance mass.rules.frames_kg
+        (rule mass, not bottom-up; doc 03 sec. 16)
     x_faces: [3.0919, 3.0987]
   - id: FS3480
     x: 3.48
@@ -5321,8 +5333,10 @@ layout:
         are pinned in the jig'
       clip: '7075-T651 shear clip (angle 20 x 20 x 1.6 mm, 40 mm long): 2 x M4 Ti to the frame web land, 2 x M4 Ti to the
         longeron web'
-      doubler: bonded U-doubler PW 16 plies (3.2 mm) x 20 mm round the notch, ends 25 mm past the notch corners into the
-        edge band
+      doubler: bonded U-doubler PW 8 plies (1.6 mm, = the solid edge band of the web) x 20 mm round the notch, ends 25 mm
+        past the notch corners into the edge band
+      mass_note: clip + 4 x M4 Ti + U-doubler about 25 g per notch (estimate), inside the frame allowance mass.rules.frames_kg
+        (rule mass, not bottom-up; doc 03 sec. 16)
     x_faces: [3.4766, 3.4834]
   - id: FS3670
     x: 3.67
@@ -5930,18 +5944,18 @@ layout:
         surface drops to the glove loft, and the rear caps and the aft part of the upper cover follow the OML under the
         solid skin over the caps (rear_spar_caps_z)
       y_extent: [-0.7, 0.7]
-      main_spar_caps_z: [[-0.034, 0.034], [-0.0339, 0.0339], [-0.039, 0.0377], [-0.0453, 0.0396], [-0.0457, 0.0401], [-0.0459,
-          0.0403], [-0.0461, 0.0406], [-0.0454, 0.0426], [-0.0433, 0.0458], [-0.0427, 0.0466], [-0.0407, 0.0483], [-0.0394,
+      main_spar_caps_z: [[-0.034, 0.034], [-0.0339, 0.0339], [-0.0391, 0.0377], [-0.0452, 0.0395], [-0.0456, 0.04], [-0.0459,
+          0.0403], [-0.0461, 0.0407], [-0.0454, 0.0426], [-0.0433, 0.0458], [-0.0427, 0.0466], [-0.0407, 0.0483], [-0.0394,
           0.0492], [-0.0388, 0.0483]]
       main_spar_caps_t:
       - 0.0081
       - 0.00838
       - 0.00545
-      - 0.00433
+      - 0.00447
       - 0.00391
       - 0.00321
       - 0.00251
-      - 0.00168
+      - 0.00182
       - 0.0014
       - 0.0014
       - 0.0014
@@ -5998,7 +6012,7 @@ layout:
           (ply-drop free), kinks at both ends (SOB rib solid land inboard, padded fork prongs at the inner pin outboard);
           the glove skins stay on the loft and are bonded to the ramped caps through a tapered ROHACELL 71 WF filler; the
           glove box skins end on the SOB rib, whose web carries the offset to the box covers (structures W-SOB-*)'
-      box: [[2.466, -0.7, -0.0477], [2.8719, 0.7, 0.0499]]
+      box: [[2.466, -0.7, -0.0476], [2.8719, 0.7, 0.0499]]
       oml_clearance_m: 0.001
       oml_clearance_basis: 'fix round 3 (VS3-01): the cap outer face lies directly under the solid skin over the caps (structures.sizing.wing.skin_solid_over_caps_m;
         the sandwich core is ramped out over the caps); cap capsules = centroid +- t/2'

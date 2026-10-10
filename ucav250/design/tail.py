@@ -57,19 +57,24 @@ TRIM = 0.001                # tail lofts end 1 mm above the body OML (sealant fi
 BOND = 0.0001               # bond line between bonded parts (contact <= 0.3 mm, no volume overlap)
 OV = 2e-4                   # boolean overlap of fused features
 T_SKIN_CS = 0.0006          # control-surface skins: 3 plies PW (solid laminate, prepreg min thickness)
-T_WEB = 0.0012              # spar webs: 6 plies PW (+-45)
+T_WEB = 0.0010              # spar webs: 5 plies PW (+-45; structures 4 plies, +1 for the bolted root / hinge lands)
 T_CAP = 0.0017              # spar caps: 12 plies UD (structures.sizing.tail.*_spar_cap_plies)
 W_CAP = 0.025               # spar cap width (structures.sizing.tail.*_spar_cap_width_m)
-T_GFRP = 0.002              # fin-tip cap: 8 plies GFRP 7781 (RF window)
+T_GFRP = 0.001              # fin-tip cap: 4 plies GFRP 7781 (RF window, 1.0 mm)
+T_CAP_TIP = 0.0006          # spar caps taper (ply drops 1:20) to 4 plies UD at the tip
+REAR_CAP = (0.0008, 0.020)  # fin rear (hinge) spar caps: 6 plies UD x 20 mm
 FIN_FRONT_XC = 0.241        # layout F-FIN-FRONT fin_chord_fraction
-FIN_REAR_XC = 0.58          # rear (hinge) spar: aft of the DA 26 case, 0.02 c behind the layout's 0.56 c root lug
+FIN_REAR_DH = 0.060         # rear (hinge) spar web 60 mm ahead of the hinge line in every section (parallel to it)
 STUB_FRONT_XC = 0.25
 RUDDER_GAP_END = 0.006      # spanwise gap rudder ends / fixed fin (rudder top swings 3.9 mm toward the tip cap)
 COVE_GAP = 0.002            # radial cove gap round the rudder nose
 HINGE_S = (0.18, 0.45, 0.68)   # rudder hinge stations: fin span from the root reference section (m)
 HINGE = A.HingeSpec(pin_d=0.003, lug_t=0.004, lug_r=0.0065, gap=0.0005, base_t=0.003, base_w=0.026, base_h=0.018,
                     bolt_d_mm=3.0, pin_clear=0.00002)
-RUDDER_SPAR_E = 0.011       # rudder spar web front face aft of the hinge axis (clevis lug end r 6.5 + 4.5 mm)
+RUDDER_SPAR_E = 0.011       # rudder spar web front face 11 mm aft of the hinge line in the section (9.8 mm normal)
+RUDDER_CAP = (0.0010, 0.032)   # rudder spar caps: 7 plies UD x 32 mm
+HORN_R = 0.0268             # rudder horn ball 26.8 mm off the 26.6 deg swept hinge axis = 24 mm lever in the rod plane
+ROD_D = 0.006               # rudder pushrod: 7075 tube 6 x 1
 SPINDLE_R = 0.01247         # spindle OD 25 (polygon-safe radius inside the 25 H7 bores)
 SPINDLE_NECK_R = 0.0105     # neck OD 21 through the node cheek hole (>= 5 mm moving-part clearance, layout.clearances)
 SPINDLE_ID = 0.022          # bore 22 (wall 1.5 = processes.cnc_milling_metal.min_thickness; structures 1.2)
@@ -79,6 +84,21 @@ BRG_RO = 0.01847            # outer race radius inside a 37 H7 bore modelled wit
 BRG_RI = 0.01253            # inner race bore
 WASHER_R = 0.0134           # moving parts inside the node boss stay >= 5 mm off the 37 mm bore
 DEG = math.pi / 180.0
+# fin spar root fittings (7075, machined): chassis clevis slots from the layout boxes (F-FIN-FRONT: 6 mm ears either side
+# of an 8 mm slot; F-FW-CORNER: slot x 3.680-3.688 between the firewall-side web and the 6 mm aft ear, chassis.md
+# interface table), lug faces 0.1 mm off the ears, flange on the spar web
+FF_SLOT = (3.4894, 3.4974)  # F-FIN-FRONT box x 3.4834-3.5034: ears 6 mm, slot 8 mm
+FF_FLOOR = 0.2532           # slot floor = clevis base (box z0 0.2292 + 24 mm base)
+FF_LUG = ((0.127, 0.1715), 0.2885)      # lug y range, lug top z
+FF_NECK = ((0.141, 0.159), 0.300)       # neck y range (through the dorsal hat gap), neck top z
+FF_BOLTS = ((0.1400, 0.2655), (0.1584, 0.2655))   # 2 x M6 12.9 double shear (y, z), axis +x (layout B1/B2 axis)
+RF_SLOT = (3.680, 3.688)    # F-FW-CORNER clevis slot (chassis.md: kept free for y >= 0.140)
+RF_FLOOR = 0.263
+RF_LUG = (((0.134, 0.172), (0.2633, 0.290)), ((0.140, 0.1715), (0.2895, 0.303)))
+RF_NECK_X0 = 3.6835         # neck / upper block start aft of the firewall heat-shield lip (x <= 3.683)
+RF_EAR_TOP = 0.3045         # upper block above the aft ear (top z 0.304)
+RF_BOLTS = ((0.1505, 0.2745), (0.161, 0.2925))    # 2 x M5 12.9 (y, z), head on the aft ear, tapped into the web
+FL_T, FL_W, FL_LEN = 0.005, 0.012, 0.060          # web flange: thickness, half width (along t), length along the span
 
 
 def unit(v) -> np.ndarray:
@@ -193,8 +213,8 @@ class Surf:
 
     def poly(self, eta, inset: float = 0.0) -> Polygon:
         """OML section (s, t) at eta (clamped to the surface), optionally inset (mitred)."""
-        e = round(self.clamp(eta), 7)
-        key = (e, round(inset, 7))
+        e = self.clamp(eta)
+        key = (round(e, 9), round(inset, 7))
         if key not in self._poly:
             p, _fr = SG.section2d(self.s, e, n=220)
             if inset > 0:
@@ -274,7 +294,13 @@ class Surf:
         section frame): caps of width w_cap on the inner skin surface (``inset`` from the OML), opening aft or forward;
         booleans of convex slabs with the inset lofts (robust for thin webs)."""
         inner = inner or self.loft(eta0 - 0.01, eta1 + 0.01, f_oml(inset))
-        inner_cap = inner_cap or self.loft(eta0 - 0.02, eta1 + 0.02, f_oml(inset + t_cap))
+        if inner_cap is None:
+            if callable(t_cap):
+                tc = t_cap
+                inner_cap = self.loft(eta0 - 0.02, eta1 + 0.02,
+                                      lambda p, ch, eta: p.buffer(-(inset + tc(eta)), join_style=2))
+            else:
+                inner_cap = self.loft(eta0 - 0.02, eta1 + 0.02, f_oml(inset + t_cap))
         if aft:
             a = self.slab(eta0, eta1, s_fn, -0.5 * t_web, -0.5 * t_web + w_cap)
             b = self.slab(eta0 - 0.01, eta1 + 0.01, s_fn, 0.5 * t_web, w_cap + 0.01)
@@ -282,6 +308,14 @@ class Surf:
             a = self.slab(eta0, eta1, s_fn, 0.5 * t_web - w_cap, 0.5 * t_web)
             b = self.slab(eta0 - 0.01, eta1 + 0.01, s_fn, -w_cap - 0.01, -0.5 * t_web)
         return D(I(inner, a), [I(inner_cap, b)])
+
+    def reg_in(self, eta, eta_ref, fn) -> Polygon:
+        """Region fn(poly, chord, eta) at eta expressed in the frame of eta_ref."""
+        e = self.clamp(eta)
+        p = SG.largest(fn(self.poly(e), self.chord(e), e))
+        o, c, u = self.frame(eta)
+        P2 = np.asarray(p.exterior.coords)
+        return Polygon(self.to2d(eta_ref, o + P2[:, :1] * c + P2[:, 1:2] * u)).buffer(0)
 
     def plate(self, eta0, eta1, region2d) -> G.Mesh:
         """Planar part between the section planes eta0 < eta1; ``region2d`` in the frame of eta0."""
@@ -345,6 +379,13 @@ def resample_corners(poly: Polygon, n: int, start_dir=(1.0, 0.31), counts=None):
     return np.vstack(out), counts
 
 
+def clean(poly, tol: float = 2e-5):
+    """Remove slivers / spikes thinner than 2 tol (morphological opening) and near-collinear vertices."""
+    p = poly.buffer(-tol, join_style=2).buffer(tol, join_style=2)
+    p = SG.largest(p) if not isinstance(p, Polygon) else p
+    return p.simplify(1e-6, preserve_topology=True)
+
+
 def f_oml(inset=0.0):
     def fn(poly, ch, eta):
         return poly if inset <= 0 else poly.buffer(-inset, join_style=2)
@@ -400,6 +441,7 @@ class Ctx:
         self.t_rib = layup_props(spec, "rib_panel")["thickness"]
         self.sz = spec["structures"]["sizing"]["tail"]
         self._body = {}
+        self._sec = {}
         self.mirror_ids: list[str] = []          # starboard parts to mirror
         self.port_joint: dict[str, str] = {}
 
@@ -426,6 +468,16 @@ class Ctx:
                 rings.append(np.column_stack([np.full(len(P2), x), P2[:, 0], P2[:, 1]]))
             self._body[key] = G.loft(rings)
         return self._body[key]
+
+    def oml_dist(self, P) -> float:
+        """Signed distance (m) of P from the body OML in its x station plane (positive outside the body)."""
+        x = round(float(P[0]), 5)
+        if x not in self._sec:
+            self._sec[x] = SG.fuselage_section2d(self.fus, x, 0.0, n=256)
+        poly = self._sec[x]
+        pt = Point(float(P[1]), float(P[2]))
+        d = poly.exterior.distance(pt)
+        return -d if poly.contains(pt) else d
 
     # ---------------------------------------------------------------- registry
     def add(self, pid: str, name: str, name_tr: str, group: str, material: str, process: str, fn, *, thickness=None,
@@ -645,9 +697,10 @@ class StubPanelGeo:
 
     def stab_spar(self) -> G.Mesh:
         C, g = self.C, self.g
-        return C.stab.channel(g.root_rib[1] + BOND, C.stab.e1 - 0.006,
-                              lambda eta: self.spar_x(eta) - C.stab.frame(eta)[0][0], C.t_skin + BOND, aft=True,
-                              inner=self.stab_inner(BOND))
+        e0, e1 = g.root_rib[1] + BOND, C.stab.e1 - 0.006
+        tc = lambda eta: T_CAP + (T_CAP_TIP - T_CAP) * min(1.0, max(0.0, (eta - e0) / (e1 - e0)))
+        return C.stab.channel(e0, e1, lambda eta: self.spar_x(eta) - C.stab.frame(eta)[0][0], C.t_skin + BOND,
+                              aft=True, inner=self.stab_inner(BOND), t_cap=tc)
 
     def stab_root_rib(self) -> G.Mesh:
         C, g = self.C, self.g
@@ -670,3 +723,320 @@ class StubPanelGeo:
     def stab_mid_rib(self) -> G.Mesh:
         e = float(self.C.T["stabilator"]["sections"][1]["y"])
         return self._fwd_rib(e, e + self.C.t_rib)
+
+
+# =====================================================================================================================
+# four-bar linkage kinematics (servo arm about the output shaft, horn about the hinge / spindle axis, rigid pushrod
+# between two spherical rod ends)
+# =====================================================================================================================
+def rot(p, origin, axis, ang):
+    return G.rotate_about(np.atleast_2d(p), origin, axis, ang)[0]
+
+
+class Linkage:
+    """Rest geometry: shaft (S, sa), arm tip A0; hinge (H, ha), horn ball centre B0. ``solve(delta)`` returns the arm
+    angle theta (rad, right hand about sa) for a surface angle delta (about ha) with |A - B| = rod length."""
+
+    def __init__(self, S, sa, A0, H, ha, B0):
+        self.S, self.sa = np.asarray(S, float), unit(sa)
+        self.A0 = np.asarray(A0, float)
+        self.H, self.ha = np.asarray(H, float), unit(ha)
+        self.B0 = np.asarray(B0, float)
+        self.L = float(np.linalg.norm(self.B0 - self.A0))
+        u0 = unit(self.B0 - self.A0)
+        e1 = unit(np.cross(u0, self.sa)) if abs(np.dot(u0, self.sa)) < 0.95 else unit(np.cross(u0, [0, 0, 1.0]))
+        e2 = np.cross(u0, e1)
+        self.u0, self.e1, self.e2 = u0, e1, e2           # rod frame: e1, e2 _|_ rod, e3 = u0
+
+    def A(self, th):
+        return rot(self.A0, self.S, self.sa, th)
+
+    def B(self, d):
+        return rot(self.B0, self.H, self.ha, d)
+
+    def solve(self, d, th0=0.0):
+        th = th0
+        Bd = self.B(d)
+        for _ in range(80):
+            f = np.linalg.norm(self.A(th) - Bd) - self.L
+            if abs(f) < 1e-11:
+                break
+            h = 1e-6
+            df = (np.linalg.norm(self.A(th + h) - Bd) - np.linalg.norm(self.A(th - h) - Bd)) / (2 * h)
+            if abs(df) < 1e-12:
+                raise ValueError("linkage toggles")
+            th -= f / df
+        if abs(np.linalg.norm(self.A(th) - Bd) - self.L) > 1e-8:
+            raise ValueError("linkage has no solution")
+        return th
+
+    def sweep(self, lo, hi, n=41):
+        """[(delta, theta, phi1, phi2)] over the range (Newton continuation from neutral both ways)."""
+        out = {0.0: (0.0, 0.0, 0.0)}
+        for rng in (np.linspace(0.0, hi, n), np.linspace(0.0, lo, n)):
+            th = 0.0
+            for d in rng[1:]:
+                th = self.solve(d, th)
+                out[float(d)] = (th,) + self.rod_angles(d, th)
+        return [(d,) + out[d] for d in sorted(out)]
+
+    def rod_angles(self, d, th):
+        """Rod pose as two rotations at the arm-end ball (axes e1 then e2 of the rest rod frame, applied after... see
+        Registry.posed_vertices: child joints first) so that R_arm(th) R_e1(p1) R_e2(p2) u0 = rod direction."""
+        u = unit(self.B(d) - self.A(th))
+        R = G.rot_axis_angle(self.sa, th)
+        wv = R.T @ u
+        w1, w2, w3 = wv @ self.e1, wv @ self.e2, wv @ self.u0
+        p2 = math.asin(max(-1.0, min(1.0, w1)))
+        p1 = math.atan2(-w2, w3)
+        return p1, p2
+
+    def ratio(self, d, th, h=1e-5):
+        """Surface-to-arm torque ratio = d(theta) / d(delta) (mechanical advantage of the four-bar)."""
+        t2 = self.solve(d + h, th)
+        t1 = self.solve(d - h, th)
+        return (t2 - t1) / (2 * h)
+
+
+# =====================================================================================================================
+# fin + rudder
+# =====================================================================================================================
+class FinGeo:
+    """Starboard fin and rudder geometry (section frame of the fin: s along the chord, t along u = inboard normal)."""
+
+    def __init__(self, C: Ctx):
+        self.C = C
+        F = self.F = C.fin
+        prm = C.T["fin"]["params"]
+        span = float(prm["span"])
+        rc = C.T["fin"]["controls"]["rudder"]
+        self.e_r0 = F.e0 + float(rc["eta0"]) * span
+        self.e_r1 = F.e0 + float(rc["eta1"]) * span
+        self.e_cap = self.e_r1 + RUDDER_GAP_END
+        self.e_aft = (self.e_r0 - RUDDER_GAP_END - C.t_rib, self.e_r0 - RUDDER_GAP_END)
+        self.e_tip = (self.e_cap - C.t_rib, self.e_cap)
+        self.xh = float(rc["xc_hinge"])
+        self.fixed_fn, self.moving_fn, self.hinge_fn = SG.control_surface_regions(self.xh, gap=COVE_GAP, hinge_frac=0.5)
+        j = C.mech["rudder_R"]
+        self.h_o, self.h_a = np.asarray(j["origin"], float), unit(j["axis"])
+        self.aw = float(self.h_a @ F.w)
+        act = C.act["ACT-RUDDER"]
+        self.Ssh = np.asarray(act["servo_axis"], float)
+        self.Hp = np.asarray(act["hinge_point"], float)
+        self.e_L = F.e0 + float((self.Ssh - F.frame(F.e0)[0]) @ F.w)
+        self.ti = C.t_skin + BOND
+        self.cp = unit(F.c - (F.c @ self.h_a) * self.h_a)       # chord direction normal to the hinge axis
+        self._m = {}
+
+    def m(self, key, fn):
+        if key not in self._m:
+            self._m[key] = fn()
+        return self._m[key]
+
+    # ---------------------------------------------------------------- stations / lines
+    def axis_at(self, eta) -> np.ndarray:
+        return self.h_o + (eta - self.e_r0) / self.aw * self.h_a
+
+    def s_hinge(self, eta) -> float:
+        return float((self.axis_at(eta) - self.F.frame(eta)[0]) @ self.F.c)
+
+    def s_front(self, eta) -> float:
+        return FIN_FRONT_XC * self.F.chord(eta)
+
+    def s_rear(self, eta) -> float:
+        return self.s_hinge(eta) - FIN_REAR_DH
+
+    def r_nose(self, eta) -> float:
+        tu, tl = self.F.half_t(eta, self.s_hinge(eta) / self.F.chord(eta))
+        return min(tu, -tl)
+
+    # ---------------------------------------------------------------- lofts
+    def outer(self):
+        F = self.F
+        return self.m("outer", lambda: F.loft(F.e0, self.e_cap, f_oml()))
+
+    def inner(self, extra=0.0):
+        F = self.F
+        return self.m(("inner", extra), lambda: F.loft(F.e0 - 0.01, self.e_cap + 0.01, f_oml(self.C.t_skin + extra)))
+
+    def cove_cut(self):
+        """Volume removed from the fixed fin for the rudder: aft of the hinge line + the cove disc (r + gap)."""
+        def fn(poly, ch, eta):
+            s, t = self.hinge_fn(poly, ch)
+            tu, tl = SG._span_t(poly, s)
+            r = min(tu - t, t - tl)
+            return unary_union([Point(s, t).buffer(r + COVE_GAP, 96), sbox(s, t - 0.1, s + 0.40, t + 0.1)])
+        F = self.F
+        return self.m("cove", lambda: F.loft(self.e_r0 - RUDDER_GAP_END, self.e_cap + 0.02, fn, n=480))
+
+    def root_band(self, lo=0.0, hi=None):
+        C = self.C
+        hi = C.t_rib if hi is None else hi
+        return D(C.body(TRIM + hi, 3.24, 4.0), [C.body(TRIM + lo, 3.22, 4.0)])
+
+    # ---------------------------------------------------------------- fixed fin structure
+    def skin_raw(self) -> G.Mesh:
+        C = self.C
+        return D(self.outer(), [self.inner(), C.body(TRIM), self.cove_cut()])
+
+    def front_spar(self) -> G.Mesh:
+        F, C = self.F, self.C
+        e1 = self.e_tip[0] - BOND
+        tc = lambda eta: T_CAP + (T_CAP_TIP - T_CAP) * min(1.0, max(0.0, (eta - F.e0) / (e1 - F.e0)))
+        sp = F.channel(F.e0, e1, self.s_front, self.ti, aft=True, inner=self.inner(BOND), t_cap=tc)
+        return pieces_above(D(sp, [C.body(TRIM + C.t_rib + BOND, 3.24, 4.0)]))
+
+    def rear_spar_raw(self) -> G.Mesh:
+        F, C = self.F, self.C
+        sp = F.channel(F.e0, self.e_tip[0] - BOND, self.s_rear, self.ti, aft=False, inner=self.inner(BOND),
+                       t_cap=REAR_CAP[0], w_cap=REAR_CAP[1])
+        return pieces_above(D(sp, [C.body(TRIM + C.t_rib + BOND, 3.24, 4.0), self.cove_cut()]))
+
+    def root_rib_raw(self) -> G.Mesh:
+        return I(self.inner(BOND), self.root_band())
+
+    def box_rib_region(self, e0, e1) -> Polygon:
+        """Rib between the spar webs (frame of e0), notched round the front-spar caps (aft) and rear-spar caps
+        (forward)."""
+        F = self.F
+        reg = F.inner_common(e0, e1, self.ti)
+        regc = F.inner_common(e0, e1, self.ti + T_CAP + BOND)
+        dx1 = float((F.frame(e1)[0] - F.frame(e0)[0]) @ F.c)
+        sf = [self.s_front(e0), self.s_front(e1) + dx1]
+        sr = [self.s_rear(e0), self.s_rear(e1) + dx1]
+        a = max(sf) + 0.5 * T_WEB + BOND
+        b = min(sr) - 0.5 * T_WEB - BOND
+        rib = reg.intersection(sbox(a, -1.0, b, 1.0))
+        capz = reg.difference(regc)
+        regr = F.inner_common(e0, e1, self.ti + REAR_CAP[0] + BOND)
+        notch = capz.intersection(sbox(a - 0.01, -1.0, max(sf) - 0.5 * T_WEB + W_CAP + BOND, 1.0)).union(
+            reg.difference(regr).intersection(sbox(min(sr) + 0.5 * T_WEB - REAR_CAP[1] - BOND, -1.0, b + 0.01, 1.0)))
+        return clean(SG.largest(rib.difference(notch)))
+
+    def box_rib(self, e0, e1) -> G.Mesh:
+        return self.F.plate(e0, e1, self.box_rib_region(e0, e1))
+
+    def aft_rib(self) -> G.Mesh:
+        F = self.F
+        e0, e1 = self.e_aft
+        reg = F.inner_common(e0, e1, self.ti)
+        dx1 = float((F.frame(e1)[0] - F.frame(e0)[0]) @ F.c)
+        a = max(self.s_rear(e0), self.s_rear(e1) + dx1) + 0.5 * T_WEB + BOND
+        return F.plate(e0, e1, SG.largest(reg.intersection(sbox(a, -1.0, 1.0, 1.0))))
+
+    def tip_rib(self) -> G.Mesh:
+        F = self.F
+        e0, e1 = self.e_tip
+
+        def g(poly, ch, eta):
+            return SG.largest(self.fixed_fn(poly, ch, eta).buffer(-self.ti, join_style=2))
+        reg = F.reg_in(e0, e0, g).intersection(F.reg_in(e1, e0, g))
+        return F.plate(e0, e1, SG.largest(reg))
+
+    def cap_shell(self) -> G.Mesh:
+        F = self.F
+        outer = F.loft(self.e_cap, F.e1, f_oml())
+        inner = F.loft(self.e_cap - 0.01, F.e1 - T_GFRP, f_oml(T_GFRP))
+        return D(outer, [inner])
+
+    def cap_base(self) -> G.Mesh:
+        F = self.F
+        e0, e1 = self.e_cap, self.e_cap + T_GFRP
+        return F.plate(e0, e1, SG.largest(F.inner_common(e0, e1, T_GFRP + BOND)))
+
+    # ---------------------------------------------------------------- rudder
+    def rudder_outer(self):
+        F = self.F
+        return self.m("r_out", lambda: F.loft(self.e_r0, self.e_r1, self.moving_fn, n=240))
+
+    def rudder_inner(self, extra=0.0):
+        F = self.F
+
+        def fn(poly, ch, eta):
+            return SG.largest(self.moving_fn(poly, ch, eta).buffer(-(T_SKIN_CS + extra), join_style=2))
+        return self.m(("r_in", extra), lambda: F.loft(self.e_r0 + T_SKIN_CS + extra, self.e_r1 - T_SKIN_CS - extra,
+                                                      fn, n=240))
+
+    def s_rspar(self, eta) -> float:
+        return self.s_hinge(eta) + RUDDER_SPAR_E + 0.5 * T_WEB
+
+    def rudder_spar(self) -> G.Mesh:
+        F = self.F
+        tc, wc = RUDDER_CAP
+        inner = self.rudder_inner(BOND)
+        e0, e1 = self.e_r0 + T_SKIN_CS + BOND, self.e_r1 - T_SKIN_CS - BOND
+        capin = F.loft(e0 - 0.01, e1 + 0.01, lambda p, ch, eta: SG.largest(
+            self.moving_fn(p, ch, eta).buffer(-(T_SKIN_CS + BOND + tc), join_style=2)), n=240)
+        return F.channel(e0, e1, self.s_rspar, 0.0, aft=True, t_cap=tc, w_cap=wc, inner=inner, inner_cap=capin)
+
+    def rudder_core(self) -> G.Mesh:
+        F = self.F
+        tc, wc = RUDDER_CAP
+        e0, e1 = self.e_r0 + T_SKIN_CS + BOND, self.e_r1 - T_SKIN_CS - BOND
+        inner = self.rudder_inner(BOND)
+        capin = F.loft(e0 - 0.01, e1 + 0.01, lambda p, ch, eta: SG.largest(
+            self.moving_fn(p, ch, eta).buffer(-(T_SKIN_CS + 2 * BOND + tc), join_style=2)), n=240)
+        x0 = 0.5 * T_WEB + BOND
+        x1 = -0.5 * T_WEB + wc + BOND
+        a = I(capin, F.slab(e0 - 0.001, e1 + 0.001, self.s_rspar, x0, x1 + OV))
+        b = I(inner, F.slab(e0 - 0.001, e1 + 0.001, self.s_rspar, x1, 0.5))
+        return U([a, b])
+
+    def rudder_skin_raw(self) -> G.Mesh:
+        return D(self.rudder_outer(), [self.rudder_inner()])
+
+    # ---------------------------------------------------------------- spar root fittings
+    def eta_on_rib(self, s_fn, t=0.0, h=None) -> float:
+        """Span coordinate where the line (s_fn(eta), t) leaves the root rib (OML + TRIM + t_rib + BOND)."""
+        C, F = self.C, self.F
+        h = TRIM + C.t_rib + BOND if h is None else h
+        lo, hi = F.e0, F.e0 + 0.30
+        for _ in range(60):
+            mid = 0.5 * (lo + hi)
+            if C.oml_dist(F.p3(mid, s_fn(mid), t)) > h:
+                hi = mid
+            else:
+                lo = mid
+        return 0.5 * (lo + hi)
+
+    def block(self, eta0, eta1, s_fn, d0, d1, t0, t1) -> G.Mesh:
+        """Convex block between eta0 and eta1 whose section is the chord band s_fn(eta) + [d0, d1] x t [t0, t1]."""
+        F = self.F
+        return G.hull(np.asarray([F.p3(e, s_fn(e) + d, t) for e in (eta0, eta1) for d in (d0, d1) for t in (t0, t1)]))
+
+    def flange_span(self, s_fn):
+        eb = self.eta_on_rib(s_fn)
+        return eb - 0.010, eb + FL_LEN
+
+    def flange(self, s_fn, front_face=True) -> tuple:
+        """(mesh, (eta0, eta1), (d0, d1)) of the 5 mm web flange on the web front face of the spar along s_fn."""
+        e0, e1 = self.flange_span(s_fn)
+        d0, d1 = -0.5 * T_WEB - BOND - FL_T, -0.5 * T_WEB - BOND
+        return self.block(e0, e1, s_fn, d0, d1, -FL_W, FL_W), (e0, e1), (d0, d1)
+
+    def _bridge(self, top_pts, s_fn, e0, d0, d1) -> G.Mesh:
+        F = self.F
+        bot = [F.p3(e0, s_fn(e0) + d, t) for d in (d0, d1) for t in (-FL_W, FL_W)]
+        return G.hull(np.asarray(list(top_pts) + bot))
+
+    def front_fitting(self) -> G.Mesh:
+        x0, x1 = FF_SLOT[0] + BOND, FF_SLOT[1] - BOND
+        (y0, y1), zt = FF_LUG
+        (ny0, ny1), zn = FF_NECK
+        lug = box3((x0, y0, FF_FLOOR + BOND), (x1, y1, zt))
+        neck = box3((x0, ny0, zt - OV), (x1, ny1, zn))
+        fl, (e0, _e1), (d0, d1) = self.flange(self.s_front)
+        top = [(x, y, zn - OV) for x in (x0, x1) for y in (ny0, ny1)]
+        return U([lug, neck, self._bridge(top, self.s_front, e0, d0, d1), fl])
+
+    def rear_fitting(self) -> G.Mesh:
+        x0, x1 = RF_SLOT[0] + BOND, RF_SLOT[1] - BOND
+        (ya, za), (yb, zb) = RF_LUG
+        a = box3((x0, ya[0], za[0]), (x1, ya[1], za[1]))
+        b = box3((x0, yb[0], za[1] - OV), (x1, yb[1], zb[1]))
+        neck = box3((RF_NECK_X0, 0.142, zb[1] - OV), (x1, 0.165, RF_EAR_TOP + OV))
+        ze = RF_EAR_TOP + 0.008
+        e = box3((RF_NECK_X0, 0.142, RF_EAR_TOP), (RF_SLOT[1] + 0.0035, 0.165, ze))
+        fl, (e0, _e1), (d0, d1) = self.flange(self.s_rear)
+        top = [(x, y, ze - OV) for x in (RF_NECK_X0, RF_SLOT[1] + 0.0035) for y in (0.142, 0.165)]
+        return U([a, b, neck, e, self._bridge(top, self.s_rear, e0, d0, d1), fl])

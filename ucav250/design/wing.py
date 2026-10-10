@@ -399,11 +399,11 @@ class OP:
 # =====================================================================================================================
 # panel layout (spanwise stations of ribs, hinges, servo bays) - module detailing, from the layout interfaces
 # =====================================================================================================================
-RIB_Y = (0.775, 1.005, 1.33, 1.66, 1.95, 2.03, 2.26, 2.55, 2.88, 3.20)    # native rib planes (plan y of the LE)
-HINGE_Y = {"flap": (0.826, 1.219, 1.599, 1.993), "aileron": (2.30, 2.70, 3.10)}
+RIB_Y = (0.83, 1.15, 1.40, 1.70, 1.99, 2.26, 2.55, 2.88, 3.20)    # native rib planes (plan y of the LE)
+HINGE_Y = {"flap": (0.78, 1.25, 1.55, 1.88), "aileron": (2.31, 2.70, 3.10)}
 PIN_D = {"flap": 0.004, "aileron": 0.003}      # structures C-HPIN (4 mm; aileron 3 mm, see docs/detail/wing.md)
-BRKT_BOLT = {"flap": 4, "aileron": 3}
-LEVER_K = {"flap": 1.2, "aileron": 1.25}       # arm/horn lengths x k at the same 2:1 ratio (rod below the skin)
+BRKT_BOLT = {"flap": 3, "aileron": 3}
+LEVER_K = {"flap": 1.2, "aileron": 1.4}       # arm/horn lengths x k at the same 2:1 ratio (rod below the skin)
 
 
 def skin_stations(op: OP) -> list:
@@ -746,7 +746,7 @@ def spar_transition(op: OP, tg: Tongue) -> dict:
 # rear spar (C-section, flanges forward)
 # =====================================================================================================================
 N_FL = 6
-RS_Y0 = ROOT_RIB_Y + T_RIB + 0.006 + BOND          # rear-spar root: outboard of the root fitting's rib flange (6 mm)
+RS_Y0 = ROOT_RIB_Y + T_RIB + BOND + 0.0038 + BOND  # rear-spar root: outboard of the root fitting's rib flange (FIT_T)
 
 
 def rear_poly2(op: OP, st) -> np.ndarray:
@@ -826,15 +826,66 @@ def rflange_polys(op: OP, st, grow: float = BOND) -> list:
 R_CONDUIT = 0.007           # harness conduit OD 14 mm (GFRP tube, 1 mm wall)
 
 
-def conduit_st(op: OP, st) -> tuple[float, float]:
-    """Conduit centre (s, t) at a station: bonded along the aft face of the main-spar web at mid-depth."""
-    eta = st[0]
-    y = op.y_of(eta) if st[1] is None else st[1]
+CONDUIT_Y0 = ROOT_RIB_Y + T_RIB + 0.040     # conduit inboard end (40 mm for the CN-WING plug and backshell)
+CONDUIT_RISE_Y = 0.89                        # conduit reaches its upper route (over the flap servo) here
+CONDUIT_MERGE = (1.30, 1.70)                 # blend from the upper route onto the main-spar web line
+CONDUIT_UP = 0.014                           # upper route: centre this far under the upper skin inner face
+CONDUIT_Y1 = TIP_RIB_Y1 - T_RIB - 0.020      # conduit outboard end
+
+
+def _smooth(x: float) -> float:
+    x = min(1.0, max(0.0, x))
+    return x * x * (3.0 - 2.0 * x)
+
+
+def _web_st(op: OP, eta: float, y: float) -> tuple[float, float]:
     sm = op.s_main(eta)
     s = sm + 0.5 * op.t_mweb(max(y, ROOT_TRANS_Y1)) + BOND + R_CONDUIT
     tu = float(op.t_oml(eta, "up", s))
     tl = float(op.t_oml(eta, "lo", s))
     return s, 0.5 * (tu + tl)
+
+
+def conduit_st(op: OP, st) -> tuple[float, float]:
+    """Harness conduit centre (s, t) at a station. Outboard of y 1.70 it is bonded along the aft face of the main-spar
+    web at mid-depth; inboard it leaves the CN-WING plug (layout.systems.harness, x 2.725 / z -0.01) spanwise, rises
+    over the flap servo to 14 mm under the upper skin inner face and blends onto the web line between y 1.30 and
+    1.70 (smooth-step blends, no kinks)."""
+    eta = st[0]
+    y = op.y_of(eta) if st[1] is None else st[1]
+    s_w, t_w = _web_st(op, eta, y)
+    if y >= CONDUIT_MERGE[1]:
+        return s_w, t_w
+    cn = next(c for c in op.L["systems"]["harness"]["connectors"] if c["id"] == "CN-WING")["point"]
+    ym = CONDUIT_MERGE[1]
+    em = op.eta(ym)
+    x_m = op.pt(op.stn(em), [_web_st(op, em, ym)[0]], [0.0])[0][0]
+    x_u = float(cn[0]) + (x_m - float(cn[0])) * (y - CONDUIT_Y0) / (ym - CONDUIT_Y0)
+    s_u = op.s_of_x(eta, x_u)
+    t_u = float(op.inner(st, "up", [s_u])[1][0][1]) - CONDUIT_UP
+    o, c, u, _w = op.frame(eta)
+    t_cn = (float(cn[2]) - o[2] - s_u * c[2]) / u[2]
+    f = _smooth((y - CONDUIT_Y0) / (CONDUIT_RISE_Y - CONDUIT_Y0))
+    s_r, t_r = s_u, (1 - f) * t_cn + f * t_u
+    g = _smooth((y - CONDUIT_MERGE[0]) / (CONDUIT_MERGE[1] - CONDUIT_MERGE[0]))
+    return (1 - g) * s_r + g * s_w, (1 - g) * t_r + g * t_w
+
+
+def conduit_mesh(op: OP) -> G.Mesh:
+    """GFRP harness conduit OD 14 x 1 mm (wing branch of H-WING) from the CN-WING plug backshell to the tip bay."""
+    ys = np.r_[np.arange(CONDUIT_Y0, CONDUIT_Y1, 0.010), CONDUIT_Y1]
+    path = []
+    for y in ys:
+        st = op.stn(op.eta(y))
+        sc, tc = conduit_st(op, st)
+        path.append(op.pt(st, [sc], [tc])[0])
+    path = np.asarray(path)
+    outer = G.sweep_circle(path, R_CONDUIT, n=20)
+    d0 = _unit(path[1] - path[0])
+    d1 = _unit(path[-1] - path[-2])
+    ext = np.vstack([path[0] - 0.002 * d0, path, path[-1] + 0.002 * d1])
+    inner = G.sweep_circle(ext, R_CONDUIT - 0.001, n=20)
+    return finish(_diff(outer, [inner]))
 
 
 def strip_nodes(op: OP, st, side: str, s0: float, s1: float, n: int = 6) -> np.ndarray:
@@ -950,14 +1001,16 @@ def rib_piece(op: OP, eta: float, kind: str, holes=True) -> G.Mesh:
                 sc, tc = conduit_st(op, so)
                 q = map2(op, so, st, [[sc, tc]])[0]
                 cut.append(Point(q[0], q[1]).buffer(R_CONDUIT + 0.0015, 32))
+            c_hole = unary_union(cut)
             a, b = s0 + 0.035, s1 - 0.02
             n_h = max(1, int((b - a) // 0.08))
             for k in range(n_h):
                 sx = a + (k + 0.5) * (b - a) / n_h
                 tu, tl = float(op.t_oml(eta, "up", sx)), float(op.t_oml(eta, "lo", sx))
                 d = min(0.42 * (tu - tl - 0.016), 0.6 * (b - a) / n_h)
-                if d > 0.012:
-                    cut.append(Point(sx, 0.5 * (tu + tl)).buffer(0.5 * d, 40))
+                hole = Point(sx, 0.5 * (tu + tl)).buffer(0.5 * d, 40)
+                if d > 0.012 and hole.distance(c_hole) > 0.008:
+                    cut.append(hole)
         else:
             sx = 0.55 * s1
             tu, tl = float(op.t_oml(eta, "up", sx)), float(op.t_oml(eta, "lo", sx))
@@ -979,7 +1032,7 @@ def rib_piece(op: OP, eta: float, kind: str, holes=True) -> G.Mesh:
 # =====================================================================================================================
 # root rib, tip rib, joint hardware
 # =====================================================================================================================
-FIT_T = 0.006               # rear root fitting: rib flange thickness
+FIT_T = 0.0038              # rear root fitting: rib flange thickness (M5 into 6.8 mm through-inserts: 6 mm engagement)
 FIT_X = (2.776, 2.897)      # rear root fitting: chordwise extent of the rib flange (box bay -> lug)
 FIT_WEB_Y1 = 0.765          # rear root fitting: web flange end (bonded to the rear-spar web root)
 LUG_SLOT = 0.001            # clearance round the lug plate in the root rib
@@ -1066,3 +1119,841 @@ def tip_rib_mesh(op: OP) -> G.Mesh:
     for side in ("up", "lo"):
         fls += end_rib_flange(op, ya - RIB_FL_W, ya + OV, side, excl)
     return finish(_union([plate] + fls))
+
+
+def tongue_bushes(op: OP, tg: Tongue) -> G.Mesh:
+    """Bonded 4130 bush pair of the tongue (structures.sizing.wing_joint.bush: 16 H8 x OD 22 x 30)."""
+    ms = []
+    for i in (0, 1):
+        c = tg.pin_center(i)
+        ri = 0.5 * tg.bush_id + 0.0000135
+        ms.append(G.tube(0.5 * tg.bush_od, ri, c - 0.5 * tg.W * tg.n, c + 0.5 * tg.W * tg.n, n=48))
+    return G.union(ms)
+
+
+PIN_HEAD = (0.024, 0.006)    # main pin head d x h (layout pins)
+FORK_PAD_N = 0.0152 + 0.010  # fork pad outer face from the slot centre line (layout slot width / 2 + 10 mm pad)
+
+
+def main_pin(op: OP, tg: Tongue, i: int) -> G.Mesh:
+    """Headed Ti-6Al-4V main pin d 16 h8 x 62 (layout pins P-MAIN1/2): head on the fork front pad, shank through the
+    four fork bushes and the two tongue bushes."""
+    p = tg.pins[i]
+    c = np.asarray(p["position"], float)
+    a = _unit(p["axis"])
+    d = float(p["diameter"])
+    L = float(p["length"])
+    r = 0.5 * d - 0.0000135
+    n0 = -FORK_PAD_N - BOND
+    shank = G.cylinder(r, c + (n0 - OV) * a, c + (n0 + L) * a, n=40)
+    hd, hh = PIN_HEAD
+    head = G.cylinder(0.5 * hd, c + (n0 - hh) * a, c + n0 * a, n=40)
+    return G.union([shank, head])
+
+
+KEEPER = {"t": 0.0025, "half_d": 0.0105, "boss_r": 0.0085, "bolt_u": 0.022, "half_u": 0.031}
+
+
+def keeper_mesh(op: OP, tg: Tongue, i: int) -> tuple[G.Mesh, list]:
+    """7075 keeper plate over a main-pin head: plate 2.5 mm, two bosses down to the fork front pad (2 x M4 into
+    potted inserts of the pad, layout pins.spec). Returns (mesh, [(bolt head point, axis)])."""
+    p = tg.pins[i]
+    c = np.asarray(p["position"], float)
+    a = _unit(p["axis"])
+    hd, hh = PIN_HEAD
+    n_head = -FORK_PAD_N - BOND - hh                      # front face of the pin head
+    n_back = n_head - BOND
+    n_front = n_back - KEEPER["t"]
+    n_pad = -FORK_PAD_N - BOND
+    dd = tg.d
+    u = tg.u
+    plate = obox(c + 0.5 * (n_back + n_front) * a, [a, dd, u], [0.5 * KEEPER["t"], KEEPER["half_d"], KEEPER["half_u"]])
+    ms = [plate]
+    bolts = []
+    for sg in (-1, 1):
+        q = c + sg * KEEPER["bolt_u"] * u
+        ms.append(G.cylinder(KEEPER["boss_r"], q + (n_back + OV) * a, q + n_pad * a, n=40))
+        bolts.append((q + n_front * a, a))
+    return G.union(ms), bolts
+
+
+def lug_plan(op: OP) -> Polygon:
+    """Plan outline (x, y) of the rear-spar lug plate: bore 8 H8 on P-REAR, e 16 mm semicircular tip, 32 mm wide along
+    the insertion axis (layout rear_spar.lug), forward edge trimmed parallel to the centre-section rear spar
+    (M-CTBOX rear_spar_line + 0.3 web + 3.2 pad + 4 slot-fitting web plate + 1 mm) inside the centre section."""
+    rp = op.wj["rear_spar"]
+    lug = rp["lug"]
+    pr = np.asarray(rp["pin"]["position"], float)
+    d = _unit(-np.asarray(op.wj["insertion"]["axis_inboard"], float))[:2]
+    n = np.array([d[1], -d[0]])
+    w2 = 0.5 * float(lug["width"])
+    y_end = ROOT_RIB_Y + T_RIB + BOND + FIT_T - 0.001
+    s_end = (y_end - pr[1]) / d[1]
+    tip = Point(pr[0], pr[1]).buffer(w2, 64)
+    body = Polygon([pr[:2] - w2 * n, pr[:2] + w2 * n, pr[:2] + w2 * n + s_end * d, pr[:2] - w2 * n + s_end * d])
+    reg = unary_union([tip, body])
+    rs = np.asarray({m["id"]: m for m in op.L["chassis"]["members"]}["M-CTBOX"]["rear_spar_line"], float)
+    ys = np.linspace(0.6, op.y_j - 0.0034, 20)
+    xt = np.interp(ys, rs[:, 1], rs[:, 0]) + 0.0003 + 0.0032 + 0.004 + 0.001
+    trim = Polygon(np.vstack([np.column_stack([xt, ys]), [[xt[-1], op.y_j - 0.0034], [2.5, op.y_j - 0.0034],
+                                                           [2.5, 0.6]]]))
+    reg = reg.difference(trim)
+    return SG.largest(reg.difference(Point(pr[0], pr[1]).buffer(0.5 * float(lug["bore"]) + 0.0000135, 48)))
+
+
+def fitting_mesh(op: OP) -> tuple[G.Mesh, list]:
+    """Rear-spar root fitting with the lug (YK250-WG-152, machined 7075-T651): lug plate 8 mm on the rear-pin plane,
+    rib flange FIT_T on the root-rib outboard face (4 x M5 into through-thickness inserts of the root rib), web
+    flange 4 mm bonded to the forward face of the rear-spar web root. Returns (mesh, [(bolt head point, axis)])."""
+    rp = op.wj["rear_spar"]
+    pz = float(rp["pin"]["position"][2])
+    t2 = 0.5 * float(rp["lug"]["thickness"])
+    lug = prism(lug_plan(op), (0.0, 0.0, pz - t2), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), 0.0, 2 * t2)
+    y0, y1 = ROOT_RIB_Y + T_RIB + BOND, ROOT_RIB_Y + T_RIB + BOND + FIT_T
+    stm = op.stp(0.5 * (y0 + y1))
+    P2 = np.asarray(interior_poly(op, stm).exterior.coords)
+    Q = op.pt(stm, P2[:, 0], P2[:, 1])
+    inner = Polygon(Q[:, [0, 2]]).buffer(0).buffer(-(RIB_FL_T + 0.0012), join_style=2)
+    fl_xz = SG.largest(inner.intersection(sbox(FIT_X[0], -1.0, FIT_X[1], 1.0)))
+    flange = prism(fl_xz, (0.0, y0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0), -FIT_T, 0.0)
+    if flange.bounds()[0][1] < y0 - 1e-6:
+        flange = flange.translated((0.0, FIT_T, 0.0))
+    # web flange inside the C-section, on the forward face of the rear-spar web
+    rings = []
+    sts = [op.stp(y0)] + [op.stn(e) for e in np.linspace(op.eta(y0 + 0.004), op.eta(FIT_WEB_Y1), 6)]
+    for st in sts:
+        C = rear_poly2(op, st)
+        sr = op.s_rear(st[0])
+        tw = op.t_rweb()
+        ub = C[3 * N_FL:][::-1]       # upper flange inner face (fwd -> web)
+        lb = C[2 * N_FL:3 * N_FL]     # lower flange inner face (fwd -> web)
+        s0, s1 = sr - tw - 0.004, sr - tw - 2 * BOND
+        tu = float(np.interp(s0, ub[:, 0], ub[:, 1])) - 0.0008
+        tl = float(np.interp(s0, lb[:, 0], lb[:, 1])) + 0.0008
+        rings.append(op.pt(st, [s0, s1, s1, s0], [tl, tl, tu, tu]))
+    web = _loft(rings)
+    m = finish(_union([lug, flange, web]))
+    zs = 0.5 * (fl_xz.bounds[1] + fl_xz.bounds[3])
+    bolts = []
+    for x in (FIT_X[0] + 0.012, FIT_X[0] + 0.044):
+        for dz in (-0.009, 0.009):
+            bolts.append((np.array([x, y1, zs + dz]), np.array([0.0, -1.0, 0.0])))
+    return m, bolts
+
+
+def rear_pin_mesh(op: OP) -> G.Mesh:
+    """Ti-6Al-4V ball-lock rear pin d 8 f7 (layout P-REAR), inserted upward through P-REARACCESS: push-button head
+    d 14 x 4 under the lower slot plate, shank through the slot plates and the lug, 2.5 mm ball-lock end above."""
+    rp = op.wj["rear_spar"]
+    sf = rp["slot_fitting"]
+    c = np.asarray(rp["pin"]["position"], float)
+    z_lo = c[2] - 0.5 * float(sf["slot"]) - float(sf["plate_t"]) - BOND
+    z_hi = c[2] + 0.5 * float(sf["slot"]) + float(sf["plate_t"]) + 0.0025
+    r = 0.5 * float(rp["pin"]["diameter"]) - 0.00002
+    shank = G.cylinder(r, (c[0], c[1], z_lo - OV), (c[0], c[1], z_hi), n=32)
+    head = G.cylinder(0.007, (c[0], c[1], z_lo - 0.004), (c[0], c[1], z_lo), n=32)
+    return G.union([shank, head])
+
+
+# =====================================================================================================================
+# region lofts: trailing-edge closures, control surfaces, tip fairing
+# =====================================================================================================================
+def region_loft(op: OP, sts: list, region_fn, n_ring: int = 140, start_dir=(1.0, 0.0)) -> G.Mesh:
+    rings = []
+    for st in sts:
+        reg = SG.largest(region_fn(st))
+        P2 = SG.resample_ring(reg, n_ring, start_dir)
+        rings.append(op.pt(st, P2[:, 0], P2[:, 1]))
+    return _loft(rings)
+
+
+def halfspace(point, normal, size: float = 2.0) -> G.Mesh:
+    """Large box filling the half-space (p - point) . normal <= 0."""
+    nrm = _unit(normal)
+    ref = np.array([0.0, 0.0, 1.0]) if abs(nrm[2]) < 0.9 else np.array([1.0, 0.0, 0.0])
+    e1 = _unit(np.cross(nrm, ref))
+    e2 = np.cross(nrm, e1)
+    c = np.asarray(point, float) - 0.5 * size * nrm
+    return obox(c, [nrm, e1, e2], [0.5 * size, 0.5 * size, 0.5 * size])
+
+
+def native_between(op: OP, y0: float, y1: float, step: float = 0.04) -> list:
+    sts = skin_stations(op)
+    e0, e1 = op.eta(y0), op.eta(y1)
+    es = sorted({round(e0, 7), round(e1, 7)} | {round(st[0], 7) for st in sts if st[1] is None and e0 < st[0] < e1})
+    out = []
+    for a, b in zip(es, es[1:]):
+        n = max(1, int(math.ceil((b - a) / step)))
+        out += list(np.linspace(a, b, n + 1)[:-1])
+    out.append(es[-1])
+    return [op.stn(e) for e in out]
+
+
+def te_region(op: OP, st) -> Polygon:
+    reg = interior_poly(op, st, extra=2 * BOND, to_te=True)
+    sr = op.s_rear(st[0])
+    return SG.largest(reg.intersection(sbox(sr + 2 * BOND, -1.0, 2.0, 1.0)))
+
+
+def te_closure(op: OP, kind: str, cutters=()) -> G.Mesh:
+    """Fixed trailing-edge closure (foam core + CFRP skin) aft of the rear-spar web between the moving surfaces:
+    'root' (root rib -> flap), 'mid' (flap -> aileron), 'tip' (aileron -> tip rib); end faces normal to the hinge
+    axes (END_GAP to the moving surfaces)."""
+    hf, ha = op.hinge("flap"), op.hinge("aileron")
+    if kind == "root":
+        y0, y1 = ROOT_RIB_Y + T_RIB + BOND, hf["y0"] + 0.03
+        sts = [op.stp(y0)] + native_between(op, y0 + 0.004, y1)
+        cut = [(op.hinge_point_at("flap", hf["y0"]), hf["axis"], -END_GAP)]
+    elif kind == "mid":
+        y0, y1 = hf["y1"] - 0.03, ha["y0"] + 0.03
+        sts = native_between(op, y0, y1)
+        cut = [(op.hinge_point_at("flap", hf["y1"]), -hf["axis"], -END_GAP),
+               (op.hinge_point_at("aileron", ha["y0"]), ha["axis"], -END_GAP)]
+    else:
+        y0, y1 = ha["y1"] - 0.03, TIP_RIB_Y1 - T_RIB - BOND
+        sts = native_between(op, y0, y1 - 0.004) + [op.stp(y1)]
+        cut = [(op.hinge_point_at("aileron", ha["y1"]), -ha["axis"], -END_GAP)]
+    m = region_loft(op, sts, lambda st: te_region(op, st))
+    for p, a, off in cut:
+        m = _inter(m, halfspace(np.asarray(p) + off * _unit(a), a))
+    m = _diff(m, list(cutters))
+    return finish(largest_piece(m))
+
+
+def moving_region(op: OP, which: str, st) -> Polygon:
+    poly, _fr = SG.section2d(op.W, st[0], n=240)
+    _fixed, moving, _h = SG.control_surface_regions(0.75, gap=COVE_GAP)
+    return moving(poly, op.chord(st[0]), st[0])
+
+
+def surface_raw(op: OP, which: str) -> G.Mesh:
+    """Moving surface (foam core + CFRP skin): structgen round-nose region lofted between the hinge-line end planes
+    (normal to the layout hinge axis)."""
+    h = op.hinge(which)
+    sts = native_between(op, h["y0"] - 0.02, h["y1"] + 0.02, step=0.03)
+    m = region_loft(op, sts, lambda st: moving_region(op, which, st), n_ring=160)
+    m = _inter(m, halfspace(op.hinge_point_at(which, h["y1"]), h["axis"]))
+    m = _inter(m, halfspace(op.hinge_point_at(which, h["y0"]), -h["axis"]))
+    return m
+
+
+def tip_fairing_mesh(op: OP, cutters=()) -> G.Mesh:
+    """GFRP tip fairing (4 plies 7781, 1.0 mm): OML cap from the tip-rib outboard face to the tip section, pocket for
+    the LT-WING position light (layout box + 0.5 mm)."""
+    y0 = TIP_RIB_Y1 + BOND
+    sts = [op.stp(y0), op.stp(y0 + 0.01), op.stp(y0 + 0.02)] + [op.stn(e) for e in
+                                                               np.linspace(op.eta(y0 + 0.03), op.eta_end, 4)]
+
+    def full(st):
+        poly, _ = SG.section2d(op.W, st[0], n=200)
+        return poly
+    outer = region_loft(op, sts, full, n_ring=160)
+    t = 0.0010
+    inner_sts = [op.stp(y0 - 0.001)] + sts[1:-1]
+
+    def shrunk(st):
+        poly, _ = SG.section2d(op.W, st[0], n=200)
+        return poly.buffer(-t, join_style=2)
+    inner = region_loft(op, inner_sts, shrunk, n_ring=160)
+    # inner cavity ends t before the tip cap
+    end = op.stn(op.eta_end)
+    o, c, u, w = op.frame(end[0])
+    inner = _inter(inner, halfspace(o - t * w, w))
+    m = _diff(outer, [inner] + list(cutters))
+    return finish(largest_piece(m))
+
+
+# =====================================================================================================================
+# hinges (7075 clevis bracket on the rear-spar web, bonded 7075 tongue in the surface, stainless pin)
+# =====================================================================================================================
+HINGE_LUG_T = 0.003          # structures C-HINGE: 3 mm 7075 lugs
+HINGE_GAP = 0.0005           # axial gap tongue / clevis lug
+HINGE_BASE_T = 0.003
+TONGUE_EMBED = 0.020         # tongue length bonded into the surface core
+WEB_PAD_T = 0.0020           # 10-ply pad on the rear-spar web forward face under each bracket
+
+
+def hframe(axis) -> tuple:
+    a = _unit(axis)
+    x = np.array([1.0, 0.0, 0.0])
+    c = _unit(x - np.dot(x, a) * a)
+    n = np.cross(c, a)
+    return a, c, n
+
+
+def hinge_geo(op: OP, which: str, y: float) -> dict:
+    """Geometry of one hinge station: hinge point H, frame, web position, lug radius, bracket base size, bolt points
+    (head on the base, -c), notch band for the surface."""
+    h = op.hinge(which)
+    H = op.hinge_point_at(which, y)
+    a, c, n = hframe(h["axis"])
+    st = op.stn(op.eta(y))
+    sr = op.s_rear(st[0])
+    _o, cs, us, _w = op.frame(st[0])
+    sH, tH, r = op.hinge_cs(st[0])
+    # web aft face and the free height between the skin lips just aft of it, in the hinge frame
+    Pw = op.pt(st, [sr], [tH])[0]
+    c_w = float(np.dot(Pw - H, c))
+    s_b = sr + HINGE_BASE_T + 0.001
+    tu = float(op.inner(st, "up", [s_b], extra=BOND)[1][0, 1])
+    tl = float(op.inner(st, "lo", [s_b], extra=BOND)[1][0, 1])
+    n_mid = float(np.dot(op.pt(st, [sr], [0.5 * (tu + tl)])[0] - H, n))
+    h_free = tu - tl
+    d = PIN_D[which]
+    r_lug = 2.0 * d + 0.0005
+    bd = BRKT_BOLT[which]
+    D = bd * 1e-3
+    from . import fastener_catalog as FCAT
+    spacing = max(3 * D, FCAT.NUTPLATE[bd][0] + 0.002)
+    base_w = spacing + 2 * 2.3 * D
+    base_h = min(h_free - 0.002, 2 * r_lug + 0.006)
+    half_clevis = 0.5 * HINGE_LUG_T + HINGE_GAP + HINGE_LUG_T
+    band = 0.5 * base_w + 0.003
+    bolts = [(H + c_w * c + 0.0002 * c + HINGE_BASE_T * c + k * 0.5 * spacing * a + n_mid * n, -c)
+             for k in (-1, 1)]
+    return {"H": H, "a": a, "c": c, "n": n, "c_w": c_w, "n_mid": n_mid, "r": r, "r_lug": r_lug, "d": d,
+            "base_w": base_w, "base_h": base_h, "half_clevis": half_clevis, "band": band, "bolts": bolts,
+            "bolt_d": bd, "st": st, "y": y}
+
+
+def _prism_frame(poly, H, e_u, e_v, e_w, w0: float, w1: float) -> G.Mesh:
+    """shapely polygon in (u, v) about H, extruded along e_w from w0 to w1 (e_u x e_v = +/- e_w handled)."""
+    ww = np.cross(e_u, e_v)
+    if np.dot(ww, e_w) > 0:
+        return G.extrude(poly, w1 - w0, origin=H + w0 * e_w, u=e_u, v=e_v)
+    m = G.extrude(poly, w1 - w0, origin=H + w1 * e_w, u=e_u, v=e_v)
+    return m
+
+
+def clevis_profile(g: dict) -> Polygon:
+    """Lug profile in the hinge frame (c, n): disc r_lug about the axis + stem into the base plate."""
+    hb = g["base_h"]
+    c_in = g["c_w"] + 2 * BOND + 0.5 * HINGE_BASE_T          # stem starts inside the base thickness (fused)
+    return unary_union([Point(0.0, 0.0).buffer(g["r_lug"], 48),
+                        Polygon([(c_in, g["n_mid"] - 0.5 * hb + 0.001), (0.0, -g["r_lug"]), (0.0, g["r_lug"]),
+                                 (c_in, g["n_mid"] + 0.5 * hb - 0.001)])])
+
+
+def base_plate(op: OP, g: dict) -> G.Mesh:
+    """Bracket base plate parallel to the rear-spar web aft face (lofted in the section frames like the web)."""
+    rings = []
+    half = 0.5 * g["base_w"]
+    for dy in (-half, 0.0, half):
+        st = op.stn(op.eta(g["y"] + dy * g["a"][1]))
+        sr = op.s_rear(st[0])
+        _sH, tH, _r = op.hinge_cs(st[0])
+        tm = tH + g["n_mid"]
+        s0, s1 = sr + 2 * BOND, sr + 2 * BOND + HINGE_BASE_T
+        h2 = 0.5 * g["base_h"]
+        rings.append(op.pt(st, [s0, s1, s1, s0], [tm - h2, tm - h2, tm + h2, tm + h2]))
+    return _loft(rings)
+
+
+def clevis_mesh(op: OP, g: dict) -> G.Mesh:
+    """Fixed hinge bracket (machined 7075): base plate on the rear-spar web aft face + two lugs about the hinge axis."""
+    H, a, c, n = g["H"], g["a"], g["c"], g["n"]
+    prof = clevis_profile(g).difference(Point(0.0, 0.0).buffer(0.5 * g["d"] + 0.000025, 32))
+    lugs = []
+    t0 = 0.5 * HINGE_LUG_T + HINGE_GAP
+    for sg in (-1, 1):
+        w0, w1 = (t0, t0 + HINGE_LUG_T) if sg > 0 else (-t0 - HINGE_LUG_T, -t0)
+        lugs.append(_prism_frame(prof, H, c, n, a, w0, w1))
+    return finish(_union([base_plate(op, g)] + lugs))
+
+
+def tongue_profile(g: dict, region_cn: Polygon | None) -> Polygon:
+    rl = g["r_lug"]
+    c_end = rl + 0.003 + TONGUE_EMBED
+    trap = Polygon([(0.0, -rl), (c_end, -0.5 * g["h_t"]), (c_end, 0.5 * g["h_t"]), (0.0, rl)])
+    if region_cn is not None:
+        trap = trap.intersection(region_cn)
+    prof = unary_union([Point(0.0, 0.0).buffer(rl, 48), trap])
+    return SG.largest(prof).difference(Point(0.0, 0.0).buffer(0.5 * g["d"] + 0.000025, 32))
+
+
+def section_cn(op: OP, which: str, g: dict, shrink: float) -> Polygon:
+    """Moving-surface section at the hinge station in the hinge frame (c, n), shrunk by ``shrink``."""
+    st = g["st"]
+    reg = moving_region(op, which, st)
+    P = np.asarray(reg.exterior.coords)
+    Q = op.pt(st, P[:, 0], P[:, 1]) - g["H"]
+    return Polygon(np.column_stack([Q @ g["c"], Q @ g["n"]])).buffer(0).buffer(-shrink, join_style=2)
+
+
+def tongue_mesh_h(op: OP, which: str, g: dict) -> G.Mesh:
+    reg = section_cn(op, which, g, CS_SKIN_T + 0.0008)
+    th = reg.bounds
+    g["h_t"] = min(2 * g["r_lug"], 0.010)
+    prof = tongue_profile(g, reg)
+    return _prism_frame(prof, g["H"], g["c"], g["n"], g["a"], -0.5 * HINGE_LUG_T, 0.5 * HINGE_LUG_T)
+
+
+def notch_cutter(g: dict, lo: float, hi: float) -> G.Mesh:
+    """Surface cut-out at a hinge: nose forward of the axis, a disc r_lug + 3 mm, and the bracket (+3 mm) as seen
+    from the surface over its whole deflection range [lo, hi], across the bracket width + 3 mm each side."""
+    from shapely import affinity
+    br = clevis_profile(g).union(sbox(g["c_w"], g["n_mid"] - 0.5 * g["base_h"], g["c_w"] + 0.004,
+                                      g["n_mid"] + 0.5 * g["base_h"])).buffer(0.003)
+    shapes = [sbox(-0.08, -0.06, 0.0, 0.06), Point(0.0, 0.0).buffer(g["r_lug"] + 0.003, 48)]
+    for dl in np.linspace(lo, hi, 17):
+        # the surface frame rotates by +dl about a: in it the bracket appears rotated by -dl; (c, n) rotation sense
+        # from e_c -> -e_n for +dl
+        shapes.append(affinity.rotate(br, -math.degrees(-dl), origin=(0.0, 0.0)))
+    prof = unary_union(shapes)
+    return _prism_frame(prof, g["H"], g["c"], g["n"], g["a"], -g["band"], g["band"])
+
+
+def slot_cutter(op: OP, which: str, g: dict) -> G.Mesh:
+    reg = section_cn(op, which, g, CS_SKIN_T + 0.0008)
+    prof = tongue_profile(g, reg).buffer(BOND, join_style=2)
+    return _prism_frame(prof, g["H"], g["c"], g["n"], g["a"], -0.5 * HINGE_LUG_T - BOND, 0.5 * HINGE_LUG_T + BOND)
+
+
+def web_pad(op: OP, g: dict) -> G.Mesh:
+    """10-ply pad on the forward face of the rear-spar web under a hinge bracket (between the flanges)."""
+    rings = []
+    half = 0.5 * g["base_w"] + 0.008
+    for dy in (-half, 0.0, half):
+        st = op.stn(op.eta(g["y"] + dy / max(g["a"][1], 0.5)))
+        C = rear_poly2(op, st)
+        sr = op.s_rear(st[0])
+        tw = op.t_rweb()
+        ub = C[3 * N_FL:][::-1]
+        lb = C[2 * N_FL:3 * N_FL]
+        s0, s1 = sr - tw - WEB_PAD_T, sr - tw + OV
+        tu = float(np.interp(s0, ub[:, 0], ub[:, 1])) + OV
+        tl = float(np.interp(s0, lb[:, 0], lb[:, 1])) - OV
+        rings.append(op.pt(st, [s0, s1, s1, s0], [tl, tl, tu, tu]))
+    return _loft(rings)
+
+
+# =====================================================================================================================
+# servo bays, four-bar linkages, servo / arm / push-rod / horn, hatch frame and cover with the linkage fairing
+# =====================================================================================================================
+BAY_RIBS = {"flap": (1.15, 0.83), "aileron": (2.26, 1.99)}    # (outboard, inboard) rib y of each servo bay
+FRAME_T = 0.0020             # hatch frame (doubler ring, 10 plies PW) bonded on the skin inner face
+FRAME_BORDER = 0.010         # frame border on the skin round the opening
+LAND_SPAN, LAND_CHORD = 0.018, 0.007     # frame land inside the opening (spanwise / chordwise edges)
+COVER_GAP = 0.001            # cover to opening gap
+COVER_RIM_T = 0.0058         # cover rim = shell_secondary sandwich (flush 0.1 mm under the OML)
+COVER_MID_T = 0.0020         # cover middle (solid laminate, servo cradle bonded on it)
+CRADLE_WALL = 0.003
+CRADLE_BASE_MIN = 0.002
+SERVO_BOLT = 4
+ARM_T = 0.003                # servo arm / horn plate (7075, structures C-RODEND: 3 mm horn)
+EYE_R, EYE_T = 0.0065, 0.005 # rod-end eye (>= 2 D edge distance for the M3 rod-end bolt)
+ROD_OD, ROD_ID = 0.006, 0.004            # push-rod 7075 tube 6 x 1 (structures C-PUSHROD)
+ACT_KEY = {"flap": "volz_da30", "aileron": "volz_da26"}
+ACT_PART = {"flap": "ACT-FLAP", "aileron": "ACT-AILERON"}
+
+
+def servo_dims(which: str) -> dict:
+    """Case L (chordwise) x W (vertical) x H (along the shaft = hinge axis), shaft offset from the aft edge, hole
+    pattern along H, mass (components.yaml datasheet values; DA 30: envelope incl. D-Sub)."""
+    d = actuator_data(ACT_KEY[which])
+    if which == "aileron":
+        L, H, W = d["case_dimensions_m"]
+        off = float(d["mounting"]["output_axis_from_case_edge_m"])
+        hp = float(d["mounting"]["flange_hole_pattern_m"][0])
+    else:
+        H, L, W = d["envelope_dimensions_m"]
+        off = 0.010                                   # output shaft 10 mm from the aft face (layout ACT-FLAP)
+        hp = float(d["mounting"]["flange_hole_pattern_m"][0])
+    return {"L": float(L), "W": float(W), "H": float(H), "off": off, "hole_pitch": hp, "mass": float(d["mass_kg"]),
+            "model": d["model"]}
+
+
+def eta_of_point(op: OP, P) -> float:
+    """Native station (eta) whose section plane contains the point P."""
+    P = np.asarray(P, float)
+    e = op.eta(float(P[1]))
+    for _ in range(8):
+        o, _c, _u, w = op.frame(e)
+        f = float(np.dot(w, P - o))
+        if abs(f) < 1e-9:
+            break
+        e += f
+    return e
+
+
+def opening_s(op: OP, eta: float) -> tuple[float, float]:
+    """Chord range of a hatch opening at a native station: FRAME_BORDER + 2 mm inside the full-depth sandwich of the
+    lower box skin (between the main-spar cap ramp b6 and the rear-flange ramp b7), i.e. parallel to the spars."""
+    k = op.knots(eta, "lo")
+    return k["b6"] + FRAME_BORDER + 0.002, k["b7"] - FRAME_BORDER - 0.002
+
+
+def _drive_at(op: OP, which: str, yd: float, c_S: float | None = None) -> dict:
+    """Four-bar and servo pose for the rod plane at hinge station yd (chordwise shaft position c_S, or the most
+    forward position the cover land allows)."""
+    h = op.hinge(which)
+    a, c, n = hframe(h["axis"])
+    sd = servo_dims(which)
+    lk = op.ctl[which]["linkage"]
+    k = LEVER_K[which]
+    r_s = float(lk["servo_arm_m"]) * k
+    r_h = r_s * float(lk["arm_ratio"])
+    d_n = math.radians(float(lk.get("neutral_deg", 0.0)))
+    Hd = op.hinge_point_at(which, yd)
+    a1 = -0.0106
+    a0 = a1 - sd["H"]
+
+    def case_pts(cS, nS):
+        S_ = Hd + cS * c + nS * n
+        cf = sd["off"] - sd["L"] - BOND - CRADLE_WALL - 0.0025            # incl. the M4 low-head screw heads
+        ca = sd["off"] + BOND + CRADLE_WALL + 0.0025
+        return [S_ + cc * c + nn * n + aa * a for cc in (cf, ca) for nn in (-0.5 * sd["W"] - 0.003, 0.5 * sd["W"])
+                for aa in (a0, a1)]
+    # chordwise: forward bolt heads behind the forward land (+3 mm), checked at both case ends
+    if c_S is None:
+        c_S = -0.5 * op.chord(op.eta(yd))
+        for _ in range(4):
+            worst = 1.0
+            for P in case_pts(c_S, -0.01):
+                e = eta_of_point(op, P)
+                s_lim = opening_s(op, e)[0] + COVER_GAP + LAND_CHORD + 0.003
+                worst = min(worst, op.s_of_x(e, P[0]) - s_lim)
+            c_S -= worst
+    # vertical: case bottom on the cradle base over the cover middle (OML + 0.1 + COVER_MID_T + bond)
+    bott = []
+    for P in case_pts(c_S, 0.0):
+        e = eta_of_point(op, P)
+        s0 = op.s_of_x(e, P[0])
+        for ss in (s0 - 0.01, s0, s0 + 0.01):
+            sg = op.sig_of_s(e, "lo", [ss])
+            s_, t_, ns_, nt_ = op.at_sig(e, "lo", sg)
+            off = 0.0001 + COVER_MID_T + 1.5 * BOND
+            Q = op.to3d(e, s_ + off * ns_, t_ + off * nt_)[0]
+            bott.append(float(np.dot(Q - Hd, n)))
+    n_bottom = max(bott) + CRADLE_BASE_MIN
+    n_S = n_bottom + 0.5 * sd["W"]
+    S = Hd + c_S * c + n_S * n
+    A_n = S - r_s * n
+    B_n = Hd - r_h * n
+    for _ in range(40):
+        rod = _unit(B_n - A_n)
+        hd = np.cross(a, rod)
+        if np.dot(hd, n) > 0:
+            hd = -hd
+        A_n = S + r_s * hd
+        B_n = Hd + r_h * hd
+    from . import actuation as A
+    B0 = A.rotate_about(B_n[None], Hd, a, -d_n)[0] if d_n else B_n.copy()
+    ref = np.array([0, 0, 1.0]) if abs(a[2]) < 0.9 else np.array([1.0, 0, 0])
+    e1 = _unit(np.cross(a, ref))
+    e2 = np.cross(a, e1)
+    th_n = math.atan2(np.dot(A_n - S, e2), np.dot(A_n - S, e1))
+    L_rod = float(np.linalg.norm(B_n - A_n))
+    th = th_n
+    for _ in range(80):
+        def f(t):
+            return np.linalg.norm(S + r_s * (math.cos(t) * e1 + math.sin(t) * e2) - B0) - L_rod
+        df = (f(th + 1e-7) - f(th - 1e-7)) / 2e-7
+        th -= f(th) / df
+    A0 = S + r_s * (math.cos(th) * e1 + math.sin(th) * e2)
+    kin = A.linkage_kinematics(Hd, a, B0, S, a, r_s, th, (h["lo"], h["hi"]), n=41)
+    return {"which": which, "a": a, "c": c, "n": n, "Hd": Hd, "yd": yd, "std": op.stn(op.eta(yd)), "S": S,
+            "A0": A0, "B0": B0, "A_n": A_n, "B_n": B_n, "th0": th, "e1": e1, "e2": e2, "r_s": r_s, "r_h": r_h,
+            "L_rod": L_rod, "kin": kin, "sd": sd, "c_S": c_S, "n_bottom": n_bottom, "lo": h["lo"], "hi": h["hi"],
+            "d_n": d_n, "case_pts": case_pts(c_S, n_S)}
+
+
+def drive_geo(op: OP, which: str) -> dict:
+    """Servo bay, hatch opening, servo position and the four-bar of one surface (starboard). The rod plane station
+    is placed so the servo case (+ cradle and screw heads) clears the inboard cover land and the linkage blister clears
+    the outboard land by the same margin (both edges are native stations; the drive is aligned with the swept hinge
+    axis, so its plan footprint is skewed against them)."""
+    cache = op.__dict__.setdefault("_dg", {})
+    if which in cache:
+        return cache[which]
+    y_out, y_in = BAY_RIBS[which]
+    yo0 = y_in + 0.5 * T_RIB + RIB_FL_W + FRAME_BORDER + 0.002
+    yo1 = y_out - 0.5 * T_RIB - RIB_FL_W - FRAME_BORDER - 0.002
+    e_in = op.eta(yo0 + LAND_SPAN)
+    e_out = op.eta(yo1 - LAND_SPAN)
+    yd = 0.5 * (yo0 + yo1)
+    for _ in range(6):
+        dg = _drive_at(op, which, yd)
+        m_in = min(eta_of_point(op, P) for P in dg["case_pts"]) - e_in
+        env = linkage_envelope(dg).buffer(CAV_CLR + BLISTER_T)
+        a1 = -0.0106
+        a_hi = a1 + 0.0106 + 0.5 * ROD_OD + CAV_CLR + BLISTER_T
+        pts = [dg["Hd"] + x * dg["c"] + z * dg["n"] + a_hi * dg["a"] for x, z in np.asarray(env.exterior.coords)
+               if z < dg["n_bottom"] - CRADLE_BASE_MIN]
+        m_out = e_out - max(eta_of_point(op, P) for P in pts)
+        if abs(m_out - m_in) < 2e-4:
+            break
+        yd += 0.5 * (m_out - m_in) / dg["a"][1]
+    if min(m_in, m_out) < 0.003:
+        raise ValueError(f"{which} drive does not fit its servo bay (margins {m_in:.4f} / {m_out:.4f} m)")
+    dg["opening"] = {"y": (yo0, yo1)}
+    dg["margins"] = (m_in, m_out)
+    cache[which] = dg
+    return dg
+
+
+def linkage_states(dg: dict, n: int = 13) -> list:
+    """Exact coupled joint values over the deflection range: (delta, arm angle from rest, rod angle from rest)."""
+    from . import actuation as A
+    S, a, e1, e2 = dg["S"], dg["a"], dg["e1"], dg["e2"]
+    out = []
+    for dl in np.linspace(dg["lo"], dg["hi"], n):
+        k = A.linkage_kinematics(dg["Hd"], a, dg["B0"], S, a, dg["r_s"], dg["th0"], (0.0, dl) if dl != 0 else
+                                 (0.0, 1e-9), n=max(3, int(abs(dl) / 0.02) + 3))
+        th = float(k["servo_angles"][-1])
+        A1 = S + dg["r_s"] * (math.cos(th) * e1 + math.sin(th) * e2)
+        B1 = A.rotate_about(dg["B0"][None], dg["Hd"], a, dl)[0]
+        # rod angle: rotation about a taking (B0 - A0) rotated by the arm angle to (B1 - A1)
+        v0 = A.rotate_about((dg["B0"] - dg["A0"])[None], np.zeros(3), a, th - dg["th0"])[0]
+        v1 = B1 - A1
+        x0 = np.dot(v0, e1), np.dot(v0, e2)
+        x1 = np.dot(v1, e1), np.dot(v1, e2)
+        ph = math.atan2(x1[1], x1[0]) - math.atan2(x0[1], x0[0])
+        ph = (ph + math.pi) % (2 * math.pi) - math.pi
+        out.append((float(dl), float(th - dg["th0"]), float(ph)))
+    return out
+
+
+def _local(dg: dict, c: float, n: float, a: float = 0.0, ref=None) -> np.ndarray:
+    """Point at (c, n, a) of the drive frame about the hinge point of the rod plane (or about ``ref``)."""
+    o = dg["Hd"] if ref is None else ref
+    return o + c * dg["c"] + n * dg["n"] + a * dg["a"]
+
+
+def a_case_end(dg: dict) -> float:
+    """Spanwise coordinate (along the hinge axis, from the rod plane) of the servo case outboard end face."""
+    return -0.0106
+
+
+def servo_mesh(dg: dict) -> G.Mesh:
+    """Actuator envelope (datasheet dimensions): case L x W x H, output shaft d 6 x 8 mm on the outboard end face."""
+    sd = dg["sd"]
+    S = dg["S"]
+    a, c, n = dg["a"], dg["c"], dg["n"]
+    a1 = a_case_end(dg)
+    a0 = a1 - sd["H"]
+    c_aft = sd["off"]
+    centre = S + (c_aft - 0.5 * sd["L"]) * c + 0.5 * (a0 + a1) * a
+    case = obox(centre, [c, n, a], [0.5 * sd["L"], 0.5 * sd["W"], 0.5 * sd["H"]])
+    shaft = G.cylinder(0.003, S + (a1 - OV) * a, S + (a1 + 0.008) * a, n=24)
+    return G.union([case, shaft])
+
+
+def cradle_mesh(op: OP, dg: dict) -> tuple[G.Mesh, list]:
+    """7075 servo cradle bonded on the hatch cover: base (follows the cover inner face) and two walls along the
+    case's forward / aft faces with 2 + 2 M4 screws into the case sides (tapped). Returns (mesh, bolts)."""
+    sd = dg["sd"]
+    S = dg["S"]
+    a, c, n = dg["a"], dg["c"], dg["n"]
+    a1 = a_case_end(dg) - 0.004
+    a0 = a_case_end(dg) - sd["H"] + 0.004
+    cf = sd["off"] - sd["L"] - BOND - CRADLE_WALL       # forward wall outer face (c from the shaft)
+    ca = sd["off"] + BOND + CRADLE_WALL
+    n_b = -0.5 * sd["W"] - BOND                         # base top = case bottom - bond (n from the shaft)
+    # base: loft along a of sections (c, n): bottom follows the cover middle inner face
+    rings = []
+    for aa in np.linspace(a0, a1, 7):
+        P0 = S + aa * a
+        cs = np.linspace(cf, ca, 24)
+        top = [P0 + cc * c + n_b * n for cc in cs]
+        bot = []
+        for p in top:
+            e = eta_of_point(op, p)
+            s_ = op.s_of_x(e, p[0])
+            sg = op.sig_of_s(e, "lo", [s_])
+            s2, t2, ns2, nt2 = op.at_sig(e, "lo", sg)
+            off = 0.0001 + COVER_MID_T + 1.5 * BOND
+            q = op.to3d(e, s2 + off * ns2, t2 + off * nt2)[0]
+            # bottom point: on the line through p along -n, at the cover face height
+            bot.append(p + (np.dot(q - p, n)) * n)
+        rings.append(np.vstack([np.asarray(top), np.asarray(bot)[::-1]]))
+    base = _loft(rings)
+    hw = 0.85 * sd["W"]
+    walls = []
+    for c0, c1 in ((cf, cf + CRADLE_WALL), (ca - CRADLE_WALL, ca)):
+        ctr = S + 0.5 * (c0 + c1) * c + (n_b - 0.0015 + 0.5 * (hw + 0.0015)) * n + 0.5 * (a0 + a1) * a
+        walls.append(obox(ctr, [c, n, a], [0.5 * (c1 - c0), 0.5 * (hw + 0.0015), 0.5 * (a1 - a0)]))
+    m = finish(_union([base] + walls))
+    am = 0.5 * (a_case_end(dg) - sd["H"] + a_case_end(dg))
+    bolts = []
+    for aa in (am - 0.5 * sd["hole_pitch"], am + 0.5 * sd["hole_pitch"]):
+        bolts.append((S + cf * c + aa * a, c))                 # forward wall: head forward, into the case (+c)
+        bolts.append((S + ca * c + aa * a, -c))                # aft wall: head aft
+    return m, bolts
+
+
+def arm_mesh(dg: dict) -> G.Mesh:
+    """7075 servo arm on the output spline (hub d 12, plate 3 mm), eye at the rod-end bolt."""
+    S, A0, a = dg["S"], dg["A0"], dg["a"]
+    e1, e2 = dg["e1"], dg["e2"]
+    a1 = a_case_end(dg)
+
+    def uv(p):
+        d = p - S
+        return (float(np.dot(d, e1)), float(np.dot(d, e2)))
+    pa = uv(A0)
+    prof = unary_union([Point(0, 0).buffer(0.006, 40), Point(*pa).buffer(EYE_R, 40),
+                        LineString([(0, 0), pa]).buffer(0.0045)])
+    prof = prof.difference(Point(0, 0).buffer(0.003 + BOND, 32))
+    plate = G.extrude(prof, ARM_T, origin=S + (a1 + 0.005) * a, u=e1, v=e2)
+    if np.dot(np.cross(e1, e2), a) < 0:
+        plate = plate.translated(ARM_T * a)
+    hub = G.tube(0.006, 0.003 + BOND, S + (a1 + 0.0012) * a, S + (a1 + 0.005 + OV) * a, n=32)
+    return finish(_union([plate, hub]))
+
+
+def rod_mesh(dg: dict) -> G.Mesh:
+    """Push-rod: 7075 tube 6 x 1 with two rod-end eyes (r 6.5, 5 mm) in the rod plane."""
+    A0, B0, a = dg["A0"], dg["B0"], dg["a"]
+    a_e0 = a_case_end(dg) + 0.005 + ARM_T + BOND
+    ctrA = A0 + (a_e0 - np.dot(A0 - dg["Hd"], a)) * a
+    ctrB = B0 + (a_e0 - np.dot(B0 - dg["Hd"], a)) * a
+    d = _unit(ctrB - ctrA)
+    am = a_e0 + 0.5 * EYE_T
+    pA = ctrA + 0.5 * EYE_T * a
+    pB = ctrB + 0.5 * EYE_T * a
+    eyes = [G.cylinder(EYE_R, c0, c0 + EYE_T * a, n=36) for c0 in (ctrA, ctrB)]
+    necks = [G.cylinder(0.0024, pA + (EYE_R - 0.001) * d, pA + 0.020 * d, n=20),
+             G.cylinder(0.0024, pB - (EYE_R - 0.001) * d, pB - 0.020 * d, n=20)]
+    tube = G.tube(0.5 * ROD_OD, 0.5 * ROD_ID, pA + 0.018 * d, pB - 0.018 * d, n=20)
+    return finish(_union(eyes + necks + [tube]))
+
+
+def horn_mesh(op: OP, dg: dict) -> tuple[G.Mesh, list, list]:
+    """7075 horn on the surface's lower face: L-flange (3 mm, follows the OML, 2 x M3 into potted inserts of the
+    surface) and the 3 mm horn plate in the arm plane down to the rod-end hole at B. Returns (mesh, flange bolts,
+    rod-end bolt point)."""
+    B0, Hd, a, c, n = dg["B0"], dg["Hd"], dg["a"], dg["c"], dg["n"]
+    a_p0 = a_case_end(dg) + 0.005                      # horn plate a-range (same plane as the arm plate)
+    a_p1 = a_p0 + ARM_T
+    a_f0 = a_p0 - 0.014                                 # flange extends inboard of the plate
+    # flange grid on the lower OML (outward offset BOND .. BOND + 3 mm), chord from H + 4 .. H + 34 mm
+    Po, Pi = [], []
+    for aa in np.linspace(a_f0, a_p1, 5):
+        P0 = Hd + aa * a
+        st = op.stn(op.eta(P0[1]))
+        sH, tH, r = op.hinge_cs(st[0])
+        ss = np.linspace(sH + 0.004, sH + 0.034, 12)
+        sg = op.sig_of_s(st[0], "lo", ss)
+        s2, t2, ns2, nt2 = op.at_sig(st[0], "lo", sg)
+        Po.append(op.pt(st, s2 - (BOND + 0.003) * ns2, t2 - (BOND + 0.003) * nt2))
+        Pi.append(op.pt(st, s2 - BOND * ns2, t2 - BOND * nt2))
+    flange = _slab(np.stack(Po, 0), np.stack(Pi, 0))
+    # plate: hull of the flange's mid line (in the plate plane) and the eye at B
+    mid = 0.5 * (np.stack(Po, 0) + np.stack(Pi, 0))[-2]           # line near the plate
+    pts = [(float(np.dot(p - Hd, c)), float(np.dot(p - Hd, n))) for p in mid]
+    pb = (float(np.dot(B0 - Hd, c)), float(np.dot(B0 - Hd, n)))
+    root = LineString(pts).buffer(0.0012)
+    prof = unary_union([root, Point(*pb).buffer(EYE_R, 40)]).convex_hull
+    plate = _prism_frame(prof, Hd, c, n, a, a_p0, a_p1)
+    m = finish(_union([flange, plate]))
+    fl_bolts = []
+    for k_ in (0.25, 0.75):
+        i = int(round(k_ * 11))
+        P_out = np.stack(Po, 0)[1][i]                        # a row inboard of the plate
+        P_in = np.stack(Pi, 0)[1][i]
+        fl_bolts.append((P_out, _unit(P_in - P_out)))
+    rod_bolt = (B0 + (a_p0 - np.dot(B0 - Hd, a)) * a, a)
+    return m, fl_bolts, rod_bolt
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# hatch: skin opening, frame (doubler ring with lands), cover with the linkage fairing (blister)
+# ---------------------------------------------------------------------------------------------------------------------
+def lower_slab(op: OP, y0: float, y1: float, s0: float, s1: float, d0, d1, n_s: int = 28,
+               step: float = 0.02) -> G.Mesh:
+    """Solid between two offsets of the lower OML (d0 < d1 inward along the local normal; callables of (eta, s)
+    allowed) over native stations y0..y1 and chord s0..s1 (same s range at every station)."""
+    sts = native_between(op, y0, y1, step)
+    Po, Pi = [], []
+    for st in sts:
+        eta = st[0]
+        ss = np.linspace(s0(eta) if callable(s0) else s0, s1(eta) if callable(s1) else s1, n_s)
+        sg = op.sig_of_s(eta, "lo", ss)
+        s_, t_, ns_, nt_ = op.at_sig(eta, "lo", sg)
+        a = d0(eta, s_) if callable(d0) else np.full_like(s_, d0)
+        b = d1(eta, s_) if callable(d1) else np.full_like(s_, d1)
+        Po.append(op.pt(st, s_ + a * ns_, t_ + a * nt_))
+        Pi.append(op.pt(st, s_ + b * ns_, t_ + b * nt_))
+    return _slab(np.stack(Po, axis=1), np.stack(Pi, axis=1))
+
+
+def hatch_geo(op: OP, which: str) -> dict:
+    dg = drive_geo(op, which)
+
+    def sf(k: int, d: float):
+        return lambda e: opening_s(op, e)[k] + d
+    return {"dg": dg, "y": dg["opening"]["y"], "s": sf}
+
+
+def opening_cutter(op: OP, hg: dict) -> G.Mesh:
+    (y0, y1), sf = hg["y"], hg["s"]
+    return lower_slab(op, y0, y1, sf(0, 0.0), sf(1, 0.0), -0.004, lambda e, s: op.t_skin(e, "lo", s) + 0.0005)
+
+
+def frame_mesh(op: OP, hg: dict) -> G.Mesh:
+    """Hatch frame: 10-ply PW ring bonded on the lower skin inner face, FRAME_BORDER round the opening, lands
+    LAND_CHORD / LAND_SPAN inside the opening carrying the cover rim and the four nutplates."""
+    (y0, y1), sf = hg["y"], hg["s"]
+
+    def d0(e, s):
+        return op.t_skin(e, "lo", s) + 1.5 * BOND
+
+    def d1(e, s):
+        return op.t_skin(e, "lo", s) + 1.5 * BOND + FRAME_T
+    outer = lower_slab(op, y0 - FRAME_BORDER, y1 + FRAME_BORDER, sf(0, -FRAME_BORDER), sf(1, FRAME_BORDER), d0, d1)
+    hole = lower_slab(op, y0 + LAND_SPAN, y1 - LAND_SPAN, sf(0, LAND_CHORD), sf(1, -LAND_CHORD),
+                      lambda e, s: d0(e, s) - 0.002, lambda e, s: d1(e, s) + 0.002)
+    return finish(_diff(outer, [hole]))
+
+
+CAV_CLR = 0.0025             # linkage cavity: clearance round the swept arm / rod envelope
+BLISTER_T = 0.0020           # blister wall (= cover middle laminate)
+
+
+def linkage_envelope(dg: dict, n: int = 17) -> Polygon:
+    """Swept envelope (drive-plane c, n about the hinge point) of the servo arm and the push-rod over the full surface
+    range (exact four-bar states)."""
+    from . import actuation as A
+    Hd, a, c, nn = dg["Hd"], dg["a"], dg["c"], dg["n"]
+
+    def cn(p):
+        d = p - Hd
+        return (float(np.dot(d, c)), float(np.dot(d, nn)))
+    S = cn(dg["S"])
+    shapes = []
+    for dl, dth, _ph in linkage_states(dg, n):
+        th = dg["th0"] + dth
+        A1 = dg["S"] + dg["r_s"] * (math.cos(th) * dg["e1"] + math.sin(th) * dg["e2"])
+        B1 = A.rotate_about(dg["B0"][None], Hd, a, dl)[0]
+        pa, pb = cn(A1), cn(B1)
+        shapes += [Point(*S).buffer(0.006, 32), LineString([S, pa]).buffer(0.0045), Point(*pa).buffer(EYE_R, 32),
+                   LineString([pa, pb]).buffer(0.5 * ROD_OD), Point(*pb).buffer(EYE_R, 32)]
+    return unary_union(shapes)
+
+
+def cover_mesh(op: OP, hg: dict) -> tuple[G.Mesh, G.Mesh]:
+    """Hatch cover: 2 mm PW laminate flush 0.1 mm under the OML, rim built up to the skin inner face over the frame
+    lands, with the integral linkage blister (2 mm wall round the swept arm / rod envelope + 2.5 mm, open aft where
+    the rod leaves). Returns (cover, cavity cutter)."""
+    dg = hg["dg"]
+    (y0, y1), sf = hg["y"], hg["s"]
+    g = COVER_GAP
+
+    def rim_in(e, s):
+        return op.t_skin(e, "lo", s) - 0.0001
+    mid = lower_slab(op, y0 + g, y1 - g, sf(0, g), sf(1, -g), 0.0001, 0.0001 + COVER_MID_T)
+    rim = lower_slab(op, y0 + g, y1 - g, sf(0, g), sf(1, -g), 0.0001 + COVER_MID_T - OV, rim_in)
+    rim_hole = lower_slab(op, y0 + LAND_SPAN, y1 - LAND_SPAN, sf(0, LAND_CHORD), sf(1, -LAND_CHORD), 0.0, 0.010)
+    rim = _diff(rim, [rim_hole])
+    env = linkage_envelope(dg)
+    a1 = a_case_end(dg)
+    a_lo, a_hi = a1 + 0.005 - CAV_CLR, a1 + 0.0106 + 0.5 * ROD_OD + CAV_CLR
+    cav_poly = env.buffer(CAV_CLR, 24)
+    cavity = _prism_frame(cav_poly, dg["Hd"], dg["c"], dg["n"], dg["a"], a_lo, a_hi)
+    outer_poly = cav_poly.buffer(BLISTER_T, 24)
+    blister = _prism_frame(outer_poly, dg["Hd"], dg["c"], dg["n"], dg["a"], a_lo - BLISTER_T, a_hi + BLISTER_T)
+    outside = lower_slab(op, y0 + g, y1 - g, sf(0, g), sf(1, -g), -0.06, 0.0001 + OV)
+    blister = _inter(blister, outside)
+    cover = _diff(_union([mid, rim, blister]), [cavity])
+    return finish(largest_piece(cover)), cavity

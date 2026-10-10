@@ -1457,11 +1457,13 @@ class Fuel:
                    head="ISO 7380", notes="potted insert M3 in the firewall sandwich (forward face)")
         # shut-off valve (layout EQ-SHUTOFF box) on the shelf, 2 x M3 from below into its base
         e_ = self.C.eq["EQ-SHUTOFF"]
-        vb = box3(sv0, sv1)
-        cyl = G.cylinder(0.011, (0.5 * (sv0[0] + sv1[0]), 0.5 * (sv0[1] + sv1[1]), sv1[2] - OV),
-                         (0.5 * (sv0[0] + sv1[0]), 0.5 * (sv0[1] + sv1[1]), sv1[2] + 0.0001), n=32)
-        valve = finish(union([vb]))
-        del cyl
+        yv = 0.5 * (sv0[1] + sv1[1])
+        zv = 0.5 * (f3.path[0][2] + self.lines["FL-FEED-2"].path[-1][2])
+        vbase = box3(sv0, (sv1[0], sv1[1], sv0[2] + 0.006))
+        vbody = G.cylinder(0.010, (sv0[0], yv, zv), (sv1[0], yv, zv), n=32)
+        ped = box3((sv0[0] + 0.006, yv - 0.006, sv0[2] + 0.006 - OV), (sv1[0] - 0.006, yv + 0.006, zv - 0.008))
+        act = box3((sv0[0] + 0.008, yv - 0.010, zv + 0.010 - 0.002), (sv1[0] - 0.008, yv + 0.010, sv1[2]))
+        valve = finish(union([vbase, vbody, ped, act]))
         vid = e_["part"]
         f2 = self.lines["FL-FEED-2"]
         self.add(vid, e_["name"], e_["name_tr"], P_BUY, P_BUY, (lambda m=valve: m), purchased=True,
@@ -1471,9 +1473,9 @@ class Fuel:
                  notes=f"layout EQ-SHUTOFF box {e_['box']} on the forward face of the firewall (no valve on the engine "
                        "side, CS-VLA 995); commanded by the flight-termination / engine-kill logic; mass "
                        f"{e_['mass_kg']} kg (layout, estimate)")
-        for k, xb in enumerate((sv0[0] + 0.008, sv1[0] - 0.008), 1):
-            J.bolt(self.reg, f"{vid}-B{k}", 3, (xb, 0.5 * (sv0[1] + sv1[1]), zl), (0.0, 0.0, 1.0), [(bid, t)],
-                   owner=vid, nut="tapped", tapped_part=vid, tapped_depth=0.006, step=STEP,
+        for k, (xb, yb) in enumerate(((sv0[0] + 0.008, sv0[1] + 0.0065), (sv1[0] - 0.008, sv1[1] - 0.0065)), 1):
+            J.bolt(self.reg, f"{vid}-B{k}", 3, (xb, yb, zl), (0.0, 0.0, 1.0), [(bid, t + 0.00005)],
+                   owner=vid, nut="tapped", tapped_part=vid, tapped_depth=0.0055, step=STEP,
                    notes="valve base screws from below the shelf")
         for ln in (f2, f3):
             self.reg.parts[ln.part_id].contacts = tuple(dict.fromkeys(self.reg.parts[ln.part_id].contacts + (vid,)))
@@ -1493,13 +1495,14 @@ class Fuel:
         zb = lo[2] + 0.00005
         base = box3((lo[0] + 0.001, lo[1], zb), (hi[0] - 0.001, hi[1], zb + base_t))
         p_in, p_out = f1.path[-1], f2.path[0]
-        yc, zc = 0.5 * (lo[1] + hi[1]), 0.5 * (zb + base_t + hi[2]) - 0.006
-        body = G.cylinder(0.017, (lo[0] + 0.012, yc - 0.008, zc), (hi[0] - 0.012, yc - 0.008, zc), n=32)
+        r_b = 0.017
+        yb_, zb_ = 0.5 * (lo[1] + hi[1]) - 0.008, zb + base_t + r_b - 0.0001
+        body = G.cylinder(r_b, (lo[0] + 0.016, yb_, zb_), (hi[0] - 0.016, yb_, zb_), n=32)
         bowl_c = np.array([dr.path[0][0], dr.path[0][1]])
         bowl = G.cylinder(0.019, (bowl_c[0], bowl_c[1], zb + base_t - OV), (bowl_c[0], bowl_c[1], hi[2] - 0.004), n=32)
-        reg_box = box3((hi[0] - 0.030, hi[1] - 0.022, zb + base_t - OV), (hi[0] - 0.004, hi[1] - 0.002, hi[2] - 0.010))
-        port_in = G.cylinder(0.0075, (lo[0], p_in[1], p_in[2]), (lo[0] + 0.0125, p_in[1], p_in[2]), n=24)
-        port_out = G.cylinder(0.0075, (hi[0] - 0.0125, p_out[1], p_out[2]), (hi[0], p_out[1], p_out[2]), n=24)
+        reg_box = box3((hi[0] - 0.036, yb_ - 0.012, zb_ + r_b - 0.0005), (hi[0] - 0.014, yb_ + 0.010, zb_ + r_b + 0.015))
+        port_in = G.cylinder(0.0075, (lo[0], p_in[1], p_in[2]), (lo[0] + 0.017, p_in[1], p_in[2]), n=24)
+        port_out = G.cylinder(0.0075, (hi[0] - 0.017, p_out[1], p_out[2]), (hi[0], p_out[1], p_out[2]), n=24)
         z_nip = dr.path[0][2] + 0.00005
         nip = G.cylinder(0.004, (bowl_c[0], bowl_c[1], z_nip), (bowl_c[0], bowl_c[1], zb + OV), n=24)
         pump = finish(union([base, body, bowl, reg_box, port_in, port_out, nip]))
@@ -1513,10 +1516,13 @@ class Fuel:
                        "bowl drain through the tray to FL-DRAIN; filter reached through P-AFTHATCH; mass "
                        f"{e['mass_kg']} kg = engine.installed_items_kg.fuel_pump_regulator_filter (booked in the "
                        "propulsion budget item engine_group_installed)")
-        for k, (xb, yb) in enumerate(((lo[0] + 0.008, lo[1] + 0.008), (hi[0] - 0.008, lo[1] + 0.008),
-                                      (lo[0] + 0.008, hi[1] - 0.008), (hi[0] - 0.008, hi[1] - 0.008)), 1):
-            J.bolt_through(self.reg, f"{pid}-B{k}", 4, (xb, yb, zb), (0.0, 0.0, -1.0), [pid, tray], washer_head=True,
-                           step=STEP, notes="pump base to the aft-bay tray, nyloc nut under the tray")
+        iv = J.measure_stack(self.reg, [tray], (lo[0] + 0.009, lo[1] + 0.009, float(lo[2])), (0.0, 0.0, -1.0), 0.003)
+        t_tray = float(iv[0][2] - iv[0][1])
+        for k, (xb, yb) in enumerate(((lo[0] + 0.009, lo[1] + 0.009), (hi[0] - 0.009, lo[1] + 0.009),
+                                      (lo[0] + 0.009, hi[1] - 0.009), (hi[0] - 0.009, hi[1] - 0.009)), 1):
+            J.bolt(self.reg, f"{pid}-B{k}", 4, (xb, yb, zb + base_t), (0.0, 0.0, -1.0),
+                   [(pid, base_t + 0.00005), (tray, t_tray)], washer_head=True, step=STEP,
+                   notes="pump base to the aft-bay tray, ISO 7040 nyloc nut + washer under the tray")
         for ln in (f1, f2, dr):
             self.reg.parts[ln.part_id].contacts = tuple(dict.fromkeys(self.reg.parts[ln.part_id].contacts + (pid,)))
         self.reg.parts[f2.part_id].parent = pid

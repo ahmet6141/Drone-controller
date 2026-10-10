@@ -1641,7 +1641,9 @@ def dorsal_end_x(C: Ctx) -> float:
 
 def build_aftkeel(C: Ctx) -> G.Mesh:
     """Machined 7075 hat channel (open downward) firewall -> x 3.905 with the two lower land flanges of the split lower
-    cowl (Camloc receptacles at y +-0.040)."""
+    cowl (Camloc receptacles at y +-0.040) and an integral forward foot (V01): a 5 mm collar round the channel on the
+    shield aft face, bolted through the firewall stack (4 x M5 12.9, KEEL_FOOT_BOLTS) to the 7075 backing plate
+    CH-089 - the keel is pinned at its firewall end as structures FR-3738-KEEL assumes (tail-bumper strike)."""
     m = C.mem["M-AFTKEEL"]
     lo, hi = m["box"]
     s = m["section"]
@@ -1649,7 +1651,7 @@ def build_aftkeel(C: Ctx) -> G.Mesh:
     tf = float(s["land_flange_t"])
     yL = float(m["lands"][0]["y"][1])
     z_top = float(hi[2])
-    x0, x1 = float(lo[0]), float(hi[0])
+    x0, x1 = fw_planes(C)[3], float(hi[0])                       # forward end on the shield aft face
     # channel: top web + walls down to the skin line (the V belly)
     poly = unary_union([rect(-w / 2, w / 2, z_top - t, z_top), rect(-w / 2, -w / 2 + t, -0.30, z_top),
                         rect(w / 2 - t, w / 2, -0.30, z_top)])
@@ -1658,7 +1660,27 @@ def build_aftkeel(C: Ctx) -> G.Mesh:
     band = diff(inter(box3((x0, -yL, -0.30), (x1, yL, z_top - t)), C.body_env(0.0065, x0 - 0.005, x1 + 0.005)),
                 [C.body_env(0.0065 + tf, x0 - 0.01, x1 + 0.01), box3((x0 - 0.01, -(w / 2 - t), -0.31),
                                                                    (x1 + 0.01, w / 2 - t, z_top))])
-    return pieces_above(union([chan, pieces_above(band)]))
+    foot = diff(inter(box3((x0, -KEEL_FOOT_HW, -0.30), (x0 + KEEL_FOOT_T, KEEL_FOOT_HW, KEEL_FOOT_ZTOP)),
+                      C.body_env(0.0065 - OV, x0 - 0.005, x0 + KEEL_FOOT_T + 0.005)),
+                [box3((x0 - 0.01, -(w / 2 - t), -0.31), (x0 + KEEL_FOOT_T + 0.01, w / 2 - t, z_top - t))])
+    return pieces_above(union([chan, pieces_above(band), foot]))
+
+
+KEEL_FOOT_T, KEEL_FOOT_HW, KEEL_FOOT_ZTOP = 0.005, 0.040, -0.030   # aft-keel foot collar on the shield aft face
+KEEL_FOOT_BOLTS = ((0.0175, -0.0425), (0.029, -0.069))             # starboard (y, z) of the 4 x M5 through the stack
+KEEL_BACK_T, KEEL_BACK_ZLO = 0.004, -0.083                         # backing plate CH-089 on the sandwich forward face
+
+
+def build_keel_backing(C: Ctx) -> G.Mesh:
+    """Aft-keel foot backing plate (7075, 4 mm) on the firewall sandwich forward face: takes the 4 x M5 foot bolts,
+    relieved round the end of the ventral keel strip hat (M-VENTRALKEEL)."""
+    xf = fw_planes(C)[0]
+    vk = C.mem["M-VENTRALKEEL"]
+    zc = float(np.asarray(vk["paths"][0], float)[-1, 2])
+    crown = zc + 0.5 * float(vk["section"]["h"]) + 0.0019
+    hw = 0.5 * float(vk["section"]["w"]) + 0.0025
+    poly = rect(-KEEL_FOOT_HW, KEEL_FOOT_HW, KEEL_BACK_ZLO, KEEL_FOOT_ZTOP).difference(rect(-hw, hw, -1.0, crown))
+    return prism_x(clean_poly(poly), xf - KEEL_BACK_T, xf)
 
 
 def build_ventralkeel(C: Ctx) -> G.Mesh:

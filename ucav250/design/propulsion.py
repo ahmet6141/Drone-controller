@@ -19,14 +19,17 @@ propeller PR-540, spinner PR-542, S-duct PR-546):
   integral spinner stand-off, CFRP spinner cone with blade slots, centre M5 screw at the tip;
 * exhaust (each side): stainless 304 port flange + header, silencer can and tail pipe inside the routing envelope
   ``KO-EXHAUST-R/L`` ending at the layout exit point / direction, 2 x M6 into the cylinder port boss;
-* cooling: CFRP S-duct from the dorsal inlet throat to the firewall (``KO-COOLING-DUCT`` corridor, exit section through
-  ``C-DUCT``), stainless firewall transition duct (fireproof spigot through C-DUCT, rising over the mount truss), silicone
+* cooling: CFRP S-duct from the dorsal inlet to the firewall (``KO-COOLING-DUCT`` corridor, open-roof mouth under the
+  inlet lip over the first corridor segment, exit section through ``C-DUCT``), stainless firewall transition duct (fireproof spigot through C-DUCT, rising over the mount truss), silicone
   -glass coupling boot, engine-mounted 5052 plenum with the cylinder baffle skirts (air down through the fin packs),
   stainless node heat baffles (``layout.heat_protection.hardware[F-SPINDLE-NODE]``);
 * engine accessories: throttle actuator Volz DA 22 on a 5052 bracket under the crankcase (direct drive of the throttle
   cross shaft), engine ECU on the mission tray, generator power electronics on the port side-bay tray (layout boxes);
-* heat protection (``layout.heat_protection``): stainless exit insert and foil shields - registered only when their host
-  parts (lower cowl halves, stub root strips, stabilator stubs) are in the registry.
+* heat protection (``layout.heat_protection``): HS-COWL-EXIT stainless exit insert (PR-520-R/L, external riveted lap over
+  the cowl cut-out, tail-pipe slot) and HS-COWL-SHIELD stainless shield (PR-523-R/L, hung from the insert with a 5 mm
+  air gap under the cowl) - registered only when the lower cowl halves (YK250-SH-451-R/L) are in the registry;
+  HS-STUBROOT / HS-STUB (PR-521 / PR-522) are not needed (the stub-root strip and the stub keep >= 50 mm from the
+  exhaust).
 
 Interfaces read (never another module's geometry): ``spec.layout`` (part numbers, chassis.engine_mount: thrust axis,
 mount face, bolt pattern, isolator centres, cups; stations FS3480 / FS3670 cut-outs; keep_outs KO-ENGINE /
@@ -178,6 +181,22 @@ def finish(m: G.Mesh) -> G.Mesh:
     if not m.check()["ok"]:
         raise ValueError("propulsion: open or inverted mesh")
     return m
+
+
+def finish_clean(m: G.Mesh) -> G.Mesh:
+    """``finish`` for thin formed sheets cut by many booleans: merge the sub-10-um sliver edges the cuts leave where a
+    trim plane grazes the curved sheet (manifold simplify at growing tolerance until the mesh check incl. the
+    triangle self-intersection test passes)."""
+    man = m.to_manifold()
+    for tol in (0.0, 1e-7, 1e-6, 4e-6, 1e-5):
+        out = G.Mesh.from_manifold(man.simplify(tol) if tol else man)
+        try:
+            ok = out.check(self_intersect=True)["ok"]
+        except ImportError:                       # no triangle-test backend: closedness only
+            ok = out.check()["ok"]
+        if ok:
+            return out
+    raise ValueError("propulsion: sheet mesh not clean after simplify")
 
 
 def prism_axis(poly2d, a0: float, a1: float, axis: int) -> G.Mesh:
@@ -1042,15 +1061,16 @@ NODE_BAFFLE = dict(v=(0.128, 0.198), w=(-0.025, 0.035), t=0.0004)
 # =====================================================================================================================
 # heat protection in the lower cowl (layout.heat_protection: HS-COWL-EXIT insert PR-520, HS-COWL-SHIELD PR-523)
 # =====================================================================================================================
-HS = dict(lift=0.0001, lap=0.020, hole=0.010, band_t=0.0016, standoff=0.005, wall_in=0.003, fl_w=0.014,
-          rivet_d=0.0032, rivet_out=0.010, rivet_pitch=0.025, fl_rivet_d=0.0024, fl_rivet_in=0.010, fl_pitch=0.035,
+HS = dict(lift=0.0001, lap=0.020, hole=0.010, band_t=0.0016, standoff=0.005, wall_in=0.0055, fl_w=0.014,
+          rivet_d=0.0032, rivet_out=0.010, rivet_pitch=0.025, fl_rivet_d=0.0024, fl_rivet_in=0.0125, fl_pitch=0.035,
           edge=0.0005, x0=3.70, phi0=0.42 * math.pi, nx=150, nphi=110)
 #   lift: the external insert lies 0.1 mm off the cowl OML (bond / sealant line); lap: riveted lap round the cowl
 #   cut-out (layout 20 mm); hole: radial clearance of the tail pipe in the insert (layout 5 mm stand-off ring raised to
 #   the 10 mm engine dynamic margin, layout.clearance_values.engine_keep_out: the pipe moves with the engine);
 #   band_t: cowl solid edge band at the riveted cut-out edge (layout.shell.rules.sandwich_edges 1.6 mm);
 #   standoff: shield air gap below the thickest cowl laminate (layout 5 mm); wall_in / fl_w: the shield's return wall
-#   3 mm inside the cut-out edge and its 14 mm flange riveted to the insert; edge: margin to the P-COWL-LO panel edges
+#   5.5 mm inside the insert region boundary (>= 5 mm air gap to the cowl cut-out edge, which lies on the boundary + the
+#   panel gap) and its 14 mm flange riveted to the insert; edge: margin to the P-COWL-LO panel edges
 
 
 def _boxes(regions, grow: float):
@@ -1102,9 +1122,14 @@ def _cowl_clip(C: Ctx, extra: float = 0.0) -> G.Mesh:
 
 
 def _pipe_cutter(C: Ctx, clear: float) -> G.Mesh:
+    """Clearance volume round the tail pipe: union of capsules (hulls of two spheres) along its centre line - a swept
+    circle of this radius would fold inside the 1.5 D bend."""
     pa = exhaust_paths(C)
     path = np.vstack([pa["tail"][:-1], pa["tail"][-1] + np.outer([0.0, 0.03, 0.06], pa["exit_dir"])])
-    return G.sweep_circle(path, TAIL_R + clear, n=32)
+    sph = G.sphere(TAIL_R + clear, n=20).V
+    caps = [G.hull(np.vstack([sph + a, sph + b])) for a, b in zip(path[:-1], path[1:])
+            if np.linalg.norm(b - a) > 1e-6]
+    return union(caps)
 
 
 def cowl_insert_mesh(C: Ctx) -> G.Mesh:
@@ -1114,7 +1139,7 @@ def cowl_insert_mesh(C: Ctx) -> G.Mesh:
     hp = _hp(C, "inserts", "HS-COWL-EXIT")
     t = float(hp["t"])
     m = inter(inter(_oml_band(C, -HS["lift"] - t, -HS["lift"]), _box_union(hp["regions"], HS["lap"])), _cowl_clip(C))
-    return finish(largest_piece(diff(m, [_pipe_cutter(C, HS["hole"])])))
+    return finish_clean(largest_piece(diff(m, [_pipe_cutter(C, HS["hole"])])))
 
 
 def _surface_samples(C: Ctx, nx: int = 300, nphi: int = 240):
@@ -1160,9 +1185,9 @@ def cowl_insert_rivets(C: Ctx) -> list[tuple]:
 
 def cowl_shield_mesh(C: Ctx) -> G.Mesh:
     """HS-COWL-SHIELD (PR-523-R): AISI 304 sheet (0.4 mm, process minimum; layout foil 0.1 mm) 5 mm inside the
-    thickest cowl laminate over the shield band (25..50 mm from the stack envelope), with a return wall 3 mm inside the
-    cut-out edge and a 14 mm flange riveted under the insert: the shield hangs from the insert, the cowl inner face
-    keeps its air gap whatever its edge build-up."""
+    thickest cowl laminate over the shield band (25..50 mm from the stack envelope), with a return wall 5.5 mm inside
+    the cut-out edge and a 14 mm flange riveted under the insert: the shield hangs from the insert, the cowl inner face
+    and its cut edge keep their 5 mm air gap whatever the edge build-up."""
     sh = _hp(C, "shields", "HS-COWL-SHIELD")
     reg = _hp(C, "inserts", "HS-COWL-EXIT")["regions"]
     t = float(_hp(C, "inserts", "HS-COWL-EXIT")["t"])
@@ -1176,7 +1201,7 @@ def cowl_shield_mesh(C: Ctx) -> G.Mesh:
     fl = inter(_oml_band(C, -HS["lift"], -HS["lift"] + t),
                diff(_box_union(reg, -w0 - 0.5 * t), [_box_union(reg, -w0 - HS["fl_w"])]))
     m = inter(union([pan_, wall, fl]), clip)
-    return finish(largest_piece(diff(m, [_pipe_cutter(C, HS["hole"] + 0.003)])))
+    return finish_clean(largest_piece(diff(m, [_pipe_cutter(C, HS["hole"] + 0.003)])))
 
 
 def sheet_outline(m: G.Mesh, C: Ctx, cos_min: float = 0.7, bend=None) -> list[np.ndarray]:
@@ -1234,7 +1259,8 @@ def sheet_outline(m: G.Mesh, C: Ctx, cos_min: float = 0.7, bend=None) -> list[np
 
 
 def shield_bend_mask(C: Ctx):
-    """Boundary points on the shield's wall roots (the band of the return wall, 3.0..3.4 mm inside the cut-out edge)."""
+    """Boundary points on the shield's wall roots (the band of the return wall, wall_in .. wall_in + t inside the
+    cut-out edge)."""
     reg = _hp(C, "inserts", "HS-COWL-EXIT")["regions"]
     lo, hi = -HS["wall_in"] - 0.0004 - 0.0006, -HS["wall_in"] + 0.0006
 
@@ -1244,8 +1270,8 @@ def shield_bend_mask(C: Ctx):
 
 
 def shield_rivets(C: Ctx) -> list[tuple]:
-    """Shield flange rivets (through the insert, set from outside): 10 mm inside the cut-out edge, ~35 mm pitch,
-    clear of the pipe slot."""
+    """Shield flange rivets (through the insert, set from outside): 12.5 mm inside the cut-out edge (mid-flange),
+    ~35 mm pitch, clear of the pipe slot."""
     reg = _hp(C, "inserts", "HS-COWL-EXIT")["regions"]
     pan = _cowl_lo(C)
     P, X, PH = _surface_samples(C)
@@ -1450,7 +1476,7 @@ class _Reg:
                 explode=(0.0, 0.05, -0.20), contacts=(ins.id,), color="hardware",
                 notes=f"layout {sh['id']}: AISI 304 0.4 mm (layout foil 0.1 mm is below the sheet_metal_steel "
                       "minimum), 5 mm air gap below the thickest cowl laminate over the 25..50 mm band, return wall "
-                      "3 mm inside the cut-out edge, flange riveted under the insert (d 2.4 at ~35 mm)")
+                      "5.5 mm inside the cut-out edge, flange riveted under the insert (d 2.4 at ~35 mm)")
         ins.outline = sheet_outline(ins.base_mesh, C)
         shd.outline = sheet_outline(shd.base_mesh, C, bend=shield_bend_mask(C))
         ids["ins_R"], ids["shd_R"] = ins.id, shd.id

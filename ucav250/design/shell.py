@@ -682,6 +682,9 @@ def _seg_dist(p0, p1, q0, q1) -> float:
     return float(np.linalg.norm((p0 + s * d1) - (q0 + t * d2)))
 
 
+LAND_GROUPS = ("chassis", GROUP)    # fasteners land on the chassis and on the shell's own joggled lands only
+
+
 @dataclass
 class Cand:
     """A fastener candidate on a panel: OML point, inward axis, kind ('nut' M4 nutplate, 'cam' Camloc, 'ins' insert,
@@ -827,18 +830,24 @@ class Fix:
             if sd < 3.0 * max(d_, dd) + 0.0003:
                 return self._drop(c, f"hole spacing {sd * 1000:.1f} mm in {c.panel}")
         lands = [c.land] if c.land else []
-        if not lands:                       # the land is the first part behind the panel (chassis or joggle)
-            q0, q1 = p + (e0 - 0.0005) * a, p + (e0 + 0.003) * a
-            best = None
-            for pid in self.parts_near(np.minimum(q0, q1) - 0.004, np.maximum(q0, q1) + 0.004):
-                if pid == c.panel:
-                    continue
-                iv = [v for v in self.intervals(pid, p, a) if v[1] > e0 + 1e-5]
-                if iv and (best is None or iv[0][0] < best[1]):
-                    best = (pid, iv[0][0])
-            if best is None:
+        if not lands:                       # the land: the first chassis / shell part behind the panel (a frame cap,
+            prev, used = e0, {c.panel}      # a member flange or a joggled land); nutplates and rivets also clamp a
+            for _k in range(3):             # second / third part lying within the seal gap behind it
+                q0, q1 = p + (prev - 0.0005) * a, p + (prev + 0.003) * a
+                best = None
+                for pid in self.parts_near(np.minimum(q0, q1) - 0.004, np.maximum(q0, q1) + 0.004):
+                    if pid in used or self.reg.parts[pid].group not in LAND_GROUPS:
+                        continue
+                    iv = [v for v in self.intervals(pid, p, a) if v[1] > prev + 1e-5]
+                    if iv and (best is None or iv[0][0] < best[1]):
+                        best = (pid, iv[0][0], iv[0][1])
+                if best is None or (lands and (best[1] - prev > MAX_GAP or c.kind == "cam")):
+                    break
+                lands.append(best[0])
+                used.add(best[0])
+                prev = best[2]
+            if not lands:
                 return self._drop(c, "no land behind the panel")
-            lands = [best[0]]
         stack = [(c.panel, s0, e0)]
         prev = e0
         for land in lands:
@@ -1084,6 +1093,7 @@ class Pan:
     cut: list = field(default_factory=list)     # meshes subtracted
     zband: tuple | None = None
     keep: list = field(default_factory=list)    # meshes intersected (trim solids)
+    pad_cut: list = field(default_factory=list)  # meshes subtracted from the land pads only
     areal: float | None = None  # areal mass of a non-layup laminate (GFRP sandwich windows)
     joint: str | None = None
     notes: str = ""
@@ -1175,15 +1185,16 @@ def build_panel_mesh(sc: SC, pn: Pan) -> G.Mesh:
         pads = clean(pn.pads.intersection(reg.buffer(-0.0005, join_style=2)), 1e-6)
         if not pads.is_empty:
             pm = man_and(sc.layer(pn.t - OV, LAND_FIT, x0, x1), half, prism_z(pads))
-            parts.append(man_sub(pm, [chine_zone(sc, x0, x1)]))
+            parts.append(man_sub(pm, [chine_zone(sc, x0, x1)] + list(pn.pad_cut)))
+    lhalf = sc.half(getattr(pn, "land_surf", pn.surf), x0, x1)
     for strip, reach, t_n in pn.lands:
         strip = clean(strip, 1e-6)
         if strip.is_empty:
             continue
-        parts.append(man_and(sc.layer(t_n + SEAL, t_n + SEAL + LAND_T, x0, x1), half, prism_z(strip)))
+        parts.append(man_and(sc.layer(t_n + SEAL, t_n + SEAL + LAND_T, x0, x1), lhalf, prism_z(strip)))
         rch = clean(reach, 1e-6)
         if not rch.is_empty and t_n + SEAL + OV > pn.t - OV + 1e-5:    # (a land deeper than the owner skin)
-            parts.append(man_and(sc.layer(pn.t - OV, t_n + SEAL + OV, x0, x1), half, prism_z(rch)))
+            parts.append(man_and(sc.layer(pn.t - OV, t_n + SEAL + OV, x0, x1), lhalf, prism_z(rch)))
     parts += pn.extra
     m = man_add(parts)
     if pn.zband is not None:
@@ -1400,9 +1411,15 @@ def body_panels(sc: SC) -> dict[str, Pan]:
     f0300, f0600, f1110 = st("FS0300"), st("FS0600"), st("FS1110")
     add("P-NOSECONE", "F", full(-0.01, f0300 - GAP), 0.0, f0300, pads=up_pads(0, f0300).union(lo_pads(0, f0300)),
         step=STEP["close"], parent=sc.st["FS0300"]["part"], explode=(-0.35, 0.0, 0.0))
-    fwd = add("P-FWDSKIN", "F", full(f0300 + GAP, f0600 - GAP).difference(grow("P-FWDHATCH")), f0300, f0600,
-              pads=up_pads(f0300, f0600).union(lo_pads(f0300, f0600)), step=STEP["skin"],
-              parent=sc.st["FS0300"]["part"], explode=(0.0, 0.0, -0.18))
+    fwd = add("P-FWDSKIN", "F", full(f0300 + GAP, f0600 - GAP), f0300, f0600,
+              pads=up_pads(f0300, f0600).union(lo_pads(f0300, f0600)),
+              step=STEP["skin"], parent=sc.st["FS0300"]["part"], explode=(0.0, 0.0, -0.18))
+    # full-wrap panel: the hatch opening is cut from the upper half only (above the chine plane): the skin layer
+    # (the joggled land under the hatch edge band stays), and the land pads under the hatch
+    hcut = man_and(prism_z(grow("P-FWDHATCH")), sc.half("U", f0300 - 0.01, f0600 + 0.01, gap=-GAP))
+    fwd.cut.append(man_sub(hcut, [sc.env(t + 0.0001, f0300 - 0.01, f0600 + 0.01)]))
+    fwd.pad_cut.append(hcut)
+    fwd.land_surf = "U"
     add("P-FWDHATCH", "U", o["P-FWDHATCH"].buffer(-GAP, join_style=2), f0300, f0600, pads=up_pads(f0300, f0600),
         step=STEP["close"], parent=fwd.key, explode=(0.0, 0.0, 0.3))
     fwd.lands.append(_strip(fwd.region, o["P-FWDHATCH"], sc, "U", t))
@@ -1693,6 +1710,11 @@ def aft_panels(sc: SC, pans: dict) -> None:
                                     fin), 1e-6), mirror=True, t=t, x0=X_COWL, x1=X_AFT, step=STEP["fin"],
                                 parent=sc.st["FS3670"]["part"], explode=(0.0, 0.05, 0.35),
                                 pads=up_pads(X_COWL, X_AFT), land_refs=("ST-FS3670",))
+    # joggled land under the side edges of the centre cowl piece (its Camloc rows)
+    cup_o = rect(X_COWL, X_AFT, -y_up, y_up)
+    pans["P-FINROOT-AFT"].lands.append(_strip(pans["P-FINROOT-AFT"].region, cup_o, sc, "U", t,
+                                              extra_cut=[rect(-1.0, 10.0, -1.0, y_up - LAND_W - GAP - 0.001),
+                                                         rect(X_UPS_LAND, 5.0, -1.0, 1.0)]))
     # joggled land under the inboard edge of the aluminium outer piece (its Camloc row)
     ups_o = rect(X_COWL, X_AFT, y_ups, 0.40)
     pans["P-FINROOT-AFT"].lands.append(_strip(pans["P-FINROOT-AFT"].region, ups_o, sc, "U", T_AL,
@@ -2188,9 +2210,9 @@ def glove_parts(sc: SC, pans: dict) -> Glove:
     reach = man_and(gl.layer(t_up - OV, t_ja + SEAL + OV), half, prism_z(band.difference(ja.buffer(GAP,
                                                                                                     join_style=2))))
     ribs_all = [gl.rib_env(w, 0.0002) for w in ("SOB", "GLOVE", "JOINT")]
-    pans["P-GLOVE-LO"].mesh_override = lambda: finish(pieces_above(man_sub(man_add([skin(False), land, reach]),
-                                                                           [gl.cap_keepout(False), jcut] + rcuts +
-                                                                           ribs_all), 2e-8))
+    pans["P-GLOVE-LO"].mesh_override = lambda: finish(pieces_above(man_add([
+        man_sub(man_add([skin(False), reach]), [gl.cap_keepout(False), jcut] + rcuts + ribs_all),
+        man_sub(land, [gl.cap_keepout(False)] + rcuts + ribs_all)]), 2e-8))      # (the land runs under the panel)
     pans["P-GLOVE-LO"].ja = ja
     # joint access panel (non-structural cover, layups.shell_secondary, flush in the joggled land)
     jaS = S["P-JOINTACCESS"]
@@ -2241,8 +2263,8 @@ ROW_KIND = {"nutplate+screw": ("nut", PITCH_NUT), "camloc": ("cam", PITCH_CAM), 
 EDGE = {"nut": EDGE_M4, "cam": EDGE_CAM, "riv": EDGE_M4}
 OWN_MARGIN = 0.0015             # plan margin added to the edge distance when a row point is given to a panel (the
 #                                 edge distance is measured at the laminate mid-plane, the panel edges are cut plumb)
-NO_ROWS = ("P-PARAHATCH", "P-REFUEL", "P-REARACCESS", "P-SPINE", "P-NOSECONE", "P-TURRETRING", "P-GLOVE-UP",
-           "P-GLOVE-LO", "P-JOINTACCESS", "P-VENTRALROOT")
+NO_ROWS = ("P-PARAHATCH", "P-REFUEL", "P-REARACCESS", "P-SPINE", "P-NOSECONE", "P-GLOVE-UP", "P-GLOVE-LO",
+           "P-JOINTACCESS", "P-VENTRALROOT")
 DENSE = 0.002                   # dense sampling step of a row line before the pitch is laid out
 
 
@@ -2287,6 +2309,7 @@ class Rows:
         self.sc, self.reg, self.pans, self.keys = sc, reg, pans, keys
         self.fix = Fix(sc)
         self.own = []
+        self.full = {}
         for key, pn in pans.items():
             rk = row_kind(sc, key)
             if rk is None or key in NO_ROWS:
@@ -2299,6 +2322,7 @@ class Rows:
                 inner = clean(rg.buffer(-e, join_style=2), 1e-8)
                 if not inner.is_empty:
                     self.own.append((pid, key, prep(inner), pn.surf, rk))
+                    self.full[pid] = (key, prep(rg), pn.surf, rk)
         self.done = 0
 
     # ------------------------------------------------------------------ ownership
@@ -2324,6 +2348,10 @@ class Rows:
         return hits[0] if hits else None
 
     # ------------------------------------------------------------------ candidates
+    def _centre(self, key: str) -> bool:
+        b = self.pans[key].region.bounds
+        return b[1] < -0.001 and b[3] > 0.001
+
     def _mirror_pid(self, pid: str) -> str:
         if pid.endswith("-R"):
             return pid[:-1] + "L"
@@ -2338,8 +2366,17 @@ class Rows:
             q = np.array([p[0], -p[1], p[2]])
             aq = np.array([a[0], -a[1], a[2]])
             oq = np.array([orient[0], -orient[1], orient[2]])
-            group.append(Cand(p=q, a=_unit(aq), kind=kind, panel=self._mirror_pid(pid), land="", size=size,
-                              orient=_unit(oq), note=note, step=st))
+            mp = self._mirror_pid(pid)
+            if not pid.endswith(("-R", "-L")) and not self._centre(key):
+                mp = None                           # one-sided panel: its mirror image is another part (or none)
+                for pid2, (key2, pr2, surf2, _rk) in self.full.items():
+                    if pid2 != pid and surf2 == self.pans[key].surf and pr2.contains(Point(float(q[0]),
+                                                                                         float(q[1]))):
+                        mp = pid2
+                        break
+            if mp is not None:
+                group.append(Cand(p=q, a=_unit(aq), kind=kind, panel=mp, land="", size=size, orient=_unit(oq),
+                                  note=note, step=st))
         if self.fix.try_group(group):
             self.done += len(group)
             return True
@@ -2398,6 +2435,13 @@ class Rows:
                 j += 1
             pid, key, (kd, pt) = own[k]
             idx = np.arange(k, j + 1)
+            if self.pans[key].surf == "F":          # wrap-round panels: plan regions do not bound the arc
+                sl = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(P[idx], axis=0), axis=1))]
+                e_ = EDGE[kd] + OWN_MARGIN
+                idx = idx[(sl >= e_) & (sl <= sl[-1] - e_)]
+                if not len(idx):
+                    k = j + 1
+                    continue
             sym = False
             if centre_sym and abs(float(P[j][1])) < 0.003 <= abs(float(P[k][1])):
                 idx = idx[::-1]                     # the run ends on the centre line: lay it out from there
@@ -2480,6 +2524,8 @@ class Rows:
                                                                                 "fairing" or key == "P-INLET"):
                 continue
             kind, pitch = rk
+            if not pn.mirror and pn.region.bounds[3] < 0.0:
+                continue                        # port-only panel: drilled as the mirror image of its partner
             O_ = o.get(key, pn.region)
             ring = O_.buffer(-(EDGE[kind] + OWN_MARGIN), join_style=2)
             if ring.is_empty:
@@ -2555,23 +2601,14 @@ class Rows:
             self.line_rows(float(C[0, 0]), float(C[-1, 0]),
                            lambda x: float(np.interp(x, C[:, 0], C[:, 1])) - GAP - EDGE_M4, "U",
                            "crease row (fairing land)")
+        # centre cowl piece: Camloc rows on the fin-root fairings' joggled lands along its side edges
+        y_up = -float(sc.pan["P-COWL-UP"]["outline"][0][1])
+        self.line_rows(X_COWL + 0.03, X_UPS_LAND - 0.02, lambda x: y_up - GAP - EDGE_CAM - OWN_MARGIN - 0.0005, "U",
+                       "centre cowl edge row", owner_fixed=(keys["P-COWL-UP"], "P-COWL-UP", ("cam", PITCH_COWL)))
         # lower cowl halves: Camloc row on the aft-keel land flanges (layout: receptacles at y +-0.040)
         ld = sc.mem["M-AFTKEEL"]["lands"][0]
         self.line_rows(float(ld["x"][0]) + 0.012, float(ld["x"][1]) - 0.012, lambda x: 0.040, "L",
                        "aft-keel land row", owner_fixed=(keys["P-COWL-LO"], "P-COWL-LO", ("cam", PITCH_COWL)))
-        # turret aperture ring: 14 x M4 on the ring mid-circle into the lower-skin rebate
-        T = sc.S["payload"]["turret"]
-        xc = float(T["bay_center_x"])
-        ring = outlines(sc)["P-TURRETRING"]
-        r_open = 0.5 * float(T["ball_diameter"]) + float(T["bay"]["aperture_ring"]["radial_clearance"])
-        r_out = float(ring.exterior.distance(Point(xc, 0.0)))
-        rm = 0.5 * (r_open + r_out)
-        for k in range(7):
-            th = math.pi * (k + 0.5) / 7.0
-            xx, yy = xc + rm * math.cos(th), rm * math.sin(th)
-            p, n = sc.oml_point(xx, yy, "L")
-            t = np.array([-math.sin(th), math.cos(th), 0.0])
-            self._commit(keys["P-TURRETRING"], "P-TURRETRING", "nut", p, -n, t, "turret ring screw")
 
     def glove_rows(self, gl):
         """Peel-stopper blind rivets (M4, 150 mm) at the glove skin ends: on the SOB-rib and joint-rib flanges."""
@@ -2587,21 +2624,52 @@ class Rows:
             xs = np.arange(x0 + 0.03, x1 - 0.03, DENSE)
             P, N = [], []
             for x in xs:
-                g = LineString([(x, -1.0), (x, 1.0)]).intersection(poly)
-                if g.is_empty:
-                    continue
-                zz = float(g.bounds[3] if upper else g.bounds[1])
-                g2 = LineString([(x + 0.001, -1.0), (x + 0.001, 1.0)]).intersection(poly)
-                zz2 = float(g2.bounds[3] if upper else g2.bounds[1])
-                dz = (zz2 - zz) / 0.001
-                n = _unit([-dz, 0.0, 1.0]) if upper else _unit([dz, 0.0, -1.0])
-                P.append([x, y, zz])
-                N.append(n)
+                r = self.glove_point(gl, float(x), y, upper)
+                if r is not None:
+                    P.append(r[0])
+                    N.append(r[1])
             P, N = np.asarray(P), np.asarray(N)
             T = np.gradient(P, axis=0)
             T = T / np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-12)
             own = [(keys[key], key, ("riv", RIVET_PITCH))] * len(P)
             self._runs(P, N, T, own, "peel-stopper rivet row (3.2 mm: 20 mm rib flange)", size=RIVET_D)
+
+    @staticmethod
+    def glove_point(gl, x: float, y: float, upper: bool):
+        """Glove OML point and outward normal (streamwise section slope; the glove is flat spanwise)."""
+        poly = gl.poly(y)
+        zz = []
+        for xx in (x, x + 0.001):
+            g = LineString([(xx, -1.0), (xx, 1.0)]).intersection(poly)
+            if g.is_empty:
+                return None
+            zz.append(float(g.bounds[3] if upper else g.bounds[1]))
+        dz = (zz[1] - zz[0]) / 0.001
+        n = _unit([-dz, 0.0, 1.0]) if upper else _unit([dz, 0.0, -1.0])
+        return np.array([x, y, zz[0]]), n
+
+    def joint_access_rows(self, gl):
+        """Wing-joint access panel: Camloc row 2.5 D + 1.5 mm inside its outline, on the glove lower skin's joggled
+        land and the rib flanges."""
+        key = "P-JOINTACCESS"
+        ja = self.pans["P-GLOVE-LO"].ja
+        ring = ja.buffer(-(EDGE_CAM + OWN_MARGIN), join_style=2)
+        if ring.is_empty:
+            return
+        R = np.asarray(_as_polys(ring)[0].exterior.coords)
+        s_ = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(R, axis=0), axis=1))]
+        q = np.arange(0.0, s_[-1], DENSE)
+        P, N = [], []
+        for x, y in np.column_stack([np.interp(q, s_, R[:, 0]), np.interp(q, s_, R[:, 1])]):
+            r = self.glove_point(gl, float(x), float(y), False)
+            if r is not None:
+                P.append(r[0])
+                N.append(r[1])
+        P, N = np.asarray(P), np.asarray(N)
+        T = np.gradient(P, axis=0)
+        T = T / np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-12)
+        own = [(self.keys[key], key, ("cam", PITCH_CAM))] * len(P)
+        self._runs(P, N, T, own, "joint access panel edge row")
 
     def run(self, gl):
         self.station_rows()
@@ -2609,6 +2677,7 @@ class Rows:
         self.ring_rows()
         self.special_rows()
         self.glove_rows(gl)
+        self.joint_access_rows(gl)
         return self.done
 
 

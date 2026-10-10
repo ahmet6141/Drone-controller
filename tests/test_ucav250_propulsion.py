@@ -278,7 +278,9 @@ class TestPropulsionBuild(unittest.TestCase):
 
     # ------------------------------------------------------------------ cooling
     def test_sduct_in_corridor_and_through_cutout(self):
-        """The S-duct stays inside KO-COOLING-DUCT (three 80 mm tubes, stadium envelope) and exits through C-DUCT."""
+        """The S-duct stays inside KO-COOLING-DUCT (three 80 mm tubes, stadium envelope) and exits through C-DUCT;
+        only its inlet mouth (first corridor segment, open roof) rises above the corridor, to the inlet lip land
+        under the OML (never into the skin)."""
         ko = next(k for k in self.L["keep_outs"] if k["id"] == "KO-COOLING-DUCT")
         Pth = np.asarray(ko["path"], float)
         hy = max(abs(o) for o in ko["lateral_offsets"]) + ko["radius"]
@@ -287,8 +289,14 @@ class TestPropulsionBuild(unittest.TestCase):
         x0 = Pth[0, 0]
         self.assertGreaterEqual(float(V[:, 0].min()), x0 - 1e-6)
         self.assertLessEqual(float(V[:, 0].max()), ex["x"][1] + 1e-6)
+        dep = P.inlet_bond_depth()
         for p in V:
-            if p[0] <= Pth[-1, 0]:
+            if p[0] <= Pth[1, 0] + 1e-9:                 # inlet mouth
+                zc = np.interp(p[0], Pth[:, 0], Pth[:, 2])
+                self.assertLessEqual(abs(p[1]), hy + 1e-6)
+                self.assertGreaterEqual(p[2], zc - ko["radius"] - 1e-6)
+                self.assertLessEqual(p[2], self.C.oml_z_top(p[0], p[1]) - dep + 2e-4)
+            elif p[0] <= Pth[-1, 0]:
                 zc = np.interp(p[0], Pth[:, 0], Pth[:, 2])
                 self.assertLessEqual(abs(p[1]), hy + 1e-6)
                 self.assertLessEqual(abs(p[2] - zc), ko["radius"] + 1e-6)
@@ -298,6 +306,12 @@ class TestPropulsionBuild(unittest.TestCase):
                 if p[0] >= P.DUCT_FLAT_X:
                     self.assertTrue(ex["y"][0] - 1e-6 <= p[1] <= ex["y"][1] + 1e-6)
                     self.assertTrue(min(ex["z"]) - 1e-6 <= p[2] <= max(ex["z"]) + 1e-6)
+        # the mouth roof is open: a vertical line from the OML down to the corridor centre meets no duct material
+        man = self.pr["YK250-PR-546"].mesh.to_manifold()
+        xm = 0.5 * (Pth[0, 0] + Pth[1, 0])
+        zt = self.C.oml_z_top(xm, 0.0)
+        hits = G.ray_hits(man, np.array([xm, 0.0, zt]), np.array([xm, 0.0, np.interp(xm, Pth[:, 0], Pth[:, 2])]))
+        self.assertEqual(len(hits), 0)
         cut = next(c for c in next(s for s in self.L["stations"] if s["id"] == "FS3670")["cutouts"]
                    if c["id"] == "C-DUCT")
         T = self.pr["YK250-PR-548"].mesh
@@ -358,6 +372,96 @@ class TestPropulsionBuild(unittest.TestCase):
         self.assertAlmostEqual(self.pr["YK250-PR-514"].mass_kg, d22["mass_kg"]["value"])
         sg = items["epropelled_sg750"]
         self.assertAlmostEqual(self.pr["YK250-PR-502"].mass_kg, sg["mass_kg"]["value"])
+
+
+def _cowl_stand_in(C):
+    """Stand-in lower cowl half from spec.layout only (P-COWL-LO extents, shell_secondary 5.8 mm sandwich, 1.6 mm solid
+    edge band within 30 mm of the cut-out, the HS-COWL-EXIT insert regions cut out with a 0.5 mm gap) until the shell
+    producer registers the real halves."""
+    hp = P._hp(C, "inserts", "HS-COWL-EXIT")["regions"]
+    pan = P._cowl_lo(C)
+    clip = P.box3((pan["x"][0] + 0.0005, pan["y"][0] + 0.0005, -0.3), (4.1, 0.5, pan["z_band"][1] - 0.0005))
+    full = P.inter(P._oml_band(C, 0.0, P.COWL_SKIN), clip)
+    band = P.inter(P._oml_band(C, 0.0, P.HS["band_t"]), clip)
+    near = P._box_union(hp, 0.030)
+    m = P.diff(P.union([P.diff(full, [near]), P.inter(band, near)]), [P._box_union(hp, 0.0005)])
+    return P.finish(P.largest_piece(m))
+
+
+@unittest.skipUnless(HAVE, "ucav250 dependencies missing")
+class TestHeatProtection(unittest.TestCase):
+    """layout.heat_protection HS-COWL-EXIT (PR-520) / HS-COWL-SHIELD (PR-523) ride on the lower cowl halves: they are
+    registered only when the halves exist. Verified here on a layout-derived stand-in of YK250-SH-451-R/L (a fixture
+    marked consumable so that it hangs on the root part without its own Camloc row)."""
+
+    @classmethod
+    def setUpClass(cls):
+        from ucav250.core.parts import Part, mirror_part
+        from ucav250.design import hardware as HW
+        cls.reg = build_registry(modules=["chassis"], strict=False)
+        cls.spec = cls.reg.spec
+        P._spinner_dims(cls.spec)
+        cls.C = P.Ctx(cls.reg, cls.spec)
+        hid = P._cowl_lo(cls.C)["part"]
+        host = Part(id=hid + "-R", name="lower cowl stand-in, starboard", name_tr="alt kaporta vekili, sağ",
+                    group="shell", material="cfrp_pw_mtm45_as4", process="consumable",
+                    mesh_fn=lambda C=cls.C: _cowl_stand_in(C), side="R", thickness=P.HS["band_t"],
+                    parent=cls.L_root(cls.spec), step=36)
+        cls.reg.add(host)
+        cls.reg.add(mirror_part(host, hid + "-L"))
+        P.register(cls.reg, cls.spec)
+        HW.register(cls.reg, cls.spec)
+        cls.hosts = {"R": hid + "-R", "L": hid + "-L"}
+        focus = {pid for pid in cls.reg.parts if pid.startswith("YK250-PR")}
+        cls.summary = K.run_all(cls.reg, quick=False, write=False, focus=focus)
+
+    @staticmethod
+    def L_root(spec):
+        return spec["layout"]["root_part"]
+
+    def test_registered_on_hosts(self):
+        for side in ("R", "L"):
+            ins, shd = self.reg.parts[f"YK250-PR-520-{side}"], self.reg.parts[f"YK250-PR-523-{side}"]
+            self.assertEqual(ins.parent, self.hosts[side])
+            self.assertEqual(shd.parent, ins.id)
+            self.assertEqual(ins.material, "ss_304_annealed")
+            self.assertGreaterEqual(ins.thickness, float(self.spec["processes"][ins.process]["min_thickness"]))
+            self.assertIn(ins.step, {int(s["step"]) for s in self.spec["assembly"]["steps"]})
+        self.assertNotIn("YK250-PR-521-R", self.reg.parts)          # not required (doc: >= 50 mm margins)
+        self.assertNotIn("YK250-PR-522-R", self.reg.parts)
+
+    def test_design_rule_checks_clean(self):
+        bad = {k: v[:3] for k, v in self.summary["details"].items() if v}
+        self.assertTrue(self.summary["ok"], f"heat-protection violations: {bad}")
+
+    def test_rivets_pierce_and_join(self):
+        man = {pid: self.reg.parts[pid].mesh.to_manifold() for pid in
+               ("YK250-PR-520-R", "YK250-PR-523-R", self.hosts["R"])}
+        fs = [f for f in self.reg.fasteners() if f.joins and f.joins[0] == "YK250-PR-520-R"]
+        lap = [f for f in fs if self.hosts["R"] in f.joins]
+        sh = [f for f in fs if "YK250-PR-523-R" in f.joins]
+        self.assertGreaterEqual(len(lap), 15)
+        self.assertGreaterEqual(len(sh), 10)
+        for f in lap + sh:
+            for pid in f.joins:              # every joined sheet is met by a probe line next to the hole
+                e1 = np.cross(f.axis, [0.0, 0.0, 1.0] if abs(f.axis[2]) < 0.9 else [1.0, 0.0, 0.0])
+                o = f.position + 1.6 * 0.5 * f.d * e1 / np.linalg.norm(e1)
+                h = G.ray_hits(man[pid], o - 0.003 * f.axis, o + (f.grip or f.length) * f.axis + 0.003 * f.axis)
+                self.assertGreaterEqual(len(h), 2, f"{f.id} misses {pid}")
+
+    def test_air_gaps_and_pipe_clearance(self):
+        host = self.reg.parts[self.hosts["R"]].mesh.to_manifold()
+        shd = self.reg.parts["YK250-PR-523-R"].mesh.to_manifold()
+        ins = self.reg.parts["YK250-PR-520-R"].mesh.to_manifold()
+        exh = self.reg.parts["YK250-PR-504-R"].mesh.to_manifold()
+        self.assertGreaterEqual(shd.min_gap(host, 0.02), P.HS["standoff"] - 3e-4)   # 5 mm air gap (layout)
+        self.assertGreaterEqual(ins.min_gap(exh, 0.02), P.HS["hole"] - 1e-3)        # engine dynamic margin
+        self.assertGreaterEqual(exh.min_gap(host, 0.05), 0.025)                    # shielded cowl rule
+
+    def test_masses(self):
+        m = sum(self.reg.mass(self.reg.parts[f"YK250-PR-{n}-{s}"]) for n in (520, 523) for s in "RL")
+        self.assertLess(m, 1.0)
+        self.assertGreater(m, 0.3)
 
 
 if __name__ == "__main__":

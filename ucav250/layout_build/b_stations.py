@@ -209,8 +209,8 @@ def stations() -> list:
                              "14.8 mm", "shield_material": "ss_304_annealed", "shield_t": 0.0004},
         name_tr="yangın perdesi")
     add("FS3738", X_RING, "engine-bay lower U-ring (metallic, in the hot zone): ventral rear fitting, aft keel beam, "
-        "lower cowl intermediate land; its upper ends are riveted to the feet of the outboard cheeks of the stabilator "
-        "node fittings; open centre for the engine (dynamic envelope + 10 mm); fix round 1 (VPK-01): the ring no "
+        "lower cowl intermediate land; its upper ends are bolted (3 x M4 12.9 each) to the feet of the outboard cheeks of "
+        "the stabilator node fittings; open centre for the engine (dynamic envelope + 10 mm); fix round 1 (VPK-01): the ring no "
         "longer carries the spindle bearings (the 30 mm band at the spindle could not hold a 25 mm spindle hole and "
         "the housing bolts) and ends below the node fittings (ring_z_max)", "ring", "YK250-CH-014", [],
         ring_depth=0.030, ring_z_max=0.176, flange_w=0.020,

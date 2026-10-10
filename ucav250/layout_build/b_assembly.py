@@ -100,7 +100,9 @@ def steps() -> list:
                   ["her çerçeve istasyonu ±0,3 mm", "kesiklerin konumu ve kenar payı"]))
     S.append(step(7, "Burun kutusu: omurga duvarları, aviyonik güverte, burun takımı mafsalı",
                   "burun kutusu", "İki omurga duvarı FS0600 ile FS1110 arasına, aviyonik güverte bunların üstüne "
-                  "yapıştırılır. Burun takımı mafsal burç blokları (7075) her iki duvara bağlanır ve Ø16 H7 yuvalar "
+                  "yapıştırılır. FS0300 burun perdesi iki CFRP kenar saplamasıyla (YK250-CH-049-R/L) FS0600'a yapıştırılarak "
+                  "bağlanır (sökülebilir tepsiye bağlı kalmaz). Burun takımı mafsal burç blokları (7075) her iki "
+                  "duvara bağlanır; flanşlı 4130 burçlar (YK250-CH-073) yapıştırılır ve Ø16 H7 yuvalar "
                   "mafsal mastarıyla birlikte hat raybalanır. Yukarı kilit kancası güvertenin altına takılır.",
                   ["mafsal mastarı", "Ø16 H7 rayba", "yapıştırıcı"],
                   ["burun takımı mafsal ekseni = landing_gear.nose.pivot ±0,2 mm", "omurga yarığı iç genişliği "
@@ -122,39 +124,48 @@ def steps() -> list:
     S.append(step(10, "Omurga kirişleri, güverteler ve ana takım yapısı",
                    "omurga kirişleri, ön yakıt güvertesi, kuyu tavanı, ana takım kirişleri, mafsal bağlantıları",
                    "Yük bölmesi kenarındaki iki omurga kirişi, ön yakıt bölmesi tabanı, kuyu tavanı ve iki ana takım "
-                   "kirişi yerleştirilir. 7075 mafsal bağlantıları (YK250-CH-070) kirişe ve tavana bağlanır; Ø20 H7 "
-                   "yatak yuvaları mafsal mastarıyla hat raybalanır.", ["ana takım mafsal mastarı", "Ø20 H7 rayba"],
+                   "kirişi yerleştirilir. 7075 mafsal bağlantıları (YK250-CH-070) kirişe ve tavana bağlanır; 4130 kovan "
+                   "burçlar (YK250-CH-074, dış çap 23) yapıştırılır ve Ø20 H7 yatak yuvaları mafsal mastarıyla hat "
+                   "raybalanır.", ["ana takım mafsal mastarı", "Ø20 H7 rayba"],
                    ["mafsal ekseni = landing_gear.main.trunnion ±0,2 mm, x eksenine paralel 0,05°",
                     "iki taraf simetrisi ±0,3 mm"]))
     S.append(step(11, "Arka gövde: sırt uzun kirişleri, kuyruk ve ventral bağlantıları",
                    "FS-GEAR, FS3480, sırt uzun kirişleri, arka omurga kirişi, kuyruk bağlantıları",
-                   "FS-GEAR ve FS3480 çerçeveleri, sırt uzun kirişleri (yangın perdesinin önünde biter), ventral "
-                   "omurga şeridi ve arka omurga kirişi takılır. Dikey ön kiriş bağlantısı, sabit kök parçası ön "
-                   "bağlantısı ve üç ventral bağlantısı matkap şablonlarından delinerek bağlanır.",
+                   "FS-GEAR ve FS3480 çerçeveleri ve sırt uzun kirişleri (yangın perdesinin önünde biter) takılır. "
+                   "Dikey ön kiriş bağlantısı ve sabit kök parçası ön bağlantısı matkap şablonlarından delinerek "
+                   "FS3480'e bağlanır (ventral omurga şeridi adım 12'de, arka omurga kirişi ve üç ventral bağlantısı "
+                   "adım 13'te).",
                    ["kuyruk bağlantı şablonları", "tork anahtarı"],
-                   ["dikey kök bağlantı noktaları layout.chassis.fittings ±0,3 mm", "ventral bağlantıları aynı hatta"]))
+                   ["dikey kök bağlantı noktaları layout.chassis.fittings ±0,3 mm"]))
     S.append(step(12, "Yangın perdesi, motor bağlantı parçaları ve arka kenar çizgisi uzun kirişleri",
                    "FS3670, YK250-CH-020 (L/R) arka parça",
                    f"Kompozit sandviç perde takılır; 12 paslanmaz ara parça üzerine {shield_mm()} mm AISI 304 kalkan "
-                   "perçinlenir. İki köşe bağlantısı (motor üst ayağı 2 x M8, dikey arka kiriş çatalı 2 x M6, sırt uzun "
+                   "perçinlenir; 0,8 mm paslanmaz kenar köşebendi (YK250-PR-091) kalkanın arka yüzüne d 3,2 kör "
+                   "perçinlerle (~25 mm aralık) perçinlenir. Ventral omurga şeridi FS3480 ile perdenin ön yüzü arasına "
+                   "yapıştırılır. İki köşe bağlantısı (motor üst ayağı 2 x M8, dikey arka kiriş çatalı 2 x M6, sırt uzun "
                    "kirişi eki) ve iki alt motor ayağı (2 x M8) 7075 destek plakaları ve paslanmaz ara borularla perdeye "
                    "bağlanır. Kablo, yakıt ve itme çubuğu geçişlerine yanmaz rondela/körük takılır. Ardından kenar "
                    "çizgisi uzun kirişinin arka parçası (arka kiriş çerçevesinin 30 mm arkasından perdenin ön yüzüne) "
                    "FS-GEAR ve FS3480'in kenara açık uzun kiriş çentiklerine dışarıdan yanlamasına yerleştirilir "
                    "(çerçeveler ve perde tezgâhta), her çerçevede 7075 kesme köşebendiyle bağlanır ve gövde yanı "
-                   "kaburgasının arka uzantısına 4 x M6 Ti ile eklenir (M-CHINE.splices SPL-CH-AFT); arka uçtaki 7075 "
+                   "kaburgasının arka uzantısına 4 x M4 Ti ile eklenir (M-CHINE.splices SPL-CH-AFT; 4,8 mm "
+                   "kalınlaştırılmış ek bacağı, kaburganın dolu bandı x 2,840'tan); arka uçtaki 7075 "
                    "uç bağlantısı adım 13'te perdeden geçen cıvatalarla stabilatör düğüm bağlantısına eklenir; motor "
                    "bölmesine karbon parça geçmez.",
                    ["perçin tabancası", "tork anahtarı", "matkap şablonları"],
                    ["paslanmaz kalkan >= 0,38 mm (FIRE-001), açık delik yok",
                     "motor bağlantı parçası konumları ±0,3 mm",
-                    "arka kenar çizgisi ek cıvataları (4 x M6 Ti) torklu, kenar mesafesi >= 2,5 D"]))
+                    "arka kenar çizgisi ek cıvataları (4 x M4 Ti) torklu, kenar mesafesi >= 2,5 D"]))
     S.append(step(13, "Stabilatör düğüm bağlantıları ve motor bölmesi alt U halkası", "F-SPINDLE-NODE, FS3738",
                    "İşlenmiş 7075 stabilatör düğüm bağlantıları (iç yatak yuvası işlenmiş halde) mil hizalama "
                    "fikstürüyle (sahte mil + FS3480 kök parçası ön bağlantısı deliklerine bağlanan şablon) "
                    "konumlanır ve 7 x M5 ile yangın perdesinden geçirilerek bağlanır; kenar çizgisi uzun kirişi uç "
-                   "bağlantıları aynı cıvatalarla eklenir. 2024-T3 alt U halka takılır ve uçları düğümün dış yanaklarına "
-                   "perçinlenir. Dış yatak yuvası kök parçası uç kaburgasında adım 31'de düğüm yuvasıyla eş eksenli "
+                   "bağlantıları aynı cıvatalarla eklenir. 2024-T3 alt U halka bacakları (YK250-CH-014-R/L) üst "
+                   "uçlarından düğümün dış yanak ayağına 3 x M4 12.9 ile bağlanır, 7075 alt parça (YK250-CH-015) "
+                   "bacaklara 3'er M5 ile eklenir. Arka omurga kirişi (YK250-CH-033) ön ayağından 4 x M5 12.9 ile "
+                   "yangın perdesi yığınından (ön yüzde destek plakası YK250-CH-089, ara borular) geçirilerek bağlanır "
+                   "ve iki klipsle (YK250-CH-102) alt parçanın gövdesine bağlanır; üç ventral bağlantısı "
+                   "(YK250-CH-099..101) 2'şer M4 12.9 ile arka omurga gövdesine bağlanır. Dış yatak yuvası kök parçası uç kaburgasında adım 31'de düğüm yuvasıyla eş eksenli "
                    "işlenir.",
                    ["mil hizalama fikstürü (iki taraf)", "tork anahtarı"],
                    ["düğüm yatak ekseni = tail.surfaces.stabilator.pivot ±0,2 mm, y eksenine paralel 0,05°",

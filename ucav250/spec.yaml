@@ -5409,10 +5409,10 @@ layout:
     x: 3.7378
     sweep_deg: 0.0
     role: 'engine-bay lower U-ring (metallic, in the hot zone): ventral rear fitting, aft keel beam, lower cowl intermediate
-      land; its upper ends are riveted to the feet of the outboard cheeks of the stabilator node fittings; open centre for
-      the engine (dynamic envelope + 10 mm); fix round 1 (VPK-01): the ring no longer carries the spindle bearings (the
-      30 mm band at the spindle could not hold a 25 mm spindle hole and the housing bolts) and ends below the node fittings
-      (ring_z_max)'
+      land; its upper ends are bolted (3 x M4 12.9 each) to the feet of the outboard cheeks of the stabilator node fittings;
+      open centre for the engine (dynamic envelope + 10 mm); fix round 1 (VPK-01): the ring no longer carries the spindle
+      bearings (the 30 mm band at the spindle could not hold a 25 mm spindle hole and the housing bolts) and ends below
+      the node fittings (ring_z_max)'
     role_tr: motor bölmesi alt U halkası
     type: ring
     part: YK250-CH-014
@@ -5452,13 +5452,13 @@ layout:
       role: 'primary longitudinal member on the chine line (z = chine plane): body bending (with the dorsal ridge skin and
         the belly), upper/lower skin attachment land at the chine, LERX/glove root attachment between FS1810 and the main-spar
         frame; forward piece FS0600 -> main-spar frame, aft piece rear-spar frame -> forward face of the firewall FS3670;
-        both pieces are spliced to the side-of-body rib of the wing box with 4 x M6 Ti each (fix round 3, PK3-04: splices
-        SPL-CH-FWD / SPL-CH-AFT; the side-of-body rib extends aft of the rear spar as the aft splice land), so that the
-        axial longeron load passes through the side-of-body rib past the spar frames; the pieces pass the frames they cross
-        in longeron notches open to the frame edge (layout.stations C-CHINE: placed laterally after the frames, 7075 shear
-        clip, U-doubler); fix round 1 (VPK-01/VPK-06): no carbon aft of the firewall - the aft end is spliced (2 x M5 Ti)
-        to the forward tongue of the metallic stabilator node fitting F-SPINDLE-NODE, which is through-bolted with the firewall
-        stack'
+        both pieces are spliced to the side-of-body rib of the wing box (fix round 3, PK3-04: splices SPL-CH-FWD 4 x M6
+        Ti / SPL-CH-AFT 4 x M4 Ti in the padded leg, detail design CH-V08; the side-of-body rib extends aft of the rear
+        spar as the aft splice land), so that the axial longeron load passes through the side-of-body rib past the spar
+        frames; the pieces pass the frames they cross in longeron notches open to the frame edge (layout.stations C-CHINE:
+        placed laterally after the frames, 7075 shear clip, U-doubler); fix round 1 (VPK-01/VPK-06): no carbon aft of the
+        firewall - the aft end is spliced (2 x M5 Ti) to the forward tongue of the metallic stabilator node fitting F-SPINDLE-NODE,
+        which is through-bolted with the firewall stack'
       material: cfrp_ud_mtm45_as4
       process: prepreg_ooa_vacbag
       layup: spar_cap_ud
@@ -5487,13 +5487,13 @@ layout:
       - id: SPL-CH-AFT
         with: M-SOB
         piece: aft piece start
-        d: 0.006
+        d: 0.004
         axis: [0.0, 1.0, 0.0]
-        spec: M6 Ti-6Al-4V (NAS1956 type) + self-locking nut, axis y, through the chine-longeron web (J outboard leg, 2.4
-          mm) and the 16-ply solid land of the side-of-body rib
-        pitch_m: 0.018
-        edge_m: 0.015
-        bolts: [[2.877, 0.3975, 0.0], [2.895, 0.3975, 0.0], [2.913, 0.3975, 0.0], [2.931, 0.3975, 0.0]]
+        spec: 'M4 Ti-6Al-4V + self-locking nut, axis y, through the chine''s padded splice leg (4.8 mm) and the 16-ply solid
+          land of the side-of-body rib, at the rib''s mid height (detail design, chassis CH-V08: detail_joint_margins SPL-CH-AFT-*)'
+        pitch_m: 0.0125
+        edge_m: 0.0105
+        bolts: [[2.8475, 0.3975, 0.0], [2.86, 0.3975, 0.0], [2.8725, 0.3975, 0.0], [2.885, 0.3975, 0.0]]
       mirror: true
       load_path: skins (shear) -> chine longeron (axial) -> frames / wing box side-of-body rib
       touch: [ST-*, M-SOB, M-DECK-NOSE, M-WELLROOF, M-FWDDECK, M-MIDFLOOR, F-SPINDLE-NODE]
@@ -6070,7 +6070,7 @@ layout:
       role: 'rib on the body side line between main and rear spar (and forward to the LERX nose): splices the chine longeron,
         closes the body-side of the glove box, kink rib of the chine/glove skins; fix round 3 (PK3-04): extended aft of
         the rear spar to x 2.952 as the closing rib of the glove trailing-edge bay and the splice land of the aft chine
-        piece; 16-ply solid lands at both chine splices (4 x M6 Ti each, M-CHINE.splices)'
+        piece; 16-ply solid lands at both chine splices (SPL-CH-FWD 4 x M6 Ti, SPL-CH-AFT 4 x M4 Ti, M-CHINE.splices)'
       material: cfrp_pw_mtm45_as4
       process: prepreg_ooa_vacbag
       layup: rib_panel
@@ -6081,9 +6081,9 @@ layout:
       - x: [2.4354, 2.5104]
         z: [-0.016, 0.016]
         text: forward chine splice land (16 plies)
-      - x: [2.862, 2.952]
+      - x: [2.84, 2.952]
         z: [-0.016, 0.016]
-        text: aft chine splice land (16 plies)
+        text: aft chine splice land (16 plies; from x 2.840 for the 4 x M4 of SPL-CH-AFT)
       box: [[1.8674, 0.3966, -0.05], [2.952, 0.4034, 0.052]]
       contour: wing_loft
       mirror: true
@@ -6649,7 +6649,8 @@ layout:
         plate forward); inboard cheek 28 mm (y 0.132-0.160, clear of the engine-mount truss tubes) with the bearing boss;
         outboard cheek 7 mm (y 0.2125-0.2195; fix round 2: 10 -> 7 mm, structures T-NODE-CHEEK) carrying the stub rear-spar
         root fitting on 4 x M6 12.9 (axis y, 76 x 62 mm rectangle, tension + shear) clear of the horn sweep; FS3738 is a
-        lower U-ring below the node (ring_z_max) and is riveted to the outboard cheek foot'
+        lower U-ring below the node (ring_z_max) whose 2024 legs are bolted to the outboard cheek foot (3 x M4 12.9 per
+        side, detail design: chassis detail_joint_margins NODE-FOOT-*)'
       load_path: stabilator -> spindle -> inboard bearing (boss) / stub tip bearing -> stub -> stub root fitting -> outboard
         cheek (4 x M6) -> node -> 7 x M5 through the firewall -> firewall sandwich (in-plane) + chine longeron splice ->
         body; structures T-NODE-*
@@ -9922,7 +9923,7 @@ layout:
     min_mm: 50.0
   - name: exhaust vs shielded cowl and firewall
     a: [YK250-PR-504-R, YK250-PR-504-L]
-    b: ['prefix:YK250-SH-45', YK250-CH-013, YK250-CH-014]
+    b: ['prefix:YK250-SH-45', YK250-CH-013, 'prefix:YK250-CH-014']
     min_mm: 25.0
   - name: cylinder heads vs composites
     a: [YK250-PR-500]
@@ -11629,9 +11630,10 @@ assembly:
   - step: 7
     title_tr: 'Burun kutusu: omurga duvarları, aviyonik güverte, burun takımı mafsalı'
     subassembly: burun kutusu
-    text: İki omurga duvarı FS0600 ile FS1110 arasına, aviyonik güverte bunların üstüne yapıştırılır. Burun takımı mafsal
-      burç blokları (7075) her iki duvara bağlanır ve Ø16 H7 yuvalar mafsal mastarıyla birlikte hat raybalanır. Yukarı kilit
-      kancası güvertenin altına takılır.
+    text: İki omurga duvarı FS0600 ile FS1110 arasına, aviyonik güverte bunların üstüne yapıştırılır. FS0300 burun perdesi
+      iki CFRP kenar saplamasıyla (YK250-CH-049-R/L) FS0600'a yapıştırılarak bağlanır (sökülebilir tepsiye bağlı kalmaz).
+      Burun takımı mafsal burç blokları (7075) her iki duvara bağlanır; flanşlı 4130 burçlar (YK250-CH-073) yapıştırılır
+      ve Ø16 H7 yuvalar mafsal mastarıyla birlikte hat raybalanır. Yukarı kilit kancası güvertenin altına takılır.
     tools: [mafsal mastarı, Ø16 H7 rayba, yapıştırıcı]
     checks: ['burun takımı mafsal ekseni = landing_gear.nose.pivot ±0,2 mm', 'omurga yarığı iç genişliği 0,083 m ±0,3 mm']
   - step: 8
@@ -11656,39 +11658,45 @@ assembly:
     title_tr: Omurga kirişleri, güverteler ve ana takım yapısı
     subassembly: omurga kirişleri, ön yakıt güvertesi, kuyu tavanı, ana takım kirişleri, mafsal bağlantıları
     text: Yük bölmesi kenarındaki iki omurga kirişi, ön yakıt bölmesi tabanı, kuyu tavanı ve iki ana takım kirişi yerleştirilir.
-      7075 mafsal bağlantıları (YK250-CH-070) kirişe ve tavana bağlanır; Ø20 H7 yatak yuvaları mafsal mastarıyla hat raybalanır.
+      7075 mafsal bağlantıları (YK250-CH-070) kirişe ve tavana bağlanır; 4130 kovan burçlar (YK250-CH-074, dış çap 23) yapıştırılır
+      ve Ø20 H7 yatak yuvaları mafsal mastarıyla hat raybalanır.
     tools: [ana takım mafsal mastarı, Ø20 H7 rayba]
     checks: ['mafsal ekseni = landing_gear.main.trunnion ±0,2 mm, x eksenine paralel 0,05°', 'iki taraf simetrisi ±0,3 mm']
   - step: 11
     title_tr: 'Arka gövde: sırt uzun kirişleri, kuyruk ve ventral bağlantıları'
     subassembly: FS-GEAR, FS3480, sırt uzun kirişleri, arka omurga kirişi, kuyruk bağlantıları
-    text: FS-GEAR ve FS3480 çerçeveleri, sırt uzun kirişleri (yangın perdesinin önünde biter), ventral omurga şeridi ve
-      arka omurga kirişi takılır. Dikey ön kiriş bağlantısı, sabit kök parçası ön bağlantısı ve üç ventral bağlantısı matkap
-      şablonlarından delinerek bağlanır.
+    text: FS-GEAR ve FS3480 çerçeveleri ve sırt uzun kirişleri (yangın perdesinin önünde biter) takılır. Dikey ön kiriş
+      bağlantısı ve sabit kök parçası ön bağlantısı matkap şablonlarından delinerek FS3480'e bağlanır (ventral omurga şeridi
+      adım 12'de, arka omurga kirişi ve üç ventral bağlantısı adım 13'te).
     tools: [kuyruk bağlantı şablonları, tork anahtarı]
-    checks: ['dikey kök bağlantı noktaları layout.chassis.fittings ±0,3 mm', ventral bağlantıları aynı hatta]
+    checks: ['dikey kök bağlantı noktaları layout.chassis.fittings ±0,3 mm']
   - step: 12
     title_tr: Yangın perdesi, motor bağlantı parçaları ve arka kenar çizgisi uzun kirişleri
     subassembly: FS3670, YK250-CH-020 (L/R) arka parça
-    text: Kompozit sandviç perde takılır; 12 paslanmaz ara parça üzerine 0,4 mm AISI 304 kalkan perçinlenir. İki köşe bağlantısı
-      (motor üst ayağı 2 x M8, dikey arka kiriş çatalı 2 x M6, sırt uzun kirişi eki) ve iki alt motor ayağı (2 x M8) 7075
-      destek plakaları ve paslanmaz ara borularla perdeye bağlanır. Kablo, yakıt ve itme çubuğu geçişlerine yanmaz rondela/körük
-      takılır. Ardından kenar çizgisi uzun kirişinin arka parçası (arka kiriş çerçevesinin 30 mm arkasından perdenin ön
-      yüzüne) FS-GEAR ve FS3480'in kenara açık uzun kiriş çentiklerine dışarıdan yanlamasına yerleştirilir (çerçeveler ve
-      perde tezgâhta), her çerçevede 7075 kesme köşebendiyle bağlanır ve gövde yanı kaburgasının arka uzantısına 4 x M6
-      Ti ile eklenir (M-CHINE.splices SPL-CH-AFT); arka uçtaki 7075 uç bağlantısı adım 13'te perdeden geçen cıvatalarla
-      stabilatör düğüm bağlantısına eklenir; motor bölmesine karbon parça geçmez.
+    text: Kompozit sandviç perde takılır; 12 paslanmaz ara parça üzerine 0,4 mm AISI 304 kalkan perçinlenir; 0,8 mm paslanmaz
+      kenar köşebendi (YK250-PR-091) kalkanın arka yüzüne d 3,2 kör perçinlerle (~25 mm aralık) perçinlenir. Ventral omurga
+      şeridi FS3480 ile perdenin ön yüzü arasına yapıştırılır. İki köşe bağlantısı (motor üst ayağı 2 x M8, dikey arka kiriş
+      çatalı 2 x M6, sırt uzun kirişi eki) ve iki alt motor ayağı (2 x M8) 7075 destek plakaları ve paslanmaz ara borularla
+      perdeye bağlanır. Kablo, yakıt ve itme çubuğu geçişlerine yanmaz rondela/körük takılır. Ardından kenar çizgisi uzun
+      kirişinin arka parçası (arka kiriş çerçevesinin 30 mm arkasından perdenin ön yüzüne) FS-GEAR ve FS3480'in kenara açık
+      uzun kiriş çentiklerine dışarıdan yanlamasına yerleştirilir (çerçeveler ve perde tezgâhta), her çerçevede 7075 kesme
+      köşebendiyle bağlanır ve gövde yanı kaburgasının arka uzantısına 4 x M4 Ti ile eklenir (M-CHINE.splices SPL-CH-AFT;
+      4,8 mm kalınlaştırılmış ek bacağı, kaburganın dolu bandı x 2,840'tan); arka uçtaki 7075 uç bağlantısı adım 13'te perdeden
+      geçen cıvatalarla stabilatör düğüm bağlantısına eklenir; motor bölmesine karbon parça geçmez.
     tools: [perçin tabancası, tork anahtarı, matkap şablonları]
     checks: ['paslanmaz kalkan >= 0,38 mm (FIRE-001), açık delik yok', 'motor bağlantı parçası konumları ±0,3 mm', 'arka
-        kenar çizgisi ek cıvataları (4 x M6 Ti) torklu, kenar mesafesi >= 2,5 D']
+        kenar çizgisi ek cıvataları (4 x M4 Ti) torklu, kenar mesafesi >= 2,5 D']
   - step: 13
     title_tr: Stabilatör düğüm bağlantıları ve motor bölmesi alt U halkası
     subassembly: F-SPINDLE-NODE, FS3738
     text: İşlenmiş 7075 stabilatör düğüm bağlantıları (iç yatak yuvası işlenmiş halde) mil hizalama fikstürüyle (sahte mil
       + FS3480 kök parçası ön bağlantısı deliklerine bağlanan şablon) konumlanır ve 7 x M5 ile yangın perdesinden geçirilerek
-      bağlanır; kenar çizgisi uzun kirişi uç bağlantıları aynı cıvatalarla eklenir. 2024-T3 alt U halka takılır ve uçları
-      düğümün dış yanaklarına perçinlenir. Dış yatak yuvası kök parçası uç kaburgasında adım 31'de düğüm yuvasıyla eş eksenli
-      işlenir.
+      bağlanır; kenar çizgisi uzun kirişi uç bağlantıları aynı cıvatalarla eklenir. 2024-T3 alt U halka bacakları (YK250-CH-014-R/L)
+      üst uçlarından düğümün dış yanak ayağına 3 x M4 12.9 ile bağlanır, 7075 alt parça (YK250-CH-015) bacaklara 3'er M5
+      ile eklenir. Arka omurga kirişi (YK250-CH-033) ön ayağından 4 x M5 12.9 ile yangın perdesi yığınından (ön yüzde destek
+      plakası YK250-CH-089, ara borular) geçirilerek bağlanır ve iki klipsle (YK250-CH-102) alt parçanın gövdesine bağlanır;
+      üç ventral bağlantısı (YK250-CH-099..101) 2'şer M4 12.9 ile arka omurga gövdesine bağlanır. Dış yatak yuvası kök parçası
+      uç kaburgasında adım 31'de düğüm yuvasıyla eş eksenli işlenir.
     tools: [mil hizalama fikstürü (iki taraf), tork anahtarı]
     checks: ['düğüm yatak ekseni = tail.surfaces.stabilator.pivot ±0,2 mm, y eksenine paralel 0,05°', düğüm - motor dinamik
         zarfı >= 10 mm]

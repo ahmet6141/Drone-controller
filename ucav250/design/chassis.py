@@ -1124,7 +1124,6 @@ def build_glove_ribs(C: Ctx, bx: Box) -> dict:
     jr = C.mem["M-JOINTRIB"]
     y = 0.70
     poly = glove_rib_poly(C, y)
-    pm = C.L["chassis"]["wing_joint"]["main_spar"]
     mouth = rect(bx.xm(y) - (0.5 * SLOT_W + 0.0005) / abs(fork_frame(bx)[2][0]),
                  bx.xm(y) + (0.5 * SLOT_W + 0.0005) / abs(fork_frame(bx)[2][0]), -0.5 * SLOT_H - 0.0010,
                  0.5 * SLOT_H + 0.0010)
@@ -1356,7 +1355,6 @@ def chevron_slab(C: Ctx, sid: str, side: int, pad: float = 0.0) -> G.Mesh:
     """Half-space slab of a chevron frame: the region forward (side -1) or aft (side +1) of its face, as a big solid
     (used to trim members to the swept frame faces)."""
     st = C.st[sid]
-    k = math.tan(math.radians(float(st["sweep_deg"])))
     xf = float(st["x"]) + side * (0.5 * float(st["t"]) + pad)
 
     def b(y_lo, y_hi, dxa):
@@ -1827,8 +1825,9 @@ def boxes_union(boxes, ov=OV) -> G.Mesh:
 
 def build_trunnion(C: Ctx) -> G.Mesh:
     """Main-gear trunnion fitting (7075-T651, starboard): beam flange (6.5 mm over the proud insert land), two bearing
-    lugs with 26 mm bushing bosses (20 H7 bores on the trunnion axis) on 12 mm webs (layout lug check t_m), top plate
-    20 mm on the well roof (pocketed to 5 mm between the lugs) extended fore and aft for the 4 roof bolts, clear of the
+    lugs with 26 mm bushing bosses (bores for the bonded OD 23 sleeve bushings CH-074, 20 H7 on the trunnion axis) on
+    12 mm webs (layout lug check t_m), top plate on the well roof: 20 mm only over the lug webs, pocketed to 5 mm
+    between the lugs and to 8 mm elsewhere (the roof-bolt plates fore and aft for the 4 roof bolts), clear of the
     retraction-EMA allocation envelope (ACT-MLG-EMA)."""
     f = C.fit["F-TRUNNION"]
     yb = float(C.mem["M-GEARBEAM"]["box"][0][1]) - BEAM_LAND_PROUD          # land face
@@ -1866,8 +1865,11 @@ def build_trunnion(C: Ctx) -> G.Mesh:
             xa_, xb_ = xc - TRUN_LUG_HALF - 0.001, xc + TRUN_LUG_HALF - t_web
         else:
             xa_, xb_ = xc - TRUN_LUG_HALF + t_web, xc + TRUN_LUG_HALF + 0.001
-        pocket = box3((xa_, TRUN_LUG_Y[0] - 0.001, -0.16), (xb_, TRUN_LUG_Y[1], TRUN_PLATE_Z0))
+        pocket = box3((xa_, TRUN_LUG_Y[0] - 0.001, -0.16), (xb_, TRUN_LUG_Y[1], TRUN_PLATE_Z1 - TRUN_ROOF_PLATE_T))
         cuts.append(diff(pocket, [bore((xa_ - 0.002, py, pz), (xb_ + 0.002, py, pz), r_boss)]))
+    # the 12 mm strip of the top plate inboard of the lugs: 8 mm like the roof-bolt plates (V03)
+    cuts.append(box3((TRUN_LUG_X[0] - 0.026 - 0.001, ya - 0.001, TRUN_PLATE_Z0 - 0.001),
+                     (TRUN_LUG_X[1] + 0.026 + 0.001, TRUN_LUG_Y[0], TRUN_PLATE_Z1 - TRUN_ROOF_PLATE_T)))
     cuts.append(box3((TRUN_LUG_X[0] + 0.004, TRUN_LUG_Y[0] + 0.004, TRUN_PLATE_Z0 - 0.001),
                      (TRUN_LUG_X[1] - 0.004, TRUN_PLATE_Y1 - 0.004, TRUN_PLATE_Z1 - TRUN_PLATE_SKIN)))
     return diff(m, cuts)
@@ -1990,6 +1992,12 @@ def build_spindle_node(C: Ctx) -> G.Mesh:
         lo = lo.copy()
         if k >= 3:
             lo[0] -= OV
+        if k == 3:          # inboard arm: I-section, 3 mm web (spec structures node inboard_web_t_m) + 3 mm flanges (V03)
+            t_w = float(C.S["structures"]["sizing"]["tail"]["node"]["inboard_web_t_m"])
+            yc = 0.5 * (lo[1] + hi[1])
+            boxes += [(lo, (hi[0], hi[1], lo[2] + NODE_ARM_FL_T)), ((lo[0], lo[1], hi[2] - NODE_ARM_FL_T), hi),
+                      ((lo[0], yc - 0.5 * t_w, lo[2] + NODE_ARM_FL_T), (hi[0], yc + 0.5 * t_w, hi[2] - NODE_ARM_FL_T))]
+            continue
         boxes.append((lo, hi))
     cy = f["cylinder"]
     c = np.asarray(cy["center"], float)
@@ -2003,6 +2011,7 @@ def build_spindle_node(C: Ctx) -> G.Mesh:
     return diff(m, cuts)
 
 
+NODE_ARM_FL_T = 0.003       # inboard-arm flanges of the stabilator node (I-section with the 3 mm web)
 NODE_FOOT_T = 0.005         # outboard-cheek foot tab on the aft face of the FS3738 U-ring leg web (V01)
 NODE_FOOT_Z0 = 0.128       # lower edge of the foot tab
 NODE_FOOT_BOLT_Z = (0.140, 0.154, 0.168)   # z of the 3 x M4 foot bolts on the U-ring leg web band centre line
@@ -2152,6 +2161,8 @@ def build_riser(C: Ctx, fid: str) -> G.Mesh:
         x_f = float(B[0][0][0])
         for c, a in riser_aft_frame_bolts(C):
             ph = c + (x_f - c[0]) / a[0] * a
+            # hex nut trap of the reversed frame bolt (head on the FS-RS aft face, V07): the nut is dropped in from
+            # above and held against rotation (drawn as the spot face)
             cuts.append(G.cylinder(RISER_SPOTFACE_R, ph - RISER_SPOTFACE_DEPTH * a, ph + 0.0002 * a, n=32))
     else:
         x_f = float(B[0][1][0])
@@ -2159,7 +2170,25 @@ def build_riser(C: Ctx, fid: str) -> G.Mesh:
             c = np.array([x_f, sy * RISER_FRAME_BOLT[0], RISER_FRAME_BOLT[1]])
             cuts.append(G.cylinder(RISER_SPOTFACE_R, c - np.array([0.0002, 0, 0]),
                                    c + np.array([RISER_SPOTFACE_DEPTH, 0, 0]), n=32))
+            cuts.append(riser_groove(c, np.array([1.0, 0.0, 0.0])))
     return diff(m, cuts)
+
+
+RISER_GROOVE_R = 0.0044         # insertion groove of the M5 frame bolts along the base-strip top (head d 8.5 + 0.3 mm;
+#                                 the bolts go in before the floor bolts, V07)
+
+
+def riser_groove(c, u) -> G.Mesh:
+    """Flat-bottomed insertion groove of an M5 frame bolt (head seat c on the flange face, u = away from the frame, in
+    the xy plane) along the top of the base strip: width 2 x RISER_GROOVE_R, bottom 0.1 mm below the head's lowest
+    point; the floor bolts' heads seat flat on its bottom."""
+    u = np.asarray(u, float) / np.linalg.norm(u)
+    v = np.array([-u[1], u[0], 0.0])
+    z0 = float(c[2]) - 0.00425 - 0.0001
+    L = 0.044
+    ctr = np.asarray(c, float) + (0.006 + 0.5 * L) * u
+    ctr[2] = z0 + 0.01
+    return G.box((L, 2 * RISER_GROOVE_R, 0.02), ctr, R=np.column_stack([u, v, [0.0, 0.0, 1.0]]))
 
 
 RISER_SPOTFACE_DEPTH = 0.0065   # head height 5 mm + 1.5 mm
@@ -2274,7 +2303,6 @@ def shield_rivet_points(C: Ctx, reliefs, other_yz=()) -> list:
     line = C.sec(xa, inset + SHIELD_RIVET_OFF).exterior
     blocks = [c for c in _cut_polys(st) + list(reliefs)] + [n for n, sd in _cap_notch_sides(C, "FS3670")
                                                              if sd != "fwd"]
-    from shapely.geometry import Point
     pts = []
     L = line.length
     s_ = 0.0
@@ -2320,8 +2348,10 @@ def build_engine_mount(C: Ctx, foot_x: float) -> G.Mesh:
         a, b = loop[i], loop[(i + 1) % 4]
         u = (b - a) / np.linalg.norm(b - a)
         ms.append(G.tube(ro_r, ro_r - t_r, a - 0.4 * ro_r * u, b + 0.4 * ro_r * u, n=20))
+    voids = []
     for k, nd in enumerate(nodes):
-        ms.append(G.sphere(ro_r + 0.0005, nd, n=20))                   # welded node cluster
+        ms.append(G.sphere(ro_r + 0.0005, nd, n=20))                   # welded node cluster (hollow: tube walls, V03)
+        voids.append(G.sphere(ro_r - t_r, nd, n=20))
     # feet (4 mm plates 56 x 32 centred on their bolt pair, welded strut block between the bolt heads) and struts
     feet = {}
     for i, ft in enumerate(eng["feet"]):
@@ -2342,7 +2372,9 @@ def build_engine_mount(C: Ctx, foot_x: float) -> G.Mesh:
         a = feet[tb["from"]].copy()
         b = nodes[int(tb["to"][-1]) - 1]
         ms.append(G.tube(ro_s, ro_s - t_s, a, b, n=16))
-        ms.append(G.sphere(ro_s + 0.0005, a, n=16))
+        ms.append(G.sphere(ro_s + 0.0005, a, n=16))                     # strut-end weld on the foot block (hollow)
+        voids.append(diff(G.sphere(ro_s - t_s, a, n=16), [box3((a[0] - 0.02, a[1] - 0.02, a[2] - 0.02),
+                                                               (a[0] - 0.5 * ro_s, a[1] + 0.02, a[2] + 0.02))]))
     # isolator cups on gussets
     for k, ic in enumerate(eng["isolators"]["centres"]):
         c = np.asarray(ic, float)
@@ -2351,7 +2383,7 @@ def build_engine_mount(C: Ctx, foot_x: float) -> G.Mesh:
         ms.append(G.cylinder(CUP_ID / 2 + CUP_T, c0 - CUP_BOTTOM_T * d, c0 + 0.0003 * d, n=36))
         nd = nodes[int(np.argmin(np.linalg.norm(nodes - c, axis=1)))]
         ms.append(G.tube(0.006, 0.0045, nd, c0 + 0.003 * d + 0.4 * (nd - c0 - 0.003 * d), n=14))
-    m = union(ms)
+    m = diff(union(ms), voids)
     cut = [G.cylinder(0.0045, np.asarray(ic, float) - 0.03 * d, np.asarray(ic, float) - 0.0125 * d + 0.001 * d, n=24)
            for ic in eng["isolators"]["centres"]]
     return diff(m, cut)
@@ -2582,7 +2614,6 @@ def uring_splice_points(C: Ctx):
     st = C.st["FS3738"]
     x1 = float(st["x_faces"][1])
     ys = float(st["lower_segment"]["y"][1])
-    inset = float(st["inset"])
     n = 0.026                                                    # flat web: 15.3 .. 36.5 mm from the OML
     pts = []
     for y in (ys - 0.040, ys - 0.025, ys - 0.010):
@@ -2864,10 +2895,17 @@ def build_aftbay_tray(C: Ctx) -> G.Mesh:
     sec_b = bent_l(La, AFTBAY_FL_B, AFTBAY_T, AFTBAY_R)        # (u = -x from xb, v = -z from z0)
     ma = extrude_cs(sec_a, 2 * hw, (xa, -hw, z0), (1.0, 0.0, 0.0), (0.0, 0.0, -1.0))      # u x v = +y
     mb = extrude_cs(sec_b, 2 * hw, (xb, hw, z0), (-1.0, 0.0, 0.0), (0.0, 0.0, -1.0))      # u x v = -y
-    return union([ma, mb])
+    holes = [G.cylinder(0.5 * AFTBAY_HOLE_D, (x, y, z0 + 0.01), (x, y, z0 - AFTBAY_T - 0.01), n=40)
+             for x, y in AFTBAY_HOLES]
+    return diff(union([ma, mb]), holes)
 
 
 AFTBAY_FL_A, AFTBAY_FL_B = 0.032, 0.040
+# lightening holes d 60 in the floor (V03): clear of the EFI fuel-pump footprint (EQ-FUELPUMP, x 3.105-3.205,
+# y 0.03-0.09, starboard), >= 25 mm from the tray edges and the frame-flange bends
+AFTBAY_HOLE_D = 0.060
+AFTBAY_HOLES = ((3.165, -0.045), (3.255, 0.045), (3.255, -0.045), (3.330, 0.045), (3.330, -0.045),
+                (3.405, 0.045), (3.405, -0.045))
 
 
 def aftbay_tray_points(C: Ctx):
@@ -2942,8 +2980,20 @@ def build_rail_anchor(C: Ctx, rail: dict) -> G.Mesh:
     leg_f = box3((min(xf, xf + sx * RAIL_ANCHOR_T), sy * (yw - RAIL_ANCHOR_LEG) if sy > 0 else -yw,
                   z0), (max(xf, xf + sx * RAIL_ANCHOR_T), yw if sy > 0 else -(yw - RAIL_ANCHOR_LEG), z1))
     xa_, xb_ = sorted((xf, xr_far))
+    # wall leg (V03): 3 mm seat plate under the rail, standing off the wall on two 3 mm edge ribs, two end ribs and
+    # solid bosses round the wall bolts (the layout's solid 8.75 x 50 x 245 mm bar was 0.3 kg per anchor)
+    t = RAIL_ANCHOR_T
+    s_in, s_out = sorted((sy * seat, sy * (seat + t)))
     ya_, yb_ = sorted((sy * seat, sy * yw))
-    leg_w = box3((xa_, ya_, z0), (xb_, yb_, z1))
+    parts = [box3((xa_, s_in, z0), (xb_, s_out, z1))]
+    for xx in ((xa_, xa_ + t), (xb_ - t, xb_)):
+        parts.append(box3((xx[0], ya_, z0), (xx[1], yb_, z1)))
+    for zz in ((z0, z0 + t), (z1 - t, z1)):
+        parts.append(box3((xa_, ya_, zz[0]), (xb_, yb_, zz[1])))
+    _fb, wb = rail_anchor_points(C, rail)
+    for (xb, yb, zb) in wb:
+        parts.append(G.cylinder(RAIL_BOSS_R, (xb, ya_, zb), (xb, yb_, zb), n=32))
+    leg_w = inter(union(parts), box3((xa_, ya_, z0), (xb_, yb_, z1)))
     m = union([leg_f, leg_w])
     return pieces_above(inter(m, C.body_env(MEM_IN, xf - 0.06, xf + 0.06)))
 
@@ -2952,6 +3002,7 @@ RAIL_HALF_H = 0.00325       # half the rail height (MGN9 class 6.5 mm, payload m
 RAIL_SEAT_X = 0.028         # seat leg runs 28 mm beyond the rail centre line (bolt heads clear of the carriage)
 RAIL_ANCHOR_T = 0.003
 RAIL_ANCHOR_LEG = 0.025
+RAIL_BOSS_R = 0.0085        # solid boss round each wall bolt (2 D + 0.5 mm edge distance for M4)
 
 
 def rail_anchor_points(C: Ctx, rail: dict):
@@ -3206,7 +3257,7 @@ class _Reg:
 
     # ---------------------------------------------------------------- members
     def members(self):
-        C, M, root = self.C, self.M, self.root
+        C, M = self.C, self.M
         mem = C.mem
         stp = self.st_part
 
@@ -3593,14 +3644,15 @@ class _Reg:
                      (lambda rail=rail: M(("rail", rail["id"]), lambda: build_rail_anchor(C, rail))),
                      thickness=RAIL_ANCHOR_T, parent=stp(fr), step=14, explode=(0.0, 0.0, 0.2),
                      contacts=(stp(fr), C.ref("M-TURRETWALL", side)),
-                     notes=f"seat of rail {rail['part']} (payload module), M3 into potted inserts of the seat")
+                     notes=f"seat of rail {rail['part']} (payload module), M3 into potted inserts of the seat; "
+                           "3 mm seat plate on 3 mm edge / end ribs and solid bosses round the wall bolts (V03)")
 
     def _liner_floor_part(self, fs):
         return {"forward_cell": self.C.ref("M-FWDDECK"), "saddle_cell": self.root,
                 "aft_cell": self.C.ref("M-WELLROOF")}[fs["cell"]]
 
     def _liner(self, fs):
-        C, M = self.C, self.M
+        C = self.C
         mem = C.mem
         cell = fs["cell"]
         if cell == "forward_cell":
@@ -3795,7 +3847,7 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
     for fid, num in (("F-KINK-UP", 56), ("F-KINK-LO", 57)):
         for i, b in enumerate(fit[fid]["bolts"]):
             p = (KINK_BOLT_X0 + i * KINK_BOLT_PITCH, b["point"][1], b["point"][2])
-            F.bolt(6, p, b["axis"], [pid(num), pid(55)], grade=TI, washer_head=True, step=2,
+            F.bolt(6, p, b["axis"], [pid(num), pid(55)], grade=TI, washer_head=True,
                    label=f"{fid} {b['id']}", notes="Ti, through the 16-ply land of the centre-line rib")
 
     # ---- 2. box-to-spar-frame bolts (4 x M6 Ti per side per frame, nutplates on the box doublers)
@@ -3828,7 +3880,7 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
         piece = 20 if float(st[sid]["x"]) < 2.6 else N_CHINE_AFT
         clip = pid(num, "R")
         for p in pa:                                   # fuel-bay frames: the liner is relieved round the nuts
-            F.sym(4, p, (-side, 0.0, 0.0), [clip, st[sid]["part"]], grade=TI, step=9,
+            F.sym(4, p, (-side, 0.0, 0.0), [clip, st[sid]["part"]], grade=TI,
                   label=f"clip {sid} frame", washer_nut=True)
         nrm = clip_web_normal(C, sid, side, pb[0][0])
         if sid in CLIP_J_BOLT_FROM_J:                  # head inside the J: the clip's frame leg blocks the axis (V07)
@@ -3845,11 +3897,10 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
             pt = (TRUN_BEAM_X.get(b["id"], b["point"][0]), b["point"][1],
                   TRUN_B3_Z if b["id"] == "B3" else TRUN_BEAM_Z.get(b["id"], b["point"][2]))
             F.sym(6, pt, (0.0, 1.0, 0.0), [trn], nut="insert", insert_part=beam, insert_depth=land_depth,
-                  grade=G129, step=10, label=f"F-TRUNNION {b['id']}",
+                  grade=G129, label=f"F-TRUNNION {b['id']}",
                   notes="bonded through-thickness M6 insert in the solid land of the gear beam (no nut outboard)")
         else:
-            F.sym(6, trunnion_roof_point(b), (0.0, 0.0, 1.0), [trn, C.ref("M-WELLROOF")], nut="nutplate", grade=G129,
-                  step=10, label=f"F-TRUNNION {b['id']}", notes="sealed dome nutplate on the fuel side of the roof")
+            F.sym(6, trunnion_roof_point(b), (0.0, 0.0, 1.0), [trn, C.ref("M-WELLROOF")], nut="nutplate", grade=G129, label=f"F-TRUNNION {b['id']}", notes="sealed dome nutplate on the fuel side of the roof")
     # up-lock (layout F-UPLOCK: blind potted inserts from the well side, the fuel-side facesheet is not pierced, V09)
     px_u = float(fit["F-UPLOCK"]["point"][0])
     z_r = fit["F-UPLOCK"]["bolts"][0]["point"][2]
@@ -3877,8 +3928,7 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
     fw = stp("FS3670")
     for i, (x, y, z) in enumerate(node_firewall_points(C)):
         back = pid(N_UPPER_PLATE, "R") if i < 3 else pid(N_CHINE_END, "R")
-        F.sym(5, (x, y, z), (-1.0, 0.0, 0.0), [pid(95, "R"), shield, fw, back], bridge=(sp_r,), grade=G129,
-              step=13, label=f"F-SPINDLE-NODE B{i + 1}", notes="through the firewall stack (spacer tube in the gap)")
+        F.sym(5, (x, y, z), (-1.0, 0.0, 0.0), [pid(95, "R"), shield, fw, back], bridge=(sp_r,), grade=G129, label=f"F-SPINDLE-NODE B{i + 1}", notes="through the firewall stack (spacer tube in the gap)")
     pts = engine_foot_points(C)
     for i, p in enumerate(pts):
         upper = i < 2
@@ -3894,20 +3944,19 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
     # chine end fitting tongue to the aft chine J web (2 x M5 Ti)
     nrm = chine_web_normal(C)
     for p in chine_end_bolt_points(C):
-        F.sym(5, p, nrm, [pid(N_CHINE_END, "R"), pid(N_CHINE_AFT, "R")], grade=TI, washer_head=True, step=12,
+        F.sym(5, p, nrm, [pid(N_CHINE_END, "R"), pid(N_CHINE_AFT, "R")], grade=TI, washer_head=True,
               label="chine end tongue")
     # dorsal longeron splice (2 x M4 Ti through the tongue and the hat's inboard wall)
     yw = 0.15 - 0.5 * DORSAL_W
     for x, z in DORSAL_SPLICE_BOLTS:
-        F.sym(4, (x, yw - DORSAL_TONGUE_T, z), (0.0, 1.0, 0.0), [pid(N_UPPER_PLATE, "R"), pid(32, "R")], grade=TI,
-              step=12, label="dorsal splice")
+        F.sym(4, (x, yw - DORSAL_TONGUE_T, z), (0.0, 1.0, 0.0), [pid(N_UPPER_PLATE, "R"), pid(32, "R")], grade=TI, label="dorsal splice")
 
     # ---- 8. tail root fittings on FS3480 (frame bolts of layout F-FIN-FRONT B3/B4, F-STUB-FRONT B1/B2)
     for p in fin_front_frame_points(C):
-        F.sym(6, p, (-1.0, 0.0, 0.0), [pid(96, "R"), stp("FS3480")], grade=G129, step=11, label="F-FIN-FRONT frame")
+        F.sym(6, p, (-1.0, 0.0, 0.0), [pid(96, "R"), stp("FS3480")], grade=G129, label="F-FIN-FRONT frame")
     for b in fit["F-STUB-FRONT"]["bolts"]:
         if b["group"] == "frame":
-            F.sym(5, b["point"], (-1.0, 0.0, 0.0), [pid(98, "R"), stp("FS3480")], grade=G129, step=11,
+            F.sym(5, b["point"], (-1.0, 0.0, 0.0), [pid(98, "R"), stp("FS3480")], grade=G129,
                   label=f"F-STUB-FRONT {b['id']}")
     # ventral root fittings to the aft keel web: 2 x M4 12.9 each into tapped holes (layout 1 x M6: the lug slot leaves
     # 8 mm of base under the web, no room for a nut; detail_joint_margins VENTRAL-KEEL); the keel now starts on the
@@ -3942,21 +3991,29 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
             if b["group"] == "spine floor":
                 y = math.copysign(RISER_FLOOR_BOLT_Y, y)
                 F.bolt(4, (x, y, z), (0.0, 0.0, -1.0), [pid(num), C.ref("M-SPINE"), pid(N_WASHER[fid])],
-                       grade=G129, step=14, label=f"{fid} {b['id']}")
+                       grade=G129, label=f"{fid} {b['id']}")
             else:
                 y = math.copysign(RISER_FRAME_BOLT[0], y)
-                ax = (-1.0, 0.0, 0.0)
-                if fid.endswith("AFT"):                     # normal to the chevron forward face of FS-RS
+                if fid.endswith("AFT"):
+                    # normal to the chevron forward face of FS-RS; head + washer on the FS-RS aft face (the aft bay is
+                    # open from above before the dorsal skins and the cell), nut in the fitting's hex nut trap: a
+                    # straight insertion from the fitting side is blocked by its base strips (V07)
                     ax = next(a for c_, a in riser_aft_frame_bolts(C) if c_[1] * y > 0)
-                F.bolt(RISER_FRAME_SIZE, (x, y, RISER_FRAME_BOLT[1]), ax, [pid(num), frame], grade=G129,
-                       label=f"{fid} {b['id']}", notes="layout M5 12.9: heads clear of the base strips and the ears")
+                    F.bolt(RISER_FRAME_SIZE, (x, y, RISER_FRAME_BOLT[1]), -np.asarray(ax), [frame, pid(num)],
+                           owner=pid(num), grade=G129, washer_head=True, washer_nut=False, label=f"{fid} {b['id']}",
+                           notes="layout M5 12.9; head on the FS-RS aft face, ISO 7040 nut held in the hex nut trap")
+                else:
+                    F.bolt(RISER_FRAME_SIZE, (x, y, RISER_FRAME_BOLT[1]), (-1.0, 0.0, 0.0), [pid(num), frame],
+                           grade=G129, label=f"{fid} {b['id']}",
+                           notes="layout M5 12.9: head in the spot face, inserted along the strip groove before the "
+                                 "floor bolts")
 
     # ---- 10. rear-spar slot fitting to the glove rear-spar web pad (2 x M5 Ti, nuts inside the glove box)
     for y in SLOT_BOLT_Y:
         dxdy = float(bx.xr(y + 0.002) - bx.xr(y - 0.002)) / 0.004
         n = np.array([1.0, -dxdy, 0.0]) / math.hypot(1.0, dxdy)
         F.sym(5, (float(bx.xr(y)) + 0.01, y, float(C.L["chassis"]["wing_joint"]["rear_spar"]["pin"]["position"][2])),
-              -n, [pid(54, "R"), root], grade=TI, step=5, label=f"F-REARSLOT web y {y}")
+              -n, [pid(54, "R"), root], grade=TI, label=f"F-REARSLOT web y {y}")
 
     # ---- 11. FS3738 U-ring: leg / segment splices (3 x M5 each end), aft keel clips (2 x M5 per side)
     for p in uring_splice_points(C):
@@ -3986,28 +4043,28 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
         wall = C.ref("M-KEELWALL", "R" if side > 0 else "L")
         for x, y, z in kb:
             F.bolt(4, (x, side * y, z), (0.0, -side, 0.0), [tray], nut="insert", insert_part=wall, insert_depth=t6,
-                   grade="A2-70", step=14, label=f"{tid} keel wall")
+                   grade="A2-70", label=f"{tid} keel wall")
         for x, y, z in fb:
             F.bolt(4, (x, side * y, z), (1.0, 0.0, 0.0), [tray], nut="insert", insert_part=stp("FS1110"),
-                   insert_depth=t6, grade="A2-70", step=14, label=f"{tid} FS1110")
+                   insert_depth=t6, grade="A2-70", label=f"{tid} FS1110")
     pa, pb = fwdbay_tray_points(C)
     for p in pa:
         F.bolt(4, p, (-1.0, 0.0, 0.0), [pid(TRAY_N["TR-FWDBAY"])], nut="insert", insert_part=stp("FS0300"),
-               insert_depth=t6, grade="A2-70", step=14, label="TR-FWDBAY FS0300")
+               insert_depth=t6, grade="A2-70", label="TR-FWDBAY FS0300")
     for p in pb:
         F.bolt(4, p, (1.0, 0.0, 0.0), [pid(TRAY_N["TR-FWDBAY"])], nut="insert", insert_part=stp("FS0600"),
-               insert_depth=t6, grade="A2-70", step=14, label="TR-FWDBAY FS0600")
+               insert_depth=t6, grade="A2-70", label="TR-FWDBAY FS0600")
     for p in mission_tray_points(C):
         F.bolt(4, p, (0.0, 0.0, 1.0), [C.ref("M-MIDFLOOR"), pid(TRAY_N["TR-MISSION"])], nut="nutplate",
-               owner=pid(TRAY_N["TR-MISSION"]), grade="A2-70", step=14, label="TR-MISSION",
+               owner=pid(TRAY_N["TR-MISSION"]), grade="A2-70", label="TR-MISSION",
                notes="captive screw from below through the hat inner flange into a nutplate on the tray")
     pa, pb = aftbay_tray_points(C)
     for p in pa:
         F.bolt(4, p, (-1.0, 0.0, 0.0), [pid(TRAY_N["TR-AFTBAY"])], nut="insert", insert_part=stp("FS-GEAR"),
-               insert_depth=t6, grade="A2-70", step=14, label="TR-AFTBAY FS-GEAR")
+               insert_depth=t6, grade="A2-70", label="TR-AFTBAY FS-GEAR")
     for p in pb:
         F.bolt(4, p, (1.0, 0.0, 0.0), [pid(TRAY_N["TR-AFTBAY"])], nut="insert", insert_part=stp("FS3480"),
-               insert_depth=t6, grade="A2-70", step=14, label="TR-AFTBAY FS3480")
+               insert_depth=t6, grade="A2-70", label="TR-AFTBAY FS3480")
 
     # ---- 13. parachute strap brackets: 2 flush blind rivets each (no head in the 6 mm container gap)
     for num, xc in zip(N_PARA_BRKT, PARA_BRKT_X):
@@ -4026,10 +4083,10 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
         fb, wb = rail_anchor_points(C, rail)
         for p in fb:
             F.bolt(4, p, (-sx, 0.0, 0.0), [pid(num)], nut="insert", insert_part=stp(fr), insert_depth=t6,
-                   grade="A2-70", step=14, label=f"rail anchor {rail['corner']} frame")
+                   grade="A2-70", label=f"rail anchor {rail['corner']} frame")
         for p in wb:
             F.bolt(4, p, (0.0, sy, 0.0), [pid(num)], nut="insert", insert_part=wall, insert_depth=t6,
-                   grade="A2-70", step=14, label=f"rail anchor {rail['corner']} wall")
+                   grade="A2-70", label=f"rail anchor {rail['corner']} wall")
 
     # ---- 15. firewall shield edge angle: blind rivets d 3.2 through the radial leg and the sheet, set from the
     # engine side (V14); the other fasteners through the shield keep 3 D
@@ -4046,3 +4103,266 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
 VENTRAL_TAP_DEPTH = 0.0075
 RISER_FLOOR_BOLT_Y = 0.0127  # heads clear of the 6 mm ears (layout y +-0.013)
 PARA_RIVET_D = 0.004
+
+
+# =====================================================================================================================
+# detail joint margins (V08): the detail fasteners that differ from the layout bolt groups, on the structures loads
+# =====================================================================================================================
+def detail_joint_margins(S: dict | None = None) -> list:
+    """Margin-of-safety rows (structures.Rows format, MS = allowable / (applied x factor) - 1) of the chassis detail
+    joints whose fasteners differ from the layout bolt groups that structures.py checks: the aft chine splice SPL-CH-AFT
+    (4 x M4 Ti in the padded leg), the ventral root fittings to the aft keel (2 x M4 12.9 tapped each), the aft-keel foot
+    through the firewall stack (4 x M5 12.9), the U-ring leg to the node foot (3 x M4 12.9), the keel clips to the keel
+    walls (4 x M5 12.9), the up-lock potted inserts (4 x M4 in the layout's potting) and the dorsal splice (2 x M4 Ti).
+    Loads are those of structures.py (same models and factors); no new load case is introduced."""
+    import copy as _copy
+    from ..analysis import structures as SA
+    from ..analysis import structlib as SL
+    S = S if S is not None else _spec_load()
+    c = SA.Ctx(_copy.deepcopy(S))
+    R = SA.Rows()
+    Gv = 9.80665
+    L = S["layout"]
+    fits = {f["id"]: f for f in L["chassis"]["fittings"]}
+    mem = {m_["id"]: m_ for m_ in L["chassis"]["members"]}
+    mats = S["materials"]
+    al75 = SA.mat(c, "al_7075_t651_plate")
+    al24 = SA.mat(c, "al_2024_t3_sheet")
+    ti = mats["ti_6al_4v_annealed_sheet"]
+    qi = SA.qi_design_values(c)
+    pp = SA.ply_props(c, "cfrp_pw_mtm45_as4")
+    Rm = float(SA.research_value("materials", "fasteners.property_classes.steel_12_9.tensile_Rm_min_Pa"))
+    As = SA.research_value("materials", "fasteners.property_classes.stress_area.A_s_m2")
+    ffit = SA.total_factor(c, fit=True)
+    ffc = SA.total_factor(c, fit=True, comp=True)
+
+    def interaction(S_, T_, d_mm):
+        """ISO 898-1 12.9 bolt, shear on the thread (0.6 Rm A_s) + tension (Rm A_s), ultimate loads: multiplier."""
+        a_s = float(As[f"M{d_mm}"])
+        return 1.0 / math.sqrt((S_ / (0.6 * Rm * a_s)) ** 2 + (max(T_, 0.0) / (Rm * a_s)) ** 2)
+
+    # ---- 1. aft chine splice SPL-CH-AFT: chine axial force at the splice (structures B-CHINE-AFT model: chine +
+    # dorsal longerons as the bending chords, aft items at the equipment n + both stabilator panels; the section at
+    # FS-GEAR is used with the moment at the splice, which is larger)
+    tail = SA.tail_loads(c)
+    pts = SA.body_mass_points(c)
+    ud = SA.ply_props(c, "cfrp_ud_mtm45_as4")
+    ch, do = mem["M-CHINE"]["section"], mem["M-DORSAL"]["section"]
+    EA_ch = ud["E1"] * ch["w"] * ch["t"] + pp["E1"] * ch["h"] * ch["t"]
+    EA_do = ud["E1"] * do["w"] * do["t"] + pp["E1"] * 2 * do["h"] * do["t"]
+    x_s = float(np.mean(CHINE_AFT_SPLICE_X))
+    x_st = float(S["tail"]["surfaces"]["stabilator"]["pivot"][0])
+    n = c.n_eq_pos
+    M_s = sum(m * n * Gv * (x - x_s) for m, x, z, nm in pts if x > x_s) + 2 * tail["N_stab"] * (x_st - x_s)
+    _yc, zc = SA.member_path_z(c, "M-CHINE", x_s)
+    _yd, zd = SA.member_path_z(c, "M-DORSAL", SA.station_x(c, "FS-GEAR") + 0.005)
+    zna = (2 * EA_ch * zc + 2 * EA_do * zd) / (2 * EA_ch + 2 * EA_do)
+    EI = 2 * EA_ch * (zc - zna) ** 2 + 2 * EA_do * (zd - zna) ** 2
+    F_ch = abs(M_s * (zna - zc) / EI) * EA_ch
+    nb, d = len(CHINE_AFT_SPLICE_X), 0.004
+    cs = (f"aft body bending at the splice x {x_s:.3f}: aft items at n {n:.2f} + both stabilator panels "
+          f"{tail['N_stab']:.0f} N: M {M_s:.0f} N m, chine axial force {F_ch:.0f} N (limit)")
+    cs_tr = (f"ek x {x_s:.3f}'te arka gövde eğilmesi: arka kalemler n {n:.2f} + iki stabilatör paneli "
+             f"{tail['N_stab']:.0f} N: M {M_s:.0f} N m, kenar uzun kirişi eksenel kuvveti {F_ch:.0f} N (limit)")
+    R.add("SPL-CH-AFT-SH", "chassis detail", f"aft chine splice SPL-CH-AFT: {nb} x M4 Ti (Ti-6Al-4V), shank shear",
+          f"arka kenar kirişi eki SPL-CH-AFT: {nb} x M4 Ti, gövde kesmesi", cs, cs_tr, F_ch,
+          nb * math.pi / 4 * d * d * float(ti["Fsu"]), "N", ffit, "Ti-6Al-4V Fsu on the shank (single shear)",
+          part="YK250-CH-040")
+    t_land = 16 * pp["t"]
+    R.add("SPL-CH-AFT-BR-RIB", "chassis detail", f"SPL-CH-AFT bearing in the side-of-body rib land (16 plies, "
+          f"{t_land * 1000:.1f} mm; land from x 2.840)", f"SPL-CH-AFT gövde yanı kaburgası dolu bandında ezilme (16 kat, "
+          f"{t_land * 1000:.1f} mm; band x 2,840'tan)", cs, cs_tr, F_ch, nb * d * t_land * qi["bearing_Pa"], "N", ffc,
+          "QI bearing ETW", part="YK250-CH-050")
+    R.add("SPL-CH-AFT-BR-LEG", "chassis detail", f"SPL-CH-AFT bearing in the padded splice leg "
+          f"({CHINE_AFT_PAD_T * 1000:.1f} mm)", f"SPL-CH-AFT kalınlaştırılmış ek bacağında ezilme "
+          f"({CHINE_AFT_PAD_T * 1000:.1f} mm)", cs, cs_tr, F_ch, nb * d * CHINE_AFT_PAD_T * qi["bearing_Pa"], "N", ffc,
+          "QI bearing ETW", part="YK250-CH-040")
+
+    # ---- 2. ventral root fittings to the aft keel: the most loaded lug load of structures T-VENTRAL-* (tail-bumper
+    # strike 1.0 x MTOM weight at 45 deg) on the fitting's 2 x M4 12.9 (axis z, tapped in the 7075 fitting)
+    vb = S["tail"]["surfaces"]["ventral"]["bumper"]["contact_point"]
+    P_b = 1.0 * c.m0 * Gv
+    Fx, Fz = P_b / math.sqrt(2), P_b / math.sqrt(2)
+    vf = [f for f in L["chassis"]["fittings"] if f["id"].startswith("F-VENTRAL")]
+    vp = np.array([[f["point"][0], f["point"][2]] for f in vf])
+    cen = vp.mean(axis=0)
+    Mz = Fz * (vb[0] - cen[0]) - Fx * (vb[2] - cen[1])
+    bf = SL.bolt_group_inplane(vp, (Fx, Fz), Mz)
+    P_v = float(bf.max())
+    tf = ffit["total"]
+    r_v = interaction(0.5 * P_v * tf, 0.5 * P_v * tf, 4)
+    csv = (f"tail-bumper strike (structures T-VENTRAL-*): most loaded fitting {P_v:.0f} N (limit) in the x-z plane, "
+           "taken by the 2 bolts as shear and as tension together (conservative)")
+    csv_tr = (f"kuyruk tamponu çarpması (structures T-VENTRAL-*): en yüklü bağlantı {P_v:.0f} N (limit) x-z düzleminde, "
+              "2 cıvatada aynı anda kesme ve çekme olarak (muhafazakâr)")
+    R.add("VENTRAL-KEEL-BOLTS", "chassis detail", "ventral root fitting to the aft keel web: 2 x M4 12.9 tapped in the "
+          "7075 fitting (7.5 mm thread), shear + tension interaction", "ventral kök bağlantısı - arka omurga gövdesi: "
+          "7075 bağlantıda 2 x M4 12.9 diş (7,5 mm), kesme + çekme etkileşimi", csv, csv_tr, 1.0, r_v,
+          "load multiplier", SA.total_factor(c, ult_only=True), "ISO 898-1 12.9: R_s^2 + R_t^2 = 1 (FoS x fitting in "
+          "the multiplier); thread depth 7.5 mm >= 1.2 D", part="YK250-CH-099..101")
+    R.add("VENTRAL-KEEL-BR", "chassis detail", "ventral root fitting bolts: bearing in the aft keel web "
+          f"({float(mem['M-AFTKEEL']['thickness']) * 1000:.1f} mm 7075)", "ventral kök bağlantısı cıvataları: arka omurga "
+          f"gövdesinde ezilme ({float(mem['M-AFTKEEL']['thickness']) * 1000:.1f} mm 7075)", csv, csv_tr, P_v,
+          2 * 0.004 * float(mem["M-AFTKEEL"]["thickness"]) * float(al75["Fbru"]), "N", ffit, "MMPDS Fbru (e/D 2)",
+          part="YK250-CH-033")
+
+    # ---- 3. aft-keel foot through the firewall stack and the keel support at FS3738 (structures FR-3738-KEEL model:
+    # keel pinned at its firewall end, supported by FS3738)
+    ak = mem["M-AFTKEEL"]
+    x_fw = float(ak["box"][0][0])
+    x38 = SA.station_x(c, "FS3738")
+    z_k = 0.5 * (ak["box"][0][2] + ak["box"][1][2])
+    M_fw = Fz * (vb[0] - x_fw) + Fx * (z_k - vb[2])
+    R38 = M_fw / (x38 - x_fw)
+    R_fw = abs(R38 - Fz)
+    nk = len(KEEL_FOOT_BOLTS) * 2
+    csk = (f"tail-bumper strike (structures FR-3738-KEEL model): FS3738 reaction {R38:.0f} N, firewall-end reaction "
+           f"{R_fw:.0f} N in shear + the aft strike component {Fx:.0f} N in tension (limit)")
+    csk_tr = (f"kuyruk tamponu çarpması (structures FR-3738-KEEL modeli): FS3738 tepkisi {R38:.0f} N, yangın perdesi ucu "
+              f"tepkisi {R_fw:.0f} N kesmede + arkaya çarpma bileşeni {Fx:.0f} N çekmede (limit)")
+    r_k = interaction(R_fw / nk * tf, Fx / nk * tf, 5)
+    R.add("KEEL-FOOT-BOLTS", "chassis detail", f"aft-keel foot to the firewall stack: {nk} x M5 12.9 (axis x), shear + "
+          "tension interaction", f"arka omurga ayağı - yangın perdesi yığını: {nk} x M5 12.9 (x ekseni), kesme + çekme "
+          "etkileşimi", csk, csk_tr, 1.0, r_k, "load multiplier", SA.total_factor(c, ult_only=True),
+          "ISO 898-1 12.9: R_s^2 + R_t^2 = 1 (FoS x fitting in the multiplier)", part="YK250-CH-033")
+    t_fl = int(c.D["body"]["frame_land_plies"]) * pp["t"]
+    R.add("KEEL-FOOT-BR", "chassis detail", f"aft-keel foot bolts: bearing in the firewall solid land "
+          f"({t_fl * 1000:.1f} mm)", f"arka omurga ayağı cıvataları: yangın perdesi dolu bandında ezilme "
+          f"({t_fl * 1000:.1f} mm)", csk, csk_tr, R_fw / nk, 0.005 * t_fl * qi["bearing_Pa"], "N", ffc,
+          "QI bearing ETW", part="YK250-CH-013")
+    R.add("KEEL-FOOT-COLLAR-BR", "chassis detail", f"aft-keel foot bolts: bearing in the keel foot collar "
+          f"({KEEL_FOOT_T * 1000:.0f} mm 7075)", f"arka omurga ayağı cıvataları: omurga ayağı yakasında ezilme "
+          f"({KEEL_FOOT_T * 1000:.0f} mm 7075)", csk, csk_tr, R_fw / nk, 0.005 * KEEL_FOOT_T * float(al75["Fbru"]), "N",
+          ffit, "MMPDS Fbru (e/D 2)", part="YK250-CH-033")
+    # keel clips: the FS3738 reaction from the keel walls into the clips (2 + 2 wall bolts M5 12.9)
+    kw = len(KCLIP_B_PTS) * 2
+    R.add("KEEL-CLIP-WALL-BOLTS", "chassis detail", f"keel clips to the aft keel walls: {kw} x M5 12.9, single shear",
+          f"omurga klipsleri - arka omurga duvarları: {kw} x M5 12.9, tek kesme", csk, csk_tr, R38 / kw,
+          0.6 * Rm * float(As["M5"]), "N", ffit, "ISO 898-1 12.9, 0.6 Rm A_s", part="YK250-CH-102")
+    t_kw = min(float(ak["thickness"]), KCLIP_T)
+    R.add("KEEL-CLIP-BR", "chassis detail", f"keel clip wall bolts: bearing in the thinner of clip / keel wall "
+          f"({t_kw * 1000:.1f} mm 7075)", f"omurga klipsi duvar cıvataları: klips / omurga duvarından incesinde ezilme "
+          f"({t_kw * 1000:.1f} mm 7075)", csk, csk_tr, R38 / kw, 0.005 * t_kw * float(al75["Fbru"]), "N", ffit,
+          "MMPDS Fbru (e/D 2)", part="YK250-CH-102")
+    # U-ring leg upper end on the node foot: each leg carries half the FS3738 reaction (structures FR-3738-END)
+    nf = len(NODE_FOOT_BOLT_Z)
+    t_leg = float(C_st(L, "FS3738")["t"])
+    R.add("NODE-FOOT-BOLTS", "chassis detail", f"U-ring leg to the node foot: {nf} x M4 12.9 per side, single shear",
+          f"U halkası bacağı - düğüm ayağı: her yanda {nf} x M4 12.9, tek kesme", csk, csk_tr, 0.5 * R38 / nf,
+          0.6 * Rm * float(As["M4"]), "N", ffit, "ISO 898-1 12.9, 0.6 Rm A_s", part="YK250-CH-014")
+    R.add("NODE-FOOT-BR", "chassis detail", f"U-ring leg / node foot bolts: bearing in the 2024-T3 leg web "
+          f"({t_leg * 1000:.1f} mm)", f"U halkası bacağı / düğüm ayağı cıvataları: 2024-T3 bacak gövdesinde ezilme "
+          f"({t_leg * 1000:.1f} mm)", csk, csk_tr, 0.5 * R38 / nf, 0.004 * t_leg * float(al24["Fbru"]), "N", ffit,
+          "MMPDS Fbru (e/D 2)", part="YK250-CH-014")
+
+    # ---- 4. up-lock: structures G-UPLOCK (hook load, potted inserts) on the detail bolt pattern (4 x M4 12.9 in the
+    # layout's potting r 12 mm; the pull-out is set by the potting radius and the core, not the thread size)
+    LG = S["landing_gear"]
+    GD = c.D["gear"]
+    up = fits["F-UPLOCK"]
+    tr_ = np.asarray(LG["main"]["trunnion"], float)
+    axs = np.asarray(LG["main"]["axle_static"], float)
+    m_leg = SA.mass_item(c, "main_gear_legs_wheels_brakes_emas_pair") / 2
+    r_cg = 0.7 * float(np.linalg.norm(axs - tr_))
+    pu = np.asarray(up["point"], float)
+    r_lk = float(math.hypot(pu[1] - tr_[1], pu[2] - tr_[2]))
+    n_up = max(abs(c.n_eq_pos), abs(c.n_eq_neg))
+    F_lk = m_leg * Gv * n_up * r_cg / r_lk
+    UL = GD["uplock"]
+    P_up = np.array([[pu[0] + dx, y] for dx in (-UPLOCK_BOLT_DX, UPLOCK_BOLT_DX) for y in UPLOCK_BOLT_Y])
+    T_b = SL.bolt_group_tension(P_up, F_lk, Mx=F_lk * float(UL["hook_offset_m"]))
+    fl = SA.skin_faces(c, c.D["fuel_bay"]["floor_layup"])
+    fl_core = SA.mat(c, fl["core"]["key"]) if "key" in fl["core"] else fl["core"]
+    P_ins = SL.insert_pullout(float(fl_core["Fsu"]), float(UL["b_p_m"]), fl["c"])
+    csu = f"stowed main leg at n {n_up:.2f}: hook load {F_lk:.0f} N (limit, structures G-UPLOCK)"
+    csu_tr = f"toplanmış ana bacak, n {dec_tr(n_up)}: kanca yükü {F_lk:.0f} N (limit, structures G-UPLOCK)"
+    R.add("UPLOCK-INSERT-M4", "chassis detail", f"up-lock fitting: 4 x M4 12.9 into blind potted inserts of the well "
+          f"roof (pattern {2 * UPLOCK_BOLT_DX * 1000:.0f} x {abs(UPLOCK_BOLT_Y[1] - UPLOCK_BOLT_Y[0]) * 1000:.0f} mm, "
+          f"potting r {float(UL['b_p_m']) * 1000:.0f} mm), insert pull-out (most loaded)", "yukarı kilit bağlantısı: "
+          "kuyu tavanının kör dökme insertlerine 4 x M4 12.9, insert sökülmesi (en yüklü)", csu, csu_tr,
+          float(T_b.max()), P_ins, "N", ffc, "structlib.insert_pullout P = 2 pi b_p c tau_c (as structures G-UPLOCK)",
+          part="YK250-CH-072")
+
+    # ---- 5. dorsal splice: structures FW-UPPER-SPLICE load (upper foot x-reaction) on 2 x M4 Ti
+    em = SA.check_engine_mount(c, SA.Rows())
+    feet = np.asarray(L["chassis"]["engine_mount"]["feet"], float)
+    upper = [k for k in range(len(feet)) if feet[k][2] >= 0.2]
+    k_u = max(upper, key=lambda k: em["feet_ult"][k]["rx"][0])
+    Pu = float(em["feet_ult"][k_u]["rx"][0])
+    nds = len(DORSAL_SPLICE_BOLTS)
+    csd = f"upper engine foot: largest x reaction {Pu:.0f} N (ultimate, structures FW-UPPER-SPLICE)"
+    csd_tr = f"üst motor ayağı: en büyük x tepkisi {Pu:.0f} N (nihai, structures FW-UPPER-SPLICE)"
+    R.add("DORSAL-SPLICE-M4", "chassis detail", f"dorsal longeron splice: {nds} x M4 Ti, bearing in the longeron "
+          f"({float(do['t']) * 1000:.1f} mm)", f"sırt uzun kirişi eki: {nds} x M4 Ti, uzun kirişte ezilme "
+          f"({float(do['t']) * 1000:.1f} mm)", csd, csd_tr, Pu / nds, 0.004 * float(do["t"]) * qi["bearing_Pa"], "N",
+          SA.total_factor(c, ult_only=True, fit=True, comp=True), "QI bearing ETW", part="YK250-CH-032")
+    R.add("DORSAL-SPLICE-SH", "chassis detail", f"dorsal longeron splice: {nds} x M4 Ti, shank shear",
+          f"sırt uzun kirişi eki: {nds} x M4 Ti, gövde kesmesi", csd, csd_tr, Pu / nds,
+          math.pi / 4 * 0.004 ** 2 * float(ti["Fsu"]), "N", SA.total_factor(c, ult_only=True, fit=True),
+          "Ti-6Al-4V Fsu on the shank", part="YK250-CH-032")
+    return R.rows
+
+
+def C_st(L: dict, sid: str) -> dict:
+    return next(s for s in L["stations"] if s["id"] == sid)
+
+
+def dec_tr(v: float, n: int = 2) -> str:
+    return f"{v:.{n}f}".replace(".", ",")
+
+
+def _spec_load():
+    from ..core import spec as _SP
+    return _SP.load()
+
+
+# =====================================================================================================================
+# mass reconciliation (V03): chassis parts against the spec.mass items they are booked in
+# =====================================================================================================================
+MASS_ITEM_PARTS = {
+    "frames_bulkheads": (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 89, 90),
+    "wing_carry_through_box_fittings": (1, 50, 51, 52, 53, 54, 55, 56, 57, 58),
+    "keel_beams_longerons": (20, 21, 28, 32, 33, 36, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 102),
+    "floors_trays_rails": (22, 26, 27, 29, 30, 34, 35, 38, 118, 119, 120, 121, 122),
+    "main_gear_frame_trunnions_side_braces": (31, 70, 72, 74),
+    "nose_gear_trunnion_fitting": (71, 73),
+    "engine_mount_4130": (85, 86, 87, 92, 93),
+    "parachute_attach_fitting": (37, 110, 111, 112, 113),
+    "turret_bay_frame_guides": (23, 24, 125, 126),
+    "fuel_bay_liners_supports": (115, 116, 117),
+    "stabilator_spindle_bearing_housings": (95,),
+    "fin_ventral_root_fittings": (96, 98, 99, 100, 101),
+    "hatch_frames_quick_access_fasteners": (25, 114, 123),
+}
+
+
+def mass_reconciliation(reg: Registry, spec: dict) -> list:
+    """Rows {item, model_kg, budget_kg, delta_kg, parts} of the chassis group by spec.mass item (MASS_ITEM_PARTS);
+    the UD spar caps of the centre box CH-001 are booked in the wing item (spec.mass: 'the spar caps of the box are in
+    the wing item') and listed as their own row."""
+    budget = {it["name"]: float(it["mass_kg"]) for it in spec["mass"]["items"]}
+    num_of = {}
+    for pid, p in reg.parts.items():
+        if p.group != GROUP:
+            continue
+        m = pid.split("-")
+        num_of[pid] = int(m[2])
+    rows, seen = [], set()
+    root = spec["layout"]["root_part"]
+    caps = 0.0
+    note = reg.parts[root].notes if root in reg.parts else ""
+    if "mass split kg: caps " in note:                # written by _Reg.ct_mass
+        caps = float(note.split("mass split kg: caps ")[1].split(",")[0])
+    for item, nums in MASS_ITEM_PARTS.items():
+        ids = [pid for pid, k in num_of.items() if k in nums]
+        seen.update(ids)
+        kg = sum(reg.mass(reg.parts[p]) for p in ids) - (caps if root in ids else 0.0)
+        rows.append({"item": item, "model_kg": kg, "budget_kg": budget.get(item, 0.0),
+                     "delta_kg": kg - budget.get(item, 0.0), "parts": sorted(ids)})
+    rows.append({"item": "wing_structure_pair (centre-box spar caps in CH-001)", "model_kg": caps, "budget_kg": None,
+                 "delta_kg": None, "parts": [root]})
+    rest = sorted(set(num_of) - seen)
+    if rest:
+        rows.append({"item": "unassigned", "model_kg": sum(reg.mass(reg.parts[p]) for p in rest), "budget_kg": 0.0,
+                     "delta_kg": sum(reg.mass(reg.parts[p]) for p in rest), "parts": rest})
+    return rows

@@ -94,6 +94,12 @@ Y_WK = 0.015                                   # inner face of the well keel web
 CHINE_FWD1 = spar_x(0.38, 0.25) - 0.030        # end of the forward chine piece (30 mm ahead of FS-MS)
 CHINE_AFT0 = spar_x(0.38, 0.72) + 0.030        # start of the aft chine piece (30 mm aft of FS-RS)
 SPL_PITCH, SPL_EDGE = 0.018, 0.015             # chine splices: 4 x M6 at 3 D pitch, 2.5 D composite edge (PK3-04)
+# detail design (chassis CH-V08): the aft splice is 4 x M4 Ti at 12.5 mm pitch where the side-of-body rib between the
+# glove skins is >= 20 mm deep (the 4 x M6 at x 2.877-2.931 could not keep 2.5 D in a rib only 24-35 mm deep there);
+# the chine's splice leg is padded to 4.8 mm and the rib's 16-ply aft land starts at x 2.840 (chassis
+# detail_joint_margins SPL-CH-AFT-*)
+SPL_AFT_X = (2.8475, 2.8600, 2.8725, 2.8850)
+SPL_AFT_LAND_X0 = 2.840
 
 
 def _frame_edge_x(x_web, sign):
@@ -162,21 +168,28 @@ def members() -> list:
     # ---------------------------------------------------------------- longitudinal primary members
     x_ms38, x_rs38 = spar_x(0.38, 0.25), spar_x(0.38, 0.72)
     spl = []
-    for sid, xs_, sg, txt in (("SPL-CH-FWD", CHINE_FWD1, -1.0, "forward piece end"),
-                              ("SPL-CH-AFT", CHINE_AFT0, 1.0, "aft piece start")):
-        pts = [[r3(xs_ + sg * (SPL_EDGE + k * SPL_PITCH)), r3(chine_halfwidth(xs_) - 0.020 + 0.5 * 0.035), 0.0]
-               for k in range(4)]
-        spl.append({"id": sid, "with": "M-SOB", "piece": txt, "d": 0.006, "axis": [0.0, 1.0, 0.0],
-                    "spec": "M6 Ti-6Al-4V (NAS1956 type) + self-locking nut, axis y, through the chine-longeron web "
-                            "(J outboard leg, 2.4 mm) and the 16-ply solid land of the side-of-body rib",
-                    "pitch_m": SPL_PITCH, "edge_m": SPL_EDGE, "bolts": pts})
+    xs_ = CHINE_FWD1
+    pts = [[r3(xs_ - (SPL_EDGE + k * SPL_PITCH)), r3(chine_halfwidth(xs_) - 0.020 + 0.5 * 0.035), 0.0]
+           for k in range(4)]
+    spl.append({"id": "SPL-CH-FWD", "with": "M-SOB", "piece": "forward piece end", "d": 0.006,
+                "axis": [0.0, 1.0, 0.0],
+                "spec": "M6 Ti-6Al-4V (NAS1956 type) + self-locking nut, axis y, through the chine-longeron web "
+                        "(J outboard leg, 2.4 mm) and the 16-ply solid land of the side-of-body rib",
+                "pitch_m": SPL_PITCH, "edge_m": SPL_EDGE, "bolts": pts})
+    spl.append({"id": "SPL-CH-AFT", "with": "M-SOB", "piece": "aft piece start", "d": 0.004, "axis": [0.0, 1.0, 0.0],
+                "spec": "M4 Ti-6Al-4V + self-locking nut, axis y, through the chine's padded splice leg (4.8 mm) and "
+                        "the 16-ply solid land of the side-of-body rib, at the rib's mid height (detail design, "
+                        "chassis CH-V08: detail_joint_margins SPL-CH-AFT-*)",
+                "pitch_m": 0.0125, "edge_m": 0.0105,
+                "bolts": [[r3(x), r3(chine_halfwidth(CHINE_AFT0) - 0.020 + 0.5 * 0.035), 0.0] for x in SPL_AFT_X]})
     M.append(member("M-CHINE", "YK250-CH-020", "chine longeron", "kenar çizgisi uzun kirişi",
                     "primary longitudinal member on the chine line (z = chine plane): body bending (with the dorsal "
                     "ridge skin and the belly), upper/lower skin attachment land at the chine, LERX/glove root "
                     "attachment between FS1810 and the main-spar frame; forward piece FS0600 -> main-spar frame, "
                     "aft piece rear-spar frame -> forward face of the firewall FS3670; both pieces are spliced to the "
-                    "side-of-body rib of the wing box with 4 x M6 Ti each (fix round 3, PK3-04: splices SPL-CH-FWD / "
-                    "SPL-CH-AFT; the side-of-body rib extends aft of the rear spar as the aft splice land), so that "
+                    "side-of-body rib of the wing box (fix round 3, PK3-04: splices SPL-CH-FWD 4 x M6 Ti / SPL-CH-AFT 4 x "
+                    "M4 Ti in the padded leg, detail design CH-V08; the side-of-body rib extends aft of the rear spar "
+                    "as the aft splice land), so that "
                     "the axial longeron load passes through the side-of-body rib past the spar frames; the pieces "
                     "pass the frames they cross in longeron notches open to the frame edge (layout.stations C-CHINE: "
                     "placed laterally after the frames, 7075 shear clip, U-doubler); fix round 1 (VPK-01/VPK-06): no "
@@ -564,15 +577,15 @@ def members() -> list:
         geo = {}
         if mid == "M-SOB":
             # fix round 3 (PK3-04): aft extension behind the rear spar (glove trailing-edge closing) = splice land of
-            # the aft chine piece (4 x M6 Ti, M-CHINE.splices SPL-CH-AFT)
+            # the aft chine piece (4 x M4 Ti, M-CHINE.splices SPL-CH-AFT)
             x1 = CHINE_AFT0 + 0.090
             role = role + ("; fix round 3 (PK3-04): extended aft of the rear spar to x %.3f as the closing rib of the "
                            "glove trailing-edge bay and the splice land of the aft chine piece; 16-ply solid lands at "
-                           "both chine splices (4 x M6 Ti each, M-CHINE.splices)" % x1)
+                           "both chine splices (SPL-CH-FWD 4 x M6 Ti, SPL-CH-AFT 4 x M4 Ti, M-CHINE.splices)" % x1)
             geo["fitting_lands"] = [{"x": r3([CHINE_FWD1 - 0.075, CHINE_FWD1]), "z": [-0.016, 0.016],
                              "text": "forward chine splice land (16 plies)"},
-                            {"x": r3([CHINE_AFT0, x1]), "z": [-0.016, 0.016],
-                             "text": "aft chine splice land (16 plies)"}]
+                            {"x": r3([SPL_AFT_LAND_X0, x1]), "z": [-0.016, 0.016],
+                             "text": "aft chine splice land (16 plies; from x 2.840 for the 4 x M4 of SPL-CH-AFT)"}]
         geo.update({"box": r3([[x0, y - T_SW / 2, -0.050], [x1, y + T_SW / 2, 0.052]]), "contour": "wing_loft"})
         M.append(member(mid, part, nm, ntr, role, "cfrp_pw_mtm45_as4", "prepreg_ooa_vacbag",
                         {"type": "flanged sandwich rib (rib_panel), solid laminate at fittings", "t": T_SW},
@@ -899,7 +912,8 @@ def fittings() -> list:
                         "clear of the engine-mount truss tubes) with the bearing boss; outboard cheek 7 mm (y "
                         "0.2125-0.2195; fix round 2: 10 -> 7 mm, structures T-NODE-CHEEK) carrying the stub rear-spar root fitting on 4 x "
                         "M6 12.9 (axis y, 76 x 62 mm rectangle, tension + shear) clear of the horn sweep; FS3738 is a "
-                        "lower U-ring below the node (ring_z_max) and is riveted to the outboard cheek foot",
+                        "lower U-ring below the node (ring_z_max) whose 2024 legs are bolted to the outboard cheek foot (3 x "
+                        "M4 12.9 per side, detail design: chassis detail_joint_margins NODE-FOOT-*)",
               "load_path": "stabilator -> spindle -> inboard bearing (boss) / stub tip bearing -> stub -> stub root fitting "
                            "-> outboard cheek (4 x M6) -> node -> 7 x M5 through the firewall -> firewall sandwich "
                            "(in-plane) + chine longeron splice -> body; structures T-NODE-*",

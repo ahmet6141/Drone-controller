@@ -1,10 +1,14 @@
 """ucav250 chassis producer (design/chassis.py): the built chassis is clean under every design-rule check, every part
 honours the producer contract (ids, material / process / thickness, parent, step, explode, contacts), and the
 framework details the chassis relies on (fused box unions, path extension, mid-plane of the clamped material in the
-edge-distance check, insert bores, nominal tapped holes, fastener materials with a density) behave as specified.
-Nothing here writes to the repository (checks run with write=False)."""
+edge-distance check, insert bores, nominal tapped holes, fastener materials with a density, blind rivets) behave as
+specified. The chassis-fix round (CH-V01..V15) adds the physical checks: every part reaches the root through fasteners
+and touching bonded faces, one solid per part (declared bush / spacer sets excepted), a buildable assembly order,
+straight bolt insertion, the gear / turret / assembly-path / cooling-duct envelopes, positive detail-joint margins and
+the mass reconciliation. Nothing here writes to the repository (checks run with write=False)."""
 from __future__ import annotations
 
+import copy
 import math
 import re
 import sys
@@ -16,6 +20,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 try:
     from ucav250.analysis import checks as K
+    from ucav250.analysis import layout_check as LC
     from ucav250.core import geom as G
     from ucav250.core.assemble import build_registry
     from ucav250.core.parts import Fastener, Part, Registry, layup_props
@@ -107,6 +112,211 @@ class TestChassisBuild(unittest.TestCase):
         self.assertGreater(hw, 0.0)
 
 
+    # ------------------------------------------------------------------ chassis-fix round (CH-V01..V15)
+    def _cache(self):
+        if not hasattr(self.__class__, "_mc"):
+            self.__class__._mc = K._ManCache(self.reg)
+        return self.__class__._mc
+
+    def _produced(self):
+        """Parts produced by the chassis module (CH-* and the firewall-shield PR-* parts it registers)."""
+        return [pid for pid, p in self.reg.parts.items() if pid.startswith(("YK250-CH-", "YK250-PR-08", "YK250-PR-09"))]
+
+    def test_attachment_through_fasteners_and_bonded_faces(self):
+        """V01 / V10: every chassis part reaches the root through fastener stacks or faces that really touch (bond line
+        <= 0.3 mm); declared contacts all touch."""
+        cache = self._cache()
+        root = self.spec["layout"]["root_part"]
+        adj = {pid: set() for pid in self.reg.parts}
+        for f in self.reg.fasteners():
+            for a, b in zip(f.joins, f.joins[1:]):
+                adj[a].add(b)
+                adj[b].add(a)
+        for pid in self._produced():
+            p = self.reg.parts[pid]
+            for c in set(p.contacts) | ({p.parent} if p.parent else set()):
+                if c in self.reg.parts and K._touching(cache, pid, c):
+                    adj[pid].add(c)
+                    adj[c].add(pid)
+            for c in p.contacts:
+                self.assertTrue(K._touching(cache, pid, c), f"{pid}: declared contact {c} does not touch")
+        seen, todo = {root}, [root]
+        while todo:
+            x = todo.pop()
+            for y in adj[x] - seen:
+                seen.add(y)
+                todo.append(y)
+        self.assertEqual(sorted(set(self._produced()) - seen), [])
+
+    def test_parents_carry_their_parts(self):
+        """V10: a part's parent touches it or is fastened to it (frames excepted: they are located on the assembly jig,
+        whose datum is the CT box), and the parent is installed no later than the part."""
+        fastened = {pid: set() for pid in self.reg.parts}
+        for f in self.reg.fasteners():
+            for a in f.joins:
+                fastened[a].update(f.joins)
+        frames = {st["part"] for st in self.spec["layout"]["stations"]}
+        cache = self._cache()
+        for pid in self._produced():
+            p = self.reg.parts[pid]
+            if not p.parent:
+                continue
+            self.assertGreaterEqual(p.step, self.reg.parts[p.parent].step, f"{pid} before its parent {p.parent}")
+            if pid in frames:
+                continue
+            self.assertTrue(p.parent in fastened[pid] or K._touching(cache, pid, p.parent),
+                            f"{pid}: parent {p.parent} neither touches nor is fastened to it")
+
+    def test_one_solid_per_part(self):
+        """V12 / V14: each produced part is one solid (internal voids allowed: tube bores, hollow nodes), except the
+        declared sets of identical loose items."""
+        sets = {"YK250-CH-053-R": 4, "YK250-CH-053-L": 4, "YK250-CH-074-R": 2, "YK250-CH-074-L": 2}
+        multi_ok = ("YK250-CH-090-", "YK250-PR-094")        # spacer tubes / stand-offs (one per bolt)
+        cache = self._cache()
+        for pid in self._produced():
+            if pid.startswith(multi_ok):
+                continue
+            vols = [m.volume() for m in cache.man(pid).decompose()]
+            n = sum(1 for v in vols if v > 1e-9)
+            self.assertEqual(n, sets.get(pid, 1), f"{pid}: {n} solids {sorted(vols, reverse=True)[:5]}")
+
+    def test_assembly_order(self):
+        """V06: a fastener is installed with (not before) the last of the parts it joins."""
+        for f in self.reg.fasteners():
+            if not any(j.startswith(("YK250-CH-", "YK250-PR-")) for j in f.joins):
+                continue
+            last = max(self.reg.parts[j].step for j in f.joins)
+            self.assertGreaterEqual(f.step, last, f"{f.id}: step {f.step} < {last}")
+
+    def test_bolts_insert_straight(self):
+        """V07: each chassis bolt (head d_k, washer, shank length) comes in along its axis from the head side without
+        crossing any part (0.1 mm clearance round the head)."""
+        dk = {3: (0.0055, 0.003), 4: (0.007, 0.004), 5: (0.0085, 0.005), 6: (0.010, 0.006), 8: (0.013, 0.008)}
+        cache = self._cache()
+        solid = [pid for pid in self.reg.parts if not pid.startswith("YK250-HW-")]
+        bad = []
+        for f in self.reg.fasteners():
+            if f.kind != "bolt" or not any(j.startswith(("YK250-CH-", "YK250-PR-")) for j in f.joins):
+                continue
+            d_k, k = dk[round(f.d * 1000)]
+            a, p = np.asarray(f.axis, float), np.asarray(f.position, float)
+            w = 0.0016 if f.washer_head else 0.0
+            p0, p1 = p - a * (w + 0.0003), p - a * (w + k + f.length + 0.002)
+            cyl = G.cylinder(0.5 * d_k + 0.0001, p1, p0, n=24)
+            lo, hi = cyl.bounds()
+            man = cyl.to_manifold()
+            for q in solid:
+                if K._boxes_overlap((lo, hi), cache.box(q)) and (man ^ cache.man(q)).volume() > 1e-9:
+                    bad.append((f.id, q))
+        self.assertEqual(bad, [])
+
+    def test_mechanism_and_path_envelopes(self):
+        """V04 / V05 / V13: main / nose tyre >= tyre_to_well and legs >= harness_to_moving_parts over the retraction
+        (except the parts the legs pivot in), turret growth envelope >= turret_to_bay_wall over its travel, every
+        assembly path free of chassis parts except the ones it engages, the cooling-duct corridor free."""
+        ctx = LC.Ctx(copy.deepcopy(self.spec))
+        L = self.spec["layout"]
+        cv = L["clearance_values"]
+        cache = self._cache()
+        produced = [pid for pid in self._produced() if pid in self.reg.parts]
+        C = CH.Ctx(Registry(copy.deepcopy(self.spec)), copy.deepcopy(self.spec))
+
+        def mesh_of(pr):
+            if isinstance(pr, LC.Sphere):
+                return G.sphere(pr.r, pr.c, n=32)
+            if isinstance(pr, LC.Cyl):
+                return G.cylinder(pr.r, pr.c - pr.h * pr.a, pr.c + pr.h * pr.a, n=40)
+            if isinstance(pr, LC.Capsule):
+                return G.union([G.cylinder(pr.r, pr.p0, pr.p1, n=32), G.sphere(pr.r, pr.p0, n=24),
+                                G.sphere(pr.r, pr.p1, n=24)])
+            if isinstance(pr, LC.Torus):
+                prof = [(pr.R0 + pr.rt * math.cos(t), pr.rt * math.sin(t))
+                        for t in np.linspace(0, 2 * math.pi, 25)[:-1]]
+                return G.revolve(prof, n=64, axis_origin=pr.c, axis=pr.a)
+            if isinstance(pr, LC.OBB):
+                return G.box(2 * pr.h, pr.c, R=pr.R)
+            raise TypeError(pr)
+
+        def gaps(prims, need, allow=()):
+            out = []
+            for pr in prims:
+                m = mesh_of(pr)
+                lo, hi = m.bounds()
+                man = m.to_manifold()
+                for q in produced:
+                    if q in allow or not K._boxes_overlap((lo, hi), cache.box(q), pad=need):
+                        continue
+                    g = float(man.min_gap(cache.man(q), need + 0.002))
+                    if (need > 0 and g < need - 1e-6) or (need == 0 and (man ^ cache.man(q)).volume() > 1e-9):
+                        out.append((q, round(g * 1000, 2)))
+            return out
+
+        J_ = {j["name"]: j for j in L["mechanisms"]["joints"]}
+        bad = []
+        for ang in np.linspace(0.0, float(J_["main_gear_R"]["hi"]), 13):
+            g = LC.gear_prims(ctx, "main", ang, "R")
+            bad += [("main tyre", ang, x) for x in gaps([g["tyre"]], float(cv["tyre_to_well"]))]
+            bad += [("main leg", ang, x) for x in gaps([g["leg"]], float(cv["harness_to_moving_parts"]),
+                                                      ("YK250-CH-070-R", "YK250-CH-074-R"))]
+        for ang in np.linspace(0.0, float(J_["nose_gear"]["hi"]), 10):
+            g = LC.gear_prims(ctx, "nose", ang)
+            bad += [("nose tyre", ang, x) for x in gaps([g["tyre"]], float(cv["tyre_to_well"]))]
+            bad += [("nose leg", ang, x) for x in gaps([g["leg"]], float(cv["harness_to_moving_parts"]),
+                                                      tuple(f"YK250-CH-{n}-{s}" for n in ("071", "073")
+                                                            for s in "RL"))]
+        for st in L["mechanisms"]["sequences"]["turret_extension"]["states"]:
+            bad += [("turret", st["turret_elevator"], x)
+                    for x in gaps(LC.turret_prims(ctx, float(st["turret_elevator"])),
+                                  float(cv["turret_to_bay_wall"]))]
+        objs = LC.layout_objects(ctx)
+        movable = {"mission_tray_removal": ("YK250-CH-120",), "ecu_removal": ("YK250-CH-120",)}   # the tray itself
+        for pth in L["mechanisms"]["assembly_paths"]:
+            prims = LC._path_prims(ctx, pth, objs)
+            for side, pr in (("R", prims), ("L", [LC.mirror_prim(q) for q in prims])):
+                if side == "L" and not pth.get("mirror"):
+                    continue
+                allow = set(movable.get(pth["name"], ()))
+                for e in pth.get("engages", []):
+                    try:
+                        allow.add(C.ref(e, side))
+                    except KeyError:
+                        pass
+                    if e == "ENGINE-MOUNT":
+                        allow.add(L["chassis"]["engine_mount"]["part"])
+                    if e == "F-FORK":                   # the fork prongs are integral with the CT box CH-001
+                        allow.add(L["root_part"])
+                bad += [(pth["name"], side, x) for x in gaps(pr, 0.0, allow)]
+        ko = next(k for k in L["keep_outs"] if k["id"] == "KO-COOLING-DUCT")
+        P = np.asarray(ko["path"], float)
+        for off in ko["lateral_offsets"]:
+            bad += [("cooling duct", off, x) for x in gaps(LC.polyline(P + np.array([0.0, off, 0.0]),
+                                                                       float(ko["radius"])), 0.0)]
+        self.assertEqual(bad, [])
+
+    def test_detail_joint_margins(self):
+        """V08: the detail fasteners that differ from the layout bolt groups have positive margins on the structures
+        loads."""
+        rows = CH.detail_joint_margins(self.spec)
+        ids = {r["id"] for r in rows}
+        for need in ("SPL-CH-AFT-SH", "SPL-CH-AFT-BR-RIB", "SPL-CH-AFT-BR-LEG", "VENTRAL-KEEL-BOLTS",
+                     "KEEL-FOOT-BOLTS", "KEEL-FOOT-BR", "NODE-FOOT-BOLTS", "NODE-FOOT-BR", "UPLOCK-INSERT-M4",
+                     "DORSAL-SPLICE-M4"):
+            self.assertIn(need, ids)
+        for r in rows:
+            self.assertGreaterEqual(r["ms"], 0.0, f"{r['id']}: MS {r['ms']:.3f}")
+
+    def test_mass_reconciliation_covers_every_part(self):
+        """V03: every chassis part is booked in one spec.mass item; the rows add up to the chassis group mass."""
+        rows = CH.mass_reconciliation(self.reg, self.spec)
+        self.assertNotIn("unassigned", [r["item"] for r in rows])
+        tot = sum(self.reg.mass(p) for p in self.reg.parts.values() if p.group == "chassis")
+        self.assertAlmostEqual(sum(r["model_kg"] for r in rows), tot, delta=1e-6)
+        items = {it["name"] for it in self.spec["mass"]["items"]}
+        for r in rows:
+            if r["budget_kg"] is not None:
+                self.assertIn(r["item"], items)
+
+
 @unittest.skipUnless(HAVE, "ucav250 dependencies missing")
 class TestChassisHelpers(unittest.TestCase):
     def test_fuse_boxes_single_shell(self):
@@ -132,6 +342,11 @@ class TestChassisHelpers(unittest.TestCase):
         self.assertEqual(HW.fastener_material("ISO 4762 M4x18-Ti-6Al-4V", mats), "ti_6al_4v_annealed_sheet")
         self.assertEqual(HW.fastener_material("ISO 4762 M6x14-12.9", {"fastener_steel": {"density": 7900.0}}),
                          "fastener_steel")
+        # V15: the alloy is read from the grade token only ("estimate", "captive", "anti-rotation" are not "Ti")
+        self.assertEqual(HW.fastener_material("blind rivet, A286 / CherryMAX class (estimate) 3.2x3.5", mats),
+                         "ss_304_annealed")
+        self.assertEqual(HW.fastener_material("captive screw M4 (anti-rotation, estimate)", mats), "steel_4130_n")
+        self.assertEqual(HW.fastener_material("NAS1956 Ti 6-4 bolt", mats), "ti_6al_4v_annealed_sheet")
 
 
 @unittest.skipUnless(HAVE, "ucav250 dependencies missing")
@@ -179,6 +394,24 @@ class TestFrameworkDetails(unittest.TestCase):
                tapped_depth=0.01, step=1)
         p0, p1, r = reg.parts["B"].holes[-1]
         self.assertAlmostEqual(r, 0.002, delta=1e-12)           # 0.5 d: the shank does not overlap the thread
+
+    def test_blind_rivet(self):
+        """joints.rivet: kind 'rivet', hole d + 0.1 mm in every stack part, length = grip + 0.6 d rounded up to 0.5 mm,
+        blind (self-locking stem) far side; hardware.py classes an A286 rivet as stainless."""
+        spec = {"materials": {"ss": {"density": 7900.0, "kind": "metal"}},
+                "processes": {"sm": {"min_thickness": 0.0003}}, "layout": {"root_part": "A"}}
+        reg = Registry(spec)
+        for pid, z0, t in (("A", 0.0, 0.0008), ("B", -0.0004, 0.0004)):
+            reg.add(Part(id=pid, name=pid, name_tr=pid, group="propulsion", material="ss", process="sm",
+                         thickness=t, mesh_fn=(lambda z0=z0, t=t: G.box((0.03, 0.03, t), center=(0.0, 0.0, z0 + t / 2)))))
+        f = J.rivet(reg, "R1", 0.0032, (0.0, 0.0, 0.0008), (0.0, 0.0, -1.0), [("A", 0.0008), ("B", 0.0004)],
+                    spec="blind rivet, A286 class (estimate)", step=12)
+        self.assertEqual(f.kind, "rivet")
+        self.assertEqual(f.joins, ("A", "B"))
+        self.assertAlmostEqual(f.length, math.ceil((0.0012 + 0.6 * 0.0032) * 2000) / 2000, delta=1e-12)
+        self.assertIn("blind", f.nut)
+        for pid in ("A", "B"):
+            self.assertAlmostEqual(reg.parts[pid].holes[-1][2], 0.5 * 0.0032 + 0.5 * J.RIVET_HOLE_CLEARANCE, delta=1e-12)
 
 
 if __name__ == "__main__":

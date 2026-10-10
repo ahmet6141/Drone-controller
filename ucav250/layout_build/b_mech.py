@@ -543,7 +543,7 @@ def clearances() -> list:
     add("exhaust vs unshielded composites", ["YK250-PR-504-R", "YK250-PR-504-L"],
         ["group:tail", "group:wing", "group:fuel", "group:systems", "group:payload", "group:gear"], 50.0)
     add("exhaust vs shielded cowl and firewall", ["YK250-PR-504-R", "YK250-PR-504-L"],
-        ["prefix:YK250-SH-45", "YK250-CH-013", "YK250-CH-014"], 25.0)
+        ["prefix:YK250-SH-45", "YK250-CH-013", "prefix:YK250-CH-014"], 25.0)
     add("cylinder heads vs composites", ["YK250-PR-500"], ["group:shell", "group:tail"], 25.0)
     add("stabilator vs fixed root stub", "joint:stabilator_R", ["YK250-TL-252-R"], 6.0, ["stabilator_R"], "R-38")
     add("stabilator vs fixed root stub (port)", "joint:stabilator_L", ["YK250-TL-252-L"], 6.0, ["stabilator_L"])

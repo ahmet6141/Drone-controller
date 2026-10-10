@@ -1573,17 +1573,53 @@ class Fuel:
                 trayp.holes.append(cut)
 
     # ------------------------------------------------------------------ skin-end fittings (drains, flush vent)
+    def above_oml(self, p, half: float, z_top: float, n: int = 25) -> G.Mesh:
+        """Solid between the fuselage OML (lower surface, ``Ctx.z_bot``) and the plane z_top over the square of
+        half-width ``half`` round p (heightfield): trims a skin-end fitting body flush with the curved skin."""
+        C = self.C
+        xs = np.linspace(p[0] - half, p[0] + half, n)
+        ys = np.linspace(p[1] - half, p[1] + half, n)
+        Zb = np.array([[C.z_bot(x, y) for y in ys] for x in xs])
+        if Zb.max() >= z_top:
+            raise ValueError("above_oml: z_top below the OML")
+        X, Y = np.meshgrid(xs, ys, indexing="ij")
+        bot = np.column_stack([X.ravel(), Y.ravel(), Zb.ravel()])
+        top = np.column_stack([X.ravel(), Y.ravel(), np.full(n * n, z_top)])
+        V = np.vstack([bot, top])
+        o = n * n
+        F = []
+
+        def vid(i, j, layer):
+            return layer * o + i * n + j
+        for i in range(n - 1):
+            for j in range(n - 1):
+                a, b, c, d = vid(i, j, 0), vid(i + 1, j, 0), vid(i + 1, j + 1, 0), vid(i, j + 1, 0)
+                F += [(a, c, b), (a, d, c)]                       # OML face (normal down)
+                a, b, c, d = vid(i, j, 1), vid(i + 1, j, 1), vid(i + 1, j + 1, 1), vid(i, j + 1, 1)
+                F += [(a, b, c), (a, c, d)]                       # top face (normal up)
+        border = [(i, 0) for i in range(n - 1)] + [(n - 1, j) for j in range(n - 1)] + \
+                 [(i, n - 1) for i in range(n - 1, 0, -1)] + [(0, j) for j in range(n - 1, 0, -1)]
+        for k in range(len(border)):
+            (i0, j0), (i1, j1) = border[k], border[(k + 1) % len(border)]
+            a, b, c, d = vid(i0, j0, 0), vid(i1, j1, 0), vid(i1, j1, 1), vid(i0, j0, 1)
+            F += [(a, b, c), (a, c, d)]
+        return G.fix_orientation(G.Mesh(V, np.asarray(F)))
+
     def skin_fitting(self, ln: Line, r_body: float, nut_r: float, nut_h: float, hex_: bool, skin: str | None = None):
-        """Flush skin-end fitting at the end of ``ln``: body flush with the OML, socket for the line, jam nut / flange on
-        the inner skin face. With the shell built (``skin`` = panel part id) the faces are measured on the panel and a
-        contoured washer fills the space between the curved inner skin face and the flat nut (0.05 mm above the
-        skin); otherwise the OML and the shell_secondary laminate thickness give the faces."""
+        """Flush skin-end fitting at the end of ``ln``: body face contoured to the OML (machined flush with the curved
+        skin), socket for the line, jam nut / flange on the inner skin face. With the shell built (``skin`` = panel part
+        id) the inner faces are measured on the panel and a contoured washer fills the space between the curved inner
+        skin face and the flat nut (0.05 mm above the skin); otherwise the OML and the shell_secondary laminate
+        thickness give the faces."""
         C = self.C
         Q = ln.centerline()
         p = Q[-1]
         d = G.unit(Q[-1] - Q[-2])
+        z_ring = [C.z_bot(p[0] + r_body * math.cos(th), p[1] + r_body * math.sin(th))
+                  for th in np.linspace(0.0, 2 * math.pi, 24, endpoint=False)]
         z_oml = C.z_bot(p[0], p[1])
-        z_in = z_oml + C.skin_t
+        z_oml_lo = min(z_ring + [z_oml])
+        z_in = max(z_ring + [z_oml]) + C.skin_t
         pad = None
         if skin is not None:
             man = self.reg.parts[skin].mesh.to_manifold()
@@ -1597,22 +1633,28 @@ class Fuel:
                         ins.append(h[1])
             if not ins:
                 raise ValueError(f"{ln.lid}: skin panel {skin} not found under the fitting")
-            z_oml = float(np.median(outs[:24]))
             z_in_lo, z_in = float(min(ins)), float(max(ins))
-            # the undrilled panel lifted 0.05 mm trims the washer and the nut (the body passes the drilled hole)
-            skin_cut = inter(self.reg.parts[skin].mesh.translated((0.0, 0.0, 0.00005)),
-                             box3((p[0] - 0.03, p[1] - 0.03, z_oml - 0.03), (p[0] + 0.03, p[1] + 0.03, z_in + 0.01)))
+            t_v = float(min(b - a for a, b in zip(outs, ins)))          # thinnest vertical skin section sampled
+            # the undrilled panel lifted 0.05 mm trims the washer and the nut (the body passes the drilled hole); copies
+            # lowered in steps of 0.9 x the skin section remove whatever of the washer would sit below the skin
+            local = inter(self.reg.parts[skin].mesh,
+                          box3((p[0] - 0.03, p[1] - 0.03, z_oml - 0.03), (p[0] + 0.03, p[1] + 0.03, z_in + 0.01)))
+            n_dn = int(math.ceil((z_in - z_in_lo + 0.001) / (0.9 * t_v)))
+            skin_cut = union([local.translated((0.0, 0.0, 0.00005))] +
+                             [local.translated((0.0, 0.0, -0.9 * t_v * k)) for k in range(1, n_dn + 1)])
             pad = diff(G.tube(nut_r, r_body - OV, (p[0], p[1], z_in_lo - 0.0005), (p[0], p[1], z_in + 0.00005 + OV),
                               n=32), [skin_cut])
-        body = G.cylinder(r_body, (p[0], p[1], z_oml), (p[0], p[1], max(p[2], z_in + nut_h + 0.001)), n=32)
+        z_body1 = max(p[2], z_in + nut_h + 0.001)
+        body = G.cylinder(r_body, (p[0], p[1], z_oml_lo - 0.002), (p[0], p[1], z_body1), n=32)
+        body = inter(body, self.above_oml(p, r_body + 0.002, z_body1 + 0.001))
         sock = G.cylinder(ln.ro + 0.0015, p - 0.0002 * d, p - 0.009 * d, n=32)
         nut = G.cylinder(nut_r, (p[0], p[1], z_in + 0.00005), (p[0], p[1], z_in + nut_h), n=6 if hex_ else 32)
         if pad is not None:
             nut = diff(nut, [skin_cut])
         bore = rod(trim(Q, 0.0, 0.0), ln.ro + BORE_CLR)
-        local = inter(bore, box3(p - 0.03, p + 0.03))
-        flow = G.cylinder(min(ln.ri, r_body - 0.0015), (p[0], p[1], z_oml - 0.001), p + 0.001 * d, n=24)
-        return finish(diff(union([body, sock, nut, pad]), [local, flow])), (p, z_oml, z_in)
+        local_b = inter(bore, box3(p - 0.03, p + 0.03))
+        flow = G.cylinder(min(ln.ri, r_body - 0.0015), (p[0], p[1], z_oml_lo - 0.003), p + 0.001 * d, n=24)
+        return finish(diff(union([body, sock, nut, pad]), [local_b, flow])), (p, z_oml_lo, z_in)
 
     def register_skin_fittings(self):
         C = self.C

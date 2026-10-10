@@ -74,10 +74,14 @@ PROBE = dict(r=0.006, head_r=0.015, head_h=0.008, boss_r=0.019, mass=0.060)  # G
 COUPLING = dict(r=0.016, L=0.040, flange_r=0.019, flange_h=0.006, nut_h=0.006, mass=0.067)  # OBP AN6 airframe half
 COLLECTOR = dict(depth=0.036, y=(-0.062, 0.102), top=0.010, wall=0.002, inlet_r=0.006)
 PUMP = dict(mass=0.35)      # engine.installed_items_kg.fuel_pump_regulator_filter (Limbach EFI supply kit)
+GASCOLATOR = dict(r=0.019, mass=0.152)   # components.yaml andair_gas375 (0.152 kg manufacturer); bowl d estimate
 SHUTOFF = dict(mass=0.08)   # layout EQ-SHUTOFF (estimate)
 DRAIN = dict(r=0.0055, nut_r=0.0085, nut_h=0.004, mass=0.02)   # flush quick-drain valve (estimate)
 VENT_OUT = dict(r=0.008, flange_r=0.014, flange_h=0.0015, mass=0.025)  # flush vent outlet with flame arrestor
 BRACKET_T = 0.002           # 6061-T6 sheet brackets
+# aft-bay line support: web plane (forward face) at about mid-span of FL-FEED-2 / FL-RETURN, bolts on the tray web
+# between its lightening holes (edge distance checked on the tray geometry), bush wall, web margin round the bushes
+SUPPORT = dict(x_web=3.377, y_bolts=(0.022, 0.088), edge=0.009, bush_wall=0.0025, web_rim=0.003)
 SS_PLATE_T = 0.0015         # firewall block flange (cnc_milling_metal minimum 1.5 mm)
 STEP = 18                   # assembly step "Yakıt sistemi"
 STEP_LOAD = 38              # fuel contents: loaded for the function tests
@@ -90,7 +94,7 @@ P_SHEET, P_CNC, P_SLS, P_BUY = "sheet_metal_aluminium", "cnc_milling_metal", "sl
 N = dict(collector=573, coupling=574, coupling_bracket=575, fw_block=577, probe_f=578, probe_s=579, probe_a=595,
          fuel_f=596, fuel_s=597, fuel_a=598, grom_ms=600, grom_rs=601, grom_gear=602, cv_fs=603, cv_fa=604,
          cv_sa=605, fv_f=606, fv_s=607, fv_s2=608, fv_a=609, fv_a2=610, vent_out=611, drain_f=612, drain_a=613,
-         drain_g=614, support=615, clamps=616)
+         drain_g=614, support=615, clamps=616, gascolator=617)
 CELL_KEYS = ("forward_cell", "saddle_cell", "aft_cell")
 PROBE_AT = {"forward_cell": (2.33, 0.15), "saddle_cell": (2.64, 0.10), "aft_cell": (2.95, 0.15)}   # (x, y)
 RING_TRIES = (256, 244, 268, 232, 280)   # bladder loft ring point counts tried in turn
@@ -881,11 +885,11 @@ class Fuel:
         f1 = Lx["FL-FEED-1"]
         pb0, pb1 = self.eq_box("EQ-FUELPUMP")
         P = f1.path.copy()
-        P[0] = [self.col_x0 + 0.016, P[0, 1], col_floor_in + f1.ro + 0.0009]
+        P[0] = [self.col_x0 + 0.016, P[0, 1], col_floor_in + f1.ro + 0.0010]
         P[-1, 0] = pb0[0] - 0.0001
         f1.path = P
-        f1.extra.append(G.cylinder(f1.ro + 0.0005, P[0] - 0.004 * G.unit(P[1] - P[0]),
-                                   P[0] + 0.010 * G.unit(P[1] - P[0]), n=20))      # weighted flop pickup
+        ex = np.array([1.0, 0.0, 0.0])                                             # weighted flop pickup (brass)
+        f1.extra.append(G.cylinder(f1.ro + 0.0005, P[0] - 0.004 * ex, P[0] + 0.006 * ex, n=20))
         # collector drain (sump of the feed cell) -> quick drain in the aft hatch
         da = Lx["FL-DRAIN-A"]
         P = da.path.copy()
@@ -980,10 +984,14 @@ class Fuel:
                     tilt = r_b * k_w
                     out_len = max(0.0015, min(BOSS_OUT, gap - GROM_FL - 0.0015 - tilt))
                     dir_out = d if side * d[0] > 0 else -d
-                    boss = G.cylinder(r_b, pt - (T_BLAD + 0.0003 + tilt) * dir_out, pt + out_len * dir_out, n=32)
-                    clip = box3((pt[0] - 0.05, pt[1] - 0.05, c.floor + 0.00005), (pt[0] + 0.05, pt[1] + 0.05,
-                                                                                    c.top - 0.00005))
-                    boss = inter(boss, clip)
+                    cosd = abs(float(dir_out[0])) * math.cos(math.atan(k_w))
+                    reach = r_b * math.tan(math.acos(min(1.0, cosd))) + 0.001
+                    boss = G.cylinder(r_b, pt - (T_BLAD + 0.0003 + reach) * dir_out,
+                                      pt + (out_len + reach) * dir_out, n=32)
+                    x_w = c.x_aft(0.0) if side > 0 else c.x_fwd(0.0)
+                    t_in, t_out = (-(T_BLAD + 0.0003), out_len) if side > 0 else (-out_len, T_BLAD + 0.0003)
+                    slab = chevron_prism(sbox(-1.0, c.floor + 0.00005, 1.0, c.top - 0.00005), x_w, k_w, t_in, t_out)
+                    boss = inter(boss, slab)
                     c.fittings.append(boss)
                     self.ports.append((c, ln, pt, dir_out))
                     if ln.mirror:
@@ -1291,6 +1299,13 @@ class Fuel:
                  chevron_prism(rim, xf, k, w + GROM_FACE, w + GROM_FACE + GROM_FL)]
         g = union(parts)
         cut = []
+        if k:                                   # chevron frames: the kink of the web faces stands proud by <= 0.5 mm
+            kink = sbox(-0.0025, -10, 0.0025, 10).difference(sbox(y0 - 0.0001, z0 - 0.0001, y1 + 0.0001, z1 + 0.0001))
+            if not kink.is_empty:
+                for t0, t1 in ((-GROM_FACE - 0.0007, 0.0), (w, w + GROM_FACE + 0.0007)):
+                    for pk in getattr(kink, "geoms", [kink]):
+                        cut.append(chevron_prism(pk.intersection(sbox(-1, z0 - GROM_RIM - 0.001, 1, z1 + GROM_RIM + 0.001)),
+                                                 xf, k, t0, t1))
         span = {-1: (-0.01, -0.00001), +1: (w + 0.00001, w + 0.01), 0: (-0.01, w + 0.01)}
         for side, bands in forbid.items():
             for zlo, zhi in bands:
@@ -1499,34 +1514,54 @@ class Fuel:
         yb_, zb_ = 0.5 * (lo[1] + hi[1]) - 0.008, zb + base_t + r_b - 0.0001
         body = G.cylinder(r_b, (lo[0] + 0.016, yb_, zb_), (hi[0] - 0.016, yb_, zb_), n=32)
         bowl_c = np.array([dr.path[0][0], dr.path[0][1]])
-        bowl = G.cylinder(0.019, (bowl_c[0], bowl_c[1], zb + base_t - OV), (bowl_c[0], bowl_c[1], hi[2] - 0.004), n=32)
         reg_box = box3((hi[0] - 0.036, yb_ - 0.012, zb_ + r_b - 0.0005), (hi[0] - 0.014, yb_ + 0.010, zb_ + r_b + 0.015))
         port_in = G.cylinder(0.0075, (lo[0], p_in[1], p_in[2]), (lo[0] + 0.017, p_in[1], p_in[2]), n=24)
         port_out = G.cylinder(0.0075, (hi[0] - 0.017, p_out[1], p_out[2]), (hi[0], p_out[1], p_out[2]), n=24)
         z_nip = dr.path[0][2] + 0.00005
-        nip = G.cylinder(0.004, (bowl_c[0], bowl_c[1], z_nip), (bowl_c[0], bowl_c[1], zb + OV), n=24)
-        pump = finish(union([base, body, bowl, reg_box, port_in, port_out, nip]))
+        nip = G.cylinder(0.004, (bowl_c[0], bowl_c[1], z_nip), (bowl_c[0], bowl_c[1], zb + base_t + OV), n=24)
+        # gascolator (separate purchased unit, fuel budget): bowl standing on the base plate, drain nipple through the
+        # plate and the tray; the pump / regulator housing is relieved round it (0.1 mm)
+        gas = finish(union([G.cylinder(GASCOLATOR["r"], (bowl_c[0], bowl_c[1], zb + base_t + 0.00005),
+                                       (bowl_c[0], bowl_c[1], hi[2] - 0.004), n=32), nip]))
+        relief = [G.cylinder(GASCOLATOR["r"] + 0.0001, (bowl_c[0], bowl_c[1], zb + base_t),
+                             (bowl_c[0], bowl_c[1], hi[2]), n=32),
+                  G.cylinder(0.004 + 0.0005, (bowl_c[0], bowl_c[1], zb - 0.001), (bowl_c[0], bowl_c[1], zb + base_t + OV),
+                             n=24)]
+        pump = finish(diff(union([base, body, reg_box, port_in, port_out]), relief))
         pid = e["part"]
         self.add(pid, e["name"], e["name_tr"], P_BUY, P_BUY, (lambda m=pump: m), purchased=True,
-                 vendor="Limbach EFI fuel supply kit: positive-displacement 12 V pump, 2.5 bar regulator, gascolator "
-                        "(Andair GAS375 class) with drain (components.yaml limbach_efi_supply_kit)",
-                 mass_kg=float(e["mass_kg"]), parent=tray, contacts=(tray, f1.part_id, f2.part_id, dr.part_id),
+                 vendor="Limbach EFI fuel supply kit: positive-displacement 12 V pump, 2.5 bar regulator, filter "
+                        "(components.yaml limbach_efi_supply_kit) on a common base plate with the gascolator",
+                 mass_kg=float(e["mass_kg"]), parent=tray, contacts=(tray, f1.part_id, f2.part_id),
                  explode=(0.0, 0.0, -0.25),
-                 notes=f"layout EQ-FUELPUMP box {e['box']} on TR-AFTBAY; inlet from FL-FEED-1, outlet to FL-FEED-2, "
-                       "bowl drain through the tray to FL-DRAIN; filter reached through P-AFTHATCH; mass "
+                 notes=f"layout EQ-FUELPUMP box {e['box']} on TR-AFTBAY; inlet from FL-FEED-1 through the gascolator, "
+                       "outlet to FL-FEED-2; filter reached through P-AFTHATCH; mass "
                        f"{e['mass_kg']} kg = engine.installed_items_kg.fuel_pump_regulator_filter (booked in the "
                        "propulsion budget item engine_group_installed)")
+        gid = self.pid("gascolator")
+        self.add(gid, "gascolator (water trap and strainer) before the pump", "gaskolatör (su tutucu ve süzgeç)",
+                 P_BUY, P_BUY, (lambda m=gas: m), purchased=True,
+                 vendor="Andair GAS375 gascolator (3/8 in lines), PTFE-coated 70 micron washable screen "
+                        "(components.yaml andair_gas375)",
+                 mass_kg=GASCOLATOR["mass"], parent=pid, contacts=(pid, dr.part_id), explode=(0.0, 0.0, -0.25),
+                 notes="on the base plate of the EQ-FUELPUMP unit (screwed to the plate by the unit supplier, "
+                       "counterbored from below), in the line between FL-FEED-1 and the pump; bowl drain nipple "
+                       "through the plate and the tray to FL-DRAIN and the flush drain valve in P-AFTHATCH (daily water "
+                       "check, CS-LUAS drain + strainer rule); mass 0.152 kg manufacturer (excluding fittings), item "
+                       "of the fuel-system mass basis (components.yaml fuel_system, gascolator 0.15 kg)")
         iv = J.measure_stack(self.reg, [tray], (lo[0] + 0.009, lo[1] + 0.009, float(lo[2])), (0.0, 0.0, -1.0), 0.003)
         t_tray = float(iv[0][2] - iv[0][1])
-        for k, (xb, yb) in enumerate(((lo[0] + 0.009, lo[1] + 0.009), (hi[0] - 0.009, lo[1] + 0.009),
+        y_b1 = p_in[1] + 0.0075 + 0.007        # clear of the inlet boss above (installation access from the top)
+        for k, (xb, yb) in enumerate(((lo[0] + 0.009, y_b1), (hi[0] - 0.009, lo[1] + 0.009),
                                       (lo[0] + 0.009, hi[1] - 0.009), (hi[0] - 0.009, hi[1] - 0.009)), 1):
             J.bolt(self.reg, f"{pid}-B{k}", 4, (xb, yb, zb + base_t), (0.0, 0.0, -1.0),
                    [(pid, base_t + 0.00005), (tray, t_tray)], washer_head=True, step=STEP,
                    notes="pump base to the aft-bay tray, ISO 7040 nyloc nut + washer under the tray")
-        for ln in (f1, f2, dr):
+        for ln in (f1, f2):
             self.reg.parts[ln.part_id].contacts = tuple(dict.fromkeys(self.reg.parts[ln.part_id].contacts + (pid,)))
+        self.reg.parts[dr.part_id].contacts = tuple(dict.fromkeys(self.reg.parts[dr.part_id].contacts + (gid,)))
         self.reg.parts[f2.part_id].parent = pid
-        self.reg.parts[dr.part_id].parent = pid
+        self.reg.parts[dr.part_id].parent = gid
         # pass-through holes in the tray for the gascolator drain, the aft-cell drain and the vent descent
         trayp = self.reg.parts[tray]
         z_t = float(lo[2])
@@ -1586,7 +1621,82 @@ class Fuel:
 
     # ------------------------------------------------------------------ aft-bay line support
     def register_support(self):
-        pass
+        """Support bracket on TR-AFTBAY at about mid-span of FL-FEED-2 (pump -> shut-off valve, 0.38 m) and FL-RETURN
+        (FS-GEAR seal -> firewall block, 0.56 m): 6061-T6 L-bracket (web across the lines) with two split cushion
+        bushes that hold the hoses laterally and let them slide axially (thermal / pressure length change)."""
+        C = self.C
+        tray = C.trays["TR-AFTBAY"]["part"]
+        f2, rt = self.lines["FL-FEED-2"], self.lines["FL-RETURN"]
+        t, r_in = BRACKET_T, 3.0 * BRACKET_T            # inside bend radius 3 t (processes.sheet_metal_aluminium)
+        S = SUPPORT
+        z_t = float(C.L["rules"]["boxes"]["equipment_bay_aft"]["z"][0])      # tray top = bay floor
+        x_w0 = S["x_web"]
+        x_w1 = x_w0 + t
+        x_mid = x_w0 + 0.5 * t
+        z_f0 = z_t + 0.00005
+        z_f1 = z_f0 + t
+        x_b = x_w0 - r_in - 0.5 * FC.ISO7089[4][1] - 0.001          # washer clear of the bend
+        x_f0 = x_b - S["edge"]
+        y0, y1 = S["y_bolts"][0] - S["edge"], S["y_bolts"][1] + S["edge"]
+        # L profile (x-z centre line, filleted) extruded over the base width, web plate with the bush holes above it
+        from shapely.geometry import LineString
+        Pc = np.array([[x_f0, 0.0, z_f0 + 0.5 * t], [x_mid, 0.0, z_f0 + 0.5 * t], [x_mid, 0.0, z_f1 + r_in + 0.004]])
+        Q, _arcs = fillet(Pc, r_in + 0.5 * t, n_arc=10)
+        prof = LineString(Q[:, [0, 2]]).buffer(0.5 * t, cap_style=2, join_style=2, mitre_limit=2.0)
+        base = G.extrude(prof, y1 - y0, origin=(0.0, y0, 0.0), u=(1.0, 0.0, 0.0), v=(0.0, 0.0, 1.0))
+        lo_, hi_ = base.bounds()
+        base = base.translated((0.0, 0.5 * (y0 + y1) - 0.5 * (lo_[1] + hi_[1]), 0.0))
+        bushes = []
+        for ln in (f2, rt):
+            p, _i = plane_cross(ln.centerline(), lambda q: q[0] - x_mid)
+            if p is None:
+                raise ValueError(f"{ln.lid} does not cross the support web at x {x_mid:.4f}")
+            bushes.append((ln, p, ln.ro + S["bush_wall"]))
+        z_web0 = z_f1 + r_in - OV
+        outline = [Polygon([(y0, z_web0), (y1, z_web0), (y1, z_web0 + 0.001), (y0, z_web0 + 0.001)])]
+        outline += [Point(float(p[1]), float(p[2])).buffer(r_p + GROM_RIM + S["web_rim"], 32) for _ln, p, r_p in bushes]
+        web_poly = unary_union(outline).convex_hull.buffer(-0.004, join_style=1).buffer(0.004, join_style=1)
+        web = prism_x(web_poly, x_w0, x_w1)
+        holes = [G.cylinder(r_p + GROM_CLR, (x_w0 - 0.002, p[1], p[2]), (x_w1 + 0.002, p[1], p[2]), n=40)
+                 for _ln, p, r_p in bushes]
+        br_mesh = finish(diff(union([base, web]), holes))
+        bid = self.pid("support")
+        self.add(bid, "aft-bay fuel line support bracket", "arka bölme yakıt hattı destek braketi", MAT_AL, P_SHEET,
+                 (lambda m=br_mesh: m), thickness=t, parent=tray, contacts=(tray,), explode=(0.0, 0.0, -0.2),
+                 notes=f"6061-T6 sheet {t * 1000:.0f} mm L-bracket, inside bend radius 3 t (processes."
+                       "sheet_metal_aluminium), web across FL-FEED-2 / FL-RETURN at about mid-span between the pump / "
+                       "FS-GEAR and the firewall (unsupported hose spans <= 0.3 m); 2 x M4 A2-70 through the tray "
+                       "web between its lightening holes, ISO 7040 nyloc + washer under the tray; split cushion "
+                       "bushes YK250-FU-616 in the two web holes")
+        iv = J.measure_stack(self.reg, [tray], (x_b, S["y_bolts"][0], z_t), (0.0, 0.0, -1.0), 0.003)
+        t_tray = float(iv[0][2] - iv[0][1])
+        for k, yb in enumerate(S["y_bolts"], 1):
+            J.bolt(self.reg, f"{bid}-B{k}", 4, (x_b, yb, z_f1), (0.0, 0.0, -1.0),
+                   [(bid, t + 0.00005), (tray, t_tray)], washer_head=True, step=STEP,
+                   notes="line support bracket to the aft-bay tray, ISO 7040 nyloc nut + washer under the tray")
+        # split cushion bushes: plug in the web hole, flanges on both web faces, bore = hose + 0.05 mm
+        parts, lines = [], []
+        for ln, p, r_p in bushes:
+            x_a, x_b2 = x_w0 - GROM_FACE - GROM_FL, x_w1 + GROM_FACE + GROM_FL
+            plug = G.cylinder(r_p, (x_a, p[1], p[2]), (x_b2, p[1], p[2]), n=40)
+            fl0 = G.cylinder(r_p + GROM_RIM, (x_a, p[1], p[2]), (x_w0 - GROM_FACE, p[1], p[2]), n=40)
+            fl1 = G.cylinder(r_p + GROM_RIM, (x_w1 + GROM_FACE, p[1], p[2]), (x_b2, p[1], p[2]), n=40)
+            bore = inter(ln.envelope(), box3(p - 0.02, p + 0.02))
+            parts.append(finish(diff(union([plug, fl0, fl1]), [bore])))
+            lines.append(ln.part_id)
+        bush = G.merge(parts)
+        self.add(self.pid("clamps"), "split cushion bushes, aft-bay line support",
+                 "yarık yastıklı burçlar, arka bölme hat desteği", P_BUY, P_BUY, (lambda m=bush: m), purchased=True,
+                 vendor="moulded fluorosilicone (FVMQ, 60 Shore A) split grommet bush, fuel resistant (estimate)",
+                 mass_kg=round(bush.volume() * FLUORO_RHO, 4), parent=bid, contacts=(bid,) + tuple(lines),
+                 explode=(0.0, 0.0, -0.2),
+                 notes=f"2 bushes (FL-FEED-2, FL-RETURN), wall {S['bush_wall'] * 1000:.1f} mm, flanges "
+                       f"{GROM_FL * 1000:.1f} mm on both web faces; split along the axis, fitted round the hose and "
+                       "pressed into the web hole; lateral support and chafe protection, the hose slides axially; "
+                       "mass = volume x 1400 kg/m3 (estimate)")
+        for ln in (f2, rt):
+            self.reg.parts[ln.part_id].contacts = tuple(dict.fromkeys(self.reg.parts[ln.part_id].contacts +
+                                                                      (self.pid("clamps"),)))
 
 
 # =====================================================================================================================

@@ -22,7 +22,8 @@ da bırakma düzeneği yoktur ve öngörülmemiştir.
 | Bağlantı elemanı (`joints.py`, geometri `hardware.py`) | **759**: 571 × ISO 7380 M4 + yüzer somun plakası, 54 × ISO 7380 M3 + somun plakası, 106 × Camloc 4002 (2600 yuva), 28 × kör perçin (3,2 / 4 mm) |
 | Hareketli eklem | 2: `para_hatch` (prizmatik, `layout.mechanisms.joints`), `refuel_door` (döner, `P-REFUEL.hinge`, 0…100°) |
 | Tasarım kuralı denetimleri | `checks --modules chassis,shell --focus YK250-SH --no-write`: **0 ihlal** (mesh, statik, süpürme, açıklık, kalınlık, bağlantı elemanı, temas, bağlanma) |
-| Kabuk grubu kütlesi (registry) | **10,565 kg** — bütçe 10,48 ± 0,31 kg (+0,085 kg, bant içinde; §9) |
+| Kanat ve kuyrukla birlikte | `checks --modules chassis,wing,tail,shell --focus YK250-SH`: **0 ihlal** |
+| Kabuk grubu kütlesi (registry) | **10,561 kg** — bütçe 10,48 ± 0,31 kg (+0,081 kg, bant içinde; §9) |
 | Kabuk bağlantı elemanları (grup `hardware`) | 3,34 kg (bütçe uyuşmazlığı, §11) |
 
 Önizlemeler (`python3 -m ucav250.blender.build --modules chassis,shell --previews --no-blend`): ön, yan, üst ve
@@ -103,11 +104,11 @@ Kütle: registry (`reg.mass`: katman alan kütlesi / kalınlık × hacim; GFRP p
 | SH-390 | üst arka kaplama | CFRP | 16 | 1 | 0,439 | 30 |
 | SH-391 | sırt soğutma girişi dudağı | CFRP (yapıştırma) | 16 | 1 | 0,042 | 6 perçin |
 | SH-392 | dikey kök örtüsü | CFRP | 32 | 2 | 0,093 | 20 |
-| SH-393 | stabilatör kökü fileto şeridi | CFRP | 31 | 2 | 0,031 | — (§11) |
+| SH-393 | stabilatör kökü fileto şeridi | CFRP | 31 | 2 | 0,030 | — (§11) |
 | SH-394 | ventral kök şeridi | 5,8 mm katı CFRP | 33 | 1 | 0,103 | — (§11) |
 | SH-395 | motor bölmesi üstü dikey kök kaplaması | CFRP | 32 | 2 | 0,057 | — (§11) |
 | SH-420 | LERX/eldiven üst kaplaması | `wing_skin_primary` (+ kutu / LERX bölgeleri) | 17 | 2 | 0,733 | 12 perçin |
-| SH-421 | LERX/eldiven alt kaplaması | `wing_skin_primary` | 17 | 2 | 0,529 | 8 perçin |
+| SH-421 | LERX/eldiven alt kaplaması | `wing_skin_primary` | 17 | 2 | 0,528 | 8 perçin |
 | SH-422 | kanat birleşim erişim kapağı | CFRP | 36 | 2 | 0,108 | 2 Camloc (§11) |
 | SH-423 | arka pim erişim kapağı (bayonet) | ≈ 1,0 mm katı CFRP | 35 | 2 | 0,002 | — |
 | SH-424 | kanat kökü birleşim kaplaması | `wing_skin_primary` | 17 | 2 | 0,420 | 2 perçin |
@@ -204,7 +205,7 @@ geçmeyen aday delinmez ve sıra onun çevresinde kapanır (bu yapıda 238 aday)
 
 ## 9. Kütle ve bütçe
 
-Kabuk grubu (registry): **10,565 kg** ↔ bütçe `mass.budget.shell` 10,48 ± 0,31 kg → **+0,085 kg (+%0,8), bant
+Kabuk grubu (registry): **10,561 kg** ↔ bütçe `mass.budget.shell` 10,48 ± 0,31 kg → **+0,081 kg (+%0,8), bant
 içinde.** Katkılar: yapısal gövde kaplamaları (13 parça) 4,89 kg, kapaklar / pencereler / sökülebilir paneller
 2,95 kg, LERX/eldiven + birleşim kaplaması 1,68 kg, kaporta + kök şeritleri + giriş dudağı 0,88 kg, taret halkası
 0,16 kg. Kütle, katman alan kütlesinin kalınlığa
@@ -258,6 +259,9 @@ için ayrılan `mass.budget.hardware` 1,51 kg ile çelişir (§11).
 * **Kanat birleşim erişim kapağı:** 2 Camloc. Kapak ön kenarı eldiven burnunun eğri bölgesindedir; SOB / eldiven /
   birleşim kaburgası T flanşları (20 mm) Camloc için dar. Kaburga flanşlarının 26 mm'ye çıkarılması (şasi) ya da M4
   somun plakalı kenar önerilir.
+* **Taret açıklık halkası:** layout 14 × M4 ister; ispatı geçen 8 vida (FS1110 / FS1330 başlıklarında 4, yan
+  karada 4). Halka kenarının geri kalanı alt kaplama yuvasının dar şeridinde 2,5 D tutmaz; yan kara takviyesi
+  (M-TURRETWALL.side_land) genişletilirse tamamlanır.
 * **Üst orta gövde kaplaması (SH-380):** yakıt kapakları arasında kalan dar şeritler; yalnız 4 vida. Çoğu kenar yakıt
   kapaklarının ve birleşim kaplamasının karalarındadır.
 * **Kanat kökü birleşim kaplaması:** layout'un drag modeline girmediği belirtiliyor (PK2-01/PK2-10, OML modülü).
@@ -266,6 +270,7 @@ için ayrılan `mass.budget.hardware` 1,51 kg ile çelişir (§11).
 
 ```
 python3 -m ucav250.analysis.checks --modules chassis,shell --focus YK250-SH --no-write   # 0 ihlal
+python3 -m ucav250.analysis.checks --modules chassis,wing,tail,shell --focus YK250-SH --no-write   # 0 ihlal
 python3 -m unittest tests.test_ucav250_shell                                               # 12 test, OK
 python3 -m ucav250.blender.build --modules chassis,shell --previews --no-blend --out <dizin>
 python3 -m ucav250.layout_build.build --check

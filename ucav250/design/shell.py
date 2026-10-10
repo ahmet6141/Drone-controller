@@ -25,14 +25,16 @@ are kept, the extra detail parts use free numbers of the range, see ``docs/detai
 * the cowl pieces, the fin / stub / ventral root strips and the dorsal cooling-inlet lip.
 
 Interfaces read (never another module's geometry for placement): ``spec.layout`` (part_numbers, stations: x, sweep,
-inset, flange_w, cut-outs; chassis members: chine path / section, member ``lands``, CT box spar lines and cap levels;
-shell panels / root_cut_lines / wing_root_fairing; mechanisms joints and door_outlines; heat_protection insert regions;
-keep-outs), ``spec.fuselage`` / ``spec.wing`` (OML), ``spec.payload.turret``, ``spec.layups`` / ``materials`` /
-``processes``. Fastener rows are laid out from these interfaces; every candidate is then checked the way the drilling
-jig is proven (the same ray probes ``joints.bolt_through`` and ``analysis.checks`` use): the line must clamp solid
-land material within 0.5 mm, keep the 2.5 D / 2.0 D edge distance in every clamped part, keep 3 D + hole radius to
-every existing hole of those parts and the nutplate / receptacle must clear the structure behind the land; a
-candidate that fails is not drilled (the row closes up round it).
+inset, flange_w; chassis members: chine path / section, member ``lands``, CT box spar lines and cap levels, keel /
+dorsal / aft-keel boxes; fittings: trunnion, spindle-node and riser bolts / boxes; wing_joint rear pin; shell panels /
+rules / root_cut_lines / wing_root_fairing; mechanisms joints and door_outlines), ``spec.fuselage`` / ``spec.wing``
+(OML), ``spec.payload.turret``, ``spec.layups`` / ``materials`` / ``processes`` / ``assembly``. Fastener rows
+(``Rows``) are laid out from these interfaces; every candidate is then checked the way the drilling jig is proven
+(``Fix.prove``, the same ray probes ``analysis.checks`` uses): the line must clamp solid land material of the chassis
+or of the shell's own joggled lands within 0.5 mm, keep the 2.5 D / 2.0 D edge distance in every clamped part, keep
+3 D + hole radius to every existing hole of those parts, and the head and the nutplate / receptacle must seat on the
+curved faces and clear every other part and fastener; a candidate that fails is not drilled (the row closes up round
+it). The module documentation (Turkish) is ``ucav250/docs/detail/shell.md``.
 
 Module-private detailing constants (reflected in ``docs/detail/shell.md``) are listed below.
 """

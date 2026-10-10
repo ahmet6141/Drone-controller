@@ -1,34 +1,37 @@
 """Wing producer (YK-250 HANÇER): the two removable outer wing panels (y 0.70 .. 3.60 m each side), their ailerons and
 flaps with hinges and actuation, and the outer-panel half of the wing joint.
 
-What it builds (part numbers from ``spec.layout.part_numbers.wing``: WG 150-199 structure, FC 200-249 controls; the
-starboard panel is modelled in +y and mirrored with ``core.parts.mirror_part``):
+What it builds (part numbers from ``spec.layout.part_numbers.wing`` 150-249: WG 150-199 structure, FC 200-249 controls;
+the starboard panel is modelled in +y and mirrored with ``core.parts.mirror_part``):
 
-* the CFRP main spar with its integral joint tongue (YK250-WG-151, layout ``chassis.wing_joint.main_spar.tongue``): UD
-  caps 30 mm wide sized by ``structures.sizing.wing.main_cap.zones`` (cap outer face 1 mm under the OML), +-45 PW web
+* WG-151 the CFRP main spar with its integral joint tongue (layout ``chassis.wing_joint.main_spar.tongue``): UD caps
+  30 mm wide sized by ``structures.sizing.wing.main_cap.zones`` (cap outer face 1 mm + bond under the OML), +-45 PW web
   (``main_web.zones``), the 0.10 m root-bay depth transition to the 30 x 61 mm tongue (UD flanges 10 -> 3 mm, 25-ply
-  web, [+-45/0/90] boss blocks) and its bonded 4130 bush pair; the two Ti main pins P-MAIN1/2 with their keeper
-  plates (2 x M4 into potted inserts of the fork front pad), the rear-spar root fitting with the 8 mm 7075 lug
-  (YK250-WG-152) and the Ti ball-lock rear pin P-REAR;
-* the CFRP C-section rear spar (web aft face on a straight line just forward of the control-surface coves), the
-  flanged sandwich ribs (root, bay, servo-bay and tip ribs; nose and box pieces), the sandwich skins split into a
-  leading-edge (D-nose) skin and upper / lower box skins (core ramped to 1 mm solid laminate over the spar caps, at
-  the nose and at the cove lips), the fixed trailing-edge closures between the moving surfaces, the GFRP tip fairing,
-  the servo hatch frames and covers (with the linkage fairings), the harness conduit and the drain holes;
-* the aileron and the flap (YK250-FC-200 / 202: round nose in a cove, ``structgen.control_surface_regions``; foam-core
-  CFRP shells with end faces normal to the hinge axis), their 7075 clevis hinge brackets on the rear-spar web, bonded
-  hinge tongues and pins on the hinge lines of ``layout.mechanisms.joints``; the Volz DA 26 / DA 30 actuators
-  (YK250-FC-204 / 206) on their hatch covers, the servo arms, push-rods and horns (four-bar linkages of
-  ``wing.controls.*.linkage``, solved with ``actuation.linkage_kinematics``) and the coupled joints / sequences that
-  move the linkage with the surface.
+  web, boss blocks, ROHACELL 71 fillers); WG-156/157 the bonded 4130 bushes, WG-158/159 the Ti main pins P-MAIN1/2 with
+  the WG-162/163 keeper plates (2 x M4 into potted inserts of the fork pad, YK250-CH-001), WG-152 the rear-spar root
+  fitting with the 8 mm 7075 lug and WG-160 the Ti ball-lock rear pin P-REAR;
+* WG-155 the CFRP C-section rear spar (web aft face on a straight plan line just forward of the coves, 10-ply pads under
+  the hinge brackets), WG-161 / WG-182 the root and tip ribs, WG-164..172 nose and WG-173..181 box ribs (flanged
+  rib_panel sandwich), WG-150 / 153 / 154 the leading-edge (D-nose), upper and lower box skins (core ramped to 1 mm
+  solid laminate over the caps, at the nose and at the cove lips; servo-hatch openings and drain holes in the lower
+  skin), WG-183..185 the fixed trailing-edge closures, WG-186 the GFRP tip fairing, WG-187/188 the hatch frames,
+  WG-190/191 the hatch covers with their linkage fairings and WG-189 the harness conduit;
+* FC-200 aileron and FC-202 flap (round nose in a cove, ``structgen.control_surface_regions``; ROHACELL core + PW skin,
+  end faces normal to the hinge axis), FC-220..226 clevis brackets on the rear-spar web and FC-230..236 bonded hinge
+  tongues with ISO 2341-B pins on the hinge lines of ``layout.mechanisms.joints``; FC-204 / 206 the Volz DA 26 / DA 30
+  actuators (components.yaml envelopes) in FC-214/215 cradles on the hatch covers with FC-216..219 clamp straps, the
+  FC-208/209 servo arms, FC-210/211 push-rods, FC-212/213 horns on FC-238/239 potted insert blocks (four-bar linkages of
+  ``wing.controls.*.linkage`` solved with ``actuation.linkage_kinematics``); coupled joints (``expr``) and exact
+  linkage sequences move the arm and rod with the surface.
 
 Interfaces read (never another module's geometry): ``spec.layout`` (part_numbers, chassis.wing_joint: plane, insertion
-axis, pins, fork slot, rear lug / pin; mechanisms.joints aileron_* / flap_*; systems.actuators ACT-AILERON / ACT-FLAP;
-systems.harness CN-WING; systems.air_data_lights LT-WING; keep_outs KO-WINGJOINT-PATH), ``spec.wing`` (OML sections,
-planform, controls), ``spec.structures.sizing.wing`` / ``wing_joint`` (sized plies and joint dimensions),
-``spec.layups`` / ``materials`` / ``processes``, ``data/research/components.yaml`` (actuator dimensions).
+axis, pins, fork / slot fitting part ids, rear lug / pin; mechanisms.joints aileron_* / flap_*; systems.actuators
+ACT-AILERON / ACT-FLAP; systems.harness CN-WING; chassis.members M-CTBOX rear_spar_line; root_part), ``spec.wing``
+(OML sections, planform, controls), ``spec.structures.sizing.wing`` / ``wing_joint`` (sized plies and joint
+dimensions), ``spec.layups`` / ``materials`` / ``processes``, ``data/research/components.yaml`` (actuator data).
 
-Module-private detailing constants are listed below and in ``docs/detail/wing.md``.
+Module-private detailing constants are listed below; the design notes and the deviations from the layout are in
+``docs/detail/wing.md``.
 """
 from __future__ import annotations
 
@@ -708,11 +711,15 @@ def spar_transition(op: OP, tg: Tongue) -> dict:
     n_lin = np.linspace(-W2, W2, N_CAP)
     out = {}
     for side, sg in (("up", 1.0), ("lo", -1.0)):
-        topb, botb, top2, bot2 = cap_rings(op, stb, side)
+        topf, botf, top2, bot2 = cap_rings(op, stb, side)
+        # end ring 0.1 mm inside the outboard cap on every side (no coplanar faces in the fused union)
+        topb, botb, _t2, _b2 = cap_rings(op, stb, side, extra_w=-0.0001)
+        dvec = (botb - topb) / np.linalg.norm(botb - topb, axis=1, keepdims=True)
+        topb, botb = topb + 0.0001 * dvec, botb - 0.0001 * dvec
         ta, ba = [], []
-        for n in n_lin[::-1] if False else n_lin:
-            q_top = tg.section_at_y(ya, n, n, sg * H2, sg * H2)[0]
-            q_bot = tg.section_at_y(ya, n, n, sg * (H2 - tf), sg * (H2 - tf))[0]
+        for n in np.linspace(-W2 + 0.0001, W2 - 0.0001, N_CAP):       # 0.1 mm inside the tongue flange faces
+            q_top = tg.section_at_y(ya, n, n, sg * (H2 - 0.0001), sg * (H2 - 0.0001))[0]
+            q_bot = tg.section_at_y(ya, n, n, sg * (H2 - tf + 0.0001), sg * (H2 - tf + 0.0001))[0]
             ta.append(q_top)
             ba.append(q_bot)
         ta, ba = np.asarray(ta), np.asarray(ba)
@@ -727,18 +734,21 @@ def spar_transition(op: OP, tg: Tongue) -> dict:
         Pa[:, 1] = ROOT_RIB_Y + T_RIB + BOND                 # filler bonded to the root-rib outboard face
         fa_bot = ta - sg * OV * np.array([0, 0, 1.0])
         fa_bot[:, 1] = ROOT_RIB_Y + T_RIB + BOND
-        Pb = topb
-        fb_bot = topb + (botb - topb) * (0.0003 / max(np.linalg.norm(botb[0] - topb[0]), 1e-9))
+        dfull = (botf - topf) / np.linalg.norm(botf - topf, axis=1, keepdims=True)
+        Pb = topf + 0.00015 * dfull
+        fb_bot = topf + 0.0004 * dfull
         out[f"fill_{side}"] = _loft([_strip_ring(Pa, fa_bot), _strip_ring(Pb, fb_bot)])
         out[f"_bot_{side}"] = (ba, botb)
     # web: tongue web (25 plies) -> zone web
     tw_a, tw_b = tg.tw, op.t_mweb(yb)
     sm_b = op.s_main(stb[0])
-    ring_a = np.vstack([tg.section_at_y(ya, -tw_a / 2, tw_a / 2, -(H2 - tf) - OV, (H2 - tf) + OV)])
+    ring_a = np.vstack([tg.section_at_y(ya, -tw_a / 2 + 0.0001, tw_a / 2 - 0.0001, -(H2 - tf) - OV,
+                                        (H2 - tf) + OV)])
     _t, _b, _t2, bu2 = cap_rings(op, stb, "up")
     _t, _b, _t2, bl2 = cap_rings(op, stb, "lo")
     tu = float(np.interp(sm_b, bu2[:, 0], bu2[:, 1])) + OV
     tl = float(np.interp(sm_b, bl2[:, 0], bl2[:, 1])) - OV
+    tw_b -= 0.0002
     ring_b = op.pt(stb, [sm_b - tw_b / 2, sm_b + tw_b / 2, sm_b + tw_b / 2, sm_b - tw_b / 2], [tl, tl, tu, tu])
     out["web"] = _loft([ring_a, ring_b])
     for k in [k for k in out if k.startswith("_")]:
@@ -763,6 +773,11 @@ def rear_poly2(op: OP, st) -> np.ndarray:
     s = np.linspace(srf, sr, N_FL)
     _P, u2, nu = op.inner(st, "up", s, extra=BOND)
     _P, l2, nl = op.inner(st, "lo", s, extra=BOND)
+    # web aft face exactly at s_rear (the normal offset of the skin inner face shifts the last node forward)
+    u2 = u2.copy()
+    l2 = l2.copy()
+    u2[-1] = (sr, float(np.interp(sr, u2[:, 0], u2[:, 1])))
+    l2[-1] = (sr, float(np.interp(sr, l2[:, 0], l2[:, 1])))
     ub = u2 + tf * nu
     lb = l2 + tf * nl
     tu_i = float(np.interp(sr - tw, ub[:, 0], ub[:, 1]))
@@ -1048,7 +1063,7 @@ def rib_mass(spec: dict, plate: G.Mesh, fls: list, land_area: float = 0.0) -> fl
 # =====================================================================================================================
 # root rib, tip rib, joint hardware
 # =====================================================================================================================
-FIT_T = 0.0038              # rear root fitting: rib flange thickness (M5 into 6.8 mm through-inserts: 6 mm engagement)
+FIT_T = 0.0038              # rear root fitting: rib flange thickness (M4 into 6.8 mm through-inserts: 6.2 mm engagement)
 FIT_X = (2.776, 2.897)      # rear root fitting: chordwise extent of the rib flange (box bay -> lug)
 FIT_WEB_Y1 = 0.765          # rear root fitting: web flange end (bonded to the rear-spar web root)
 LUG_SLOT = 0.001            # clearance round the lug plate in the root rib
@@ -1122,7 +1137,7 @@ def root_rib_mesh(op: OP, tg: Tongue, lug_poly_xz: Polygon) -> G.Mesh:
 
 
 def tip_rib_mesh(op: OP) -> G.Mesh:
-    """Tip rib (YK250-WG-178): flat rib_panel plate y 3.5331 .. 3.5399, full section; its outboard face carries the
+    """Tip rib (YK250-WG-182): flat rib_panel plate y 3.5331 .. 3.5399, full section; its outboard face carries the
     tip fairing and the LT-WING light (layout.systems.air_data_lights); T-flanges inboard."""
     ya, yb = TIP_RIB_Y1 - T_RIB, TIP_RIB_Y1
     reg = end_rib_region(op, op.stp(ya), op.stp(yb), "tip")
@@ -1217,13 +1232,13 @@ def lug_plan(op: OP) -> Polygon:
     xt = np.interp(ys, rs[:, 1], rs[:, 0]) + 0.0003 + 0.0032 + 0.004 + 0.001
     trim = Polygon(np.vstack([np.column_stack([xt, ys]), [[xt[-1], op.y_j - 0.0034], [2.5, op.y_j - 0.0034],
                                                            [2.5, 0.6]]]))
-    reg = reg.difference(trim)
+    reg = reg.difference(trim).intersection(sbox(0.0, 0.0, 10.0, y_end))     # square end on the fitting flange
     return SG.largest(reg.difference(Point(pr[0], pr[1]).buffer(0.5 * float(lug["bore"]) + 0.0000135, 48)))
 
 
 def fitting_mesh(op: OP) -> tuple[G.Mesh, list]:
     """Rear-spar root fitting with the lug (YK250-WG-152, machined 7075-T651): lug plate 8 mm on the rear-pin plane,
-    rib flange FIT_T on the root-rib outboard face (4 x M5 into through-thickness inserts of the root rib), web
+    rib flange FIT_T on the root-rib outboard face (4 x M4 in one row into through-thickness inserts of the root rib), web
     flange 4 mm bonded to the forward face of the rear-spar web root. Returns (mesh, [(bolt head point, axis)])."""
     rp = op.wj["rear_spar"]
     pz = float(rp["pin"]["position"][2])
@@ -1461,7 +1476,8 @@ def hinge_geo(op: OP, which: str, y: float) -> dict:
     half_clevis = 0.5 * HINGE_LUG_T + HINGE_GAP + HINGE_LUG_T
     band = 0.5 * base_w + 0.003
     wn = web_normal(op, st[0])
-    bolts = [(H + c_w * c + 0.5 * HINGE_BASE_T * c + k * 0.5 * spacing * a + n_mid * n, -wn) for k in (-1, 1)]
+    P_bc = op.pt(st, [sr + BOND + 0.5 * HINGE_BASE_T], [tH + n_mid])[0]        # base-plate centre (base_plate)
+    bolts = [(P_bc + k * 0.5 * spacing * a, -wn) for k in (-1, 1)]
     return {"H": H, "a": a, "c": c, "n": n, "c_w": c_w, "n_mid": n_mid, "r": r, "r_lug": r_lug, "d": d,
             "base_w": base_w, "base_h": base_h, "half_clevis": half_clevis, "band": band, "bolts": bolts,
             "bolt_d": bd, "st": st, "y": y}
@@ -1545,7 +1561,11 @@ def notch_cutter(g: dict, lo: float, hi: float) -> G.Mesh:
     from shapely import affinity
     br = clevis_profile(g).union(sbox(g["c_w"], g["n_mid"] - 0.5 * g["base_h"], g["c_w"] + 0.0065,
                                       g["n_mid"] + 0.5 * g["base_h"])).buffer(0.003)
-    shapes = [sbox(-0.08, -0.06, 0.0, 0.06), Point(0.0, 0.0).buffer(g["r_lug"] + 0.003, 48)]
+    rd = g["r_lug"] + 0.003
+    if rd > g["r"] - 0.002:          # disc would graze the skins (thin section): full-depth notch to the same depth
+        shapes = [sbox(-0.08, -0.06, rd, 0.06)]
+    else:
+        shapes = [sbox(-0.08, -0.06, 0.0, 0.06), Point(0.0, 0.0).buffer(rd, 48)]
     for dl in np.linspace(lo, hi, 17):
         # the surface frame rotates by +dl about a: in it the bracket appears rotated by -dl; (c, n) rotation sense
         # from e_c -> -e_n for +dl
@@ -1890,12 +1910,12 @@ def rod_mesh(dg: dict) -> G.Mesh:
 
 
 HORN_S = (0.012, 0.042)      # horn flange chord range aft of the hinge line (clear of the cove lip at full deflection)
-BLOCK_T = 0.008              # 7075 hard-point block potted in the surface core under the horn (M3 tapped)
+BLOCK_T = 0.008              # 7075 horn insert block potted in the surface core under the horn (M3 tapped)
 
 
 def horn_mesh(op: OP, dg: dict) -> dict:
     """7075 horn on the surface's lower face: L-flange (3 mm, follows the OML, 2 x M3 through the surface skin into a
-    7075 hard-point block potted in the core) and the 3 mm horn plate in the arm plane down to the rod-end hole at B.
+    7075 insert block potted in the core) and the 3 mm horn plate in the arm plane down to the rod-end hole at B.
     Returns {"horn", "block", "pocket", "bolts": [(head point, axis)], "rod_bolt": (point, axis)}."""
     B0, Hd, a, c, n = dg["B0"], dg["Hd"], dg["a"], dg["c"], dg["n"]
     a_p0 = a_case_end(dg) + 0.005                      # horn plate a-range (same plane as the arm plate)
@@ -2066,11 +2086,9 @@ def cover_screws(op: OP, hg: dict) -> list:
         s0, s1 = sf(0, 0.0)(e), sf(1, 0.0)(e)
         for f in (0.25, 0.75):
             s = s0 + f * (s1 - s0)
-            sg = op.sig_of_s(e, "lo", [s])
-            s_, t_, ns_, nt_ = op.at_sig(e, "lo", sg)
-            P = op.to3d(e, s_ - 0.002 * ns_, t_ - 0.002 * nt_)[0]
-            axis = op.vec3d(e, ns_, nt_)[0]
-            out.append((P, _unit(axis)))
+            tk = float(op.t_skin(e, "lo", [s])[0])
+            q, axis = surf_normal3d(op, "lo", e, s, tk + 1.5 * BOND + FRAME_T)   # normal of the nutplate face
+            out.append((q - 0.012 * axis, axis))
     return out
 
 
@@ -2154,7 +2172,7 @@ def cored_mass(spec: dict, m: G.Mesh, skin_t: float = CS_SKIN_T) -> float:
 N_WG = {"le": 150, "spar": 151, "fitting": 152, "up": 153, "lo": 154, "rear": 155, "bush": (156, 157),
         "pin": (158, 159), "rpin": 160, "root_rib": 161, "keeper": (162, 163), "nose_rib": 164, "box_rib": 173,
         "tip_rib": 182, "te": {"root": 183, "mid": 184, "tip": 185}, "tip_fairing": 186,
-        "frame": {"flap": 187, "aileron": 188}, "conduit": 189, "cover": {"aileron": 190, "flap": 191}}
+        "frame": {"flap": 187, "aileron": 188}, "conduit": 189, "cover": {"aileron": 190, "flap": 191}, "mast": 192}
 N_FC = {"surface": {"aileron": 200, "flap": 202}, "act": {"aileron": 204, "flap": 206},
         "arm": {"aileron": 208, "flap": 209}, "rod": {"aileron": 210, "flap": 211},
         "horn": {"aileron": 212, "flap": 213}, "cradle": {"aileron": 214, "flap": 215},
@@ -2240,7 +2258,8 @@ def build_starboard(spec: dict) -> dict:
     out["keeper"] = [keeper_mesh(op, tg, i) for i in (0, 1)]
     out["rpin"] = rear_pin_mesh(op)
     out["te"] = {k: te_closure(op, k) for k in ("root", "mid", "tip")}
-    out["tip_fairing"] = tip_fairing_mesh(op)
+    out["tip_fairing"] = tip_fairing_mesh(op, cutters=[light_pocket(op)])
+    out["mast"], out["mast_bolts"] = pitot_mast(op)
     out["conduit"] = conduit_mesh(op)
     # drives and hatches
     out["drive"], out["hatch"] = {}, {}
@@ -2256,14 +2275,16 @@ def build_starboard(spec: dict) -> dict:
                            "rod_bolt_B": hm["rod_bolt"]}
         out["hatch"][w] = {"hg": hgw, "frame": frame_mesh(op, hgw), "cover": cover,
                            "opening": opening_cutter(op, hgw), "screws": cover_screws(op, hgw)}
-    # control surfaces with hinge cut-outs, tongue slots and the horn hard-point pocket; hinge hardware
+    # control surfaces with hinge cut-outs, tongue slots and the horn insert-block pocket; hinge hardware
     out["surface"], out["clevis"], out["tongue"] = {}, {}, {}
     for w in ("flap", "aileron"):
         h = op.hinge(w)
-        cut = [out["drive"][w]["pocket"]]
+        cut = []
         for g in hg[w]:
             cut += [notch_cutter(g, h["lo"], h["hi"]), slot_cutter(op, w, g)]
-        out["surface"][w] = finish(largest_piece(finish(_diff(finish(surface_raw(op, w)), cut))))
+        sm = finish(largest_piece(finish(_diff(finish(surface_raw(op, w)), cut))))
+        # the horn insert-block pocket is a closed void under the skin (block potted before the skin is laid up)
+        out["surface"][w] = finish(_diff(sm, [out["drive"][w]["pocket"]]))
         out["clevis"][w] = [clevis_mesh(op, g) for g in hg[w]]
         out["tongue"][w] = [tongue_mesh_h(op, w, g) for g in hg[w]]
     out["skin"]["lo"] = finish(_diff(out["skin"]["lo"], [out["hatch"][w]["opening"] for w in out["hatch"]]))
@@ -2282,6 +2303,7 @@ def build_starboard(spec: dict) -> dict:
 
 def register(reg: Registry, spec: dict) -> None:
     if _w(N_WG["spar"]) in reg.parts:                     # registered already (guard)
+        reg.note("wing: register() second call ignored")
         return
     B = build_starboard(spec)
     op, tg = B["op"], B["tg"]
@@ -2332,7 +2354,7 @@ def register(reg: Registry, spec: dict) -> None:
         contacts=[up, lo, rtip, fit] + list(te.values()) + box)
     add(le, "outer wing leading-edge skin (D-nose), starboard", "Dış kanat hücum kenarı kaplaması (D-burun), sağ",
         GROUP_W, MAT_PW, P_PREG, B["skin"]["le"], thickness=T_SOLID, layup="wing_skin_primary",
-        mass=B["skin_mass"]["le"], parent=spar, contacts=[spar, up, lo, rroot, rtip, tipf] + nose,
+        mass=B["skin_mass"]["le"], parent=spar, contacts=[spar, up, lo, rroot, rtip] + nose,
         notes="sandwich 0.6/5/0.4 mm, 1 mm solid laminate over the cap and at the nose")
     add(up, "outer wing upper box skin, starboard", "Dış kanat üst kutu kaplaması, sağ", GROUP_W, MAT_PW, P_PREG,
         B["skin"]["up"], thickness=T_SOLID, layup="wing_box_skin_upper", mass=B["skin_mass"]["up"], parent=spar,
@@ -2352,7 +2374,7 @@ def register(reg: Registry, spec: dict) -> None:
     m_rr, mass_rr = B["root_rib"]
     add(rroot, "outer wing root rib, starboard", "Dış kanat kök kaburgası, sağ", GROUP_W, MAT_PW, P_PREG, m_rr,
         thickness=RIB_FL_T, layup="rib_panel", mass=mass_rr, parent=spar,
-        contacts=[spar, le, up, lo, rear, fit, te["root"]],
+        contacts=[spar, le, up, lo, fit, te["root"]],
         notes="rib_panel with 20-ply solid lands round the tongue, lug slot, CN-WING plug hole and fitting inserts; "
               "1.5 mm elastomer seal strip on the inboard face (consumable, not modelled)")
     m_tr, mass_tr = B["tip_rib"]
@@ -2384,8 +2406,8 @@ def register(reg: Registry, spec: dict) -> None:
             GROUP_W, MAT_PW, P_PREG, m, thickness=CS_SKIN_T, mass=cored_mass(spec, m), parent=rear,
             contacts=te_c[k], notes="ROHACELL 51 WF core, 3-ply PW skin")
     add(tipf, "wing tip fairing (GFRP), starboard", "Kanat ucu kaportası (CTP), sağ", GROUP_W, MAT_GF, P_PREG,
-        B["tip_fairing"], thickness=0.0010, parent=rtip, contacts=[rtip, le, up, lo],
-        notes="4 plies 7781; LT-WING position light on the tip-rib face inside (systems)")
+        B["tip_fairing"], thickness=0.0010, parent=rtip, contacts=[rtip, up, lo],
+        notes="4 plies 7781; pocket for the LT-WING light (layout box + 0.5 mm) on the tip-rib face; the light and its M5 screws are the systems module's")
     add(cond, "harness conduit (GFRP tube 14 x 1), starboard", "Kablo demeti borusu (CTP 14 x 1), sağ", GROUP_W,
         MAT_GF, P_PREG, B["conduit"], thickness=0.0010, parent=spar, contacts=[spar],
         notes="wing branch of H-WING from the CN-WING plug backshell: bonded to the main-spar web outboard of y 1.70, "
@@ -2427,7 +2449,7 @@ def register(reg: Registry, spec: dict) -> None:
             add(strap[w][i], f"{w} actuator clamp strap {i + 1}, starboard",
                 f"{h_tr[w]} eyleyici bağlama kelepçesi {i + 1}, sağ", GROUP_C, MAT_7075, P_CNC, D["straps"][i],
                 thickness=STRAP_T, parent=cradle[w], explode=EXPLODE["drive"], contacts=[cradle[w], act[w]])
-        add(block[w], f"{w} horn hard-point block, starboard", f"{h_tr[w]} boynuz takviye bloğu, sağ", GROUP_C,
+        add(block[w], f"{w} horn insert block, starboard", f"{h_tr[w]} boynuz takviye bloğu, sağ", GROUP_C,
             MAT_7075, P_CNC, D["block"], thickness=BLOCK_T, parent=surf[w], joint=f"{w}_R", explode=EXPLODE["surface"],
             contacts=[surf[w]], notes="potted in the core under the skin before closing the surface mould")
         add(act[w], f"{w} actuator {sd['model']}, starboard", f"{h_tr[w]} eyleyicisi {sd['model']}, sağ", GROUP_C,
@@ -2482,7 +2504,7 @@ def register(reg: Registry, spec: dict) -> None:
             J.bolt(reg, f"{horn[w]}-B{k + 1}", 3, p + t0 * ax, ax, [(horn[w], t1 - t0 + BOND),
                                                                      (surf[w], CS_SKIN_T + BOND)],
                    head="ISO 7380", nut="tapped", tapped_part=block[w], tapped_depth=BLOCK_T - 0.001, owner=horn[w],
-                   step=STEP_RIG, notes="horn through the surface skin into the potted hard-point block")
+                   step=STEP_RIG, notes="horn through the surface skin into the potted insert block")
         a = dg["a"]
         a_p0 = a_case_end(dg) + 0.005
         pA = dg["A0"] + a_p0 * a
@@ -2500,7 +2522,7 @@ def register(reg: Registry, spec: dict) -> None:
             J.bolt_through(reg, f"{cover[w]}-B{k + 1}", 3, p, ax, [cover[w], frame[w]], head="ISO 7380",
                            nut="nutplate", owner=cover[w], step=STEP, notes="hatch cover screw")
     for k, (p, ax) in enumerate(B["fitting_bolts"]):
-        J.bolt(reg, f"{fit}-B{k + 1}", 5, p, ax, [(fit, FIT_T)], nut="insert", insert_part=rroot, insert_depth=T_RIB,
+        J.bolt(reg, f"{fit}-B{k + 1}", 4, p, ax, [(fit, FIT_T)], nut="insert", insert_part=rroot, insert_depth=T_RIB,
                owner=fit, step=STEP, notes="through-thickness potted inserts in the root rib")
     for p0, p1, r in B["drains"]:
         reg.parts[lo].add_hole(p0, p1, r)
@@ -2536,6 +2558,22 @@ def register(reg: Registry, spec: dict) -> None:
         jl = p.joint[:-2] + "_L" if p.joint else None
         reg.add(mirror_part(p, side_map[pid], joint=jl, id_map=side_map))
 
+    # ------------------------------------------------------------------ port pitot mast (AD-PITOT-WING, wing module)
+    mast, le_l = _w(N_WG["mast"], "L"), _w(N_WG["le"], "L")
+    reg.add(Part(id=mast, name="pitot mast (AD-PITOT-WING), port", name_tr="Pito direği (AD-PITOT-WING), sol",
+                 group=GROUP_W, material=MAT_7075, process=P_CNC, mesh_fn=(lambda m=B["mast"].mirrored_y(): m),
+                 thickness=MAST_BASE_T, side="L", parent=le_l, step=STEP, explode=(0.0, -0.45, -0.08),
+                 contacts=(le_l,), notes="streamlined 7075 mast, clamp ring for the HASA probe (systems YK250-SY-789); "
+                                         "probe cable through the mast is an open item"))
+    for k, (p, ax) in enumerate(B["mast_bolts"]):
+        J.bolt_through(reg, f"{mast}-B{k + 1}", 3, M @ p, M @ ax, [mast], head="ISO 7380", nut="insert",
+                       insert_part=le_l, insert_depth=0.0055, owner=mast, step=STEP,
+                       notes="pitot mast into through-thickness inserts of the LE skin")
+    for pid in (mast, le_l):
+        p = reg.parts[pid]
+        if p.holes:
+            p._base, p.holes, p._mesh, p._n_holes = finish(p.mesh), [], None, -1
+
     # ------------------------------------------------------------------ joint pins to the centre section (per side)
     for s in ("R", "L") if CH001 in reg.parts else ():
         for i in (0, 1):
@@ -2568,3 +2606,60 @@ def register(reg: Registry, spec: dict) -> None:
     reg.note(f"wing: {len(added)} starboard parts mirrored to port; drive margins (eta) "
              + ", ".join(f"{w} {B['drive'][w]['dg']['margins'][0] * 1000:.1f}/{B['drive'][w]['dg']['margins'][1] * 1000:.1f} mm"
                          for w in ("flap", "aileron")))
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# port pitot mast (layout.systems.air_data_lights AD-PITOT-WING: "mast on the port outer-panel lower skin at 15 % chord
+# (wing module)") and the LT-WING light pocket of the tip fairing
+# ---------------------------------------------------------------------------------------------------------------------
+MAST_CHORD, MAST_T, MAST_BASE_T = 0.022, 0.006, 0.002
+
+
+def _sys_item(op: OP, key: str) -> dict:
+    return next(i for i in op.L["systems"]["air_data_lights"] if i["id"] == key)
+
+
+def light_pocket(op: OP) -> G.Mesh:
+    """LT-WING box (layout, starboard) + 0.5 mm: the light sits in the tip fairing on the tip-rib face."""
+    b = np.asarray(_sys_item(op, "LT-WING")["box"], float)
+    lo, hi = b[0] - 0.0005, b[1] + 0.0005
+    lo[1] = TIP_RIB_Y1 - 0.0005                         # open to the tip-rib face
+    return G.box(hi - lo, 0.5 * (lo + hi))
+
+
+def pitot_mast(op: OP) -> tuple[G.Mesh, list]:
+    """Machined 7075 streamlined mast (starboard mirror image of the port part): base flange bonded on the lower OML at
+    15 % chord with 2 x M3 into through-thickness inserts of the leading-edge skin, elliptic strut 22 x 6 mm, clamp
+    ring round the AD-PITOT-WING probe (layout p0 -> p1, d 10). Returns (mesh, [(head point, axis)])."""
+    it = _sys_item(op, "AD-PITOT-WING")
+    M = np.diag([1.0, -1.0, 1.0])
+    p0, p1 = M @ np.asarray(it["p0"], float), M @ np.asarray(it["p1"], float)
+    rp = 0.5 * float(it["diameter"])
+    ax = _unit(p1 - p0)
+    xm = p1[0] - 0.5 * MAST_CHORD - 0.002               # mast just forward of the probe's aft end
+    c = p0 + (xm - p0[0]) / ax[0] * ax
+    ring = G.tube(rp + 0.0025, rp + BOND, c - 0.5 * MAST_CHORD * ax, c + 0.5 * MAST_CHORD * ax, n=48)
+    y = float(c[1])
+    e = eta_of_point(op, np.array([xm, y, c[2] + 0.03]))
+    x0, x1 = xm - 0.025, xm + 0.025
+
+    def sx(x):
+        return lambda ee: op.s_of_x(ee, x)
+    base = lower_slab(op, y - 0.012, y + 0.012, sx(x0), sx(x1), -(BOND + MAST_BASE_T), -BOND, n_s=16, step=0.008)
+    zs = []
+    for x in np.linspace(xm - 0.5 * MAST_CHORD, xm + 0.5 * MAST_CHORD, 9):
+        s = op.s_of_x(e, x)
+        zs.append(float(op.to3d(e, [s], op.t_oml(e, "lo", [s]))[0][2]))
+    z_top = min(zs) - BOND - 0.0012
+    z_bot = c[2] + rp + 0.001
+    sec = Point(0.0, 0.0).buffer(1.0, 48)
+    from shapely import affinity
+    sec = affinity.scale(sec, 0.5 * MAST_CHORD, 0.5 * MAST_T)
+    strut = G.extrude(sec, z_top - z_bot, origin=(xm, y, z_bot), u=(1.0, 0.0, 0.0), v=(0.0, 1.0, 0.0))
+    m = finish(_union([ring, strut, base]))
+    bolts = []
+    for x in (x0 + 0.008, x1 - 0.008):
+        s = op.s_of_x(e, x)
+        q, nrm = surf_normal3d(op, "lo", e, s, -(BOND + MAST_BASE_T))
+        bolts.append((q - 0.002 * nrm, nrm))
+    return m, bolts

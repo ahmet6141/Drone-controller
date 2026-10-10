@@ -362,6 +362,8 @@ def render_previews(spec: dict, out_dir: Path, res=(1600, 1000)) -> list[str]:
     files.append(str(p))
     set_controls(explode=0.0)
     for st in (spec.get("display", {}) or {}).get("preview_states", []) or []:
+        if not isinstance(st, dict):            # descriptive entry only (no {name, view, set}): nothing to pose
+            continue
         saved = {k: root[k] for k in st.get("set", {})}
         set_controls(**st.get("set", {}))
         d, up, ortho = VIEWS[st.get("view", "iso")]

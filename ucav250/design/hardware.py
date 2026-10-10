@@ -6,8 +6,10 @@ Geometry contract (see ARCHITECTURE.md): the producer that created a Fastener mu
 stack thickness) so the nut/nutplate lands on the far face. Heads and nuts then only TOUCH the outer faces; the shank
 passes through the holes; nothing overlaps.
 
-Each fastener becomes one Part ``YK250-HW-<fastener id>`` in group "hardware" (material ``fastener_steel`` or
-``fastener_ti`` if the designation says Ti), parented to the first joined part, at the fastener's assembly step.
+Each fastener becomes one Part ``YK250-HW-<fastener id>`` in group "hardware" (material ``fastener_steel`` /
+``fastener_stainless`` / ``fastener_ti`` when spec.materials defines them, else the spec material of the same alloy
+family so that the mass has a density: ``steel_4130_n``, ``ss_304_annealed``, ``ti_6al_4v_annealed_sheet``), parented
+to the first joined part, at the fastener's assembly step.
 """
 from __future__ import annotations
 
@@ -117,17 +119,29 @@ def fastener_mesh(f: Fastener) -> Mesh:
     return _bolt_mesh(f)
 
 
+# fastener material -> spec.materials key with a density (first present): dedicated fastener entries if the spec has
+# them, else the spec material of the same alloy family (12.9 alloy steel ~ 4130 N density, A2/A4 ~ 304, Ti-6Al-4V)
+_MAT_CANDIDATES = {"ti": ("fastener_ti", "ti_6al_4v_annealed_sheet"),
+                   "stainless": ("fastener_stainless", "ss_304_annealed"),
+                   "steel": ("fastener_steel", "steel_4130_n")}
+
+
+def fastener_material(designation: str, mats: dict) -> str:
+    u = designation.upper()
+    fam = "ti" if "TI" in u else ("stainless" if ("A2-" in u or "A4-" in u) else "steel")
+    cands = _MAT_CANDIDATES[fam]
+    return next((m for m in cands if m in mats), cands[0])
+
+
 def register(reg: Registry, spec: dict) -> None:
     mats = spec.get("materials", {}) or {}
-    mat_steel = "fastener_steel" if "fastener_steel" in mats else "steel"
-    mat_ti = "fastener_ti" if "fastener_ti" in mats else mat_steel
     for f in list(reg.fasteners()):
         pid = f"YK250-HW-{f.id}"
         if pid in reg.parts:
             raise ValueError(f"duplicate fastener id {f.id}")
         owner = reg.parts[f.joins[0]] if f.joins and f.joins[0] in reg.parts else None
         reg.add(Part(id=pid, name=f.spec, name_tr=f.spec, group="hardware",
-                     material=mat_ti if "TI" in f.spec.upper() else mat_steel, process="purchased",
+                     material=fastener_material(f.spec, mats), process="purchased",
                      mesh_fn=(lambda f=f: fastener_mesh(f)), thickness=None, purchased=True,
                      vendor=f.spec + (f" + {f.nut}" if f.nut else ""), side=owner.side if owner else "C",
                      joint=owner.joint if owner else None, parent=f.joins[0] if f.joins else None, step=f.step,

@@ -1203,7 +1203,7 @@ def chine_aft_splice_points(C: Ctx):
     return out
 
 
-CHINE_AFT_SPLICE_DZ = 0.0003     # 10 mm (2.5 D) above the splice leg's skin-line edge
+CHINE_AFT_SPLICE_DZ = 0.00015    # 10.1 mm (2.5 D) to the splice leg's skin-line edge and to the SOB rib's upper edge
 
 
 def box_member(C: Ctx, lo, hi, inset=MEM_IN, cut=()) -> G.Mesh:
@@ -1624,8 +1624,9 @@ def boxes_union(boxes, ov=OV) -> G.Mesh:
 
 def build_trunnion(C: Ctx) -> G.Mesh:
     """Main-gear trunnion fitting (7075-T651, starboard): beam flange (6.5 mm over the proud insert land), two bearing
-    lugs 26 mm with 20 H7 bores on the trunnion axis, top plate on the well roof with head pockets for the 4 roof bolts,
-    clear of the retraction-EMA allocation envelope (ACT-MLG-EMA)."""
+    lugs with 26 mm bushing bosses (20 H7 bores on the trunnion axis) on 12 mm webs (layout lug check t_m), top plate
+    20 mm on the well roof (pocketed to 5 mm between the lugs) extended fore and aft for the 4 roof bolts, clear of the
+    retraction-EMA allocation envelope (ACT-MLG-EMA)."""
     f = C.fit["F-TRUNNION"]
     yb = float(C.mem["M-GEARBEAM"]["box"][0][1]) - BEAM_LAND_PROUD          # land face
     boxes = []
@@ -1650,9 +1651,28 @@ def build_trunnion(C: Ctx) -> G.Mesh:
     ax = np.asarray(ema["axis"], float)
     cuts.append(bore(c - (ema["half_length"] + 0.0005) * ax, c + (ema["half_length"] + 0.0005) * ax,
                      ema["radius"] + 0.0005))
+    # lightening: each lug keeps a web of the checked lug thickness (layout lug t_m) on its yoke side and the full
+    # 26 mm bushing boss (radius = lug end distance e_m); the top plate between the lugs is pocketed from below
+    t_web, r_boss = float(f["lug"]["t_m"]), float(f["lug"]["e_m"])
+    for b in f["bearings"]:
+        xc = float(b["x"])
+        if xc < px:                                   # forward lug: yoke (inner) face aft
+            xa_, xb_ = xc - TRUN_LUG_HALF - 0.001, xc + TRUN_LUG_HALF - t_web
+        else:
+            xa_, xb_ = xc - TRUN_LUG_HALF + t_web, xc + TRUN_LUG_HALF + 0.001
+        pocket = box3((xa_, TRUN_LUG_Y[0] - 0.001, -0.16), (xb_, TRUN_LUG_Y[1], TRUN_PLATE_Z0))
+        cuts.append(diff(pocket, [bore((xa_ - 0.002, py, pz), (xb_ + 0.002, py, pz), r_boss)]))
+    cuts.append(box3((TRUN_LUG_X[0] + 0.004, TRUN_LUG_Y[0] + 0.004, TRUN_PLATE_Z0 - 0.001),
+                     (TRUN_LUG_X[1] - 0.004, TRUN_PLATE_Y1 - 0.004, TRUN_PLATE_Z1 - TRUN_PLATE_SKIN)))
     return diff(m, cuts)
 
 
+TRUN_LUG_HALF = 0.013           # bushing boss / lug envelope half length in x (layout 26 mm)
+TRUN_LUG_X = (2.9399, 3.0119)   # inner (yoke-side) faces of the two lugs
+TRUN_LUG_Y = (0.326, 0.375)    # lug inboard / outboard faces (the 2 mm connector to the flange stays solid)
+TRUN_PLATE_Y1 = 0.377           # top plate between the lugs reaches the flange
+TRUN_PLATE_Z0, TRUN_PLATE_Z1 = -0.0868, -0.0668     # top plate (well-roof face at z1)
+TRUN_PLATE_SKIN = 0.005         # top plate between the lugs pocketed to 5 mm
 TRUN_ROOF_Y = (0.326, 0.355)    # roof bolts B6-B9: rows 29 mm apart (sealed dome nutplates 28 mm long; layout 22 mm)
 TRUN_BEAM_Z = {"B1": -0.092, "B4": -0.092, "B5": -0.1125}   # beam bolts below the roof plate band (layout -0.085),
 # B5 15.5 mm above the beam's skin-line edge; B4 5 mm aft so that B4-B5 are 21 mm apart (insert bores 11 mm:
@@ -1828,7 +1848,30 @@ def build_riser(C: Ctx, fid: str) -> G.Mesh:
         ms[0] = diff(box3(lo, (hi[0] + k * float(hi[1]) + 0.001, hi[1], hi[2])), [_aft_of(C, "FS-RS")])
     m = union(ms)
     px, py, pz = f["point"]
-    return diff(m, [bore((px, -0.03, pz + RISER_PIN_DZ), (px, 0.03, pz + RISER_PIN_DZ), 0.004 + 0.00002)])
+    cuts = [bore((px, -0.03, pz + RISER_PIN_DZ), (px, 0.03, pz + RISER_PIN_DZ), 0.004 + 0.00002)]
+    if fid == "F-RISER-AFT":                     # spot faces normal to the frame bolts (axis normal to the chevron)
+        x_f = float(B[0][0][0])
+        for c, a in riser_aft_frame_bolts(C):
+            ph = c + (x_f - c[0]) / a[0] * a
+            cuts.append(G.cylinder(RISER_SPOTFACE_R, ph - 0.003 * a, ph, n=32))
+    return diff(m, cuts)
+
+
+RISER_SPOTFACE_R = 0.0040       # ISO 4762 M4 head d 7 mm + 0.5 mm
+
+
+def riser_aft_frame_bolts(C: Ctx):
+    """(point, unit axis) of the aft bridle fitting's frame bolts (B5 / B6): normal to the chevron forward face of FS-RS
+    (the kink piece is flat only within +-1.5 mm of the centre line)."""
+    k = math.tan(math.radians(float(C.st["FS-RS"]["sweep_deg"])))
+    out = []
+    for b in C.fit["F-RISER-AFT"]["bolts"]:
+        if b["group"] == "spine floor":
+            continue
+        y = math.copysign(RISER_FRAME_BOLT[0], b["point"][1])
+        a = np.array([1.0, -k * math.copysign(1.0, y), 0.0])
+        out.append((np.array([float(b["point"][0]), y, RISER_FRAME_BOLT[1]]), a / np.linalg.norm(a)))
+    return out
 
 
 RISER_PIN_DZ = 0.0            # shackle pin on the layout point (e = 15.5 mm to the ear top)
@@ -2392,7 +2435,10 @@ def fwdbay_tray_points(C: Ctx):
     xa = float(C.st["FS0300"]["x"]) + 0.5 * float(C.st["FS0300"]["t"])
     xb = float(C.st["FS0600"]["x"]) - 0.5 * float(C.st["FS0600"]["t"])
     zb = z0 - 0.5 * (TRAY_FL + TRAY_T)
-    return [(xa + TRAY_T, 0.0, zb)], [(xb - TRAY_T, s * 0.058, zb) for s in (1, -1)]
+    return [(xa + TRAY_T, 0.0, zb + FWD_TRAY_BOLT_DZ)], [(xb - TRAY_T, s * 0.058, zb) for s in (1, -1)]
+
+
+FWD_TRAY_BOLT_DZ = 0.001    # FS0300 insert 1 mm higher: 2.5 D to the V-shaped lower edge of the frame web
 
 
 def build_mission_tray(C: Ctx) -> G.Mesh:
@@ -3416,11 +3462,9 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
                        grade=G129, step=14, label=f"{fid} {b['id']}")
             else:
                 y = math.copysign(RISER_FRAME_BOLT[0], y)
+                ax = (-1.0, 0.0, 0.0)
                 if fid.endswith("AFT"):                     # normal to the chevron forward face of FS-RS
-                    k_rs = math.tan(math.radians(float(st["FS-RS"]["sweep_deg"])))
-                    ax = (1.0, -k_rs * math.copysign(1.0, y), 0.0)
-                else:
-                    ax = (-1.0, 0.0, 0.0)
+                    ax = next(a for c_, a in riser_aft_frame_bolts(C) if c_[1] * y > 0)
                 F.bolt(4, (x, y, RISER_FRAME_BOLT[1]), ax, [pid(num), frame], grade=G129, step=14,
                        label=f"{fid} {b['id']}", notes="M4 (layout M5): heads clear of the base strips")
 

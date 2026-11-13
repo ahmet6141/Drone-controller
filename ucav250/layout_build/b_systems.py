@@ -439,8 +439,8 @@ ANT_XC = 0.42                         # chord fraction of the fin-tip dipoles on
 LT_TAIL_XC = 0.40                     # chord fraction of the tail light centre on the fin tip face (IR-06): its aft
 #                                       screw keeps 2.5 D in the mounting block (section thins aft of 45 % chord)
 LT_SEAT_GAP = 0.0003                  # light base above the cap tip face (the loft end plane leans ~0.1 mm on w)
-Y_FUELB = 0.0146                      # H-FUEL in the spine channel: midway between the bridle aft leg and the
-#                                       starboard wall, room for the floor grommet (bore r 4.2 + 2 mm rim)
+Y_FUELB = 0.0165                      # H-FUEL in the spine channel: 5 mm corridor to the bridle aft leg (C04), the
+#                                       floor grommet's flanges trimmed flat at the starboard wall (systems)
 FIN_XC_BOX = 0.27                     # H-FIN chord line in the fin box between the front spar and the rudder actuator
 
 
@@ -456,7 +456,7 @@ def fin_branch() -> dict:
     e_r = 0.26
     p1 = surf_point(F, e_r, 0.46)
     p_a = np.array([3.575, 0.128, 0.275])           # under the dorsal longeron M-DORSAL (y 0.15, z 0.30 under the fin
-    p_in = np.array([3.640, 0.172, 0.275])          # root), across it, then up into the fin root aft of its end (x 3.627)
+    p_in = np.array([3.640, 0.169, 0.275])          # root), across it, then up into the fin root aft of its end (x 3.627)
     # up the fin box on FIN_XC_BOX between the front-spar web and the rudder actuator (eta 0.42-0.55), then to the
     # antenna chord line above the servo rib, ending 6.5 mm under the tip rib (jack + 4 mm jam nut, coax plug)
     pb = surf_point(F, 0.40, FIN_XC_BOX)
@@ -775,7 +775,7 @@ def harness() -> dict:
          "penetrations": [{"member": "M-SPINE", "point": r3([1.930, Y_FUELB, 0.163]),
                            "kind": "sealed split grommet in the spine-channel floor (mission bay side)"}],
          "text": "breakout of H-COAX in the mission bay -> up through the floor of the dorsal spine channel M-SPINE -> "
-                 "along its starboard wall (y 0.0146, midway between the parachute bridle aft leg (|y| 0.008) and the wall (0.0212), under the fuel-bay "
+                 "along its starboard wall (y 0.0165, 5 mm outboard of the parachute bridle aft leg, under the fuel-bay "
                  "panels' inboard flange) over the forward and saddle cells -> wall connectors of the probe flying leads "
                  "at x 2.33 / 2.64; the bundle stays in the sealed trough, outside the vapour-tight bays"},
         {"id": "H-FUEL-A", "part": "YK250-SY-778", "name": "fuel level probe branch (aft cell)", "diameter": 0.006,

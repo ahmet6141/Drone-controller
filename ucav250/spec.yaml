@@ -10587,14 +10587,14 @@ layout:
       part: YK250-SY-791
       name: tail position/strobe light (white, aft-facing)
       name_tr: kuyruk seyir ışığı
-      box: [[4.0516, 0.4322, 1.0367], [4.1516, 0.4851, 1.0814]]
+      box: [[4.026, 0.4323, 1.037], [4.126, 0.4852, 1.0817]]
       frame:
-        center: [4.1016, 0.4586, 1.059]
+        center: [4.076, 0.4588, 1.0593]
         axes: [[1.0, 0.0, 0.0], [0.0, -0.92718, 0.374616], [0.0, 0.374616, 0.92718]]
         half: [0.05, 0.0225, 0.015]
         text: 'light case on the tip face: axes = chord, thickness normal, span (half sizes)'
-      mount: tip face of the starboard fin-tip cap (GFRP), aft part, 2 x M5 into potted inserts of the bonded GFRP mounting
-        block inside the cap (tail module, integration round IR-06)
+      mount: tip face of the starboard fin-tip cap (GFRP), mid chord, 2 x M4 (as the wing-tip units) into potted inserts
+        of the bonded GFRP mounting block inside the cap (tail module, integration round IR-06)
       source: components.yaml aveoflash_lp_lsa
     actuators:
     - id: ACT-AILERON
@@ -10789,26 +10789,27 @@ layout:
         diameter: 0.008
         mirror: true
         in_tail: true
-        path: [[3.520022, 0.12003, 0.301393], [3.522153, 0.123014, 0.310589], [3.575, 0.128, 0.275], [3.6, 0.172, 0.275],
-          [3.6218, 0.1724, 0.3507], [3.993, 0.3992, 0.9119]]
-        text: fin root (end of H-TAIL) -> up the fin box on the chord line of the tip dipole between the spars, through
-          bores (grommets) in the root, box and servo ribs -> TNC bulkhead jack in the tip rib (dipole ANT-BKP / ANT-C2B)
-          and, starboard, the tail light LT-TAIL lead through the tip rib
+        path: [[3.520022, 0.12003, 0.301393], [3.522153, 0.123014, 0.310589], [3.575, 0.128, 0.275], [3.64, 0.172, 0.275],
+          [3.6441, 0.1724, 0.3507], [3.6326, 0.2249, 0.4805], [3.7538, 0.2923, 0.6474], [3.8671, 0.3223, 0.7215], [3.9915,
+            0.3983, 0.9096]]
+        text: fin root (end of H-TAIL) -> up the fin box between the front spar and the rudder actuator, then on the chord
+          line of the tip dipole between the spars, through bores (grommets) in the root, box and servo ribs -> TNC bulkhead
+          jack in the tip rib (dipole ANT-BKP / ANT-C2B) and, starboard, the tail light LT-TAIL lead through the tip rib
       - id: H-FUEL
         part: YK250-SY-777
         name: fuel level probe branch (forward / saddle cells)
         diameter: 0.006
-        path: [[1.8548, 0.2052, 0.0102], [1.857, 0.2026, 0.0119], [1.88, 0.09, 0.11], [1.93, 0.0165, 0.14], [1.93, 0.0165,
-            0.177], [2.775, 0.0165, 0.177]]
+        path: [[1.8548, 0.2052, 0.0102], [1.857, 0.2026, 0.0119], [1.88, 0.09, 0.11], [1.93, 0.0146, 0.14], [1.93, 0.0146,
+            0.177], [2.775, 0.0146, 0.177]]
         supports: [M-SPINE]
         penetrations:
         - member: M-SPINE
-          point: [1.93, 0.0165, 0.163]
+          point: [1.93, 0.0146, 0.163]
           kind: sealed split grommet in the spine-channel floor (mission bay side)
         text: breakout of H-COAX in the mission bay -> up through the floor of the dorsal spine channel M-SPINE -> along
-          its starboard wall (y 0.0165, 5 mm outboard of the parachute bridle aft leg, under the fuel-bay panels' inboard
-          flange) over the forward and saddle cells -> wall connectors of the probe flying leads at x 2.33 / 2.64; the bundle
-          stays in the sealed trough, outside the vapour-tight bays
+          its starboard wall (y 0.0146, midway between the parachute bridle aft leg (|y| 0.008) and the wall (0.0212), under
+          the fuel-bay panels' inboard flange) over the forward and saddle cells -> wall connectors of the probe flying
+          leads at x 2.33 / 2.64; the bundle stays in the sealed trough, outside the vapour-tight bays
       - id: H-FUEL-A
         part: YK250-SY-778
         name: fuel level probe branch (aft cell)
@@ -11270,48 +11271,48 @@ layout:
       position_sizing_phase: [1.8253, 0.0, -0.05]
     wiring_harness_connectors_coax:
       mode: absolute
-      position: [2.3291, -0.0156, 0.0298]
+      position: [2.33, -0.0156, 0.0306]
       basis: cables 70 % (estimate) by trunk length x diameter^2 (layout.systems.harness) + outer-panel harnesses; connectors,
         backshells and coax terminations 30 % (estimate) equally over the connection points of the layout (equipment, actuators,
         antennas, lights, gear EMAs)
       components:
       - what: H-MAIN
-        fraction: 0.2198
+        fraction: 0.2194
         at: [2.1988, -0.1764, -0.0419]
       - what: H-COAX
-        fraction: 0.1335
+        fraction: 0.1333
         at: [2.1782, 0.185, -0.0524]
       - what: H-WING (x2)
-        fraction: 0.0579
+        fraction: 0.0578
         at: [2.5432, 0.0, -0.0565]
       - what: H-TAIL (x2)
-        fraction: 0.0371
+        fraction: 0.037
         at: [3.4169, 0.0, 0.1615]
       - what: H-ENGINE
-        fraction: 0.0343
+        fraction: 0.0342
         at: [3.4895, -0.0778, -0.007]
       - what: H-NOSE
-        fraction: 0.0155
+        fraction: 0.0154
         at: [0.5362, 0.0568, 0.0286]
       - what: H-FIN (x2)
-        fraction: 0.0236
-        at: [3.757, 0.0, 0.5569]
+        fraction: 0.0248
+        at: [3.7381, 0.0, 0.5579]
       - what: H-FUEL
         fraction: 0.0082
-        at: [2.2352, 0.0375, 0.156]
+        at: [2.2348, 0.036, 0.156]
       - what: H-FUEL-A
         fraction: 0.0014
         at: [3.1703, -0.0686, 0.0903]
       - what: outer-panel harnesses (x2, to the tips)
-        fraction: 0.1687
+        fraction: 0.1684
         at: [2.8707, 0.0, 0.076]
       - what: connectors at 53 connection points
         fraction: 0.3
-        at: [1.8571, 0.0, 0.0524]
+        at: [1.8566, 0.0, 0.0524]
       position_sizing_phase: [1.9, 0.0, 0.0]
     flight_termination_lights:
       mode: absolute
-      position: [2.2976, 0.0954, 0.2491]
+      position: [2.2923, 0.0954, 0.2491]
       basis: FTS 0.15 kg + 3 x AveoFlash 0.083 kg at their installed places
       components:
       - what: FTS unit (forward bay)
@@ -11322,7 +11323,7 @@ layout:
         at: [2.9748, 0.0, 0.155]
       - what: tail light (fin tip)
         fraction: 0.208
-        at: [4.1016, 0.4587, 1.0591]
+        at: [4.076, 0.4587, 1.0594]
       position_sizing_phase: [1.6836, 0.0, 0.02]
     keel_beams_longerons:
       mode: absolute

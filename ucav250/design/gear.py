@@ -1305,8 +1305,11 @@ class NoseDoors:
             if xb_ - xa_ < 1e-4:
                 continue
             nn = max(2, int((xb_ - xa_) / 0.03) + 2)
-            # neighbouring cutters overlap by 0.6 mm (obst is evaluated per x): no uncut sliver at the segment ends
-            cuts.append(relief_cutter(np.linspace(xa_ - 0.0003, xb_ + 0.0003, nn), obst, self.O, self.a, lo_, hi_))
+            # each cutter runs 0.3 mm past its segment ends with its end sections (neighbouring cutters overlap): no
+            # uncut sliver of the door at the segment boundaries (cove ends)
+            xs_ = np.r_[xa_ - 0.0003, np.linspace(xa_ + 1e-5, xb_ - 1e-5, nn), xb_ + 0.0003]
+            cuts.append(relief_cutter(xs_, lambda x, a_=xa_, b_=xb_: obst(min(max(x, a_ + 1e-5), b_ - 1e-5)), self.O,
+                                      self.a, lo_, hi_))
         for xa, xb in self.blocks:
             pa = self.on_axis(xa)
             z_b = float(min(pa[2], self.on_axis(xb)[2])) - 0.0015

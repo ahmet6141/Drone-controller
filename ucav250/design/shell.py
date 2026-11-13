@@ -1037,13 +1037,20 @@ class Fix:
         composites, 2.0 D in metals), so that no committed fastener fails it (e.g. SH-370-B3/B4 next to the spine
         notch of the FS1810 cap)."""
         from ..analysis.checks import COMPOSITE_EDGE, METAL_EDGE, _edge_distance_mesh, _insert_bore_radius
+        r_c = 0.5 * FC.clearance(int(round(f.d * 1000)))
         for pid in f.joins:
             if pid not in self.reg.parts:
                 continue
             p = self.reg.parts[pid]
             lo, hi = p.mesh.bounds()
-            ed, pierced = _edge_distance_mesh(f, self.man(pid), float(np.linalg.norm(hi - lo)) + 0.01,
-                                              r_hole=_insert_bore_radius(f, pid))
+            # measured with the candidate's own hole cut (as committed): without it an edge closer than 1.6 hole
+            # radii would be taken for the hole wall by the ray test (SH-370-B3/B4 at the FS1810 cap spine notch)
+            r_i = _insert_bore_radius(f, pid)
+            a_ = np.asarray(f.axis, float)
+            q_ = np.asarray(f.position, float)
+            hole = G.cylinder(max(r_c, r_i or 0.0), q_ - 0.05 * a_, q_ + 0.10 * a_, n=24).to_manifold()
+            ed, pierced = _edge_distance_mesh(f, self.man(pid) - hole, float(np.linalg.norm(hi - lo)) + 0.01,
+                                              r_hole=r_i)
             k = COMPOSITE_EDGE if self._kind(p) == "composite" else METAL_EDGE
             if pierced and ed < k * f.d - 1e-6:
                 return False

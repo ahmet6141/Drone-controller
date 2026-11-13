@@ -1215,7 +1215,8 @@ class Systems:
                 self.link(pid, b)
                 self.link(b, pid)
 
-    def ring_grommet(self, pid, name, name_tr, member_part, point, axis, t_wall, bore_r, bundles, rim=0.0035):
+    def ring_grommet(self, pid, name, name_tr, member_part, point, axis, t_wall, bore_r, bundles, rim=0.0035,
+                     trim=()):
         """Split ring grommet in a round bore of a panel (panel from ``point`` to point + t_wall * axis): plug 0.2 mm
         inside the bore, 1.5 mm flanges 3.5 mm beyond it on both faces, bundle holes."""
         a = G.unit(axis)
@@ -1225,7 +1226,7 @@ class Systems:
             g = union([G.cylinder(bore_r - GROM_CLR, p - (TOUCH + GROM_FL) * a, p + (t_wall + TOUCH + GROM_FL) * a, n=40),
                        G.cylinder(bore_r + rim, p - (TOUCH + GROM_FL) * a, p - TOUCH * a, n=40),
                        G.cylinder(bore_r + rim, p + (t_wall + TOUCH) * a, p + (t_wall + TOUCH + GROM_FL) * a, n=40)])
-            return finish(diff(g, [self.bundle_env(t_, s_) for t_, s_ in bundles]))
+            return finish(diff(g, [self.bundle_env(t_, s_) for t_, s_ in bundles] + list(trim)))
         bids = [self.trunk_ids[t_][0] if s_ > 0 else self.trunk_ids[t_][-1] for t_, s_ in bundles]
         self.add(pid, name, name_tr, P_BUY, P_BUY, mesh, purchased=True,
                  vendor="moulded split silicone grommet (VMQ 60 Shore A), sealed with polysulphide", mass_kg=0.0,
@@ -1272,12 +1273,15 @@ class Systems:
         z0 = float(C.mem["M-SPINE"]["box"][0][2])
         fb = C.mem["M-SPINE"].get("boxes", [C.mem["M-SPINE"]["box"]])[0]
         t_fl = float(fb[1][2]) - float(fb[0][2])                   # channel floor band of the layout member
-        r_b = 0.5 * float(t["diameter"]) + 0.0012           # 1 mm plug wall: rim (2 mm) clears the bridle and the wall
+        r_b = 0.5 * float(t["diameter"]) + 0.001            # 0.8 mm plug wall
         p0 = np.array([q[0], q[1], z0 - 0.0002])
+        # D-shaped flanges: trimmed 0.3 mm inboard of the channel's starboard wall (layout M-SPINE wall box)
+        y_wall = min(float(b_[0][1]) for b_ in C.mem["M-SPINE"].get("boxes", []) if float(b_[0][1]) > 0.0)
+        trim = [box3((q[0] - 0.02, y_wall - 0.0003, z0 - 0.02), (q[0] + 0.02, y_wall + 0.03, z0 + 0.04))]
         self.reg.parts[spine].add_hole(p0 - np.array([0.0, 0.0, 0.003]), p0 + np.array([0.0, 0.0, t_fl + 0.003]), r_b)
         self.ring_grommet(self.pid(779), "harness grommet, spine-channel floor (fuel probe branch)",
                           "kablo geçiş rondelası, sırt kanalı tabanı (yakıt algılayıcı kolu)", spine, p0, (0, 0, 1),
-                          t_fl + 0.0004, r_b, [("H-FUEL", 1)], rim=0.002)
+                          t_fl + 0.0004, r_b, [("H-FUEL", 1)], rim=0.002, trim=trim)
         self.harness_fixed[self.pid(779)] = None
         hf, hc = self.trunk_ids["H-FUEL"][0], self.trunk_ids["H-COAX"][0]
         self.link(hf, hc)
@@ -1674,7 +1678,9 @@ class Systems:
                      purchased=True, vendor="AveoFlashLP LSA 3-in-1 (components.yaml aveoflash_lp_lsa, stainless "
                      "screws)", mass_kg=0.083, parent=rib, contacts=(rib,), step=STEP_ANTENNA,
                      explode=(0.0, 0.10 * side, 0.0), notes=f"{lt['mount']}; in the tip-fairing pocket")
-            for k, dx in enumerate((-0.010, 0.028)):
+            # screws 38 mm apart (hole pattern: estimate) centred on the thickest part of the tip rib web (x/c ~ 0.25,
+            # section >= 23 mm): >= 2.5 D edge distance in the composite rib (IR-09)
+            for k, dx in enumerate((-0.006, 0.032)):
                 q = np.array([0.5 * float(lo[0] + hi[0]) + dx, 0.5 * float(lo[1] + hi[1]), 0.5 * float(lo[2] + hi[2])])
                 ax = np.array([0.0, -float(side), 0.0])
                 (_r, r0, r1), = J.measure_stack(self.reg, [rib], q, ax, 0.0036, search=0.08)

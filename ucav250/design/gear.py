@@ -1337,7 +1337,7 @@ NG_RH, NG_AL, NG_RC = 0.033, math.radians(116.0), 0.0341   # nose drag-link horn
 #                                                            (x, z)), crank radius; folded toggle with the gear down
 NG_Y = {"horn": (-0.01025, -0.00525), "link": (-0.0050, 0.0000), "crank": (0.00025, 0.00475)}
 NG_PIN, NG_EYE = 0.006, 0.0122                         # pins d 6 (heat-treated, gear-unit requirement G-NLOCK)
-ND_XP, ND_RC, ND_QREL = 1.07275, 0.0233, (0.0060, 0.0232)  # nose-door drive: link plane (port hinge point), crank
+ND_XP, ND_RC, ND_QREL = 1.07275, 0.0169, (0.0062, 0.0171)  # nose-door drive: link plane (port hinge point), crank
 #                                     radius, drive pin on the port coupling horn rel. the port hinge (inboard, up; closed)
 NC_XP, NC_B, NC_BETA, NC_ZC0 = 1.073, 0.028, math.radians(160.0), -0.130   # coupling plane x, horn radius / angle
 #                                                                            (starboard), slide-bar pin z (closed)

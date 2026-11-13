@@ -141,10 +141,11 @@ def dooract_main() -> dict:
 
 NDA_PLANE_X = 1.0695                # nose-door drive crank plane (DA 22 crank; drive link and drive arm of the port
 #                                     coupling horn in the planes behind it, aft of the nose-tyre swing)
-NDA_SHAFT_YZ = (-0.0868, -0.1277)   # DA 22 output axis in that plane (port side bay; mechanism study docs/detail/gear.md)
+NDA_SHAFT_YZ = (-0.0795, -0.1160)   # DA 22 output axis in that plane (port side bay; mechanism study docs/detail/gear.md)
 NDA_SHAFT_END = 0.014               # output axis from the lower end of the 65.9 mm case side (estimate, as EQ-DOORACT)
-NDA_ROLL_DEG = -12.0                # case roll about the output axis (top towards the keel wall)
-NDA_SLIDE_X = (1.0680, 1.0860)      # symmetric coupling of the two doors: horns, links, slide bar and guide plate
+NDA_ROLL_DEG = 0.0                # case roll about the output axis (top towards the keel wall)
+NDA_SLIDE_X = (1.0705, 1.0860)      # (the horns on the doors are part of the door outlines)
+NDA_SLIDE_Z0 = -0.1715              # above the slot-end sill (z <= -0.1721); symmetric coupling of the two doors
 #                                     (x range on the door axes; >= 10 mm aft of the stowed tyre, ahead of the sill)
 
 
@@ -188,11 +189,11 @@ def ndooract() -> dict:
                                "text": "crank axis in the drive plane (parallel to the door hinge axes); case rolled "
                                        "about it (roll_deg, from the case side normal to y)"},
                      "drive_envelope": {"id": "NDOOR-LINKAGE", "part": "YK250-LG-679",
-                                        "box": r3([[NDA_SLIDE_X[0], -0.0415, z0], [NDA_SLIDE_X[1], 0.0415, -0.075]]),
-                                        "text": "swept envelope of the door coupling (two horns, two links, slide bar and "
+                                        "box": r3([[NDA_SLIDE_X[0], -0.0415, NDA_SLIDE_Z0], [NDA_SLIDE_X[1], 0.0415, -0.075]]),
+                                        "text": "swept envelope of the door coupling above the doors (two links, slide bar and "
                                                 "its guide plate on the keel walls) over the door travel, between the "
-                                                "keel walls, >= 10 mm aft of the stowed nose tyre and ahead of the "
-                                                "slot-end sill",
+                                                "keel walls, aft of the stowed nose tyre and above the slot-end sill; "
+                                                "the horns are bonded on the doors",
                                         "mass_kg": 0.05,
                                         "mass_basis": "estimate: crank 0.008 + drive link 0.006 + two horns (port with the "
                                                       "drive arm) 0.010 + two links 0.008 + slide bar 0.008 + guide plate "
@@ -513,7 +514,7 @@ def wing_actuators() -> list:
 
 NLG_EMA_X = (-0.014, 0.046)    # nose EMA envelope about the pivot (x), y (starboard offset), z (gear detail round GD-04)
 NLG_EMA_Y = (0.0060, 0.0410)
-NLG_EMA_Z = (-0.093, -0.033)
+NLG_EMA_Z = (-0.090, -0.033)
 NLG_CRANK_XZ = (0.0158, 0.0560)   # EMA output axis about the pivot (x, z): mechanism study docs/detail/gear.md
 
 

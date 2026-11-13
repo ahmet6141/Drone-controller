@@ -1908,7 +1908,7 @@ def build_trunnion(C: Ctx) -> G.Mesh:
 
 
 TRUN_LUG_HALF = 0.013           # bushing boss / lug envelope half length in x (layout 26 mm)
-DL_BOSS_R = 0.014               # boss round the down-lock bolt bore in the aft-lug extension (2 D edge for d 14 / 2)
+DL_BOSS_R = 0.0105               # boss round the down-lock bolt bore in the aft-lug extension (2 D edge for d 14 / 2)
 DL_BORE_CLR = 0.00005           # lock-bolt bore radial clearance (H8 / f7 class)
 DL_SOL_CB = (0.00945, 0.006)    # solenoid neck counterbore (M19 x 1 thread modelled at nominal) radius / depth
 TRUN_ROOF_PLATE_T = 0.008       # roof-bolt plates fore / aft of the lugs (the layout's 20 mm top plate over the lugs)

@@ -528,7 +528,7 @@
       139.3141565558656
      ],
      "sigma_leg": 172665385.3734135,
-     "lock": 5970.606709537096,
+     "lock": 6687.079514681547,
      "bearing": 7385.11659028152
     },
     "level_spring_back": {
@@ -543,7 +543,7 @@
       -139.3141565558656
      ],
      "sigma_leg": 178968502.16735584,
-     "lock": 7960.808946049463,
+     "lock": 8916.106019575398,
      "bearing": 7775.031303535016
     },
     "level_max_vertical": {
@@ -558,7 +558,7 @@
       -69.6570782779328
      ],
      "sigma_leg": 118371596.61956912,
-     "lock": 9951.011182561828,
+     "lock": 11145.132524469247,
      "bearing": 5063.01401039399
     },
     "side_inboard": {
@@ -573,7 +573,7 @@
       -0.0
      ],
      "sigma_leg": 42874112.3578404,
-     "lock": 5398.8284537320615,
+     "lock": 6046.687868179908,
      "bearing": 611.5274450716298
     },
     "side_outboard": {
@@ -588,7 +588,7 @@
       0.0
      ],
      "sigma_leg": 58580976.003194265,
-     "lock": 7631.117268461187,
+     "lock": 8546.85134067653,
      "bearing": 545.6540319957694
     },
     "braked_roll": {
@@ -603,7 +603,7 @@
       -45.93846968461894
      ],
      "sigma_leg": 57174421.63286403,
-     "lock": 2050.8245394919163,
+     "lock": 2296.923484230946,
      "bearing": 2451.2806120264127
     },
     "tail_down": {
@@ -618,7 +618,7 @@
       44.3926528673931
      ],
      "sigma_leg": 98121775.30577973,
-     "lock": 9823.897692154756,
+     "lock": 11002.765415213327,
      "bearing": 3915.5419464138854
     },
     "one_wheel": {
@@ -633,7 +633,7 @@
       -69.6570782779328
      ],
      "sigma_leg": 118371596.61956912,
-     "lock": 9951.011182561828,
+     "lock": 11145.132524469247,
      "bearing": 5063.01401039399
     }
    }
@@ -829,7 +829,7 @@
   "body": {
    "M_aft": 1916.7592256058476,
    "V_aft": 2989.9752104435106,
-   "M_fwd_per_g": 283.6917513697396,
+   "M_fwd_per_g": 283.6908824797182,
    "T_aft": 760.1473928575593,
    "q_aft": 12559.024812980731,
    "cell_area": 0.25679767791205366
@@ -4676,17 +4676,17 @@
   {
    "id": "G-DOWNLOCK",
    "group": "gear",
-   "member": "main down-lock bolt d 14 (4130) at r 28 mm from the retraction axis, single shear (governing: level_max_vertical)",
-   "member_tr": "ana takım aşağı kilit cıvatası Ø14 (4130), toplama ekseninden r 28 mm, tek kesme (belirleyici: level_max_vertical)",
+   "member": "main down-lock bolt d 14 (4130) at r 25 mm from the retraction axis, single shear (governing: level_max_vertical)",
+   "member_tr": "ana takım aşağı kilit cıvatası Ø14 (4130), toplama ekseninden r 25 mm, tek kesme (belirleyici: level_max_vertical)",
    "part": "YK250-CH-070 / YK250-LG-641",
    "case": "CS-LUAS App. H: V_sink 2.35 m/s, d 92 mm, e_f 0.63, n_j 5.40, n 6.07; per main leg P_v 3970 N (limit)",
    "case_tr": "CS-LUAS Ek H: V_çökme 2.35 m/s, d 92 mm, e_f 0.63, n_j 5.40, n 6.07; ana bacak başına P_v 3970 N (limit)",
-   "applied": 9951.011182561828,
+   "applied": 11145.132524469247,
    "allowable": 60497.64973017866,
    "unit": "N",
    "factor_text": "FoS 1.5 x fitting 1.15",
    "factor_total": 1.7249999999999999,
-   "ms": 2.524375628711569,
+   "ms": 2.146763954206758,
    "ref": "moment about the trunnion axis / lock radius",
    "note": "",
    "kind": "strength"
@@ -4699,12 +4699,12 @@
    "part": "YK250-LG-641",
    "case": "CS-LUAS App. H: V_sink 2.35 m/s, d 92 mm, e_f 0.63, n_j 5.40, n 6.07; per main leg P_v 3970 N (limit)",
    "case_tr": "CS-LUAS Ek H: V_çökme 2.35 m/s, d 92 mm, e_f 0.63, n_j 5.40, n 6.07; ana bacak başına P_v 3970 N (limit)",
-   "applied": 249.33714693073424,
+   "applied": 279.25760456242233,
    "allowable": 655.0,
    "unit": "MPa",
    "factor_text": "FoS 1.5 x fitting 1.15",
    "factor_total": 1.7249999999999999,
-   "ms": 0.5228783580852459,
+   "ms": 0.3597128197189696,
    "ref": "M = P (gap + engagement / 2), structlib.pin_bending_stress, Ftu (no plastic factor) - gear detail round GD-03",
    "note": "",
    "kind": "strength"
@@ -6067,12 +6067,12 @@
    "part": "YK250-CH-020",
    "case": "forward body at FS-FUEL: inertia of the forward items, n 6.99 (equipment n, governing sign): M 1984 N m (limit)",
    "case_tr": "FS-FUEL'de ön gövde: ön kalemlerin ataleti, n 6.99 (teçhizat n'i, belirleyici işaret): M 1984 N m (limit)",
-   "applied": 492.16309687616194,
+   "applied": 492.1615894808932,
    "allowable": 3000.0,
    "unit": "µε",
    "factor_text": "FoS 1.5",
    "factor_total": 1.5,
-   "ms": 3.063693545278629,
+   "ms": 3.063705991581947,
    "ref": "STANAG UL13.1.2",
    "note": "",
    "kind": "strength"
@@ -6085,12 +6085,12 @@
    "part": "YK250-CH-027",
    "case": "forward body at FS-FUEL: inertia of the forward items, n 6.99 (equipment n, governing sign): M 1984 N m (limit)",
    "case_tr": "FS-FUEL'de ön gövde: ön kalemlerin ataleti, n 6.99 (teçhizat n'i, belirleyici işaret): M 1984 N m (limit)",
-   "applied": 907.35110450043,
+   "applied": 907.3483254689042,
    "allowable": 2600.0,
    "unit": "µε",
    "factor_text": "FoS 1.5",
    "factor_total": 1.5,
-   "ms": 0.9103226135242024,
+   "ms": 0.9103284644709873,
    "ref": "STANAG UL13.1.2",
    "note": "",
    "kind": "strength"
@@ -6104,11 +6104,11 @@
    "case": "forward body at FS-FUEL: inertia of the forward items, n 6.99 (equipment n, governing sign): M 1984 N m (limit)",
    "case_tr": "FS-FUEL'de ön gövde: ön kalemlerin ataleti, n 6.99 (teçhizat n'i, belirleyici işaret): M 1984 N m (limit)",
    "applied": 1.0,
-   "allowable": 2.2638190912108302,
+   "allowable": 2.263826024848603,
    "unit": "load multiplier",
    "factor_text": "FoS 1.5 x composite 1.2",
    "factor_total": 1.7999999999999998,
-   "ms": 0.2576772728949057,
+   "ms": 0.2576811249158908,
    "ref": "CLT D*, sandwich shear correction; SS edges",
    "note": "",
    "kind": "strength"
@@ -7371,13 +7371,13 @@
    "main_trunnion_pin_d_m": 0.02,
    "main_trunnion_lug_t_m": 0.012,
    "main_downlock_pin_d_m": 0.014,
-   "main_downlock_radius_m": 0.028,
+   "main_downlock_radius_m": 0.025,
    "main_downlock": {
     "material": "steel_4130_n",
     "shear": "single",
     "engaged_t_m": 0.0115,
     "gap_m": 0.001,
-    "text": "gear detail round (GD-03): spring-engaged, solenoid-withdrawn 4130 lock bolt d 14 in a bore of the aft F-TRUNNION lug extension, engaging 11.5 mm of the aft yoke arm 28 mm below the retraction axis; single shear across the 1 mm lug-to-arm gap (a second clevis ear would stand in the swept leg); bolt bending as a cantilever from the lug bore, uniform bearing over the engaged length"
+    "text": "gear detail round (GD-03): spring-engaged, solenoid-withdrawn 4130 lock bolt d 14 in a bore of the aft F-TRUNNION lug extension, engaging 11.5 mm of the aft yoke arm 25 mm below the retraction axis; single shear across the 1 mm lug-to-arm gap (a second clevis ear would stand in the swept leg); bolt bending as a cantilever from the lug bore, uniform bearing over the engaged length"
    },
    "trunnion_fitting": {
     "insert_flange_od_m": 0.014,

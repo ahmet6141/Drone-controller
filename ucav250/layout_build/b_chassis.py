@@ -10,7 +10,7 @@ SKIN = 0.0058          # shell_secondary 0.4/5/0.4 mm
 # and the trunnion-fitting flange over the gear-down position and the whole retraction (layout_check C05)
 Y_GB = 0.385
 X_NOTCH, Z_NOTCH = 0.042, -0.134    # reinforced notch in the beam's lower edge around the leg (half length, top z)
-DL_R = 0.028                         # main down-lock bolt below the trunnion axis (gear detail round GD-03)
+DL_R = 0.025                         # main down-lock bolt below the trunnion axis (gear detail round GD-03)
 X0_T, Y0_T, Z0_T = (float(v) for v in MG["trunnion"])
 
 
@@ -768,7 +768,7 @@ def fittings() -> list:
     wf = [[x0 - 0.062, 0.375, -0.130], [x0 - 0.036, yf, -0.0668]]         # lug-to-flange web (forward)
     wa = [[x0 + 0.036, 0.375, -0.130], [x0 + 0.062, yf, -0.0668]]         # lug-to-flange web (aft)
     tp = [[x0 - 0.036, 0.326, -0.0868], [x0 + 0.036, yf, -0.0668]]         # top plate (on the well roof)
-    dlx = [[x0 + 0.036, round(y0 - 0.014, 4), round(z0 - DL_R - 0.015, 4)], [x0 + 0.062, round(y0 + 0.014, 4), z0 - 0.023]]
+    dlx = [[x0 + 0.036, round(y0 - 0.0105, 4), round(z0 - DL_R - 0.0085, 4)], [x0 + 0.062, round(y0 + 0.0105, 4), z0 - 0.023]]
     boxes = [fb, fm, fa, lf, lfl, la, lal, wf, wa, tp, dlx]       # dlx: aft-lug extension for the down-lock bolt (GD-03)
     BEAM = ("M6 12.9 (ISO 4762) from the well side (head and washer in the well), into a bonded through-thickness "
             "threaded insert M6 in the solid land of the gear beam (flush with its outboard face, installed in the beam "
@@ -813,13 +813,13 @@ def fittings() -> list:
                                           "front face (layout.systems.actuators ACT-MLG-EMA)",
                                   "point": r3([x0 - 0.085, y0, z0])},
               "locks": "down-lock (gear detail round GD-03): spring-engaged, solenoid-withdrawn 4130 lock bolt d 14 "
-                       "along x in a bushed bore of a lower extension of the AFT bearing lug, 28 mm below the trunnion "
+                       "along x in a bushed bore of a lower extension of the AFT bearing lug, 25 mm below the trunnion "
                        "axis, engaging a bushed bore of the aft yoke arm in the gear-down position (single shear across "
                        "the 1 mm lug-to-arm gap: a second clevis ear would stand in the swept leg; structures "
                        "G-DOWNLOCK shear and G-DOWNLOCK-BEND bolt bending); up-lock: hook fitting F-UPLOCK under the "
                        "well roof deck engaging a roller on the leg",
               "downlock": {"point": r3([x0 + 0.049, y0, z0 - DL_R]), "axis": [1.0, 0.0, 0.0], "d": 0.014,
-                           "lug_bottom_z": r3(z0 - DL_R - 0.015),
+                           "lug_bottom_z": r3(z0 - DL_R - 0.0085),
                            "text": "bore of the lock bolt in the aft-lug extension (boss to z lug_bottom_z) and in the "
                                    "aft yoke arm; bolt withdrawn aft (15 mm stroke) by the gear-unit solenoid before "
                                    "the leg moves (mechanism main_downlock_R/L)"},

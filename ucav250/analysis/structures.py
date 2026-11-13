@@ -262,11 +262,11 @@ DESIGN = {
                      "text": "outer cylinder of the telescopic spring/oil damper leg (SAGITTA architecture); bar "
                              "allowables taken as the 7075-T6 sheet values (estimate)"},
         "main_trunnion_pin_d_m": 0.020, "main_trunnion_lug_t_m": 0.012,
-        "main_downlock_pin_d_m": 0.014, "main_downlock_radius_m": 0.028,
+        "main_downlock_pin_d_m": 0.014, "main_downlock_radius_m": 0.025,
         "main_downlock": {"material": "steel_4130_n", "shear": "single", "engaged_t_m": 0.0115, "gap_m": 0.001,
                           "text": "gear detail round (GD-03): spring-engaged, solenoid-withdrawn 4130 lock bolt d 14 "
                                   "in a bore of the aft F-TRUNNION lug extension, engaging 11.5 mm of the aft yoke arm "
-                                  "28 mm below the retraction axis; single shear across the 1 mm lug-to-arm gap (a "
+                                  "25 mm below the retraction axis; single shear across the 1 mm lug-to-arm gap (a "
                                   "second clevis ear would stand in the swept leg); bolt bending as a cantilever "
                                   "from the lug bore, uniform bearing over the engaged length"},
         "trunnion_fitting": {"insert_flange_od_m": 0.014, "nutplate_base_m": 0.020, "k_axial_over_shear": 1.0,

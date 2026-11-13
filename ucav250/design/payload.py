@@ -1,6 +1,6 @@
-"""Payload producer (``layout.part_numbers.payload``, YK250-PL-820..849): the retractable Trillium HD59 EO/IR turret of the
-YK-250 HANCER civil surveillance UAV, its vibration-isolated mount, the ball-screw elevator, the two sliding turret-bay
-doors with their Volz DA 22 rack drives, the aperture seal and the turret harness service loop.
+"""Payload producer (``layout.part_numbers.payload``, YK250-PL-820..849): the retractable Trillium HD59 EO/IR turret of
+the YK-250 HANCER civil surveillance UAV, its vibration-isolated mount, the ball-screw elevator, the two sliding
+turret-bay doors with their Volz DA 22 rack drives, the aperture seal and the turret harness service loop.
 
 What is built (every part with material + process + thickness, a parent, an assembly step, an explode vector and
 contacts that really touch; fasteners through ``design/joints.py``):
@@ -10,18 +10,22 @@ contacts that really touch; fasteners through ``design/joints.py``):
   tapped holes (the vendor ICD is not public: bolt circle is an estimate); its interface cable to the carriage;
 * isolated mount: 7075 adapter plate on the HD59 top, four cylindrical elastomer isolators (M4 female both ends) to
   the carriage plate (``payload.turret_mass_kg`` = HD59 1.55 + mount 0.20 kg);
-* elevator (``layout.chassis.turret_elevator``): 7075 carriage plate with two corner tabs, four MGN12-class carriage
-  blocks on the two MGN12-class profile rails (front-starboard and aft-port corners, 4 x M3 per rail end into floating
-  anchor nutplates on the chassis corner-angle seats), d 8 x 2 ball screw in the front-port corner turned by the BLDC
-  worm-gear drive with spring brake and absolute encoder under the roof (6061 bearing housing on four potted M4 inserts
-  of the roof sandwich, ``top_anchor``), lower journal bracket on the FS1110 web that is also the lower hard stop; the
-  upper hard stop is the drive face (PU bumper on the nut); joint ``turret_elevator`` (rest = retracted);
+* elevator (``layout.chassis.turret_elevator``): 7075 carriage (4 mm ring + isolator pads + arms, two corner tabs),
+  four MGN12-class carriage blocks on the two MGN12-class profile rails (front-starboard and aft-port corners, 4 x M3
+  per rail end into floating anchor nutplates on the chassis corner-angle seats), d 8 x 2 ball screw in the front-port
+  corner turned by the BLDC worm-gear drive with spring brake and absolute encoder under the roof (6061 bearing
+  housing on four potted M4 inserts of the roof sandwich, ``top_anchor``), lower journal bracket on the FS1110 web
+  that is also the lower hard stop; the upper hard stop is the drive face (PU bumper on the nut); joint
+  ``turret_elevator`` (rest = retracted);
 * sliding doors (``layout.mechanisms`` turret_door_R/L, prismatic on rails inclined 32 deg): 2 mm CFRP doors shaped
   so that they close the 157 mm aperture behind the ring insert and stay inside the lower skin, the frame caps and
-  under the free lower edge of the bay walls over the whole travel; bonded PTFE-lined 6061 C-sliders on straight 6061
-  rails cantilevered from the FS1110 / FS1330 webs (integral stand-offs, M3 into potted inserts), the aft slider
-  carrying the rack; Volz DA 22 (EQ-TDOORACT) on a 6061 bracket on the FS1330 aft face, pinion shaft through
-  C-TDOOR-SHAFT; coupled sequence ``turret_extension`` (doors open before the turret moves);
+  under the free lower edge of the bay walls over the whole travel; straight grooved 6061 rails (6 x 6 mm, 2.6 mm
+  groove on the door side) on integral stand-off lugs (ISO 7380 M3 into potted inserts of the FS1110 / FS1330 webs,
+  spacing <= 60 mm, none under the wall corner / elevator-rail seat), the bonded slider tongue (PTFE-lined) running
+  in the groove keeps the slider no higher than the rail so that the door set passes under the elevator rail seats
+  and the free wall edge; the aft slider carries the rack; the inboard rail ends are relieved round the E180 growth
+  envelope at full extension; Volz DA 22 (EQ-TDOORACT) on a 6061 bracket on the FS1330 aft face, 7075 pinion shaft
+  through C-TDOOR-SHAFT; coupled sequence ``turret_extension`` (doors open before the turret moves);
 * sealing: moulded silicone lip seal bonded inside the aperture ring insert (0.5 mm off the closed doors);
 * harness: SLS PA12 guide trough on the starboard bay wall (4 x M3 into potted inserts) holding the rolling flat-cable
   service loop, ending in a MIL-DTL-38999 jam-nut receptacle through the wall.
@@ -35,8 +39,8 @@ anchor), ``structures.sizing.turret`` (rail screws), ``layout.mechanisms`` (join
 (``oml.fuselage_from_spec``). The chassis corner-angle seats of the rails carry no layout id: they are found by their
 rail id in the registry name.
 
-Manufacturing: machined parts CNC 7075-T651 / 6061-T6 (ISO 2768-mK), pinion shaft 4130, doors OOA prepreg (10 plies
-PW, 2.0 mm), trough SLS PA12; purchased units carry datasheet masses or labelled estimates; fasteners metric
+Manufacturing: machined parts CNC 7075-T651 / 6061-T6 (ISO 2768-mK; pinions hard-anodised 7075), doors OOA prepreg
+(10 plies PW, 2.0 mm), trough SLS PA12; purchased units carry datasheet masses or labelled estimates; fasteners metric
 (ISO 4762 / ISO 7380, nyloc / floating nutplate / potted insert), holes ISO 273 medium, edge distance >= 2 D metal /
 polymer and >= 2.5 D composite. Module notes: ``docs/detail/payload.md``.
 """
@@ -45,7 +49,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
-from shapely.geometry import LineString, Point, box as sbox
+from shapely.geometry import LineString, Point, Polygon, box as sbox
 from shapely.ops import unary_union
 
 from ..core import geom as G
@@ -58,8 +62,7 @@ GROUP = "payload"
 # =====================================================================================================================
 # module constants (detailing choices; interface values come from spec.layout / spec.payload)
 # =====================================================================================================================
-M7075, M6061, M4130, MPW, MPA12 = ("al_7075_t651_plate", "al_6061_t6_sheet", "steel_4130_n", "cfrp_pw_mtm45_as4",
-                                   "pa12_sls")
+M7075, M6061, MPW, MPA12 = "al_7075_t651_plate", "al_6061_t6_sheet", "cfrp_pw_mtm45_as4", "pa12_sls"
 P_CNC, P_PREG, P_SLS, P_BUY = "cnc_milling_metal", "prepreg_ooa_vacbag", "sls_pa12", "purchased"
 STEP = 24                    # spec.assembly step 24: turret elevator, sliding doors and HD59
 OV = 1e-4                    # boolean overlap of fused features
@@ -74,8 +77,9 @@ MOUNT_MASS = 0.20            # payload.sources.turret_mass_kg: isolator / mount 
 ADAPT_T, ADAPT_HALF, ADAPT_HOLE_R = 0.004, 0.062, 0.030
 ISO_R, ISO_H, ISO_XY = 0.010, 0.016, 0.048
 # carriage
-CARR_T = 0.005
-CARR_HOLE_R = 0.035
+CARR_T = 0.004
+CARR_ARM = 0.010              # half width of the carriage arms to the rail tabs and the ball nut
+CARR_HOLE_R = 0.050           # central lightening / harness hole (>= 17 mm to the isolator screws)
 TAB_T = 0.004
 # MGN12-class rail / block (estimate geometry; layout rail_spec)
 RAIL_W, RAIL_H = 0.012, 0.008
@@ -84,17 +88,20 @@ RAIL_PITCH, RAIL_END = 0.025, 0.0125
 BLK_W, BLK_L, BLK_H, BLK_LIFT = 0.027, 0.0347, 0.014, 0.003
 BLK_GAP_TOP, BLK_GAP_SIDE = 0.0002, 0.0005
 BLK_TOP_Z = 0.0932           # retracted: upper block top (rail top end 0.095)
+BLK_SCREW_DZ = (-0.0085, 0.0065)                 # tab screws about the block centre (head clear of the carriage plate)
 RAIL_MASS_PER_M, BLK_MASS = 0.65, 0.034          # estimates (MGN12 class)
 # ball screw / nut / drive
 SCREW_R, JOURNAL_R, BORE_FIT = 0.004, 0.003, 0.00005
 NUT_FL_R, NUT_FL_T, NUT_BODY_R, NUT_BORE_R, NUT_BOLT_R = 0.017, 0.004, 0.0075, 0.0042, 0.0105
 SCREW_HOLE_R = 0.0045
-GBX = (0.014, 0.022, 0.014, 0.020)               # gearbox: -dx, +dx, -dy(outboard), +dy(inboard) about the screw
-GBX_Z = (0.078, 0.098)
-MOTOR_R, MOTOR_DY, MOTOR_Z, MOTOR_X1 = 0.011, 0.010, 0.088, 0.212
+GBX = (0.013, 0.022, 0.013, 0.020)               # gearbox: -dx, +dx, -dy(outboard), +dy(inboard) about the screw
+GBX_Z = (0.076, 0.098)
+MOTOR_R, MOTOR_DY, MOTOR_Z, MOTOR_X1 = 0.011, 0.010, 0.0869, 1.212
 HOUS_T = 0.004
+HOUS_SEAT_R = 0.0135        # bearing seat boss (626-class angular-contact pair, D 19 mm)
 STOP_GAP = 0.0005            # hard stops 0.5 mm beyond the electrical limits
 LB_BOSS_R = 0.0065
+LB_DROP = 0.009              # bracket web / flange top below the boss top (stop face)
 # doors
 DOOR_T = 0.002               # 10 plies PW solid laminate (door_outlines thickness 4 mm = door + sliders envelope)
 DOOR_GAP_CL = 0.0005         # half of the 1 mm gap between the two doors on the centre line
@@ -104,16 +111,23 @@ T_CAP = 0.0082               # frame-cap top above the OML (skin inset 6.5 mm + 
 Y_LAND = 0.0965              # skin land / frame caps start outboard of this |y| (ring alone inboard)
 DOOR_CLR = 0.0010            # door outer face to the ring / skin / caps
 # door rails and sliders
-DR_W, DR_H = 0.008, 0.008    # rail bar: x width, height normal to the travel
-DR_SO_H = 0.013              # stand-off height (2 D edge distance for the M3)
+DR_W, DR_H = 0.006, 0.006    # rail bar: x width, height normal to the travel
+GR_H, GR_D = 0.0026, 0.003   # guide groove in the door-side face of the rail (the slider tongue runs in it)
+CB_D = 0.0018                # counterbore depth for the ISO 7380 M3 head in the stand-off lug (above the groove)
+# door-rail stand-off lug: bolt line, top and bottom relative to the rail centre line (6.5 mm edge distance round the
+# M3 above and below, the ISO 7380 head clear above the groove)
+SO_BOLT, SO_TOP, SO_BOT = 0.0045, 0.011, -0.002
 DR_X_GAP = 0.0011            # rail to bay-wall end post
-SL_T, SL_CLR = 0.002, 0.0002
-SO_LEN = 0.014
+SL_PAD = 0.002               # slider bonding pad thickness over the door top
+SL_T, SL_CLR = 0.0022, 0.0002                    # slider tongue thickness, running clearance
+SO_LEN = 0.012
+SO_SPAN = 0.060              # largest stand-off spacing along a door rail (rail deflection under 9 g + suction)
 # rack / pinion (module 0.5, teeth envelope only: pitch line / pitch cylinder, 0.2 mm apart)
-PIN_R, PIN_W, RACK_W, RACK_D = 0.0195, 0.006, 0.006, 0.008
+PIN_R, PIN_W, RACK_W, RACK_D = 0.0195, 0.006, 0.006, 0.006
+PIN_WEB = 0.002              # pinion web (recessed both sides of the hub, 3.5 mm tooth rim)
 PIN_SHAFT_R = 0.004
 # DA 22 bracket
-BR_T = 0.003
+BR_T = 0.0025                # DA 22 side flange (the frame flange is the 3 mm gap frame face - DA 22 case)
 # seal ring
 SEAL_RI_ADD, SEAL_W = 0.0015, 0.006
 # harness
@@ -151,6 +165,14 @@ def prism_x(poly_yz, x0, x1) -> G.Mesh:
 
 def clean(m: G.Mesh, tol: float = 1e-6) -> G.Mesh:
     return G.Mesh.from_manifold(m.to_manifold().simplify(tol))
+
+
+def clip_cl(m: G.Mesh, y0: float = DOOR_GAP_CL) -> G.Mesh:
+    """Starboard part trimmed at |y| = y0 (1 mm gap to its port mirror on the centre line)."""
+    out = G.intersection(m, box3((-5.0, y0, -5.0), (5.0, 5.0, 5.0)))
+    if out is None:
+        raise ValueError("payload: centre-line trim removed the whole part")
+    return out
 
 
 def rrect(x0, x1, y0, y1, r):
@@ -273,7 +295,7 @@ class Ctx:
 def hd59_mesh(C: Ctx) -> G.Mesh:
     c = np.array([C.xc, 0.0, C.zc0])
     zt = C.z_top
-    ball = G.sphere(C.r_ball, c, n=72)
+    ball = G.sphere(C.r_ball, c, n=96)       # equator vertices on the ring-opening vertices
     z_stem = C.zc0 + math.sqrt(C.r_ball ** 2 - C.r_stem ** 2) - 0.004
     stem = G.cylinder(C.r_stem, (C.xc, 0.0, z_stem), (C.xc, 0.0, zt - HD59_BASE_H + OV), n=64)
     base = G.cylinder(HD59_BASE_R, (C.xc, 0.0, zt - HD59_BASE_H), (C.xc, 0.0, zt), n=72)
@@ -328,21 +350,23 @@ class Elev:
         xmin = C.xf1 + float(C.T["bay"]["wall_margin"]) + 0.0021
         xmax = C.xf3 - float(C.T["bay"]["wall_margin"]) - 0.0021
         ylim = C.yw_in - 0.0075
-        core = rrect(C.xc - 0.064, C.xc + 0.064, -0.064, 0.064, 0.008)
-        parts = [core]
+        # ring round the turret harness hole + one pad per isolator screw (8.8 mm edge distance for the M4)
+        ring = Point(C.xc, 0.0).buffer(CARR_HOLE_R + 0.010, 96)
+        parts = [ring] + [Point(x, y).buffer(0.011, 32) for x, y in iso_points(C)]
         for corner in ("FR", "AL"):
             x_r, sg, seat = self.rail_geom(corner)
             y_face = seat - BLK_H                                         # block top face |y| (tab outer face)
-            parts.append(LineString([(C.xc, 0.0), (x_r, sg * (y_face - 0.012))]).buffer(0.012, 16))
+            parts.append(LineString([(C.xc, 0.0), (x_r, sg * (y_face - 0.012))]).buffer(CARR_ARM, 16))
             parts.append(sbox(x_r - 0.5 * BLK_W, min(sg * (y_face - 0.016), sg * y_face),
                               x_r + 0.5 * BLK_W, max(sg * (y_face - 0.016), sg * y_face)))
-        parts.append(LineString([(C.xc, 0.0), (self.sx, self.sy)]).buffer(0.012, 16))
+        parts.append(LineString([(C.xc, 0.0), (self.sx, self.sy)]).buffer(CARR_ARM, 16))
         parts.append(Point(self.sx, self.sy).buffer(NUT_FL_R, 64))
         tx, ty = self.trough_tab
         parts.append(LineString([(C.xc + 0.03, 0.04), (tx, ty - 0.006)]).buffer(0.006, 16))
         parts.append(sbox(tx - 0.006, ty - 0.012, tx + 0.006, ty))
         poly = unary_union(parts).intersection(sbox(xmin, -ylim, xmax, ylim))
         poly = poly.difference(Point(C.xc, 0.0).buffer(CARR_HOLE_R, 48))
+        poly = poly.difference(Point(self.sx, self.sy).buffer(SCREW_HOLE_R, 32))      # ball-screw clearance
         return poly
 
     def carriage_mesh(self):
@@ -425,9 +449,11 @@ class Elev:
         lo, hi = self.gbx_box()
         fl_lo, fl_hi, _b = self.housing_geom()
         flange = box3(fl_lo, fl_hi)
-        boss = box3((lo[0], lo[1], hi[2]), (hi[0], hi[1], fl_lo[2] + OV))
+        z0, z1 = hi[2], fl_lo[2] + OV
+        seat = G.cylinder(HOUS_SEAT_R, (x, y, z0), (x, y, z1), n=48)                  # bearing seat (626 pair)
+        lug = box3((x - 0.0135, hi[1] - 0.0135, z0), (x + 0.0135, hi[1] + 0.0005, z1))  # gearbox screw lugs
         bore = G.cylinder(JOURNAL_R + BORE_FIT, (x, y, hi[2] - 0.001), (x, y, fl_hi[2] + 0.001), n=32)
-        return G.difference(G.union([flange, boss]), [bore])
+        return G.difference(G.union([flange, seat, lug]), [bore])
 
     def lb_z(self):
         """Lower journal bracket: boss z range (bottom, top = lower hard stop under the carriage plate)."""
@@ -439,8 +465,9 @@ class Elev:
         x, y = self.sx, self.sy
         zb, zt = self.lb_z()
         xf = C.xf1
-        flange = box3((xf + CT, y - 0.020, zb - 0.020), (xf + 0.004, y + 0.020, zt))
-        web = box3((xf + 0.004 - OV, y - 0.005, zb), (x, y + 0.005, zt))
+        zw = zt - LB_DROP                                                 # web / flange below the nut-flange nylocs
+        flange = box3((xf + CT, y - 0.020, zb - 0.020), (xf + 0.004, y + 0.020, zw))
+        web = box3((xf + 0.004 - OV, y - 0.005, zb), (x, y + 0.005, zw))
         boss = G.cylinder(LB_BOSS_R, (x, y, zb), (x, y, zt), n=40)
         bore = G.cylinder(JOURNAL_R + BORE_FIT, (x, y, zb - 0.001), (x, y, zt + 0.001), n=24)
         return G.difference(G.union([flange, web, boss]), [bore])
@@ -448,7 +475,7 @@ class Elev:
     def lb_bolts(self):
         zb, zt = self.lb_z()
         y = self.sy
-        return [(y - 0.0115, zb - 0.0115), (y + 0.0115, zt - 0.009)]
+        return [(y - 0.0115, zb - 0.0115), (y + 0.0115, zt - LB_DROP - 0.0085)]
 
 
 # =====================================================================================================================
@@ -485,9 +512,23 @@ class Doors:
             z = np.maximum(z, C.z_obst(x, ys + s * ca) - s * sa + DOOR_CLR)
         return z
 
-    def grids(self):
-        X, Y = np.meshgrid(self.xs, self.ys, indexing="ij")
-        P = np.stack([X, Y, self.Z], axis=-1)
+    def z_under_min(self, x, y):
+        """Lowest door outer-face z over (x, y) during the whole travel (closed door at s = 0, then slid by s)."""
+        C = self.C
+        ca, sa = C.d_ax[1], C.d_ax[2]
+        row = np.array([float(np.interp(x, self.xs, self.Z[:, k])) for k in range(len(self.ys))])
+        y = max(float(y), self.y0)
+        z = np.inf
+        for s in np.linspace(0.0, C.d_travel, 121):
+            yq = y - s * ca
+            if self.y0 <= yq <= self.y1:
+                z = min(z, float(np.interp(yq, self.ys, row)) + s * sa)
+        return z
+
+    def grids(self, xs=None, ys=None, Z=None):
+        xs, ys, Z = (self.xs, self.ys, self.Z) if xs is None else (xs, ys, Z)
+        X, Y = np.meshgrid(xs, ys, indexing="ij")
+        P = np.stack([X, Y, Z], axis=-1)
         dPx = np.gradient(P, axis=0)
         dPy = np.gradient(P, axis=1)
         N = np.cross(dPx, dPy)
@@ -496,12 +537,18 @@ class Doors:
 
     def door_mesh(self):
         P, N = self.grids()
-        return G.shell_from_grid(P, DOOR_T, inward=N)
+        return clip_cl(G.shell_from_grid(P, DOOR_T, inward=N))
 
     def top_slab(self):
-        """Solid from the door top face down 40 mm over the door plan: cutter for the bonded sliders / rack feet."""
-        P, N = self.grids()
+        """Solid from the door top face down 60 mm, over the door plan grown by 10 mm (so that its side faces, which
+        follow the surface normal, stay outside the slider columns): cutter for the bonded sliders / rack feet."""
+        xs = np.r_[self.x0 - 0.010, self.xs, self.x1 + 0.010]
+        ys = np.r_[self.ys, self.y1 + 0.010]
+        Z = np.array([self.z_outer_row(x, ys) for x in xs])
+        P, N = self.grids(xs, ys, Z)
         Ptop = P + DOOR_T * N
+        Pd, Nd = self.grids()
+        Ptop[1:-1, :-1] = Pd + DOOR_T * Nd                               # identical to the door top inside its plan
         return G.shell_from_grid(Ptop, 0.06, inward=-N)
 
     def column(self, x0, x1):
@@ -535,7 +582,7 @@ class Doors:
         xa, xb = self.rail_x(which)
         ua, ub = self.slider_u()
         need = -1.0
-        lip = 0.5 * DR_H + SL_CLR + SL_T + 0.0005
+        lip = 0.5 * DR_H + 0.0005                                         # rail bottom (tongue is higher)
         for x in np.linspace(xa - 0.002, xb + 0.003, 5):
             for u in np.linspace(ua - 0.004, ub + C.d_travel + 0.004, 160):
                 # point on the lip bottom for a trial w: y, z linear in w -> solve z(w) >= z_obst(y(w)) by iteration
@@ -560,74 +607,91 @@ class Doors:
         C = self.C
         u0, u1 = self.rail_span(which)
         x = C.xf1 - 0.5 * C.t_frame if which == "F" else C.xf3 + 0.5 * C.t_frame
+        bkt = self.bracket_geom()[2]
         ok = []
         for u in np.linspace(u0 + 0.008, u1 - 0.008, 400):
-            y, z = C.yz(u, w_r)
-            if 0.098 < y < 0.122:                                         # bay-wall end post and rail-anchor corner
-                continue
-            if z - 0.5 * DR_SO_H < float(C.z_in(x, y, T_CAP)) + 0.0005:
+            y, z = C.yz(u, w_r + SO_BOLT)
+            if 0.075 < y < 0.13:                     # under the elevator rail / its corner seat and the bay-wall edge
                 continue
             if z < float(C.z_in(x, y, 0.0065)) + 0.0075 + 0.003:
                 continue
+            if which == "A" and min(math.hypot(y - yb, z - zb) for yb, zb in bkt) < 0.016:
+                continue                                     # potted inserts of the DA 22 bracket in the same web
             ok.append(u)
         if len(ok) < 2:
             raise ValueError("payload: no stand-off station for the door rail")
         ok = np.array(ok)
-        picks = [ok[0], ok[-1]]
-        mid = ok[(ok > ok[0] + 0.04) & (ok < ok[-1] - 0.04)]
-        if len(mid):
-            picks.insert(1, mid[len(mid) // 2])
+        # both ends of every free segment (the crossing band under the wall corner splits the rail), plus mid-points
+        # so that no span exceeds SO_SPAN
+        cuts = np.where(np.diff(ok) > 0.005)[0]
+        segs = np.split(ok, cuts + 1)
+        picks = []
+        for sg_ in segs:
+            a, b = float(sg_[0]), float(sg_[-1])
+            k = max(1, int(math.ceil((b - a) / SO_SPAN)))
+            picks += [a + (b - a) * i / k for i in range(k + 1)] if b - a > SO_LEN else [0.5 * (a + b)]
         return picks
 
     def rail_mesh(self, which, w_r):
         C = self.C
         xa, xb = self.rail_x(which)
         u0, u1 = self.rail_span(which)
-        bar = C.prism_travel(sbox(w_r - 0.5 * DR_H, xa, w_r + 0.5 * DR_H, xb), u0, u1)
+        if which == "F":
+            gr = sbox(w_r - 0.5 * GR_H, xb - GR_D, w_r + 0.5 * GR_H, xb)
+        else:
+            gr = sbox(w_r - 0.5 * GR_H, xa, w_r + 0.5 * GR_H, xa + GR_D)
+        bar = C.prism_travel(sbox(w_r - 0.5 * DR_H, xa, w_r + 0.5 * DR_H, xb).difference(gr), u0, u1)
         parts = [bar]
         xf = C.xf1 if which == "F" else C.xf3
         for u in self.standoff_u(which, w_r):
+            lug = sbox(w_r + 0.5 * DR_H - OV, xa, w_r + SO_TOP, xb)          # above the bar, over the groove
             if which == "F":
-                pol = sbox(w_r - 0.5 * DR_SO_H, xf + CT, w_r + 0.5 * DR_SO_H, xa + OV)
+                pol = sbox(w_r + SO_BOT, xf + CT, w_r + SO_TOP, xa + OV).union(lug)
             else:
-                pol = sbox(w_r - 0.5 * DR_SO_H, xb - OV, w_r + 0.5 * DR_SO_H, xf - CT)
+                pol = sbox(w_r + SO_BOT, xb - OV, w_r + SO_TOP, xf - CT).union(lug)
             parts.append(C.prism_travel(pol, u - 0.5 * SO_LEN, u + 0.5 * SO_LEN))
         m = G.union(parts)
-        # counterbores for the ISO 4762 M3 heads on the slider face of the bar
+        # counterbores for the ISO 7380 M3 heads under the groove bottom
         cbs = []
         for u in self.standoff_u(which, w_r):
-            y, z = C.yz(u, w_r)
+            y, z = C.yz(u, w_r + SO_BOLT)
             if which == "F":
-                cbs.append(G.cylinder(0.0031, (xb - 0.0035, y, z), (xb + 0.001, y, z), n=32))
+                cbs.append(G.cylinder(0.0031, (xb - CB_D, y, z), (xb + 0.001, y, z), n=32))
             else:
-                cbs.append(G.cylinder(0.0031, (xa - 0.001, y, z), (xa + 0.0035, y, z), n=32))
-        return G.difference(m, cbs)
+                cbs.append(G.cylinder(0.0031, (xa - 0.001, y, z), (xa + CB_D, y, z), n=32))
+        # inboard rail ends relieved for the E180 growth ball at full extension (0.5 mm round the envelope)
+        relief = e180_envelope(C.S, C.stroke, grow=0.0005)
+        return clip_cl(G.difference(m, cbs + [relief]))
 
     # ---------------------------------------------------------------- sliders and rack
     def slider_mesh(self, which, w_r, slab, rack=None):
         C = self.C
         xa, xb = self.rail_x(which)
         ua, ub = self.slider_u()
-        lo_w, hi_w = w_r - 0.5 * DR_H - SL_CLR, w_r + 0.5 * DR_H + SL_CLR
+        t0, t1 = w_r - 0.5 * GR_H + SL_CLR, w_r + 0.5 * GR_H - SL_CLR      # tongue in the rail groove
         if which == "F":
-            lips = [sbox(lo_w - SL_T, xa + 0.0005, lo_w, self.x0 + 0.002),
-                    sbox(hi_w, xa + 0.0005, hi_w + SL_T, self.x0 + 0.002),
-                    sbox(lo_w - SL_T, xb + SL_CLR, hi_w + SL_T, xb + SL_CLR + 0.0025)]
+            tongue = sbox(t0, xb - GR_D + SL_CLR, t1, self.x0 + 0.002)
             riser_x = (self.x0 + 0.0005, self.x0 + 0.014)
         else:
-            lips = [sbox(lo_w - SL_T, self.x1 - 0.002, lo_w, xb - 0.0005),
-                    sbox(hi_w, self.x1 - 0.002, hi_w + SL_T, xb - 0.0005),
-                    sbox(lo_w - SL_T, xa - SL_CLR - 0.0025, hi_w + SL_T, xa - SL_CLR)]
+            tongue = sbox(t0, self.x1 - 0.002, t1, xa + GR_D - SL_CLR)
             riser_x = (self.x1 - 0.014, self.x1 - 0.0005)
-        c_part = C.prism_travel(unary_union(lips), ua, ub)
-        riser = C.prism_travel(sbox(w_r - 0.045, riser_x[0], lo_w + OV, riser_x[1]), ua, ub)
+        c_part = G.difference(C.prism_travel(tongue, ua, ub), [slab])
+        riser = C.prism_travel(sbox(w_r - 0.045, riser_x[0], t1, riser_x[1]), ua, ub)
         riser = G.intersection(G.difference(riser, [slab]), self.column(*riser_x))
         if riser is None:
             raise ValueError("payload: door slider riser does not reach the door")
+        # bonding pad: at least 2 mm of slider over the door top under the whole riser (no feathered edge where the
+        # door top approaches the tongue)
+        P, N = self.grids()
+        pad = G.shell_from_grid(P + DOOR_T * N, SL_PAD, inward=N)
+        pad = G.intersection(G.intersection(pad, self.column(*riser_x)),
+                             C.prism_travel(sbox(-0.2, riser_x[0], 0.2, riser_x[1]), ua, ub))
+        if pad is not None:
+            riser = G.union([riser, pad])
         parts = [c_part, riser]
         if rack is not None:
             parts += rack
-        return clean(G.union(parts))
+        return clip_cl(clean(G.union(parts)))
 
     def rack_geom(self):
         """Pinion pitch circle (y, z) centre on the C-TDOOR-SHAFT cut-out centre; rack top w (0.2 mm below the pitch
@@ -660,6 +724,9 @@ class Doors:
         xa, xb = self.pinion_x()
         x_end = float(C.da22["box"][0][0])
         pin = G.cylinder(PIN_R, (xa, yc, zc), (xb, yc, zc), n=96)
+        rec = [G.cylinder(PIN_R - 0.0035, (xa - 0.001, yc, zc), (0.5 * (xa + xb) - 0.5 * PIN_WEB, yc, zc), n=64),
+               G.cylinder(PIN_R - 0.0035, (0.5 * (xa + xb) + 0.5 * PIN_WEB, yc, zc), (xb + 0.001, yc, zc), n=64)]
+        pin = G.union([G.difference(pin, rec), G.cylinder(0.008, (xa, yc, zc), (xb, yc, zc), n=48)])
         hub = G.cylinder(0.008, (xb - OV, yc, zc), (xb + 0.004, yc, zc), n=48)
         shaft = G.cylinder(PIN_SHAFT_R, (xb + 0.004 - OV, yc, zc), (x_end - CT, yc, zc), n=32)
         return G.union([pin, hub, shaft])
@@ -676,8 +743,10 @@ class Doors:
         xa = C.xf3a
         (yc, zc), *_ = self.rack_geom()
         fl = ((xa + CT, yc - 0.023, zc - 0.039), (lo[0] - CT, yc + 0.024, zc + 0.038))
-        side = ((xa + CT, lo[1] - BR_T, lo[2]), (lo[0] + 0.062, lo[1] - CT, hi[2]))
-        frame_bolts = [(yc, zc - 0.0305), (yc, zc + 0.0295), (yc + 0.015, zc - 0.0305), (yc + 0.015, zc + 0.0295)]
+        zm = 0.5 * (lo[2] + hi[2])
+        side = ((xa + CT, lo[1] - BR_T, zm - 0.012), (lo[0] + 0.062, lo[1] - CT, zm + 0.012))
+        frame_bolts = [(yc - 0.010, zc - 0.0305), (yc, zc + 0.0295), (yc + 0.006, zc - 0.028),
+                       (yc + 0.015, zc + 0.0295)]
         da_bolts = [(lo[0] + 0.0156, 0.5 * (lo[2] + hi[2])), (lo[0] + 0.0516, 0.5 * (lo[2] + hi[2]))]
         return fl, side, frame_bolts, da_bolts
 
@@ -686,7 +755,14 @@ class Doors:
         fl, side, _fb, _db = self.bracket_geom()
         m = G.union([box3(*fl), box3(side[0], side[1])])
         bore = G.cylinder(PIN_SHAFT_R + BORE_FIT, (fl[0][0] - 0.001, yc, zc), (fl[1][0] + 0.001, yc, zc), n=32)
-        return G.difference(m, [bore])
+        # lower edge trimmed parallel to the skin, 1 mm above the FS1330 aft cap (the frame cap runs aft on the skin)
+        C = self.C
+        x0, x1 = fl[0][0] - 0.001, side[1][0] + 0.001
+        ys = np.linspace(fl[0][1] - 0.002, fl[1][1] + 0.002, 24)
+        zc_ = np.maximum(C.z_in(x0, ys, T_CAP + 0.001), C.z_in(x1, ys, T_CAP + 0.001))
+        keep = prism_x(Polygon([(float(y), float(z)) for y, z in zip(ys, zc_)]
+                               + [(float(ys[-1]), 0.0), (float(ys[0]), 0.0)]), x0, x1)
+        return G.intersection(G.difference(m, [bore]), keep)
 
 
 # =====================================================================================================================
@@ -702,7 +778,7 @@ def seal_mesh(C: Ctx, D: Doors) -> G.Mesh:
         for j, r in enumerate(rs):
             x, y = C.xc + r * math.cos(t), r * math.sin(t)
             zb = float(C.z_in(x, y, C.t_ring + T_RING_CLR))
-            zd = float(np.interp(abs(y), D.ys, [float(np.interp(x, D.xs, D.Z[:, k])) for k in range(len(D.ys))]))
+            zd = D.z_under_min(x, abs(y))
             P[i, j] = (x, y, zb)
             Tt[i, j] = max(zd - 0.0005 - zb, 0.0003)
     N = np.zeros_like(P)
@@ -839,7 +915,7 @@ class Build:
             iso_ids.append(self.add(23 + i, "C", f"elastomer vibration isolator {i + 1}", f"elastomer titreşim "
                                     f"izolatörü {i + 1}", "purchased", P_BUY,
                                     (lambda x=x, y=y: isolator_mesh(C, x, y)), parent=car, joint=jt,
-                                    contacts=(), purchased=True, mass_kg=m_iso,
+                                    contacts=(adp, car), purchased=True, mass_kg=m_iso,
                                     vendor="cylindrical elastomer isolator d 20 x 16 mm, M4 female both ends, ~40 Shore "
                                            "A (estimate, tuned to the HD59 mass; mount total 0.20 kg)",
                                     explode=(0.0, 0.0, -0.30), color="payload"))
@@ -897,8 +973,8 @@ class Build:
         self.add(12, "C", "ball-screw lower journal bracket and lower hard stop", "bilyalı vida alt muylu braketi ve "
                  "alt sert durdurucu", M6061, P_CNC, lambda: M("lb", lambda: E.lb_mesh()), thickness=0.004,
                  parent=C.p_fs1110, contacts=(C.p_fs1110,), explode=(0.05, 0.0, -0.05),
-                 notes="6061-T6 machined; PTFE-lined bush for the lower journal; boss top 0.5 mm under the carriage plate "
-                       "at full extension = lower hard stop; 2 x M4 into potted inserts of the FS1110 web")
+                 notes="6061-T6 machined; PTFE-lined bush for the lower journal; boss top 0.5 mm under the carriage "
+                       "plate at full extension = lower hard stop; 2 x M4 into potted inserts of the FS1110 web")
 
     # ---------------------------------------------------------------- doors (starboard; port mirrored)
     def doors(self):
@@ -916,26 +992,31 @@ class Build:
         self.add(14, "R", "door slider, front (PTFE-lined), starboard", "kapak kızağı, ön (PTFE kaplı), sağ", M6061,
                  P_CNC, lambda: M("slF", lambda: D.slider_mesh("F", wF, slab())), thickness=SL_T, parent=C.pid(17, "R"),
                  contacts=(door, C.pid(17, "R")), joint=jd, explode=(0.0, 0.22, -0.16), mirror=True,
-                 notes="6061-T6 machined C-slider with bonded PTFE liner, bonded (EA 9394) to the door top face")
+                 notes="6061-T6 machined slider: PTFE-lined tongue in the rail groove + riser / 2 mm pad bonded "
+                       "(EA 9394) to the door top face")
         self.add(16, "R", "door slider with rack, aft (PTFE-lined), starboard", "kapak kızağı ve kremayer, arka (PTFE "
                  "kaplı), sağ", M7075, P_CNC,
                  lambda: M("slA", lambda: D.slider_mesh("A", wA, slab(), rack=D.rack_parts(slab()))), thickness=SL_T,
                  parent=C.pid(18, "R"), contacts=(door, C.pid(18, "R"), C.pid(15, "R")), joint=jd,
                  explode=(0.0, 0.22, -0.16), mirror=True,
-                 notes="7075-T651 machined C-slider + module 0.5 rack (teeth envelope = pitch line - 0.2 mm), bonded to "
+                 notes="7075-T651 machined slider (tongue + riser) + module 0.5 rack (teeth envelope = pitch line - 0.2 "
+                       "mm), bonded to "
                        "the door; the rack cantilevers 56 mm outboard of the door edge under the bay wall")
         self.add(17, "R", "door rail, front (on FS1110), starboard", "kapak rayı, ön (FS1110 üzerinde), sağ", M6061,
                  P_CNC, lambda: M("rF", lambda: D.rail_mesh("F", wF)), thickness=DR_W, parent=C.p_fs1110,
                  contacts=(C.p_fs1110,), explode=(0.0, 0.15, -0.10), mirror=True,
-                 notes="6061-T6 bar 8 x 8 mm inclined 32 deg with integral stand-offs, M3 into potted inserts of the web")
+                 notes="6061-T6 bar 6 x 6 mm with a 2.6 mm guide groove, inclined 32 deg, integral stand-off lugs "
+                       "(<= 60 mm apart), ISO 7380 M3 into potted inserts of the web")
         self.add(18, "R", "door rail, aft (on FS1330), starboard", "kapak rayı, arka (FS1330 üzerinde), sağ", M6061,
                  P_CNC, lambda: M("rA", lambda: D.rail_mesh("A", wA)), thickness=DR_W, parent=C.p_fs1330,
                  contacts=(C.p_fs1330,), explode=(0.0, 0.15, -0.10), mirror=True,
-                 notes="6061-T6 bar 8 x 8 mm inclined 32 deg with integral stand-offs, M3 into potted inserts of the web")
-        self.add(15, "R", "door pinion and drive shaft, starboard", "kapak pinyonu ve tahrik mili, sağ", M4130, P_CNC,
+                 notes="6061-T6 bar 6 x 6 mm with a 2.6 mm guide groove, inclined 32 deg, integral stand-off lugs "
+                       "(<= 60 mm apart), ISO 7380 M3 into potted inserts of the web")
+        self.add(15, "R", "door pinion and drive shaft, starboard", "kapak pinyonu ve tahrik mili, sağ", M7075, P_CNC,
                  lambda: M("pin", lambda: D.pinion_mesh()), thickness=PIN_SHAFT_R, parent=C.pid(10, "R"),
                  contacts=(C.pid(10, "R"), C.pid(11, "R"), C.pid(16, "R")), explode=(0.08, 0.0, 0.0), mirror=True,
-                 notes="4130 spur pinion module 0.5, 78 teeth (pitch d 39 mm, teeth envelope = pitch cylinder), splined "
+                 notes="7075-T651 hard-anodised spur pinion module 0.5, 78 teeth (pitch d 39 mm, teeth envelope = pitch "
+                       "cylinder, 2 mm web, 3.5 mm rim), splined "
                        "to the DA 22 output, carried in the bracket bush; shaft through C-TDOOR-SHAFT")
         self.add(10, "R", "turret door actuator Volz DA 22 (EQ-TDOORACT), starboard",
                  "taret kapağı eyleyicisi Volz DA 22 (EQ-TDOORACT), sağ", "purchased", P_BUY,
@@ -995,13 +1076,14 @@ class Build:
         C, E, reg = self.C, self.E, self.reg
         tur, adp, car = C.pid(0), C.pid(1), C.pid(2)
         z_a1 = C.z_top + ADAPT_T
-        for i, (dx, dy) in enumerate(((HD59_BOLT_R, 0.0), (0.0, HD59_BOLT_R), (-HD59_BOLT_R, 0.0), (0.0, -HD59_BOLT_R))):
+        r = HD59_BOLT_R
+        for i, (dx, dy) in enumerate(((r, 0.0), (0.0, r), (-r, 0.0), (0.0, -r))):
             J.bolt(reg, f"{adp}-B{i + 1}", 4, (C.xc + dx, dy, z_a1), (0, 0, -1), [(adp, ADAPT_T)], owner=adp,
                    nut="tapped", tapped_part=tur, tapped_depth=0.008, step=STEP,
                    notes="HD59 mounting screw (vendor ICD estimate), thread locker")
         for i, ((x, y), iso) in enumerate(zip(iso_points(C), self.iso_ids)):
             J.bolt(reg, f"{car}-B{i + 1}", 4, (x, y, E.z_c1), (0, 0, -1), [(car, CARR_T)], owner=car, nut="tapped",
-                   tapped_part=iso, tapped_depth=0.0065, step=STEP, notes="carriage to isolator (top insert)")
+                   tapped_part=iso, tapped_depth=0.0075, step=STEP, notes="carriage to isolator (top insert)")
             J.bolt(reg, f"{adp}-B{i + 5}", 4, (x, y, C.z_top), (0, 0, 1), [(adp, ADAPT_T)], owner=adp, nut="tapped",
                    tapped_part=iso, tapped_depth=0.0075, step=STEP, notes="adapter to isolator (bottom insert)")
         nb = 9
@@ -1009,7 +1091,7 @@ class Build:
             x_r, sg, seat = E.rail_geom(corner)
             y_head = seat - BLK_H - TAB_T
             for bid, (cc, i, z0, z1) in zip(self.blk[corner], [b for b in E.blocks if b[0] == corner]):
-                for dz in (-0.0075, 0.0075):
+                for dz in BLK_SCREW_DZ:
                     J.bolt(reg, f"{car}-B{nb}", 3, (x_r, sg * y_head, 0.5 * (z0 + z1) + dz), (0, sg, 0),
                            [(car, TAB_T)], owner=car, nut="tapped", tapped_part=bid, tapped_depth=0.0055, step=STEP,
                            notes="carriage tab to rail block")
@@ -1056,13 +1138,15 @@ class Build:
             xa, xb = D.rail_x(which)
             w_r = self.w_r[which]
             for i, u in enumerate(D.standoff_u(which, w_r)):
-                y, z = C.yz(u, w_r)
+                y, z = C.yz(u, w_r + SO_BOLT)
                 if which == "F":
-                    p, ax, grip = (xb - 0.0035, sg * y, z), (-1, 0, 0), xb - 0.0035 - xf - CT
+                    p, ax, grip = (xb - CB_D, sg * y, z), (-1, 0, 0), xb - CB_D - xf - CT
                 else:
-                    p, ax, grip = (xa + 0.0035, sg * y, z), (1, 0, 0), xf - CT - xa - 0.0035
-                J.bolt(reg, f"{rail}-B{i + 1}", 3, p, ax, [(rail, grip)], owner=rail, nut="insert", insert_part=frame,
-                       insert_depth=C.t_frame, step=STEP, notes="door rail stand-off, potted M3 insert in the frame web")
+                    p, ax, grip = (xa + CB_D, sg * y, z), (1, 0, 0), xf - CT - xa - CB_D
+                J.bolt(reg, f"{rail}-B{i + 1}", 3, p, ax, [(rail, grip)], owner=rail, head="ISO 7380", nut="insert",
+                       insert_part=frame,
+                       insert_depth=C.t_frame, step=STEP,
+                       notes="door rail stand-off, potted M3 insert in the frame web")
         br, da = C.pid(11, side), C.pid(10, side)
         fl, sidef, fbolts, dbolts = D.bracket_geom()
         for i, (y, z) in enumerate(fbolts):
@@ -1081,6 +1165,44 @@ class Build:
             J.bolt(reg, f"{tr}-B{i + 1}", 3, (x, y_head, z), (0, 1, 0), [(tr, TR_T + CT)], owner=tr, head="ISO 7380",
                    nut="insert", insert_part=wall, insert_depth=C.t_wall, step=STEP,
                    notes="potted M3 insert through the wall sandwich")
+
+
+# =====================================================================================================================
+# verification helpers (used by the tests and the module notes)
+# =====================================================================================================================
+def e180_envelope(spec: dict, stroke: float = 0.0, grow: float = 0.0) -> G.Mesh:
+    """E180 growth envelope as ``sizing.turret_checks`` defines it (``payload.turret.growth_envelope``): sphere d 0.18 m
+    on the HD59 ball centre plus a d 0.18 m cylinder up to the envelope top (ball centre + height - radius), moved
+    ``stroke`` down along the elevator, radius grown by ``grow``."""
+    T = spec["payload"]["turret"]
+    el = spec["layout"]["chassis"]["turret_elevator"]
+    xc, zc = float(el["ball_center_retracted"][0]), float(el["ball_center_retracted"][2]) - float(stroke)
+    g = T["growth_envelope"]
+    top = zc + float(g["height"]) - 0.5 * float(g["diameter"])
+    r = 0.5 * float(g["diameter"]) + grow
+    return G.union([G.sphere(r, (xc, 0.0, zc), n=64), G.cylinder(r, (xc, 0.0, zc), (xc, 0.0, top), n=64)])
+
+
+def fov_obstructions(reg: Registry, part_ids, state: dict | None = None) -> list[tuple[str, float, float]]:
+    """Parts reaching below the field-of-regard cone of the extended turret (``layout.keep_outs`` KO-TURRET-FOV: apex on
+    the extended ball centre, every protrusion above ``min_clear_elevation_deg``). Each vertex outside the ball is
+    tested (posed with ``state``). Returns (part id, azimuth deg with 0 = forward, elevation deg) of the lowest vertex
+    of every obstructing part."""
+    ko = next(k for k in reg.spec["layout"]["keep_outs"] if k["id"] == "KO-TURRET-FOV")
+    c = np.asarray(ko["apex"], float)
+    e_min = float(ko["min_clear_elevation_deg"])
+    r_b = 0.5 * float(reg.spec["payload"]["turret"]["ball_diameter"])
+    out = []
+    for pid in part_ids:
+        p = reg.parts[pid]
+        V = reg.posed_vertices(p, state) if state else p.mesh.V
+        d = V - c
+        elev = np.degrees(np.arctan2(d[:, 2], np.hypot(d[:, 0], d[:, 1])))
+        bad = (np.linalg.norm(d, axis=1) > r_b + 1e-4) & (elev < e_min)
+        if np.any(bad):
+            k = int(np.argmin(np.where(bad, elev, np.inf)))
+            out.append((pid, float(np.degrees(np.arctan2(d[k, 1], -d[k, 0])) % 360.0), float(elev[k])))
+    return out
 
 
 def register(reg: Registry, spec: dict) -> None:

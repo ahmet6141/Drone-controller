@@ -2877,6 +2877,11 @@ def main_gear_layout(S: dict, af: "Airframe", x_mg: float, z_g: float, y_mg_req:
     half_y = r_t * math.cos(sp) + 0.5 * w * math.sin(sp)               # stowed tyre half extent in y
     gap = 0.5 * float(mg["well_gap"])
     L = max((y_mg_req - half_y - clr - gap) / (1.0 + math.sin(sp)), float(mg["leg_length_min"]))
+    if (S["mass"].get("registry") or {}).get("groups") and mg.get("leg_length"):
+        # detail-design closure (mass/CG closure round): the turnover rule is a minimum-track rule; the main legs,
+        # trunnion fittings, wells and doors are built (gear module, layout), so a lower CG does not shorten the leg
+        # and narrow the track (one-sided, as the tail growth rule); a higher CG still lengthens it
+        L = max(L, float(mg["leg_length"]))
     z_t = z_ax + L * math.cos(sp)
     y_t = max(float(mg["trunnion_y_min"]), L + half_y + clr + gap)
     return _main_gear_geom(S, af, np.array([x_mg, y_t, z_t]), L, sp, z_ax)

@@ -5302,8 +5302,14 @@ layout:
       kind: pass-through
       y: [-0.025, 0.025]
       z: [-0.12, -0.068]
+    - id: C-HARN-FUELA
+      purpose: 'aft-cell fuel level probe lead H-FUEL-A (integration round IR-07): sealed split grommet with the probe flying
+        lead''s bulkhead connector on the aft face'
+      kind: pass-through
+      y: [-0.11, -0.08]
+      z: [0.115, 0.145]
     - id: C-DOORSHAFT
-      purpose: 'inner-door drive shaft (DA 22 EQ-DOORACT on the aft face -> flanged bearing housing on the forward face
+      purpose: 'inner-door drive shaft (DA 30 EQ-DOORACT on the aft face -> flanged bearing housing on the forward face
         -> crank and link in the well; gear detail round GD-05: replaces the 35 x 18 mm pushrod window C-DOORLINK, which
         could not pass a pushrod over the 90 deg door travel)'
       kind: pass-through
@@ -5546,11 +5552,11 @@ layout:
       openings:
       - id: W-NDOOR-LINK
         side: L
-        x: [1.084, 1.095]
+        x: [1.0824, 1.0934]
         z: [-0.1735, -0.1235]
         text: 'gear detail round (GD-08): window in the port keel wall for the nose-door drive link (DA 22 crank in the
-          side bay -> drive arm of the port coupling horn); solid laminate land round it (the wall''s aft end, 11.6 mm ahead
-          of FS1110; integration round IR-01: moved 13.5 mm aft with the coupling)'
+          side bay -> drive arm of the port coupling horn); solid laminate land round it (the wall''s aft end, 13 mm ahead
+          of FS1110; integration round IR-01: moved 11.9 mm aft with the coupling)'
     - id: M-DECK-NOSE
       part: YK250-CH-022
       name: avionics deck
@@ -8008,10 +8014,10 @@ layout:
       process: prepreg_ooa_vacbag
       layup: null
       thickness_m: 0.002
-      outline: [[1.0946, -0.125], [1.3584, -0.125], [1.3584, 0.125], [1.0946, 0.125], [1.0946, 0.04], [1.1055, 0.04], [
-          1.1055, -0.04], [1.0946, -0.04]]
+      outline: [[1.0946, -0.125], [1.3584, -0.125], [1.3584, 0.125], [1.0946, 0.125], [1.0946, 0.046], [1.1055, 0.046],
+        [1.1055, -0.046], [1.0946, -0.046]]
       lands: [ST-FS1110, ST-FS1330, M-TURRETWALL, M-KEELWALL]
-      notes: 'integration round (IR-01): forward edge notched over the keel slot (|y| < 0.04) back to x 1.1055, 1 mm aft
+      notes: 'integration round (IR-01): forward edge notched over the keel slot (|y| < 0.046) back to x 1.1055, 1 mm aft
         of the nose-door aft edge (the doors'' edge band lies on the trimmed FS1110 forward cap there; the notch sides land
         on the keel-wall foot flanges); fix round 1 (VPK-08): flush skin insert {(xr1 - xr0) * 1000:.0f} x {2 * RING_Y *
         1000:.0f} mm, CFRP solid laminate 2.0 mm (10 plies PW, prepreg_ooa_vacbag; fix round 3 PK3-08), landing on the outward
@@ -9900,7 +9906,7 @@ layout:
       part (rudder root vs cowl 8 mm, stabilator root gap R-38)'
   - id: KO-CORRIDOR-HARNESS
     kind: corridor (harness trunks)
-    trunks: [H-MAIN, H-COAX, H-WING, H-TAIL, H-ENGINE, H-NOSE]
+    trunks: [H-MAIN, H-COAX, H-WING, H-TAIL, H-ENGINE, H-NOSE, H-FIN, H-FUEL, H-FUEL-A]
     radius: trunk diameter / 2 + radial_margin
     radial_margin: 0.01
     corridor_diameter: trunk diameter + 10 mm (static objects; layout.systems.harness.rules)
@@ -10333,7 +10339,7 @@ layout:
       name: nose-door actuator Volz DA 22 (28 V), drives both clamshell doors
       name_tr: burun kapağı eyleyicisi DA 22 (iki kapak)
       group: gear
-      box: [[1.0454, -0.1003, -0.1287], [1.0731, -0.0587, -0.0611]]
+      box: [[1.0454, -0.1003, -0.1288], [1.0731, -0.0587, -0.0612]]
       mass_kg: 0.132
       mount:
         zone: aft lower corner of the port avionics side bay, through the cut-out of the side-bay tray
@@ -10348,7 +10354,7 @@ layout:
         (NDOOR-LINKAGE)'
       mass_item: gear_doors_wells_locks_sensors
       shaft:
-        point: [1.083, -0.0795, -0.116]
+        point: [1.0814, -0.0795, -0.116]
         axis: [0.996145, 0.0, -0.08772]
         roll_deg: 0.0
         text: crank axis in the drive plane (parallel to the door hinge axes); case rolled about it (roll_deg, from the
@@ -10356,7 +10362,7 @@ layout:
       drive_envelope:
         id: NDOOR-LINKAGE
         part: YK250-LG-679
-        box: [[1.084, -0.0415, -0.1715], [1.0995, 0.0415, -0.075]]
+        box: [[1.084, -0.0415, -0.1715], [1.106, 0.0415, -0.075]]
         text: swept envelope of the door coupling above the doors (two links, slide bar and its guide plate on the keel
           walls) over the door travel, between the keel walls, aft of the stowed nose tyre and above the slot-end sill;
           the horns are bonded on the doors
@@ -10486,23 +10492,35 @@ layout:
       part: YK250-SY-783
       name: primary datalink antenna B (2.4 GHz omni dipole, SWA 1001-202)
       name_tr: birincil veri bağı anteni B
-      point: [4.0253, -0.4309, 0.9904]
-      size: [0.013, 0.013, 0.109]
+      point: [3.9999, -0.4239, 0.9729]
+      size: [0.013, 0.0529, 0.1059]
       window: YK250-TL-258-L
       link: Silvus SC4200EP MIMO chain B
       notes: 'along the span inside the GFRP port fin-tip cap (upper/lateral coverage; research note: spaced fin/belly pair
         avoids shadowing)'
+      base: [3.9999, -0.4034, 0.9224]
+      axis: [0.0, -0.374614, 0.927181]
+      length: 0.109
+      diameter: 0.013
+      mount: 'TNC bulkhead jack in the tip rib (fin tail module), base on the rib top face; polarisation canted 22 deg with
+        the fin (cos 22 deg: -0.3 dB on a vertical ground antenna)'
     - id: ANT-BKP
       part: YK250-SY-784
       name: backup C2 antenna (2.4 GHz omni dipole)
       name_tr: yedek C2 anteni
-      point: [4.0253, 0.4309, 0.9904]
-      size: [0.013, 0.013, 0.109]
+      point: [3.9999, 0.4239, 0.9729]
+      size: [0.013, 0.0529, 0.1059]
       window: YK250-TL-258-R
       link: Microhard pDDL2450 main port
       notes: 'inside the GFRP starboard fin-tip cap; diversity port: small dipole in the nose cone ≥ 1 wavelength from antenna
         A. Co-site with the 2.4 GHz Silvus band: frequency plan or the 900 MHz pDDL900 alternative (components.yaml) - open
         item'
+      base: [3.9999, 0.4034, 0.9224]
+      axis: [0.0, 0.374614, 0.927181]
+      length: 0.109
+      diameter: 0.013
+      mount: 'TNC bulkhead jack in the tip rib (fin tail module), base on the rib top face; polarisation canted 22 deg with
+        the fin (cos 22 deg: -0.3 dB on a vertical ground antenna)'
     - id: ANT-XPDR
       part: YK250-SY-786
       name: transponder L-band blade antenna (1090 MHz)
@@ -10569,8 +10587,14 @@ layout:
       part: YK250-SY-791
       name: tail position/strobe light (white, aft-facing)
       name_tr: kuyruk seyir ışığı
-      box: [[4.1596, 0.4234, 0.989], [4.2596, 0.4534, 1.029]]
-      mount: trailing edge of the starboard fin-tip cap (GFRP), 2 x M5
+      box: [[4.0516, 0.4322, 1.0367], [4.1516, 0.4851, 1.0814]]
+      frame:
+        center: [4.1016, 0.4586, 1.059]
+        axes: [[1.0, 0.0, 0.0], [0.0, -0.92718, 0.374616], [0.0, 0.374616, 0.92718]]
+        half: [0.05, 0.0225, 0.015]
+        text: 'light case on the tip face: axes = chord, thickness normal, span (half sizes)'
+      mount: tip face of the starboard fin-tip cap (GFRP), aft part, 2 x M5 into potted inserts of the bonded GFRP mounting
+        block inside the cap (tail module, integration round IR-06)
       source: components.yaml aveoflash_lp_lsa
     actuators:
     - id: ACT-AILERON
@@ -10759,6 +10783,37 @@ layout:
           [0.37, 0.055, 0.03], [0.335, 0.0, 0.012], [0.3, 0.0, 0.01]]
         supports: [M-DECK-NOSE]
         text: FTS, nose-cone antennas (coax), transponder blade feed, pitot heater; pitot lines alongside
+      - id: H-FIN
+        part: YK250-SY-794
+        name: 'fin branch (each side): tip-cap antenna coax, tail light'
+        diameter: 0.008
+        mirror: true
+        path: [[3.5201, 0.1201, 0.3016], [3.5226, 0.1236, 0.3124], [3.6218, 0.1724, 0.3507], [3.993, 0.3992, 0.9119]]
+        text: fin root (end of H-TAIL) -> up the fin box on the chord line of the tip dipole between the spars, through
+          bores (grommets) in the root, box and servo ribs -> TNC bulkhead jack in the tip rib (dipole ANT-BKP / ANT-C2B)
+          and, starboard, the tail light LT-TAIL lead through the tip rib
+      - id: H-FUEL
+        part: YK250-SY-777
+        name: fuel level probe branch (forward / saddle cells)
+        diameter: 0.006
+        path: [[1.85, 0.2108, 0.0066], [1.88, 0.09, 0.11], [1.93, 0.0165, 0.14], [1.93, 0.0165, 0.177], [2.775, 0.0165,
+            0.177]]
+        supports: [M-SPINE]
+        penetrations:
+        - member: M-SPINE
+          point: [1.93, 0.0165, 0.163]
+          kind: sealed split grommet in the spine-channel floor (mission bay side)
+        text: breakout of H-COAX in the mission bay -> up through the floor of the dorsal spine channel M-SPINE -> along
+          its starboard wall (y 0.0165, 5 mm outboard of the parachute bridle aft leg, under the fuel-bay panels' inboard
+          flange) over the forward and saddle cells -> wall connectors of the probe flying leads at x 2.33 / 2.64; the bundle
+          stays in the sealed trough, outside the vapour-tight bays
+      - id: H-FUEL-A
+        part: YK250-SY-778
+        name: fuel level probe branch (aft cell)
+        diameter: 0.006
+        path: [[3.093, -0.095, 0.13], [3.12, -0.095, 0.13], [3.2, -0.06, 0.07], [3.235, -0.022, 0.04]]
+        text: bulkhead connector of the aft-cell probe flying lead in FS-GEAR (C-HARN-FUELA, sealed) -> aft equipment bay
+          -> breakout into H-MAIN ahead of the junction CN-TAIL
       rules: 'trunks are keep-out corridors (diameter + 10 mm: no object within 5 mm of the trunk surface, layout_check
         C04, fix round 3 PK3-05) except the members a trunk is clamped to (''supports''), its declared penetrations (grommets
         / conduit entries) and its two terminations (connectors, 30 mm); grommets at every frame (cut-outs in layout.stations);
@@ -10961,13 +11016,13 @@ layout:
     name: aft-cell sump drain (collector)
     name_tr: arka hücre sump boşaltma hattı
     diameter: 0.008
-    path: [[3.018, -0.05, -0.049], [3.0912, -0.05, -0.048], [3.1452, -0.07, -0.06], [3.1452, -0.118, -0.09], [3.1452, -0.118,
-        -0.1755]]
+    path: [[3.018, -0.05, -0.049], [3.0912, -0.05, -0.048], [3.1452, -0.07, -0.06], [3.1572, -0.07, -0.09], [3.265, -0.07,
+        -0.098], [3.265, -0.07, -0.1531]]
     penetrations: []
     text: 'fix round 3 (PK3-01): drain fitting at the bottom of the aft-cell collector (the low point of the feed cell,
       into which the forward and saddle cells drain) through FS-GEAR C-FUEL-DRN (sealed union) to a flush quick-drain valve
-      in the aft equipment hatch P-AFTHATCH; integration round (IR-02): falls outboard over the port inner-door DA 30 case
-      to y -0.118'
+      in the aft equipment hatch P-AFTHATCH; integration round (IR-02): runs aft over the port inner-door DA 30 case and
+      drops behind it (x 3.265)'
     end_fitting: skin
     role: drain
   - id: FL-DRAIN
@@ -10975,10 +11030,10 @@ layout:
     name: gascolator / filter drain
     name_tr: filtre boşaltma hattı
     diameter: 0.008
-    path: [[3.1552, 0.07, -0.066], [3.1552, 0.07, -0.084], [3.1552, 0.118, -0.094], [3.1552, 0.118, -0.1738]]
+    path: [[3.1552, 0.07, -0.066], [3.1552, 0.07, -0.088], [3.275, 0.07, -0.094], [3.275, 0.07, -0.1511]]
     penetrations: []
     text: 'drain valve flush with the aft equipment hatch P-AFTHATCH; integration round (IR-02): gascolator bowl at y 0.070,
-      the drain line falls outboard over the inner-door DA 30 case to y 0.118'
+      the drain line runs aft over the inner-door DA 30 case and drops behind it (x 3.275)'
     end_fitting: skin
     role: drain
   fuel_system:
@@ -11213,39 +11268,48 @@ layout:
       position_sizing_phase: [1.8253, 0.0, -0.05]
     wiring_harness_connectors_coax:
       mode: absolute
-      position: [2.3012, -0.0166, 0.0152]
+      position: [2.327, -0.0157, 0.0294]
       basis: cables 70 % (estimate) by trunk length x diameter^2 (layout.systems.harness) + outer-panel harnesses; connectors,
         backshells and coax terminations 30 % (estimate) equally over the connection points of the layout (equipment, actuators,
         antennas, lights, gear EMAs)
       components:
       - what: H-MAIN
-        fraction: 0.2307
+        fraction: 0.2204
         at: [2.1988, -0.1764, -0.0419]
       - what: H-COAX
-        fraction: 0.1402
+        fraction: 0.1339
         at: [2.1782, 0.185, -0.0524]
       - what: H-WING (x2)
-        fraction: 0.0607
+        fraction: 0.058
         at: [2.5432, 0.0, -0.0565]
       - what: H-TAIL (x2)
-        fraction: 0.0389
+        fraction: 0.0372
         at: [3.4169, 0.0, 0.1615]
       - what: H-ENGINE
-        fraction: 0.036
+        fraction: 0.0344
         at: [3.4895, -0.0778, -0.007]
       - what: H-NOSE
-        fraction: 0.0162
+        fraction: 0.0155
         at: [0.5362, 0.0568, 0.0286]
+      - what: H-FIN (x2)
+        fraction: 0.0217
+        at: [3.7706, 0.0, 0.585]
+      - what: H-FUEL
+        fraction: 0.0083
+        at: [2.2325, 0.0386, 0.1552]
+      - what: H-FUEL-A
+        fraction: 0.0014
+        at: [3.1703, -0.0686, 0.0903]
       - what: outer-panel harnesses (x2, to the tips)
-        fraction: 0.1772
+        fraction: 0.1692
         at: [2.8707, 0.0, 0.076]
       - what: connectors at 53 connection points
         fraction: 0.3
-        at: [1.8601, 0.0, 0.0521]
+        at: [1.8571, 0.0, 0.0524]
       position_sizing_phase: [1.9, 0.0, 0.0]
     flight_termination_lights:
       mode: absolute
-      position: [2.3201, 0.0912, 0.2387]
+      position: [2.2976, 0.0954, 0.2491]
       basis: FTS 0.15 kg + 3 x AveoFlash 0.083 kg at their installed places
       components:
       - what: FTS unit (forward bay)
@@ -11256,7 +11320,7 @@ layout:
         at: [2.9748, 0.0, 0.155]
       - what: tail light (fin tip)
         fraction: 0.208
-        at: [4.2096, 0.4384, 1.009]
+        at: [4.1016, 0.4587, 1.0591]
       position_sizing_phase: [1.6836, 0.0, 0.02]
     keel_beams_longerons:
       mode: absolute
@@ -11288,7 +11352,7 @@ layout:
       position_sizing_phase: [2.0, 0.0, -0.05]
     frames_bulkheads:
       mode: absolute
-      position: [2.4086, 0.0, 0.0105]
+      position: [2.4083, 0.0, 0.0104]
       basis: 13 stations, mass ~ net web area (section inside the 6 mm skin inset minus the declared cut-outs and, for the
         spar frames, the box) x thickness x effective density (sandwich ~400 kg/m3, aluminium ring 2700 kg/m3; estimate)
       components:
@@ -11305,28 +11369,28 @@ layout:
         fraction: 0.0748
         at: [1.33, 0.0, -0.0092]
       - what: FS1490
-        fraction: 0.1055
+        fraction: 0.1056
         at: [1.49, 0.0, -0.0346]
       - what: FS1810
-        fraction: 0.1221
+        fraction: 0.1222
         at: [1.81, 0.0, -0.0443]
       - what: FS-FUEL
         fraction: 0.1216
         at: [2.1895, 0.0, -0.0421]
       - what: FS-MS
-        fraction: 0.0542
+        fraction: 0.0543
         at: [2.487, 0.0, -0.0157]
       - what: FS-RS
         fraction: 0.0557
         at: [2.8, 0.0, -0.0114]
       - what: FS-GEAR
-        fraction: 0.1226
-        at: [3.0952, 0.0, -0.0226]
+        fraction: 0.1222
+        at: [3.0952, 0.0, -0.0232]
       - what: FS3480
         fraction: 0.0313
         at: [3.48, 0.0, 0.1047]
       - what: FS3670
-        fraction: 0.1738
+        fraction: 0.1739
         at: [3.67, 0.0, 0.125]
       - what: FS3738
         fraction: 0.0428
@@ -11559,7 +11623,7 @@ layout:
       position_sizing_phase: [0.8443, 0.0, -0.1244]
     gear_doors_wells_locks_sensors:
       mode: absolute
-      position: [2.3771, -0.0057, -0.1385]
+      position: [2.3772, -0.0057, -0.1385]
       basis: sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout door
         outlines (closed), well centres and door drives
       components:
@@ -11586,10 +11650,10 @@ layout:
         at: [2.9758, 0.0, -0.2]
       - what: nose-door DA 22 + crank/pushrod (EQ-NDOORACT)
         fraction: 0.0723
-        at: [1.0593, -0.0795, -0.0949]
+        at: [1.0593, -0.0795, -0.095]
       - what: nose-door bellcrank, links and horns (NDOOR-LINKAGE)
         fraction: 0.021
-        at: [1.0917, 0.0, -0.1232]
+        at: [1.095, 0.0, -0.1232]
       - what: door seals (main)
         fraction: 0.027
         at: [2.9758, 0.0, -0.1309]

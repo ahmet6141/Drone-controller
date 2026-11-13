@@ -3031,8 +3031,10 @@ def build_rail_anchor(C: Ctx, rail: dict) -> G.Mesh:
     z0, z1 = min(z_a, z_b), max(z_a, z_b)
     seat = abs(y_r) + RAIL_HALF_H                                # rail base plane (|y|)
     xr_far = x_r + sx * (RAIL_SEAT_X)
+    # integration round (IR-03): the frame leg starts 4 mm above the rail end (3.7 mm to the sliding-door rail on
+    # the frame face, was 0.3 mm)
     leg_f = box3((min(xf, xf + sx * RAIL_ANCHOR_T), sy * (yw - RAIL_ANCHOR_LEG) if sy > 0 else -yw,
-                  z0), (max(xf, xf + sx * RAIL_ANCHOR_T), yw if sy > 0 else -(yw - RAIL_ANCHOR_LEG), z1))
+                  z0 + RAIL_LEG_F_UP), (max(xf, xf + sx * RAIL_ANCHOR_T), yw if sy > 0 else -(yw - RAIL_ANCHOR_LEG), z1))
     xa_, xb_ = sorted((xf, xr_far))
     # wall leg (V03): 3 mm seat plate under the rail, standing off the wall on two 3 mm edge ribs, two end ribs and
     # solid bosses round the wall bolts (the layout's solid 8.75 x 50 x 245 mm bar was 0.3 kg per anchor)
@@ -3057,6 +3059,7 @@ RAIL_SEAT_X = 0.028         # seat leg runs 28 mm beyond the rail centre line (b
 RAIL_ANCHOR_T = 0.003
 RAIL_ANCHOR_LEG = 0.025
 RAIL_BOSS_R = 0.0085        # solid boss round each wall bolt (2 D + 0.5 mm edge distance for M4)
+RAIL_LEG_F_UP = 0.004       # frame leg lower end above the rail end (IR-03: clear of the sliding-door rail)
 
 
 def rail_anchor_points(C: Ctx, rail: dict):
@@ -3071,7 +3074,7 @@ def rail_anchor_points(C: Ctx, rail: dict):
     zs = (z0 + 0.020, z1 - 0.020)
     fb = [(xf + sx * RAIL_ANCHOR_T, sy * (yw - 0.0125), z) for z in zs]
     seat = abs(y_r) + RAIL_HALF_H
-    xm = x_r + sx * (RAIL_SEAT_X - 0.012)
+    xm = x_r + sx * (RAIL_SEAT_X - 0.010)      # IR-03: 18 mm from the rail axis (socket heads clear of the blocks)
     wb = [(xm, sy * seat, z) for z in (z0 + 0.060, z1 - 0.060)]
     return fb, wb
 

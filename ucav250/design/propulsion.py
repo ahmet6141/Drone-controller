@@ -793,7 +793,9 @@ DUCT_FLAT_X = 3.616         # S-duct constant exit section from here to the exit
 EDGE_ANGLE_LEG = 0.013      # firewall shield edge angle leg (layout firewall_stackup: angle 2 x 13 mm)
 SDUCT_SCREW_X = 3.636       # 4 x M4 of the slip joint (>= 2.5 D to the duct end, >= 2 D to the spigot end)
 TRANS = dict(x_flange=0.0005, fl_out=0.012, fl_top=0.009, x_rise0=3.676, x_rise1=3.703, x_wide=3.712, x_end=3.745,
-             z_lo=0.294, z_hi=0.328, z_hi_fw=0.312, r=0.016, hy=0.120)
+             z_lo=0.294, z_hi=0.3265, z_hi_fw=0.312, r=0.016, hy=0.120)
+# integration round (IR-09): z_hi 0.328 -> 0.3265: the coupling boot's outer corners kept 1.1 mm under the fixed fin-root
+# fairing SH-395 (was 0.8 mm into it); boot section 0.00758 m2 = 64 % of the S-duct exit (test >= 60 %)
 
 
 def spigot_section(C: Ctx):

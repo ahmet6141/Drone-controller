@@ -85,6 +85,8 @@ SF_FL_Y, SF_FL_END = 0.303, 0.012   # flange bolt station (12.5 mm+ from the web
 SF_FL_HZ, SF_FL_DZ, SF_FL_T = 0.021, 0.010, 0.005   # flange half height, flange bolts +-10 mm about the stub plane, t
 RUDDER_GAP_END = 0.006      # spanwise gap rudder ends / fixed fin (rudder top swings 3.9 mm toward the tip cap)
 CAP_SKIRT = 0.025           # tip-cap skirt length below the cap joint (2 x M3 into nutplates on the fin skin)
+LIGHT_BLOCK_XC = (0.38, 0.62)   # tail-light mounting block chord fractions under the cap tip face (IR-06)
+LIGHT_BLOCK_H = 0.014           # its depth along the span
 COVE_GAP = 0.002            # radial cove gap round the rudder nose
 HINGE_S = (0.18, 0.45, 0.68)   # rudder hinge stations: fin span from the root reference section (m)
 BOX_RIBS = (0.35, 0.70)     # fin box ribs (span coordinate eta), clear of the hinge-bracket nutplates and the servo bay
@@ -1420,6 +1422,20 @@ class FinGeo:
                 [self._fixed3d(e0 - 0.02, self.e_cap + 0.001)])
         return D(outer, [inner, aft])
 
+    def light_block(self) -> G.Mesh:
+        """Integration round (IR-06): GFRP mounting block of the tail light (layout LT-TAIL on the tip face of the
+        starboard cap; the port block is the symmetric provision): bonded under the cap's tip face between chord
+        fractions LIGHT_BLOCK_XC, filling the cap section (inset by the cap laminate + bond line), LIGHT_BLOCK_H deep;
+        the light's 2 x M4 go into potted inserts in it (10 mm edge distance: section >= 21 mm thick there)."""
+        F = self.F
+        e_hi = F.e1 - T_GFRP
+        x0, x1 = LIGHT_BLOCK_XC
+
+        def fn(poly, ch, eta):
+            return SG.largest(poly.buffer(-(T_GFRP + BOND), join_style=2).intersection(
+                sbox(x0 * ch, -1.0, x1 * ch, 1.0)))
+        return F.loft(e_hi - LIGHT_BLOCK_H, e_hi, fn)
+
     def cap_screws(self):
         """(point on the skirt outer surface, axis into the fin) of the two M3 cap screws (inboard / outboard face)."""
         F = self.F
@@ -2224,6 +2240,11 @@ class _TailReg:
           contacts=(self.P("skin"),),
           notes="4 plies GFRP 7781 (RF window for the 2.4 GHz dipole of layout ANT-BKP / ANT-C2B); skirt in the joggled "
                 "fin-skin land, 2 x M3 into nutplates")
+        A("lblk", 292, "R", "tail", "tail-light mounting block (GFRP), starboard", "kuyruk ışığı bağlantı bloğu "
+          "(GFRP), sağ", GFRP, P_PREPREG, f.light_block, thickness=LIGHT_BLOCK_H, parent=self.P("cap"), step=32,
+          explode=EX_FIN, contacts=(self.P("cap"),),
+          notes="integration round IR-06: GFRP block bonded under the tip face of the cap; starboard: the tail light "
+                "LT-TAIL (systems) on the tip face, 2 x M4 into potted inserts; port: symmetric provision")
         A("hatch", 268, "R", "tail", "fin servo hatch cover, starboard", "dikey servo kapağı, sağ", CFRP_PW, P_PREPREG,
           f.hatch_cover, thickness=HATCH_T, parent=self.P("skin"), step=32, explode=(0.0, -0.10, 0.28),
           contacts=(self.P("skin"),), notes="5 plies PW, flush in the joggled land, 4 x M4 into nutplates "

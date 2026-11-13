@@ -1028,7 +1028,9 @@ class Systems:
                    "H-WING": C.mem["M-CTBOX"]["part"], "H-TAIL": C.stp("FS3480"), "H-ENGINE": C.stp("FS3670"),
                    "H-NOSE": C.mem["M-DECK-NOSE"]["part"]}
         # integration round (IR-07): fuel level probe branches (layout H-FUEL in the spine channel, H-FUEL-A aft)
-        for tid, par in (("H-FUEL", C.mem["M-SPINE"]["part"]), ("H-FUEL-A", C.stp("FS-GEAR"))):
+        fin_rr = "YK250-TL-255-R"                       # fin root rib (tail module; H-FIN, IR-06)
+        for tid, par in (("H-FUEL", C.mem["M-SPINE"]["part"]), ("H-FUEL-A", C.stp("FS-GEAR")),
+                         ("H-FIN", fin_rr if fin_rr in self.reg.parts else C.stp("FS3480"))):
             if tid in C.trunk:
                 parents[tid] = par
         self.trunk_ids = {}
@@ -1055,12 +1057,17 @@ class Systems:
         self.wing_receptacle(RC, cn, 1)
         self.wing_receptacle(RC, cn, -1)
         # port copies of the mirrored branches and of the H-WING penetration grommets
-        for tid in ("H-WING", "H-TAIL"):
+        self.fin_bores()
+        for tid in [t for t in ("H-WING", "H-TAIL", "H-FIN") if t in self.trunk_ids]:
             pr, pl = self.trunk_ids[tid]
             q = mirror_part(self.reg.parts[pr], pl)
             q.contacts = ()
             self.reg.add(q)
             self.harness_parts.append(pl)
+        if "H-FIN" in self.trunk_ids and "H-TAIL" in self.trunk_ids:     # IR-06: breakout of H-TAIL at its end
+            for fi, ti in zip(self.trunk_ids["H-FIN"], self.trunk_ids["H-TAIL"]):
+                self.link(fi, ti)
+                self.link(ti, fi)
         for g in self.member_grommets_R:
             q = mirror_part(self.reg.parts[g], g[:-1] + "L")
             q.parent = q.parent[:-1] + "L" if q.parent.endswith("-R") else q.parent
@@ -1222,6 +1229,28 @@ class Systems:
         for b in bids:
             self.link(b, pid)
         return pid
+
+    def fin_bores(self):
+        """IR-06: H-FIN runs up the fin box through bores in the tail ribs it crosses (bundle + 1.5 mm, moulded split
+        grommets, drawing note) - cut here in the starboard parts and mirrored into the port ones."""
+        if "H-FIN" not in self.trunk_ids:
+            return
+        bore = self.bundle("H-FIN", 0.0015)
+        lo, hi = bore.bounds()
+        man = bore.to_manifold()
+        for pid, p in list(self.reg.parts.items()):
+            if not pid.startswith("YK250-TL-") or not pid.endswith("-R"):
+                continue
+            plo, phi = p.mesh.bounds()
+            if np.any(phi < lo) or np.any(plo > hi):
+                continue
+            v = man ^ p.mesh.to_manifold()
+            if v.is_empty() or v.volume() < 1e-9:
+                continue
+            p.holes.append(bore)
+            q = pid[:-1] + "L"
+            if q in self.reg.parts:
+                self.reg.parts[q].holes.append(bore.mirrored_y())
 
     def spine_grommet(self):
         """Integration round (IR-07): H-FUEL enters the dorsal spine channel through its floor in the mission bay
@@ -1650,13 +1679,61 @@ class Systems:
         self.fin_items()
 
     def fin_items(self):
-        """ANT-C2B / ANT-BKP (2.4 GHz dipoles in the fin-tip caps) and LT-TAIL are not created: the as-built GFRP
-        tip caps (tail module) give 82 mm of span-wise cavity at the layout antenna point for a 109 mm dipole, and the
-        LT-TAIL box (30 mm wide) straddles the 4 mm thick cap trailing edge; both need a tail-module provision (open
-        items in docs/detail/systems.md)."""
-        if any(pid.startswith("YK250-TL-258") for pid in self.reg.parts):
-            self.reg.note("systems: ANT-C2B / ANT-BKP / LT-TAIL not created - no fit / provision in the fin-tip caps "
-                          "(open item)")
+        """Integration round (IR-06): ANT-BKP (starboard) / ANT-C2B (port), Southwest Antennas 1001-202 dipoles along
+        the fin span on the tip rib inside the GFRP tip caps (TNC bulkhead jack through the rib, jam nut under it), and
+        LT-TAIL, the AveoFlash LSA tail light on the tip face of the starboard cap (2 x M4 into the potted inserts of
+        the tail module's GFRP mounting block TL-292); coax / supply in H-FIN."""
+        C = self.C
+        if not any(pid.startswith("YK250-TL-258") for pid in self.reg.parts):
+            return
+        for aid, sd in (("ANT-BKP", "R"), ("ANT-C2B", "L")):
+            a = C.ant.get(aid)
+            if a is None or "axis" not in a:
+                continue
+            rib, cap = f"YK250-TL-264-{sd}", f"YK250-TL-258-{sd}"
+            ax = G.unit(np.asarray(a["axis"], float))
+            base = np.asarray(a["base"], float)
+            L, d = float(a["length"]), float(a["diameter"])
+            (_r, r0, r1), = J.measure_stack(self.reg, [rib], base, -ax, 0.009, search=0.03)
+            top, bot = base - r0 * ax, base - r1 * ax                 # rib faces on the antenna axis
+            r_jack = 0.006
+
+            def amesh(top=top, bot=bot, ax=ax, L=L, d=d):
+                body = G.cylinder(0.5 * d, top + 0.0001 * ax, top + L * ax, n=40)
+                stub = G.cylinder(r_jack, bot - 0.004 * ax, top + 0.0002 * ax, n=32)
+                nut = G.cylinder(0.009, bot - 0.004 * ax, bot - 0.0001 * ax, n=6)
+                return G.union([body, stub, nut])
+            self.reg.parts[rib].add_hole(top + 0.002 * ax, bot - 0.002 * ax, r_jack + 0.0005)
+            jid = getattr(self, "trunk_ids", {}).get("H-FIN", [None, None])[0 if sd == "R" else -1]
+            self.add(a["part"], a["name"], a["name_tr"], P_BUY, P_BUY, amesh, purchased=True,
+                     vendor="Southwest Antennas 1001-202 omni half-wave dipole 2.1-2.5 GHz, TNC(m) "
+                            "(components.yaml southwest_antennas_1001_202) + TNC bulkhead jack and jam nut",
+                     mass_kg=0.0227 + 0.012, parent=rib, contacts=(rib,), step=STEP_ANTENNA,
+                     explode=tuple((0.12 * ax).tolist()),
+                     notes=f"{a['link']}; {a.get('mount', '')}; RF window: GFRP tip cap {cap}; coax in H-FIN"
+                           + (f" ({jid})" if jid else "") + "; jack mass 0.012 kg (estimate)")
+        lt = next((q for q in C.L["systems"]["air_data_lights"] if q["id"] == "LT-TAIL"), None)
+        blk = "YK250-TL-292-R"
+        if lt is None or "frame" not in lt or blk not in self.reg.parts:
+            return
+        fr = lt["frame"]
+        Rm = np.asarray(fr["axes"], float).T                         # columns: chord, thickness normal, span
+        hc = np.asarray(fr["half"], float)
+        pc = np.asarray(fr["center"], float)
+        lid = self.pid(int(lt["part"].split("-")[2]))
+        self.add(lid, "tail position / strobe light (white, aft-facing)", "kuyruk seyir / çakar ışığı (beyaz)",
+                 P_BUY, P_BUY, (lambda: G.box(tuple((2 * hc).tolist()), center=pc, R=Rm)), purchased=True,
+                 vendor="AveoFlashLP LSA 3-in-1 (components.yaml aveoflash_lp_lsa, stainless screws)", mass_kg=0.083,
+                 parent="YK250-TL-258-R", contacts=("YK250-TL-258-R",), step=STEP_ANTENNA,
+                 explode=tuple((0.10 * Rm[:, 2]).tolist()), notes=lt["mount"] + "; supply in H-FIN (starboard)")
+        w = Rm[:, 2]
+        for k, dc in enumerate((-0.019, 0.019)):
+            q = pc + dc * Rm[:, 0] + hc[2] * w
+            (_r, r0, r1), = J.measure_stack(self.reg, [blk], q, -w, 0.0036, search=0.08)
+            J.bolt_through(self.reg, f"{lid}-B{k + 1}", 4, q, -w, [lid, "YK250-TL-258-R"], owner=lid, nut="insert",
+                           insert_part=blk, insert_depth=r1 - r0, step=STEP_ANTENNA,
+                           notes="light through its mounting holes and the cap tip face into potted inserts of the "
+                                 "mounting block (M4 as the wing-tip units)")
 
     # =================================================================================================================
     # harness mass: cables 70 % by length x d^2, connectors / grommets / breakouts 30 % of the layout item

@@ -429,10 +429,10 @@ class SC:
         return np.where((y >= self.y_in) & (y <= self.y_root + 1e-3), np.maximum(zt, gu), zt)
 
     # ------------------------------------------------------------------ envelopes (closed solids)
-    def body_env(self, d: float, x0: float, x1: float) -> G.Mesh:
-        key = ("b", round(d, 7), round(x0, 4), round(x1, 4))
+    def body_env(self, d: float, x0: float, x1: float, dx: float | None = None) -> G.Mesh:
+        key = ("b", round(d, 7), round(x0, 4), round(x1, 4)) + ((round(dx, 5),) if dx else ())
         if key not in self._env:
-            n = max(2, int(math.ceil((x1 - x0) / DX)) + 1)
+            n = max(2, int(math.ceil((x1 - x0) / (dx or DX))) + 1)
             rings = []
             for x in np.linspace(x0, x1, n):
                 try:
@@ -482,21 +482,22 @@ class SC:
                 self._env[key] = G.union([f, f.mirrored_y()])
         return self._env[key]
 
-    def env(self, d: float, x0: float, x1: float) -> G.Mesh:
-        """Union OML (body + wing-root fairing) inset by d in the section plane, between x0 and x1."""
-        key = ("u", round(d, 7), round(x0, 4), round(x1, 4))
+    def env(self, d: float, x0: float, x1: float, dx: float | None = None) -> G.Mesh:
+        """Union OML (body + wing-root fairing) inset by d in the section plane, between x0 and x1 (``dx``: finer
+        section spacing than DX, for strongly curved closures)."""
+        key = ("u", round(d, 7), round(x0, 4), round(x1, 4)) + ((round(dx, 5),) if dx else ())
         if key not in self._env:
-            b = self.body_env(d, x0, x1)
+            b = self.body_env(d, x0, x1, dx)
             f = self.fair_env(d, x0, x1)
             self._env[key] = b if f is None else G.union([b, f])
         return self._env[key]
 
-    def layer(self, d0: float, d1: float, x0: float, x1: float) -> G.Mesh:
+    def layer(self, d0: float, d1: float, x0: float, x1: float, dx: float | None = None) -> G.Mesh:
         """Shell layer between the union OML inset by d0 and by d1 (section plane), x0..x1."""
-        key = ("l", round(d0, 7), round(d1, 7), round(x0, 4), round(x1, 4))
+        key = ("l", round(d0, 7), round(d1, 7), round(x0, 4), round(x1, 4)) + ((round(dx, 5),) if dx else ())
         if key not in self._env:
-            a = self.env(max(d0, 0.0), x0, x1)
-            b = self.env(d1, x0 - 0.01, x1 + 0.01)
+            a = self.env(max(d0, 0.0), x0, x1, dx)
+            b = self.env(d1, x0 - 0.01, x1 + 0.01, dx)
             self._env[key] = man_sub(a, [b])
         return self._env[key]
 
@@ -699,6 +700,16 @@ class Fix:
             else str(mats.get(p.material, {}).get("kind", "metal"))
         from . import hardware as HW
         self.HW = HW
+        # turret door band (IR-03): x between the FS1110 aft / FS1330 forward web faces, arc length along the skin
+        # up to the layout band edge + the nutplate half-length + 3 mm
+        do = (sc.L.get("mechanisms", {}).get("door_outlines") or {}).get("turret_door_R")
+        self._band = None
+        if do and do.get("band"):
+            bnd = np.asarray(do["band"], float)
+            xa_ = float(sc.st["FS1110"]["x_faces"][1]) if "FS1110" in sc.st else float(bnd[:, 0].min())
+            xb_ = float(sc.st["FS1330"]["x_faces"][0]) if "FS1330" in sc.st else float(bnd[:, 0].max())
+            self._band = (xa_, xb_, float(bnd[:, 1].max()) + 0.5 * FC.NUTPLATE[4][0] + 0.003)
+        self.ring_pid = str(sc.pan.get("P-TURRETRING", {}).get("part", "YK250-SH-363"))
         for f in self.reg.fasteners():                  # holes and hardware already in the registry
             self._record(f)
 
@@ -949,7 +960,27 @@ class Fix:
                 v = om ^ hm
                 if not v.is_empty() and v.volume() > HW_TOL:
                     return False
+        for (klo, khi, km) in self.keepouts():        # IR-09: parts registered after the shell (cooling path)
+            if np.all(khi >= lo) and np.all(hi >= klo):
+                v = om ^ km
+                if not v.is_empty() and v.volume() > HW_TOL:
+                    return False
         return True
+
+    def keepouts(self) -> list:
+        """Integration round (IR-09): volumes the propulsion module fills after the shell is drilled, where no shell
+        fastener hardware may stand: the cooling-air S-duct (PR-546), the firewall transition duct (PR-548) and the
+        coupling boot (PR-550), built here from the propulsion module's own geometry functions (spec only)."""
+        if getattr(self, "_ko", None) is None:
+            self._ko = []
+            try:
+                from . import propulsion as PRP
+                pc = PRP.Ctx(self.reg, self.reg.spec)
+                kos = [PRP.sduct_mesh(pc), PRP.transition_mesh(pc), PRP.boot_mesh(pc)]
+            except Exception:                                 # pragma: no cover - propulsion data missing
+                kos = []
+            self._ko = [(km.bounds()[0], km.bounds()[1], km.to_manifold()) for km in kos]
+        return self._ko
 
     # ------------------------------------------------------------------ commit
     def _fid(self, panel: str, kind: str) -> str:
@@ -1000,11 +1031,65 @@ class Fix:
             p = self.reg.parts[pid]
             p._mesh, p._n_holes = None, -1
 
+    def _edge_ok(self, f: Fastener) -> bool:
+        """Integration round (IR-05): the edge distance of a proven candidate measured exactly as the design-rule
+        check measures it (analysis.checks: radial rays at the material mid-plane of every joined part, 2.5 D in
+        composites, 2.0 D in metals), so that no committed fastener fails it (e.g. SH-370-B3/B4 next to the spine
+        notch of the FS1810 cap)."""
+        from ..analysis.checks import COMPOSITE_EDGE, METAL_EDGE, _edge_distance_mesh, _insert_bore_radius
+        for pid in f.joins:
+            if pid not in self.reg.parts:
+                continue
+            p = self.reg.parts[pid]
+            lo, hi = p.mesh.bounds()
+            ed, pierced = _edge_distance_mesh(f, self.man(pid), float(np.linalg.norm(hi - lo)) + 0.01,
+                                              r_hole=_insert_bore_radius(f, pid))
+            k = COMPOSITE_EDGE if self._kind(p) == "composite" else METAL_EDGE
+            if pierced and ed < k * f.d - 1e-6:
+                return False
+        return True
+
+    def door_band(self, p) -> bool:
+        """Integration round (IR-03): is the OML point ``p`` inside the band swept by the sliding turret-bay doors
+        (layout door_outlines turret_door_R/L 'band', arc length along the skin from the centre line, between the
+        FS1110 aft and FS1330 forward web faces)? The doors and their rails pass 8.2 mm above the OML there
+        (payload T_CAP), so no nutplate may stand in it."""
+        b = self._band
+        if b is None:
+            return False
+        x0, x1, s1 = b
+        x, y = float(p[0]), abs(float(p[1]))
+        if not (x0 < x < x1):
+            return False
+        ys = np.linspace(0.0, y, 25)
+        zs = np.array([float(self.sc.z_bot(x, yy)) for yy in ys])
+        arc = float(np.sum(np.hypot(np.diff(ys), np.diff(zs))))
+        return arc < s1
+
+    def band_kind(self, c: Cand) -> bool:
+        """IR-03: candidates in the turret door band: the aperture ring's screws become M3 into flush potted inserts
+        (through the ring side land of the lower skin with its bonded doubler, layout M-TURRETWALL side_land), the
+        fixed lower skin keeps no fastener in the band (its edge there is the ring rebate; the frame caps carry it
+        outboard of the band). Returns False when the candidate is dropped."""
+        if not self.door_band(c.p):
+            return True
+        if c.panel.startswith(self.ring_pid):
+            c.kind, c.size = "ins", 3
+            c.note = (c.note + "; " if c.note else "") + "flush potted M3 insert (turret door band, IR-03)"
+            return True
+        if c.kind in ("nut", "cam"):
+            self._drop(c, "turret door band (no nutplate under the sliding doors)")
+            return False
+        return True
+
     def try_group(self, cands: list[Cand]) -> bool:
         """Prove and commit a group of candidates together (a symmetric pair): all or nothing. The nutplate /
         receptacle base is tried along the flatter direction of the land first, then across it."""
         proofs = []
         dry = []
+        for c in cands:
+            if not self.band_kind(c):
+                return False
         for c in cands:
             ok = None
             for alt in (0, 1):
@@ -1013,6 +1098,10 @@ class Fix:
                 if pr is None:
                     break
                 f = self.make(c, pr, "DRY", dry=True)
+                if f is not None and not self._edge_ok(f):
+                    self._drop(c, "edge distance (design-rule check measure)")
+                    pr = None
+                    break
                 if f is not None and self._hw_clear(f, [s[0] for s in pr["stack"]]):
                     ok = pr
                     dry.append(f)
@@ -1163,7 +1252,7 @@ def build_panel_mesh(sc: SC, pn: Pan) -> G.Mesh:
     if pn.t_normal is not None:             # true-normal gauge (sheet metal on the steep cowl closure)
         lay = man_sub(sc.body_env(0.0, x0, x1), [sc.body_env_normal(pn.t, pn.t_normal, x0 - 0.01, x1 + 0.01)])
     else:
-        lay = sc.layer(0.0, pn.t, x0, x1)
+        lay = sc.layer(0.0, pn.t, x0, x1, getattr(pn, "dx", None))
     parts = [man_and(lay, half, pz)]
     if pn.pads is not None and not pn.pads.is_empty:
         pads = clean(pn.pads.intersection(reg.buffer(-0.0005, join_style=2)), 1e-6)
@@ -1217,6 +1306,24 @@ def cowl_exit_cuts(sc: SC, gap: float = 0.0005) -> list:
         for lo, hi in ins.get("regions", []):
             out.append(box3(np.asarray(lo, float) - gap, np.asarray(hi, float) + gap))
     return out
+
+
+def cowl_exit_bands(sc: SC, t: float, x0: float, x1: float) -> list:
+    """IR-09: 30 mm solid edge band (1.6 mm laminate, core and inner plies removed) round the exhaust-exit cut-outs
+    of the lower cowl: the lap of PR-520 is riveted through it (propulsion heat protection, Monel blind rivets) and the
+    shield PR-523 keeps its 5 mm air gap to it."""
+    out = []
+    for ins in ((sc.L.get("heat_protection") or {}).get("inserts") or []):
+        if ins.get("panel") != "P-COWL-LO":
+            continue
+        for lo, hi in ins.get("regions", []):
+            lo, hi = np.asarray(lo, float), np.asarray(hi, float)
+            band = box3(lo - COWL_BAND_W, hi + COWL_BAND_W)
+            out.append(man_and(band, sc.layer(COWL_BAND_T, t + 0.002, x0 - 0.003, x1 + 0.003)))
+    return [m for m in out if m is not None]
+
+
+COWL_BAND_W, COWL_BAND_T = 0.030, 0.0016     # exhaust-exit edge band of the lower cowl (IR-09)
 
 
 def lay_outline(sc: SC, lid: str) -> Polygon:
@@ -1760,8 +1867,11 @@ def aft_panels(sc: SC, pans: dict) -> None:
                             x0=X_COWL, x1=xe, step=STEP["close"], parent=sc.ref("M-AFTKEEL"),
                             explode=(0.05, 0.15, -0.35), removable=True, pads=lo_pads(X_COWL, xe),
                             cut=[below, sc.half("U", X_COWL - 0.01, X_AFT, gap=-GAP)] + list(stub_box) +
-                            cowl_exit_cuts(sc),
+                            cowl_exit_cuts(sc) + cowl_exit_bands(sc, t, X_COWL, xe),
                             land_refs=tuple(clo["lands"]))
+    # IR-09: the concave boat-tail of the lower cowl: sections every 2.5 mm (at DX the chord between two sections
+    # stood up to 0.8 mm outside the OML, under the lap of the exhaust-exit panel PR-520)
+    pans["P-COWL-LO"].dx = 0.0025
     kb = np.asarray(sc.mem["M-AFTKEEL"]["box"], float)        # aft keel channel (layout box) + bond line
     pans["P-VENTRALROOT"].cut.append(box3(kb[0] - 0.0003, kb[1] + 0.0003))
     pans["P-VENTRALROOT"].x1 = xe
@@ -1845,6 +1955,22 @@ def ring_parts(sc: SC, pans: dict) -> None:
         cutter = man_sub(man_and(box3((xa, -0.5, -0.5), (xb, 0.5, 0.5)), pz), [sc.env(t_ring + SEAL, xa - 0.01,
                                                                                     xb + 0.01)])
         pn.cut.append(cutter)
+    # integration round (IR-03): bonded doubler (5 plies PW, 1.0 mm) on the inner face of the ring side lands
+    # (layout M-TURRETWALL side_land |y| 0.100-0.135) between the sliding-door rails: the ring's side screws in the
+    # door band are M3 into flush potted inserts through land + doubler (6.8 mm from the OML, under the door travel
+    # surface 8.2 mm above the OML, payload T_CAP)
+    mid = pans["P-MID-LOWER"]
+    tb = sc.L["zones_preliminary"]["turret_bay"]["box"]
+    xa, xb = float(tb[0][0]) + RING_DBL_RAIL, float(tb[1][0]) - RING_DBL_RAIL
+    y0, y1 = RING_DBL_Y
+    dreg = unary_union([rect(xa, xb, y0, y1), rect(xa, xb, -y1, -y0)])
+    mid.extra.append(man_and(sc.layer(mid.t - OV, mid.t + RING_DBL_T, mid.x0 - 0.003, mid.x1 + 0.003),
+                             sc.half("L", mid.x0 - 0.003, mid.x1 + 0.003), prism_z(dreg)))
+
+
+RING_DBL_T = 0.0010             # ring side-land doubler (5 plies PW) on the lower skin inner face (IR-03)
+RING_DBL_Y = (0.100, 0.135)     # layout M-TURRETWALL side_land |y|
+RING_DBL_RAIL = 0.019           # doubler ends 19 mm inside the bay (clear of the sliding-door rails on the frames)
 
 
 def refuel_axis(sc: SC):

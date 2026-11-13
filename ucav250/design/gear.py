@@ -49,6 +49,7 @@ from shapely.ops import unary_union
 
 from ..core import geom as G
 from ..core.parts import Fastener, Joint, Part, Registry, mirror_part
+from . import fastener_catalog as FC
 from . import joints as J
 from . import oml as O
 
@@ -1222,8 +1223,11 @@ class NoseDoors:
         x0, x1 = self.o.bounds[0], self.o.bounds[2]
         # hinge stations only where neither the leg yoke (pivot) nor the tyre passes near the hinge line
         # (layout clearances: doors vs legs 10 mm, nose tyre vs doors 12 mm): forward of the stowed tyre and aft of it
-        self.blocks = ((0.700, 0.710), (0.736, 0.746), (x1 - 0.031, x1 - 0.026))   # the last ends ahead of the coupling horns
-        self.knuck = ((0.7105, 0.7355), (x1 - 0.0205, x1 - 0.0085))
+        # aft station from the layout (door_outlines.nose_door_R.hinge.stations[1]; integration round IR-01: kept at
+        # x 1.0626-1.0851 when the door's aft edge moved to 1.1045): block 5 mm, knuckle from 10.5 mm to its end
+        sa0, sa1 = (float(v) for v in C.door["nose_door_R"]["hinge"]["stations"][1])
+        self.blocks = ((0.700, 0.710), (0.736, 0.746), (sa0, sa0 + 0.005))   # the last ends ahead of the coupling horns
+        self.knuck = ((0.7105, 0.7355), (sa0 + 0.0105, sa1))
         self.wall_y = float(C.mem["M-KEELWALL"]["box"][0][1])
 
     def on_axis(self, x: float) -> np.ndarray:
@@ -1431,17 +1435,45 @@ class InnerDoorDrive:
         """685: wedge plate between the aft face of FS-GEAR and the tilted flange face (3.6 mm at the shaft), the
         flange footprint 85 x 30 mm."""
         tc = self.t_case
-        pts = [self.at(tc, b, c) for b in (-DA30["shaft_from_edge"], DA30["H"] - DA30["shaft_from_edge"])
-               for c in (-0.5 * DA30["W"], 0.5 * DA30["W"])]
+        (b0, b1), (c0, c1) = self.plate_bc()
+        pts = [self.at(tc, b, c) for b in (b0, b1) for c in (c0, c1)]
         P = np.array(pts)
         Pf = P.copy()
         Pf[:, 0] = self.xf1
         m = G.hull(np.vstack([P, Pf]))
         return G.difference(m, [G.cylinder(0.0045, self.at(tc - 0.02), self.at(tc + 0.001), n=32)])
 
+    def plate_bc(self):
+        """(b range, c range) of the wedge plate: the flange footprint plus the strap ears and 8 mm (2 D) round
+        their bolts."""
+        bs = [b for b, _c in self.lug_bc()]
+        ce = 0.5 * DA30["W"] + STRAP["ear"]
+        return (min(bs) - 0.5 * STRAP["w"], max(bs) + 0.5 * STRAP["w"]), (-ce - 0.0005, ce + 0.0005)
+
+    def strap(self, k: int) -> G.Mesh:
+        """702 (IR-02): 7075 clamp strap k (0/1) across the DA 30 flange on the line of a lug-hole pair: bar over the
+        flange aft face + two feet beside the flange down to the wedge plate (the case is clamped, no bolt passes
+        through the purchased flange, whose lug holes sit 4 mm from its ends)."""
+        tc = self.t_case
+        b = self.lug_bc()[2 * k][0]
+        ft, t, w, ear = DA30["flange_t"], STRAP["t"], STRAP["w"], STRAP["ear"]
+        hw = 0.5 * DA30["W"]
+        bar = G.box((t, w, 2 * (hw + ear)), center=self.at(tc + ft + 0.5 * t, b, 0.0), R=self.R)
+        feet = [G.box((ft + 0.0002, w, ear - 0.0004), center=self.at(tc + 0.5 * (ft + 0.0002), b,
+                                                                       sg * (hw + 0.0004 + 0.5 * (ear - 0.0004))),
+                      R=self.R) for sg in (-1.0, 1.0)]
+        holes = [G.cylinder(0.5 * FC.clearance(4), self.at(tc - 0.001, b, c), self.at(tc + ft + t + 0.001, b, c), n=24)
+                 for c in self.strap_c()]
+        return _clean(G.difference(G.union([bar] + feet), holes))
+
+    def strap_c(self):
+        hw = 0.5 * DA30["W"]
+        return (-(hw + 0.5 * STRAP["ear"]), hw + 0.5 * STRAP["ear"])
+
     def ear_bolts(self):
-        """Lug-bolt head points (M4 through the flange and the wedge plate into the frame inserts)."""
-        return [self.at(self.t_case + DA30["flange_t"], b, c) for b, c in self.lug_bc()]
+        """Strap-bolt head points (M4 through strap foot and wedge plate into the frame inserts), [(point, strap)]."""
+        return [(self.at(self.t_case + DA30["flange_t"] + STRAP["t"], self.lug_bc()[2 * k][0], c), k)
+                for k in (0, 1) for c in self.strap_c()]
 
     def housing(self) -> G.Mesh:
         """689: flanged bearing housing (7075) on the forward face of FS-GEAR, spigot in C-DOORSHAFT, two sealed
@@ -1458,6 +1490,8 @@ class InnerDoorDrive:
         return [np.array([self.xf0 - 0.003, y + dy, z]) for dy in (-0.0175, 0.0175)]
 
 
+STRAP = dict(t=0.004, w=0.016, ear=0.016)   # DA 30 clamp straps (7075, IR-02): bar 4 mm, 16 mm wide, feet 16 mm
+#                                             beside the flange: bolts 8 mm (2 D) from every strap / foot edge
 DA30 = dict(L=0.1585, H=0.085, W=0.030, holes=(0.077, 0.018), axis_from_holes=0.0216, hole_d=0.0041,
             shaft_from_edge=0.0256, flange_t=0.008, mass=0.630)
 #   Volz DA 30 (components.yaml volz_da30: envelope incl. D-Sub, lug pattern 77 x 18 mm, d 4.1, output 21.6 mm from
@@ -2147,8 +2181,17 @@ class Build:
                         "(components.yaml volz_da30, datasheet)",
                  mass_kg=DA30["mass"], parent=pid(685), contacts=(pid(685),), step=STEP_DOOR, explode=(0.12, 0.0, 0.0),
                  notes="layout EQ-DOORACT (GD-05, integration round IR-02: DA 30 for the door work of structures "
-                       "G-DOOR-DRIVE): 4 x M4 through the 77 x 18 mm lug pattern and the wedge plate into the frame "
-                       "inserts; output spline drives the crank shaft through the bearing housing in C-DOORSHAFT")
+                       "G-DOOR-DRIVE): flange clamped to the wedge plate by two 7075 straps (LG-702 / 703, 4 x M4 "
+                       "into the frame inserts); output spline drives the crank shaft through the bearing housing in "
+                       "C-DOORSHAFT")
+        for k in (0, 1):
+            self.add(pid(702 + k), f"DA 30 clamp strap {k + 1} (7075-T651), starboard",
+                     f"DA 30 bağlama kuşağı {k + 1} (7075-T651), sağ", M7075, P_CNC, (lambda k=k: I.strap(k)),
+                     thickness=STRAP["t"], parent=pid(685), contacts=(pid(685), C.pid(676, "R", "FC")), step=STEP_DOOR,
+                     explode=(0.14, 0.0, 0.0),
+                     notes="integration round IR-02: clamps the DA 30 flange on the line of its lug-hole pair (2 x M4 "
+                           "through its feet and the wedge plate into the FS-GEAR inserts); the vendor lug holes "
+                           "(4 mm from the flange ends) take no bolt")
         self.add(pid(689), "inner-door drive bearing housing (7075-T651, 2 x 688-2RS bearings), starboard",
                  "iç kapak tahrik yatak yuvası (7075-T651, 2 x 688-2RS rulman), sağ", M7075, P_CNC, I.housing,
                  thickness=0.003, parent=fr, contacts=(fr,), step=STEP_DOOR, explode=(-0.08, 0.0, 0.0),
@@ -2390,9 +2433,9 @@ class Build:
             p1 = P + (min(t) - 0.0005) * a
             pin_through(reg, f"{pid(687)}-{nm}", ID_PIN, mv(p0), mv(p1), ids, step=STEP_DOOR,
                         notes="ISO 2341-B d 4 + split pin; shim washers set the 0.5 mm plane gaps")
-        for k, p in enumerate(I.ear_bolts()):
-            te = DA30["flange_t"] / I.u[0]                       # flange along x (bolt normal to the frame face)
-            J.bolt(reg, f"{C.pid(676, side, 'FC')}-B{k + 1}", 4, mv(p), (-1.0, 0.0, 0.0), [(C.pid(676, side, "FC"), te),
+        for k, (p, ks) in enumerate(I.ear_bolts()):
+            te = (DA30["flange_t"] + STRAP["t"]) / I.u[0]         # strap bar + foot along x (bolt normal to the frame)
+            J.bolt(reg, f"{pid(702 + ks)}-B{k % 2 + 1}", 4, mv(p), (-1.0, 0.0, 0.0), [(pid(702 + ks), te),
                    (pid(685), p[0] - I.xf1 - te)], nut="insert", insert_part=fr, insert_depth=0.0068, grade="12.9", step=STEP_DOOR,
                    notes="potted insert of the FS-GEAR sandwich (no through-bolts in the fuel-bay bulkhead)")
         for k, p in enumerate(I.housing_bolts()):

@@ -1,6 +1,8 @@
 """Layout builder: systems (equipment, antennas, air data, lights, actuators, harness trunks)."""
 from __future__ import annotations
 
+import itertools
+
 from .b_common import *  # noqa: F401,F403
 from .b_mech import hinge, unit
 
@@ -388,16 +390,29 @@ def antennas() -> list:
                  "Silvus SC4200EP MIMO chain A", "vertical inside the GFRP nose cone (forward/lower coverage); fix round "
                  "2 (PK2-01): x 0.25 and lowered so that the dipole envelope keeps 2 mm to the inner surface of the "
                  "6.0 mm GFRP cone (true distance)"))
-    pB = surf_point(F, 0.95, 0.35)
+    # integration round (IR-06): the dipoles stand along the fin span (canted 22 deg) on the tip rib, inside the GFRP
+    # tip cap (133 mm of span above the cap joint for the 109 mm radome); a vertical dipole left the 31-37 mm thick
+    # cap after 82 mm. Base on the tip rib top face at 45 % chord, TNC bulkhead jack through the rib, coax down the fin
+    # box (harness H-FIN)
+    pb, ax = fin_tip_antenna()
+    pB = pb + 0.5 * ANT_DIPOLE[0] * ax
+    sz = [ANT_DIPOLE[0] * abs(float(ax[k])) + ANT_DIPOLE[1] * math.sqrt(max(0.0, 1.0 - float(ax[k]) ** 2))
+          for k in range(3)]
+    mir = np.array([1, -1, 1])
     A.append(ant("ANT-C2B", "YK250-SY-783", "primary datalink antenna B (2.4 GHz omni dipole, SWA 1001-202)",
-                 "birincil veri bağı anteni B", pB * np.array([1, -1, 1]), [0.013, 0.013, 0.109], "YK250-TL-258-L",
+                 "birincil veri bağı anteni B", pB * mir, sz, "YK250-TL-258-L",
                  "Silvus SC4200EP MIMO chain B", "along the span inside the GFRP port fin-tip cap (upper/lateral "
                                                   "coverage; research note: spaced fin/belly pair avoids shadowing)"))
+    A[-1].update({"base": r3(pb * mir), "axis": r3(ax * mir, 6), "length": ANT_DIPOLE[0], "diameter": ANT_DIPOLE[1],
+                  "mount": "TNC bulkhead jack in the tip rib (fin tail module), base on the rib top face; polarisation "
+                           "canted 22 deg with the fin (cos 22 deg: -0.3 dB on a vertical ground antenna)"})
     A.append(ant("ANT-BKP", "YK250-SY-784", "backup C2 antenna (2.4 GHz omni dipole)", "yedek C2 anteni",
-                 pB, [0.013, 0.013, 0.109], "YK250-TL-258-R", "Microhard pDDL2450 main port",
+                 pB, sz, "YK250-TL-258-R", "Microhard pDDL2450 main port",
                  "inside the GFRP starboard fin-tip cap; diversity port: small dipole in the nose cone ≥ 1 wavelength "
                  "from antenna A. Co-site with the 2.4 GHz Silvus band: frequency plan or the 900 MHz pDDL900 "
                  "alternative (components.yaml) - open item"))
+    A[-1].update({"base": r3(pb), "axis": r3(ax, 6), "length": ANT_DIPOLE[0], "diameter": ANT_DIPOLE[1],
+                  "mount": A[-2]["mount"]})
     A.append(ant("ANT-XPDR", "YK250-SY-786", "transponder L-band blade antenna (1090 MHz)", "transponder anteni",
                  [0.450, 0.0, z_bot(0.450) - 0.035], [0.060, 0.008, 0.070], "external (belly, ahead of the nose gear)",
                  "uAvionix ping200X", "external blade on a bonded copper-mesh ground-plane doubler: a monopole "
@@ -417,6 +432,47 @@ def antennas() -> list:
                                                                      "2 mm to the inner surface of the 6.0 mm GFRP cone, "
                                                                      "true distance); band per the selected FTS (open item)"))
     return A
+
+
+ANT_DIPOLE = (0.109, 0.013)          # components.yaml southwest_antennas_1001_202 height, radome d (layout size)
+ANT_XC = 0.42                         # chord fraction of the fin-tip dipoles on the tip rib (IR-06)
+LT_TAIL_XC = 0.50                     # chord fraction of the tail light centre on the fin tip face (IR-06)
+
+
+FIN_RIB_T = 0.0068                    # fin rib laminate (layups.rib_panel; tail module C.t_rib)
+
+
+def fin_branch() -> dict:
+    """H-FIN (IR-06): starboard path from the H-TAIL end into the fin root and up the ANT_XC chord line to 4 mm under
+    the tip rib (the dipole's bulkhead jack and the light lead end there)."""
+    F = af.tail["fin"]
+    p0 = np.array([3.520, 0.120, round(z_top(3.520, 0.120) - 0.025, 4)])        # = H-TAIL path end
+    d0 = unit(p0 - np.array([3.500, 0.092, 0.215]))                             # H-TAIL last leg (systems path)
+    e_r = 0.26
+    p1 = surf_point(F, e_r, ANT_XC)
+    p2 = surf_point(F, fin_cap_eta() - FIN_RIB_T - 0.004, ANT_XC)
+    return {"id": "H-FIN", "part": "YK250-SY-794", "name": "fin branch (each side): tip-cap antenna coax, tail light",
+            "diameter": 0.008, "mirror": True,
+            "path": [r3(p0 + 0.0003 * d0), r3(p0 + 0.012 * d0), r3(p1), r3(p2)],
+            "text": "fin root (end of H-TAIL) -> up the fin box on the chord line of the tip dipole between the spars, "
+                    "through bores (grommets) in the root, box and servo ribs -> TNC bulkhead jack in the tip rib "
+                    "(dipole ANT-BKP / ANT-C2B) and, starboard, the tail light LT-TAIL lead through the tip rib"}
+
+
+def fin_cap_eta() -> float:
+    """Span coordinate of the fin-tip cap joint (tail module: rudder top + 6 mm gap; tip rib below it)."""
+    F = af.tail["fin"]
+    fin = S["tail"]["surfaces"]["fin"]
+    e0 = float(F.span_coords()[0])
+    return e0 + float(fin["controls"]["rudder"]["eta1"]) * float(fin["params"]["span"]) + 0.006
+
+
+def fin_tip_antenna():
+    """(base point, unit axis) of the starboard fin-tip dipole: on the tip rib top face at ANT_XC, along the span."""
+    F = af.tail["fin"]
+    e = fin_cap_eta() + 0.0005
+    _o, _c, _u, w = F.frame_at(e)
+    return surf_point(F, e, ANT_XC), unit(w)
 
 
 def air_data_lights() -> list:
@@ -442,11 +498,22 @@ def air_data_lights() -> list:
                 "box": r3([[tip[0] - 0.030, b2 - 0.060, tip[2] - 0.015], [tip[0] + 0.070, b2 + 0.004, tip[2] + 0.015]]),
                 "mount": "wing-tip fairing (wing module), M5 screws (components.yaml mounting)",
                 "source": "components.yaml aveoflash_lp_lsa 0.1 x 0.045 x 0.03 m, 0.083 kg"})
-    pt = surf_point(af.tail["fin"], 0.97, 0.98)
+    # integration round (IR-06): the 100 x 45 x 30 mm unit does not fit the 4 mm cap trailing edge: it sits on the tip
+    # face of the starboard fin-tip cap (aft part, 100 mm along the chord, 30 mm high along the span), screwed (2 x M5)
+    # into a GFRP mounting block bonded inside the cap (tail module); white aft-facing + strobe, visible over the tip
+    Ft = af.tail["fin"]
+    e1 = float(Ft.span_coords()[-1])
+    o_, c_, u_, w_ = Ft.frame_at(e1)
+    pc = surf_point(Ft, e1, LT_TAIL_XC) + 0.015 * unit(w_)
+    R_ = np.column_stack([unit(c_), unit(u_), unit(w_)])
+    hl = np.array([0.050, 0.0225, 0.015])
+    corners = np.array([pc + R_ @ (hl * np.array(sg)) for sg in itertools.product((-1, 1), repeat=3)])
     out.append({"id": "LT-TAIL", "part": "YK250-SY-791", "name": "tail position/strobe light (white, aft-facing)",
-                "name_tr": "kuyruk seyir ışığı", "box": r3([[pt[0] - 0.050, pt[1] - 0.015, pt[2] - 0.020],
-                                                         [pt[0] + 0.050, pt[1] + 0.015, pt[2] + 0.020]]),
-                "mount": "trailing edge of the starboard fin-tip cap (GFRP), 2 x M5",
+                "name_tr": "kuyruk seyir ışığı", "box": r3([corners.min(0), corners.max(0)]),
+                "frame": {"center": r3(pc), "axes": r3(R_.T, 6), "half": r3(hl),
+                          "text": "light case on the tip face: axes = chord, thickness normal, span (half sizes)"},
+                "mount": "tip face of the starboard fin-tip cap (GFRP), aft part, 2 x M5 into potted inserts of the "
+                         "bonded GFRP mounting block inside the cap (tail module, integration round IR-06)",
                 "source": "components.yaml aveoflash_lp_lsa"})
     return out
 
@@ -667,6 +734,10 @@ def harness() -> dict:
                    [0.395, 0.055, 0.030], [0.370, 0.055, 0.030], [0.335, 0.0, 0.012], [0.300, 0.0, 0.010]),
          "supports": ["M-DECK-NOSE"],
          "text": "FTS, nose-cone antennas (coax), transponder blade feed, pitot heater; pitot lines alongside"},
+        # integration round (IR-06): fin branch (each side): from the H-TAIL end at the fin root up the fin box on the
+        # ANT_XC chord line (between the spars, ahead of the rudder actuator) to the tip rib: coax of the tip-cap
+        # dipole (TNC bulkhead jack in the tip rib) and, starboard, the tail light supply; bores in the fin ribs
+        fin_branch(),
         # integration round (IR-07): fuel level probe branches (no harness inside a vapour-tight fuel bay): the forward
         # and saddle probes (FU-578 / 579) through sealed bulkhead connectors in the starboard wall of the dorsal spine
         # channel M-SPINE (a sealed trough through the fuel bays), the aft probe (FU-595) through FS-GEAR (C-HARN-FUELA)

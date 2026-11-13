@@ -5,11 +5,11 @@ from .b_common import *  # noqa: F401,F403
 
 CAM = {"type": "camloc", "spec": "Camloc 4002 stud + 2600 receptacle (quarter-turn, riveted receptacle)",
        "pitch": [0.075, 0.100], "edge_margin": 0.012}
-NUT = {"type": "nutplate+screw", "spec": "ISO 7380 M4 A2-70 button head into floating anchor nutplate M4",
+NUT = {"type": "nutplate+screw", "spec": "ISO 7380 M4 Ti-6Al-4V button head into floating anchor nutplate M4",
        "pitch": [0.025, 0.032], "edge_margin": 0.010}
-NUT_SEAL = dict(NUT, spec="ISO 7380 M4 A2-70 into floating nutplates + fuel-resistant fluorosilicone gasket "
+NUT_SEAL = dict(NUT, spec="ISO 7380 M4 Ti-6Al-4V into floating nutplates + fuel-resistant fluorosilicone gasket "
                           "(vapour-tight fuel-bay panel)", pitch=[0.025, 0.030])
-INS = {"type": "insert+screw", "spec": "ISO 7380 M4 A2-70 into potted M4 inserts (fasteners_catalog.INSERT)",
+INS = {"type": "insert+screw", "spec": "ISO 7380 M4 Ti-6Al-4V into potted M4 inserts (fasteners_catalog.INSERT)",
        "pitch": [0.060, 0.100], "edge_margin": 0.012}
 BOND = {"type": "bonded", "spec": "EA 9394 paste adhesive on the frame/longeron lands, 0.2 mm bondline; peel "
                                    "stoppers: M4 blind rivets every 150 mm at panel ends", "pitch": None,
@@ -176,7 +176,7 @@ def panels() -> list:
                [RING_NOTCH_X, RING_NOTCH_Y], [RING_NOTCH_X, -RING_NOTCH_Y], [xr0, -RING_NOTCH_Y]]
     X.append(panel("P-TURRETRING", "YK250-SH-363", "turret aperture ring insert (HD59, 157 mm opening)",
                    "taret açıklık halkası (HD59)", "body_lower", [round(xr0, 4), round(xr1, 4)], [-RING_Y, RING_Y],
-                   "removable", dict(INS, spec="14 x ISO 7380 M4 A2-70 into potted M4 inserts in the frame caps (fore/aft) "
+                   "removable", dict(INS, spec="14 x ISO 7380 M4 Ti-6Al-4V into potted M4 inserts in the frame caps (fore/aft) "
                                                "and in the bonded side land doublers of the lower skin under the door "
                                                "rail plane (sides, fix round 3 PK3-09): pitch about 67 mm",
                                      pitch=[0.060, 0.080], edge_margin=0.012), layup=None,

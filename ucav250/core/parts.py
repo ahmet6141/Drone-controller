@@ -123,6 +123,9 @@ class Part:
     notes: str = ""
     mass_item: str = ""                      # spec["mass"]["items"] name the part is booked to when it differs from
     #                                          the producer group (analysis/mass.py budget group; e.g. turret mechanism)
+    mass_fn: Callable[[], float] | None = None   # geometry-derived mass of a part made of several materials (e.g. a
+    #                                          fastener: screw + nut/nutplate of another alloy): sum of element volume
+    #                                          x element density; used when mass_kg is None
     holes: list = field(default_factory=list)  # cutters subtracted from the mesh: (p0, p1, radius) cylinders or Mesh
     _base: Mesh | None = field(default=None, repr=False)
     _mesh: Mesh | None = field(default=None, repr=False)
@@ -261,6 +264,8 @@ class Registry:
     def mass(self, part: Part) -> float:
         if part.mass_kg is not None:
             return float(part.mass_kg)
+        if part.mass_fn is not None:
+            return float(part.mass_fn())
         return part.mesh.volume() * self.density(part)
 
 
@@ -331,7 +336,7 @@ def mirror_part(p: Part, new_id: str, joint: str | None = None, id_map: dict[str
                 joint=joint, parent=id_map.get(p.parent, p.parent) if p.parent else None, step=p.step,
                 explode=tuple(mvec(p.explode)), fasteners=fs, contacts=tuple(id_map.get(c, c) for c in p.contacts),
                 outline=[mvec(o) for o in p.outline], color=p.color, notes=p.notes, mass_item=p.mass_item,
-                holes=[mhole(h) for h in p.holes])
+                mass_fn=p.mass_fn, holes=[mhole(h) for h in p.holes])
 
 
 def iter_pairs(parts: Iterable[Part]):

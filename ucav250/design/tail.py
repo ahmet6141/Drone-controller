@@ -2490,19 +2490,21 @@ class _TailReg:
         ch12 = C.st["FS3480"]["part"]
         node = C.fit["F-SPINDLE-NODE"]["part"] + "-R"
         fw = C.st["FS3670"]["part"]
-        # ---- fin front lug: 2 x M6 12.9 double shear, head on the forward ear (access hole through FS3480)
+        # ---- fin front lug: 2 x M6 Ti-6Al-4V double shear (mass/CG closure round: was 12.9; structures
+        #      T-FINROOT-FRONT), head on the forward ear (access hole through FS3480)
         x_f = float(C.fit["F-FIN-FRONT"]["box"][0][0])
         for y, z in FF_BOLTS:
-            Fa.sym(6, (x_f + 0.010, y, z), (1.0, 0.0, 0.0), [ch96, P("ffit")], window=(-0.0105, 0.0105), grade=G129,
+            Fa.sym(6, (x_f + 0.010, y, z), (1.0, 0.0, 0.0), [ch96, P("ffit")], window=(-0.0105, 0.0105), grade=TI,
                    hole_d=0.0064,
                    owner=P("ffit"), label=f"fin front lug y{y}", notes="F-FIN-FRONT lug bolt (layout B1/B2 moved for lug "
                                                                          "edge distance), head through the FS3480 access hole")
             for sgn in (1.0, -1.0):
                 reg.parts[ch12].add_hole((x_f + 0.0005, sgn * y, z), (x_f - 0.0105, sgn * y, z), 0.0065)
-        # ---- fin rear lug: 2 x M5 12.9, head on the aft ear, thread in the firewall-side web of F-FW-CORNER
+        # ---- fin rear lug: 2 x M5 Ti-6Al-4V (was 12.9; T-FINROOT-REAR), head on the aft ear, thread in the
+        #      firewall-side web of F-FW-CORNER
         x_r = RF_SLOT[1] + 0.006
         for y, z in RF_BOLTS:
-            Fa.sym(5, (x_r, y, z), (-1.0, 0.0, 0.0), [ch86, P("rfit")], window=(-0.002, 0.0138), grade=G129,
+            Fa.sym(5, (x_r, y, z), (-1.0, 0.0, 0.0), [ch86, P("rfit")], window=(-0.002, 0.0138), grade=TI,
                    hole_d=0.0053,
                    nut="tapped", tapped_part=ch86, tapped_depth=0.0096, owner=P("rfit"), label=f"fin rear lug y{y}")
         # ---- web flanges (2 x M5 each), nyloc nuts behind the webs
@@ -2549,7 +2551,9 @@ class _TailReg:
                 continue
             p_ = np.asarray(b["point"], float)
             Fa.sym(6, (p_[0], g.cheek_y[0], p_[2]), (0.0, 1.0, 0.0), [node, P("sleeve")], window=(-0.001, 0.0135),
-                   grade=G129, label=f"stub root {b['id']}", notes=f"layout F-SPINDLE-NODE {b['id']}")
+                   grade=TI, nut="ISO 7042", label=f"stub root {b['id']}",
+                   notes=f"layout F-SPINDLE-NODE {b['id']}; mass/CG closure round: Ti-6Al-4V (structures "
+                         "T-NODE-STUB-BOLTS), all-metal nut ISO 7042 class A-286 (engine bay)")
         # ---- stub front-spar fitting: lug in the F-STUB-FRONT clevis (2 x M5 12.9 double shear, heads through FS3480
         #      access holes) and flange on the front-spar web (2 x M5, nyloc nuts aft of the web, fitted before closing)
         d = self.sp.sf()
@@ -2580,7 +2584,7 @@ class _TailReg:
         # ---- stabilator cross bolt (M5 from the lower skin through the counterbored skin, tapped in the upper boss)
         cb = g.axis_pt(g.y_cb)
         Fa.sym(5, cb, (0.0, 0.0, 1.0), [P("rootfit"), P("spindle"), P("plug")], window=(-0.030, SPINDLE_R - 0.0001),
-               nut="tapped", tapped_part=P("rootfit"), tapped_depth=0.011, grade=G129, label="stabilator cross bolt",
+               nut="tapped", tapped_part=P("rootfit"), tapped_depth=0.011, grade=TI, label="stabilator cross bolt",
                on_axis=True, hole_d=0.0053, spot=(P("rootfit"), None),
                notes="removable: stabilator slides off the spindle after this bolt is out")
         for sgn in (1.0, -1.0):
@@ -2596,14 +2600,14 @@ class _TailReg:
             for y in np.linspace(y0c + 0.009, y1c - 0.009, 4):
                 Fa.sym(4, (xb, y, z), (1.0, 0.0, 0.0), [P("cradle")], window=(-0.001, CRADLE_T + 0.0001), nut="insert",
                        insert_part=fw, insert_depth=0.006, grade=TI, label="cradle base")
-        # ---- ventral: lug bolts (M5 12.9 double shear), fork / pad bolts, skid bolts
+        # ---- ventral: lug bolts (M5 Ti-6Al-4V double shear, was 12.9; T-VENTRAL-BOLT), fork / pad bolts, skid bolts
         keel = "YK250-CH-033"
         for i in range(3):
             fit = C.fit[f"F-VENTRAL-{i + 1}"]
             b = [bb for bb in fit["bolts"] if bb["group"] == "ventral lug"][0]
             p_ = np.asarray(b["point"], float)
             Fa.bolt(5, (p_[0], 0.0, p_[2]), (0.0, 1.0, 0.0), [keel, fit["part"], P(f"vfit{i}")], window=(-0.016, 0.016),
-                    grade=G129, hole_d=0.0053, owner=P(f"vfit{i}"), label=f"ventral lug {i + 1}",
+                    grade=TI, hole_d=0.0053, owner=P(f"vfit{i}"), label=f"ventral lug {i + 1}",
                     notes=f"layout F-VENTRAL-{i + 1} B1 (M6 in the layout: M5 for the tongue edge distance)")
             for x, z in v.fork_bolts(i):
                 pids = [P(f"vfit{i}"), P("vweb")] if i < 2 else [P("vskin"), P(f"vfit{i}")]

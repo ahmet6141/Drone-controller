@@ -325,7 +325,7 @@ DESIGN = {
                                "text": "one 7075 washer plate 48 x 40 x 3 mm under the four floor bolts, below the spine "
                                        "floor pad (fix round 2, VS2-01: pull-through of the fitting moment)"},
         "frame_land_plies": 32, "spine_pad_plies": 16, "spine_plies": 4,
-        "skin_screw": "ISO 7380 M4 A2-70 into nutplates, pitch 25 mm, both spine flanges, FS1810 -> FS-FUEL "
+        "skin_screw": "ISO 7380 M4 Ti-6Al-4V into nutplates, pitch 25 mm, both spine flanges, FS1810 -> FS-FUEL "
                       "(P-MB-UPPER)",
         "skin_screw_pitch_m": 0.025,
         "text": "bridle fittings in the dorsal spine channel M-SPINE: x-component and the fitting moment by 4 x M4 12.9 "
@@ -355,8 +355,8 @@ DESIGN = {
                     "(well forward wall to FS-GEAR, well roof to 0.12 m below it): halve the span of the well roof under "
                     "the aft fuel cell; the inner-door hinge brackets (hinge lines y +-0.01) are bolted to their "
                     "lower-edge flanges"},
-    "turret": {"rail_screws_per_rail_end": 4, "screw": "M3 A2-70",
-               "roof_block": "bearing block through-bolted 4 x M4 A2-70 with a 2 mm 7075 backing plate on the upper roof "
+    "turret": {"rail_screws_per_rail_end": 4, "screw": "M3 Ti-6Al-4V",
+               "roof_block": "bearing block through-bolted 4 x M4 Ti-6Al-4V with a 2 mm 7075 backing plate on the upper roof "
                              "face (no potted inserts in tension)",
                "door_area_each_m2": 0.0223, "door_rail": "6061-T6 rail with a 1 mm retaining lip, PTFE slider"},
     "ground_handling": {
@@ -474,6 +474,17 @@ class Ctx:
 
 def mat(c: Ctx, key: str) -> dict:
     return c.M[key]
+
+
+TI_BOLT = "ti_6al_4v_annealed_sheet"
+
+
+def ti_bolt_rm(c: Ctx) -> float:
+    """Tensile strength of a Ti-6Al-4V bolt (mass/CG closure round, hardware study HW-03: 12.9 bolts of the aft
+    fittings changed to titanium where the margin stays positive): spec.materials Ti-6Al-4V annealed Ftu (A-basis
+    sheet value as bar estimate, the convention of the Ti pins); shear 0.6 Rm as for the 12.9 bolts (0.6 x 924 = 554
+    MPa, below the 600 MPa Fsu of the same data: conservative)."""
+    return float(mat(c, TI_BOLT)["Ftu"])
 
 
 def total_factor(c: Ctx, ult_only: bool = False, fit: bool = False, bear: bool = False, fa: bool = False,
@@ -2209,7 +2220,7 @@ def check_tail(c: Ctx, R: Rows) -> dict:
     # node F-SPINDLE-NODE (fix round 1, VPK-01 / S1-06): stub root on the outboard cheek, inboard bearing boss, base
     # flange through-bolted to the firewall
     fit_n = total_factor(c, fit=True)
-    Rm = float(research_value("materials", "fasteners.property_classes.steel_12_9.tensile_Rm_min_Pa"))
+    Rm = ti_bolt_rm(c)                      # mass/CG closure round: node bolts Ti-6Al-4V (were 12.9)
     As = research_value("materials", "fasteners.property_classes.stress_area.A_s_m2")
     bl = node["bolts"]
     sb = [b_ for b_ in bl if b_["group"] == "stub root"]
@@ -2230,12 +2241,13 @@ def check_tail(c: Ctx, R: Rows) -> dict:
     cs_tr = (f"; düğüm: iç yatak R_iç {R_in:.0f} N (y {y_bi:.3f}), kök parçası uç yatağı R_dış {R_out:.0f} N (y "
              f"{y_bo:.3f}), yanak yüzünde (y {y_face:.4f}) kök parçası kök momenti {M_sr:.0f} N m")
     R.add("T-NODE-STUB-BOLTS", "tail", f"stub rear-spar root fitting to the outboard cheek: {len(sb)} x "
-          f"M{d_sb * 1000:.0f} 12.9 (axis y), tension from the root moment + shear R_out, interaction (most loaded bolt)",
-          f"kök parçası arka kiriş kök bağlantısı - dış yanak: {len(sb)} x M{d_sb * 1000:.0f} 12.9 (y ekseni), kök momentinden "
+          f"M{d_sb * 1000:.0f} Ti-6Al-4V (axis y), tension from the root moment + shear R_out, interaction (most loaded "
+          "bolt)", f"kök parçası arka kiriş kök bağlantısı - dış yanak: {len(sb)} x M{d_sb * 1000:.0f} Ti-6Al-4V (y ekseni), "
+          "kök momentinden "
           "çekme + R_dış kesmesi, etkileşim (en yüklü cıvata)", case + cs_, case_tr + cs_tr, 1.0, r_int, "load multiplier",
           dict(total_factor(c, ult_only=True), text="FoS 1.5 x fitting 1.15 (in the multiplier)"),
-          "elastic bolt group (tension about the pattern centroid, contact not credited); ISO 898-1 12.9: tension Rm "
-          "A_s, shear 0.6 Rm A_s; R_s^2 + R_t^2 = 1", part="YK250-CH-095")
+          "elastic bolt group (tension about the pattern centroid, contact not credited); Ti-6Al-4V (spec Ftu, sheet "
+          "A-basis as bar estimate): tension Rm A_s, shear 0.6 Rm A_s; R_s^2 + R_t^2 = 1", part="YK250-CH-095")
     t_ch = float(ND["cheek_t_m"])
     R.add("T-NODE-STUB-BR", "tail", f"stub root bolts M{d_sb * 1000:.0f}: bearing in the {t_ch * 1000:.0f} mm 7075 cheek",
           f"kök parçası cıvataları M{d_sb * 1000:.0f}: {t_ch * 1000:.0f} mm 7075 yanakta ezilme", case + cs_,
@@ -2287,12 +2299,14 @@ def check_tail(c: Ctx, R: Rows) -> dict:
            f"{My_n:.0f} N m (limit)")
     cs2_tr = (f"; düğüm tabanı: x ekseni etrafında düzlem içi moment {Mx_n:.0f} N m, net düşey {R_out - R_in:.0f} N, y "
               f"ekseni etrafında moment {My_n:.0f} N m (limit)")
-    R.add("T-NODE-BASE-BOLTS", "tail", f"node base flange to the firewall stack: {len(fb_)} x M{d_fb * 1000:.0f} 12.9 "
-          "(axis x), shear + tension interaction (most loaded bolt)", f"düğüm taban flanşı - yangın perdesi katmanı: "
-          f"{len(fb_)} x M{d_fb * 1000:.0f} 12.9 (x ekseni), kesme + çekme etkileşimi (en yüklü cıvata)", case + cs2,
+    R.add("T-NODE-BASE-BOLTS", "tail", f"node base flange to the firewall stack: {len(fb_)} x M{d_fb * 1000:.0f} "
+          "Ti-6Al-4V (axis x), shear + tension interaction (most loaded bolt)", f"düğüm taban flanşı - yangın perdesi "
+          f"katmanı: {len(fb_)} x M{d_fb * 1000:.0f} Ti-6Al-4V (x ekseni), kesme + çekme etkileşimi (en yüklü cıvata)",
+          case + cs2,
           case_tr + cs2_tr, 1.0, r_fb, "load multiplier",
           dict(total_factor(c, ult_only=True), text="FoS 1.5 x fitting 1.15 (in the multiplier)"),
-          "elastic bolt group (structlib.bolt_group_inplane / bolt_group_tension); ISO 898-1 12.9", part="YK250-CH-095")
+          "elastic bolt group (structlib.bolt_group_inplane / bolt_group_tension); Ti-6Al-4V (spec Ftu)",
+          part="YK250-CH-095")
     pp_ = ply_props(c, "cfrp_pw_mtm45_as4")
     t_lf = int(c.D["body"]["frame_land_plies"]) * pp_["t"]
     R.add("T-NODE-FW-BR", "tail", f"node base bolts M{d_fb * 1000:.0f}: bearing in the firewall land "
@@ -2316,11 +2330,11 @@ def check_tail(c: Ctx, R: Rows) -> dict:
     # socket / spline / cross-bolt: removable stabilator (frequent assembly)
     m_panel = mass_item(c, "stabilators_pair") / 2
     F_ax = 12.0 * m_panel * G
-    R.add("T-CROSSBOLT", "tail", "stabilator retention cross-bolt M6 12.9 (double shear), hinge-line inertia 12 g",
-          "stabilatör tespit çapraz cıvatası M6 12.9 (çift kesme), menteşe ekseni ataleti 12 g",
+    R.add("T-CROSSBOLT", "tail", "stabilator retention cross-bolt M6 Ti-6Al-4V (double shear), hinge-line inertia 12 g",
+          "stabilatör tespit çapraz cıvatası M6 Ti-6Al-4V (çift kesme), menteşe ekseni ataleti 12 g",
           "inertia parallel to the hinge line 12 x panel weight (CS-LUAS.393(b))", "menteşe eksenine paralel atalet "
-          "12 x panel ağırlığı (CS-LUAS.393(b))", F_ax, 2 * 0.6 * 1220e6 * 20.1e-6, "N", total_factor(c, fa=True),
-          "ISO 898-1 12.9", part="YK250-TL-301")
+          "12 x panel ağırlığı (CS-LUAS.393(b))", F_ax, 2 * 0.6 * ti_bolt_rm(c) * 20.1e-6, "N", total_factor(c, fa=True),
+          "Ti-6Al-4V (spec Ftu), 0.6 Rm A_s", part="YK250-TL-301")
     SK = TD["socket"]
     L_e = float(SK["length_m"])
     M_s = N * (TL["y_cp_stab"] - y_root)
@@ -2429,11 +2443,11 @@ def check_tail(c: Ctx, R: Rows) -> dict:
     sbf = float(TD["fin_root_bolt_spacing_m"])
     for tag, sh, fit in (("FRONT", share_f, fr), ("REAR", 1 - share_f, rr)):
         P = sh * M_f / sbf + 0.5 * sh * Nf
-        R.add(f"T-FINROOT-{tag}", "tail", f"fin {tag.lower()}-spar root fitting {fit['part']}: 2 x M6 12.9 double shear "
-              f"(cap bolts {sbf * 1000:.0f} mm apart)", f"dikey {('ön' if tag == 'FRONT' else 'arka')} kiriş kök "
-              f"bağlantısı {fit['part']}: 2 x M6 12.9 çift kesme (başlık cıvataları {sbf * 1000:.0f} mm aralık)", casef,
-              casef_tr, P, 2 * 0.6 * 1220e6 * 20.1e-6, "N", total_factor(c, fit=True), "ISO 898-1 12.9",
-              part=fit["part"])
+        R.add(f"T-FINROOT-{tag}", "tail", f"fin {tag.lower()}-spar root fitting {fit['part']}: 2 x M6 Ti-6Al-4V double "
+              f"shear (cap bolts {sbf * 1000:.0f} mm apart)", f"dikey {('ön' if tag == 'FRONT' else 'arka')} kiriş kök "
+              f"bağlantısı {fit['part']}: 2 x M6 Ti-6Al-4V çift kesme (başlık cıvataları {sbf * 1000:.0f} mm aralık)",
+              casef, casef_tr, P, 2 * 0.6 * ti_bolt_rm(c) * 20.1e-6, "N", total_factor(c, fit=True),
+              "Ti-6Al-4V (spec Ftu), 0.6 Rm A_s", part=fit["part"])
         R.add(f"T-FINROOT-BR-{tag}", "tail", f"fin {tag.lower()}-spar root fitting: 7075 angle lug bearing (t 5 mm)",
               f"dikey {('ön' if tag == 'FRONT' else 'arka')} kiriş kök bağlantısı: 7075 köşebent kulak ezilmesi (t 5 mm)",
               casef, casef_tr, P, 0.006 * 0.005 * float(al["Fbru"]), "N", total_factor(c, fit=True), "MMPDS Fbru",
@@ -2461,9 +2475,10 @@ def check_tail(c: Ctx, R: Rows) -> dict:
              "App. H H.9 direction; no tail-wheel load rule for a tricycle bumper)")
     caseb_tr = ("kuyruk tamponu çarpması (tasarım kararı): skidden 45° yukarı-geri 1,0 x MTOM ağırlığı (CS-LUAS Ek H H.9 "
                 "yönü; burun tekerli uçak tamponu için kuyruk tekeri kuralı yok)")
-    R.add("T-VENTRAL-BOLT", "tail", "ventral root fittings: most loaded lug bolt M6 12.9 double shear", "ventral kök "
-          "bağlantıları: en yüklü kulak cıvatası M6 12.9 çift kesme", caseb, caseb_tr, float(bf.max()),
-          2 * 0.6 * 1220e6 * 20.1e-6, "N", total_factor(c, fit=True), "elastic bolt group (3 lugs on the keel line)",
+    R.add("T-VENTRAL-BOLT", "tail", "ventral root fittings: most loaded lug bolt M6 Ti-6Al-4V double shear", "ventral "
+          "kök bağlantıları: en yüklü kulak cıvatası M6 Ti-6Al-4V çift kesme", caseb, caseb_tr, float(bf.max()),
+          2 * 0.6 * ti_bolt_rm(c) * 20.1e-6, "N", total_factor(c, fit=True),
+          "elastic bolt group (3 lugs on the keel line); Ti-6Al-4V (spec Ftu), 0.6 Rm A_s",
           part="YK250-CH-099..101")
     R.add("T-VENTRAL-LUG", "tail", "ventral root lug bearing (7075, t 6 mm)", "ventral kök kulağı ezilmesi (7075, t 6 mm)",
           caseb, caseb_tr, float(bf.max()), 0.006 * 0.006 * float(al["Fbru"]), "N", total_factor(c, fit=True),
@@ -2590,8 +2605,8 @@ def check_controls(c: Ctx, R: Rows) -> dict:
                  f"{H_st:.1f} N m at the horn (CS-LUAS.395: the system limit load is the actuator output)")
         casep_tr = (f"{s_['tr']}: eyleyici tepe torku {act['torque_peak_Nm']} N m x en büyük bağlantı oranı {k_max:.2f} = "
                     f"boynuzda {H_st:.1f} N m (CS-LUAS.395: sistem limit yükü eyleyici çıktısıdır)")
-        R.add(f"C-RODEND-{k.upper()}", "controls", f"{k} push-rod end bolt M3 A2-70 in the horn (t 3 mm 7075), bearing "
-              "(3.33 total)", f"{s_['tr']} itme çubuğu ucu cıvatası M3 A2-70 boynuzda (t 3 mm 7075), ezilme (3,33 toplam)",
+        R.add(f"C-RODEND-{k.upper()}", "controls", f"{k} push-rod end bolt M3 Ti-6Al-4V in the horn (t 3 mm 7075), bearing "
+              "(3.33 total)", f"{s_['tr']} itme çubuğu ucu cıvatası M3 Ti-6Al-4V boynuzda (t 3 mm 7075), ezilme (3,33 toplam)",
               casep, casep_tr, F_push, 0.003 * 0.003 * float(al["Fbru"]), "N",
               total_factor(c, total=c.f["pushpull_total"]), "CS-LUAS.693 push-pull joint factor 3.33",
               part=f"{k} horn")
@@ -3378,6 +3393,7 @@ def check_engine_mount(c: Ctx, R: Rows) -> dict:
     feet_ult = {}
     As8 = float(research_value("materials", "fasteners.property_classes.stress_area.A_s_m2")["M8"])
     Rm = float(research_value("materials", "fasteners.property_classes.steel_12_9.tensile_Rm_min_Pa"))
+    Rm_foot = ti_bolt_rm(c)                 # mass/CG closure round: firewall-foot bolts Ti-6Al-4V (crankcase bolts 12.9)
     for name, (F, M, ult, _tr) in EC["cases"].items():
         f_iso = rigid_distribution(iso, F, M, es["cg"])
         loads = {}
@@ -3426,7 +3442,7 @@ def check_engine_mount(c: Ctx, R: Rows) -> dict:
             Rv = -v * fac * c.f["fit"]
             ft = abs(Rv[0]) / 2
             fs = math.hypot(Rv[1], Rv[2]) / 2
-            r_ = 1.0 / math.sqrt((ft / (Rm * As8)) ** 2 + (fs / (0.6 * Rm * As8)) ** 2)
+            r_ = 1.0 / math.sqrt((ft / (Rm_foot * As8)) ** 2 + (fs / (0.6 * Rm_foot * As8)) ** 2)
             if "foot" not in worst or r_ < worst["foot"][0]:
                 worst["foot"] = (r_, name, k_, math.hypot(ft, fs), None, ult)
             iso_max = max(np.linalg.norm(f) for f in f_iso) * fac
@@ -3447,14 +3463,17 @@ def check_engine_mount(c: Ctx, R: Rows) -> dict:
                              ("ring_t", "isolator ring, tension (near-weld Ftu)", "sönümleyici halkası, çekme (kaynak yakını Ftu)"),
                              ("bolt", "crankcase bolts M8 12.9 at the isolators, shear + tension interaction (x 1.15 fitting)",
                               "sönümleyicilerdeki karter cıvataları M8 12.9, kesme + çekme etkileşimi (x 1,15 bağlantı)"),
-                             ("foot", "firewall feet 2 x M8 12.9 each, shear + tension interaction (x 1.15 fitting)",
-                              "yangın perdesi ayakları, her biri 2 x M8 12.9, kesme + çekme etkileşimi (x 1,15 bağlantı)")):
+                             ("foot", "firewall feet 2 x M8 Ti-6Al-4V each, shear + tension interaction (x 1.15 "
+                                      "fitting)",
+                              "yangın perdesi ayakları, her biri 2 x M8 Ti-6Al-4V, kesme + çekme etkileşimi (x 1,15 "
+                              "bağlantı)")):
         if key not in worst:
             continue
         r_, nm, j, Nj, cap, ult = worst[key]
         R.add(f"E-{key.upper()}", "engine mount", lab, lab_tr, f"{nm}; {txt}", f"{EC['cases'][nm][3]}; {txt_tr}", 1.0, r_,
               "load multiplier", one, "direct-stiffness space truss (structlib.truss3d); MMPDS 4130 N, near-weld Ftu "
-              "80 ksi (AC 43.13-1B); ISO 898-1 12.9; loads already x FoS (limit cases) and x 1.15 (bolts)",
+              "80 ksi (AC 43.13-1B); crankcase bolts ISO 898-1 12.9, firewall-foot bolts Ti-6Al-4V (spec Ftu); loads "
+              "already x FoS (limit cases) and x 1.15 (bolts)",
               part="YK250-CH-085" if key not in ("bolt",) else "engine")
     iso_max, nm, *_ = worst["iso"]
     R.info("E-ISOLATOR", "engine mount", "elastomer isolator: required ultimate load capacity (largest resultant per "
@@ -3935,10 +3954,10 @@ def check_parachute(c: Ctx, R: Rows) -> dict:
     pitch = float(PD["skin_screw_pitch_m"])
     n_sc = 2 * int(L_sk / pitch)
     As4 = float(As["M4"])
-    R.add("P-SPINE-SCREWS", "parachute", f"spine flanges to P-MB-UPPER: {n_sc} x M4 A2-70 (pitch {pitch * 1000:.0f} mm, "
+    R.add("P-SPINE-SCREWS", "parachute", f"spine flanges to P-MB-UPPER: {n_sc} x M4 Ti-6Al-4V (pitch {pitch * 1000:.0f} mm, "
           f"FS1810 - FS-FUEL), shear of the x component (button head 0.8 x class)", f"omurga flanşları - P-MB-UPPER: "
-          f"{n_sc} x M4 A2-70 ({pitch * 1000:.0f} mm aralık, FS1810 - FS-FUEL), x bileşeninin kesmesi (yuvarlak baş 0,8 x "
-          "sınıf)", cx, cx_tr, Fx / n_sc, 0.8 * 0.6 * 700e6 * As4, "N", fu, "ISO 3506-1 A2-70", part="M-SPINE / YK250-SH-370")
+          f"{n_sc} x M4 Ti-6Al-4V ({pitch * 1000:.0f} mm aralık, FS1810 - FS-FUEL), x bileşeninin kesmesi (yuvarlak baş 0,8 x "
+          "sınıf)", cx, cx_tr, Fx / n_sc, 0.8 * 0.6 * 700e6 * As4, "N", fu, "Ti-6Al-4V screws credited at ISO 3506-1 A2-70 (conservative)", part="M-SPINE / YK250-SH-370")
     R.add("P-SPINE-SCREW-BR", "parachute", "spine flange screws M4: bearing in the 1.6 mm solid edge band of the skin",
           "omurga flanşı vidaları M4: kaplamanın 1,6 mm dolu kenar bandında ezilme", cx, cx_tr, Fx / n_sc,
           0.004 * 0.0016 * qi["bearing_Pa"], "N", fl, "QI bearing ETW", part="YK250-SH-370")
@@ -4082,14 +4101,14 @@ def check_turret(c: Ctx, R: Rows) -> dict:
            "yük sayısı (ileri + yan, nihai)", case, case_tr, math.hypot(F_fw, F_sd) / 2 * c.f["fit"], "N",
            "procurement requirement", part="YK250-PL-828")
     a2 = 0.6 * 700e6 * float(research_value("materials", "fasteners.property_classes.stress_area.A_s_m2")["M4"])
-    R.add("TU-ROOF", "turret", "roof bearing block: 4 x M4 A2-70 through-bolts with a 2 mm 7075 backing plate, tension "
-          "(hanging load)", "tavan yatak bloğu: 4 x M4 A2-70 geçme cıvata, 2 mm 7075 karşı plaka, çekme (asılı yük)",
-          case, case_tr, F_dn / 4, 700e6 * 8.78e-6, "N", total_factor(c, ult_only=True, fit=True), "ISO 3506-1 A2-70 Rm A_s",
+    R.add("TU-ROOF", "turret", "roof bearing block: 4 x M4 Ti-6Al-4V through-bolts with a 2 mm 7075 backing plate, tension "
+          "(hanging load)", "tavan yatak bloğu: 4 x M4 Ti-6Al-4V geçme cıvata, 2 mm 7075 karşı plaka, çekme (asılı yük)",
+          case, case_tr, F_dn / 4, 700e6 * 8.78e-6, "N", total_factor(c, ult_only=True, fit=True), "Ti-6Al-4V screws credited at ISO 3506-1 A2-70 Rm A_s (conservative, mass/CG closure round)",
           part="M-TURRETROOF")
     n_scr = int(c.D["turret"]["rail_screws_per_rail_end"])
     a3 = 0.6 * 700e6 * float(research_value("materials", "fasteners.property_classes.stress_area.A_s_m2")["M3"])
-    R.add("TU-RAILSCR", "turret", f"rail end screws {n_scr} x M3 A2-70 per rail end (2 rails, 2 ends), shear",
-          f"ray ucu vidaları ray ucu başına {n_scr} x M3 A2-70 (2 ray, 2 uç), kesme", case, case_tr,
+    R.add("TU-RAILSCR", "turret", f"rail end screws {n_scr} x M3 Ti-6Al-4V per rail end (2 rails, 2 ends), shear",
+          f"ray ucu vidaları ray ucu başına {n_scr} x M3 Ti-6Al-4V (2 ray, 2 uç), kesme", case, case_tr,
           math.hypot(F_fw, F_sd) / (2 * 2 * n_scr), a3, "N", total_factor(c, ult_only=True, fit=True),
           "0.6 Rm A_s", part="YK250-PL-828")
     # sliding doors: suction at VD, rail friction (mu estimate) -> pinion torque vs DA 22 rated torque
@@ -4354,9 +4373,9 @@ def check_body(c: Ctx, R: Rows, tail: dict) -> dict:
           part="YK250-SH-388 / -390")
     pitch = 0.032
     As4 = float(research_value("materials", "fasteners.property_classes.stress_area.A_s_m2")["M4"])
-    R.add("B-SCREW-SH", "body", "skin screw row ISO 7380 M4 A2-70 at 32 mm pitch: shear (button head 0.8 x class)",
-          "kaplama vida sırası ISO 7380 M4 A2-70, 32 mm aralık: kesme (yuvarlak baş 0,8 x sınıf)", case_t, case_ttr,
-          q * pitch, 0.8 * 0.6 * 700e6 * As4, "N", total_factor(c, fit=True), "ISO 3506-1 A2-70; materials.yaml screw_types",
+    R.add("B-SCREW-SH", "body", "skin screw row ISO 7380 M4 Ti-6Al-4V at 32 mm pitch: shear (button head 0.8 x class)",
+          "kaplama vida sırası ISO 7380 M4 Ti-6Al-4V, 32 mm aralık: kesme (yuvarlak baş 0,8 x sınıf)", case_t, case_ttr,
+          q * pitch, 0.8 * 0.6 * 700e6 * As4, "N", total_factor(c, fit=True), "Ti-6Al-4V screws credited at ISO 3506-1 A2-70 (conservative); materials.yaml screw_types",
           part="shell fasteners")
     R.add("B-SCREW-BR", "body", "skin screw row M4: bearing in the 1.6 mm solid edge band", "kaplama vida sırası M4: 1,6 mm "
           "dolu kenar bandında ezilme", case_t, case_ttr, q * pitch, 0.004 * 0.0016 * qi_design_values(c)["bearing_Pa"],
@@ -4393,15 +4412,15 @@ def check_equipment(c: Ctx, R: Rows) -> dict:
     m_pc = mass_item(c, "parachute_uavos_200")
     F = m_pc * G * max(nd, nf)
     As5 = float(research_value("materials", "fasteners.property_classes.stress_area.A_s_m2")["M5"])
-    R.add("EQ-PARA-BRK", "equipment", "parachute container brackets 4 x (2 x M5 A2-70), shear (one bracket pair carries "
-          "half)", "paraşüt kabı dirsekleri 4 x (2 x M5 A2-70), kesme (bir dirsek çifti yarısını taşır)", case, case_tr,
-          F / 4, 0.6 * 700e6 * As5, "N", total_factor(c, ult_only=True, fit=True), "0.6 Rm A_s", part="YK250-CH-114")
+    R.add("EQ-PARA-BRK", "equipment", "parachute container brackets 4 x (2 x M5 Ti-6Al-4V), shear (one bracket pair carries "
+          "half)", "paraşüt kabı dirsekleri 4 x (2 x M5 Ti-6Al-4V), kesme (bir dirsek çifti yarısını taşır)", case, case_tr,
+          F / 4, 0.6 * 700e6 * As5, "N", total_factor(c, ult_only=True, fit=True), "0.6 Rm A_s (Ti-6Al-4V screws credited at A2-70, conservative)", part="YK250-CH-114")
     # payload tray: 4 x M5 captive screws, research payload at MTOM (n of the MTOM case, no lightest-mass parachute)
     m_pay = sum(float(p["mass_kg"]) for p in c.S["mass"]["payload_items"] if p["name"] in (
         "research_payload_allowance", "research_payload_max_increment", "payload_tray_harness"))
     n_pay = max(1.5 * c.n_wing, n_land, 6.0, PARA_SHOCK_N / (c.m0 * G), 9.0)
-    R.add("EQ-PAYTRAY", "equipment", f"payload tray (max payload {m_pay:.2f} kg) 4 x M5 A2-70 captive screws, shear",
-          f"faydalı yük tepsisi (en büyük yük {m_pay:.2f} kg) 4 x M5 A2-70 tutsak vida, kesme",
+    R.add("EQ-PAYTRAY", "equipment", f"payload tray (max payload {m_pay:.2f} kg) 4 x M5 Ti-6Al-4V captive screws, shear",
+          f"faydalı yük tepsisi (en büyük yük {m_pay:.2f} kg) 4 x M5 Ti-6Al-4V tutsak vida, kesme",
           f"maximum payload at MTOM, ultimate n {n_pay:.2f} (largest of flight, landing, emergency, parachute)",
           f"MTOM'da en büyük faydalı yük, nihai n {n_pay:.2f} (uçuş, iniş, acil, paraşüt en büyüğü)",
           m_pay * G * n_pay / 4, 0.6 * 700e6 * As5, "N", total_factor(c, ult_only=True, fit=True), "0.6 Rm A_s",

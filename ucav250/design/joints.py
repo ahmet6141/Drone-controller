@@ -88,7 +88,7 @@ def _spec(head: str, size, L: float, grade: str) -> str:
 
 
 def bolt(reg: Registry, fid: str, size, position, axis, stack, *, owner: str | None = None, head: str = "ISO 4762",
-         grade: str = "A2-70", nut: str = "ISO 7040", washer_head: bool = False, washer_nut: bool = True,
+         grade: str = "Ti-6Al-4V", nut: str = "ISO 7040", washer_head: bool = False, washer_nut: bool = True,
          insert_part: str | None = None, insert_depth: float | None = None, tapped_part: str | None = None,
          tapped_depth: float | None = None, step: int = 0, notes: str = "", torque_nm: float | None = None,
          hole_d: float | None = None, orient=None) -> Fastener:
@@ -98,6 +98,10 @@ def bolt(reg: Registry, fid: str, size, position, axis, stack, *, owner: str | N
     * ``"nutplate"``: floating anchor nutplate riveted to the far face of the last stack part;
     * ``"insert"``: potted insert in ``insert_part`` (sandwich panel) whose face is at the end of the stack;
     * ``"tapped"``: thread tapped in ``tapped_part`` (metal), starting at the end of the stack.
+
+    Default grade (mass/CG closure round, hardware study HW-01/02): Ti-6Al-4V (materials.yaml: fasteners in CFRP are
+    titanium, A286 or passivated stainless; stronger than A2-70, 44 % lighter); the far side keeps its own alloy
+    (hardware.py). Torque: the grade's table, else the A2-70 values (C.TORQUE).
     """
     a = unit(axis)
     p = np.asarray(position, float)

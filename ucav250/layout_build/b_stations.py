@@ -205,11 +205,12 @@ def stations() -> list:
          cut("C-FW-PUSHROD", "stabilator pushrods (fireproof bellows boots)", [0.165, 0.195], [0.215, 0.262],
              mirror=True)],
         mat={"material": "cfrp_pw_mtm45_as4", "process": "prepreg_ooa_vacbag", "layup": "rib_panel", "t": 0.0148,
-             "construction": "stack-up forward -> aft: CFRP sandwich bulkhead (layups.rib_panel, 6.8 mm) / 7.6 mm "
+             "construction": "stack-up forward -> aft: CFRP sandwich bulkhead (layups.rib_panel, 6.8 mm) / 7.59 mm "
                              "air gap on 12 stainless stand-offs (insulation blanket optional, material to be "
-                             "selected) / 0.4 mm AISI 304 stainless sheet (fireproof without test: >= 0.38 mm, "
-                             "standards.yaml FIRE-001, CS-VLA 1191), riveted to a stainless edge angle; overall "
-                             "14.8 mm", "shield_material": "ss_304_annealed", "shield_t": 0.0004},
+                             "selected) / 0.41 mm Ti-6Al-4V sheet (fireproof without test: titanium sheet 0.016 in, "
+                             "14 CFR 23.1191(e)(6), standards.yaml FIRE-001 also_in; mass/CG closure round: replaces "
+                             "the 0.4 mm AISI 304 sheet, -0.2 kg aft of the CG), riveted to a stainless edge angle; "
+                             "overall 14.8 mm", "shield_material": "ti_6al_4v_annealed_sheet", "shield_t": 0.00041},
         name_tr="yangın perdesi")
     add("FS3738", X_RING, "engine-bay lower U-ring (metallic, in the hot zone): ventral rear fitting, aft keel beam, "
         "lower cowl intermediate land; its upper ends are bolted (3 x M4 12.9 each) to the feet of the outboard cheeks of "

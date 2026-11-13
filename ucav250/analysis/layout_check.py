@@ -962,20 +962,21 @@ def _placements_round2(ctx: Ctx, L: dict, eqs: dict, put) -> None:
     fixed = pk["well_close_outs"] + pk["cut_out_reinforcement"] + pk["locks_sensors"]
     cnt = int(S["mass"]["rules"]["gear_doors"]["inner_door_actuator"]["count"])
     n_main = min(cnt, 2)
-    act_e = pk["inner_door_actuators"] / max(cnt, 1)
+    ia = gd["inner_door_actuator_kg"]               # main drives (DA 30, main_drive) and nose drive (DA 22) apart
     lnk_e = pk["inner_door_linkages"] / max(cnt, 1)
+    act_main, act_nose = ia["main_each"], ia["nose_each"]
     comps = [("main inner doors", ak * g["area_main_inner_m2"], door_c("main_inner_door_R")),
              ("main leg + trunnion doors", ak * g["area_main_leg_m2"],
               door_c(*[n for n in ("main_leg_door_R", "main_trunnion_door_R") if n in do])),
              ("nose clamshell doors", ak * g["area_nose_m2"], door_c("nose_door_R")),
              ("close-outs, reinforcement, locks/sensors (main wells, 2/3)", 2.0 / 3.0 * fixed, wm),
              ("close-outs, reinforcement, locks/sensors (nose well, 1/3)", fixed / 3.0, wn),
-             ("main inner-door DA 22 + linkages (EQ-DOORACT)", n_main * (act_e + lnk_e),
+             ("main inner-door DA 30 + linkages (EQ-DOORACT)", n_main * (act_main + lnk_e),
               _pair(_box_c(eqs["EQ-DOORACT"]["box"]))),
              ("leg-door brackets", pk["leg_door_brackets"], door_c("main_leg_door_R"))]
     nda = [k for k in ("EQ-NDOORACT", "EQ-NDOORACT-R", "EQ-NDOORACT-L") if k in eqs]
     if cnt > 2 and nda:
-        comps.append(("nose-door DA 22 + crank/pushrod (EQ-NDOORACT)", (cnt - 2) * (act_e + lnk_e),
+        comps.append(("nose-door DA 22 + crank/pushrod (EQ-NDOORACT)", (cnt - 2) * (act_nose + lnk_e),
                       np.mean([_box_c(eqs[k]["box"]) for k in nda], axis=0).tolist()))
     if pk.get("nose_door_bellcrank_links", 0.0) > 0 and nda and eqs[nda[0]].get("drive_envelope"):
         comps.append(("nose-door bellcrank, links and horns (NDOOR-LINKAGE)", pk["nose_door_bellcrank_links"],

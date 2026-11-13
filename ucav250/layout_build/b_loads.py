@@ -87,17 +87,20 @@ def engine_mount(fittings: list) -> dict:
                                 "engine.yaml vibration.isolator_target)",
                       "tag": "estimate", "centres": iso},
         "ring_center": ring_c, "ring_nodes": ring_nodes, "feet": feet, "tubes": tubes,
-        "firewall_attach": "each foot: 4130 cup bolted with 2 x M8 12.9 through the firewall stack (F-EMOUNT "
-                           "fittings: 7075 backing plate 40 x 40 x 5 mm on the forward face, stainless spacer tubes "
-                           "through the sandwich and the air gap; stainless shield clamped under the foot)",
+        "firewall_attach": "each foot: 4130 cup bolted with 2 x M8 Ti-6Al-4V through the firewall stack (F-EMOUNT "
+                           "fittings: 7075 backing plate 40 x 40 x 5 mm on the forward face, Ti-6Al-4V spacer tubes "
+                           "through the sandwich and the air gap; titanium shield clamped under the foot; mass/CG "
+                           "closure round: bolts 12.9 -> Ti-6Al-4V (structures E-FOOT), A-286 all-metal locknuts)",
         "firewall_stackup": {
             "station": "FS3670", "aft_face_x": X_FW, "forward_face_x": r3(X_FW - 0.0148),
             "layers_fwd_to_aft": [
                 {"layer": "CFRP sandwich bulkhead (layups.rib_panel)", "t": 0.0068},
-                {"layer": "air gap on 12 stainless stand-offs (insulation blanket optional)", "t": 0.0076},
-                {"layer": "AISI 304 stainless sheet 0.4 mm, fireproof without test (>= 0.38 mm, standards.yaml "
-                          "FIRE-001; fix round 2: 0.5 -> 0.4 mm, air gap 7.5 -> 7.6 mm, stack unchanged 14.8 mm)",
-                 "t": 0.0004}],
+                {"layer": "air gap on 12 stainless stand-offs (insulation blanket optional)", "t": 0.00759},
+                {"layer": "Ti-6Al-4V sheet 0.41 mm, fireproof without test (titanium sheet 0.016 in, 14 CFR "
+                          "23.1191(e)(6), standards.yaml FIRE-001 also_in; fix round 2: stainless 0.5 -> 0.4 mm; "
+                          "mass/CG closure round: AISI 304 0.4 mm -> Ti-6Al-4V 0.41 mm, air gap 7.6 -> 7.59 mm, stack "
+                          "unchanged 14.8 mm)",
+                 "t": 0.00041}],
             "text": "layout.firewall_x is the AFT face (stainless shield); the stack lies forward of it so the "
                     "firewall_gap of the sizing (SG750 front 20 mm aft of the shield) is kept; penetrations only "
                     "through fireproof unions, grommets and bellows (stations FS3670 cut-outs); fuel cells >= 13 mm "
@@ -334,7 +337,9 @@ def firewall_mass(L: dict) -> dict:
     em = L["chassis"]["engine_mount"]
     st = next(s_ for s_ in L["stations"] if s_["id"] == "FS3670")
     t = float(em["firewall_stackup"]["layers_fwd_to_aft"][-1]["t"])
-    rho = float(S["materials"]["ss_304_annealed"]["density"])
+    rho_ss = float(S["materials"]["ss_304_annealed"]["density"])
+    sh_mat = str(st.get("shield_material") or "ss_304_annealed")
+    rho = float(S["materials"][sh_mat]["density"])
     ph = np.radians(np.linspace(0.0, 360.0, 721))
     Pf = af.fus.point(np.full_like(ph, float(L["firewall_x"])), ph)
     y, z = Pf[:, 1], Pf[:, 2]
@@ -343,13 +348,13 @@ def firewall_mass(L: dict) -> dict:
     A_cut = sum((2 if c_.get("mirror") else 1) * (c_["y"][1] - c_["y"][0]) * (c_["z"][1] - c_["z"][0])
                 for c_ in st.get("cutouts", []))
     sheet = (A - A_cut) * t * rho
-    angle = per * FW_EDGE_ANGLE_LEGS * t * rho
+    angle = per * FW_EDGE_ANGLE_LEGS * t * rho_ss
     stand = FW_STANDOFFS[0] * FW_STANDOFFS[1]
     rivets = per / 0.025 * 0.0005
     return {"section_area_m2": r3(A, 4), "cutouts_m2": r3(A_cut, 4), "perimeter_m": r3(per, 3),
             "sheet_kg": r3(sheet, 4), "edge_angle_kg": r3(angle, 4), "standoffs_kg": r3(stand, 4),
             "rivets_kg": r3(rivets, 4), "total_kg": r3(sheet + angle + stand + rivets, 4),
-            "basis": f"stainless 304 sheet {t * 1000:.1f} mm over the FS3670 section at layout.firewall_x minus the "
+            "basis": f"{sh_mat} sheet {t * 1000:.2f} mm over the FS3670 section at layout.firewall_x minus the "
                      f"cut-outs + edge angle 2 x 13 mm on the perimeter + {FW_STANDOFFS[0]} stand-offs "
                      f"({FW_STANDOFFS[1] * 1000:.0f} g each, estimate) + blind rivets at 25 mm (0.5 g, estimate); "
                      "read by sizing (cooling_baffles_firewall_cowl_flap, fix round 2)"}

@@ -2277,12 +2277,12 @@ spec_ready:
       tag: standard
       source: *u_ac43
     sheet_metal_steel:
-      name: Sheet-metal cutting, brake forming and riveting (stainless / carbon steel sheet)
-      name_tr: Celik / paslanmaz sac kesme, abkant bukum ve percinleme
+      name: Sheet-metal cutting, brake forming and riveting (stainless / carbon steel / titanium sheet)
+      name_tr: Celik / paslanmaz / titanyum sac kesme, abkant bukum ve percinleme
       min_thickness: 0.38e-3
       tolerance: "ISO 2768-mK linear; bend angle +/-1 deg (estimate)"
       draft_deg: 0.0
-      min_bend_radius_t: {ss_304_annealed: 0.5, steel_4130_N: 1.5}
+      min_bend_radius_t: {ss_304_annealed: 0.5, steel_4130_N: 1.5, ti_6al_4v_annealed_cold: 5.0}
       min_bend_radius_note: "materials.yaml sheet_metal.steel_titanium_bend_radius_over_t (typical shop limits, estimate)"
       edge_distance_D: 2.0
       hole_to_bend: "2.5 t + R"

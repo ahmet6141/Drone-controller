@@ -2176,8 +2176,13 @@ mass:
         count: 3
         linkage_kg_each: 0.04
         note: 'fix round 2 (PK2-13): 2 main inner-door drives (EQ-DOORACT, inner door only; fix round 3, PK3-07: the trunnion
-          door is leg-driven through a slotted lost-motion link + opening spring, within linkage_kg_each) + 1 nose clamshell-door
-          drive (EQ-NDOORACT) for both doors through a centre-line bellcrank (mass.rules.gear_doors.nose_door_drive)'
+          door is leg-driven through a slotted lost-motion link + opening spring, within linkage_kg_each; integration round
+          IR-02 / mass-CG closure round: Volz DA 30, main_drive) + 1 nose clamshell-door drive (EQ-NDOORACT, Volz DA 22
+          of model / mass_ref) for both doors through a centre-line bellcrank (mass.rules.gear_doors.nose_door_drive)'
+        main_drive:
+          model: Volz DA 30 (28 V)
+          count: 2
+          mass_ref: components.yaml#categories.control_surface_actuators.items[volz_da30].mass_kg
       leg_door_brackets:
         count: 4
         mass_kg_each: 0.02
@@ -4290,14 +4295,15 @@ processes:
     tag: standard
     source: https://www.faa.gov/documentLibrary/media/Advisory_Circular/AC_43.13-1B_w-chg1.pdf
   sheet_metal_steel:
-    name: Sheet-metal cutting, brake forming and riveting (stainless / carbon steel sheet)
-    name_tr: Celik / paslanmaz sac kesme, abkant bukum ve percinleme
+    name: Sheet-metal cutting, brake forming and riveting (stainless / carbon steel / titanium sheet)
+    name_tr: Celik / paslanmaz / titanyum sac kesme, abkant bukum ve percinleme
     min_thickness: 0.00038
     tolerance: ISO 2768-mK linear; bend angle +/-1 deg (estimate)
     draft_deg: 0.0
     min_bend_radius_t:
       ss_304_annealed: 0.5
       steel_4130_N: 1.5
+      ti_6al_4v_annealed_cold: 5.0
     min_bend_radius_note: materials.yaml sheet_metal.steel_titanium_bend_radius_over_t (typical shop limits, estimate)
     edge_distance_D: 2.0
     hole_to_bend: 2.5 t + R
@@ -5381,11 +5387,12 @@ layout:
     process: prepreg_ooa_vacbag
     layup: rib_panel
     t: 0.0148
-    construction: 'stack-up forward -> aft: CFRP sandwich bulkhead (layups.rib_panel, 6.8 mm) / 7.6 mm air gap on 12 stainless
-      stand-offs (insulation blanket optional, material to be selected) / 0.4 mm AISI 304 stainless sheet (fireproof without
-      test: >= 0.38 mm, standards.yaml FIRE-001, CS-VLA 1191), riveted to a stainless edge angle; overall 14.8 mm'
-    shield_material: ss_304_annealed
-    shield_t: 0.0004
+    construction: 'stack-up forward -> aft: CFRP sandwich bulkhead (layups.rib_panel, 6.8 mm) / 7.59 mm air gap on 12 stainless
+      stand-offs (insulation blanket optional, material to be selected) / 0.41 mm Ti-6Al-4V sheet (fireproof without test:
+      titanium sheet 0.016 in, 14 CFR 23.1191(e)(6), standards.yaml FIRE-001 also_in; mass/CG closure round: replaces the
+      0.4 mm AISI 304 sheet, -0.2 kg aft of the CG), riveted to a stainless edge angle; overall 14.8 mm'
+    shield_material: ti_6al_4v_annealed_sheet
+    shield_t: 0.00041
     flange_w: 0.028
     cutouts:
     - id: C-DUCT
@@ -7461,9 +7468,10 @@ layout:
         b: [3.7471, -0.0476, 0.1083]
         length: 0.1758
         note: lower cross diagonal (below the SG750)
-      firewall_attach: 'each foot: 4130 cup bolted with 2 x M8 12.9 through the firewall stack (F-EMOUNT fittings: 7075
-        backing plate 40 x 40 x 5 mm on the forward face, stainless spacer tubes through the sandwich and the air gap; stainless
-        shield clamped under the foot)'
+      firewall_attach: 'each foot: 4130 cup bolted with 2 x M8 Ti-6Al-4V through the firewall stack (F-EMOUNT fittings:
+        7075 backing plate 40 x 40 x 5 mm on the forward face, Ti-6Al-4V spacer tubes through the sandwich and the air gap;
+        titanium shield clamped under the foot; mass/CG closure round: bolts 12.9 -> Ti-6Al-4V (structures E-FOOT), A-286
+        all-metal locknuts)'
       firewall_stackup:
         station: FS3670
         aft_face_x: 3.67
@@ -7472,10 +7480,11 @@ layout:
         - layer: CFRP sandwich bulkhead (layups.rib_panel)
           t: 0.0068
         - layer: air gap on 12 stainless stand-offs (insulation blanket optional)
-          t: 0.0076
-        - layer: 'AISI 304 stainless sheet 0.4 mm, fireproof without test (>= 0.38 mm, standards.yaml FIRE-001; fix round
-            2: 0.5 -> 0.4 mm, air gap 7.5 -> 7.6 mm, stack unchanged 14.8 mm)'
-          t: 0.0004
+          t: 0.00759
+        - layer: 'Ti-6Al-4V sheet 0.41 mm, fireproof without test (titanium sheet 0.016 in, 14 CFR 23.1191(e)(6), standards.yaml
+            FIRE-001 also_in; fix round 2: stainless 0.5 -> 0.4 mm; mass/CG closure round: AISI 304 0.4 mm -> Ti-6Al-4V
+            0.41 mm, air gap 7.6 -> 7.59 mm, stack unchanged 14.8 mm)'
+          t: 0.00041
         text: layout.firewall_x is the AFT face (stainless shield); the stack lies forward of it so the firewall_gap of
           the sizing (SG750 front 20 mm aft of the shield) is kept; penetrations only through fireproof unions, grommets
           and bellows (stations FS3670 cut-outs); fuel cells >= 13 mm ahead of the forward face (CS-LUAS.967(c))
@@ -7483,14 +7492,14 @@ layout:
           section_area_m2: 0.1777
           cutouts_m2: 0.019
           perimeter_m: 1.511
-          sheet_kg: 0.5027
-          edge_angle_kg: 0.1244
+          sheet_kg: 0.2883
+          edge_angle_kg: 0.1275
           standoffs_kg: 0.048
           rivets_kg: 0.0302
-          total_kg: 0.7053
-          basis: stainless 304 sheet 0.4 mm over the FS3670 section at layout.firewall_x minus the cut-outs + edge angle
-            2 x 13 mm on the perimeter + 12 stand-offs (4 g each, estimate) + blind rivets at 25 mm (0.5 g, estimate); read
-            by sizing (cooling_baffles_firewall_cowl_flap, fix round 2)
+          total_kg: 0.494
+          basis: ti_6al_4v_annealed_sheet sheet 0.41 mm over the FS3670 section at layout.firewall_x minus the cut-outs
+            + edge angle 2 x 13 mm on the perimeter + 12 stand-offs (4 g each, estimate) + blind rivets at 25 mm (0.5 g,
+            estimate); read by sizing (cooling_baffles_firewall_cowl_flap, fix round 2)
       removal: engine off the isolators to the aft after removing propeller, spinner, cowls, exhaust, harness plugs, fuel
         quick-disconnects and 4 M8 bolts; the mount stays on the firewall
       design_load_case: DL-ENGINE-MOUNT
@@ -7806,7 +7815,7 @@ layout:
       attach: fixed
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 button head into floating anchor nutplate M4
+        spec: ISO 7380 M4 Ti-6Al-4V button head into floating anchor nutplate M4
         pitch: [0.025, 0.032]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -7851,7 +7860,7 @@ layout:
       attach: fixed
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 button head into floating anchor nutplate M4
+        spec: ISO 7380 M4 Ti-6Al-4V button head into floating anchor nutplate M4
         pitch: [0.025, 0.032]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -7899,7 +7908,7 @@ layout:
       attach: fixed
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 button head into floating anchor nutplate M4
+        spec: ISO 7380 M4 Ti-6Al-4V button head into floating anchor nutplate M4
         pitch: [0.025, 0.032]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -7964,7 +7973,7 @@ layout:
       attach: fixed
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 button head into floating anchor nutplate M4
+        spec: ISO 7380 M4 Ti-6Al-4V button head into floating anchor nutplate M4
         pitch: [0.025, 0.032]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -7984,7 +7993,7 @@ layout:
       attach: fixed
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 button head into floating anchor nutplate M4
+        spec: ISO 7380 M4 Ti-6Al-4V button head into floating anchor nutplate M4
         pitch: [0.025, 0.032]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -8006,8 +8015,8 @@ layout:
       attach: removable
       fastening:
         type: insert+screw
-        spec: '14 x ISO 7380 M4 A2-70 into potted M4 inserts in the frame caps (fore/aft) and in the bonded side land doublers
-          of the lower skin under the door rail plane (sides, fix round 3 PK3-09): pitch about 67 mm'
+        spec: '14 x ISO 7380 M4 Ti-6Al-4V into potted M4 inserts in the frame caps (fore/aft) and in the bonded side land
+          doublers of the lower skin under the door rail plane (sides, fix round 3 PK3-09): pitch about 67 mm'
         pitch: [0.06, 0.08]
         edge_margin: 0.012
       material: cfrp_pw_mtm45_as4
@@ -8061,7 +8070,7 @@ layout:
       attach: fixed
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 button head into floating anchor nutplate M4
+        spec: ISO 7380 M4 Ti-6Al-4V button head into floating anchor nutplate M4
         pitch: [0.025, 0.032]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -8106,7 +8115,7 @@ layout:
       attach: fixed
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 button head into floating anchor nutplate M4
+        spec: ISO 7380 M4 Ti-6Al-4V button head into floating anchor nutplate M4
         pitch: [0.025, 0.032]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -8123,7 +8132,7 @@ layout:
       attach: fixed
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 button head into floating anchor nutplate M4
+        spec: ISO 7380 M4 Ti-6Al-4V button head into floating anchor nutplate M4
         pitch: [0.025, 0.032]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -8150,7 +8159,7 @@ layout:
       attach: removable
       fastening:
         type: insert+screw
-        spec: ISO 7380 M4 A2-70 into potted M4 inserts (fasteners_catalog.INSERT)
+        spec: ISO 7380 M4 Ti-6Al-4V into potted M4 inserts (fasteners_catalog.INSERT)
         pitch: [0.06, 0.1]
         edge_margin: 0.012
       material: gfrp_7781_mtm45
@@ -8189,7 +8198,7 @@ layout:
       attach: fixed
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 button head into floating anchor nutplate M4
+        spec: ISO 7380 M4 Ti-6Al-4V button head into floating anchor nutplate M4
         pitch: [0.025, 0.032]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -8229,7 +8238,8 @@ layout:
       attach: removable
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 into floating nutplates + fuel-resistant fluorosilicone gasket (vapour-tight fuel-bay panel)
+        spec: ISO 7380 M4 Ti-6Al-4V into floating nutplates + fuel-resistant fluorosilicone gasket (vapour-tight fuel-bay
+          panel)
         pitch: [0.025, 0.03]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -8252,7 +8262,8 @@ layout:
       attach: removable
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 into floating nutplates + fuel-resistant fluorosilicone gasket (vapour-tight fuel-bay panel)
+        spec: ISO 7380 M4 Ti-6Al-4V into floating nutplates + fuel-resistant fluorosilicone gasket (vapour-tight fuel-bay
+          panel)
         pitch: [0.025, 0.03]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -8275,7 +8286,8 @@ layout:
       attach: removable
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 into floating nutplates + fuel-resistant fluorosilicone gasket (vapour-tight fuel-bay panel)
+        spec: ISO 7380 M4 Ti-6Al-4V into floating nutplates + fuel-resistant fluorosilicone gasket (vapour-tight fuel-bay
+          panel)
         pitch: [0.025, 0.03]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -8298,7 +8310,7 @@ layout:
       attach: fixed
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 button head into floating anchor nutplate M4
+        spec: ISO 7380 M4 Ti-6Al-4V button head into floating anchor nutplate M4
         pitch: [0.025, 0.032]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -8345,7 +8357,7 @@ layout:
       attach: fixed
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 button head into floating anchor nutplate M4
+        spec: ISO 7380 M4 Ti-6Al-4V button head into floating anchor nutplate M4
         pitch: [0.025, 0.032]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -8443,7 +8455,7 @@ layout:
       attach: fairing
       fastening:
         type: insert+screw
-        spec: ISO 7380 M4 A2-70 into potted M4 inserts (fasteners_catalog.INSERT)
+        spec: ISO 7380 M4 Ti-6Al-4V into potted M4 inserts (fasteners_catalog.INSERT)
         pitch: [0.06, 0.1]
         edge_margin: 0.012
       material: cfrp_pw_mtm45_as4
@@ -8462,7 +8474,7 @@ layout:
       attach: fixed
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 button head into floating anchor nutplate M4
+        spec: ISO 7380 M4 Ti-6Al-4V button head into floating anchor nutplate M4
         pitch: [0.025, 0.032]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -8487,7 +8499,7 @@ layout:
       attach: fixed
       fastening:
         type: nutplate+screw
-        spec: ISO 7380 M4 A2-70 button head into floating anchor nutplate M4
+        spec: ISO 7380 M4 Ti-6Al-4V button head into floating anchor nutplate M4
         pitch: [0.025, 0.032]
         edge_margin: 0.01
       material: cfrp_pw_mtm45_as4
@@ -8525,7 +8537,7 @@ layout:
       attach: fairing
       fastening:
         type: insert+screw
-        spec: ISO 7380 M4 A2-70 into potted M4 inserts (fasteners_catalog.INSERT)
+        spec: ISO 7380 M4 Ti-6Al-4V into potted M4 inserts (fasteners_catalog.INSERT)
         pitch: [0.06, 0.1]
         edge_margin: 0.012
       material: cfrp_pw_mtm45_as4
@@ -8543,7 +8555,7 @@ layout:
       attach: fairing
       fastening:
         type: insert+screw
-        spec: ISO 7380 M4 A2-70 into potted M4 inserts (fasteners_catalog.INSERT)
+        spec: ISO 7380 M4 Ti-6Al-4V into potted M4 inserts (fasteners_catalog.INSERT)
         pitch: [0.06, 0.1]
         edge_margin: 0.012
       material: cfrp_pw_mtm45_as4
@@ -8562,7 +8574,7 @@ layout:
       attach: fairing
       fastening:
         type: insert+screw
-        spec: ISO 7380 M4 A2-70 into potted M4 inserts (fasteners_catalog.INSERT)
+        spec: ISO 7380 M4 Ti-6Al-4V into potted M4 inserts (fasteners_catalog.INSERT)
         pitch: [0.06, 0.1]
         edge_margin: 0.012
       material: cfrp_pw_mtm45_as4
@@ -11097,7 +11109,7 @@ layout:
       part: YK250-PR-523
       panel: P-COWL-LO
       mirror: true
-      material: ss_304_annealed
+      material: ti_6al_4v_annealed_sheet
       t: 0.0001
       regions:
       - [[3.75, 0.1, -0.08], [3.95, 0.265, 0.215]]
@@ -11105,10 +11117,12 @@ layout:
       exclude_regions:
       - [[3.775, 0.125, -0.055], [3.925, 0.24, 0.19]]
       - [[3.835, 0.115, -0.065], [3.985, 0.24, 0.055]]
-      text: 'stainless 304 foil 0.1 mm on 5 mm stand-offs (air gap) on the inner face of the CFRP lower cowl between 25
-        and 50 mm from the stack routing envelope (around the insert): the composite keeps the 25 mm shielded margin'
+      text: 'heat-shield sheet on 5 mm stand-offs (air gap) on the inner face of the CFRP lower cowl between 25 and 50 mm
+        from the stack routing envelope (around the insert): the composite keeps the 25 mm shielded margin (layout foil
+        0.1 mm; the part is 0.4 mm, the sheet_metal_steel minimum; mass/CG closure round: Ti-6Al-4V instead of AISI 304,
+        a heat shield, not a fire barrier)'
       area_m2: 0.0235
-      mass_net_kg: 0.0513
+      mass_net_kg: 0.0349
     - id: HS-STUBROOT
       part: YK250-PR-521
       panel: P-STUBROOT
@@ -11161,7 +11175,7 @@ layout:
       area_m2: 0.01338
       mass_net_kg: 0.0159
     mass:
-      total_net_kg: 0.388
+      total_net_kg: 0.3716
       items: [HS-COWL-EXIT, HS-COWL-SHIELD, HS-STUBROOT, HS-STUB, F-SPINDLE-NODE baffle, P-COWL-UPS]
       basis: 'net masses of the parts above (both sides, before the growth allowance): inserts = stainless sheet incl. a
         20 mm riveted lap + blind rivets at 25 mm - the composite shell skin they replace (1.578 kg/m2, sizing.areal_masses
@@ -11204,37 +11218,37 @@ layout:
       position_sizing_phase: [3.83, 0.0, 0.19]
     cooling_baffles_firewall_cowl_flap:
       mode: absolute
-      position: [3.7811, 0.0, 0.1533]
+      position: [3.7958, 0.0, 0.1583]
       basis: 'sizing.cooling_installation_mass components at the layout objects: firewall stainless layer (firewall_stackup.mass),
         baffles/plenum and exit-lip allowances (mass.rules.cooling_split), heat protection (layout.heat_protection.mass,
         region centres)'
       components:
       - what: firewall stainless layer + edge angle + stand-offs (section centroid)
-        fraction: 0.4106
+        fraction: 0.3316
         at: [3.6698, 0.0, 0.125]
       - what: cylinder baffles + plenum + ducts (6/7 of the composite allowance)
-        fraction: 0.3115
+        fraction: 0.3592
         at: [3.8333, 0.0, 0.2285]
       - what: cowl exit lip parts (1/7)
-        fraction: 0.0519
+        fraction: 0.0599
         at: [3.98, 0.0, 0.22]
       - what: HS-COWL-EXIT (heat protection)
-        fraction: 0.1543
+        fraction: 0.1779
         at: [3.88, 0.0, 0.0625]
       - what: HS-COWL-SHIELD (heat protection)
-        fraction: 0.0299
+        fraction: 0.0234
         at: [3.88, 0.0, 0.0625]
       - what: HS-STUBROOT (heat protection)
-        fraction: 0.0087
+        fraction: 0.01
         at: [3.88, 0.0, 0.0625]
       - what: HS-STUB (heat protection)
-        fraction: 0.006
+        fraction: 0.0069
         at: [3.88, 0.0, 0.0625]
       - what: F-SPINDLE-NODE baffle
-        fraction: 0.0178
+        fraction: 0.0205
         at: [3.73, 0.0, 0.215]
       - what: P-COWL-UPS metal cowl piece (net)
-        fraction: 0.0093
+        fraction: 0.0107
         at: [3.8175, 0.0, 0.331]
       position_sizing_phase: [3.73, 0.0, 0.25]
     dorsal_cooling_inlet_s_duct:
@@ -11631,42 +11645,42 @@ layout:
       position_sizing_phase: [0.8443, 0.0, -0.1244]
     gear_doors_wells_locks_sensors:
       mode: absolute
-      position: [2.3772, -0.0057, -0.1385]
+      position: [2.6145, -0.0041, -0.1357]
       basis: sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout door
         outlines (closed), well centres and door drives
       components:
       - what: main inner doors
-        fraction: 0.1155
+        fraction: 0.0814
         at: [2.9758, 0.0, -0.2036]
       - what: main leg + trunnion doors
-        fraction: 0.0629
+        fraction: 0.0443
         at: [2.9758, 0.0, -0.1929]
       - what: nose clamshell doors
-        fraction: 0.0414
+        fraction: 0.0292
         at: [0.8622, 0.0, -0.1943]
       - what: close-outs, reinforcement, locks/sensors (main wells, 2/3)
-        fraction: 0.311
+        fraction: 0.2192
         at: [2.9758, 0.0, -0.1309]
       - what: close-outs, reinforcement, locks/sensors (nose well, 1/3)
-        fraction: 0.1555
+        fraction: 0.1096
         at: [0.851, 0.0, -0.0922]
-      - what: main inner-door DA 22 + linkages (EQ-DOORACT)
-        fraction: 0.1446
+      - what: main inner-door DA 30 + linkages (EQ-DOORACT)
+        fraction: 0.397
         at: [3.1813, 0.0, -0.129]
       - what: leg-door brackets
-        fraction: 0.0336
+        fraction: 0.0237
         at: [2.9758, 0.0, -0.2]
       - what: nose-door DA 22 + crank/pushrod (EQ-NDOORACT)
-        fraction: 0.0723
+        fraction: 0.051
         at: [1.0593, -0.0795, -0.095]
       - what: nose-door bellcrank, links and horns (NDOOR-LINKAGE)
-        fraction: 0.021
+        fraction: 0.0148
         at: [1.095, 0.0, -0.1232]
       - what: door seals (main)
-        fraction: 0.027
+        fraction: 0.019
         at: [2.9758, 0.0, -0.1309]
       - what: door seals (nose)
-        fraction: 0.0152
+        fraction: 0.0107
         at: [0.851, 0.0, -0.0922]
       position_sizing_phase: [2.4987, 0.0, -0.1]
     turret_lift_mechanism_doors:

@@ -747,10 +747,11 @@ def heat_protection(K: list) -> dict:
                      "exit cut-out with a 5 mm stand-off ring"}],
         "shields": [
             {"id": "HS-COWL-SHIELD", "part": "YK250-PR-523", "panel": "P-COWL-LO", "mirror": True,
-             "material": "ss_304_annealed", "t": HS_FOIL_T, "regions": reg_sh, "exclude_regions": reg_in,
-             "text": f"stainless 304 foil {t_f:.1f} mm on 5 mm stand-offs (air gap) on the inner face of the CFRP lower "
-                     "cowl between 25 and 50 mm from the stack routing envelope (around the insert): the composite "
-                     "keeps the 25 mm shielded margin"},
+             "material": "ti_6al_4v_annealed_sheet", "t": HS_FOIL_T, "regions": reg_sh, "exclude_regions": reg_in,
+             "text": f"heat-shield sheet on 5 mm stand-offs (air gap) on the inner face of the CFRP lower cowl between "
+                     f"25 and 50 mm from the stack routing envelope (around the insert): the composite keeps the 25 mm "
+                     f"shielded margin (layout foil {t_f:.1f} mm; the part is 0.4 mm, the sheet_metal_steel minimum; "
+                     "mass/CG closure round: Ti-6Al-4V instead of AISI 304, a heat shield, not a fire barrier)"},
             {"id": "HS-STUBROOT", "part": "YK250-PR-521", "panel": "P-STUBROOT", "mirror": True,
              "material": "ss_304_annealed", "t": HS_FOIL_T, "regions": reg_sh,
              "text": f"stainless 304 foil {t_f:.1f} mm on 5 mm stand-offs on the inner face of the lower edge of the "
@@ -797,7 +798,8 @@ def heat_protection_mass(hp: dict, areas: dict, L: dict) -> None:
         rows.append(h["id"])
     for h in hp["shields"]:
         A = float(areas.get(h["id"], 0.0))
-        m1 = A * (float(h["t"]) * rho + HS_STANDOFF_KG_M2)
+        m1 = A * (float(h["t"]) * float(S["materials"][h.get("material", "ss_304_annealed")]["density"]) +
+                  HS_STANDOFF_KG_M2)
         n = 2 if h.get("mirror") else 1
         h["area_m2"], h["mass_net_kg"] = r3(A, 5), r3(n * m1, 4)
         tot += n * m1

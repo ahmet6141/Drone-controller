@@ -1453,7 +1453,11 @@ def gear_doors_mass(S: dict) -> dict:
     ak = float(R["door_areal_kg_per_m2"])
     seal = float(R["seal_kg_per_m"]) if sealed else 0.0
     act = R["inner_door_actuator"]
-    m_act = float(research_item(act["mass_ref"])) * int(act["count"])
+    n_act = int(act["count"])
+    md = act.get("main_drive")                  # mass/CG closure round: the main inner doors use their own unit (DA 30)
+    n_md = min(int(md["count"]), n_act) if md else 0
+    m_act = float(research_item(act["mass_ref"])) * (n_act - n_md) + \
+        (float(research_item(md["mass_ref"])) * n_md if md else 0.0)
     br = R["leg_door_brackets"]
     fixed = float(R["well_close_outs_kg"]) + float(R["cut_out_reinforcement_kg"]) + float(R["locks_sensors_kg"])
     parts = {"doors": ak * g["area_total_m2"], "seals": seal * g["joint_total_m"], "well_close_outs": float(R["well_close_outs_kg"]),
@@ -1461,18 +1465,20 @@ def gear_doors_mass(S: dict) -> dict:
              "inner_door_actuators": m_act, "inner_door_linkages": float(act["linkage_kg_each"]) * int(act["count"]),
              "leg_door_brackets": float(br["mass_kg_each"]) * int(br["count"])}
     nd = R.get("nose_door_drive")
-    n_act = int(act["count"])
     n_nose = max(n_act - 2, 0)                  # actuators beyond the two main inner-door drives drive the nose doors
     if nd:
         parts["nose_door_bellcrank_links"] = float(nd["bellcrank_links_kg"])
-    m_nd = (parts["inner_door_actuators"] + parts["inner_door_linkages"]) * n_nose / max(n_act, 1) + \
-        parts.get("nose_door_bellcrank_links", 0.0)
+    m_one = float(research_item(act["mass_ref"]))
+    m_act_nose = m_one * n_nose                 # the nose drive is the base unit (mass_ref); main_drive: main doors
+    lnk = float(act["linkage_kg_each"])
+    m_nd = m_act_nose + lnk * n_nose + parts.get("nose_door_bellcrank_links", 0.0)
     m_main = (ak * (g["area_main_inner_m2"] + g["area_main_leg_m2"]) + seal * g["joint_main_m"] + 2.0 / 3.0 * fixed +
-              (parts["inner_door_actuators"] + parts["inner_door_linkages"]) * (n_act - n_nose) / max(n_act, 1) +
-              parts["leg_door_brackets"])
+              (parts["inner_door_actuators"] - m_act_nose) + lnk * (n_act - n_nose) + parts["leg_door_brackets"])
     m_nose = ak * g["area_nose_m2"] + seal * g["joint_nose_m"] + fixed / 3.0 + m_nd
     total = sum(parts.values())
     return {"total_kg": total, "parts_kg": parts, "geometry": g, "sealed": sealed,
+            "inner_door_actuator_kg": {"main_each": (parts["inner_door_actuators"] - m_act_nose) / max(n_act - n_nose, 1),
+                                       "nose_each": m_one, "n_main": n_act - n_nose, "n_nose": n_nose},
             "x": (m_main * g["x_main"] + m_nose * g["x_nose"]) / total}
 
 
@@ -4634,7 +4640,10 @@ def mass_items(S: dict, af: Airframe, wing_m: dict, tail_m: dict, shell: dict, l
         f"{gpk['cut_out_reinforcement']:.2f} + gear locks/sensors {gpk['locks_sensors']:.2f} + "
         + (f"perimeter door seals {gpk['seals']:.3f} ({float(GR['seal_kg_per_m']) * 1000:.1f} g/m x "
            f"{gg['joint_total_m']:.2f} m of joint) + " if gd["sealed"] else "") +
-        f"inner-door actuators {gpk['inner_door_actuators']:.3f} ({int(GR['inner_door_actuator']['count'])} x "
+        f"inner-door actuators {gpk['inner_door_actuators']:.3f} (" + (
+            f"{int(GR['inner_door_actuator']['main_drive']['count'])} x {GR['inner_door_actuator']['main_drive']['model']}"
+            f" main + {int(GR['inner_door_actuator']['count']) - int(GR['inner_door_actuator']['main_drive']['count'])} x "
+            if GR['inner_door_actuator'].get('main_drive') else f"{int(GR['inner_door_actuator']['count'])} x ") +
         f"{GR['inner_door_actuator']['model']}, datasheet) + their linkages {gpk['inner_door_linkages']:.2f} + leg-door "
         f"standoff brackets {gpk['leg_door_brackets']:.2f}" +
         (f" + nose-door bellcrank, links and horns {gpk['nose_door_bellcrank_links']:.2f}"
@@ -4736,7 +4745,79 @@ def mass_items(S: dict, af: Airframe, wing_m: dict, tail_m: dict, shell: dict, l
     add("fasteners_inserts_nutplates", "hardware", MR["hardware_fraction"] * struct, 1.95, 0.0,
         f"{MR['hardware_fraction']:.3f} x structure + gear base mass (estimate)")
     apply_mass_placement(S, I)
+    I += registry_closure_items(S, I, am, wing_m, tail_m, shell, gd, gp, x_mac40, z_wing)
     return I
+
+
+def registry_closure_items(S: dict, I: list, am: dict, wing_m: dict, tail_m: dict, shell: dict, gd: dict, gp: dict,
+                           x_mac40: float, z_wing: float) -> list:
+    """Detail-design mass closure (mass/CG closure round): with ``spec.mass.registry`` (analysis/mass.py --update-spec,
+    the registry of the detailed design) every budget group closes on its MEASURED mass and centroid instead of the
+    concept estimate x (1 + growth allowance): per group one item withdraws the concept estimate of the group (minus its
+    mass at its centroid) and one item adds the registry group (mass at the registry centroid), so the group sum, the
+    empty mass, the empty CG, the loading cases, the fuel (MTOM - empty - payload) and the payload-bay rule are those of
+    the detailed design; the concept items stay in the list as the allocation lineage of the ceilings. The growth
+    allowance is not carried on registry masses; what the geometry does not model is itemised (``registry_allowance``
+    items, also read by analysis/mass.py as point masses): paint (structures.paint_areal_kg_per_m2 on the exposed wetted
+    areas, part of every concept areal mass), the gear-door perimeter seals (mass.rules.gear_doors.seal_kg_per_m on the
+    sealed joint length) and the brake lines and fluid (components.yaml fixed-gear basis 'master cylinder and lines
+    0.20' less the 0.065 kg master cylinder in the brake unit FC-629). Without the registry block: no items."""
+    R = (S["mass"].get("registry") or {})
+    if not R.get("groups"):
+        return []
+    out = []
+
+    def allow(name, group, m, x, y, z, basis):
+        out.append({"name": name, "group": group, "mass_base_kg": round(float(m), 4), "mass_kg": round(float(m), 4),
+                    "x": round(float(x), 4), "y": round(float(y), 4), "z": round(float(z), 4), "basis": basis,
+                    "registry_allowance": True})
+    paint = float(am["paint"])
+    allow("paint_finish_body", "shell", paint * shell["S_wet_exposed"], shell["x_c"], 0.0, shell["z_c"],
+          f"paint {paint:.2f} kg/m2 (structures.paint_areal_kg_per_m2, estimate) x exposed body wetted area "
+          f"{shell['S_wet_exposed']:.3f} m2 at its area centroid (not in the registry layups)")
+    allow("paint_finish_wing", "wing", paint * wing_m["S_wet"], x_mac40, 0.0, z_wing,
+          f"paint {paint:.2f} kg/m2 x exposed wing wetted area {wing_m['S_wet']:.3f} m2 incl. the control surfaces, at "
+          "40 % MAC")
+    pos = {i["name"]: i for i in I}
+    tk = (("stabilator", "stabilators_pair"), ("stabilator_stub", "stabilator_root_stubs_pair"),
+          ("fin", "fins_pair_fixed"), ("ventral", "ventral_fin_bumper_skid"))
+    sw = [(float(tail_m[k]["S_wet"]), pos[n]) for k, n in tk if k in tail_m and n in pos]
+    A_t = sum(a for a, _ in sw)
+    allow("paint_finish_tail", "tail", paint * A_t, sum(a * p["x"] for a, p in sw) / A_t, 0.0,
+          sum(a * p["z"] for a, p in sw) / A_t,
+          f"paint {paint:.2f} kg/m2 x exposed tail wetted area {A_t:.3f} m2 (stabilators, stubs, fins, ventral) at the "
+          "area-weighted tail item positions")
+    if gd["parts_kg"].get("seals", 0.0) > 0:
+        allow("gear_door_perimeter_seals", "gear", gd["parts_kg"]["seals"], gd["x"], 0.0, -0.10,
+              f"perimeter door seals {float(S['mass']['rules']['gear_doors']['seal_kg_per_m']) * 1000:.1f} g/m "
+              f"(mass.rules.gear_doors.seal_kg_per_m, estimate) x {gd['geometry']['joint_total_m']:.2f} m of sealed door "
+              "joint (no seal part in the registry)")
+    eqs = {e["id"]: e for e in (S["layout"].get("systems") or {}).get("equipment", [])}
+    if "EQ-BRAKE_UNIT" in eqs:
+        b = np.asarray(eqs["EQ-BRAKE_UNIT"]["box"], float)
+        xb, zb = 0.5 * (b[0, 0] + b[1, 0]), 0.5 * (b[0, 2] + b[1, 2])
+        allow("brake_lines_fluid", "gear", 0.20 - 0.065, 0.5 * (xb + gp["x_mg"]), 0.0, 0.5 * (zb + gp["z_trunnion"]),
+              "components.yaml landing_gear fixed-gear basis 'master cylinder and lines 0.20' (estimate) less the 0.065 "
+              "kg master cylinder carried in the brake unit FC-629: two hydraulic lines + fluid along H-MAIN from the "
+              "brake unit (EQ-BRAKE_UNIT) to the main calipers, at the mid-point (no line part in the registry)")
+    for g, rg in sorted(R["groups"].items()):
+        est = [i for i in I if i["group"] == g]
+        m_e = sum(float(i["mass_kg"]) for i in est)
+        mb_e = sum(float(i["mass_base_kg"]) for i in est)
+        if m_e > 0:
+            c_e = [sum(float(i["mass_kg"]) * float(i[k]) for i in est) / m_e for k in ("x", "y", "z")]
+            out.append({"name": f"{g}_concept_estimate_withdrawn", "group": g, "mass_base_kg": round(-mb_e, 4),
+                        "mass_kg": round(-m_e, 4), "x": round(c_e[0], 6), "y": round(c_e[1], 6), "z": round(c_e[2], 6),
+                        "basis": f"detail-design closure: the concept estimate of the {g} group ({len(est)} items above, "
+                                 "incl. the growth allowance) withdrawn at its centroid; replaced by the registry item "
+                                 "below (mass/CG closure round)"})
+        c = [float(v) for v in rg["cg"]]
+        out.append({"name": f"{g}_detail_design_registry", "group": g, "mass_base_kg": round(float(rg["mass_kg"]), 4),
+                    "mass_kg": round(float(rg["mass_kg"]), 4), "x": round(c[0], 6), "y": round(c[1], 6),
+                    "z": round(c[2], 6),
+                    "basis": f"registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, "
+                             f"{R.get('parts', '?')} parts): measured {g} group mass and centroid, no growth allowance"})
+    return out
 
 
 def apply_mass_placement(S: dict, I: list) -> None:
@@ -4799,7 +4880,8 @@ def payload_items(S: dict, lz: dict) -> list:
         raise ValueError("payload.research_allowance_max_kg + baseline set must equal mission.payload_max_kg")
     return [{"name": "eo_ir_turret_hd59_mount", "mass_kg": PS["turret_mass_kg"], "x": round(xt, 4), "y": 0.0,
              "z": round(T["ball_center_retracted_z"], 4), "z_extended": round(T["ball_center_extended_z"], 4),
-             "basis": "Trillium HD59-LLVV 1.55 kg datasheet + isolator/mount 0.20 kg (baseline.yaml#payload_set)"},
+             "basis": "Trillium HD59-LLVV 1.55 kg datasheet + isolator/mount 0.20 kg (baseline.yaml#payload_set)",
+             "registry_parts": "payload_group"},
             {"name": "mission_computer_recorder", "mass_kg": PS["mission_computer_kg"], "x": round(mc[0], 4), "y": 0.0,
              "z": round(mc[2], 4), "basis": "baseline.yaml#payload_set"},
             {"name": "payload_tray_harness", "mass_kg": PS["tray_harness_kg"], "x": round(xb, 4), "y": 0.0,
@@ -5014,8 +5096,12 @@ def design_closure(S_in: dict, verbose: bool = True, max_iter: int = 30) -> dict
         empty = sum(i["mass_kg"] for i in items)
         pay = float(mis["payload_design_kg"])
         fuel = m0 - empty - pay
+        # detail-design closure: the fuel CG is the registry fuel contents centroid (bladders filled to the level of
+        # the design fuel load, fuel module) when spec.mass.registry carries it; else the fuel-cell volume centroid
+        rfu = (S["mass"].get("registry") or {}).get("fuel")
+        f_cg = [float(v) for v in rfu["cg"]] if rfu else [fuel_x, 0.0, fuel_z]
         S["mass"].update({"empty_kg": round(empty, 4), "fuel_kg": round(fuel, 4), "payload_kg": pay,
-                          "fuel_cg": _round([fuel_x, 0.0, fuel_z], 4)})
+                          "fuel_cg": _round(f_cg, 6 if rfu else 4)})
         S["payload"]["research_allowance_design_kg"] = round(pay - payload_baseline_kg(S), 4)
         update_case_fuel(S, fuel_capacity_kg(S, af))
         cases = mass_cases(S)

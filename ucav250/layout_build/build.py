@@ -242,10 +242,15 @@ def round2_edits(S2: dict) -> None:
         cooling_split(S2, COWL_SKIN_M2[0])
     gda = S2["mass"]["rules"]["gear_doors"]["inner_door_actuator"]
     gda["count"] = 3
+    # mass/CG closure round: the two main inner-door drives are Volz DA 30 (integration round IR-02, G-DOOR-DRIVE
+    # needs 14.0 J against 4.1 J of the DA 22); the nose clamshell drive stays the DA 22 of model / mass_ref
+    gda["main_drive"] = {"model": "Volz DA 30 (28 V)", "count": 2,
+                         "mass_ref": "components.yaml#categories.control_surface_actuators.items[volz_da30].mass_kg"}
     gda["note"] = ("fix round 2 (PK2-13): 2 main inner-door drives (EQ-DOORACT, inner door only; fix round 3, PK3-07: "
                    "the trunnion door is leg-driven through a slotted lost-motion link + opening spring, within "
-                   "linkage_kg_each) + 1 nose clamshell-door drive (EQ-NDOORACT) for both doors through a centre-line "
-                   "bellcrank (mass.rules.gear_doors.nose_door_drive)")
+                   "linkage_kg_each; integration round IR-02 / mass-CG closure round: Volz DA 30, main_drive) + 1 nose "
+                   "clamshell-door drive (EQ-NDOORACT, Volz DA 22 of model / mass_ref) for both doors through a "
+                   "centre-line bellcrank (mass.rules.gear_doors.nose_door_drive)")
     nde = next(e for e in S2["layout"]["systems"]["equipment"] if e["id"] == "EQ-NDOORACT")["drive_envelope"]
     S2["mass"]["rules"]["gear_doors"]["nose_door_drive"] = {
         "bellcrank_links_kg": nde["mass_kg"], "basis": nde["mass_basis"],

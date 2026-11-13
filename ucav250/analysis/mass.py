@@ -3,14 +3,22 @@
 * Manufactured parts: mesh volume x effective density (layup areal mass / thickness, or material density).
 * Purchased parts: datasheet ``mass_kg``; CG and inertia from their envelope mesh scaled to that mass.
 * Consumables (``process == "consumable"``, e.g. fuel contents): scaled per loading case.
-* Loading cases from ``spec.mass.cases``: ``[{name, fuel_fraction, payload: bool, note}]``.
+* Loading cases from ``spec.mass.cases``: ``[{name, fuel_fraction, payload: [payload item names] | bool, turret}]``.
 * Budget cross-check against ``spec.mass.budget``: ``{group: {target_kg, tol_kg}}``.
 * Budget group of a part = the group of the ``spec.mass.items`` entry it is booked to: the part's own ``mass_item``
   (producer), else the ``mass_item`` of the layout object that names it (``part`` + ``mass_item`` anywhere in
   ``spec.layout``, e.g. the EFI pump EQ-FUELPUMP in engine_group_installed), else the producer group. Parts booked to a
   ``spec.mass.payload_items`` entry are payload (left out of the no-payload cases).
+* Detail-design mass closure (mass/CG closure round): ``spec.mass.items`` entries flagged ``registry_allowance`` (paint
+  and the itemised items the geometry does not model, written by sizing) are point masses of the empty aircraft; a
+  case's ``spec.mass.payload_items`` that no registry part represents (mission computer, tray, research payload
+  allowance, E180 delta) are point masses at their spec positions, and the payload item ``eo_ir_turret_hd59_mount``
+  (``registry_parts: payload_group``) adds the remainder of its mass over the registry payload parts. The loading cases
+  then carry the whole loading of sizing.mass_cases (the earlier report left 16.25 kg of payload out).
+* ``--update-spec`` writes ``spec.mass.registry`` (registry group masses / centroids, empty mass, fuel contents, payload
+  parts) which sizing.mass_items closes on; the plain run fails when that block is stale.
 
-CLI:  python3 -m ucav250.analysis.mass   -> out/mass.md, out/mass.json (exit 1 if a budget/CG limit fails)
+CLI:  python3 -m ucav250.analysis.mass [--update-spec]  -> out/mass.md, out/mass.json (exit 1 if a budget/CG limit fails)
 """
 from __future__ import annotations
 
@@ -23,6 +31,10 @@ import numpy as np
 from ..core.parts import Part, Registry
 
 CONSUMABLE = "consumable"
+PAYLOAD_GROUP_ITEM_KEY = "payload_group"     # payload item whose registry parts are the producer payload group
+REGISTRY_TOL_KG = 0.005                      # spec.mass.registry vs the registry (stale-block check)
+REGISTRY_TOL_M = 0.0005
+CG_RANGE_TOL = 1e-5                          # m: stability.cg_range_x is stored to 6 significant digits (0.01 mm)
 
 
 def _base_id(pid: str) -> str:
@@ -70,9 +82,13 @@ def part_props(reg: Registry, p: Part, group: str | None = None) -> dict:
             "inertia": vol_props["inertia"] * k}
 
 
+def point_mass(pid: str, group: str, m: float, x: float, y: float, z: float) -> dict:
+    return {"id": pid, "group": group, "mass": float(m), "cg": np.array([x, y, z], float), "inertia": np.zeros((3, 3))}
+
+
 def combine(items: list[dict]) -> dict:
     M = sum(i["mass"] for i in items)
-    if M <= 0:
+    if abs(M) <= 0:
         return {"mass": 0.0, "cg": np.zeros(3), "inertia": np.zeros((3, 3))}
     cg = sum(i["mass"] * i["cg"] for i in items) / M
     I = np.zeros((3, 3))
@@ -82,17 +98,58 @@ def combine(items: list[dict]) -> dict:
     return {"mass": M, "cg": cg, "inertia": I}
 
 
-def case_items(reg: Registry, props: dict, case: dict) -> list[dict]:
+def allowance_items(spec: dict) -> list[dict]:
+    """Empty-mass allowance items (``spec.mass.items`` with ``registry_allowance``) as point masses."""
+    return [point_mass(f"[{i['name']}]", i["group"], i["mass_kg"], i["x"], i["y"], i["z"])
+            for i in (spec.get("mass", {}) or {}).get("items", []) or [] if i.get("registry_allowance")]
+
+
+def payload_booking(spec: dict, bg: dict, pid: str) -> str:
+    """Payload item a registry payload part represents: its own mass item, else the item flagged
+    ``registry_parts: payload_group`` (producer payload group without a mass item)."""
+    mi = bg[pid][1]
+    if mi:
+        return mi
+    for p in (spec.get("mass", {}) or {}).get("payload_items", []) or []:
+        if p.get("registry_parts") == PAYLOAD_GROUP_ITEM_KEY:
+            return p["name"]
+    return ""
+
+
+def case_items(reg: Registry, props: dict, case: dict, bg: dict | None = None) -> list[dict]:
+    """Registry parts (fuel scaled), allowance point masses and the case's payload: registry payload parts of the
+    listed payload items + point masses for what the registry does not model (module docstring)."""
+    spec = reg.spec
+    bg = bg if bg is not None else budget_groups(reg)
     out = []
     ff = float(case.get("fuel_fraction", 1.0))
-    with_payload = bool(case.get("payload", True))
+    pl = case.get("payload", True)
+    names = list(pl) if isinstance(pl, (list, tuple)) else None
+    reg_pay = defaultdict(float)
     for pid, pr in props.items():
         p = reg.parts[pid]
         if p.process == CONSUMABLE:
             pr = dict(pr, mass=pr["mass"] * ff, inertia=pr["inertia"] * ff)
-        if pr["group"] == "payload" and not with_payload:
-            continue
+        if pr["group"] == "payload":
+            if names is None:
+                if not pl:
+                    continue
+            else:
+                b = payload_booking(spec, bg, pid)
+                if b not in names:
+                    continue
+                reg_pay[b] += pr["mass"]
         out.append(pr)
+    out += allowance_items(spec)
+    if names:
+        pay = {p["name"]: p for p in (spec.get("mass", {}) or {}).get("payload_items", []) or []}
+        for n in names:
+            p = pay[n]
+            m = float(p["mass_kg"]) - reg_pay.get(n, 0.0)
+            if abs(m) < 1e-9:
+                continue
+            z = p["z_extended"] if (case.get("turret") == "extended" and "z_extended" in p) else p["z"]
+            out.append(point_mass(f"[{n}]", "payload", m, p["x"], p.get("y", 0.0), z))
     return out
 
 
@@ -104,19 +161,75 @@ def mac_fraction(reg: Registry, x_cg: float) -> float | None:
     return (x_cg - float(x_le)) / float(mac)
 
 
+def _r(v, n=6):
+    return [round(float(x), n) for x in v] if hasattr(v, "__len__") else round(float(v), n)
+
+
+def registry_block(reg: Registry, props: dict, bg: dict) -> dict:
+    """``spec.mass.registry``: what sizing.mass_items closes on (registry parts only; allowance items are spec items)."""
+    groups = defaultdict(list)
+    fuel, pay = [], defaultdict(list)
+    for pid, pr in props.items():
+        if reg.parts[pid].process == CONSUMABLE:
+            fuel.append(pr)
+        elif pr["group"] == "payload":
+            pay[payload_booking(reg.spec, bg, pid)].append(pr)
+        else:
+            groups[pr["group"]].append(pr)
+    empty = combine([pr for v in groups.values() for pr in v])
+    f = combine(fuel)
+    return {"method": "analysis/mass.py --update-spec: registry of the detailed design (core.assemble.build_registry, "
+                      "all producers): geometry x density, datasheet masses of purchased parts; group = budget group "
+                      "(mass_item booking); the allowance items (spec.mass.items registry_allowance) are not in it",
+            "parts": len(props), "empty_kg": _r(empty["mass"]), "cg": _r(empty["cg"]),
+            "groups": {g: {"mass_kg": _r(c["mass"]), "cg": _r(c["cg"])}
+                       for g, c in sorted(((g, combine(v)) for g, v in groups.items()), key=lambda t: t[0])},
+            "fuel": {"mass_kg": _r(f["mass"]), "cg": _r(f["cg"])},
+            "payload_parts": {k: {"mass_kg": _r(c["mass"]), "cg": _r(c["cg"])}
+                              for k, c in sorted((k, combine(v)) for k, v in pay.items())}}
+
+
+def registry_stale(spec_block: dict | None, new: dict) -> list[str]:
+    """Differences of spec.mass.registry from the registry beyond REGISTRY_TOL_KG / REGISTRY_TOL_M."""
+    if not spec_block:
+        return ["spec.mass.registry missing (run python3 -m ucav250.analysis.mass --update-spec)"]
+    out = []
+
+    def cmp(tag, a, b):
+        if a is None:
+            out.append(f"spec.mass.registry {tag} missing")
+            return
+        if abs(float(a["mass_kg"]) - float(b["mass_kg"])) > REGISTRY_TOL_KG or \
+                float(np.abs(np.asarray(a["cg"], float) - np.asarray(b["cg"], float)).max()) > REGISTRY_TOL_M:
+            out.append(f"spec.mass.registry {tag} stale: {float(a['mass_kg']):.3f} kg {_r(a['cg'], 4)} vs registry "
+                       f"{float(b['mass_kg']):.3f} kg {_r(b['cg'], 4)}")
+    for g, b in new["groups"].items():
+        cmp(f"groups.{g}", (spec_block.get("groups") or {}).get(g), b)
+    for g in (spec_block.get("groups") or {}):
+        if g not in new["groups"]:
+            out.append(f"spec.mass.registry groups.{g} has no registry parts")
+    cmp("fuel", spec_block.get("fuel"), new["fuel"])
+    for k, b in new["payload_parts"].items():
+        cmp(f"payload_parts.{k}", (spec_block.get("payload_parts") or {}).get(k), b)
+    return out
+
+
 def run(reg: Registry, write: bool = True) -> dict:
     bg = budget_groups(reg)
     props = {pid: part_props(reg, p, bg[pid][0]) for pid, p in reg.parts.items()}
     rebooked = sorted(({"id": pid, "producer_group": reg.parts[pid].group, "group": g, "mass_item": mi,
                         "mass": props[pid]["mass"]} for pid, (g, mi) in bg.items() if g != reg.parts[pid].group),
                       key=lambda r: r["id"])
+    allow = allowance_items(reg.spec)
     groups = defaultdict(list)
     for pid, pr in props.items():
         if reg.parts[pid].process != CONSUMABLE:
             groups[pr["group"]].append(pr)
+    for a in allow:
+        groups[a["group"]].append(a)
     by_group = {g: combine(v) for g, v in groups.items()}
     empty = combine([pr for pid, pr in props.items() if reg.parts[pid].process != CONSUMABLE
-                     and pr["group"] != "payload"])
+                     and pr["group"] != "payload"] + allow)
     spec_mass = reg.spec.get("mass", {}) or {}
     cases = spec_mass.get("cases") or [{"name": "mtow", "fuel_fraction": 1.0, "payload": True}]
     res_cases = {}
@@ -124,11 +237,14 @@ def run(reg: Registry, write: bool = True) -> dict:
     cg_lo, cg_hi = (st.get("cg_range_x") or [None, None])
     failures = []
     for c in cases:
-        tot = combine(case_items(reg, props, c))
+        its = case_items(reg, props, c, bg)
+        tot = combine(its)
         frac = mac_fraction(reg, float(tot["cg"][0]))
         res_cases[c["name"]] = {"mass": tot["mass"], "cg": tot["cg"].tolist(), "inertia": tot["inertia"].tolist(),
-                                "cg_mac": frac}
-        if cg_lo is not None and not (cg_lo - 1e-9 <= tot["cg"][0] <= cg_hi + 1e-9):
+                                "cg_mac": frac,
+                                "payload_point_masses_kg": sum(i["mass"] for i in its if i["id"].startswith("[")
+                                                               and i["group"] == "payload")}
+        if cg_lo is not None and not (cg_lo - CG_RANGE_TOL <= tot["cg"][0] <= cg_hi + CG_RANGE_TOL):
             failures.append(f"{c['name']}: CG x {tot['cg'][0]:.4f} outside [{cg_lo}, {cg_hi}]")
         if abs(tot["cg"][1]) > 0.005:
             failures.append(f"{c['name']}: lateral CG {tot['cg'][1]*1000:.1f} mm off centre")
@@ -142,11 +258,18 @@ def run(reg: Registry, write: bool = True) -> dict:
         if not ok:
             failures.append(f"budget {g}: {got:.2f} kg vs {tgt:.2f} ± {tol:.2f}")
     mtow = spec_mass.get("mtow_kg")
-    if mtow and "mtow" in res_cases and res_cases["mtow"]["mass"] > float(mtow) + 1e-6:
-        failures.append(f"MTOW case {res_cases['mtow']['mass']:.2f} kg exceeds spec mtow {mtow}")
+    for n, c in res_cases.items():
+        if mtow and c["mass"] > float(mtow) + 1e-6:
+            failures.append(f"{n}: {c['mass']:.2f} kg exceeds spec mtow {mtow}")
+    blk = registry_block(reg, props, bg)
+    stale = registry_stale(spec_mass.get("registry"), blk)
+    failures += stale
     S = {"parts": len(props), "empty": {"mass": empty["mass"], "cg": empty["cg"].tolist()},
          "by_group": {g: {"mass": v["mass"], "cg": v["cg"].tolist()} for g, v in by_group.items()},
-         "cases": res_cases, "budget": rows, "rebooked": rebooked, "failures": failures, "ok": not failures,
+         "allowance_items": [{"name": a["id"].strip("[]"), "group": a["group"], "mass": a["mass"],
+                              "cg": a["cg"].tolist()} for a in allow],
+         "cases": res_cases, "budget": rows, "rebooked": rebooked, "registry": blk, "registry_stale": stale,
+         "failures": failures, "ok": not failures,
          "top_parts": sorted(({"id": k, "mass": v["mass"]} for k, v in props.items()), key=lambda r: -r["mass"])[:25]}
     if write:
         from ..core.spec import OUT_DIR
@@ -162,18 +285,30 @@ def _f(x, n=2):
 
 def report_md(S: dict) -> str:
     L = ["# YK-250 kütle özellikleri", "",
-         f"Boş kütle (faydalı yük ve yakıt hariç): **{_f(S['empty']['mass'])} kg**, AG x = "
-         f"{_f(S['empty']['cg'][0], 3)} m.", "", "## Yükleme durumları", "",
-         "| Durum | Kütle (kg) | AG x (m) | AG y (mm) | AG z (m) | %OAK (MAC) | Ixx | Iyy | Izz (kg·m²) |",
-         "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+         f"Boş kütle (faydalı yük ve yakıt hariç; kayıt defteri parçaları + kalemlendirilmiş paylar): "
+         f"**{_f(S['empty']['mass'])} kg**, AG x = {_f(S['empty']['cg'][0], 3)} m "
+         f"(kayıt defteri parçaları yalnız: {_f(S['registry']['empty_kg'])} kg, {S['parts']} parça).", "",
+         "## Yükleme durumları", "",
+         "Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçaları (yakıt içeriği durumun yakıt "
+         "oranıyla), kalemlendirilmiş boş kütle payları ve durumun faydalı yük kalemleri (kayıt defterinde parçası "
+         "olmayanlar — görev bilgisayarı, tepsi, araştırma yükü payı, E180 farkı — kendi spec konumlarında noktasal "
+         "kütle).", "",
+         "| Durum | Kütle (kg) | Noktasal faydalı yük (kg) | AG x (m) | AG y (mm) | AG z (m) | %OAK (MAC) | Ixx | Iyy | "
+         "Izz (kg·m²) |",
+         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for n, c in S["cases"].items():
         I = np.asarray(c["inertia"])
         mac = "—" if c["cg_mac"] is None else _f(100 * c["cg_mac"], 1)
-        L.append(f"| {n} | {_f(c['mass'])} | {_f(c['cg'][0], 4)} | {_f(c['cg'][1]*1000, 1)} | {_f(c['cg'][2], 4)} | "
-                 f"{mac} | {_f(I[0,0], 1)} | {_f(I[1,1], 1)} | {_f(I[2,2], 1)} |")
+        L.append(f"| {n} | {_f(c['mass'])} | {_f(c['payload_point_masses_kg'])} | {_f(c['cg'][0], 4)} | "
+                 f"{_f(c['cg'][1]*1000, 1)} | {_f(c['cg'][2], 4)} | {mac} | {_f(I[0,0], 1)} | {_f(I[1,1], 1)} | "
+                 f"{_f(I[2,2], 1)} |")
     L += ["", "## Gruplar", "", "| Grup | Kütle (kg) | AG x (m) |", "|---|---:|---:|"]
     for g, v in sorted(S["by_group"].items(), key=lambda kv: -kv[1]["mass"]):
         L.append(f"| {g} | {_f(v['mass'])} | {_f(v['cg'][0], 3)} |")
+    if S.get("allowance_items"):
+        L += ["", "## Kalemlendirilmiş boş kütle payları (geometride modellenmeyen; spec.mass.items registry_allowance)",
+              "", "| Kalem | Grup | Kütle (kg) | x (m) |", "|---|---|---:|---:|"]
+        L += [f"| {a['name']} | {a['group']} | {_f(a['mass'], 3)} | {_f(a['cg'][0], 3)} |" for a in S["allowance_items"]]
     if S["budget"]:
         L += ["", "## Kütle bütçesi karşılaştırması", "", "| Grup | Hesap (kg) | Bütçe (kg) | Tolerans | Durum |",
               "|---|---:|---:|---:|---|"]
@@ -192,9 +327,31 @@ def report_md(S: dict) -> str:
     return "\n".join(L) + "\n"
 
 
+def update_spec(S_run: dict, path=None) -> int:
+    """Write ``spec.mass.registry`` (sizing.write_spec layout of the file); returns the number of changed values."""
+    from ..core import spec as SPEC
+    from .sizing import write_spec
+    p = path or SPEC.SPEC_PATH
+    with open(p, encoding="utf-8") as fh:
+        import yaml
+        S = yaml.safe_load(fh)
+    old = (S.get("mass") or {}).get("registry")
+    S["mass"]["registry"] = S_run["registry"]
+    write_spec(S, p)
+    SPEC.load.cache_clear()
+    return 0 if old == S_run["registry"] else 1
+
+
 def main(argv=None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
     from ..core.assemble import build_registry
     S = run(build_registry())
+    if "--update-spec" in argv:
+        changed = update_spec(S)
+        print(f"[mass] spec.mass.registry {'updated' if changed else 'unchanged'}: empty (registry parts) "
+              f"{S['registry']['empty_kg']:.3f} kg, CG x {S['registry']['cg'][0]:.4f} m; run sizing --update-spec")
+        S["failures"] = [f for f in S["failures"] if not f.startswith("spec.mass.registry")]
+        S["ok"] = not S["failures"]
     print(json.dumps({"ok": S["ok"], "failures": S["failures"],
                       "cases": {k: round(v["mass"], 2) for k, v in S["cases"].items()}}))
     return 0 if S["ok"] else 1

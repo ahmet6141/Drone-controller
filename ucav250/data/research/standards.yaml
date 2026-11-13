@@ -1845,6 +1845,7 @@ requirements:
       protects structure and controls needed for the emergency recovery from powerplant fires.
     also_in:
       - {document: STANAG 4703, clause: UL16.3, value: fire hazard assessment, source: *u_stanag4703, tag: standard}
+      - {document: 14 CFR Part 23 (before Amendment 23-64), clause: "23.1191(e)(6)", value: "titanium sheet, 0.016 in (0.41 mm) thick, accepted as fireproof without test (list (e)(1)-(6) of firewall materials: stainless 0.015 in, mild steel 0.018 in, terne plate 0.018 in, Monel 0.018 in, steel or copper base alloy fittings, titanium 0.016 in)", source: *u_far23, tag: standard, note: "mass/CG closure round: basis of the Ti-6Al-4V firewall sheet and spigot"}
 
   # ---------------- electrical bonding / lightning ----------------
   - id: ELEC-001

@@ -1009,10 +1009,10 @@ class Fix:
                 f = J.rivet(reg, fid, float(c.size) * 1e-3, head, a, thick, step=c.step, notes=c.note,
                             spec="blind rivet (CherryMAX class, A286 / monel)")
             elif c.kind == "ins":
-                f = J.bolt(reg, fid, int(c.size), head, a, thick[:-1], head=c.head, grade="A2-70", nut="insert",
+                f = J.bolt(reg, fid, int(c.size), head, a, thick[:-1], head=c.head, grade="Ti-6Al-4V", nut="insert",
                            insert_part=thick[-1][0], insert_depth=thick[-1][1], step=c.step, notes=c.note)
             else:
-                f = J.bolt(reg, fid, int(c.size), head, a, thick, head=c.head, grade="A2-70", nut="nutplate",
+                f = J.bolt(reg, fid, int(c.size), head, a, thick, head=c.head, grade="Ti-6Al-4V", nut="nutplate",
                            step=c.step, notes=c.note, orient=c.orient)
         except ValueError as exc:
             if dry:

@@ -53,7 +53,7 @@ BLAD_AREAL = 0.33           # kg/m2 coated-fabric wall (components.yaml atl_ultr
 FIT_T = 0.0075              # vulcanised bottom-fitting flange (6061-T6): blind M3 thread, engagement >= 1.2 D
 FIT_RIM = 0.0065            # flange material around a bolt (>= 2 D metal for M3, + 0.5 mm)
 FIT_SEAL = 0.004            # flange land around the structure bore (O-ring face seal)
-BOLT_FIT = 3                # M3 A2-70 bottom-fitting screws from the dry side, tapped into the flange
+BOLT_FIT = 3                # M3 Ti-6Al-4V bottom-fitting screws from the dry side, tapped into the flange
 CSK = 0.006                 # countersunk sump around the outlet bore (the outlet drains to the bladder floor)
 BORE_CLR = 0.00005          # radial clearance line / bore (O-ring seal; declared contact)
 BOSS_OUT = 0.006            # wall-port boss length outside the bladder (limited by the gap to the frame)
@@ -1068,7 +1068,7 @@ class Fuel:
                            f"(chassis); mass = {BLAD_AREAL} kg/m2 x {area:.3f} m2 wall (components.yaml basis) + "
                            f"fitting flanges {FIT_RHO * v_fit:.3f} kg (estimate)")
             self.ids[key] = c.pid
-        # bottom-fitting screws: M3 A2-70 from the dry side through the deck / well roof, tapped into the flange
+        # bottom-fitting screws: M3 Ti-6Al-4V from the dry side through the deck / well roof, tapped into the flange
         for name, b in self.bottom.items():
             for k, q in enumerate(b.bolts, 1):
                 J.bolt_through(self.reg, f"{b.cell.pid}-{name.upper()}-B{k}", BOLT_FIT,
@@ -1741,7 +1741,7 @@ class Fuel:
                  (lambda m=br_mesh: m), thickness=t, parent=tray, contacts=(tray,), explode=(0.0, 0.0, -0.2),
                  notes=f"6061-T6 sheet {t * 1000:.0f} mm L-bracket, inside bend radius 3 t (processes."
                        "sheet_metal_aluminium), web across FL-FEED-2 / FL-RETURN at about mid-span between the pump / "
-                       "FS-GEAR and the firewall (unsupported hose spans <= 0.3 m); 2 x M4 A2-70 through the tray "
+                       "FS-GEAR and the firewall (unsupported hose spans <= 0.3 m); 2 x M4 Ti-6Al-4V through the tray "
                        "web between its lightening holes, ISO 7040 nyloc + washer under the tray; split cushion "
                        "bushes YK250-FU-616 in the two web holes")
         iv = J.measure_stack(self.reg, [tray], (x_b, S["y_bolts"][0], z_t), (0.0, 0.0, -1.0), 0.003)

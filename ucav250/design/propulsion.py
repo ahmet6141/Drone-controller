@@ -121,13 +121,16 @@ CAN = dict(r=0.019, x0=3.803, x1=3.897, y=0.190, z=0.100, end_r=0.006)   # silen
 #                             KO-EXHAUST-R box 1, inboard edge clear of the port-bolt key path, >= 10 mm + skin to the OML
 # --- cooling ------------------------------------------------------------------------------------------------------
 DUCT_T = 0.0008             # S-duct CFRP 4 plies PW
-SPIGOT_T = 0.0005           # stainless transition duct
+SPIGOT_T = 0.0005           # Ti-6Al-4V transition duct (mass/CG closure round; was AISI 304)
 BAFFLE_T = 0.0008           # 5052-H32 plenum / baffle sheet
 COWL_SKIN = 0.0058          # shell_secondary laminate (layups) - the plenum roof stays >= 10 mm inside it
 DYN = 0.010                 # engine dynamic margin (layout.clearance_values.engine_keep_out)
 FINE = {3: 0.0032, 4: 0.0043, 5: 0.0053, 6: 0.0064, 8: 0.0084}   # ISO 273 fine-series holes (multi-part stacks)
 
 MAT_SS, MAT_7075, MAT_6061, MAT_5052 = "ss_304_annealed", "al_7075_t651_plate", "al_6061_t6_sheet", "al_5052_h32_sheet"
+MAT_TI = "ti_6al_4v_annealed_sheet"
+GRADE_TI = "Ti-6Al-4V"      # mass/CG closure round (HW-02): screws Ti-6Al-4V; the screws tapped into the engine's own
+#                             aluminium bosses (plenum, servo bracket, servo) stay A2-70 (no titanium in aluminium threads)
 MAT_PW, MAT_STEEL = "cfrp_pw_mtm45_as4", "steel_4130_n"
 P_CNC, P_SHEET_AL, P_SHEET_ST, P_PREG, P_BUY = ("cnc_milling_metal", "sheet_metal_aluminium", "sheet_metal_steel",
                                                 "prepreg_ooa_vacbag", "purchased")
@@ -1423,11 +1426,13 @@ class _Reg:
         shield = part_number(GROUP, 88)                 # firewall shield (chassis-made, propulsion group)
         ex = EX_ENG * C.d
         ids["trans"] = A(548, "C", "firewall cooling spigot / transition duct", "yangın perdesi soğutma geçiş kanalı",
-                         MAT_SS, P_SHEET_ST, lambda: transition_mesh(C), thickness=SPIGOT_T, parent=shield,
+                         MAT_TI, P_SHEET_ST, lambda: transition_mesh(C), thickness=SPIGOT_T, parent=shield,
                          step=STEP_ACC, explode=self.ex(0.08, 0.0, 0.10), contacts=(shield,), color="hardware",
-                         notes="AISI 304 0.5 mm, brake-formed and seam-welded; spigot through C-DUCT with a fireproof "
-                               "silicone-glass seal; flange riveted to the shield (6 x d 2.4); rises 5 mm over the "
-                               "engine-mount truss").id
+                         notes="Ti-6Al-4V 0.5 mm (mass/CG closure round: AISI 304 -> titanium, >= 0.41 mm fireproof "
+                               "without test, 14 CFR 23.1191(e)(6); cooling-air side, below the Ti-6Al-4V service "
+                               "temperature), hot-formed halves seam-welded (TIG, inert gas; cold bend R >= 5 t, "
+                               "materials.yaml); spigot through C-DUCT with a fireproof silicone-glass seal; flange "
+                               "riveted to the shield (6 x d 2.4); rises 5 mm over the engine-mount truss").id
         ids["sduct"] = A(546, "C", "cooling-air S-duct", "soğutma havası S-kanalı", MAT_PW, P_PREG,
                          lambda: sduct_mesh(C), thickness=DUCT_T, parent=ids["trans"], step=STEP_ACC,
                          explode=self.ex(-0.12, 0.0, 0.12), contacts=(ids["trans"],), color="shell",
@@ -1473,12 +1478,15 @@ class _Reg:
                 notes="layout HS-COWL-EXIT: AISI 304 0.4 mm (FIRE-001 fireproof without test), formed to the OML, "
                       "external over the cowl cut-out (layout insert regions) with a 20 mm lap, blind rivets d 3.2 "
                       "at ~25 mm; tail-pipe exit slot with 10 mm radial clearance")
-        shd = A(523, "R", "cowl heat shield, starboard", "kaporta ısı kalkanı, sağ", MAT_SS, P_SHEET_ST,
-                lambda: cowl_shield_mesh(C), thickness=float(hp["t"]), parent=ins.id, step=STEP_CLOSE,
+        shd = A(523, "R", "cowl heat shield, starboard", "kaporta ısı kalkanı, sağ", str(sh.get("material", MAT_SS)),
+                P_SHEET_ST, lambda: cowl_shield_mesh(C), thickness=float(hp["t"]), parent=ins.id, step=STEP_CLOSE,
                 explode=(0.0, 0.05, -0.20), contacts=(ins.id,), color="hardware",
-                notes=f"layout {sh['id']}: AISI 304 0.4 mm (layout foil 0.1 mm is below the sheet_metal_steel "
-                      "minimum), 5 mm air gap below the thickest cowl laminate over the 25..50 mm band, return wall "
-                      "5.5 mm inside the cut-out edge, flange riveted under the insert (d 2.4 at ~35 mm)")
+                notes=f"layout {sh['id']}: {sh.get('material', MAT_SS)} 0.4 mm (layout foil 0.1 mm is below the "
+                      "sheet_metal_steel minimum; mass/CG closure round: Ti-6Al-4V instead of AISI 304, a heat shield "
+                      "on stand-offs, not a fire barrier; hot-formed, flange and return wall bend R >= 2 t; shield "
+                      "temperature to be confirmed in the engine-bay survey, Ti-6Al-4V long-term limit ~400 degC), 5 mm "
+                      "air gap below the thickest cowl laminate over the 25..50 mm band, return wall 5.5 mm inside the "
+                      "cut-out edge, flange riveted under the insert (d 2.4 at ~35 mm)")
         ins.outline = sheet_outline(ins.base_mesh, C)
         shd.outline = sheet_outline(shd.base_mesh, C, bend=shield_bend_mask(C))
         ids["ins_R"], ids["shd_R"] = ins.id, shd.id
@@ -1563,7 +1571,7 @@ class _Reg:
             p = np.array([SDUCT_SCREW_X, y, zc + sz * (hz + DUCT_T + 0.0001)])
             J.bolt(reg, f"{ids['sduct']}-B{i + 1}", 4, p, (0.0, 0.0, -sz), [(ids["sduct"], DUCT_T + 0.0001),
                                                                            (ids["trans"], SPIGOT_T)],
-                   head="ISO 7380", grade="A2-70", nut="nutplate", step=STEP_ACC, hole_d=FINE[4],
+                   head="ISO 7380", grade=GRADE_TI, nut="nutplate", step=STEP_ACC, hole_d=FINE[4],
                    orient=(1.0, 0.0, 0.0))
         # plenum: 2 x M5 floor -> crankcase bosses, 2 x M5 outboard walls -> head bosses
         t = BAFFLE_T
@@ -1608,7 +1616,7 @@ class _Reg:
                 for y in (lo[1] + bolt[2], hi[1] - bolt[2]):
                     k += 1
                     J.bolt_through(reg, f"{ids[key]}-B{k}", 4, (x, y, lo[2] + 0.5 * base_t), (0.0, 0.0, -1.0),
-                                   [ids[key], tray], grade="A2-70", step=STEP_AVI, hole_d=FINE[4],
+                                   [ids[key], tray], grade=GRADE_TI, step=STEP_AVI, hole_d=FINE[4],
                                    notes="ISO 4762 + ISO 7040 nyloc under the tray; elastomer washers (isolated "
                                          "mounting, layout TR-MISSION) not modelled")
 
@@ -1663,7 +1671,7 @@ class _Reg:
         # spinner centre screw at the tip into the stand-off
         tip = SPINNER_BASE_U - SPINNER_L
         J.bolt(reg, f"{ids['spinner']}-B1", 5, C.P(tip, 0, 0), C.eu, [(ids["spinner"], SPINNER_TIP_T)],
-               head="ISO 7380", grade="A2-70", nut="tapped", tapped_part=ids["crush"], tapped_depth=STANDOFF_SOLID,
+               head="ISO 7380", grade=GRADE_TI, nut="tapped", tapped_part=ids["crush"], tapped_depth=STANDOFF_SOLID,
                step=STEP_PROP)
 
 

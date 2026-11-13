@@ -3136,6 +3136,7 @@ def build_liner(C: Ctx, fs: dict, z_floor: float, cut_meshes, gap: float = 0.000
 MAT_PW, MAT_UD, MAT_7075, MAT_2024, MAT_6061 = ("cfrp_pw_mtm45_as4", "cfrp_ud_mtm45_as4", "al_7075_t651_plate",
                                                "al_2024_t3_sheet", "al_6061_t6_sheet")
 MAT_4130, MAT_SS = "steel_4130_n", "ss_304_annealed"
+MAT_TI = "ti_6al_4v_annealed_sheet"     # mass/CG closure round: firewall shield sheet (layout) and spacer tubes
 P_PREG, P_CNC, P_SHEET, P_TIG, P_SS = ("prepreg_ooa_vacbag", "cnc_milling_metal", "sheet_metal_aluminium",
                                        "tig_welding_4130", "sheet_metal_steel")
 
@@ -3560,14 +3561,19 @@ class _Reg:
                        "after welding")
         st = C.st["FS3670"]
         cut_yz = _cut_polys(st)
-        self.add(N_SHIELD, "C", "firewall heat shield (AISI 304, 0.4 mm, with edge angle)",
-                 "yangın perdesi ısı kalkanı (AISI 304, 0,4 mm, kenar köşebendi ile)", MAT_SS, P_SS,
+        sh_mat, sh_t = str(st.get("shield_material", MAT_SS)), float(st["shield_t"])
+        sh_nm = "Ti-6Al-4V" if sh_mat.startswith("ti_") else "AISI 304"
+        self.add(N_SHIELD, "C", f"firewall heat shield ({sh_nm}, {sh_t * 1000:.2f} mm, with edge angle)",
+                 f"yangın perdesi ısı kalkanı ({sh_nm}, {sh_t * 1000:.2f} mm, kenar köşebendi ile)".replace(".", ","),
+                 sh_mat, P_SS,
                  lambda: M(("shield",), lambda: build_shield(C, cut_yz)), thickness=float(st["shield_t"]),
                  group="propulsion", parent=stp("FS3670"), step=12, explode=(0.15, 0.0, 0.0),
                  contacts=(C.pid(N_STANDOFF, "C", "propulsion"),),
-                 notes="fireproof without test (>= 0.38 mm, standards FIRE-001, CS-VLA 1191); riveted to the 0.8 mm "
-                       "edge angle PR-091 (13 mm aft flange = cowl land); mass booked in the propulsion "
-                       "cooling/firewall item")
+                 notes="fireproof without test (titanium sheet 0.016 in = 0.41 mm, 14 CFR 23.1191(e)(6); stainless "
+                       ">= 0.38 mm, standards FIRE-001, CS-VLA 1191); flat sheet, laser / waterjet cut (no forming); "
+                       "riveted to the 0.8 mm stainless edge angle PR-091 (13 mm aft flange = cowl land); mass booked in "
+                       "the propulsion cooling/firewall item; mass/CG closure round: AISI 304 0.4 mm -> Ti-6Al-4V "
+                       "0.41 mm")
         self.add(N_EDGE_ANGLE, "C", "firewall shield edge angle (AISI 304, 0.8 mm)",
                  "yangın perdesi kalkanı kenar köşebendi (AISI 304, 0,8 mm)", MAT_SS, P_SS,
                  lambda: M(("shieldangle",), lambda: build_shield_angle(C, self._shield_reliefs())),
@@ -3576,11 +3582,13 @@ class _Reg:
                  notes="13 mm aft flange at the skin line (cowl land) + 14.5 mm radial leg on the sheet's aft face, "
                        "blind rivets d 3.2 (A286 class) at ~25 mm; interrupted round the fittings seated on the shield "
                        "(their own flanges land the cowl there); mass booked with the shield")
-        self.add(N_SPACER, "R", "firewall spacer tubes (AISI 304), starboard", "yangın perdesi ara boruları, sağ", MAT_SS,
+        self.add(N_SPACER, "R", "firewall spacer tubes (Ti-6Al-4V), starboard", "yangın perdesi ara boruları, sağ", MAT_TI,
                  P_CNC, lambda: M(("spacers",), lambda: build_spacers(C, self._spacer_pts())), thickness=0.002,
                  parent=stp("FS3670"), step=12, explode=(0.1, 0.0, 0.0),
                  contacts=(stp("FS3670"), C.pid(N_SHIELD, "C", "propulsion")),
-                 notes="one tube per through-bolt of the stack in the 7.6 mm air gap (stack held at its design gap)")
+                 notes="one tube per through-bolt of the stack in the 7.59 mm air gap (stack held at its design gap); "
+                       "mass/CG closure round: AISI 304 -> Ti-6Al-4V (fireproof, same geometry; clamp-up only, not "
+                       "credited in E-FOOT-BR / T-NODE-FW-BR; wet-installed against the 7075 backing plates)")
         self.add(N_STANDOFF, "C", "firewall shield stand-offs (12 x AISI 304)",
                  "yangın perdesi kalkan mesafe parçaları (12 x AISI 304)", MAT_SS, "purchased",
                  lambda: M(("standoffs",), lambda: build_standoffs(C, self._fw_keepouts())[0]), group="propulsion",
@@ -3978,7 +3986,8 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
             x, z = NG_BOLT_XZ[b["id"]]
         s = 1.0 if y > 0 else -1.0
         F.bolt(6, (x, y, z), (0.0, s, 0.0), [pid(71, "R" if s > 0 else "L"), C.ref("M-KEELWALL", "R" if s > 0 else "L")],
-               grade=G129, washer_head=False, label=f"F-NG-PIVOT {b['id']}")
+               grade=TI, washer_head=False, label=f"F-NG-PIVOT {b['id']}",
+               notes="Ti-6Al-4V as structures G-NPIVOT-WALL assumes (mass/CG closure round: was 12.9 in the registry)")
 
     # ---- 7. firewall stack: stabilator node B1-B7 (M5), engine-mount feet (M8, upper / lower)
     sp_r = pid(N_SPACER, "R")
@@ -3986,19 +3995,25 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
     fw = stp("FS3670")
     for i, (x, y, z) in enumerate(node_firewall_points(C)):
         back = pid(N_UPPER_PLATE, "R") if i < 3 else pid(N_CHINE_END, "R")
-        F.sym(5, (x, y, z), (-1.0, 0.0, 0.0), [pid(95, "R"), shield, fw, back], bridge=(sp_r,), grade=G129, label=f"F-SPINDLE-NODE B{i + 1}", notes="through the firewall stack (spacer tube in the gap)")
+        F.sym(5, (x, y, z), (-1.0, 0.0, 0.0), [pid(95, "R"), shield, fw, back], bridge=(sp_r,), grade=TI,
+              nut="ISO 7042", label=f"F-SPINDLE-NODE B{i + 1}",
+              notes="through the firewall stack (spacer tube in the gap); mass/CG closure round: Ti-6Al-4V (structures "
+                    "T-NODE-BASE-BOLTS), all-metal prevailing-torque nut ISO 7042 class A-286 (engine bay > 120 degC: "
+                    "no nylon insert)")
     pts = engine_foot_points(C)
     for i, p in enumerate(pts):
         upper = i < 2
         stack = [pid(85), pid(86 if upper else 87, "R"), shield, fw, pid(N_UPPER_PLATE if upper else N_EMLO_BACK, "R")]
         # head + NORD-LOCK pair on the backing plate's forward face (inserted from the open aft equipment bay), nut on
         # the foot plate: aft of the foot the strut block and tubes leave no straight insertion corridor (V07)
-        F.sym(8, p, (1.0, 0.0, 0.0), stack, bridge=(sp_r,), owner=pid(85), grade=G129, washer_head=True,
-              washer_nut=False, hole_d=ENGINE_FOOT_HOLE_D,
+        F.sym(8, p, (1.0, 0.0, 0.0), stack, bridge=(sp_r,), owner=pid(85), grade=TI, washer_head=True,
+              washer_nut=False, hole_d=ENGINE_FOOT_HOLE_D, nut="ISO 7042",
               label=f"engine foot {'upper' if upper else 'lower'} {i % 2 + 1}",
               notes="NORD-LOCK washer pair under the head on the backing plate (estimate envelope = ISO 7089); "
                     "nut on the 4130 foot plate held with an open-end / crowfoot spanner; ISO 273 fine-series holes "
-                    "(8.4 mm, drilled through the stack on the mount jig) so the engine mount does not slip")
+                    "(8.4 mm, drilled through the stack on the mount jig) so the engine mount does not slip; mass/CG "
+                    "closure round: Ti-6Al-4V bolt with rolled thread (structures E-FOOT), all-metal prevailing-torque "
+                    "nut ISO 7042 class A-286 (engine bay > 120 degC: no nylon insert)")
     # chine end fitting tongue to the aft chine J web (2 x M5 Ti)
     nrm = chine_web_normal(C)
     for p in chine_end_bolt_points(C):
@@ -4101,28 +4116,28 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
         wall = C.ref("M-KEELWALL", "R" if side > 0 else "L")
         for x, y, z in kb:
             F.bolt(4, (x, side * y, z), (0.0, -side, 0.0), [tray], nut="insert", insert_part=wall, insert_depth=t6,
-                   grade="A2-70", label=f"{tid} keel wall")
+                   grade=TI, label=f"{tid} keel wall")
         for x, y, z in fb:
             F.bolt(4, (x, side * y, z), (1.0, 0.0, 0.0), [tray], nut="insert", insert_part=stp("FS1110"),
-                   insert_depth=t6, grade="A2-70", label=f"{tid} FS1110")
+                   insert_depth=t6, grade=TI, label=f"{tid} FS1110")
     pa, pb = fwdbay_tray_points(C)
     for p in pa:
         F.bolt(4, p, (-1.0, 0.0, 0.0), [pid(TRAY_N["TR-FWDBAY"])], nut="insert", insert_part=stp("FS0300"),
-               insert_depth=t6, grade="A2-70", label="TR-FWDBAY FS0300")
+               insert_depth=t6, grade=TI, label="TR-FWDBAY FS0300")
     for p in pb:
         F.bolt(4, p, (1.0, 0.0, 0.0), [pid(TRAY_N["TR-FWDBAY"])], nut="insert", insert_part=stp("FS0600"),
-               insert_depth=t6, grade="A2-70", label="TR-FWDBAY FS0600")
+               insert_depth=t6, grade=TI, label="TR-FWDBAY FS0600")
     for p in mission_tray_points(C):
         F.bolt(4, p, (0.0, 0.0, 1.0), [C.ref("M-MIDFLOOR"), pid(TRAY_N["TR-MISSION"])], nut="nutplate",
-               owner=pid(TRAY_N["TR-MISSION"]), grade="A2-70", label="TR-MISSION",
+               owner=pid(TRAY_N["TR-MISSION"]), grade=TI, label="TR-MISSION",
                notes="captive screw from below through the hat inner flange into a nutplate on the tray")
     pa, pb = aftbay_tray_points(C)
     for p in pa:
         F.bolt(4, p, (-1.0, 0.0, 0.0), [pid(TRAY_N["TR-AFTBAY"])], nut="insert", insert_part=stp("FS-GEAR"),
-               insert_depth=t6, grade="A2-70", label="TR-AFTBAY FS-GEAR")
+               insert_depth=t6, grade=TI, label="TR-AFTBAY FS-GEAR")
     for p in pb:
         F.bolt(4, p, (1.0, 0.0, 0.0), [pid(TRAY_N["TR-AFTBAY"])], nut="insert", insert_part=stp("FS3480"),
-               insert_depth=t6, grade="A2-70", label="TR-AFTBAY FS3480")
+               insert_depth=t6, grade=TI, label="TR-AFTBAY FS3480")
 
     # ---- 13. parachute strap brackets: 2 flush blind rivets each (no head in the 6 mm container gap)
     for num, xc in zip(N_PARA_BRKT, PARA_BRKT_X):
@@ -4141,10 +4156,10 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
         fb, wb = rail_anchor_points(C, rail)
         for p in fb:
             F.bolt(4, p, (-sx, 0.0, 0.0), [pid(num)], nut="insert", insert_part=stp(fr), insert_depth=t6,
-                   grade="A2-70", label=f"rail anchor {rail['corner']} frame")
+                   grade=TI, label=f"rail anchor {rail['corner']} frame")
         for p in wb:
             F.bolt(4, p, (0.0, sy, 0.0), [pid(num)], nut="insert", insert_part=wall, insert_depth=t6,
-                   grade="A2-70", label=f"rail anchor {rail['corner']} wall")
+                   grade=TI, label=f"rail anchor {rail['corner']} wall")
 
     # ---- 15. firewall shield edge angle: blind rivets d 3.2 through the radial leg and the sheet, set from the
     # engine side (V14); the other fasteners through the shield keep 3 D

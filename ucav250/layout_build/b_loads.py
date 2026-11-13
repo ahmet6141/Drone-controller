@@ -111,7 +111,7 @@ def engine_mount(fittings: list) -> dict:
 # blocked the sliding doors crossing under the bay walls); the ball screw moved 3 mm aft and 12 mm inboard of the rail
 # corner line so that the ball nut flange (moving with the turret) keeps the 6 mm turret-to-wall / frame margin
 # (layout.clearances "turret vs bay walls and frames", payload.turret.bay.wall_margin)
-Z_RAIL_LOW = -0.110
+Z_RAIL_LOW = -0.131
 X_SCREW, Y_SCREW = 0.082, 0.082
 
 
@@ -128,7 +128,7 @@ def turret_elevator() -> dict:
                      "rail cannot give the 2 D edge distance of its M3 screws) in two diagonal bay corners "
                      "(front-starboard, aft-port), bonded and screwed (4 x M3 per rail end into floating anchor "
                      "nutplates on the back of the corner-angle seat) to the wall corner angles; 2 carriages each on "
-                     "the turret carriage plate; payload detail phase: the rails end at z -0.110 so that the corner "
+                     "the turret carriage plate; payload detail phase: the rails end at z -0.131 so that the corner "
                      "angles stay above the sliding doors and their rails crossing under the bay walls",
         "drive": {"spec": "ball screw d 8 x 2 mm in the front-port corner, BLDC gear motor with spring-applied brake "
                           "on the bay roof, 2 limit switches + absolute encoder (estimate)",

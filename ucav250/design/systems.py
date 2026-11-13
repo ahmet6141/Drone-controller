@@ -1118,8 +1118,8 @@ class Systems:
         da_lo, da_hi = C.eqbox("EQ-DOORACT")          # inner-door actuators (+ mounting plates) on the aft face
         for s_ in (1, -1):
             y0_, y1_ = (float(da_lo[1]), float(da_hi[1])) if s_ > 0 else (-float(da_hi[1]), -float(da_lo[1]))
-            extra["FS-GEAR"].append(box3((xg, y0_ - 0.0025, float(da_lo[2]) - 0.0025),
-                                         (xg + 0.010, y1_ + 0.0025, float(da_hi[2]) + 0.0025)))
+            extra["FS-GEAR"].append(box3((xg, y0_ - 0.004, float(da_lo[2]) - 0.004),
+                                         (xg + 0.010, y1_ + 0.004, -0.050)))
         for sid in [s_["id"] for s_ in C.L["stations"]]:
             st = C.st[sid]
             cuts = [c for c in st.get("cutouts", []) if c["id"].startswith(("C-HARN", "C-COAX", "C-FW-HARN"))]

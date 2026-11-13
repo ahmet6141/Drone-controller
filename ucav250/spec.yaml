@@ -1703,19 +1703,19 @@ landing_gear:
     trunnion_y_min: 0.15
     well_gap: 0.02
     leg_length_min: 0.15
-    axle_static: [2.9759, 0.41806, -0.34696]
-    trunnion: [2.9759, 0.34786, -0.13091]
+    axle_static: [2.9759, 0.41802, -0.34696]
+    trunnion: [2.9759, 0.34783, -0.13094]
     trunnion_axis: [1.0, 0.0, 0.0]
-    leg_length: 0.22717
-    track: 0.83613
+    leg_length: 0.22714
+    track: 0.83604
     retraction:
       kind: inward about the longitudinal trunnion axis (starboard leg; port mirrored)
       angle_deg: 108.0
-      stowed_wheel_center: [2.9759, 0.12069, -0.13091]
+      stowed_wheel_center: [2.9759, 0.12069, -0.13094]
       stowed_axle_direction: [0.0, -0.30902, -0.95106]
       wheel_attitude_stowed: tilted 18 deg from flat (= leg splay), leg horizontal under the wing box, wells side by side
     stowed_envelope:
-      box: [[2.8689, 0.01893, -0.18901], [3.0829, 0.37286, -0.0728]]
+      box: [[2.8689, 0.01893, -0.18904], [3.0829, 0.37283, -0.07284]]
       note: bounding box of the tyre envelope (+ well clearance) and the trunnion fitting, starboard well (port mirrored)
   nose:
     axle_x: 0.68
@@ -1773,28 +1773,28 @@ landing_gear:
   ground_z: -0.42996
   checks:
     z_g: -0.42996
-    track: 0.83612
+    track: 0.83604
     wheelbase: 2.2959
-    h_cg: 0.468512
+    h_cg: 0.468461
     static_attitude_deg: 2.49997
-    tipback_deg: 38.6359
-    turnover_deg: 54.0004
+    tipback_deg: 38.6389
+    turnover_deg: 54.0
     nose_load_aft_cg: 0.163112
     nose_load_fwd_cg: 0.172401
     prop_clear_level: 0.25626
     prop_clear_static: 0.207856
-    prop_clear_liftoff: 0.183605
+    prop_clear_liftoff: 0.183603
     prop_clear_touchdown_unloaded: 0.203494
-    prop_clear_min_925a: 0.183605
+    prop_clear_min_925a: 0.183603
     gear_unloaded_extension_m: 0.042
     prop_clear_flat_tyre_bottomed: 0.0584305
     prop_strike_deg: 13.0669
     bumper_contact_deg: 9.16776
-    theta_lof_deg: 3.7446
+    theta_lof_deg: 3.74472
     theta_td_deg: 4.86779
     theta_flare_deg: 6.86779
-    wingtip_ground_roll_deg: 10.2003
-    prop_clear_wingtip_on_ground_m: 0.320024
+    wingtip_ground_roll_deg: 10.2002
+    prop_clear_wingtip_on_ground_m: 0.320016
     static_load_split_main_aft_cg: 0.836888
   sources:
     tyre: components.yaml#landing_gear (TOST 200x50, SAGITTA)
@@ -1951,12 +1951,12 @@ aero:
     stabilator_clmax: 0.9
   reference:
     cd0_clean: 0.0349757
-    k_clean: 0.0237163
-    e_clean: 0.838044
-    ld_max_clean: 17.3327
-    cd0_loiter_turret_extended: 0.0369243
+    k_clean: 0.0237164
+    e_clean: 0.83804
+    ld_max_clean: 17.3326
+    cd0_loiter_turret_extended: 0.0369244
     ld_max_loiter: 16.8373
-    cd0_gear_down: 0.0474337
+    cd0_gear_down: 0.0474332
     CL_alpha_per_rad: 5.69603
     CL_0: 0.493624
     clmax_wing: 1.33135
@@ -1970,7 +1970,7 @@ aero:
     tail_stabilator_stub: 0.000381377
     tail_fin: 0.00218889
     tail_ventral: 0.000163782
-    landing_gear: 0.000396439
+    landing_gear: 0.000396427
     eo_ir_turret: 9.26813e-05
     engine_cooling: 0.00186154
     aft_closure_base: 0.00215532
@@ -1978,7 +1978,7 @@ aero:
     tail_body_junctions: 0.000569271
     antennas_pitot_lights_vents: 0.000772344
     control_surface_gaps: 0.0008
-    leakage_protuberance: 0.00103552
+    leakage_protuberance: 0.00103551
   sources:
     corrections: baseline.yaml#aero tripped-polar rule (x_tr 0.075 c, cd x 1.15; cl_max x 0.94, 3-D x 0.95), endurance study
     drag_rules: 'Raymer 6th ed. (gear, upsweep), Hoerner 1965 (sphere, base pressure C_Db = 0.029/sqrt(C_Df), plain wing-body
@@ -1990,9 +1990,9 @@ aero:
       applied with gear_doors_sealed (flush doors with perimeter seals, v1.2) instead of the 10 % residual of the extended-gear
       drag
   cd0: 0.0349757
-  e: 0.838044
-  k: 0.0237163
-  ld_max: 17.3327
+  e: 0.83804
+  k: 0.0237164
+  ld_max: 17.3326
   clmax_clean: 1.29281
   clmax_to: 1.5338
   clmax_ld: 1.29281
@@ -2001,15 +2001,15 @@ aero:
     loiter: out/sizing.json#aero.polars.loiter (trimmed CL-CD table, design CG; fit cd0/k/e)
     gear_down: out/sizing.json#aero.polars.gear_down (trimmed CL-CD table, design CG; fit cd0/k/e)
   power_on_trim:
-    max_abs_tail_cl_local: 0.693712
+    max_abs_tail_cl_local: 0.69378
     governing:
       case: e180_growth_turret_full_fuel
       V: 24.1853
       T: 331.628
-      tail_cl_local: 0.693712
-      thrust_arm_m: 0.0705858
+      tail_cl_local: 0.69378
+      thrust_arm_m: 0.0706327
       x_cg: 2.58009
-      CL_wb: 1.40954
+      CL_wb: 1.40955
       gear: extended
   flaps:
     takeoff:
@@ -2360,12 +2360,12 @@ mass:
       (layout phase)'
   - name: gear_doors_wells_locks_sensors
     group: gear
-    mass_base_kg: 2.3795
+    mass_base_kg: 2.3794
     mass_kg: 2.4984
     x: 2.3694
     y: -0.0072
-    z: -0.1404
-    basis: 'V4-03 (fix round 5), door scheme landing_gear.doors: 6 doors 0.191 m2 (main inner 0.101 + leg 0.055 + nose clamshells
+    z: -0.1403
+    basis: 'V4-03 (fix round 5), door scheme landing_gear.doors: 6 doors 0.191 m2 (main inner 0.077 + leg 0.078 + nose clamshells
       0.036) x 2.733 kg/m2 (identity study 0.41 kg / 0.15 m2, sandwich doors incl. hinges and links) 0.523 + well close-outs
       0.36 + cut-out reinforcement 0.50 + gear locks/sensors 0.25 + perimeter door seals 0.101 (23.5 g/m x 4.28 m of joint)
       + inner-door actuators 0.396 (3 x Volz DA 22-30-4128 (28 V), datasheet) + their linkages 0.12 + leg-door standoff
@@ -2430,7 +2430,7 @@ mass:
     mass_kg: 1.8753
     x: 1.2454
     y: 0.0
-    z: -0.0244
+    z: -0.0283
     basis: 'ball-screw linear stage + BLDC/brake 0.45, guide rails/carriage 0.35, two sliding bay doors 0.122 (2 x 0.0223
       m2 x 2.733 kg/m2, the gear-door areal mass) + their drives 0.304 (layout phase: one Volz DA 22 per door, 2 x 0.132
       kg datasheet, + pinions, racks and door rails 0.04), bay liner/frame 0.40, controller/sensors 0.10 + HD59 aperture
@@ -2701,50 +2701,50 @@ stability:
   mac: 0.48431
   mac_le_x: 2.57831
   np_x: 2.65431
-  cg_design: [2.6052, -0.000181608, 0.0322548]
+  cg_design: [2.6052, -0.000181608, 0.0322077]
   cg_range_x: [2.58405, 2.60538]
   static_margin_range: [0.101024, 0.145058]
   cases_cg:
   - name: mtow_design_payload_turret_retracted
     m: 149.9
     x: 2.6052
-    z: 0.0322548
+    z: 0.0322077
   - name: mtow_design_payload_turret_extended
     m: 149.9
     x: 2.6052
-    z: 0.0307605
+    z: 0.0307133
   - name: mtow_max_payload_turret_retracted
     m: 149.9
     x: 2.60538
-    z: 0.0295877
+    z: 0.0295405
   - name: mtow_max_payload_turret_extended
     m: 149.9
     x: 2.60538
-    z: 0.0280933
+    z: 0.0280462
   - name: full_fuel_baseline_sensors_only
     m: 140.712
     x: 2.60312
-    z: 0.0506661
+    z: 0.0506159
   - name: zero_fuel_design_payload
     m: 119.611
     x: 2.60259
-    z: 0.0205199
+    z: 0.0204609
   - name: zero_fuel_max_payload
     m: 121.611
     x: 2.60302
-    z: 0.0180659
+    z: 0.0180078
   - name: reserve_fuel_design_payload
     m: 123.246
     x: 2.60297
-    z: 0.0238321
+    z: 0.0237748
   - name: minimum_flying_turret_only
     m: 106.39
     x: 2.60532
-    z: 0.0463554
+    z: 0.046289
   - name: e180_growth_turret_full_fuel
     m: 149.9
     x: 2.58405
-    z: 0.029291
+    z: 0.0292438
   computed:
     np_x: 2.65431
     np_x_classic: 2.66483
@@ -2766,42 +2766,42 @@ stability:
 performance:
   reference:
     endurance_h: 10.3244
-    loiter_time_h: 8.01659
+    loiter_time_h: 8.01658
     range_km: 1148.48
-    ceiling_service_m: 7113.75
-    roc_sl_m_s: 4.21806
+    ceiling_service_m: 7113.73
+    roc_sl_m_s: 4.21805
     roc_3000m_m_s: 2.38756
     takeoff_ground_roll_m: 178.167
-    takeoff_distance_15m_m: 324.784
-    landing_ground_roll_m: 182.879
+    takeoff_distance_15m_m: 324.783
+    landing_ground_roll_m: 182.88
     vs_clean_sl_mtow_m_s: 23.9484
     v_max_sl_m_s: 54.0102
     loiter_tas_3000m_m_s: 33.0509
     loiter_eas_m_s: 28.4726
-    climb_time_to_loiter_altitude_min: 15.2728
-    endurance_max_payload_h: 9.55007
+    climb_time_to_loiter_altitude_min: 15.2729
+    endurance_max_payload_h: 9.55006
     loiter_fuel_flow_kg_h: 2.64895
-    loiter_power_W: 4703.15
-    loiter_rpm: 4944.13
-    mtow_for_10h_mission_kg: 147.822
+    loiter_power_W: 4703.16
+    loiter_rpm: 4944.14
+    mtow_for_10h_mission_kg: 147.823
     mission_loiter_start_tas_m_s: 32.4448
     mission_loiter_start_eas_m_s: 27.9504
-    mission_loiter_start_rpm: 4851.74
-    mission_loiter_start_fuel_flow_kg_h: 2.55357
+    mission_loiter_start_rpm: 4851.75
+    mission_loiter_start_fuel_flow_kg_h: 2.55358
     mission_loiter_start_generator_W: 486.468
     mission_loiter_end_tas_m_s: 32.3521
-    mission_loiter_end_eas_m_s: 27.8706
+    mission_loiter_end_eas_m_s: 27.8705
     mission_loiter_end_rpm: 4747.34
     mission_loiter_end_fuel_flow_kg_h: 2.38584
     mission_loiter_end_generator_W: 476.0
     takeoff_rotation_speed_m_s: 24.74
     takeoff_liftoff_speed_m_s: 25.1299
-    takeoff_main_gear_load_at_rotation_N: 111.706
-    prop_clear_min_925a_m: 0.183605
+    takeoff_main_gear_load_at_rotation_N: 111.707
+    prop_clear_min_925a_m: 0.183603
     prop_clear_radial_m: 0.0307391
     prop_clear_longitudinal_m: 0.0286183
     generator_margin_loiter: 1.27614
-    stab_trim_cl_local_max: 0.693712
+    stab_trim_cl_local_max: 0.69378
     stab_hinge_peak_margin: 1.88453
   payload_endurance:
   - payload_kg: 3.25
@@ -2840,7 +2840,7 @@ performance:
     static_margin_range: [0.104121, 0.112006]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 175.905
+    e180_peak_battery_draw_Wh: 175.904
     e180_peak_supported_loiter_h: 7.372
     e180_peak_share_exceeded: true
   - payload_kg: 10.0
@@ -2853,21 +2853,21 @@ performance:
     static_margin_range: [0.103245, 0.110672]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 169.657
-    e180_peak_supported_loiter_h: 7.63355
+    e180_peak_battery_draw_Wh: 169.656
+    e180_peak_supported_loiter_h: 7.63357
     e180_peak_share_exceeded: true
   - payload_kg: 12.0
     fuel_kg: 35.8508
     takeoff_mass_kg: 149.462
-    endurance_h: 12.5102
+    endurance_h: 12.5101
     loiter_time_h: 10.1955
     fuel_volume_limited: true
     turret: true
     static_margin_range: [0.102566, 0.109647]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 161.888
-    e180_peak_supported_loiter_h: 7.99819
+    e180_peak_battery_draw_Wh: 161.887
+    e180_peak_supported_loiter_h: 7.99823
     e180_peak_share_exceeded: true
   - payload_kg: 12.4383
     fuel_kg: 35.8508
@@ -2879,8 +2879,8 @@ performance:
     static_margin_range: [0.102419, 0.109428]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 159.807
-    e180_peak_supported_loiter_h: 8.0994
+    e180_peak_battery_draw_Wh: 159.806
+    e180_peak_supported_loiter_h: 8.09943
     e180_peak_share_exceeded: true
   - payload_kg: 12.5
     fuel_kg: 35.7891
@@ -2892,40 +2892,40 @@ performance:
     static_margin_range: [0.102408, 0.109397]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 159.4
-    e180_peak_supported_loiter_h: 8.09928
+    e180_peak_battery_draw_Wh: 159.399
+    e180_peak_supported_loiter_h: 8.09931
     e180_peak_share_exceeded: true
   - payload_kg: 15.0
     fuel_kg: 33.2891
     takeoff_mass_kg: 149.9
-    endurance_h: 11.4887
-    loiter_time_h: 9.17753
+    endurance_h: 11.4886
+    loiter_time_h: 9.17751
     fuel_volume_limited: false
     turret: true
     static_margin_range: [0.101947, 0.108176]
     permitted_loading: true
     e180_set_fits: true
     e180_peak_battery_draw_Wh: 142.949
-    e180_peak_supported_loiter_h: 8.09423
+    e180_peak_supported_loiter_h: 8.09427
     e180_peak_share_exceeded: true
   - payload_kg: 17.5
     fuel_kg: 30.7891
     takeoff_mass_kg: 149.9
     endurance_h: 10.5187
-    loiter_time_h: 8.20963
+    loiter_time_h: 8.20962
     fuel_volume_limited: false
     turret: true
     static_margin_range: [0.101485, 0.107007]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 126.581
-    e180_peak_supported_loiter_h: 8.08919
+    e180_peak_battery_draw_Wh: 126.58
+    e180_peak_supported_loiter_h: 8.08922
     e180_peak_share_exceeded: true
   - payload_kg: 18.0
     fuel_kg: 30.2891
     takeoff_mass_kg: 149.9
     endurance_h: 10.3244
-    loiter_time_h: 8.01659
+    loiter_time_h: 8.01658
     fuel_volume_limited: false
     turret: true
     static_margin_range: [0.101393, 0.106779]
@@ -2938,7 +2938,7 @@ performance:
     fuel_kg: 29.7891
     takeoff_mass_kg: 149.9
     endurance_h: 10.1302
-    loiter_time_h: 7.824
+    loiter_time_h: 7.82399
     fuel_volume_limited: false
     turret: true
     static_margin_range: [0.1013, 0.106552]
@@ -2950,22 +2950,22 @@ performance:
   - payload_kg: 20.0
     fuel_kg: 28.2891
     takeoff_mass_kg: 149.9
-    endurance_h: 9.55007
-    loiter_time_h: 7.24695
+    endurance_h: 9.55006
+    loiter_time_h: 7.24694
     fuel_volume_limited: false
     turret: true
     static_margin_range: [0.101024, 0.105885]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 110.304
+    e180_peak_battery_draw_Wh: 110.303
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   sensitivities_endurance_h:
     bsfc_minus_12pct: 11.762
-    bsfc_plus_12pct: 9.19468
-    cd0_plus_10pct_all_drag: 9.77744
-    empty_plus_5pct: 8.36459
-    loiter_at_1000m: 9.75192
+    bsfc_plus_12pct: 9.19466
+    cd0_plus_10pct_all_drag: 9.77743
+    empty_plus_5pct: 8.36458
+    loiter_at_1000m: 9.75191
     no_transit_loiter_only: 10.2745
     turret_retracted_whole_mission: 10.4542
     k_inst_0p90: 10.1321
@@ -2977,10 +2977,10 @@ performance:
     EAS: 28.4726
     CL: 0.91956
     LD: 16.1757
-    P_shaft: 4261.34
-    P_total: 4703.15
-    eta: 0.711376
-    rpm: 4944.13
+    P_shaft: 4261.35
+    P_total: 4703.16
+    eta: 0.711375
+    rpm: 4944.14
     power_fraction: 0.261286
     bsfc_g_kWh: 563.228
     ff_kg_h: 2.64895
@@ -3000,29 +3000,29 @@ performance:
     next_step_kg: 18.5
     endurance_at_next_step_h: 10.1302
     consistent: true
-    endurance_margin_to_target_h: 0.0744445
-    empty_mass_headroom_kg: 0.191602
-    payload_at_target_kg_linear: 18.1917
-    payload_headroom_kg: 0.191664
+    endurance_margin_to_target_h: 0.0744327
+    empty_mass_headroom_kg: 0.191571
+    payload_at_target_kg_linear: 18.1916
+    payload_headroom_kg: 0.191634
   max_payload_mission:
     payload_kg: 20.0
     fuel_kg: 28.2891
     takeoff_mass_kg: 149.9
-    endurance_h: 9.55007
-    loiter_time_h: 7.24695
+    endurance_h: 9.55006
+    loiter_time_h: 7.24694
     requirement_h: 9.5
     case: mtow_max_payload_turret_retracted
   low_load_bsfc_bound:
     endurance_h_bsfc_line: 10.3244
     endurance_h_willans_line: 10.2638
     descent_fuel_kg_bsfc_line: 0.236302
-    descent_power_fraction_range_bsfc_line: [0.0512476, 0.0641328]
+    descent_power_fraction_range_bsfc_line: [0.0512476, 0.0641329]
     descent_fuel_kg_willans_line: 0.361139
-    descent_power_fraction_range_willans_line: [0.0513794, 0.0642555]
+    descent_power_fraction_range_willans_line: [0.0513795, 0.0642556]
     reserve_fuel_kg_bsfc_line: 2.03136
-    reserve_power_fraction_range_bsfc_line: [0.177716, 0.178907]
+    reserve_power_fraction_range_bsfc_line: [0.177716, 0.178908]
     reserve_fuel_kg_willans_line: 2.04912
-    reserve_power_fraction_range_willans_line: [0.177768, 0.178966]
+    reserve_power_fraction_range_willans_line: [0.177768, 0.178967]
     lowest_bsfc_point_power_fraction: 0.2
   payload_permitted_loadings:
     static_margin_min_rule: 0.1
@@ -3056,7 +3056,7 @@ performance:
       V_R_m_s: 25.06
       ground_roll_m: 179.679
       V_lof_m_s: 25.2099
-      download_margin_min_N: 1.95568
+      download_margin_min_N: 1.92831
     delta_V_R_m_s: 0.16
     delta_ground_roll_m: 3.00834
 
@@ -4675,7 +4675,7 @@ layout:
       clearance: 0.0
       content: spar box through the body
     main_gear_wells:
-      box: [[2.8689, 0.0, -0.18901], [3.0829, 0.37286, -0.0728]]
+      box: [[2.8689, 0.0, -0.18904], [3.0829, 0.37283, -0.07284]]
       symmetric: true
       clearance: 0.0
       content: stowed main wheels side by side + trunnion fittings; checked on the tyre envelopes (gear_stowage)
@@ -7467,20 +7467,20 @@ layout:
       - id: RAIL-FR
         part: YK250-PL-828
         corner: FR
-        line: [[1.135, 0.094, -0.11], [1.135, 0.094, 0.095]]
+        line: [[1.135, 0.094, -0.131], [1.135, 0.094, 0.095]]
       - id: RAIL-AL
         part: YK250-PL-829
         corner: AL
-        line: [[1.305, -0.094, -0.11], [1.305, -0.094, 0.095]]
+        line: [[1.305, -0.094, -0.131], [1.305, -0.094, 0.095]]
       rail_spec: '2 miniature profile rails 12 mm (MGN12 class, steel, estimate; payload detail phase: the 9 mm rail cannot
         give the 2 D edge distance of its M3 screws) in two diagonal bay corners (front-starboard, aft-port), bonded and
         screwed (4 x M3 per rail end into floating anchor nutplates on the back of the corner-angle seat) to the wall corner
-        angles; 2 carriages each on the turret carriage plate; payload detail phase: the rails end at z -0.110 so that the
+        angles; 2 carriages each on the turret carriage plate; payload detail phase: the rails end at z -0.131 so that the
         corner angles stay above the sliding doors and their rails crossing under the bay walls'
       drive:
         spec: ball screw d 8 x 2 mm in the front-port corner, BLDC gear motor with spring-applied brake on the bay roof,
           2 limit switches + absolute encoder (estimate)
-        screw_axis: [[1.138, -0.082, 0.095], [1.138, -0.082, -0.11]]
+        screw_axis: [[1.138, -0.082, 0.095], [1.138, -0.082, -0.131]]
         top_anchor:
           member: M-TURRETROOF
           point: [1.138, -0.082, 0.106]
@@ -8897,10 +8897,10 @@ layout:
       origin: [2.9759, 0.34783, -0.13094]
       axis: [-1.0, 0.0, 0.0]
       lo: 0.0
-      hi: 1.88496
+      hi: 1.884956
       rest: 0.0
       prop: gear_up
-      scale: 1.88496
+      scale: 1.8849556
       expr: 1.88496*clamp((gear_up-0.15)/0.7,0,1)
       moves: YK250-LG-620-R leg, YK250-LG-622-R wheel/tyre/brake, YK250-LG-672-R leg door
       side: R
@@ -8911,10 +8911,10 @@ layout:
       origin: [2.9759, -0.34783, -0.13094]
       axis: [1.0, 0.0, 0.0]
       lo: 0.0
-      hi: 1.88496
+      hi: 1.884956
       rest: 0.0
       prop: gear_up
-      scale: 1.88496
+      scale: 1.8849556
       expr: 1.88496*clamp((gear_up-0.15)/0.7,0,1)
       moves: YK250-LG-620-L, YK250-LG-622-L, YK250-LG-672-L
       side: L
@@ -8924,7 +8924,7 @@ layout:
       origin: [2.9759, 0.01, -0.2036]
       axis: [-1.0, 0.0, 0.0]
       lo: 0.0
-      hi: 1.5708
+      hi: 1.570796
       rest: 0.0
       prop: ''
       scale: 1.0
@@ -8938,7 +8938,7 @@ layout:
       origin: [2.9759, -0.01, -0.2036]
       axis: [1.0, 0.0, 0.0]
       lo: 0.0
-      hi: 1.5708
+      hi: 1.570796
       rest: 0.0
       prop: ''
       scale: 1.0
@@ -8951,8 +8951,8 @@ layout:
       origin: [2.9759, 0.3918, -0.14176]
       axis: [1.0, 0.0, 0.0]
       lo: 0.0
-      hi: 2.18166
-      rest: 2.18166
+      hi: 2.181662
+      rest: 2.181662
       prop: ''
       scale: 1.0
       hinge_parent: M-GEARBEAM
@@ -8971,8 +8971,8 @@ layout:
       origin: [2.9759, -0.3918, -0.14176]
       axis: [-1.0, 0.0, 0.0]
       lo: 0.0
-      hi: 2.18166
-      rest: 2.18166
+      hi: 2.181662
+      rest: 2.181662
       prop: ''
       scale: 1.0
       hinge_parent: M-GEARBEAM
@@ -8986,7 +8986,7 @@ layout:
       origin: [0.65, 0.0, -0.1222]
       axis: [0.0, -1.0, 0.0]
       lo: 0.0
-      hi: 1.5708
+      hi: 1.570796
       rest: 0.0
       prop: ''
       scale: 1.0
@@ -9014,8 +9014,8 @@ layout:
       origin: [0.62, 0.039, -0.14898]
       axis: [0.996145, 0.0, -0.08772]
       lo: 0.0
-      hi: 1.5708
-      rest: 1.5708
+      hi: 1.570796
+      rest: 1.570796
       prop: ''
       scale: 1.0
       expr: 1.57080*(1-clamp((gear_up-0.85)/0.15,0,1))
@@ -9030,8 +9030,8 @@ layout:
       origin: [0.62, -0.039, -0.14898]
       axis: [-0.996145, 0.0, 0.08772]
       lo: 0.0
-      hi: 1.5708
-      rest: 1.5708
+      hi: 1.570796
+      rest: 1.570796
       prop: ''
       scale: 1.0
       expr: 1.57080*(1-clamp((gear_up-0.85)/0.15,0,1))
@@ -9104,7 +9104,7 @@ layout:
       origin: [4.08, 0.0, 0.22]
       axis: [0.996195, 0.0, 0.087156]
       lo: 0.0
-      hi: 2.0944
+      hi: 2.094395
       rest: 0.0
       prop: prop_deg
       scale: 0.0174533
@@ -9146,8 +9146,8 @@ layout:
           main_trunnion_door_L: 2.18166
           nose_gear: 0.0
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 0.0
           main_gear_L: 0.0
           main_inner_door_R: 0.5236
@@ -9156,8 +9156,8 @@ layout:
           main_trunnion_door_L: 2.18166
           nose_gear: 0.0
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 0.0
           main_gear_L: 0.0
           main_inner_door_R: 1.0472
@@ -9166,185 +9166,185 @@ layout:
           main_trunnion_door_L: 2.18166
           nose_gear: 0.0
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 0.0
           main_gear_L: 0.0
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.0
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 0.13464
           main_gear_L: 0.13464
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.1122
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 0.26928
           main_gear_L: 0.26928
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.2244
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 0.40392
           main_gear_L: 0.40392
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.3366
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 0.53856
           main_gear_L: 0.53856
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.4488
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 0.6732
           main_gear_L: 0.6732
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.561
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 0.80784
           main_gear_L: 0.80784
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.6732
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 0.94248
           main_gear_L: 0.94248
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.7854
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 1.07712
           main_gear_L: 1.07712
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 0.8976
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 1.21176
           main_gear_L: 1.21176
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 1.0098
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 1.3464
           main_gear_L: 1.3464
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 1.122
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 1.48104
           main_gear_L: 1.48104
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 1.2342
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 1.61568
           main_gear_L: 1.61568
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 1.3464
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
         - main_gear_R: 1.75032
           main_gear_L: 1.75032
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
           nose_gear: 1.4586
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
-        - main_gear_R: 1.88496
-          main_gear_L: 1.88496
-          main_inner_door_R: 1.5708
-          main_inner_door_L: 1.5708
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
+        - main_gear_R: 1.884956
+          main_gear_L: 1.884956
+          main_inner_door_R: 1.570796
+          main_inner_door_L: 1.570796
           main_trunnion_door_R: 2.18166
           main_trunnion_door_L: 2.18166
-          nose_gear: 1.5708
+          nose_gear: 1.570796
           nose_steer: 0.0
-          nose_door_R: 1.5708
-          nose_door_L: 1.5708
-        - main_gear_R: 1.88496
-          main_gear_L: 1.88496
+          nose_door_R: 1.570796
+          nose_door_L: 1.570796
+        - main_gear_R: 1.884956
+          main_gear_L: 1.884956
           main_inner_door_R: 1.0472
           main_inner_door_L: 1.0472
           main_trunnion_door_R: 1.45444
           main_trunnion_door_L: 1.45444
-          nose_gear: 1.5708
+          nose_gear: 1.570796
           nose_steer: 0.0
           nose_door_R: 1.0472
           nose_door_L: 1.0472
-        - main_gear_R: 1.88496
-          main_gear_L: 1.88496
+        - main_gear_R: 1.884956
+          main_gear_L: 1.884956
           main_inner_door_R: 0.5236
           main_inner_door_L: 0.5236
           main_trunnion_door_R: 0.72722
           main_trunnion_door_L: 0.72722
-          nose_gear: 1.5708
+          nose_gear: 1.570796
           nose_steer: 0.0
           nose_door_R: 0.5236
           nose_door_L: 0.5236
-        - main_gear_R: 1.88496
-          main_gear_L: 1.88496
+        - main_gear_R: 1.884956
+          main_gear_L: 1.884956
           main_inner_door_R: 0.0
           main_inner_door_L: 0.0
           main_trunnion_door_R: 0.0
           main_trunnion_door_L: 0.0
-          nose_gear: 1.5708
+          nose_gear: 1.570796
           nose_steer: 0.0
           nose_door_R: 0.0
           nose_door_L: 0.0
@@ -11514,7 +11514,7 @@ layout:
       position_sizing_phase: [2.4987, 0.0, -0.1]
     turret_lift_mechanism_doors:
       mode: absolute
-      position: [1.2454, 0.0, -0.0244]
+      position: [1.2454, 0.0, -0.0264]
       basis: item basis split (mass.rules.turret_mechanism_kg, estimates) at the layout objects, turret retracted
       components:
       - what: ball-screw stage + BLDC/brake (EQ-ELEVATOR on the bay roof)
@@ -11522,7 +11522,7 @@ layout:
         at: [1.22, 0.0, 0.0764]
       - what: guide rails + carriage (RAIL-FR / RAIL-AL)
         fraction: 0.196
-        at: [1.22, 0.0, -0.0075]
+        at: [1.22, 0.0, -0.018]
       - what: two sliding bay doors (closed)
         fraction: 0.0683
         at: [1.22, 0.0, -0.185]

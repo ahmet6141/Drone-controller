@@ -148,6 +148,7 @@ def build() -> tuple[dict, dict]:
         "parachute": b_loads.parachute(fittings, parachute_cg()),
         "fuel_supports": b_loads.fuel_supports(),
         "trays": b_loads.trays(),
+        "ballast": b_loads.nose_ballast(),
         "ground_handling": b_loads.ground_handling(),
         "design_loads": b_loads.design_loads()}
     out["shell"] = {"rules": b_shell.RULES, "panels": b_shell.panels(), "root_cut_lines": b_shell.root_cut_lines(),

@@ -231,6 +231,35 @@ def fuel_supports() -> list:
     return out
 
 
+# mass/CG closure round: fixed nose ballast. No ballast-free relocation closes the aft CG of the detailed design
+# (docs/02 §6.4: the ECU does not fit the narrow forward bay; the parachute bay, the stabilator actuators and the payload
+# bay are tied to stations; a wing-station move of ~+12 mm with the main gear +15 mm is the alternative), so the empty
+# CG is brought back onto the payload-bay datum (layout.zones payload_bay, x 2.6288) by the smallest mass at the most
+# forward free location: a machined AISI 304 block on TR-FWDBAY ahead of the buffer battery, 4 x M4 Ti through the tray
+# (nyloc under it). BALLAST_KG: sized from the registry (analysis/mass.py) so that the empty CG incl. the allowance
+# items lies on the payload-bay datum (docs/detail/chassis.md).
+BALLAST_KG = 0.66
+BALLAST_X = (0.336, 0.380)        # 8 mm ahead of the battery cradle (x 0.387), clear of the FS0300 tray flange bolt
+BALLAST_HW = 0.030                # half width (tray half-width at x 0.34 is ~35 mm; OML clearance >= 5 mm)
+BALLAST_MAT = "ss_304_annealed"
+
+
+def nose_ballast() -> dict:
+    rho = float(S["materials"][BALLAST_MAT]["density"])
+    z0 = float(S["layout"]["rules"]["boxes"]["forward_bay"]["z"][0])
+    lx = BALLAST_X[1] - BALLAST_X[0]
+    h = BALLAST_KG / (rho * lx * 2 * BALLAST_HW)
+    return {"id": "BAL-NOSE", "part": "YK250-CH-127", "name": "nose ballast block", "name_tr": "burun safra bloğu",
+            "tray": "TR-FWDBAY", "material": BALLAST_MAT, "process": "cnc_milling_metal",
+            "box": r3([[BALLAST_X[0], -BALLAST_HW, z0], [BALLAST_X[1], BALLAST_HW, z0 + h]], 5),
+            "mass_kg": BALLAST_KG,
+            "bolts": "4 x M4 Ti-6Al-4V through the block and the tray, nyloc + washer under the tray (structures "
+                     "EQ-BALLAST)",
+            "basis": "mass/CG closure round: the smallest fixed mass at the most forward free location that brings "
+                     "the empty CG of the registry (+ allowance items) onto the payload-bay datum; height = mass / "
+                     "(density x footprint)"}
+
+
 def trays() -> list:
     return [
         {"id": "TR-SIDEBAY-L", "part": "YK250-CH-118", "zone": "avionics_side_bays (port)",

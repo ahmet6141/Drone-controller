@@ -1,35 +1,37 @@
 # YK-250 kütle özellikleri
 
-Boş kütle (faydalı yük ve yakıt hariç): **107,44 kg**, AG x = 2,645 m.
+Boş kütle (faydalı yük ve yakıt hariç; kayıt defteri parçaları + kalemlendirilmiş paylar): **106,52 kg**, AG x = 2,628 m (kayıt defteri parçaları yalnız: 106,52 kg, 2468 parça).
 
 ## Yükleme durumları
 
-| Durum | Kütle (kg) | AG x (m) | AG y (mm) | AG z (m) | %OAK (MAC) | Ixx | Iyy | Izz (kg·m²) |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| mtow_design_payload_turret_retracted | 139,46 | 2,6202 | -0,9 | 0,0254 | 8,6 | 70,1 | 122,2 | 183,5 |
-| mtow_design_payload_turret_extended | 139,46 | 2,6202 | -0,9 | 0,0254 | 8,6 | 70,1 | 122,2 | 183,5 |
-| mtow_max_payload_turret_retracted | 137,46 | 2,6203 | -0,9 | 0,0256 | 8,7 | 70,0 | 122,0 | 183,2 |
-| mtow_max_payload_turret_extended | 137,46 | 2,6203 | -0,9 | 0,0256 | 8,7 | 70,0 | 122,0 | 183,2 |
-| full_fuel_baseline_sensors_only | 145,03 | 2,6199 | -0,9 | 0,0248 | 8,6 | 70,3 | 122,6 | 184,1 |
-| zero_fuel_design_payload | 109,17 | 2,6223 | -1,2 | 0,0292 | 9,1 | 69,0 | 119,8 | 180,1 |
-| zero_fuel_max_payload | 109,17 | 2,6223 | -1,2 | 0,0292 | 9,1 | 69,0 | 119,8 | 180,1 |
-| reserve_fuel_design_payload | 112,81 | 2,6220 | -1,1 | 0,0286 | 9,0 | 69,1 | 120,1 | 180,5 |
-| minimum_flying_turret_only | 112,20 | 2,6220 | -1,1 | 0,0287 | 9,0 | 69,1 | 120,0 | 180,4 |
-| e180_growth_turret_full_fuel | 139,46 | 2,6202 | -0,9 | 0,0254 | 8,6 | 70,1 | 122,2 | 183,5 |
+Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçaları (yakıt içeriği durumun yakıt oranıyla), kalemlendirilmiş boş kütle payları ve durumun faydalı yük kalemleri (kayıt defterinde parçası olmayanlar — görev bilgisayarı, tepsi, araştırma yükü payı, E180 farkı — kendi spec konumlarında noktasal kütle).
+
+| Durum | Kütle (kg) | Noktasal faydalı yük (kg) | AG x (m) | AG y (mm) | AG z (m) | %OAK (MAC) | Ixx | Iyy | Izz (kg·m²) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| mtow_design_payload_turret_retracted | 154,81 | 16,26 | 2,6046 | -0,8 | 0,0088 | 5,4 | 70,0 | 124,4 | 185,0 |
+| mtow_design_payload_turret_extended | 154,81 | 16,26 | 2,6046 | -0,8 | 0,0088 | 5,4 | 70,0 | 124,4 | 185,0 |
+| mtow_max_payload_turret_retracted | 154,81 | 18,26 | 2,6048 | -0,8 | 0,0070 | 5,5 | 69,9 | 124,3 | 184,8 |
+| mtow_max_payload_turret_extended | 154,81 | 18,26 | 2,6048 | -0,8 | 0,0070 | 5,5 | 69,9 | 124,3 | 184,8 |
+| full_fuel_baseline_sensors_only | 145,62 | 1,51 | 2,6024 | -0,9 | 0,0228 | 5,0 | 69,9 | 124,5 | 185,6 |
+| zero_fuel_design_payload | 124,52 | 16,26 | 2,6027 | -1,0 | 0,0081 | 5,0 | 68,9 | 122,1 | 181,7 |
+| zero_fuel_max_payload | 126,52 | 18,26 | 2,6031 | -1,0 | 0,0059 | 5,1 | 68,9 | 122,1 | 181,7 |
+| reserve_fuel_design_payload | 128,16 | 16,26 | 2,6029 | -1,0 | 0,0082 | 5,1 | 69,0 | 122,4 | 182,1 |
+| minimum_flying_turret_only | 111,30 | 0,01 | 2,6052 | -1,2 | 0,0277 | 5,6 | 68,7 | 121,5 | 181,6 |
+| e180_growth_turret_full_fuel | 154,81 | 16,26 | 2,5841 | -0,8 | 0,0074 | 1,2 | 70,1 | 128,8 | 189,3 |
 
 ## Gruplar
 
 | Grup | Kütle (kg) | AG x (m) |
 |---|---:|---:|
-| chassis | 19,19 | 2,590 |
+| chassis | 19,77 | 2,514 |
 | systems | 15,21 | 1,445 |
-| propulsion | 13,45 | 3,631 |
+| propulsion | 12,97 | 3,628 |
 | gear | 12,70 | 2,428 |
 | wing | 12,30 | 2,770 |
 | shell | 10,21 | 2,258 |
 | controls | 8,15 | 3,038 |
 | tail | 7,33 | 3,782 |
-| hardware | 6,53 | 2,525 |
+| hardware | 5,52 | 2,543 |
 | fuel | 2,37 | 2,832 |
 | payload | 1,74 | 1,220 |
 
@@ -37,12 +39,12 @@ Boş kütle (faydalı yük ve yakıt hariç): **107,44 kg**, AG x = 2,645 m.
 
 | Grup | Hesap (kg) | Bütçe (kg) | Tolerans | Durum |
 |---|---:|---:|---:|---|
-| chassis | 19,19 | 12,61 | ±0,37 | ✗ |
+| chassis | 19,77 | 12,61 | ±0,37 | ✗ |
 | controls | 8,15 | 8,29 | ±0,25 | ✓ |
 | fuel | 2,37 | 2,35 | ±0,07 | ✓ |
 | gear | 12,70 | 14,57 | ±0,44 | ✗ |
-| hardware | 6,53 | 1,51 | ±0,05 | ✗ |
-| propulsion | 13,45 | 14,54 | ±0,44 | ✗ |
+| hardware | 5,52 | 1,51 | ±0,05 | ✗ |
+| propulsion | 12,97 | 14,54 | ±0,44 | ✗ |
 | shell | 10,21 | 10,48 | ±0,31 | ✓ |
 | systems | 15,21 | 14,79 | ±0,44 | ✓ |
 | tail | 7,33 | 7,35 | ±0,22 | ✓ |
@@ -119,18 +121,15 @@ Boş kütle (faydalı yük ve yakıt hariç): **107,44 kg**, AG x = 2,645 m.
 
 ## Sorunlar
 
-- mtow_design_payload_turret_retracted: CG x 2.6202 outside [2.58402, 2.60535]
-- mtow_design_payload_turret_extended: CG x 2.6202 outside [2.58402, 2.60535]
-- mtow_max_payload_turret_retracted: CG x 2.6203 outside [2.58402, 2.60535]
-- mtow_max_payload_turret_extended: CG x 2.6203 outside [2.58402, 2.60535]
-- full_fuel_baseline_sensors_only: CG x 2.6199 outside [2.58402, 2.60535]
-- zero_fuel_design_payload: CG x 2.6223 outside [2.58402, 2.60535]
-- zero_fuel_max_payload: CG x 2.6223 outside [2.58402, 2.60535]
-- reserve_fuel_design_payload: CG x 2.6220 outside [2.58402, 2.60535]
-- minimum_flying_turret_only: CG x 2.6220 outside [2.58402, 2.60535]
-- e180_growth_turret_full_fuel: CG x 2.6202 outside [2.58402, 2.60535]
-- budget chassis: 19.19 kg vs 12.61 ± 0.37
+- budget chassis: 19.77 kg vs 12.61 ± 0.37
 - budget gear: 12.70 kg vs 14.57 ± 0.44
-- budget hardware: 6.53 kg vs 1.51 ± 0.05
-- budget propulsion: 13.45 kg vs 14.54 ± 0.44
+- budget hardware: 5.52 kg vs 1.51 ± 0.05
+- budget propulsion: 12.97 kg vs 14.54 ± 0.44
 - budget wing: 12.30 kg vs 15.18 ± 0.46
+- mtow_design_payload_turret_retracted: 154.81 kg exceeds spec mtow 149.9
+- mtow_design_payload_turret_extended: 154.81 kg exceeds spec mtow 149.9
+- mtow_max_payload_turret_retracted: 154.81 kg exceeds spec mtow 149.9
+- mtow_max_payload_turret_extended: 154.81 kg exceeds spec mtow 149.9
+- e180_growth_turret_full_fuel: 154.81 kg exceeds spec mtow 149.9
+- spec.mass.registry groups.chassis stale: 19.131 kg [2.5869, 0.0004, 0.0127] vs registry 19.774 kg [2.5144, 0.0004, 0.0106]
+- spec.mass.registry groups.hardware stale: 5.499 kg [2.5502, -0.0004, 0.0227] vs registry 5.517 kg [2.5431, -0.0004, 0.0224]

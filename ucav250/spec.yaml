@@ -2698,6 +2698,51 @@ mass:
     rules.fuel_system_kg: components.yaml fuel_system 1.73 kg + 0.50 kg three-cell interconnection
     cases: 'baseline.yaml#mass_targets.loading_cases + sizing additions (turret extended, E180 growth; fix round 4: maximum-payload
       cases at MTOM and at zero fuel)'
+  registry:
+    method: 'analysis/mass.py --update-spec: registry of the detailed design (core.assemble.build_registry, all producers):
+      geometry x density, datasheet masses of purchased parts; group = budget group (mass_item booking); the allowance items
+      (spec.mass.items registry_allowance) are not in it'
+    parts: 2468
+    empty_kg: 106.523497
+    cg: [2.627753, -0.001214, 0.029683]
+    groups:
+      chassis:
+        mass_kg: 19.774142
+        cg: [2.514446, 0.000402, 0.010571]
+      controls:
+        mass_kg: 8.150285
+        cg: [3.037527, -0.003966, 0.148818]
+      fuel:
+        mass_kg: 2.366189
+        cg: [2.83239, 0.010528, 0.016777]
+      gear:
+        mass_kg: 12.702936
+        cg: [2.427738, -0.000948, -0.247066]
+      hardware:
+        mass_kg: 5.517407
+        cg: [2.543053, -0.000397, 0.022398]
+      propulsion:
+        mass_kg: 12.967211
+        cg: [3.627607, -0.000916, 0.135101]
+      shell:
+        mass_kg: 10.20847
+        cg: [2.258318, 0.000422, -0.003157]
+      systems:
+        mass_kg: 15.207834
+        cg: [1.445394, -0.004379, -0.007489]
+      tail:
+        mass_kg: 7.332106
+        cg: [3.781899, -0.000135, 0.336104]
+      wing:
+        mass_kg: 12.296917
+        cg: [2.770029, -0.003288, 0.052455]
+    fuel:
+      mass_kg: 30.2891
+      cg: [2.612525, 0.0, 0.011609]
+    payload_parts:
+      eo_ir_turret_hd59_mount:
+        mass_kg: 1.736324
+        cg: [1.22, -0.0, -0.065024]
 
 # ---------------------------------------------------------------------------------------------------------------------
 # stability: stability
@@ -3635,7 +3680,7 @@ structures:
       frame_land_plies: 32
       spine_pad_plies: 16
       spine_plies: 4
-      skin_screw: ISO 7380 M4 A2-70 into nutplates, pitch 25 mm, both spine flanges, FS1810 -> FS-FUEL (P-MB-UPPER)
+      skin_screw: ISO 7380 M4 Ti-6Al-4V into nutplates, pitch 25 mm, both spine flanges, FS1810 -> FS-FUEL (P-MB-UPPER)
       skin_screw_pitch_m: 0.025
       text: 'bridle fittings in the dorsal spine channel M-SPINE: x-component and the fitting moment by 4 x M4 12.9 (axis
         z, nuts on a 48 x 40 mm washer plate under the 16-ply spine pad), z-component by 2 x M5 12.9 (axis x) into a 32-ply
@@ -3667,9 +3712,9 @@ structures:
         fuel cell; the inner-door hinge brackets (hinge lines y +-0.01) are bolted to their lower-edge flanges'
     turret:
       rail_screws_per_rail_end: 4
-      screw: M3 A2-70
-      roof_block: bearing block through-bolted 4 x M4 A2-70 with a 2 mm 7075 backing plate on the upper roof face (no potted
-        inserts in tension)
+      screw: M3 Ti-6Al-4V
+      roof_block: bearing block through-bolted 4 x M4 Ti-6Al-4V with a 2 mm 7075 backing plate on the upper roof face (no
+        potted inserts in tension)
       door_area_each_m2: 0.0223
       door_rail: 6061-T6 rail with a 1 mm retaining lip, PTFE slider
     ground_handling:
@@ -3721,7 +3766,7 @@ structures:
         E_allocation_replacements: -0.02
       delta_total_kg: -0.024
     summary:
-      n_margins: 301
+      n_margins: 303
       n_requirements: 22
       ms_min: 0.0
       ms_min_id: W-CAP-24
@@ -7696,6 +7741,19 @@ layout:
       zone: payload_bay
       spec: payload tray on 2 rails under the forward fuel deck (M-FWDDECK), 4 x M5 captive screws; research payload <=
         mission.payload_max_kg retained for 9 g fwd / 6 g down ultimate
+    ballast:
+      id: BAL-NOSE
+      part: YK250-CH-127
+      name: nose ballast block
+      name_tr: burun safra bloğu
+      tray: TR-FWDBAY
+      material: ss_304_annealed
+      process: cnc_milling_metal
+      box: [[0.336, -0.03, -0.068], [0.38, 0.03, -0.03642]]
+      mass_kg: 0.66
+      bolts: 4 x M4 Ti-6Al-4V through the block and the tray, nyloc + washer under the tray (structures EQ-BALLAST)
+      basis: 'mass/CG closure round: the smallest fixed mass at the most forward free location that brings the empty CG
+        of the registry (+ allowance items) onto the payload-bay datum; height = mass / (density x footprint)'
     ground_handling:
       tow_point:
         point: [0.68, 0.0, -0.4472]

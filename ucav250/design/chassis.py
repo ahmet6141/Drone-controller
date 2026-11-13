@@ -2901,6 +2901,28 @@ def build_fwdbay_tray(C: Ctx) -> G.Mesh:
     return pieces_above(inter(m, C.body_env(MEM_IN, xa - 0.01, xb + 0.01)), 1e-7)
 
 
+N_BALLAST = 127               # mass/CG closure round: nose ballast block (layout.chassis.ballast BAL-NOSE)
+BALLAST_BOLT_IN = 0.009       # M4 bolt centres 9 mm inside the block edges (>= 2 D in the steel block)
+
+
+def build_ballast(C: Ctx) -> G.Mesh:
+    """Nose ballast block BAL-NOSE (layout.chassis.ballast): machined AISI 304 block on TR-FWDBAY ahead of the buffer
+    battery; its height carries the layout ballast mass."""
+    b = C.L["chassis"]["ballast"]["box"]
+    lo, hi = np.asarray(b[0], float), np.asarray(b[1], float)
+    return box3(lo + np.array([0.0, 0.0, TOUCH_Z]), hi)
+
+
+def ballast_points(C: Ctx) -> list:
+    b = C.L["chassis"]["ballast"]["box"]
+    lo, hi = np.asarray(b[0], float), np.asarray(b[1], float)
+    return [(x, y, float(hi[2])) for x in (lo[0] + BALLAST_BOLT_IN, hi[0] - BALLAST_BOLT_IN)
+            for y in (lo[1] + BALLAST_BOLT_IN, hi[1] - BALLAST_BOLT_IN)]
+
+
+TOUCH_Z = 0.00005             # the block sits 0.05 mm above the tray top (bolted contact, no volume overlap)
+
+
 def fwdbay_tray_points(C: Ctx):
     bb = C.L["rules"]["boxes"]["forward_bay"]
     z0 = float(bb["z"][0])
@@ -3676,6 +3698,14 @@ class _Reg:
                  P_PREG, lambda: M(("tray_fwd",), lambda: build_fwdbay_tray(C)), thickness=TRAY_T,
                  parent=stp("FS0600"), step=14, explode=(0.0, 0.0, 0.3), contacts=(stp("FS0300"), stp("FS0600")),
                  notes=trays["TR-FWDBAY"]["spec"][:300])
+        bal = C.L["chassis"].get("ballast")
+        if bal:
+            self.add(N_BALLAST, "C", "nose ballast block (BAL-NOSE)", "burun safra bloğu (BAL-NOSE)",
+                     bal["material"], P_CNC, lambda: M(("ballast",), lambda: build_ballast(C)),
+                     thickness=float(bal["box"][1][2]) - float(bal["box"][0][2]), parent=C.pid(TRAY_N["TR-FWDBAY"]),
+                     step=14, explode=(0.0, 0.0, 0.25), contacts=(C.pid(TRAY_N["TR-FWDBAY"]),),
+                     notes=f"layout BAL-NOSE: {bal['mass_kg']} kg fixed ballast ({bal['basis'][:160]}); "
+                           f"{bal['bolts']}")
         self.add(TRAY_N["TR-MISSION"], "C", "mission-bay removable tray (TR-MISSION)",
                  "görev bölmesi sökülebilir tepsisi (TR-MISSION)", MAT_PW, P_PREG,
                  lambda: M(("tray_mis",), lambda: build_mission_tray(C)), thickness=MID_TRAY_T,
@@ -4127,6 +4157,11 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
     for p in pb:
         F.bolt(4, p, (1.0, 0.0, 0.0), [pid(TRAY_N["TR-FWDBAY"])], nut="insert", insert_part=stp("FS0600"),
                insert_depth=t6, grade=TI, label="TR-FWDBAY FS0600")
+    if C.L["chassis"].get("ballast"):
+        for i, p in enumerate(ballast_points(C)):
+            F.bolt(4, p, (0.0, 0.0, -1.0), [pid(N_BALLAST), pid(TRAY_N["TR-FWDBAY"])], owner=pid(N_BALLAST), grade=TI,
+                   washer_head=True, label=f"BAL-NOSE B{i + 1}",
+                   notes="ballast block through-bolted to TR-FWDBAY, nyloc + washer under the tray (EQ-BALLAST)")
     for p in mission_tray_points(C):
         F.bolt(4, p, (0.0, 0.0, 1.0), [C.ref("M-MIDFLOOR"), pid(TRAY_N["TR-MISSION"])], nut="nutplate",
                owner=pid(TRAY_N["TR-MISSION"]), grade=TI, label="TR-MISSION",

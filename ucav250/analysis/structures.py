@@ -4425,6 +4425,27 @@ def check_equipment(c: Ctx, R: Rows) -> dict:
           f"MTOM'da en büyük faydalı yük, nihai n {n_pay:.2f} (uçuş, iniş, acil, paraşüt en büyüğü)",
           m_pay * G * n_pay / 4, 0.6 * 700e6 * As5, "N", total_factor(c, ult_only=True, fit=True), "0.6 Rm A_s",
           part="YK250-PL-852")
+    # mass/CG closure round: nose ballast block BAL-NOSE on TR-FWDBAY, 4 x M4 Ti through the block and the tray;
+    # shear of the forward (or side) inertia + tension of the up-load, interaction on the most loaded bolt
+    bal = (c.S["layout"]["chassis"].get("ballast") or {})
+    if bal:
+        m_b = float(bal["mass_kg"])
+        As4 = float(research_value("materials", "fasteners.property_classes.stress_area.A_s_m2")["M4"])
+        Rm_t = ti_bolt_rm(c)
+        V = m_b * G * max(nf, ns) / 4.0
+        T = m_b * G * nu / 4.0
+        fit_b = total_factor(c, ult_only=True, fit=True)
+        r_b = 1.0 / math.sqrt((V * fit_b["total"] / (0.6 * Rm_t * As4)) ** 2 + (T * fit_b["total"] / (Rm_t * As4)) ** 2)
+        R.add("EQ-BALLAST", "equipment", f"nose ballast block {m_b:.2f} kg: 4 x M4 Ti-6Al-4V through TR-FWDBAY, shear "
+              "(forward) + tension (up), interaction", f"burun safra bloğu {dec(m_b, 2)} kg: TR-FWDBAY'den 4 x M4 "
+              "Ti-6Al-4V, kesme (ileri) + çekme (yukarı), etkileşim", case, case_tr, 1.0, r_b, "load multiplier",
+              dict(total_factor(c, ult_only=True), text="ultimate x 1.15 fitting (in the multiplier)"),
+              "Ti-6Al-4V (spec Ftu): tension Rm A_s, shear 0.6 Rm A_s; R_s^2 + R_t^2 = 1", part=bal["part"])
+        t_tr = 0.003
+        R.add("EQ-BALLAST-BR", "equipment", "nose ballast bolts M4: bearing in the 3 mm CFRP tray TR-FWDBAY",
+              "burun safrası cıvataları M4: 3 mm CFRP tepside ezilme", case, case_tr, V,
+              0.004 * t_tr * qi_design_values(c)["bearing_Pa"], "N", total_factor(c, ult_only=True, fit=True, comp=True),
+              "QI bearing ETW", part="YK250-CH-119")
     return {"n_down": nd, "n_up": nu, "n_fwd": nf, "n_side": ns, "n_payload": n_pay}
 
 

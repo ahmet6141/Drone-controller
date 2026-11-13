@@ -1421,6 +1421,22 @@ def build_ngsill(C: Ctx) -> G.Mesh:
     return pieces_above(inter(union(ms), env), PIECE_VMIN)
 
 
+
+def member_openings(C: Ctx) -> None:
+    """One-sided openings of mirrored members (layout member ``openings``: x, z range on the side given), cut after the
+    port twin exists (gear detail round GD-08: the nose-door drive-link window in the port keel wall)."""
+    for mid, m in C.mem.items():
+        for op in m.get("openings", []) or []:
+            pid = m["part"] + ("-L" if op.get("side") == "L" else "-R")
+            if pid not in C.reg.parts:
+                continue
+            lo, hi = m["box"]
+            y0, y1 = sorted((float(lo[1]), float(hi[1])))
+            if op.get("side") == "L":
+                y0, y1 = -y1, -y0
+            C.reg.parts[pid].holes.append(box3((float(op["x"][0]), y0 - 0.002, float(op["z"][0])),
+                                               (float(op["x"][1]), y1 + 0.002, float(op["z"][1]))))
+
 def build_keelwall(C: Ctx) -> G.Mesh:
     m = C.mem["M-KEELWALL"]
     lo, hi = m["box"]
@@ -3149,6 +3165,7 @@ def register(reg: Registry, spec: dict) -> None:
     R.firewall()
     R.small()
     R.mirror_all()
+    member_openings(C)
     R.ct_mass()
     F = _Fast(C)
     _fasteners(C, R, F, bx)

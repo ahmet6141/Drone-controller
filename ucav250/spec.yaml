@@ -2183,8 +2183,8 @@ mass:
         mass_kg_each: 0.02
       nose_door_drive:
         bellcrank_links_kg: 0.05
-        basis: 'estimate: 7075 bellcrank 0.010 + pivot bracket and bearing 0.010 + two links 0.010 + two horns 0.008 + two
-          hinge-pin bearing blocks 0.010 (mass.rules.gear_doors.nose_door_drive)'
+        basis: 'estimate: crank 0.008 + drive link 0.006 + drive horn 0.004 + two horns 0.006 + two links 0.008 + slide
+          bar 0.008 + guide plate and pins 0.010 (mass.rules.gear_doors.nose_door_drive)'
         note: 'fix round 2: one DA 22 (counted in inner_door_actuator) drives both clamshell doors through this bellcrank,
           two links and two horns on the hinge-pin extensions (layout NDOOR-LINKAGE)'
     spinner_hub_spacer_kg: 0.5
@@ -5301,12 +5301,13 @@ layout:
       kind: pass-through
       y: [-0.025, 0.025]
       z: [-0.12, -0.068]
-    - id: C-DOORLINK
-      purpose: 'inner-door drive pushrod (DA 22 crank -> inner-door hinge horn; fix round 2: raised, corners >= inset +
-        20 mm edge band; fix round 3, PK3-07: the trunnion door is leg-driven)'
+    - id: C-DOORSHAFT
+      purpose: 'inner-door drive shaft (DA 22 EQ-DOORACT on the aft face -> flanged bearing housing on the forward face
+        -> crank and link in the well; gear detail round GD-05: replaces the 35 x 18 mm pushrod window C-DOORLINK, which
+        could not pass a pushrod over the 90 deg door travel)'
       kind: pass-through
-      y: [0.01, 0.045]
-      z: [-0.16, -0.142]
+      y: [0.035, 0.053]
+      z: [-0.144, -0.126]
       mirror: true
     - id: C-CHINE
       purpose: chine longeron M-CHINE (J 35 x 30 mm) crossing the frame web
@@ -5540,6 +5541,13 @@ layout:
       mirror: true
       load_path: nose-gear loads -> pivot bushings -> keel walls -> FS0600 / FS1110 + avionics deck -> chine longerons
       touch: [ST-FS0600, ST-FS1110, M-DECK-NOSE, F-NG-PIVOT, EQ-*]
+      openings:
+      - id: W-NDOOR-LINK
+        side: L
+        x: [1.0505, 1.0595]
+        z: [-0.168, -0.131]
+        text: 'gear detail round (GD-08): window in the port keel wall for the nose-door drive link (DA 22 crank in the
+          side bay -> drive horn on the port door); solid laminate land round it (the wall''s aft end, 47 mm ahead of FS1110)'
     - id: M-DECK-NOSE
       part: YK250-CH-022
       name: avionics deck
@@ -6277,7 +6285,8 @@ layout:
       - [[2.9139, 0.375, -0.13], [2.9399, 0.377, -0.0668]]
       - [[3.0119, 0.375, -0.13], [3.0379, 0.377, -0.0668]]
       - [[2.9399, 0.326, -0.0868], [3.0119, 0.377, -0.0668]]
-      box: [[2.8909, 0.326, -0.1539], [3.0609, 0.385, -0.0668]]
+      - [[3.0119, 0.3338, -0.1739], [3.0379, 0.3618, -0.1539]]
+      box: [[2.8909, 0.326, -0.1739], [3.0609, 0.385, -0.0668]]
       bolts:
       - id: B1
         point: [2.9059, 0.385, -0.085]
@@ -6387,9 +6396,18 @@ layout:
         kind: rotary EMA of the gear unit on the trunnion axis, flange on the fitting front face (layout.systems.actuators
           ACT-MLG-EMA)
         point: [2.8909, 0.3478, -0.1309]
-      locks: 'down-lock: 4130 lock bolt d 10 in double shear in a tight clevis of the fitting (ear gaps <= 0.5 mm) engaging
-        the leg yoke (requirement for the gear-unit supplier; structures G-DOWNLOCK shear and G-DOWNLOCK-BEND pin bending,
-        fix round 2 VS2-07); up-lock: hook fitting F-UPLOCK under the well roof deck engaging a roller on the leg'
+      locks: 'down-lock (gear detail round GD-03): spring-engaged, solenoid-withdrawn 4130 lock bolt d 14 along x in a bushed
+        bore of a lower extension of the AFT bearing lug, 28 mm below the trunnion axis, engaging a bushed bore of the aft
+        yoke arm in the gear-down position (single shear across the 1 mm lug-to-arm gap: a second clevis ear would stand
+        in the swept leg; structures G-DOWNLOCK shear and G-DOWNLOCK-BEND bolt bending); up-lock: hook fitting F-UPLOCK
+        under the well roof deck engaging a roller on the leg'
+      downlock:
+        point: [3.0249, 0.3478, -0.1589]
+        axis: [1.0, 0.0, 0.0]
+        d: 0.014
+        lug_bottom_z: -0.1739
+        text: bore of the lock bolt in the aft-lug extension (boss to z lug_bottom_z) and in the aft yoke arm; bolt withdrawn
+          aft (14 mm stroke) by the gear-unit solenoid before the leg moves (mechanism main_downlock_R/L)
       inspection: beam bolts and roof bolts from the well (gear down); the dome nutplates on the fuel side are reached only
         with the aft cell removed (assembly.maintenance_access)
       touch: [M-GEARBEAM, M-WELLROOF, M-CHINE]
@@ -6402,6 +6420,13 @@ layout:
       mirror: true
       box: [[2.9559, 0.23, -0.09], [2.9959, 0.27, -0.0668]]
       point: [2.9759, 0.25, -0.09]
+      pin:
+        point: [2.9759, 0.25, -0.08]
+        d: 0.005
+        axis: [0.0, 1.0, 0.0]
+        boss_half_x: 0.0105
+        text: 'catch pivot pin bore in the hook boss: 10 mm (2 D) edge distance to the boss bottom and 10.5 mm to its fore
+          / aft faces (gear detail round GD-10)'
       bolts:
       - id: B1
         point: [2.9659, 0.24, -0.0668]
@@ -6511,11 +6536,11 @@ layout:
           material: steel_4130_n
           arm_m: 0.009
       actuator_anchor:
-        kind: rotary EMA of the nose-gear unit above the pivot between the keel walls, crank + drag link to the leg yoke
-          (layout.systems.actuators ACT-NLG-EMA)
-        point: [0.655, 0.0, -0.055]
-      locks: 'down-lock: over-centre drag link (gear unit, its pins in double shear); up-lock: hook under the avionics deck
-        engaging the axle roller'
+        kind: rotary EMA of the nose-gear unit above the pivot, flange on the starboard keel-wall land; crank + drag link
+          in the centre plane to a horn on the yoke crown (layout.systems.actuators ACT-NLG-EMA, gear detail round GD-04)
+        point: [0.6658, 0.0, -0.0662]
+      locks: 'down-lock: crank and drag link in (folded) toggle with the gear down, over-centre against a stop on the EMA
+        housing (gear detail round GD-04); up-lock: catches bolted to the keel walls engaging the axle-end rollers'
       touch: [M-KEELWALL]
     - id: F-SPINDLE-NODE
       part: YK250-CH-095
@@ -8921,8 +8946,8 @@ layout:
       mirror_of: main_gear_R
     - name: main_inner_door_R
       kind: revolute
-      origin: [2.9759, 0.01, -0.2036]
-      axis: [-1.0, 0.0, 0.0]
+      origin: [2.9759, 0.01, -0.20027]
+      axis: [-0.997628, 0.0, -0.06884]
       lo: 0.0
       hi: 1.570796
       rest: 0.0
@@ -8931,12 +8956,14 @@ layout:
       expr: 1.57080*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))
       moves: YK250-LG-670-R
       side: R
-      notes: hinged at the inboard well edge (y = well_gap/2); opens down 90 deg before the leg moves and closes after the
-        up-/down-lock (closed at both ends of the sequence)
+      notes: hinged at the inboard well edge (y = well_gap/2) on a straight line that follows the belly (z_bot + 4 mm +-
+        1.3 mm over the hinge stations, GD-06); opens down 90 deg before the leg moves and closes after the up-/down-lock
+        (closed at both ends of the sequence); driven by the DA 22 EQ-DOORACT through a shaft in FS-GEAR, crank and link
+        to the horn on the door (over-centre in the closed position)
     - name: main_inner_door_L
       kind: revolute
-      origin: [2.9759, -0.01, -0.2036]
-      axis: [1.0, 0.0, 0.0]
+      origin: [2.9759, -0.01, -0.20027]
+      axis: [0.997628, 0.0, 0.06884]
       lo: 0.0
       hi: 1.570796
       rest: 0.0
@@ -8957,15 +8984,15 @@ layout:
       scale: 1.0
       hinge_parent: M-GEARBEAM
       hinge_zone_m: 0.015
-      expr: 2.18166*(1-clamp((gear_up-0.7333)/0.1167,0,1))
+      expr: 2.18166*(1-clamp((gear_up-0.85)/0.15,0,1))
       moves: YK250-LG-673-R
       side: R
       notes: 'hinged on the lower edge of the gear beam (axis along x), + = free edge down and outboard; open 125 deg while
-        the down leg passes through its strip; fix round 3 (PK3-07): driven by the leg through a slotted (lost-motion) link
-        - an opening spring holds the door on its open stop until the leg reaches 90 deg of its retraction, the link pin
-        then takes up the slot and pulls the door shut over the last part of the leg stroke (closed when the leg up-locks,
-        gear_up 0.85; on extension the spring opens it as the pin backs off in the slot); fix round 3 (PK3-03): rest = open
-        (the gear-down state), modelled open; value 0 = closed (door_outlines closed_at lo)'
+        the leg moves (the down leg passes through its strip); gear detail round (GD-07): driven by its own micro gearmotor
+        (yoke pocket above the beam notch) through crank, link and hinge horn, over-centre lock in the closed position;
+        closes after the up-lock (gear_up 0.85-1.0) and opens before the extension, like the inner door (the expr and the
+        sequence agree); rest = open (the gear-down state, fix round 3 PK3-03), value 0 = closed (door_outlines closed_at
+        lo)'
     - name: main_trunnion_door_L
       kind: revolute
       origin: [2.9759, -0.3918, -0.14176]
@@ -8977,7 +9004,7 @@ layout:
       scale: 1.0
       hinge_parent: M-GEARBEAM
       hinge_zone_m: 0.015
-      expr: 2.18166*(1-clamp((gear_up-0.7333)/0.1167,0,1))
+      expr: 2.18166*(1-clamp((gear_up-0.85)/0.15,0,1))
       moves: YK250-LG-673-L
       side: L
       mirror_of: main_trunnion_door_R
@@ -9022,9 +9049,10 @@ layout:
       moves: YK250-LG-674-R
       side: R
       notes: 'clamshell hinged at the keel-slot edge; open (90 deg, hanging) whenever the gear is not up-locked, closed
-        for gear_up > 0.85 + 0.15; driven together with the other door by one DA 22 (EQ-NDOORACT, centre-line bellcrank
-        and links NDOOR-LINKAGE; fix round 2 PK2-13: a leg-driven link cannot close the doors while the leg stands still);
-        fix round 3 (PK3-03): rest = open (gear-down state), modelled open; value 0 = closed (door_outlines closed_at lo)'
+        for gear_up > 0.85 + 0.15; driven together with the other door by one DA 22 (EQ-NDOORACT; gear detail round GD-08:
+        crank on its shaft and two links to the horns of the aft door knuckles, both links over-centre in the closed position;
+        fix round 2 PK2-13: a leg-driven link cannot close the doors while the leg stands still); fix round 3 (PK3-03):
+        rest = open (gear-down state), modelled open; value 0 = closed (door_outlines closed_at lo)'
     - name: nose_door_L
       kind: revolute
       origin: [0.62, -0.039, -0.14898]
@@ -9038,9 +9066,10 @@ layout:
       moves: YK250-LG-674-L
       side: L
       notes: 'clamshell hinged at the keel-slot edge; open (90 deg, hanging) whenever the gear is not up-locked, closed
-        for gear_up > 0.85 + 0.15; driven together with the other door by one DA 22 (EQ-NDOORACT, centre-line bellcrank
-        and links NDOOR-LINKAGE; fix round 2 PK2-13: a leg-driven link cannot close the doors while the leg stands still);
-        fix round 3 (PK3-03): rest = open (gear-down state), modelled open; value 0 = closed (door_outlines closed_at lo)'
+        for gear_up > 0.85 + 0.15; driven together with the other door by one DA 22 (EQ-NDOORACT; gear detail round GD-08:
+        crank on its shaft and two links to the horns of the aft door knuckles, both links over-centre in the closed position;
+        fix round 2 PK2-13: a leg-driven link cannot close the doors while the leg stands still); fix round 3 (PK3-03):
+        rest = open (gear-down state), modelled open; value 0 = closed (door_outlines closed_at lo)'
     - name: turret_elevator
       kind: prismatic
       origin: [1.22, 0.0, -0.0986]
@@ -9409,6 +9438,12 @@ layout:
         joint: main_inner_door_R
         thickness: 0.004
         outline: [[2.8689, 0.01], [3.0829, 0.01], [3.0829, 0.245], [2.8689, 0.245]]
+        hinge:
+          stations: [[2.8824, 2.8954], [2.9574, 2.9704], [3.0424, 3.0554]]
+          pin_d: 0.003
+          cove_r: 0.0042
+          text: 'GD-06: three stations (fixed bracket on the well keel web, door knuckle, pin d 3); the centre-strip skin
+            carries a cove of cove_r round the hinge axis over each station (shell owner)'
         text: inner door (well zone x range, from the inboard hinge edge to landing_gear.doors.main_inner_door_outer_edge_y)
       main_leg_door_R:
         joint: main_gear_R
@@ -9423,6 +9458,12 @@ layout:
         thickness: 0.004
         closed_at: lo
         outline: [[2.9439, 0.3], [3.0079, 0.3], [3.0079, 0.3918], [2.9439, 0.3918]]
+        hinge:
+          stations: [[2.9339, 3.0179]]
+          pin_d: 0.003
+          cove_r: 0.0042
+          text: 'GD-08: hinge blocks either side of the leg slot bolted to the gear-beam land, door knuckle over the slot
+            length; skin cove of cove_r round the hinge axis over the station (shell owner)'
         text: 'trunnion door hinged on the lower edge of the gear beam: closes the leg-slot strip y 0.3-0.385 when the gear
           is up (fix round 2, PK2-03)'
       nose_door_R:
@@ -9430,6 +9471,13 @@ layout:
         thickness: 0.004
         closed_at: lo
         outline: [[0.62, 0.0005], [1.0936, 0.0005], [1.0936, 0.039], [0.62, 0.039]]
+        hinge:
+          stations: [[0.7, 0.746], [1.0626, 1.0851]]
+          pin_d: 0.003
+          cove_r: 0.0042
+          text: two stations where neither the yoke nor the tyre passes near the hinge line (layout clearances); blocks
+            bolted through the keel wall, the aft door knuckle carries the drive horn (GD-08); skin cove of cove_r round
+            the hinge axis over each station (shell owner)
         text: 'clamshell door hinged at the keel-slot edge (y = slot half width), meets its partner on the centre line;
           fix round 3 (PK3-02): aft edge 1 mm ahead of the turret ring insert P-TURRETRING, its 12 mm edge band on the slot-end
           sill M-NGSILL (the ring lands on the FS1110 cap)'
@@ -9864,9 +9912,10 @@ layout:
       through: C-FW-PUSHROD
       radius: 0.012
     - equipment: EQ-DOORACT
-      through: C-DOORLINK
+      through: C-DOORSHAFT
       radius: 0.01
-      text: crank + pushrod from the DA 22 on the aft face of FS-GEAR to the inner-door hinge horn
+      text: 'gear detail round (GD-05): DA 22 shaft through FS-GEAR (bearing housing), crank and link in the plane x ~3.08
+        aft of the swept tyre (x <= 3.071) to the horn on the aft end of the inner door'
     text: 'pushrod corridors: rod + rod ends (d 8 mm rod, 12 mm swept radius over the actuator travel) from the actuator
       arm to the horn; the frame crossings use the declared cut-outs (fireproof bellows boots at the firewall); wing and
       tail actuator linkages stay inside the surfaces (layout.systems.actuators)'
@@ -10187,7 +10236,7 @@ layout:
       mass_kg: 0.335
       mount:
         zone: avionics_side_bays
-        tray: YK250-CH-118
+        tray: YK250-CH-022
       connector: +x face, 30 mm allowance
       source: layout.rules.bay_contents[brake_unit] (components.yaml volz_da26 case 102.8 x 54 x 26 mm, 0.27 kg + master
         cylinder on its output)
@@ -10249,45 +10298,53 @@ layout:
       name: main inner-door actuator Volz DA 22 (28 V)
       name_tr: iç kapak eyleyicisi DA 22
       group: gear
-      box: [[3.1023, 0.03, -0.17], [3.1438, 0.052, -0.1041]]
+      box: [[3.1009, 0.03, -0.1551], [3.1257, 0.0959, -0.1122]]
       mirror: true
       mass_kg: 0.132
       mount:
         zone: aft face of FS-GEAR
         tray: YK250-CH-011
       source: 'mass.rules.gear_doors.inner_door_actuator (components.yaml volz_da22_28v 41.5 x 65.9 x 22 mm, 0.132 kg);
-        crank + pushrod (C-DOORLINK) + over-centre lock to the inner-door hinge horn; drives the inner door only (opens,
-        holds, reverses to close); fix round 3 (PK3-07): the trunnion door is leg-driven through a slotted lost-motion link
-        with an opening spring (mechanisms main_trunnion_door_R/L, structures G-DOOR-DRIVE / G-TDOOR-LINK)'
+        gear detail round (GD-05): case on a wedge plate on the aft face of FS-GEAR, output shaft parallel to the inner-door
+        hinge line through the bearing housing in C-DOORSHAFT, crank + link in the well to the horn at the aft end of the
+        door, over-centre lock in the closed position (structures G-DOOR-LOCK / G-DOOR-DRIVE); drives the inner door only
+        (opens, holds, reverses to close); the trunnion door has its own micro gearmotor (GD-07)'
+      shaft:
+        point: [3.0795, 0.044, -0.136]
+        axis: [0.997628, 0.0, 0.06884]
+        text: crank axis in the drive plane x 3.0795 (the bearing housing on the forward face of FS-GEAR carries it; the
+          DA 22 spline drives it through a splined coupling)
       mass_item: gear_doors_wells_locks_sensors
     - id: EQ-NDOORACT
       part: YK250-LG-678
       name: nose-door actuator Volz DA 22 (28 V), drives both clamshell doors
       name_tr: burun kapağı eyleyicisi DA 22 (iki kapak)
       group: gear
-      box: [[1.037, -0.12, -0.11], [1.1029, -0.0785, -0.088]]
+      box: [[1.0593, -0.1016, -0.1384], [1.0869, -0.06, -0.0708]]
       mass_kg: 0.132
       mount:
-        zone: aft lower corner of the port avionics side bay on the forward face of FS1110 (under the P-SIDEBAY-L opening)
+        zone: aft lower corner of the port avionics side bay, through the cut-out of the side-bay tray
         tray: YK250-CH-118
       source: 'fix round 2 (PK2-13): the clamshell doors open before and close after the leg moves (sequence gear_retraction),
         which a leg-driven link cannot do; ONE DA 22 drives both doors (components.yaml volz_da22_28v 41.5 x 65.9 x 22 mm,
-        0.132 kg; mass.rules.gear_doors.inner_door_actuator count 3 = 2 main + 1 nose; mass closure of fix round 2): shaft
-        along x, crank + pushrod in the plane x 1.095 (between the side-bay contents and FS1110) through a bushed hole in
-        the port keel-wall land to a centre-line bellcrank on the forward face of FS1110; two links from the bellcrank arms
-        to the horns on the aft extensions of the two door hinge pins (bearing blocks on FS1110): mirror-symmetric door
-        motion; over-centre lock in the closed position (envelope NDOOR-LINKAGE, aft of the stowed tyre)'
+        0.132 kg; mass.rules.gear_doors.inner_door_actuator count 3 = 2 main + 1 nose); gear detail round (GD-08): output
+        parallel to the door hinge axes, crank + drive link through a window in the port keel wall to the drive horn of
+        the port door (over-centre lock with the doors closed); the starboard door is coupled as an exact mirror through
+        two horns, two links and a vertically guided slide bar on the centre line (NDOOR-LINKAGE)'
       mass_item: gear_doors_wells_locks_sensors
+      shaft:
+        point: [1.055, -0.0808, -0.122]
+        axis: [0.996145, 0.0, -0.08772]
+        text: crank axis in the drive plane (parallel to the door hinge axes)
       drive_envelope:
         id: NDOOR-LINKAGE
         part: YK250-LG-679
-        box: [[1.0855, -0.0415, -0.1806], [1.106, 0.0415, -0.1106]]
-        text: swept envelope of the centre-line bellcrank (pivot bracket on the forward face of FS1110), the two door links
-          and the horns on the hinge-pin extensions, over the door travel; between the keel walls, >= 18 mm aft of the stowed
-          nose tyre
+        box: [[1.068, -0.0415, -0.204], [1.087, 0.0415, -0.075]]
+        text: swept envelope of the door coupling (two horns, two links, slide bar and its guide plate on the keel walls)
+          over the door travel, between the keel walls, >= 10 mm aft of the stowed nose tyre and ahead of the slot-end sill
         mass_kg: 0.05
-        mass_basis: 'estimate: 7075 bellcrank 0.010 + pivot bracket and bearing 0.010 + two links 0.010 + two horns 0.008
-          + two hinge-pin bearing blocks 0.010 (mass.rules.gear_doors.nose_door_drive)'
+        mass_basis: 'estimate: crank 0.008 + drive link 0.006 + drive horn 0.004 + two horns 0.006 + two links 0.008 + slide
+          bar 0.008 + guide plate and pins 0.010 (mass.rules.gear_doors.nose_door_drive)'
     - id: EQ-STABACT
       part: YK250-FC-302
       name: stabilator actuator Volz DA 30
@@ -10575,11 +10632,18 @@ layout:
       part: YK250-LG-632
       name: nose-gear retraction EMA (gear unit, allocation envelope)
       mass_item: nose_gear_leg_wheel_steering
-      box: [[0.625, -0.03, -0.085], [0.685, 0.03, -0.025]]
-      drive: crank on the EMA output + over-centre drag link to the leg yoke (down-lock at the over-centre position); torque
-        requirement structures G-EMA-NOSE
-      install: allocation envelope 60 x 60 x 60 mm (estimate) between the keel walls above the pivot, bolted to the starboard
-        keel-wall land; >= 20 mm above the swept yoke
+      box: [[0.636, 0.006, -0.093], [0.696, 0.041, -0.033]]
+      shaft:
+        point: [0.6658, 0.006, -0.0662]
+        axis: [0.0, 1.0, 0.0]
+        text: output shaft on the port face of the body; the crank, the drag link and the yoke horn work in the centre plane
+          of the keel slot (y +-0.005)
+      drive: 'gear detail round (GD-04): crank on the EMA output + drag link in the centre plane to a horn bolted on the
+        yoke crown; crank and link in toggle (folded) with the gear down = over-centre down-lock against a stop on the EMA
+        housing; torque requirement structures G-EMA-NOSE'
+      install: allocation envelope 60 x 35 x 60 mm (estimate; 26 mm DA-26-class motor + planetary stage) offset to the starboard
+        keel wall, flange bolted to the wall land above the pivot block; the port half of the slot is free for the centre-plane
+        drag link (fix round 2's centred box left no plane for the link between the pivot-block bolt heads and the box)
     - id: ACT-STEER
       part: YK250-FC-628
       name: nose-wheel steering actuator Volz DA 26
@@ -11128,7 +11192,7 @@ layout:
       position_sizing_phase: [1.8253, 0.0, -0.05]
     wiring_harness_connectors_coax:
       mode: absolute
-      position: [2.3006, -0.0166, 0.0151]
+      position: [2.3005, -0.0166, 0.0151]
       basis: cables 70 % (estimate) by trunk length x diameter^2 (layout.systems.harness) + outer-panel harnesses; connectors,
         backshells and coax terminations 30 % (estimate) equally over the connection points of the layout (equipment, actuators,
         antennas, lights, gear EMAs)
@@ -11156,7 +11220,7 @@ layout:
         at: [2.8707, 0.0, 0.076]
       - what: connectors at 53 connection points
         fraction: 0.3
-        at: [1.8579, 0.0, 0.0519]
+        at: [1.8578, 0.0, 0.0518]
       position_sizing_phase: [1.9, 0.0, 0.0]
     flight_termination_lights:
       mode: absolute
@@ -11203,7 +11267,7 @@ layout:
       position_sizing_phase: [2.0, 0.0, -0.05]
     frames_bulkheads:
       mode: absolute
-      position: [2.4083, 0.0, 0.0106]
+      position: [2.4086, 0.0, 0.0105]
       basis: 13 stations, mass ~ net web area (section inside the 6 mm skin inset minus the declared cut-outs and, for the
         spar frames, the box) x thickness x effective density (sandwich ~400 kg/m3, aluminium ring 2700 kg/m3; estimate)
       components:
@@ -11220,28 +11284,28 @@ layout:
         fraction: 0.0748
         at: [1.33, 0.0, -0.0092]
       - what: FS1490
-        fraction: 0.1056
+        fraction: 0.1055
         at: [1.49, 0.0, -0.0346]
       - what: FS1810
-        fraction: 0.1222
+        fraction: 0.1221
         at: [1.81, 0.0, -0.0443]
       - what: FS-FUEL
         fraction: 0.1216
         at: [2.1895, 0.0, -0.0421]
       - what: FS-MS
-        fraction: 0.0543
+        fraction: 0.0542
         at: [2.487, 0.0, -0.0157]
       - what: FS-RS
         fraction: 0.0557
         at: [2.8, 0.0, -0.0114]
       - what: FS-GEAR
-        fraction: 0.1222
-        at: [3.0953, 0.0, -0.022]
+        fraction: 0.1226
+        at: [3.0953, 0.0, -0.0226]
       - what: FS3480
         fraction: 0.0313
         at: [3.48, 0.0, 0.1047]
       - what: FS3670
-        fraction: 0.1739
+        fraction: 0.1738
         at: [3.67, 0.0, 0.125]
       - what: FS3738
         fraction: 0.0428
@@ -11458,7 +11522,7 @@ layout:
       position_sizing_phase: [3.0006, 0.0, -0.127]
     nose_gear_leg_wheel_steering:
       mode: absolute
-      position: [0.8419, 0.0, -0.0993]
+      position: [0.8428, 0.0, -0.1]
       basis: SAGITTA nose leg 3.5 kg (components.yaml) split as TOST nose wheel 0.365 + tyre 0.45 + tube 0.08 kg + DA-26-class
         EMA 0.27 kg (estimate) + leg remainder, retracted (flight) pose
       components:
@@ -11467,14 +11531,14 @@ layout:
         at: [0.975, 0.0, -0.0922]
       - what: retraction EMA (ACT-NLG-EMA; DA-26-class mass, estimate)
         fraction: 0.0771
-        at: [0.655, 0.0, -0.055]
+        at: [0.666, 0.0, -0.063]
       - what: leg, damper, fork, steering collar (stowed leg mid-point)
         fraction: 0.6671
         at: [0.8125, 0.0, -0.1072]
       position_sizing_phase: [0.8443, 0.0, -0.1244]
     gear_doors_wells_locks_sensors:
       mode: absolute
-      position: [2.3694, -0.0072, -0.1404]
+      position: [2.3678, -0.0058, -0.1402]
       basis: sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout door
         outlines (closed), well centres and door drives
       components:
@@ -11495,16 +11559,16 @@ layout:
         at: [0.851, 0.0, -0.0922]
       - what: main inner-door DA 22 + linkages (EQ-DOORACT)
         fraction: 0.1446
-        at: [3.1231, 0.0, -0.1371]
+        at: [3.1133, 0.0, -0.1336]
       - what: leg-door brackets
         fraction: 0.0336
         at: [2.9759, 0.0, -0.2]
       - what: nose-door DA 22 + crank/pushrod (EQ-NDOORACT)
         fraction: 0.0723
-        at: [1.0699, -0.0993, -0.099]
+        at: [1.0731, -0.0808, -0.1046]
       - what: nose-door bellcrank, links and horns (NDOOR-LINKAGE)
         fraction: 0.021
-        at: [1.0958, 0.0, -0.1456]
+        at: [1.0775, 0.0, -0.1395]
       - what: door seals (main)
         fraction: 0.027
         at: [2.9759, 0.0, -0.1309]

@@ -138,6 +138,64 @@ def dooract_main() -> dict:
                                "text": "crank axis in the drive plane x 3.0795 (the bearing housing on the forward face "
                                        "of FS-GEAR carries it; the DA 22 spline drives it through a splined coupling)"}})
 
+
+NDA_PLANE_X = 1.0550                # nose-door drive plane (DA 22 crank / drive link / drive horn on the port door)
+NDA_SHAFT_YZ = (-0.0808, -0.1220)   # DA 22 output axis in that plane (port side bay; mechanism study docs/detail/gear.md)
+NDA_SHAFT_END = 0.014               # output axis from the lower end of the 65.9 mm case side (estimate, as EQ-DOORACT)
+NDA_SLIDE_X = (1.0680, 1.0870)      # symmetric coupling of the two doors: horns, links, slide bar and guide plate
+#                                     (x range on the door axes; >= 10 mm aft of the stowed tyre, ahead of the sill)
+
+
+def ndooract() -> dict:
+    """Gear detail round (GD-08): nose-door drive. The DA 22 sits in the aft lower corner of the port side bay with its
+    output parallel to the door hinge axes; crank + drive link through a window in the port keel wall to a drive horn
+    on the port door (crank and link in toggle with the doors closed = over-centre lock). The starboard door follows
+    exactly (mirror) through a symmetric coupling on the centre line: a horn on each door, two links to a slide bar
+    guided vertically by two pins in a cross plate bolted to both keel walls (NDOOR-LINKAGE). Fix round 2's centre-line
+    bellcrank rotating about x cannot move the two doors as mirror images, and the hinge-pin extensions aft of the
+    doors stand in the turret-ring insert."""
+    J = {j["name"]: j for j in b_mech_joints()}
+    a = unit(J["nose_door_R"]["axis"])
+    e1 = np.array([0.0, 1.0, 0.0])
+    e2 = np.cross(a, e1)
+    C = np.array([NDA_PLANE_X, NDA_SHAFT_YZ[0], NDA_SHAFT_YZ[1]])
+    pts = []
+    for t in (0.0055, 0.0275):
+        for b in (-0.02075, 0.02075):
+            for c in (-NDA_SHAFT_END, 0.0659 - NDA_SHAFT_END):
+                pts.append(C + t * a + b * e1 + c * e2)
+    P = np.array(pts)
+    src = ("fix round 2 (PK2-13): the clamshell doors open before and close after the leg moves (sequence "
+           "gear_retraction), which a leg-driven link cannot do; ONE DA 22 drives both doors (components.yaml "
+           "volz_da22_28v 41.5 x 65.9 x 22 mm, 0.132 kg; mass.rules.gear_doors.inner_door_actuator count 3 = 2 main + 1 "
+           "nose); gear detail round (GD-08): output parallel to the door hinge axes, crank + drive link through a "
+           "window in the port keel wall to the drive horn of the port door (over-centre lock with the doors closed); "
+           "the starboard door is coupled as an exact mirror through two horns, two links and a vertically guided "
+           "slide bar on the centre line (NDOOR-LINKAGE)")
+    z0 = round(z_bot(1.08, 0.0) + 0.006, 4)
+    return eq("EQ-NDOORACT", "YK250-LG-678", "nose-door actuator Volz DA 22 (28 V), drives both clamshell doors",
+              "burun kapağı eyleyicisi DA 22 (iki kapak)", "gear", [P.min(0).tolist(), P.max(0).tolist()], 0.132,
+              {"zone": "aft lower corner of the port avionics side bay, through the cut-out of the side-bay tray",
+               "tray": "YK250-CH-118"}, src,
+              extra={"mass_item": "gear_doors_wells_locks_sensors",
+                     "shaft": {"point": r3(C, 5), "axis": r3(a, 6),
+                               "text": "crank axis in the drive plane (parallel to the door hinge axes)"},
+                     "drive_envelope": {"id": "NDOOR-LINKAGE", "part": "YK250-LG-679",
+                                        "box": r3([[NDA_SLIDE_X[0], -0.0415, z0], [NDA_SLIDE_X[1], 0.0415, -0.075]]),
+                                        "text": "swept envelope of the door coupling (two horns, two links, slide bar and "
+                                                "its guide plate on the keel walls) over the door travel, between the "
+                                                "keel walls, >= 10 mm aft of the stowed nose tyre and ahead of the "
+                                                "slot-end sill",
+                                        "mass_kg": 0.05,
+                                        "mass_basis": "estimate: crank 0.008 + drive link 0.006 + drive horn 0.004 + two "
+                                                      "horns 0.006 + two links 0.008 + slide bar 0.008 + guide plate and "
+                                                      "pins 0.010 (mass.rules.gear_doors.nose_door_drive)"}})
+
+
+def b_mech_joints() -> list:
+    from .b_mech import mechanisms
+    return mechanisms()["joints"]
+
 def equipment(L: dict) -> list:
     E = []
     for it in L["rules"]["bay_contents"]["items"]:
@@ -183,31 +241,7 @@ def equipment(L: dict) -> list:
                 {"zone": "forward face of FS3670", "tray": "YK250-CH-013"},
                 "standards.yaml FUEL (CS-VLA 995: no valve on the engine side of the firewall); mass estimate"))
     E.append(dooract_main())
-    nd_src = ("fix round 2 (PK2-13): the clamshell doors open before and close after the leg moves (sequence "
-              "gear_retraction), which a leg-driven link cannot do; ONE DA 22 drives both doors (components.yaml "
-              "volz_da22_28v 41.5 x 65.9 x 22 mm, 0.132 kg; mass.rules.gear_doors.inner_door_actuator count 3 = 2 main "
-              "+ 1 nose; mass closure of fix round 2): shaft along x, crank + pushrod in the plane x 1.095 (between the "
-              "side-bay contents and FS1110) through a bushed hole in the port keel-wall land to a centre-line bellcrank "
-              "on the forward face of FS1110; two links from the bellcrank arms to the horns on the aft extensions of "
-              "the two door hinge pins (bearing blocks on FS1110): mirror-symmetric door motion; over-centre lock in "
-              "the closed position (envelope NDOOR-LINKAGE, aft of the stowed tyre)")
-    z_nd0 = round(z_bot(1.096, 0.0415) + 0.010, 4)
-    E.append(eq("EQ-NDOORACT", "YK250-LG-678", "nose-door actuator Volz DA 22 (28 V), drives both clamshell doors",
-                "burun kapağı eyleyicisi DA 22 (iki kapak)", "gear",
-                [[1.0370, -0.1200, -0.1100], [1.0370 + 0.0659, -0.1200 + 0.0415, -0.1100 + 0.0220]], 0.132,
-                {"zone": "aft lower corner of the port avionics side bay on the forward face of FS1110 (under the "
-                         "P-SIDEBAY-L opening)", "tray": "YK250-CH-118"}, nd_src,
-                extra={"mass_item": "gear_doors_wells_locks_sensors",
-                       "drive_envelope": {"id": "NDOOR-LINKAGE", "part": "YK250-LG-679",
-                                          "box": r3([[1.0855, -0.0415, z_nd0], [1.1060, 0.0415, z_nd0 + 0.070]]),
-                                          "text": "swept envelope of the centre-line bellcrank (pivot bracket on the "
-                                                  "forward face of FS1110), the two door links and the horns on the "
-                                                  "hinge-pin extensions, over the door travel; between the keel walls, "
-                                                  ">= 18 mm aft of the stowed nose tyre",
-                                          "mass_kg": 0.05,
-                                          "mass_basis": "estimate: 7075 bellcrank 0.010 + pivot bracket and bearing "
-                                                        "0.010 + two links 0.010 + two horns 0.008 + two hinge-pin "
-                                                        "bearing blocks 0.010 (mass.rules.gear_doors.nose_door_drive)"}}))
+    E.append(ndooract())
     E.append(eq("EQ-STABACT", "YK250-FC-302", "stabilator actuator Volz DA 30", "stabilatör eyleyicisi DA 30",
                 "controls", [[3.5650, 0.0215, 0.2025], [3.6500, 0.1800, 0.2325]], 0.63,
                 {"zone": "forward face of the firewall (cool side)", "tray": "bracket on YK250-CH-013"},

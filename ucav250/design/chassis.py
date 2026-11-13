@@ -481,7 +481,9 @@ def _cap_trims(C: Ctx, sid: str) -> list[tuple[Polygon, tuple]]:
     * FS-GEAR forward cap ends at the aft edge of the main inner-door opening (layout.mechanisms.door_outlines
       main_inner_door_R): the tyre swings through the opening during retraction (well clearance 12 mm);
     * FS0600 forward cap ends 3 mm aft of the buffer-battery box (EQ-BUFFER_BATTERY) under P-FWDHATCH: the
-      battery_removal path lifts the box straight up."""
+      battery_removal path lifts the box straight up;
+    * FS1110 forward cap in the nose-gear keel slot starts at the slot-end sill M-NGSILL (integration round IR-01):
+      the nose-door horns and coupling links swing through the slot ahead of it."""
     out = []
     m = CAP_OPENING_MARGIN
     st = C.st[sid]
@@ -492,6 +494,12 @@ def _cap_trims(C: Ctx, sid: str) -> list[tuple[Polygon, tuple]]:
         y0, y1, x_end = float(o[:, 1].min()), float(o[:, 1].max()), float(o[:, 0].max())
         for s in (1, -1):
             out.append((rect(s * (y0 - m), s * (y1 + m), -1.0, -0.05), (x - fw - 0.003, x_end + 0.0005)))
+    if sid == "FS1110":
+        # integration round (IR-01): in the keel slot the forward cap starts at the slot-end sill (M-NGSILL), the aft
+        # land of the nose doors: the door horns and the coupling links swing out through the slot ahead of it
+        sl = C.mem["M-NGSILL"]["box"]
+        yk = float(C.mem["M-KEELWALL"]["box"][0][1])
+        out.append((rect(-yk, yk, -1.0, -0.05), (x - fw - 0.003, float(sl[0][0]))))
     if sid == "FS0600":
         b = next(e for e in C.L["systems"]["equipment"] if e["id"] == "EQ-BUFFER_BATTERY")["box"]
         hw = max(abs(float(b[0][1])), abs(float(b[1][1]))) + m

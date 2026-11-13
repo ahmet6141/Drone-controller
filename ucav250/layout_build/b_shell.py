@@ -88,6 +88,12 @@ def _frame_edge(x_web, sign):
 # slot-end sill M-NGSILL, the aft land of the nose doors, lies ahead of it and clear of the nose-tyre swing by 12 mm)
 RING_X = (round(_frame_edge(1.1066, -1.0) - 0.009, 4), _frame_edge(1.3334, 1.0) + 0.022)
 RING_Y = 0.125
+# integration round (IR-01): the nose-door coupling (b_systems.NDA_SLIDE_X) sits 12 mm aft of the nose-tyre swing, so
+# the doors' aft edge band, the slot-end sill and the trimmed FS1110 forward cap in the keel slot lie aft of it: the
+# doors end at NOSE_DOOR_X1 (12 mm edge band on the sill / cap, x 1.0925-1.1045) and the ring insert is notched over
+# the keel slot (|y| < RING_NOTCH_Y) back to 1 mm aft of the door edge; outside the slot it keeps RING_X[0]
+NOSE_DOOR_X1 = 1.1045
+RING_NOTCH_X, RING_NOTCH_Y = round(NOSE_DOOR_X1 + 0.001, 4), 0.040
 X_SB_NOTCH, Y_SB_NOTCH = 1.0706, 0.135      # side-bay / door-access panel notches round the ring (fix round 3, PK3-02)
 # parachute hatch aft edge 0.5 mm aft of the FS1810 web mid-plane (fix round 3, PK3-02): the hatch lands on the forward
 # half of the FS1810 cap (and still covers the bridle notch C-BRIDLE-F in the web top), the tear-away spine strip
@@ -166,6 +172,8 @@ def panels() -> list:
                    cutouts=[{"id": "P-TURRETRING", "kind": "aperture insert"},
                             {"id": "P-TDOORACC", "kind": "hatch (L/R)"}]))
     xr0, xr1 = RING_X
+    ring_ol = [[xr0, -RING_Y], [xr1, -RING_Y], [xr1, RING_Y], [xr0, RING_Y], [xr0, RING_NOTCH_Y],
+               [RING_NOTCH_X, RING_NOTCH_Y], [RING_NOTCH_X, -RING_NOTCH_Y], [xr0, -RING_NOTCH_Y]]
     X.append(panel("P-TURRETRING", "YK250-SH-363", "turret aperture ring insert (HD59, 157 mm opening)",
                    "taret açıklık halkası (HD59)", "body_lower", [round(xr0, 4), round(xr1, 4)], [-RING_Y, RING_Y],
                    "removable", dict(INS, spec="14 x ISO 7380 M4 A2-70 into potted M4 inserts in the frame caps (fore/aft) "
@@ -173,8 +181,10 @@ def panels() -> list:
                                                "rail plane (sides, fix round 3 PK3-09): pitch about 67 mm",
                                      pitch=[0.060, 0.080], edge_margin=0.012), layup=None,
                    process="prepreg_ooa_vacbag", thickness=0.0020,
-                   lands=["ST-FS1110", "ST-FS1330", "M-TURRETWALL"],
-                   notes=f"fix round 1 (VPK-08): flush skin insert {(xr1 - xr0) * 1000:.0f} x {2 * RING_Y * 1000:.0f} mm, "
+                   lands=["ST-FS1110", "ST-FS1330", "M-TURRETWALL", "M-KEELWALL"], outline=r3(ring_ol),
+                   notes=f"integration round (IR-01): forward edge notched over the keel slot (|y| < {RING_NOTCH_Y}) "
+                         f"back to x {RING_NOTCH_X}, 1 mm aft of the nose-door aft edge (the doors' edge band lies on the "
+                         "trimmed FS1110 forward cap there; the notch sides land on the keel-wall foot flanges); fix round 1 (VPK-08): flush skin insert {(xr1 - xr0) * 1000:.0f} x {2 * RING_Y * 1000:.0f} mm, "
                          "CFRP solid laminate 2.0 mm (10 plies PW, prepreg_ooa_vacbag; fix round 3 PK3-08), landing on the "
                          "outward caps of FS1110 / FS1330 and the side land doublers (M-TURRETWALL.side_land); the fastener rows "
                          "lie >= 17 mm from the interchangeable E180 ring's 0.19 m opening (YK250-SH-364) and >= 30 mm "
@@ -182,6 +192,9 @@ def panels() -> list:
                          "ring land (2.0 mm insert + 1.6 mm flange) stays within the 5.8 mm skin thickness and the "
                          "inserts are flush, so nothing protrudes into the band of the sliding doors "
                          "(layout.mechanisms.door_outlines.turret_door_R/L)"))
+    # integration round (IR-08): the ring insert is booked in the turret mechanism item (its basis lists the "HD59
+    # aperture ring (flush skin insert)"), not in the body skin (analysis/mass.py budget group)
+    X[-1]["mass_item"] = "turret_lift_mechanism_doors"
     xt0_, xt1_ = _frame_edge(1.33, 1.0) - 0.003, _frame_edge(1.49, -1.0) + 0.003
     X.append(panel("P-TDOORACC", "YK250-SH-365", "turret-door drive access panel (lower skin aft of FS1330)",
                    "taret kapağı tahrik erişim kapağı", "body_lower", [xt0_, xt1_],

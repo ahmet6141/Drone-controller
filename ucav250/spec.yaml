@@ -5511,7 +5511,8 @@ layout:
         T-flange of FS1110 and to the two keel-wall lands at the skin line: aft land (12 mm edge band) of the nose clamshell
         doors; flat (2.4 mm) so that the nose-door bellcrank / links (NDOOR-LINKAGE, >= 10 mm above the skin) pass over
         it; the turret ring insert lands on the FS1110 cap 1 mm aft of it; >= 12 mm aft of the nose-tyre swing (layout_check
-        C05)'
+        C05); integration round (IR-01): on the FS1110 forward cap (trimmed back to the sill''s forward edge in the slot),
+        aft of the door horns and coupling links'
       material: cfrp_pw_mtm45_as4
       process: prepreg_ooa_vacbag
       layup: spar_web
@@ -5521,7 +5522,7 @@ layout:
         w: 0.013
         h: 0.0024
         t: 0.0024
-      box: [[1.0806, -0.0415, -0.1845], [1.0936, 0.0415, -0.1821]]
+      box: [[1.0915, -0.0415, -0.1847], [1.1045, 0.0415, -0.1823]]
       bottom: skin
       load_path: door edge (air loads, seal pressure) -> land strip -> FS1110 forward flange / keel walls
       touch: [M-KEELWALL, ST-FS1110]
@@ -5545,11 +5546,11 @@ layout:
       openings:
       - id: W-NDOOR-LINK
         side: L
-        x: [1.0705, 1.0815]
+        x: [1.084, 1.095]
         z: [-0.1735, -0.1235]
         text: 'gear detail round (GD-08): window in the port keel wall for the nose-door drive link (DA 22 crank in the
-          side bay -> drive arm of the port coupling horn); solid laminate land round it (the wall''s aft end, 27 mm ahead
-          of FS1110)'
+          side bay -> drive arm of the port coupling horn); solid laminate land round it (the wall''s aft end, 11.6 mm ahead
+          of FS1110; integration round IR-01: moved 13.5 mm aft with the coupling)'
     - id: M-DECK-NOSE
       part: YK250-CH-022
       name: avionics deck
@@ -8007,13 +8008,18 @@ layout:
       process: prepreg_ooa_vacbag
       layup: null
       thickness_m: 0.002
-      lands: [ST-FS1110, ST-FS1330, M-TURRETWALL]
-      notes: 'fix round 1 (VPK-08): flush skin insert 264 x 250 mm, CFRP solid laminate 2.0 mm (10 plies PW, prepreg_ooa_vacbag;
-        fix round 3 PK3-08), landing on the outward caps of FS1110 / FS1330 and the side land doublers (M-TURRETWALL.side_land);
-        the fastener rows lie >= 17 mm from the interchangeable E180 ring''s 0.19 m opening (YK250-SH-364) and >= 30 mm
-        from the HD59 opening (ball radius + payload.turret.bay.aperture_ring.radial_clearance); the ring land (2.0 mm insert
-        + 1.6 mm flange) stays within the 5.8 mm skin thickness and the inserts are flush, so nothing protrudes into the
-        band of the sliding doors (layout.mechanisms.door_outlines.turret_door_R/L)'
+      outline: [[1.0946, -0.125], [1.3584, -0.125], [1.3584, 0.125], [1.0946, 0.125], [1.0946, 0.04], [1.1055, 0.04], [
+          1.1055, -0.04], [1.0946, -0.04]]
+      lands: [ST-FS1110, ST-FS1330, M-TURRETWALL, M-KEELWALL]
+      notes: 'integration round (IR-01): forward edge notched over the keel slot (|y| < 0.04) back to x 1.1055, 1 mm aft
+        of the nose-door aft edge (the doors'' edge band lies on the trimmed FS1110 forward cap there; the notch sides land
+        on the keel-wall foot flanges); fix round 1 (VPK-08): flush skin insert {(xr1 - xr0) * 1000:.0f} x {2 * RING_Y *
+        1000:.0f} mm, CFRP solid laminate 2.0 mm (10 plies PW, prepreg_ooa_vacbag; fix round 3 PK3-08), landing on the outward
+        caps of FS1110 / FS1330 and the side land doublers (M-TURRETWALL.side_land); the fastener rows lie >= 17 mm from
+        the interchangeable E180 ring''s 0.19 m opening (YK250-SH-364) and >= 30 mm from the HD59 opening (ball radius +
+        payload.turret.bay.aperture_ring.radial_clearance); the ring land (2.0 mm insert + 1.6 mm flange) stays within the
+        5.8 mm skin thickness and the inserts are flush, so nothing protrudes into the band of the sliding doors (layout.mechanisms.door_outlines.turret_door_R/L)'
+      mass_item: turret_lift_mechanism_doors
     - id: P-TDOORACC
       part: YK250-SH-365
       name: turret-door drive access panel (lower skin aft of FS1330)
@@ -9472,7 +9478,7 @@ layout:
         joint: nose_door_R
         thickness: 0.004
         closed_at: lo
-        outline: [[0.62, 0.0005], [1.0936, 0.0005], [1.0936, 0.039], [0.62, 0.039]]
+        outline: [[0.62, 0.0005], [1.1045, 0.0005], [1.1045, 0.039], [0.62, 0.039]]
         hinge:
           stations: [[0.7, 0.746], [1.0626, 1.0851]]
           pin_d: 0.003
@@ -9481,8 +9487,9 @@ layout:
             bolted through the keel wall, the aft door knuckle carries the drive horn (GD-08); skin cove of cove_r round
             the hinge axis over each station (shell owner)
         text: 'clamshell door hinged at the keel-slot edge (y = slot half width), meets its partner on the centre line;
-          fix round 3 (PK3-02): aft edge 1 mm ahead of the turret ring insert P-TURRETRING, its 12 mm edge band on the slot-end
-          sill M-NGSILL (the ring lands on the FS1110 cap)'
+          fix round 3 (PK3-02) / integration round (IR-01): aft edge 1 mm ahead of the notch of the turret ring insert P-TURRETRING
+          over the keel slot, its 12 mm edge band on the slot-end sill M-NGSILL and the FS1110 forward cap (trimmed back
+          in the slot to clear the door coupling, which sits >= 12 mm aft of the nose-tyre swing)'
       turret_door_R:
         joint: turret_door_R
         thickness: 0.004
@@ -10297,32 +10304,36 @@ layout:
       mass_item: fuel_system_3_cells
     - id: EQ-DOORACT
       part: YK250-FC-676
-      name: main inner-door actuator Volz DA 22 (28 V)
-      name_tr: iç kapak eyleyicisi DA 22
+      name: main inner-door actuator Volz DA 30 (28 V)
+      name_tr: iç kapak eyleyicisi DA 30
       group: gear
-      box: [[3.1008, 0.03, -0.1551], [3.1256, 0.0959, -0.1122]]
+      box: [[3.1012, 0.0184, -0.1494], [3.2614, 0.1034, -0.1086]]
       mirror: true
-      mass_kg: 0.132
+      mass_kg: 0.63
       mount:
         zone: aft face of FS-GEAR
         tray: YK250-CH-011
-      source: 'mass.rules.gear_doors.inner_door_actuator (components.yaml volz_da22_28v 41.5 x 65.9 x 22 mm, 0.132 kg);
-        gear detail round (GD-05): case on a wedge plate on the aft face of FS-GEAR, output shaft parallel to the inner-door
-        hinge line through the bearing housing in C-DOORSHAFT, crank + link in the well to the horn at the aft end of the
-        door, over-centre lock in the closed position (structures G-DOOR-LOCK / G-DOOR-DRIVE); drives the inner door only
-        (opens, holds, reverses to close); the trunnion door has its own micro gearmotor (GD-07)'
+      source: 'integration round (IR-02): components.yaml volz_da30 (158.5 x 85 x 30 mm with the D-Sub connector, 0.630
+        kg, 8.0 N m rated, travel +-85 deg) replaces the DA 22 of mass.rules.gear_doors.inner_door_actuator (structures
+        G-DOOR-DRIVE: door work 14.0 J > DA 22 rated torque x crank travel); gear detail round (GD-05): flange on a wedge
+        plate on the aft face of FS-GEAR (4 x M4 through the 77 x 18 mm lug pattern into potted inserts, no hole into the
+        fuel bay), output shaft parallel to the inner-door hinge line through the bearing housing in C-DOORSHAFT, crank
+        + link in the well to the horn at the aft end of the door, over-centre lock in the closed position (structures G-DOOR-LOCK
+        / G-DOOR-DRIVE); drives the inner door only (opens, holds, reverses to close); the trunnion door has its own micro
+        gearmotor (GD-07)'
       shaft:
         point: [3.0795, 0.044, -0.136]
         axis: [0.997632, 0.0, 0.068785]
+        crank_travel_deg: 131.0
         text: crank axis in the drive plane x 3.0795 (the bearing housing on the forward face of FS-GEAR carries it; the
-          DA 22 spline drives it through a splined coupling)
+          DA 30 spline drives it through a splined coupling)
       mass_item: gear_doors_wells_locks_sensors
     - id: EQ-NDOORACT
       part: YK250-LG-678
       name: nose-door actuator Volz DA 22 (28 V), drives both clamshell doors
       name_tr: burun kapağı eyleyicisi DA 22 (iki kapak)
       group: gear
-      box: [[1.0454, -0.1003, -0.1299], [1.0731, -0.0587, -0.0623]]
+      box: [[1.0454, -0.1003, -0.1287], [1.0731, -0.0587, -0.0611]]
       mass_kg: 0.132
       mount:
         zone: aft lower corner of the port avionics side bay, through the cut-out of the side-bay tray
@@ -10332,11 +10343,12 @@ layout:
         0.132 kg; mass.rules.gear_doors.inner_door_actuator count 3 = 2 main + 1 nose); gear detail round (GD-08): output
         parallel to the door hinge axes, crank + drive link through a window in the port keel wall to the drive arm of the
         port coupling horn (over-centre lock with the doors closed; all door-level parts aft of the nose-tyre swing, x >=
-        1.068); the starboard door is coupled as an exact mirror through two horns, two links and a vertically guided slide
-        bar on the centre line (NDOOR-LINKAGE)'
+        1.0815, the slot-crossing coupling >= 12 mm aft of it, x >= 1.0840: integration round IR-01); the starboard door
+        is coupled as an exact mirror through two horns, two links and a vertically guided slide bar on the centre line
+        (NDOOR-LINKAGE)'
       mass_item: gear_doors_wells_locks_sensors
       shaft:
-        point: [1.0695, -0.0795, -0.116]
+        point: [1.083, -0.0795, -0.116]
         axis: [0.996145, 0.0, -0.08772]
         roll_deg: 0.0
         text: crank axis in the drive plane (parallel to the door hinge axes); case rolled about it (roll_deg, from the
@@ -10344,7 +10356,7 @@ layout:
       drive_envelope:
         id: NDOOR-LINKAGE
         part: YK250-LG-679
-        box: [[1.0705, -0.0415, -0.1715], [1.086, 0.0415, -0.075]]
+        box: [[1.084, -0.0415, -0.1715], [1.0995, 0.0415, -0.075]]
         text: swept envelope of the door coupling above the doors (two links, slide bar and its guide plate on the keel
           walls) over the door travel, between the keel walls, aft of the stowed nose tyre and above the slot-end sill;
           the horns are bonded on the doors
@@ -10949,11 +10961,13 @@ layout:
     name: aft-cell sump drain (collector)
     name_tr: arka hücre sump boşaltma hattı
     diameter: 0.008
-    path: [[3.018, -0.05, -0.049], [3.0912, -0.05, -0.048], [3.1452, -0.07, -0.06], [3.1452, -0.07, -0.1755]]
+    path: [[3.018, -0.05, -0.049], [3.0912, -0.05, -0.048], [3.1452, -0.07, -0.06], [3.1452, -0.118, -0.09], [3.1452, -0.118,
+        -0.1755]]
     penetrations: []
     text: 'fix round 3 (PK3-01): drain fitting at the bottom of the aft-cell collector (the low point of the feed cell,
       into which the forward and saddle cells drain) through FS-GEAR C-FUEL-DRN (sealed union) to a flush quick-drain valve
-      in the aft equipment hatch P-AFTHATCH'
+      in the aft equipment hatch P-AFTHATCH; integration round (IR-02): falls outboard over the port inner-door DA 30 case
+      to y -0.118'
     end_fitting: skin
     role: drain
   - id: FL-DRAIN
@@ -10961,9 +10975,10 @@ layout:
     name: gascolator / filter drain
     name_tr: filtre boşaltma hattı
     diameter: 0.008
-    path: [[3.1552, 0.06, -0.066], [3.1552, 0.06, -0.1739]]
+    path: [[3.1552, 0.07, -0.066], [3.1552, 0.07, -0.084], [3.1552, 0.118, -0.094], [3.1552, 0.118, -0.1738]]
     penetrations: []
-    text: drain valve flush with the aft equipment hatch P-AFTHATCH
+    text: 'drain valve flush with the aft equipment hatch P-AFTHATCH; integration round (IR-02): gascolator bowl at y 0.070,
+      the drain line falls outboard over the inner-door DA 30 case to y 0.118'
     end_fitting: skin
     role: drain
   fuel_system:
@@ -11198,7 +11213,7 @@ layout:
       position_sizing_phase: [1.8253, 0.0, -0.05]
     wiring_harness_connectors_coax:
       mode: absolute
-      position: [2.3004, -0.0166, 0.0151]
+      position: [2.3012, -0.0166, 0.0152]
       basis: cables 70 % (estimate) by trunk length x diameter^2 (layout.systems.harness) + outer-panel harnesses; connectors,
         backshells and coax terminations 30 % (estimate) equally over the connection points of the layout (equipment, actuators,
         antennas, lights, gear EMAs)
@@ -11226,7 +11241,7 @@ layout:
         at: [2.8707, 0.0, 0.076]
       - what: connectors at 53 connection points
         fraction: 0.3
-        at: [1.8575, 0.0, 0.0519]
+        at: [1.8601, 0.0, 0.0521]
       position_sizing_phase: [1.9, 0.0, 0.0]
     flight_termination_lights:
       mode: absolute
@@ -11544,7 +11559,7 @@ layout:
       position_sizing_phase: [0.8443, 0.0, -0.1244]
     gear_doors_wells_locks_sensors:
       mode: absolute
-      position: [2.3668, -0.0057, -0.1392]
+      position: [2.3771, -0.0057, -0.1385]
       basis: sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout door
         outlines (closed), well centres and door drives
       components:
@@ -11556,7 +11571,7 @@ layout:
         at: [2.9758, 0.0, -0.1929]
       - what: nose clamshell doors
         fraction: 0.0414
-        at: [0.8568, 0.0, -0.1939]
+        at: [0.8622, 0.0, -0.1943]
       - what: close-outs, reinforcement, locks/sensors (main wells, 2/3)
         fraction: 0.311
         at: [2.9758, 0.0, -0.1309]
@@ -11565,16 +11580,16 @@ layout:
         at: [0.851, 0.0, -0.0922]
       - what: main inner-door DA 22 + linkages (EQ-DOORACT)
         fraction: 0.1446
-        at: [3.1132, 0.0, -0.1336]
+        at: [3.1813, 0.0, -0.129]
       - what: leg-door brackets
         fraction: 0.0336
         at: [2.9758, 0.0, -0.2]
       - what: nose-door DA 22 + crank/pushrod (EQ-NDOORACT)
         fraction: 0.0723
-        at: [1.0593, -0.0795, -0.0961]
+        at: [1.0593, -0.0795, -0.0949]
       - what: nose-door bellcrank, links and horns (NDOOR-LINKAGE)
         fraction: 0.021
-        at: [1.0783, 0.0, -0.1232]
+        at: [1.0917, 0.0, -0.1232]
       - what: door seals (main)
         fraction: 0.027
         at: [2.9758, 0.0, -0.1309]

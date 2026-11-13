@@ -3179,20 +3179,28 @@ def check_gear(c: Ctx, R: Rows) -> dict:
     cs_md_tr = (f"ana iç kapak V_LO {dec(V_LO, 1)} m/s EAS'te işletilir: emme |Cp| 1,0 x q {q_LO:.0f} Pa (üst sınır), "
                 f"{dec(A_in, 4)} m2 + n 2'de kapak ağırlığı ({dec(m_door, 3)} kg): menteşe momenti "
                 f"{dec(H_in_lo + H_in_w, 2)} N m (limit); krank oranı 1,0 (mekanik avantaj sayılmadı)")
-    # the |Cp| 1.0 pressure bound is constant over the stroke, so the door work 1.5 H x 95 deg must come from the
-    # actuator whatever the linkage ratio: compare with the rated torque x 180 deg of output rotation
-    W_req = 1.5 * (H_in_lo + H_in_w) * a_in_rad
-    W_da22 = da22 * math.pi
-    R.info("G-DOOR-DRIVE", "gear", "main inner-door drive (EQ-DOORACT, inner door only; fix round 3, PK3-07): required "
-           f"ultimate hinge moment at the |Cp| 1.0 pressure bound; door work {W_req:.1f} J vs DA 22 rated torque x 180 "
-           f"deg = {W_da22:.1f} J - no linkage ratio closes it: OPEN ITEM (belly pressure at V_LO or a DA 26-class "
-           "drive)", "ana iç kapak tahriki (EQ-DOORACT, yalnız iç kapak; düzeltme turu 3, PK3-07): |Cp| 1,0 basınç üst "
-           f"sınırında gerekli nihai menteşe momenti; kapak işi {dec(W_req, 1)} J / DA 22 anma torku x 180 derece = "
-           f"{dec(W_da22, 1)} J - hiçbir bağlantı oranı kapatmaz: AÇIK KONU (V_LO'da gövde altı basıncı ya da DA 26 "
-           "sınıfı tahrik)", cs_md, cs_md_tr, 1.5 * (H_in_lo + H_in_w), "N m",
-           f"DA 22 rated torque {da22} N m (components.yaml); the closed door is held by the over-centre lock "
-           "(G-DOOR-LOCK)", part="EQ-DOORACT")
-    res_door = {"H_req_ult": 1.5 * (H_in_lo + H_in_w), "W_req": W_req, "W_da22": W_da22, "T_da22": da22}
+    # the |Cp| 1.0 pressure bound is constant over the stroke, so the door work H x 95 deg (x FoS 1.5) must come from
+    # the actuator whatever the linkage ratio: compare with the rated torque x the crank travel of the drive
+    # (integration round IR-02: Volz DA 30 instead of the DA 22, layout EQ-DOORACT shaft.crank_travel_deg)
+    eqd = next(e for e in S["layout"]["systems"]["equipment"] if e["id"] == "EQ-DOORACT")
+    ca_items = research_value("components", "categories.control_surface_actuators.items")
+    da30 = float(next(i for i in ca_items if i["id"] == "volz_da30")["torque_rated_Nm"]["value"])
+    trav = math.radians(float(eqd["shaft"]["crank_travel_deg"]))
+    W_lim = (H_in_lo + H_in_w) * a_in_rad
+    W_req = 1.5 * W_lim
+    W_da22 = da22 * trav
+    W_act = da30 * trav
+    R.add("G-DOOR-DRIVE", "gear", "main inner-door drive Volz DA 30 (EQ-DOORACT, inner door only; fix round 3 PK3-07, "
+          f"integration round IR-02): door work at the |Cp| 1.0 pressure bound over 95 deg vs DA 30 rated torque {da30:g} "
+          f"N m x crank travel {math.degrees(trav):.0f} deg = {W_act:.1f} J (the DA 22 gave {W_da22:.1f} J)",
+          "ana iç kapak tahriki Volz DA 30 (EQ-DOORACT, yalnız iç kapak; düzeltme turu 3 PK3-07, entegrasyon turu IR-02): "
+          f"|Cp| 1,0 basınç üst sınırında 95 derecelik kapak işi / DA 30 anma torku {dec(da30, 1)} N m x krank hareketi "
+          f"{math.degrees(trav):.0f} derece = {dec(W_act, 1)} J (DA 22: {dec(W_da22, 1)} J)", cs_md, cs_md_tr, W_lim,
+          W_act, "J", dict(total_factor(c), text="FoS 1.5 (functional)"),
+          "components.yaml volz_da30 rated torque (continuous duty at rated speed); the closed door is held by the "
+          "over-centre lock (G-DOOR-LOCK)", part="EQ-DOORACT")
+    res_door = {"H_req_ult": 1.5 * (H_in_lo + H_in_w), "W_req": W_req, "W_da22": W_da22, "T_da22": da22,
+                "W_act": W_act, "T_act": da30, "travel_deg": math.degrees(trav)}
     V_td = np.asarray(S["layout"]["mechanisms"]["door_outlines"]["main_trunnion_door_R"]["outline"], float)
     w_td = float(V_td[:, 1].max() - V_td[:, 1].min())
     A_td = float(V_td[:, 0].max() - V_td[:, 0].min()) * w_td
@@ -4750,20 +4758,9 @@ def open_items(res: dict) -> list:
     core_txt = ", ".join(f"{r['id']} MS {r['ms']:.3f} (retention >= {1.0 / (1.0 + r['ms']):.2f})" for r in core_rows)
     core_txt_tr = ", ".join(f"{r['id']} MS {dec(r['ms'], 3)} (koruma >= {dec(1.0 / (1.0 + r['ms']), 2)})"
                             for r in core_rows)
-    dd = (res.get("gear") or {}).get("inner_door_drive") or {}
-    door_item = [] if not dd else [(
-        f"main inner-door drive (fix round 3, PK3-07): at the |Cp| 1.0 pressure bound the door needs "
-        f"{dd['H_req_ult']:.1f} N m ultimate over its 95 deg stroke ({dd['W_req']:.1f} J of work) while a DA 22 gives "
-        f"{dd['T_da22']:.1f} N m rated ({dd['W_da22']:.1f} J over 180 deg): no linkage ratio closes this. Either the belly "
-        "pressure at V_LO is established (CFD / flight test; the lower surface is mostly a pressure side) and shown to "
-        "be below about a third of the bound, or the two main inner doors get a DA 26-class drive (+0.28 kg, which the "
-        "mass budget margin does not hold today); the trunnion doors are leg-driven (no actuator)",
-        f"ana iç kapak tahriki (düzeltme turu 3, PK3-07): |Cp| 1,0 basınç üst sınırında kapak 95 derecelik stroku "
-        f"boyunca {dec(dd['H_req_ult'], 1)} N m nihai moment ({dec(dd['W_req'], 1)} J iş) ister; DA 22 anma torku "
-        f"{dec(dd['T_da22'], 1)} N m ({dec(dd['W_da22'], 1)} J, 180 derecede): hiçbir bağlantı oranı bunu kapatmaz. Ya "
-        "V_LO'da gövde altı basıncı (HAD / uçuş testi; alt yüzey çoğunlukla basınç tarafıdır) belirlenip üst sınırın "
-        "yaklaşık üçte birinin altında gösterilmeli ya da iki ana iç kapağa DA 26 sınıfı tahrik verilmeli (+0,28 kg; "
-        "kütle bütçesi payı bugün bunu taşımıyor); mafsal kapakları bacakla tahriklidir (eyleyici yok)")]
+    # integration round (IR-02): the main inner-door drive open item (DA 22 work deficit) is closed by the DA 30
+    # (structures row G-DOOR-DRIVE, a margin row now)
+    door_item = []
     return door_item + [
         ("sandwich core allowables (ROHACELL 51 / 71 WF: Ec, Gc, Fsu, Fcu) are room-temperature manufacturer minimum "
          "values (materials.yaml has no temperature data) while the faces use MTM45-1 ETW B-basis: the core-governed "

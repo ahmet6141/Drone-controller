@@ -1337,13 +1337,15 @@ NG_RH, NG_AL, NG_RC = 0.033, math.radians(116.0), 0.0341   # nose drag-link horn
 #                                                            (x, z)), crank radius; folded toggle with the gear down
 NG_Y = {"horn": (-0.01025, -0.00525), "link": (-0.0050, 0.0000), "crank": (0.00025, 0.00475)}
 NG_PIN, NG_EYE = 0.006, 0.0122                         # pins d 6 (heat-treated, gear-unit requirement G-NLOCK)
-ND_XP, ND_RC, ND_QREL = 1.07275, 0.0169, (0.0062, 0.0171)  # nose-door drive: link plane (port hinge point), crank
+ND_XP, ND_RC, ND_QREL = 1.08625, 0.0169, (0.0062, 0.0171)  # nose-door drive: link plane (port hinge point), crank
 #                                     radius, drive pin on the port coupling horn rel. the port hinge (inboard, up; closed)
-NC_XP, NC_B, NC_BETA, NC_ZC0 = 1.073, 0.028, math.radians(160.0), -0.130   # coupling plane x, horn radius / angle
+NC_XP, NC_B, NC_BETA, NC_ZC0 = 1.0865, 0.028, math.radians(160.0), -0.130   # coupling plane x, horn radius / angle
 #                                                                            (starboard), slide-bar pin z (closed)
-NC_X = {"horn_L": (1.0680, 1.0710), "horn_R": (1.0680, 1.0710), "crank": (1.0680, 1.0710),
-        "link_R": (1.07125, 1.07425), "dlink": (1.07125, 1.07425), "link_L": (1.0745, 1.0775),
-        "bar": (1.07775, 1.08175), "guide": (1.0820, 1.0860)}   # all door-level parts aft of the tyre swing (x 1.0713)
+NC_X = {"horn_L": (1.0815, 1.0845), "horn_R": (1.0815, 1.0845), "crank": (1.0815, 1.0845),
+        "link_R": (1.08475, 1.08775), "dlink": (1.08475, 1.08775), "link_L": (1.0880, 1.0910),
+        "bar": (1.09125, 1.09525), "guide": (1.0955, 1.0995)}   # integration round (IR-01): the stack 13.5 mm aft:
+#                                     every slot-crossing part >= 12 mm aft of the tyre swing (x 1.0714), the horns
+#                                     10 mm; the links swing out through the slot ahead of the sill / FS1110 cap (1.0915)
 NC_PIN, NC_EYE, NC_GP = 0.003, 0.0062, (0.010, 0.020)  # coupling pins d 3, eyes r 6, bar guide pins d 3 above the bar pin
 ND_PIN, ND_EYE = 0.003, 0.0062
 
@@ -1353,7 +1355,7 @@ def _seq_bounds(vals, pad=1e-6):
 
 
 class InnerDoorDrive:
-    """GD-05: DA 22 on the aft face of FS-GEAR, shaft parallel to the inner-door hinge line through a bearing housing
+    """GD-05 / IR-02: Volz DA 30 on the aft face of FS-GEAR, shaft parallel to the inner-door hinge line through a bearing housing
     in C-DOORSHAFT; crank 686 + link 687 to the horn 688 bonded at the aft end of the door; folded toggle with the
     door closed (over-centre lock)."""
 
@@ -1368,7 +1370,9 @@ class InnerDoorDrive:
                           math.copysign(1.0, float(Dr.a_i @ u)), ID_FOLD, d_max)
         self.m = Mech(fb, lambda st: st["main_inner_door_R"], 0.0, d_max)
         lo, hi = np.asarray(eq["box"][0], float), np.asarray(eq["box"][1], float)
-        self.t_case = (lo[0] - self.Cp[0] + 0.02075 * abs(u[2])) / u[0]   # DA 22 case forward face along u
+        e2 = np.cross(u, np.array([0.0, 1.0, 0.0]))
+        c_lo = -0.5 * DA30["W"] if e2[0] > 0 else 0.5 * DA30["W"]
+        self.t_case = (lo[0] - self.Cp[0] - c_lo * e2[0]) / u[0]   # DA 30 flange face along u (layout box min x)
         self.e1 = np.array([0.0, 1.0, 0.0])
         self.e2 = np.cross(u, self.e1)
         self.R = np.column_stack([u, self.e1, self.e2])
@@ -1399,18 +1403,32 @@ class InnerDoorDrive:
         return _clean(_plate(poly, fb.p0, fb.e1, fb.e2, t0, t1))
 
     def case(self) -> G.Mesh:
-        """676: DA 22 case (41.5 x 65.9 x 22, datasheet) on its tilted axes, two top ears, spline bore."""
+        """676: Volz DA 30 (datasheet envelope 158.5 x 85 x 30 mm incl. the D-Sub, flange 85 x 30 with the 77 x 18 mm
+        lug pattern, output 21.6 mm from the hole line, centred in the 30 mm width; integration round IR-02) on its
+        tilted axes: flange face on the wedge plate, body aft along the shaft, spline bore in the flange face."""
         tc = self.t_case
-        body = G.box((0.022, 0.0659, 0.0415), center=self.at(tc + 0.011, 0.5 * 0.0659 - 0.014, 0.0), R=self.R)
-        ears = [G.box((0.003, 0.0135, 0.0145), center=self.at(tc + 0.0015, b, 0.02075 + 0.00625), R=self.R)
-                for b in DA_EAR_B]
+        L_, H_, W_ = DA30["L"], DA30["H"], DA30["W"]
+        cb = 0.5 * H_ - DA30["shaft_from_edge"]            # 85 mm side outboard along e1 (y), 30 mm along e2
+        flange = G.box((DA30["flange_t"], H_, W_), center=self.at(tc + 0.5 * DA30["flange_t"], cb, 0.0), R=self.R)
+        body = G.box((L_ - DA30["flange_t"], H_ - 0.020, W_ - 0.002),
+                     center=self.at(tc + 0.5 * (L_ + DA30["flange_t"]), cb, 0.0), R=self.R)
+        holes = [G.cylinder(0.5 * DA30["hole_d"], self.at(tc - 0.001, b, c), self.at(tc + DA30["flange_t"] + 0.001, b, c),
+                            n=16) for b, c in self.lug_bc()]
         bore = G.cylinder(0.00405, self.at(tc - 0.001), self.at(tc + 0.0105), n=32)
-        return _clean(G.difference(G.union([body] + ears), [bore]))
+        return _clean(G.difference(G.union([flange, body]), [bore] + holes))
+
+    def lug_bc(self):
+        """(b, c) of the four lug holes in the flange: 77 mm along the 85 mm side (e1, 4 mm inset), 18 mm across the
+        30 mm side (e2), the near row 21.6 mm from the output axis (datasheet)."""
+        b0 = -DA30["axis_from_holes"]
+        return [(b, sc * 0.5 * DA30["holes"][1]) for sc in (-1, 1) for b in (b0, b0 + DA30["holes"][0])]
 
     def plate(self) -> G.Mesh:
-        """685: wedge plate between the aft face of FS-GEAR and the tilted case face (3.6 mm at the shaft)."""
+        """685: wedge plate between the aft face of FS-GEAR and the tilted flange face (3.6 mm at the shaft), the
+        flange footprint 85 x 30 mm."""
         tc = self.t_case
-        pts = [self.at(tc, b, c) for b in (-0.016, 0.0539) for c in (-0.02075, 0.02075 + 0.0135)]
+        pts = [self.at(tc, b, c) for b in (-DA30["shaft_from_edge"], DA30["H"] - DA30["shaft_from_edge"])
+               for c in (-0.5 * DA30["W"], 0.5 * DA30["W"])]
         P = np.array(pts)
         Pf = P.copy()
         Pf[:, 0] = self.xf1
@@ -1418,7 +1436,8 @@ class InnerDoorDrive:
         return G.difference(m, [G.cylinder(0.0045, self.at(tc - 0.02), self.at(tc + 0.001), n=32)])
 
     def ear_bolts(self):
-        return [self.at(self.t_case + 0.003, b, 0.02075 + 0.006) for b in DA_EAR_B]
+        """Lug-bolt head points (M4 through the flange and the wedge plate into the frame inserts)."""
+        return [self.at(self.t_case + DA30["flange_t"], b, c) for b, c in self.lug_bc()]
 
     def housing(self) -> G.Mesh:
         """689: flanged bearing housing (7075) on the forward face of FS-GEAR, spigot in C-DOORSHAFT, two sealed
@@ -1435,7 +1454,10 @@ class InnerDoorDrive:
         return [np.array([self.xf0 - 0.003, y + dy, z]) for dy in (-0.0175, 0.0175)]
 
 
-DA_EAR_B = (-0.006, 0.044)          # DA 22 top ears along the case (e1), M3 into the frame inserts
+DA30 = dict(L=0.1585, H=0.085, W=0.030, holes=(0.077, 0.018), axis_from_holes=0.0216, hole_d=0.0041,
+            shaft_from_edge=0.0256, flange_t=0.008, mass=0.630)
+#   Volz DA 30 (components.yaml volz_da30: envelope incl. D-Sub, lug pattern 77 x 18 mm, d 4.1, output 21.6 mm from
+#   the hole line; flange thickness 8 mm read from the drawing 7.1/7.2 (estimate)); inner-door drive, IR-02
 HS_YZ = (0.044, -0.135)             # bearing housing centre on the forward face of FS-GEAR (C-DOORSHAFT centre)
 
 
@@ -1567,8 +1589,9 @@ class NoseDoorDrive:
     link 696 through the port keel-wall window W-NDOOR-LINK to the drive arm of the port coupling horn 698-L (folded
     toggle with the doors closed = over-centre lock). Coupling: horns 698-R/L, links 699-R/L to the slide bar 700
     guided by two pins in the slot of the guide plate 701 (bolted to both keel walls): the starboard door follows the
-    port door as its exact mirror. Every door-level part lies aft of the nose-tyre swing (x >= 1.068) and ahead of the
-    slot-end sill (x < 1.0806)."""
+    port door as its exact mirror. Integration round (IR-01): every door-level part lies aft of the nose-tyre swing
+    (horns x >= 1.0815, the slot-crossing links, slide bar and guide >= 12 mm aft of it, x >= 1.0848) and the parts
+    that swing out through the slot ahead of the slot-end sill / trimmed FS1110 forward cap (x < 1.0915)."""
 
     def __init__(self, C: Ctx, ND: "NoseDoors"):
         self.C, self.ND = C, ND
@@ -1593,7 +1616,7 @@ class NoseDoorDrive:
         self.e1 = math.cos(ph) * e1_ + math.sin(ph) * e2_
         self.e2 = -math.sin(ph) * e1_ + math.cos(ph) * e2_
         self.R = np.column_stack([u, self.e1, self.e2])
-        self.t_case = (-0.0230, -0.0010)               # layout EQ-NDOORACT: case ahead of the crank plane
+        self.t_case = NDA_CASE_T                       # layout EQ-NDOORACT: case ahead of the crank plane
         # coupling (planar in the plane normal to u; both door axes are parallel to u)
         oR = np.asarray(jr["origin"], float)
         zax = oR[2] + (NC_XP - oR[0]) / u[0] * u[2]
@@ -1743,6 +1766,8 @@ class NoseDoorDrive:
 
 NDA_TRAY_Z = -0.089                 # side-bay tray top face (TR-SIDEBAY-L)
 NDA_EAR_X = (1.0480, 1.0720)        # nose-door DA 22 outboard ear on the side-bay tray (outboard of its cut-out)
+NDA_CASE_T = (-0.0365, -0.0145)     # DA 22 case along u from the crank plane (layout b_systems.NDA_CASE_T): the case
+#                                     stays under P-SIDEBAY-L, a 13.5 mm splined extension carries the crank aft (IR-01)
 NDA_EAR_OUT = 0.0140                # ear length beyond the tray cut-out (M3 nutplates, 7.5 mm composite edge distance)
 NC_GUIDE_ZB = -0.1700               # guide plate lower edge (above the slot-end sill)
 SIDE_EN, SIDE_TR = {"R": "starboard", "L": "port"}, {"R": "sağ", "L": "sol"}
@@ -2108,13 +2133,15 @@ class Build:
         self.add(pid(685), "inner-door actuator wedge plate (7075-T651), starboard",
                  "iç kapak eyleyicisi kama plakası (7075-T651), sağ", M7075, P_CNC, I.plate, thickness=0.0036,
                  parent=fr, contacts=(fr,), step=STEP_DOOR, explode=(0.1, 0.0, 0.0),
-                 notes="on the aft face of FS-GEAR (potted inserts): tilts the DA 22 so that its output is parallel to "
-                       "the inner-door hinge line (3.9 deg)")
-        self.add(C.pid(676, "R", "FC"), "main inner-door actuator Volz DA 22 (28 V), starboard",
-                 "ana iç kapak eyleyicisi Volz DA 22 (28 V), sağ", P_BUY, P_BUY, I.case, purchased=True,
-                 vendor="Volz DA 22-30-4128 (28 V, long case) 41.5 x 65.9 x 22 mm, 0.132 kg (datasheet)",
-                 mass_kg=0.132, parent=pid(685), contacts=(pid(685),), step=STEP_DOOR, explode=(0.12, 0.0, 0.0),
-                 notes="layout EQ-DOORACT (GD-05): 2 x M3 through the top ears and the wedge plate into the frame "
+                 notes="on the aft face of FS-GEAR (potted inserts): tilts the DA 30 so that its output is parallel to "
+                       "the inner-door hinge line (3.9 deg); 85 x 30 mm flange footprint (integration round IR-02)")
+        self.add(C.pid(676, "R", "FC"), "main inner-door actuator Volz DA 30 (28 V), starboard",
+                 "ana iç kapak eyleyicisi Volz DA 30 (28 V), sağ", P_BUY, P_BUY, I.case, purchased=True,
+                 vendor="Volz DA 30 (DA 30.30.x, D-Sub) 158.5 x 85 x 30 mm, 0.630 kg, 8.0 N m rated, travel +-85 deg "
+                        "(components.yaml volz_da30, datasheet)",
+                 mass_kg=DA30["mass"], parent=pid(685), contacts=(pid(685),), step=STEP_DOOR, explode=(0.12, 0.0, 0.0),
+                 notes="layout EQ-DOORACT (GD-05, integration round IR-02: DA 30 for the door work of structures "
+                       "G-DOOR-DRIVE): 4 x M4 through the 77 x 18 mm lug pattern and the wedge plate into the frame "
                        "inserts; output spline drives the crank shaft through the bearing housing in C-DOORSHAFT")
         self.add(pid(689), "inner-door drive bearing housing (7075-T651, 2 x 688-2RS bearings), starboard",
                  "iç kapak tahrik yatak yuvası (7075-T651, 2 x 688-2RS rulman), sağ", M7075, P_CNC, I.housing,
@@ -2125,7 +2152,7 @@ class Build:
                  "iç kapak tahrik krankı, d 8 milli (4130 N), sağ", M4130, P_CNC, I.crank, thickness=0.003,
                  joint="main_idoor_crank_R", parent=pid(689), contacts=(pid(689), C.pid(676, "R", "FC")),
                  step=STEP_DOOR, explode=(-0.08, 0.0, 0.0),
-                 notes=f"crank r {ID_RC * 1000:.0f} mm on the DA 22 spline; folded toggle with the door closed "
+                 notes=f"crank r {ID_RC * 1000:.0f} mm on the DA 30 spline; folded toggle with the door closed "
                        "(over-centre lock against the link stop)")
         self.add(pid(687), "inner-door drive link (7075-T651), starboard", "iç kapak tahrik biyeli (7075-T651), sağ",
                  M7075, P_CNC, I.link, thickness=0.003, joint="main_idoor_link_R", parent=pid(686),
@@ -2358,8 +2385,8 @@ class Build:
             pin_through(reg, f"{pid(687)}-{nm}", ID_PIN, mv(p0), mv(p1), ids, step=STEP_DOOR,
                         notes="ISO 2341-B d 4 + split pin; shim washers set the 0.5 mm plane gaps")
         for k, p in enumerate(I.ear_bolts()):
-            te = 0.003 / I.u[0]                                  # ear along x (bolt normal to the frame face)
-            J.bolt(reg, f"{C.pid(676, side, 'FC')}-B{k + 1}", 3, mv(p), (-1.0, 0.0, 0.0), [(C.pid(676, side, "FC"), te),
+            te = DA30["flange_t"] / I.u[0]                       # flange along x (bolt normal to the frame face)
+            J.bolt(reg, f"{C.pid(676, side, 'FC')}-B{k + 1}", 4, mv(p), (-1.0, 0.0, 0.0), [(C.pid(676, side, "FC"), te),
                    (pid(685), p[0] - I.xf1 - te)], nut="insert", insert_part=fr, insert_depth=0.0068, grade="12.9", step=STEP_DOOR,
                    notes="potted insert of the FS-GEAR sandwich (no through-bolts in the fuel-bay bulkhead)")
         for k, p in enumerate(I.housing_bolts()):

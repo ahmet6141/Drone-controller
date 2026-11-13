@@ -204,17 +204,22 @@ def members() -> list:
                     "skins (shear) -> chine longeron (axial) -> frames / wing box side-of-body rib",
                     mirror=True, layup="spar_cap_ud", touch=["ST-*", "M-SOB", "M-DECK-NOSE", "M-WELLROOF",
                                                             "M-FWDDECK", "M-MIDFLOOR", "F-SPINDLE-NODE"]))
-    # fix round 3 (PK3-02): slot-end sill between the keel walls = aft land of the nose clamshell doors, which end
-    # 1 mm ahead of the turret ring insert (b_shell.RING_X: the ring owns the aft part of the FS1110 forward cap); the
-    # sill starts >= 12 mm aft of the nose-tyre swing at the skin line (layout_check C05)
-    xd1 = round(_frame_edge_x(1.1066, -1.0) - 0.009 - 0.001, 4)
+    # fix round 3 (PK3-02): slot-end sill between the keel walls = aft land of the nose clamshell doors; integration
+    # round (IR-01): the doors end at b_shell.NOSE_DOOR_X1 (1 mm ahead of the notch of the turret ring insert over the
+    # keel slot) and the sill lies on the FS1110 forward cap, which is trimmed back in the slot to the sill's forward
+    # edge (chassis._cap_trims) so that the nose-door horns and coupling links (>= 12 mm aft of the nose-tyre swing)
+    # swing through the slot ahead of it
+    from .b_shell import NOSE_DOOR_X1
+    xd1 = round(NOSE_DOOR_X1, 4)
     xs0_ = round(xd1 - 0.013, 4)
     M.append(member("M-NGSILL", "YK250-CH-038", "nose-gear slot-end land strip", "burun takımı yarık sonu kenar şeridi",
                     "fix round 3 (PK3-02): flat CFRP land strip 13 mm wide across the keel slot at its aft end, bonded "
                     "to the forward T-flange of FS1110 and to the two keel-wall lands at the skin line: aft land (12 mm "
                     "edge band) of the nose clamshell doors; flat (2.4 mm) so that the nose-door bellcrank / links "
                     "(NDOOR-LINKAGE, >= 10 mm above the skin) pass over it; the turret ring insert lands on the FS1110 "
-                    "cap 1 mm aft of it; >= 12 mm aft of the nose-tyre swing (layout_check C05)",
+                    "cap 1 mm aft of it; >= 12 mm aft of the nose-tyre swing (layout_check C05); integration round "
+                    "(IR-01): on the FS1110 forward cap (trimmed back to the sill's forward edge in the slot), aft of "
+                    "the door horns and coupling links",
                     "cfrp_pw_mtm45_as4", "prepreg_ooa_vacbag",
                     {"type": "flat strip 13 x 2.4 mm, 12 plies PW", "w": 0.013, "h": 0.0024, "t": 0.0024},
                     {"box": r3([[xs0_, -0.0415, z_bot(xs0_, 0.0415) + SKIN], [xd1, 0.0415,
@@ -233,10 +238,11 @@ def members() -> list:
                     "nose-gear loads -> pivot bushings -> keel walls -> FS0600 / FS1110 + avionics deck -> chine "
                     "longerons", mirror=True, layup="rib_panel",
                     touch=["ST-FS0600", "ST-FS1110", "M-DECK-NOSE", "F-NG-PIVOT", "EQ-*"]))
-    M[-1]["openings"] = [{"id": "W-NDOOR-LINK", "side": "L", "x": [1.0705, 1.0815], "z": [-0.1735, -0.1235],
+    M[-1]["openings"] = [{"id": "W-NDOOR-LINK", "side": "L", "x": [1.0840, 1.0950], "z": [-0.1735, -0.1235],
                           "text": "gear detail round (GD-08): window in the port keel wall for the nose-door drive link "
                                   "(DA 22 crank in the side bay -> drive arm of the port coupling horn); solid laminate "
-                                  "land round it (the wall's aft end, 27 mm ahead of FS1110)"}]
+                                  "land round it (the wall's aft end, 11.6 mm ahead of FS1110; integration round IR-01: "
+                                  "moved 13.5 mm aft with the coupling)"}]
     M.append(member("M-DECK-NOSE", "YK250-CH-022", "avionics deck", "aviyonik güverte",
                     "horizontal deck above the nose-gear well, chine to chine: PDU and power-switching equipment "
                     "tray, roof of the keel slot and of the side bays, upper chord of the nose box",

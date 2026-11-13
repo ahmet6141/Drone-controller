@@ -121,6 +121,8 @@ class Part:
     outline: list = field(default_factory=list)   # mid-surface boundary polylines (k, 3) for edge-distance checks
     color: str = ""                          # display colour key (spec["display"]["colors"])
     notes: str = ""
+    mass_item: str = ""                      # spec["mass"]["items"] name the part is booked to when it differs from
+    #                                          the producer group (analysis/mass.py budget group; e.g. turret mechanism)
     holes: list = field(default_factory=list)  # cutters subtracted from the mesh: (p0, p1, radius) cylinders or Mesh
     _base: Mesh | None = field(default=None, repr=False)
     _mesh: Mesh | None = field(default=None, repr=False)
@@ -316,7 +318,7 @@ def mirror_part(p: Part, new_id: str, joint: str | None = None, id_map: dict[str
                 purchased=p.purchased, vendor=p.vendor, mass_kg=p.mass_kg, side="L" if p.side == "R" else p.side,
                 joint=joint, parent=id_map.get(p.parent, p.parent) if p.parent else None, step=p.step,
                 explode=tuple(mvec(p.explode)), fasteners=fs, contacts=tuple(id_map.get(c, c) for c in p.contacts),
-                outline=[mvec(o) for o in p.outline], color=p.color, notes=p.notes,
+                outline=[mvec(o) for o in p.outline], color=p.color, notes=p.notes, mass_item=p.mass_item,
                 holes=[mhole(h) for h in p.holes])
 
 

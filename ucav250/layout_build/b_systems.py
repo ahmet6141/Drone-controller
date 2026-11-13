@@ -103,14 +103,23 @@ def eq(eid, part, name, name_tr, group, box, mass_kg, mount, source, mirror=Fals
 DOORACT_SHAFT_YZ = (0.044, -0.136)   # inner-door crank axis in the drive plane (gear detail round GD-05, mechanism
 #                                     study docs/detail/gear.md: crank 34 mm, link 78 mm, horn 38 mm, transmission >= 57 deg)
 DOORACT_PLANE_X = 3.0795           # drive plane (link) on the inner-door hinge axis: 8 mm aft of the swept tyre
-DOORACT_SHAFT_END = 0.014          # DA 22 output axis from the inboard end of the 65.9 mm case side (estimate from the
-#                                     Volz DA 22 drawing: output near one end; confirm with the installation drawing)
+DOORACT_SHAFT_END = 0.0256         # integration round (IR-02): Volz DA 30 output axis 25.6 mm from the inboard 30 mm
+#                                     edge of the 85 mm flange (85 mm side along y, 30 mm vertical: the belly rises aft) (datasheet drawing 7.1/7.2: 4 mm hole inset + 21.6 mm from
+#                                     the 77 mm hole line), centred in the 30 mm width; output on the end face, the
+#                                     158.5 mm body (D-Sub version) along the shaft
+DA30_DIMS = (0.1585, 0.085, 0.030)  # components.yaml volz_da30 envelope_dimensions_m (L along the output axis, H, W)
+DOORACT_TRAVEL_DEG = 131.0         # crank travel over the door stroke (gear detail round GD-05 mechanism, gear.py
+#                                     InnerDoorDrive; tests/test_ucav250_gear checks the built mechanism against it)
 
 
 def dooract_main() -> dict:
-    """Gear detail round (GD-05): main inner-door DA 22 on the aft face of FS-GEAR with its output shaft parallel to the
-    inner-door hinge line (planar crank / link / horn drive in the well, over-centre in the closed position); the shaft
-    passes FS-GEAR in a flanged bearing housing (cut-out C-DOORSHAFT)."""
+    """Gear detail round (GD-05) / integration round (IR-02): main inner-door Volz DA 30 on the aft face of FS-GEAR
+    with its output shaft parallel to the inner-door hinge line (planar crank / link / horn drive in the well,
+    over-centre in the closed position); the shaft passes FS-GEAR in a flanged bearing housing (cut-out C-DOORSHAFT).
+    The DA 22 (1.8 N m x 131 deg = 4.1 J) could not deliver the door work at the |Cp| 1.0 bound (structures
+    G-DOOR-DRIVE 14.0 J); the DA 30 (8.0 N m rated x 131 deg = 18.3 J) does. The case stands aft in the aft equipment
+    bay (85 mm side outboard along y, 30 mm vertical: the belly rises 28 mm over the case length), flange on a wedge
+    plate on the frame; the gascolator and aft-cell drains pass outboard of it (FL-DRAIN, FL-DRAIN-A)."""
     from .b_mech import inner_door_hinge_line
     o_d, a_d, _dev = inner_door_hinge_line()
     u = -np.asarray(a_d, float)                                 # mechanism axis, pointing aft
@@ -118,33 +127,44 @@ def dooract_main() -> dict:
     e2 = np.cross(u, e1)
     C = np.array([DOORACT_PLANE_X, DOORACT_SHAFT_YZ[0], 0.0])
     C[2] = DOORACT_SHAFT_YZ[1]
-    x_f = X_GEARF + 0.0070                                     # case forward face (3.6 mm wedge plate on the frame)
+    x_f = X_GEARF + 0.0070                                     # case flange face (3.6 mm wedge plate on the frame)
     t0 = (x_f - C[0]) / u[0]
+    L_, H_, W_ = DA30_DIMS
     pts = []
-    for a in (t0, t0 + 0.022):
-        for b in (-DOORACT_SHAFT_END, 0.0659 - DOORACT_SHAFT_END):
-            for c in (-0.02075, 0.02075):
+    for a in (t0, t0 + L_):
+        for b in (-DOORACT_SHAFT_END, H_ - DOORACT_SHAFT_END):     # 85 mm side outboard (y), 30 mm vertical
+            for c in (-0.5 * W_, 0.5 * W_):
                 pts.append(C + a * u + b * e1 + c * e2)
     P = np.array(pts)
-    return eq("EQ-DOORACT", "YK250-FC-676", "main inner-door actuator Volz DA 22 (28 V)", "iç kapak eyleyicisi DA 22",
-              "gear", [P.min(0).tolist(), P.max(0).tolist()], 0.132, {"zone": "aft face of FS-GEAR", "tray": "YK250-CH-011"},
-              "mass.rules.gear_doors.inner_door_actuator (components.yaml volz_da22_28v 41.5 x 65.9 x 22 mm, 0.132 kg); "
-              "gear detail round (GD-05): case on a wedge plate on the aft face of FS-GEAR, output shaft parallel to the "
-              "inner-door hinge line through the bearing housing in C-DOORSHAFT, crank + link in the well to the horn at "
-              "the aft end of the door, over-centre lock in the closed position (structures G-DOOR-LOCK / G-DOOR-DRIVE); "
-              "drives the inner door only (opens, holds, reverses to close); the trunnion door has its own micro "
-              "gearmotor (GD-07)", mirror=True,
-              extra={"shaft": {"point": r3(C, 5), "axis": r3(u, 6),
+    return eq("EQ-DOORACT", "YK250-FC-676", "main inner-door actuator Volz DA 30 (28 V)", "iç kapak eyleyicisi DA 30",
+              "gear", [P.min(0).tolist(), P.max(0).tolist()], 0.630, {"zone": "aft face of FS-GEAR", "tray": "YK250-CH-011"},
+              "integration round (IR-02): components.yaml volz_da30 (158.5 x 85 x 30 mm with the D-Sub connector, "
+              "0.630 kg, 8.0 N m rated, travel +-85 deg) replaces the DA 22 of mass.rules.gear_doors.inner_door_actuator "
+              "(structures G-DOOR-DRIVE: door work 14.0 J > DA 22 rated torque x crank travel); gear detail round "
+              "(GD-05): flange on a wedge plate on the aft face of FS-GEAR (4 x M4 through the 77 x 18 mm lug pattern "
+              "into potted inserts, no hole into the fuel bay), output shaft parallel to the inner-door hinge line "
+              "through the bearing housing in C-DOORSHAFT, crank + link in the well to the horn at the aft end of the "
+              "door, over-centre lock in the closed position (structures G-DOOR-LOCK / G-DOOR-DRIVE); drives the inner "
+              "door only (opens, holds, reverses to close); the trunnion door has its own micro gearmotor (GD-07)",
+              mirror=True,
+              extra={"shaft": {"point": r3(C, 5), "axis": r3(u, 6), "crank_travel_deg": DOORACT_TRAVEL_DEG,
                                "text": "crank axis in the drive plane x 3.0795 (the bearing housing on the forward face "
-                                       "of FS-GEAR carries it; the DA 22 spline drives it through a splined coupling)"}})
+                                       "of FS-GEAR carries it; the DA 30 spline drives it through a splined coupling)"}})
 
 
-NDA_PLANE_X = 1.0695                # nose-door drive crank plane (DA 22 crank; drive link and drive arm of the port
+# integration round (IR-01): the whole nose-door drive / coupling stack moved 13.5 mm aft so that every part that
+# crosses the keel slot stays >= 12 mm (landing_gear well clearance) aft of the nose-tyre swing (x <= 1.0714): the
+# coupling envelope starts at x 1.0840; the FS1110 forward cap is trimmed back in the keel slot, the slot-end sill and
+# the door aft edge move onto it and the turret ring insert is notched over the slot (b_shell.NOSE_DOOR_X1)
+NDA_PLANE_X = 1.0830                # nose-door drive crank plane (DA 22 crank; drive link and drive arm of the port
 #                                     coupling horn in the planes behind it, aft of the nose-tyre swing)
 NDA_SHAFT_YZ = (-0.0795, -0.1160)   # DA 22 output axis in that plane (port side bay; mechanism study docs/detail/gear.md)
 NDA_SHAFT_END = 0.014               # output axis from the lower end of the 65.9 mm case side (estimate, as EQ-DOORACT)
 NDA_ROLL_DEG = 0.0                # case roll about the output axis (top towards the keel wall)
-NDA_SLIDE_X = (1.0705, 1.0860)      # (the horns on the doors are part of the door outlines)
+NDA_SLIDE_X = (1.0840, 1.0995)      # (the horns on the doors are part of the door outlines)
+NDA_CASE_T = (-0.0365, -0.0145)     # DA 22 case along the output axis from the crank plane: the case keeps its place
+#                                     under the clear opening of P-SIDEBAY-L (removal downward), a 13.5 mm splined
+#                                     extension shaft carries the crank to the coupling planes (IR-01)
 NDA_SLIDE_Z0 = -0.1715              # above the slot-end sill (z <= -0.1721); symmetric coupling of the two doors
 #                                     (x range on the door axes; >= 10 mm aft of the stowed tyre, ahead of the sill)
 
@@ -166,7 +186,7 @@ def ndooract() -> dict:
     e2 = -math.sin(ph) * e1_ + math.cos(ph) * e2_
     C = np.array([NDA_PLANE_X, NDA_SHAFT_YZ[0], NDA_SHAFT_YZ[1]])
     pts = []
-    for t in (-0.0230, -0.0010):                    # case ahead of the crank, output on its aft face
+    for t in NDA_CASE_T:                            # case ahead of the crank, output on its aft face
         for b in (-0.02075, 0.02075):
             for c in (-NDA_SHAFT_END, 0.0659 - NDA_SHAFT_END):
                 pts.append(C + t * a + b * e1 + c * e2)
@@ -176,7 +196,8 @@ def ndooract() -> dict:
            "volz_da22_28v 41.5 x 65.9 x 22 mm, 0.132 kg; mass.rules.gear_doors.inner_door_actuator count 3 = 2 main + 1 "
            "nose); gear detail round (GD-08): output parallel to the door hinge axes, crank + drive link through a "
            "window in the port keel wall to the drive arm of the port coupling horn (over-centre lock with the doors "
-           "closed; all door-level parts aft of the nose-tyre swing, x >= 1.068); "
+           "closed; all door-level parts aft of the nose-tyre swing, x >= 1.0815, the slot-crossing coupling >= 12 mm aft of "
+           "it, x >= 1.0840: integration round IR-01); "
            "the starboard door is coupled as an exact mirror through two horns, two links and a vertically guided "
            "slide bar on the centre line (NDOOR-LINKAGE)")
     z0 = round(z_bot(1.08, 0.0) + 0.006, 4)
@@ -793,13 +814,16 @@ def fuel_lines() -> list:
           role="drain"),
         L("FL-DRAIN-A", "YK250-FU-593", "aft-cell sump drain (collector)", "arka hücre sump boşaltma hattı", 0.008,
           [[xa[1] - 0.012, -0.050, za0 + 0.003], [xg - 0.004, -0.050, -0.048], [xg + 0.050, -0.070, -0.060],
-           [xg + 0.050, -0.070, round(z_bot(xg + 0.050, 0.070) + 0.010, 4)]], (),
+           [xg + 0.050, -0.118, -0.090], [xg + 0.050, -0.118, round(z_bot(xg + 0.050, 0.118) + 0.010, 4)]], (),
           "fix round 3 (PK3-01): drain fitting at the bottom of the aft-cell collector (the low point of the feed "
           "cell, into which the forward and saddle cells drain) through FS-GEAR C-FUEL-DRN (sealed union) to a flush "
-          "quick-drain valve in the aft equipment hatch P-AFTHATCH", end_fitting="skin", role="drain"),
+          "quick-drain valve in the aft equipment hatch P-AFTHATCH; integration round (IR-02): falls outboard over the "
+          "port inner-door DA 30 case to y -0.118", end_fitting="skin", role="drain"),
         L("FL-DRAIN", "YK250-FU-589", "gascolator / filter drain", "filtre boşaltma hattı", 0.008,
-          [[xg + 0.060, 0.060, -0.066], [xg + 0.060, 0.060, round(z_bot(xg + 0.060, 0.060) + 0.010, 4)]],
-          (), "drain valve flush with the aft equipment hatch P-AFTHATCH", end_fitting="skin", role="drain")]
+          [[xg + 0.060, 0.070, -0.066], [xg + 0.060, 0.070, -0.084], [xg + 0.060, 0.118, -0.094],
+           [xg + 0.060, 0.118, round(z_bot(xg + 0.060, 0.118) + 0.010, 4)]],
+          (), "drain valve flush with the aft equipment hatch P-AFTHATCH; integration round (IR-02): gascolator bowl "
+          "at y 0.070, the drain line falls outboard over the inner-door DA 30 case to y 0.118", end_fitting="skin", role="drain")]
     return out
 
 

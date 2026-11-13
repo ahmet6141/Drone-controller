@@ -316,9 +316,10 @@ def door_outlines() -> dict:
     slot = 0.5 * float(MG["leg_frontal_width"]) + 0.0225
     nw = ZP["nose_gear_well"]["box"]
     xs0, xs1, yh = float(nw[0][0]), float(nw[1][0]), float(nw[1][1])
-    from .b_shell import RING_X
-    xs1 = round(RING_X[0] - 0.001, 4)    # fix round 3 (PK3-02): aft edge on the slot-end sill M-NGSILL (aft of the well
-    #                                       box end), 1 mm ahead of the turret ring insert
+    from .b_shell import NOSE_DOOR_X1
+    xs1 = NOSE_DOOR_X1                   # fix round 3 (PK3-02) / integration round (IR-01): aft edge band on the slot-end
+    #                                       sill M-NGSILL and the trimmed FS1110 forward cap, 1 mm ahead of the notch of the
+    #                                       turret ring insert over the keel slot
     tb = ZP["turret_bay"]["box"]
     tx0, tx1 = float(tb[0][0]) + 0.003, float(tb[1][0]) - 0.003
     out = {
@@ -349,16 +350,17 @@ def door_outlines() -> dict:
                                          f"strip y {Y_LEGDOOR}-{Y_GB} when the gear is up (fix round 2, PK2-03)"},
         "nose_door_R": {"joint": "nose_door_R", "thickness": 0.004, "closed_at": "lo",
                         "outline": r3([[xs0, 0.0005], [xs1, 0.0005], [xs1, yh], [xs0, yh]]),
-                        "hinge": {"stations": [[0.700, 0.746], r3([xs1 - 0.031, xs1 - 0.0085])], "pin_d": 0.003,
+                        "hinge": {"stations": [[0.700, 0.746], [1.0626, 1.0851]], "pin_d": 0.003,
                                   "cove_r": HINGE_COVE_R,
                                   "text": "two stations where neither the yoke nor the tyre passes near the hinge line "
                                           "(layout clearances); blocks bolted through the keel wall, the aft door "
                                           "knuckle carries the drive horn (GD-08); skin cove of cove_r round the hinge "
                                           "axis over each station (shell owner)"},
                         "text": "clamshell door hinged at the keel-slot edge (y = slot half width), meets its "
-                                "partner on the centre line; fix round 3 (PK3-02): aft edge 1 mm ahead of the turret "
-                                "ring insert P-TURRETRING, its 12 mm edge band on the slot-end sill M-NGSILL (the ring "
-                                "lands on the FS1110 cap)"},
+                                "partner on the centre line; fix round 3 (PK3-02) / integration round (IR-01): aft "
+                                "edge 1 mm ahead of the notch of the turret ring insert P-TURRETRING over the keel slot, "
+                                "its 12 mm edge band on the slot-end sill M-NGSILL and the FS1110 forward cap (trimmed back "
+                                "in the slot to clear the door coupling, which sits >= 12 mm aft of the nose-tyre swing)"},
         "turret_door_R": {"joint": "turret_door_R", "thickness": float(TU["bay"]["door_thickness"]),
                           "outline_closed": r3([[tx0, 0.0], [tx1, 0.0], [tx1, 0.105], [tx0, 0.105]]),
                           "travel_along_skin": 0.120,

@@ -5,6 +5,10 @@
 * Consumables (``process == "consumable"``, e.g. fuel contents): scaled per loading case.
 * Loading cases from ``spec.mass.cases``: ``[{name, fuel_fraction, payload: bool, note}]``.
 * Budget cross-check against ``spec.mass.budget``: ``{group: {target_kg, tol_kg}}``.
+* Budget group of a part = the group of the ``spec.mass.items`` entry it is booked to: the part's own ``mass_item``
+  (producer), else the ``mass_item`` of the layout object that names it (``part`` + ``mass_item`` anywhere in
+  ``spec.layout``, e.g. the EFI pump EQ-FUELPUMP in engine_group_installed), else the producer group. Parts booked to a
+  ``spec.mass.payload_items`` entry are payload (left out of the no-payload cases).
 
 CLI:  python3 -m ucav250.analysis.mass   -> out/mass.md, out/mass.json (exit 1 if a budget/CG limit fails)
 """
@@ -21,12 +25,49 @@ from ..core.parts import Part, Registry
 CONSUMABLE = "consumable"
 
 
-def part_props(reg: Registry, p: Part) -> dict:
+def _base_id(pid: str) -> str:
+    return pid[:-2] if pid.endswith(("-R", "-L")) else pid
+
+
+def layout_booking(spec: dict) -> dict:
+    """{part number: mass item} of every layout object that carries both ``part`` and ``mass_item``."""
+    out = {}
+
+    def walk(d):
+        if isinstance(d, dict):
+            if isinstance(d.get("part"), str) and isinstance(d.get("mass_item"), str):
+                out.setdefault(d["part"], d["mass_item"])
+            for v in d.values():
+                walk(v)
+        elif isinstance(d, list):
+            for v in d:
+                walk(v)
+    walk(spec.get("layout", {}) or {})
+    return out
+
+
+def budget_groups(reg: Registry) -> dict:
+    """{part id: (budget group, mass item or '')} (module docstring)."""
+    sm = reg.spec.get("mass", {}) or {}
+    items = {i["name"]: i["group"] for i in sm.get("items", []) or []}
+    items.update({i["name"]: "payload" for i in sm.get("payload_items", []) or []})
+    book = layout_booking(reg.spec)
+    out = {}
+    for pid, p in reg.parts.items():
+        mi = p.mass_item or book.get(pid) or book.get(_base_id(pid)) or ""
+        if mi and mi not in items:
+            raise ValueError(f"{pid}: mass item {mi!r} not in spec.mass.items / payload_items")
+        out[pid] = (items[mi] if mi else p.group, mi)
+    return out
+
+
+def part_props(reg: Registry, p: Part, group: str | None = None) -> dict:
     mesh = p.mesh
     vol_props = mesh.mass_props(1.0)                       # unit density: mass == volume
     m = reg.mass(p)
     k = m / max(vol_props["mass"], 1e-15)
-    return {"id": p.id, "group": p.group, "mass": m, "cg": vol_props["cg"], "inertia": vol_props["inertia"] * k}
+    return {"id": p.id, "group": group or p.group, "mass": m, "cg": vol_props["cg"],
+            "inertia": vol_props["inertia"] * k}
 
 
 def combine(items: list[dict]) -> dict:
@@ -49,7 +90,7 @@ def case_items(reg: Registry, props: dict, case: dict) -> list[dict]:
         p = reg.parts[pid]
         if p.process == CONSUMABLE:
             pr = dict(pr, mass=pr["mass"] * ff, inertia=pr["inertia"] * ff)
-        if p.group == "payload" and not with_payload:
+        if pr["group"] == "payload" and not with_payload:
             continue
         out.append(pr)
     return out
@@ -64,14 +105,18 @@ def mac_fraction(reg: Registry, x_cg: float) -> float | None:
 
 
 def run(reg: Registry, write: bool = True) -> dict:
-    props = {pid: part_props(reg, p) for pid, p in reg.parts.items()}
+    bg = budget_groups(reg)
+    props = {pid: part_props(reg, p, bg[pid][0]) for pid, p in reg.parts.items()}
+    rebooked = sorted(({"id": pid, "producer_group": reg.parts[pid].group, "group": g, "mass_item": mi,
+                        "mass": props[pid]["mass"]} for pid, (g, mi) in bg.items() if g != reg.parts[pid].group),
+                      key=lambda r: r["id"])
     groups = defaultdict(list)
     for pid, pr in props.items():
         if reg.parts[pid].process != CONSUMABLE:
-            groups[reg.parts[pid].group].append(pr)
+            groups[pr["group"]].append(pr)
     by_group = {g: combine(v) for g, v in groups.items()}
     empty = combine([pr for pid, pr in props.items() if reg.parts[pid].process != CONSUMABLE
-                     and reg.parts[pid].group != "payload"])
+                     and pr["group"] != "payload"])
     spec_mass = reg.spec.get("mass", {}) or {}
     cases = spec_mass.get("cases") or [{"name": "mtow", "fuel_fraction": 1.0, "payload": True}]
     res_cases = {}
@@ -101,7 +146,7 @@ def run(reg: Registry, write: bool = True) -> dict:
         failures.append(f"MTOW case {res_cases['mtow']['mass']:.2f} kg exceeds spec mtow {mtow}")
     S = {"parts": len(props), "empty": {"mass": empty["mass"], "cg": empty["cg"].tolist()},
          "by_group": {g: {"mass": v["mass"], "cg": v["cg"].tolist()} for g, v in by_group.items()},
-         "cases": res_cases, "budget": rows, "failures": failures, "ok": not failures,
+         "cases": res_cases, "budget": rows, "rebooked": rebooked, "failures": failures, "ok": not failures,
          "top_parts": sorted(({"id": k, "mass": v["mass"]} for k, v in props.items()), key=lambda r: -r["mass"])[:25]}
     if write:
         from ..core.spec import OUT_DIR
@@ -135,6 +180,11 @@ def report_md(S: dict) -> str:
         for r in S["budget"]:
             L.append(f"| {r['group']} | {_f(r['computed_kg'])} | {_f(r['target_kg'])} | ±{_f(r['tol_kg'])} | "
                      f"{'✓' if r['ok'] else '✗'} |")
+    if S.get("rebooked"):
+        L += ["", "## Başka bütçe grubuna yazılan parçalar (layout / üretici mass_item)", "",
+              "| Parça | Üretici grubu | Bütçe grubu | Kütle kalemi | Kütle (kg) |", "|---|---|---|---|---:|"]
+        L += [f"| {r['id']} | {r['producer_group']} | {r['group']} | {r['mass_item']} | {_f(r['mass'], 3)} |"
+              for r in S["rebooked"]]
     L += ["", "## En ağır 25 parça", "", "| Parça | Kütle (kg) |", "|---|---:|"]
     L += [f"| {r['id']} | {_f(r['mass'], 3)} |" for r in S["top_parts"]]
     if S["failures"]:

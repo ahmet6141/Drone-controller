@@ -189,6 +189,21 @@ def U(ms) -> G.Mesh:
     return ms[0] if len(ms) == 1 else G.union(ms)
 
 
+def finish(m: G.Mesh) -> G.Mesh:
+    """Boolean clean-up of a finished part (as chassis.finish / wing.finish): when the triangle self-intersection test
+    flags sub-micron sliver folds left by the trims (e.g. the ventral skin TL-254 at the body-OML trim), merge them
+    with manifold simplify at growing tolerance (0.1 um .. 10 um; volume change << 1 mm^3). A clean mesh is returned
+    unchanged."""
+    if m.check(self_intersect=True)["ok"]:
+        return m
+    man = m.to_manifold()
+    for tol in (1e-7, 1e-6, 4e-6, 1e-5):
+        out = G.Mesh.from_manifold(man.simplify(tol))
+        if out.check(self_intersect=True)["ok"]:
+            return out
+    return m
+
+
 def D(a: G.Mesh, cut) -> G.Mesh:
     cut = [c for c in cut if c is not None]
     return a if not cut else G.difference(a, cut)
@@ -562,6 +577,8 @@ class Ctx:
             layup=None, parent=None, step=0, explode=(0.0, 0.0, 0.0), contacts=(), joint=None, purchased=False,
             vendor="", mass_kg=None, notes="", mirror=True, color="") -> Part:
         side = "R" if pid.endswith("-R") else ("L" if pid.endswith("-L") else "C")
+        if not purchased:                       # every manufactured part passes the self-intersection test
+            fn = (lambda f=fn: finish(f()))
         p = Part(id=pid, name=name, name_tr=name_tr, group=group, material=material, process=process, mesh_fn=fn,
                  thickness=thickness, layup=layup, parent=parent, step=step, explode=tuple(explode),
                  contacts=tuple(contacts), joint=joint, purchased=purchased, vendor=vendor, mass_kg=mass_kg,

@@ -58,6 +58,8 @@ from . import joints as J
 from . import oml as O
 
 GROUP = "payload"
+MASS_ITEM_MOUNT = "eo_ir_turret_hd59_mount"          # spec.mass.payload_items (HD59 + isolated mount)
+MASS_ITEM_MECH = "turret_lift_mechanism_doors"       # spec.mass.items, group systems (elevator, doors, drives)
 
 # =====================================================================================================================
 # module constants (detailing choices; interface values come from spec.layout / spec.payload)
@@ -869,12 +871,15 @@ class Build:
 
     def add(self, k, side, name, name_tr, material, process, mesh_fn, *, thickness=None, parent, contacts=(),
             joint=None, explode=(0.0, 0.0, -0.2), purchased=False, vendor="", mass_kg=None, color="chassis",
-            notes="", mirror=False):
+            notes="", mirror=False, mass_item=MASS_ITEM_MECH):
+        """Register a payload part. ``mass_item``: the spec.mass item it is booked to (analysis/mass.py budget group):
+        the HD59 and its isolated mount are the payload item eo_ir_turret_hd59_mount, everything else (elevator,
+        doors, drives, seal, service loop) is the systems item turret_lift_mechanism_doors (layout.mass_placement)."""
         pid = self.C.pid(k, side)
         p = Part(id=pid, name=name, name_tr=name_tr, group=GROUP, material=material, process=process,
                  mesh_fn=mesh_fn, thickness=thickness, purchased=purchased, vendor=vendor, mass_kg=mass_kg,
                  side=side, joint=joint, parent=parent, step=STEP, explode=tuple(explode), contacts=tuple(contacts),
-                 color=color, notes=notes)
+                 color=color, notes=notes, mass_item=mass_item)
         self.reg.add(p)
         if mirror:
             self.mirror_ids.append(pid)
@@ -904,11 +909,11 @@ class Build:
                  lambda: M("hd59", lambda: hd59_mesh(C)), parent=adp, contacts=(adp,), joint=jt, purchased=True,
                  vendor="Trillium Engineering HD59-LLVV (datasheet: ball d 147 mm, height 202 mm, 1.55 kg; mounting "
                         "ICD not public, base / bolt circle estimate)", mass_kg=HD59_MASS, color="payload",
-                 explode=(0.0, 0.0, -0.45))
+                 explode=(0.0, 0.0, -0.45), mass_item=MASS_ITEM_MOUNT)
         m_iso = 0.012
         self.add(1, "C", "turret adapter (isolator) plate", "taret adaptör (izolatör) plakası", M7075, P_CNC,
                  lambda: M("adp", lambda: adapter_mesh(C)), thickness=ADAPT_T, parent=car, joint=jt,
-                 contacts=(tur,), explode=(0.0, 0.0, -0.38),
+                 contacts=(tur,), explode=(0.0, 0.0, -0.38), mass_item=MASS_ITEM_MOUNT,
                  notes="7075-T651 4 mm, 4 x M4 to the HD59 base (tapped), 4 x M4 to the isolators")
         iso_ids = []
         for i, (x, y) in enumerate(iso_points(C)):
@@ -918,7 +923,7 @@ class Build:
                                     contacts=(adp, car), purchased=True, mass_kg=m_iso,
                                     vendor="cylindrical elastomer isolator d 20 x 16 mm, M4 female both ends, ~40 Shore "
                                            "A (estimate, tuned to the HD59 mass; mount total 0.20 kg)",
-                                    explode=(0.0, 0.0, -0.30), color="payload"))
+                                    explode=(0.0, 0.0, -0.30), color="payload", mass_item=MASS_ITEM_MOUNT))
         self.iso_ids = iso_ids
         self.add(2, "C", "turret carriage (elevator)", "taret taşıyıcısı (asansör)", M7075, P_CNC,
                  lambda: M("car", lambda: E.carriage_mesh()), thickness=TAB_T, parent=C.pid(3), joint=jt,

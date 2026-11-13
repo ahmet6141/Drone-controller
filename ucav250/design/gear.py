@@ -1337,15 +1337,19 @@ NG_RH, NG_AL, NG_RC = 0.033, math.radians(116.0), 0.0341   # nose drag-link horn
 #                                                            (x, z)), crank radius; folded toggle with the gear down
 NG_Y = {"horn": (-0.01025, -0.00525), "link": (-0.0050, 0.0000), "crank": (0.00025, 0.00475)}
 NG_PIN, NG_EYE = 0.006, 0.0122                         # pins d 6 (heat-treated, gear-unit requirement G-NLOCK)
-ND_XP, ND_RC, ND_QREL = 1.08625, 0.0169, (0.0062, 0.0171)  # nose-door drive: link plane (port hinge point), crank
+ND_XP, ND_RC, ND_QREL = 1.08465, 0.0169, (0.0062, 0.0171)  # nose-door drive: link plane (port hinge point), crank
 #                                     radius, drive pin on the port coupling horn rel. the port hinge (inboard, up; closed)
-NC_XP, NC_B, NC_BETA, NC_ZC0 = 1.0865, 0.028, math.radians(160.0), -0.130   # coupling plane x, horn radius / angle
+NC_XP, NC_B, NC_BETA, NC_ZC0 = 1.0849, 0.028, math.radians(160.0), -0.130   # coupling plane x, horn radius / angle
 #                                                                            (starboard), slide-bar pin z (closed)
-NC_X = {"horn_L": (1.0815, 1.0845), "horn_R": (1.0815, 1.0845), "crank": (1.0815, 1.0845),
-        "link_R": (1.08475, 1.08775), "dlink": (1.08475, 1.08775), "link_L": (1.0880, 1.0910),
-        "bar": (1.09125, 1.09525), "guide": (1.0955, 1.0995)}   # integration round (IR-01): the stack 13.5 mm aft:
-#                                     every slot-crossing part >= 12 mm aft of the tyre swing (x 1.0714), the horns
-#                                     10 mm; the links swing out through the slot ahead of the sill / FS1110 cap (1.0915)
+NC_X = {"horn_L": (1.0799, 1.0829), "horn_R": (1.0799, 1.0829), "crank": (1.0799, 1.0829),
+        "link_R": (1.08315, 1.08615), "dlink": (1.08315, 1.08615), "link_L": (1.0864, 1.0894),
+        "bar": (1.08965, 1.09365), "guide": (1.0939, 1.0979)}   # integration round (IR-01): the stack 11.9 mm aft
+#                                     (x at the hinge level; the planes are normal to the door axes, tilted 5 deg, so
+#                                     they lie 1.6 mm further aft at the envelope floor z -0.1715 and 8.6 mm at the guide
+#                                     top): every slot-crossing part >= 12 mm aft of the tyre swing (x 1.0714) inside
+#                                     the layout envelope NDOOR-LINKAGE (x >= 1.0840), the links swing out through the
+#                                     slot ahead of the sill / FS1110 cap (1.0915), the guide top 0.6 mm ahead of the
+#                                     FS1110 web
 NC_PIN, NC_EYE, NC_GP = 0.003, 0.0062, (0.010, 0.020)  # coupling pins d 3, eyes r 6, bar guide pins d 3 above the bar pin
 ND_PIN, ND_EYE = 0.003, 0.0062
 
@@ -1747,11 +1751,11 @@ class NoseDoorDrive:
         s0, s1 = self.guide_slot()
         wy = float(self.C.mem["M-KEELWALL"]["box"][0][1])
         zb = NC_GUIDE_ZB - self.cp.p0[2]
-        plate = rect(-wy + 0.0005, wy - 0.0005, zb, s1 + 0.016).difference(rect(-0.0016, 0.0016, s0, s1))
+        plate = rect(-wy + 0.0005, wy - 0.0005, zb, s1 + NC_TOP).difference(rect(-0.0016, 0.0016, s0, s1))
         for sg in (1.0, -1.0):                    # lightening windows (8 mm webs)
             plate = plate.difference(rect(sg * 0.0096, sg * (wy - 0.0115), zb + 0.008, s1 - 0.024))
         m = _plate(plate, self.cp.p0, self.cp.e1, self.cp.e2, t0, t1)
-        fls = [_plate(rect(min(sg * wy, sg * (wy - 0.003)), max(sg * wy, sg * (wy - 0.003)), s1 - 0.012, s1 + 0.016),
+        fls = [_plate(rect(min(sg * wy, sg * (wy - 0.003)), max(sg * wy, sg * (wy - 0.003)), s1 - 0.012, s1 + NC_TOP),
                       self.cp.p0, self.cp.e1, self.cp.e2, t0 - NC_FL_L, t0 + 0.0005) for sg in (1.0, -1.0)]
         return _clean(G.union([m] + fls))
 
@@ -1760,19 +1764,21 @@ class NoseDoorDrive:
         t0, _t1 = self.tx("guide")
         s0, s1 = self.guide_slot()
         wy = float(self.C.mem["M-KEELWALL"]["box"][0][1])
-        return [(self.cp.to3(np.array([sg * (wy - 0.003), s1 + 0.006])) + (t0 - 0.5 * NC_FL_L) * self.cp.u,
+        return [(self.cp.to3(np.array([sg * (wy - 0.003), s1 - 0.001])) + (t0 - 0.5 * NC_FL_L) * self.cp.u,
                  np.array([0.0, sg, 0.0])) for sg in (1.0, -1.0)]
 
 
 NDA_TRAY_Z = -0.089                 # side-bay tray top face (TR-SIDEBAY-L)
 NDA_EAR_X = (1.0480, 1.0720)        # nose-door DA 22 outboard ear on the side-bay tray (outboard of its cut-out)
-NDA_CASE_T = (-0.0365, -0.0145)     # DA 22 case along u from the crank plane (layout b_systems.NDA_CASE_T): the case
-#                                     stays under P-SIDEBAY-L, a 13.5 mm splined extension carries the crank aft (IR-01)
+NDA_CASE_T = (-0.0349, -0.0129)     # DA 22 case along u from the crank plane (layout b_systems.NDA_CASE_T): the case
+#                                     stays under P-SIDEBAY-L, an 11.9 mm splined extension carries the crank aft (IR-01)
 NDA_EAR_OUT = 0.0140                # ear length beyond the tray cut-out (M3 nutplates, 7.5 mm composite edge distance)
 NC_GUIDE_ZB = -0.1700               # guide plate lower edge (above the slot-end sill)
 SIDE_EN, SIDE_TR = {"R": "starboard", "L": "port"}, {"R": "sağ", "L": "sol"}
 PIN_X = 0.0003                      # pin ends beyond the outer plates
 NC_FL_L = 0.016                     # guide-plate flange length on the keel walls
+NC_TOP = 0.010                      # guide plate / flanges above the slot top (IR-01: 16 -> 10 mm, the tilted plate's top
+#                                     stays ahead of the FS1110 web; flange bolts 11 mm from both flange edges)
 
 
 # =====================================================================================================================

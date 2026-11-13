@@ -238,11 +238,11 @@ def members() -> list:
                     "nose-gear loads -> pivot bushings -> keel walls -> FS0600 / FS1110 + avionics deck -> chine "
                     "longerons", mirror=True, layup="rib_panel",
                     touch=["ST-FS0600", "ST-FS1110", "M-DECK-NOSE", "F-NG-PIVOT", "EQ-*"]))
-    M[-1]["openings"] = [{"id": "W-NDOOR-LINK", "side": "L", "x": [1.0840, 1.0950], "z": [-0.1735, -0.1235],
+    M[-1]["openings"] = [{"id": "W-NDOOR-LINK", "side": "L", "x": [1.0824, 1.0934], "z": [-0.1735, -0.1235],
                           "text": "gear detail round (GD-08): window in the port keel wall for the nose-door drive link "
                                   "(DA 22 crank in the side bay -> drive arm of the port coupling horn); solid laminate "
-                                  "land round it (the wall's aft end, 11.6 mm ahead of FS1110; integration round IR-01: "
-                                  "moved 13.5 mm aft with the coupling)"}]
+                                  "land round it (the wall's aft end, 13 mm ahead of FS1110; integration round IR-01: "
+                                  "moved 11.9 mm aft with the coupling)"}]
     M.append(member("M-DECK-NOSE", "YK250-CH-022", "avionics deck", "aviyonik güverte",
                     "horizontal deck above the nose-gear well, chine to chine: PDU and power-switching equipment "
                     "tray, roof of the keel slot and of the side bays, upper chord of the nose box",

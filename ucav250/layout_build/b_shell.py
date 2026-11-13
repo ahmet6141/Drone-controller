@@ -93,7 +93,7 @@ RING_Y = 0.125
 # doors end at NOSE_DOOR_X1 (12 mm edge band on the sill / cap, x 1.0925-1.1045) and the ring insert is notched over
 # the keel slot (|y| < RING_NOTCH_Y) back to 1 mm aft of the door edge; outside the slot it keeps RING_X[0]
 NOSE_DOOR_X1 = 1.1045
-RING_NOTCH_X, RING_NOTCH_Y = round(NOSE_DOOR_X1 + 0.001, 4), 0.040
+RING_NOTCH_X, RING_NOTCH_Y = round(NOSE_DOOR_X1 + 0.001, 4), 0.046   # clears the open door (hinge y 0.039 + 4 mm door + gap)
 X_SB_NOTCH, Y_SB_NOTCH = 1.0706, 0.135      # side-bay / door-access panel notches round the ring (fix round 3, PK3-02)
 # parachute hatch aft edge 0.5 mm aft of the FS1810 web mid-plane (fix round 3, PK3-02): the hatch lands on the forward
 # half of the FS1810 cap (and still covers the bridle notch C-BRIDLE-F in the web top), the tear-away spine strip

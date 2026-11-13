@@ -173,11 +173,13 @@ def _states(reg: Registry, n: int) -> list[tuple[str, dict[str, float]]]:
 def check_swept(reg: Registry, n: int = 9, cache: _ManCache | None = None, tol: float = VOL_TOL) -> list[dict]:
     cache = cache or _ManCache(reg)
     out = []
-    seen = set()
     for label, state in _states(reg, n):
         moving = {p.id for name in state for p in reg.moving_parts(name)}
         if not moving:
             continue
+        # pairs already evaluated in THIS state (each state is evaluated in full; integration round: a set keyed by
+        # the whole state over all states grew to tens of millions of keys on the complete aircraft - out of memory)
+        seen = set()
         posed = {pid: reg.posed_mesh(reg.parts[pid], state) for pid in moving}
         pboxes = {pid: m.bounds() for pid, m in posed.items()}
         pman = {pid: m.to_manifold() for pid, m in posed.items()}
@@ -185,9 +187,8 @@ def check_swept(reg: Registry, n: int = 9, cache: _ManCache | None = None, tol: 
             for q in reg.parts:
                 if q == pid or reg.parts[q].process == "consumable":
                     continue
-                # the key holds the state values: a single-joint sweep has one label for all its samples (fix round
-                # 3: only the first sample of every sweep was evaluated before)
-                key = (label, tuple(sorted(state.items())), *sorted((pid, q)))
+                # every sample of every sweep is evaluated (fix round 3): the seen-set is reset per state
+                key = (pid, q) if pid < q else (q, pid)
                 if key in seen:
                     continue
                 seen.add(key)

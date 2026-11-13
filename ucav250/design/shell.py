@@ -1205,6 +1205,20 @@ def build_panel_mesh(sc: SC, pn: Pan) -> G.Mesh:
 # =====================================================================================================================
 # layout outlines, land footprints, deviations
 # =====================================================================================================================
+def cowl_exit_cuts(sc: SC, gap: float = 0.0005) -> list:
+    """Integration round (IR-09): the lower cowl halves give way to the stainless exhaust-exit panels (layout
+    heat_protection.inserts[panel P-COWL-LO].regions: every part of the cowl within 25 mm of the stack, propulsion
+    PR-520 lapped over the cut edge and riveted through the cowl's solid edge band); starboard boxes (the panel is
+    mirrored), 0.5 mm clear."""
+    out = []
+    for ins in ((sc.L.get("heat_protection") or {}).get("inserts") or []):
+        if ins.get("panel") != "P-COWL-LO":
+            continue
+        for lo, hi in ins.get("regions", []):
+            out.append(box3(np.asarray(lo, float) - gap, np.asarray(hi, float) + gap))
+    return out
+
+
 def lay_outline(sc: SC, lid: str) -> Polygon:
     p = sc.pan[lid]
     if p.get("outline"):
@@ -1745,7 +1759,8 @@ def aft_panels(sc: SC, pans: dict) -> None:
                             surf="F", region=rect(X_COWL + GAP, xe + 0.01, y_lo + GAP, 1.0), mirror=True, t=t,
                             x0=X_COWL, x1=xe, step=STEP["close"], parent=sc.ref("M-AFTKEEL"),
                             explode=(0.05, 0.15, -0.35), removable=True, pads=lo_pads(X_COWL, xe),
-                            cut=[below, sc.half("U", X_COWL - 0.01, X_AFT, gap=-GAP)] + list(stub_box),
+                            cut=[below, sc.half("U", X_COWL - 0.01, X_AFT, gap=-GAP)] + list(stub_box) +
+                            cowl_exit_cuts(sc),
                             land_refs=tuple(clo["lands"]))
     kb = np.asarray(sc.mem["M-AFTKEEL"]["box"], float)        # aft keel channel (layout box) + bond line
     pans["P-VENTRALROOT"].cut.append(box3(kb[0] - 0.0003, kb[1] + 0.0003))

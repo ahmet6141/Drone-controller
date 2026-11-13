@@ -92,7 +92,7 @@ class TestGearBuild(unittest.TestCase):
             self.assertEqual(P[f"YK250-LG-670-{s}"].joint, f"main_inner_door_{s}")
             self.assertEqual(P[f"YK250-LG-673-{s}"].joint, f"main_trunnion_door_{s}")
             self.assertEqual(P[f"YK250-LG-674-{s}"].joint, f"nose_door_{s}")
-            self.assertIn("DA 22", P[f"YK250-FC-676-{s}"].vendor)
+            self.assertIn("DA 30", P[f"YK250-FC-676-{s}"].vendor)     # IR-02: inner-door actuator DA 22 -> DA 30
             self.assertIn(f"YK250-LG-630-{s}", P)
         self.assertEqual(P["YK250-LG-624"].joint, "nose_gear")
         self.assertEqual(P["YK250-LG-626"].joint, "nose_steer")

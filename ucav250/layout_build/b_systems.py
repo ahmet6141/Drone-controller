@@ -437,7 +437,7 @@ def antennas() -> list:
 ANT_DIPOLE = (0.109, 0.013)          # components.yaml southwest_antennas_1001_202 height, radome d (layout size)
 ANT_XC = 0.42                         # chord fraction of the fin-tip dipoles on the tip rib (IR-06)
 LT_TAIL_XC = 0.40                     # chord fraction of the tail light centre on the fin tip face (IR-06): its aft
-#                                       screw keeps 2.5 D in the mounting block (section thins aft of 45 % chord)
+#                                       screws keep 2.5 D in the mounting block (tail LIGHT_BLOCK_XC)
 LT_SEAT_GAP = 0.0003                  # light base above the cap tip face (the loft end plane leans ~0.1 mm on w)
 Y_FUELB = 0.0165                      # H-FUEL in the spine channel: 5 mm corridor to the bridle aft leg (C04), the
 #                                       floor grommet's flanges trimmed flat at the starboard wall (systems)
@@ -454,9 +454,10 @@ def fin_branch() -> dict:
     p0 = np.array([3.520, 0.120, round(z_top(3.520, 0.120) - 0.025, 4)])        # = H-TAIL path end
     d0 = unit(p0 - np.array([3.500, 0.092, 0.215]))                             # H-TAIL last leg (systems path)
     e_r = 0.26
-    p1 = surf_point(F, e_r, 0.46)
+    p1 = surf_point(F, e_r, ANT_XC)
     p_a = np.array([3.575, 0.128, 0.275])           # under the dorsal longeron M-DORSAL (y 0.15, z 0.30 under the fin
-    p_in = np.array([3.640, 0.169, 0.275])          # root), across it, then up into the fin root aft of its end (x 3.627)
+    p_in = np.array([3.615, 0.150, 0.275])          # root), then up between the longeron's two webs (y 0.140 / 0.160,
+    p_up = np.array([3.618, 0.150, 0.333])          # z >= 0.29) ahead of the FS3670 top cap (x >= 3.627) into the fin
     # up the fin box on FIN_XC_BOX between the front-spar web and the rudder actuator (eta 0.42-0.55), then to the
     # antenna chord line above the servo rib, ending 6.5 mm under the tip rib (jack + 4 mm jam nut, coax plug)
     pb = surf_point(F, 0.40, FIN_XC_BOX)
@@ -465,7 +466,7 @@ def fin_branch() -> dict:
     p2 = surf_point(F, fin_cap_eta() - FIN_RIB_T - 0.0065, ANT_XC)
     return {"id": "H-FIN", "part": "YK250-SY-794", "name": "fin branch (each side): tip-cap antenna coax, tail light",
             "diameter": 0.008, "mirror": True, "in_tail": True,
-            "path": [r3(p0 + 0.0001 * d0, 6), r3(p0 + 0.010 * d0, 6), r3(p_a), r3(p_in), r3(p1), r3(pb), r3(pc),
+            "path": [r3(p0 + 0.0001 * d0, 6), r3(p0 + 0.010 * d0, 6), r3(p_a), r3(p_in), r3(p_up), r3(p1), r3(pb), r3(pc),
                      r3(pd), r3(p2)],
             "text": "fin root (end of H-TAIL) -> up the fin box between the front spar and the rudder actuator, then on "
                     "the chord line of the tip dipole between the spars, "
@@ -768,7 +769,8 @@ def harness() -> dict:
         # into the aft equipment bay; the probes' flying leads (purchased with the probes) end at those connectors
         {"id": "H-FUEL", "part": "YK250-SY-777", "name": "fuel level probe branch (forward / saddle cells)",
          "diameter": 0.006,
-         "path": P(*fuel_breakout(np.array([X_PFR, 0.195, 0.035]), np.array([2.000, 0.270, Z_HL]), 1.850,
+         # breakout on H-COAX's straight leg as systems sweeps it: 14 mm straight through FS1810, then to x 2.0
+         "path": P(*fuel_breakout(np.array([X_PFR + 0.014, 0.195, 0.035]), np.array([2.000, 0.270, Z_HL]), 1.860,
                                   np.array([1.880, 0.090, 0.110])), [1.880, 0.090, 0.110], [1.930, Y_FUELB, 0.140], [1.930, Y_FUELB, 0.177],
                    [2.775, Y_FUELB, 0.177]),
          "supports": ["M-SPINE"],

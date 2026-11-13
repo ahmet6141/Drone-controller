@@ -273,7 +273,7 @@ elemanları.
 ### 10.1 Entegrasyon turu değişiklikleri
 
 * **IR-04:** her imal parçası kaydedilirken üçgen öz-kesişim testinden geçer; mikron altı kıymıklar (ör. ventral kaplama TL-254'ün gövde OML kesiminde 8 öz-kesişim) manifold simplify ile (0,1 µm'den başlayarak) birleştirilir, temiz ağ değişmez (`finish`).
-* **IR-06:** uç kapağı içinde dipoller (sistem modülü) uç kaburgasına oturur (TNC jak deliği sistem modülünce açılır); LT-TAIL için TL-292 GFRP bağlantı bloğu (sağda ışık, solda simetrik hazırlık) kapağın uç yüzünün altına yapıştırılır (%38–62 veter, 14 mm), 2 × M4 gömme burç. H-FIN kolu kök, kutu ve servo kaburgalarındaki deliklerden geçer.
+* **IR-06:** uç kapağı içinde dipoller (sistem modülü) uç kaburgasına oturur (TNC jak deliği sistem modülünce açılır); LT-TAIL için TL-292 GFRP bağlantı bloğu (sağda ışık, solda simetrik hazırlık) kapağın uç yüzünün altına yapıştırılır (%26–56 veter, 14 mm; ışık %40 vetere alındı, iki M4 de bloğun uçlarından ve yanlarından ≥ 2,5 D kenar mesafesi tutar); H-FIN kolu (sistem) kutu içinde ön kiriş ile dümen eyleyicisi arasından yükselir, kaburgalardaki delikleri sistem modülü açar, 2 × M4 gömme burç. H-FIN kolu kök, kutu ve servo kaburgalarındaki deliklerden geçer.
 
 ## 11. Açık konular
 

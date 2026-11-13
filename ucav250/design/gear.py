@@ -1440,12 +1440,31 @@ class InnerDoorDrive:
         flange footprint 85 x 30 mm."""
         tc = self.t_case
         (b0, b1), (c0, c1) = self.plate_bc()
-        pts = [self.at(tc, b, c) for b in (b0, b1) for c in (c0, c1)]
-        P = np.array(pts)
-        Pf = P.copy()
-        Pf[:, 0] = self.xf1
-        m = G.hull(np.vstack([P, Pf]))
+        pieces = []
+        for (ba, bb_), (ca, cb_) in self.plate_pieces(b0, b1, c0, c1):
+            P = np.array([self.at(tc, b, c) for b in (ba, bb_) for c in (ca, cb_)])
+            Pf = P.copy()
+            Pf[:, 0] = self.xf1
+            pieces.append(G.hull(np.vstack([P, Pf])))
+        m = G.union(pieces) if len(pieces) > 1 else pieces[0]
         return G.difference(m, [G.cylinder(0.0045, self.at(tc - 0.02), self.at(tc + 0.001), n=32)])
+
+    def plate_pieces(self, b0, b1, c0, c1):
+        """(b, c) rectangles of the wedge plate: the full footprint less the inboard upper corner over the FS-GEAR
+        C-HARN-CL cut-out and its grommet rim (CL_KEEP round the cut-out, layout)."""
+        cl = next((c_ for c_ in self.C.st["FS-GEAR"].get("cutouts", []) if c_["id"] == "C-HARN-CL"), None)
+        if cl is None:
+            return [((b0, b1), (c0, c1))]
+        bx = (float(cl["y"][1]) + CL_KEEP - self.Cp[1]) / self.e1[1]           # b of the keep-out's outboard edge
+        zk = float(cl["z"][0]) - CL_KEEP                                         # z of its lower edge
+        cz = (zk - self.at(self.t_case)[2]) / self.e2[2]                         # c at that z (e2 nearly vertical)
+        if self.e2[2] > 0:
+            if not (b0 < bx and cz < c1):
+                return [((b0, b1), (c0, c1))]
+            return [((b0, b1), (c0, cz)), ((bx, b1), (c0, c1))]
+        if not (b0 < bx and cz > c0):
+            return [((b0, b1), (c0, c1))]
+        return [((b0, b1), (cz, c1)), ((bx, b1), (c0, c1))]
 
     def plate_bc(self):
         """(b range, c range) of the wedge plate: the flange footprint plus the strap ears and 8 mm (2 D) round
@@ -1469,9 +1488,9 @@ class InnerDoorDrive:
             b0, b1 = min(b, bf) - 0.5 * w, max(b, bf) + 0.5 * w
             cm = sg * (hw + 0.0004 + 0.5 * (ear - 0.0004))
             parts.append(G.box((ft + 0.0002, w, ear - 0.0004), center=self.at(tc + 0.5 * (ft + 0.0002), bf, cm), R=self.R))
-            if bf != b:                                 # dogleg: bar + foot widened along e1 to the offset foot
-                parts.append(G.box((ft + t, b1 - b0, ear - 0.0004), center=self.at(tc + 0.5 * (ft + t), 0.5 * (b0 + b1),
-                                                                                     cm), R=self.R))
+            if bf != b:                                 # dogleg: bar level (above the flange face) out to the foot,
+                parts.append(G.box((t, b1 - b0, ear - 0.0004), center=self.at(tc + ft + 0.5 * t, 0.5 * (b0 + b1), cm),
+                                   R=self.R))           # clear of the harness cut-out and its grommet on the frame
         holes, sf = [], []
         for sg, c in zip((-1.0, 1.0), self.strap_c()):
             bf = self.foot_b(k, sg)
@@ -1494,7 +1513,8 @@ class InnerDoorDrive:
         if cl is None:
             return b
         p = self.at(self.t_case, b, self.strap_c()[1])
-        need = float(cl["y"][1]) + 2.5 * 0.004 + 0.0005
+        need = max(float(cl["y"][1]) + 2.5 * 0.004 + 0.0005,                 # bolt edge distance in the frame
+                   float(cl["y"][1]) + CL_KEEP + 0.5 * STRAP["w"])            # foot clear of the grommet rim
         if float(cl["z"][0]) - 2.5 * 0.004 < p[2] and p[1] < need:
             return b + (need - p[1]) / self.e1[1]
         return b
@@ -1534,6 +1554,8 @@ class InnerDoorDrive:
 STRAP = dict(t=0.004, w=0.020, ear=0.020)   # DA 30 clamp straps (7075, IR-02): bar 4 mm, 20 mm wide, feet 20 mm
 #                                             beside the flange: bolts 10 mm (2.5 D, composite frame) from every edge
 STRAP_SF = 0.001                             # spot face under the strap-bolt heads
+CL_KEEP = 0.0055                             # wedge plate / strap feet keep 5.5 mm off the FS-GEAR C-HARN-CL cut-out
+#                                              (grommet rim 4 mm + 1.5 mm)
 DA30 = dict(L=0.1585, H=0.085, W=0.030, holes=(0.077, 0.018), axis_from_holes=0.0216, hole_d=0.0041,
             shaft_from_edge=0.0256, flange_t=0.008, body_inset=0.020, mass=0.630)
 #   Volz DA 30 (components.yaml volz_da30: envelope incl. D-Sub, lug pattern 77 x 18 mm, d 4.1, output 21.6 mm from

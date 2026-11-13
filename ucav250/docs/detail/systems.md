@@ -22,7 +22,7 @@ kurtarma paraşütü sistemleridir. Sistemde silah, mühimmat, dış yük taşı
 | Büyüklük | Değer |
 |---|---|
 | Parça kimliği (720–819) | `chassis,shell,systems` kaydında 84 (60 satın alma, 24 imalat); kanat kayıttayken + 3 (HASA pitosu, 2 kanat ucu ışığı) = 87 |
-| Bağlantı elemanı (`joints.py`, geometri `hardware.py`) | 73 (kanatla + 4 × M4): 30 × ISO 7380 M3, 34 × ISO 4762 M3, 9 × ISO 4762 M4 (A2-70); gömme insert, nyloc somun, ünite M3 dişleri |
+| Bağlantı elemanı (`joints.py`, geometri `hardware.py`) | 75 (kanatla + 4 × M4): 30 × ISO 7380 M3, 36 × ISO 4762 M3, 9 × ISO 4762 M4 (A2-70); gömme insert, nyloc somun, ünite M3 dişleri |
 | Hareketli eklem | yok (paraşüt kapağının `para_hatch` eklemi kabuk modülündedir; mandal ve konteyner bu eklemin her konumunda ≥ 10 mm uzakta kalır) |
 | Tasarım kuralı denetimleri | `python3 -m ucav250.analysis.checks --modules chassis,shell,systems --focus YK250-SY --no-write`: **0 ihlal** (§10) |
 | Sistem grubu kütlesi | 12,82 kg (`chassis,shell,systems`); kanatla ≈ 13,03 kg; tavan 14,79 kg (§9) |

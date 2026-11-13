@@ -99,6 +99,45 @@ def eq(eid, part, name, name_tr, group, box, mass_kg, mount, source, mirror=Fals
     return d
 
 
+
+DOORACT_SHAFT_YZ = (0.044, -0.136)   # inner-door crank axis in the drive plane (gear detail round GD-05, mechanism
+#                                     study docs/detail/gear.md: crank 34 mm, link 78 mm, horn 38 mm, transmission >= 57 deg)
+DOORACT_PLANE_X = 3.0795           # drive plane (link) on the inner-door hinge axis: 8 mm aft of the swept tyre
+DOORACT_SHAFT_END = 0.014          # DA 22 output axis from the inboard end of the 65.9 mm case side (estimate from the
+#                                     Volz DA 22 drawing: output near one end; confirm with the installation drawing)
+
+
+def dooract_main() -> dict:
+    """Gear detail round (GD-05): main inner-door DA 22 on the aft face of FS-GEAR with its output shaft parallel to the
+    inner-door hinge line (planar crank / link / horn drive in the well, over-centre in the closed position); the shaft
+    passes FS-GEAR in a flanged bearing housing (cut-out C-DOORSHAFT)."""
+    from .b_mech import inner_door_hinge_line
+    o_d, a_d, _dev = inner_door_hinge_line()
+    u = -np.asarray(a_d, float)                                 # mechanism axis, pointing aft
+    e1 = np.array([0.0, 1.0, 0.0])
+    e2 = np.cross(u, e1)
+    C = np.array([DOORACT_PLANE_X, DOORACT_SHAFT_YZ[0], 0.0])
+    C[2] = DOORACT_SHAFT_YZ[1]
+    x_f = X_GEARF + 0.0070                                     # case forward face (3.6 mm wedge plate on the frame)
+    t0 = (x_f - C[0]) / u[0]
+    pts = []
+    for a in (t0, t0 + 0.022):
+        for b in (-DOORACT_SHAFT_END, 0.0659 - DOORACT_SHAFT_END):
+            for c in (-0.02075, 0.02075):
+                pts.append(C + a * u + b * e1 + c * e2)
+    P = np.array(pts)
+    return eq("EQ-DOORACT", "YK250-FC-676", "main inner-door actuator Volz DA 22 (28 V)", "iç kapak eyleyicisi DA 22",
+              "gear", [P.min(0).tolist(), P.max(0).tolist()], 0.132, {"zone": "aft face of FS-GEAR", "tray": "YK250-CH-011"},
+              "mass.rules.gear_doors.inner_door_actuator (components.yaml volz_da22_28v 41.5 x 65.9 x 22 mm, 0.132 kg); "
+              "gear detail round (GD-05): case on a wedge plate on the aft face of FS-GEAR, output shaft parallel to the "
+              "inner-door hinge line through the bearing housing in C-DOORSHAFT, crank + link in the well to the horn at "
+              "the aft end of the door, over-centre lock in the closed position (structures G-DOOR-LOCK / G-DOOR-DRIVE); "
+              "drives the inner door only (opens, holds, reverses to close); the trunnion door has its own micro "
+              "gearmotor (GD-07)", mirror=True,
+              extra={"shaft": {"point": r3(C, 5), "axis": r3(u, 6),
+                               "text": "crank axis in the drive plane x 3.0795 (the bearing housing on the forward face "
+                                       "of FS-GEAR carries it; the DA 22 spline drives it through a splined coupling)"}})
+
 def equipment(L: dict) -> list:
     E = []
     for it in L["rules"]["bay_contents"]["items"]:
@@ -111,6 +150,11 @@ def equipment(L: dict) -> list:
         tray = {"avionics_side_bays": "YK250-CH-118" if it.get("side") == "port" else "YK250-CH-122",
                 "forward_bay": "YK250-CH-119", "forward_bay_lower": "YK250-CH-119",
                 "nose_cone_bay": "YK250-CH-002"}.get(it["zone"], "YK250-CH-022")
+        if it["name"] == "brake_unit":
+            # gear detail round (GD-09): the unit lies 67 mm above the side-bay tray, over the generator power
+            # electronics: it hangs from the underside of the avionics deck on a machined hanger (4 x M4 into potted
+            # inserts of the deck land, the PDU side of the deck is not pierced)
+            tray = "YK250-CH-022"
         E.append(eq("EQ-" + it["name"].upper(), part, nm, ntr, grp, box, it["mass_kg"],
                     {"zone": it["zone"], "tray": tray},
                     f"layout.rules.bay_contents[{it['name']}] ({it.get('source', '')[:90]})",
@@ -138,14 +182,7 @@ def equipment(L: dict) -> list:
                 "fuel", [[3.600, 0.020, 0.000], [3.640, 0.060, 0.040]], 0.08,
                 {"zone": "forward face of FS3670", "tray": "YK250-CH-013"},
                 "standards.yaml FUEL (CS-VLA 995: no valve on the engine side of the firewall); mass estimate"))
-    E.append(eq("EQ-DOORACT", "YK250-FC-676", "main inner-door actuator Volz DA 22 (28 V)",
-                "iç kapak eyleyicisi DA 22", "gear", [[X_GEARF + 0.0070, 0.030, -0.170], [X_GEARF + 0.0485, 0.052, -0.1041]],
-                0.132, {"zone": "aft face of FS-GEAR", "tray": "YK250-CH-011"},
-                "mass.rules.gear_doors.inner_door_actuator (components.yaml volz_da22_28v 41.5 x 65.9 x 22 mm, "
-                "0.132 kg); crank + pushrod (C-DOORLINK) + over-centre lock to the inner-door hinge horn; drives the "
-                "inner door only (opens, holds, reverses to close); fix round 3 (PK3-07): the trunnion door is "
-                "leg-driven through a slotted lost-motion link with an opening spring (mechanisms "
-                "main_trunnion_door_R/L, structures G-DOOR-DRIVE / G-TDOOR-LINK)", mirror=True))
+    E.append(dooract_main())
     nd_src = ("fix round 2 (PK2-13): the clamshell doors open before and close after the leg moves (sequence "
               "gear_retraction), which a leg-driven link cannot do; ONE DA 22 drives both doors (components.yaml "
               "volz_da22_28v 41.5 x 65.9 x 22 mm, 0.132 kg; mass.rules.gear_doors.inner_door_actuator count 3 = 2 main "
@@ -433,6 +470,12 @@ def wing_actuators() -> list:
     return out
 
 
+NLG_EMA_X = (-0.014, 0.046)    # nose EMA envelope about the pivot (x), y (starboard offset), z (gear detail round GD-04)
+NLG_EMA_Y = (0.0060, 0.0410)
+NLG_EMA_Z = (-0.093, -0.033)
+NLG_CRANK_XZ = (0.0158, 0.0560)   # EMA output axis about the pivot (x, z): mechanism study docs/detail/gear.md
+
+
 def gear_actuators() -> list:
     """Fix round 2 (PK2-13): landing-gear actuators as layout envelopes (the gear unit is not selected: allocation
     envelopes, estimates; SAGITTA practice: DA-26-class EMAs for retraction and steering, components.yaml):
@@ -465,11 +508,17 @@ def gear_actuators() -> list:
                     "practice; mass in the gear item), between the well forward wall and the forward lug"},
         {"id": "ACT-NLG-EMA", "part": "YK250-LG-632", "name": "nose-gear retraction EMA (gear unit, allocation envelope)",
          "mass_item": "nose_gear_leg_wheel_steering",
-         "box": r3([[xn - 0.025, -0.030, -0.085], [xn + 0.035, 0.030, -0.025]]),
-         "drive": "crank on the EMA output + over-centre drag link to the leg yoke (down-lock at the over-centre "
-                  "position); torque requirement structures G-EMA-NOSE",
-         "install": "allocation envelope 60 x 60 x 60 mm (estimate) between the keel walls above the pivot, bolted to "
-                    "the starboard keel-wall land; >= 20 mm above the swept yoke"},
+         "box": r3([[xn + NLG_EMA_X[0], NLG_EMA_Y[0], NLG_EMA_Z[0]], [xn + NLG_EMA_X[1], NLG_EMA_Y[1], NLG_EMA_Z[1]]]),
+         "shaft": {"point": r3([xn + NLG_CRANK_XZ[0], NLG_EMA_Y[0], zn + NLG_CRANK_XZ[1]], 5), "axis": [0.0, 1.0, 0.0],
+                   "text": "output shaft on the port face of the body; the crank, the drag link and the yoke horn work in "
+                           "the centre plane of the keel slot (y +-0.005)"},
+         "drive": "gear detail round (GD-04): crank on the EMA output + drag link in the centre plane to a horn bolted "
+                  "on the yoke crown; crank and link in toggle (folded) with the gear down = over-centre down-lock "
+                  "against a stop on the EMA housing; torque requirement structures G-EMA-NOSE",
+         "install": "allocation envelope 60 x 35 x 60 mm (estimate; 26 mm DA-26-class motor + planetary stage) offset "
+                    "to the starboard keel wall, flange bolted to the wall land above the pivot block; the port half of "
+                    "the slot is free for the centre-plane drag link (fix round 2's centred box left no plane for the "
+                    "link between the pivot-block bolt heads and the box)"},
         {"id": "ACT-STEER", "part": "YK250-FC-628", "name": "nose-wheel steering actuator Volz DA 26",
          "mass_item": "actuators_nose_steering_brake_2x_DA26", "moves_with": "nose_gear",
          "obb": {"center": r3(c_st), "axes": r3(axes.tolist()), "half": half},

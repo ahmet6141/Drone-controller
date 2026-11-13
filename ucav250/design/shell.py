@@ -1349,6 +1349,32 @@ def glove_root_cutter(sc: SC) -> G.Mesh:
     return sc._cache["grc"]
 
 
+
+def door_hinge_coves(sc: SC) -> dict[str, list]:
+    """Gear detail round (GD-07 / item 7): coves of the gear-door hinge knuckles in the fixed skin, owned here. For every
+    door outline with a ``hinge`` record (layout.mechanisms.door_outlines: stations, cove_r) a cylinder of cove_r round
+    the door's hinge axis over each station (+-1.5 mm) is cut from the skin panel that carries the hinge edge: the main
+    inner / trunnion doors from P-CENTRE-LOWER, the nose clamshells from P-NOSE-LOWER (both sides; the port axis is
+    the mirrored starboard one)."""
+    D = sc.L["mechanisms"]["door_outlines"]
+    J = {j["name"]: j for j in sc.L["mechanisms"]["joints"]}
+    pan = {"main_inner_door_R": "P-CENTRE-LOWER", "main_trunnion_door_R": "P-CENTRE-LOWER", "nose_door_R": "P-NOSE-LOWER"}
+    out: dict[str, list] = {}
+    for key, lid in pan.items():
+        h = (D.get(key) or {}).get("hinge")
+        j = J.get(D[key]["joint"]) if key in D else None
+        if not h or j is None:
+            continue
+        o = np.asarray(j["origin"], float)
+        a = _unit(j["axis"])
+        r = float(h["cove_r"])
+        for x0, x1 in h["stations"]:
+            p0 = o + (float(x0) - 0.0015 - o[0]) / a[0] * a
+            p1 = o + (float(x1) + 0.0015 - o[0]) / a[0] * a
+            cv = G.cylinder(r, p0, p1, n=32)
+            out.setdefault(lid, []).extend([cv, cv.mirrored_y()])
+    return out
+
 def body_panels(sc: SC) -> dict[str, Pan]:
     o = outlines(sc)
     S = sc.pan
@@ -1497,6 +1523,9 @@ def body_panels(sc: SC) -> dict[str, Pan]:
     cl = add("P-CENTRE-LOWER", "L", cl_reg, ffuel, fgear, pads=lo_pads(ffuel, fgear), step=STEP["skin"],
              parent=sc.st["FS-FUEL"]["part"], explode=(0.0, 0.0, -0.22))
     cl.cut.append(glove_root_cutter(sc))
+    coves = door_hinge_coves(sc)                 # gear-door hinge coves (layout door_outlines hinge stations)
+    cl.cut.extend(coves.get("P-CENTRE-LOWER", []))
+    nl.cut.extend(coves.get("P-NOSE-LOWER", []))
     for b in sc.fit["F-TRUNNION"]["bolts"]:      # spot-faces d12 x 0.8 over the gear-beam bolt tips (outboard face)
         if abs(float(b["axis"][1])) > 0.9:
             q = np.asarray(b["point"], float)

@@ -10,6 +10,7 @@ SKIN = 0.0058          # shell_secondary 0.4/5/0.4 mm
 # and the trunnion-fitting flange over the gear-down position and the whole retraction (layout_check C05)
 Y_GB = 0.385
 X_NOTCH, Z_NOTCH = 0.042, -0.134    # reinforced notch in the beam's lower edge around the leg (half length, top z)
+DL_R = 0.028                         # main down-lock bolt below the trunnion axis (gear detail round GD-03)
 X0_T, Y0_T, Z0_T = (float(v) for v in MG["trunnion"])
 
 
@@ -763,7 +764,8 @@ def fittings() -> list:
     wf = [[x0 - 0.062, 0.375, -0.130], [x0 - 0.036, yf, -0.0668]]         # lug-to-flange web (forward)
     wa = [[x0 + 0.036, 0.375, -0.130], [x0 + 0.062, yf, -0.0668]]         # lug-to-flange web (aft)
     tp = [[x0 - 0.036, 0.326, -0.0868], [x0 + 0.036, yf, -0.0668]]         # top plate (on the well roof)
-    boxes = [fb, fm, fa, lf, lfl, la, lal, wf, wa, tp]
+    dlx = [[x0 + 0.036, round(y0 - 0.014, 4), round(z0 - DL_R - 0.015, 4)], [x0 + 0.062, round(y0 + 0.014, 4), z0 - 0.023]]
+    boxes = [fb, fm, fa, lf, lfl, la, lal, wf, wa, tp, dlx]       # dlx: aft-lug extension for the down-lock bolt (GD-03)
     BEAM = ("M6 12.9 (ISO 4762) from the well side (head and washer in the well), into a bonded through-thickness "
             "threaded insert M6 in the solid land of the gear beam (flush with its outboard face, installed in the beam "
             "subassembly; no nut on the outboard side)")
@@ -806,19 +808,31 @@ def fittings() -> list:
               "actuator_anchor": {"kind": "rotary EMA of the gear unit on the trunnion axis, flange on the fitting "
                                           "front face (layout.systems.actuators ACT-MLG-EMA)",
                                   "point": r3([x0 - 0.085, y0, z0])},
-              "locks": "down-lock: 4130 lock bolt d 10 in double shear in a tight clevis of the fitting (ear gaps <= "
-                       "0.5 mm) engaging the leg yoke (requirement for the gear-unit supplier; structures G-DOWNLOCK "
-                       "shear and G-DOWNLOCK-BEND pin bending, fix round 2 VS2-07); up-lock: hook "
-                       "fitting F-UPLOCK under the well roof deck engaging a roller on the leg",
+              "locks": "down-lock (gear detail round GD-03): spring-engaged, solenoid-withdrawn 4130 lock bolt d 14 "
+                       "along x in a bushed bore of a lower extension of the AFT bearing lug, 28 mm below the trunnion "
+                       "axis, engaging a bushed bore of the aft yoke arm in the gear-down position (single shear across "
+                       "the 1 mm lug-to-arm gap: a second clevis ear would stand in the swept leg; structures "
+                       "G-DOWNLOCK shear and G-DOWNLOCK-BEND bolt bending); up-lock: hook fitting F-UPLOCK under the "
+                       "well roof deck engaging a roller on the leg",
+              "downlock": {"point": r3([x0 + 0.049, y0, z0 - DL_R]), "axis": [1.0, 0.0, 0.0], "d": 0.014,
+                           "lug_bottom_z": r3(z0 - DL_R - 0.015),
+                           "text": "bore of the lock bolt in the aft-lug extension (boss to z lug_bottom_z) and in the "
+                                   "aft yoke arm; bolt withdrawn aft (14 mm stroke) by the gear-unit solenoid before "
+                                   "the leg moves (mechanism main_downlock_R/L)"},
               "inspection": "beam bolts and roof bolts from the well (gear down); the dome nutplates on the fuel side "
                             "are reached only with the aft cell removed (assembly.maintenance_access)",
               "touch": ["M-GEARBEAM", "M-WELLROOF", "M-CHINE"]})
     xu, yu = x0, 0.250
     ub = [[xu - 0.020, yu - 0.020, -0.090], [xu + 0.020, yu + 0.020, -0.0668]]
+    # gear detail round (GD-10): catch pivot pin d 5 raised to 10 mm (2 D) above the boss bottom; the boss widens to
+    # +-10.5 mm in x (2.1 D); the stowed leg's roller lug passes below the boss bottom z -0.090 as before
     F.append({"id": "F-UPLOCK", "part": "YK250-CH-072", "name": "main-gear up-lock hook fitting",
               "name_tr": "ana takım yukarı kilit kancası bağlantısı", "material": "al_7075_t651_plate",
               "process": "cnc_milling_metal", "mirror": True, "box": r3(ub),
               "point": r3([xu, yu, -0.090]),
+              "pin": {"point": r3([xu, yu, -0.080]), "d": 0.005, "axis": [0.0, 1.0, 0.0], "boss_half_x": 0.0105,
+                      "text": "catch pivot pin bore in the hook boss: 10 mm (2 D) edge distance to the boss bottom and "
+                              "10.5 mm to its fore / aft faces (gear detail round GD-10)"},
               "bolts": [bolt(f"B{k + 1}", [xu + dx, yu + dy, -0.0668], AZ, 0.005, M5, ["M-WELLROOF"], "well roof")
                         for k, (dx, dy) in enumerate((dx, dy) for dx in (-0.010, 0.010) for dy in (-0.010, 0.010))],
               "attach": "machined bracket bolted 4 x M5 (axis z, 20 mm square) to the underside of the well roof deck "
@@ -855,11 +869,13 @@ def fittings() -> list:
                                        "and the nose doors open; path layout.mechanisms.assembly_paths nose_stub_axles",
                                "stub_axle": {"d": 0.016, "length": 0.022, "material": "steel_4130_n",
                                              "arm_m": 0.009}},
-              "actuator_anchor": {"kind": "rotary EMA of the nose-gear unit above the pivot between the keel walls, "
-                                          "crank + drag link to the leg yoke (layout.systems.actuators ACT-NLG-EMA)",
-                                  "point": r3([xn + 0.005, 0.0, -0.055])},
-              "locks": "down-lock: over-centre drag link (gear unit, its pins in double shear); up-lock: hook under the "
-                       "avionics deck engaging the axle roller",
+              "actuator_anchor": {"kind": "rotary EMA of the nose-gear unit above the pivot, flange on the starboard "
+                                          "keel-wall land; crank + drag link in the centre plane to a horn on the yoke "
+                                          "crown (layout.systems.actuators ACT-NLG-EMA, gear detail round GD-04)",
+                                  "point": r3([xn + 0.0158, 0.0, zn + 0.0560])},
+              "locks": "down-lock: crank and drag link in (folded) toggle with the gear down, over-centre against a stop "
+                       "on the EMA housing (gear detail round GD-04); up-lock: catches bolted to the keel walls engaging "
+                       "the axle-end rollers",
               "touch": ["M-KEELWALL"]})
     # ------------------------------------------------------------------ stabilator node (VPK-01): firewall-mounted
     pv = STAB["pivot"]

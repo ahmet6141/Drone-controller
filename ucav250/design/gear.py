@@ -115,6 +115,134 @@ def _clean(m: G.Mesh, tol: float = 2e-6) -> G.Mesh:
 
 
 # =====================================================================================================================
+# planar linkages (gear detail round: door drives, nose drag link): every crank / link / output axis of one mechanism is
+# parallel, so the mechanism is solved exactly in the plane normal to that axis and posed with chained revolute joints
+# =====================================================================================================================
+def plane_frame(u) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """(e1, e2, u) right-handed frame of the plane normal to ``u`` (e1 = y projected, or x for a y axis)."""
+    u = _u(u)
+    e1 = np.array([0.0, 1.0, 0.0]) if abs(u[1]) < 0.9 else np.array([1.0, 0.0, 0.0])
+    e1 = _u(e1 - (e1 @ u) * u)
+    return e1, np.cross(u, e1), u
+
+
+def _r2(a: float) -> np.ndarray:
+    c, s_ = math.cos(a), math.sin(a)
+    return np.array([[c, -s_], [s_, c]])
+
+
+def _ang(v) -> float:
+    return math.atan2(float(v[1]), float(v[0]))
+
+
+class FourBar:
+    """Planar four-bar: a driven crank (pivot ``C``, radius ``rc``) and an output member (pivot ``O``) rotating about
+    parallel axes ``u``; the link joins the crank pin K to the output pin q. ``q_tog`` is the output pin in the TOGGLE
+    pose (crank and link collinear = over-centre lock: the gear-down pose of a down-lock, the closed pose of a door);
+    output changes are measured from that pose. ``s_out`` is the sign of the output joint axis against ``u``.
+    K_tog = C + rc (q_tog - C)/|q_tog - C| (``fold`` = False, extended toggle) or the opposite point (``fold`` = True).
+    ``drive`` (+1 / -1) is the crank rotation sense about u when the output leaves the toggle pose (it selects the branch
+    through the toggle)."""
+
+    def __init__(self, u, plane_pt, C, O, rc: float, q_tog, s_out: float, fold: bool, drive: float):
+        self.e1, self.e2, self.u = plane_frame(u)
+        self.p0 = np.asarray(plane_pt, float)
+        self.C3 = self.on_plane(C)
+        self.O3 = self.on_plane(O)
+        self.c, self.o = self.to2(self.C3), self.to2(self.O3)
+        self.q_rest = self.to2(q_tog)
+        self.rc, self.s_out, self.fold, self.drive = float(rc), float(s_out), bool(fold), float(drive)
+        w = _u(self.q_rest - self.c)
+        self.k_rest = self.c + (-1.0 if fold else 1.0) * self.rc * w
+        self.l = float(np.linalg.norm(self.q_rest - self.k_rest))
+        self.psi0 = _ang(self.k_rest - self.c)
+        self.lam0 = _ang(self.q_rest - self.k_rest)
+
+    def on_plane(self, P) -> np.ndarray:
+        P = np.asarray(P, float)
+        return P - ((P - self.p0) @ self.u) * self.u
+
+    def to2(self, P) -> np.ndarray:
+        d = np.asarray(P, float) - self.p0
+        return np.array([d @ self.e1, d @ self.e2])
+
+    def to3(self, q2) -> np.ndarray:
+        return self.p0 + q2[0] * self.e1 + q2[1] * self.e2
+
+    def q_at(self, d_out: float) -> np.ndarray:
+        """Output pin for an output-joint change ``d_out`` (value - rest)."""
+        return self.o + _r2(self.s_out * d_out) @ (self.q_rest - self.o)
+
+    def solve(self, d_outs) -> list[dict]:
+        """Crank angle, link angle, crank pin, transmission angle for each output change (ordered from the rest pose
+        outward: the branch is followed continuously)."""
+        out, prev = [], self.psi0
+        for k, d in enumerate(d_outs):
+            q = self.q_at(d)
+            dd = float(np.linalg.norm(q - self.c))
+            if abs(d) < 1e-12:
+                psi = self.psi0
+            else:
+                if dd > self.rc + self.l + 1e-9 or dd < abs(self.l - self.rc) - 1e-9:
+                    raise ValueError(f"four-bar: output change {d:.4f} out of reach")
+                base = _ang(q - self.c)
+                g = math.acos(max(-1.0, min(1.0, (self.rc ** 2 + dd ** 2 - self.l ** 2) / (2 * self.rc * dd))))
+                cands = [base + g, base - g]
+                if len(out) == 0 or (len(out) == 1 and abs(out[0]["psi"] - self.psi0) < 1e-12):
+                    psi = min(cands, key=lambda v: -self.drive * (((v - self.psi0 + math.pi) % (2 * math.pi)) - math.pi))
+                else:
+                    psi = min(cands, key=lambda v: abs(((v - prev + math.pi) % (2 * math.pi)) - math.pi))
+                psi = prev + (((psi - prev + math.pi) % (2 * math.pi)) - math.pi)
+            K = self.c + self.rc * np.array([math.cos(psi), math.sin(psi)])
+            lam = _ang(q - K)
+            lam = self.lam0 + (((lam - self.lam0 + math.pi) % (2 * math.pi)) - math.pi) if not out else \
+                out[-1]["lam"] + (((lam - out[-1]["lam"] + math.pi) % (2 * math.pi)) - math.pi)
+            v1, v2 = q - K, q - self.o
+            mu = math.degrees(math.acos(min(1.0, abs(v1 @ v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-15))))
+            out.append({"psi": psi, "lam": lam, "K": K, "q": q, "mu": mu, "dpsi": psi - self.psi0,
+                        "dlam": lam - self.lam0})
+            prev = psi
+        return out
+
+
+def pl_expr(gs, vals, prop: str = "gear_up") -> str:
+    """Blender simple expression (clamp only) of the piecewise-linear function through (gs, vals): equal to the
+    sequence values at every sample."""
+    terms = [f"{vals[0]:.6f}"] if abs(vals[0]) > 1e-9 else []
+    for k in range(len(gs) - 1):
+        dv = vals[k + 1] - vals[k]
+        if abs(dv) < 1e-9:
+            continue
+        dg = gs[k + 1] - gs[k]
+        terms.append(f"{dv:+.6f}*clamp(({prop}-{gs[k]:.4f})/{dg:.4f},0,1)")
+    return "".join(terms).lstrip("+") or "0.0"
+
+
+def eval_pl_expr(expr: str, g: float) -> float:
+    """Evaluate a pl_expr / layout expression (clamp, min, max, abs) at gear_up = g (tests and checks)."""
+    def clamp(v, a, b):
+        return min(max(v, a), b)
+    return float(eval(expr, {"__builtins__": {}}, {"clamp": clamp, "min": min, "max": max, "abs": abs, "gear_up": g}))
+
+
+def bar_mesh(fb: FourBar, P0, P1, r0: float, r1: float, t0: float, t1: float, hole0: float = 0.0,
+             hole1: float = 0.0, extra=()) -> G.Mesh:
+    """Flat bar (hull of two eye circles) between the 3-D points P0, P1 in the plane of ``fb`` (2-D coordinates), from
+    t0 to t1 along the mechanism axis (measured from the plane point), with pin bores; ``extra`` = shapely polygons
+    added to the outline."""
+    a, b = fb.to2(P0), fb.to2(P1)
+    poly = unary_union([Point(*a).buffer(r0, 48), Point(*b).buffer(r1, 48),
+                        Polygon([tuple(a + r0 * _r2(math.pi / 2) @ _u(b - a)), tuple(b + r1 * _r2(math.pi / 2) @ _u(b - a)),
+                                 tuple(b - r1 * _r2(math.pi / 2) @ _u(b - a)), tuple(a - r0 * _r2(math.pi / 2) @ _u(b - a))])]
+                       + list(extra))
+    if hole0:
+        poly = poly.difference(Point(*a).buffer(hole0, 32))
+    if hole1:
+        poly = poly.difference(Point(*b).buffer(hole1, 32))
+    return _plate(poly, fb.p0, fb.e1, fb.e2, t0, t1)
+
+
+# =====================================================================================================================
 # context: interfaces from the spec
 # =====================================================================================================================
 class Ctx:
@@ -421,46 +549,6 @@ def oml_panel(C: Ctx, poly: Polygon, t: float, off: float = 0.0, nx: int = 40, n
     pan = G.shell_from_grid(P, t, inward=-N)
     clip = G.extrude(poly, 0.8, origin=(0.0, 0.0, -0.6), u=(1, 0, 0), v=(0, 1, 0))
     return G.intersection(pan, clip)
-
-
-def skin_section(C: "Ctx", x: float, ya: float, yb: float, t: float, n: int = 17, m: float = 0.0005) -> Polygon:
-    """(y, z) section of a lower-skin band between ya and yb (outer face = OML, thickness t along the normal), grown
-    by ``m`` all round."""
-    ys = np.linspace(ya - m, yb + m, n)
-    ph = phi_lower(C.fus, np.full_like(ys, x), ys)
-    ph = np.where(ys < 0, 2 * math.pi - ph, ph)
-    P = C.fus.point(np.full_like(ys, x), ph)
-    N = C.fus.normal(np.full_like(ys, x), ph)
-    out = P + m * N
-    inn = P - (t + m) * N
-    pts = np.vstack([out[:, 1:3], inn[::-1, 1:3]])
-    return Polygon(pts).buffer(0)
-
-
-def rect(x0, x1, y0, y1) -> Polygon:
-    return Polygon([(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
-
-
-def relief_cutter(xs, section_fn, origin, axis, v0: float, v1: float, nth: int = 31) -> G.Mesh:
-    """Cutter swept by fixed obstacles relative to a part turning about an (almost) x-parallel axis: at each station x
-    the obstacle section (shapely polygon in (y, z), ``section_fn(x)``) is turned by -v for v in v0..v1 and united;
-    between two stations the cutter is the prism of the union of both station regions (conservative, robust)."""
-    regs = []
-    for x in xs:
-        sec = section_fn(x)
-        geoms = list(sec.geoms) if hasattr(sec, "geoms") else [sec]
-        polys = []
-        for v in np.linspace(v0, v1, nth):
-            for gpoly in geoms:
-                pts = np.array([[x, py, pz] for py, pz in np.asarray(gpoly.exterior.coords)])
-                q = _rot(pts, origin, axis, -v)
-                polys.append(Polygon(q[:, 1:3]).buffer(0))
-        regs.append(unary_union(polys).buffer(0.0002, join_style=2))
-    prisms = []
-    for k in range(len(xs) - 1):
-        u = unary_union([regs[k], regs[k + 1]]).simplify(0.00005)
-        prisms.append(_plate(u, (float(xs[k]), 0.0, 0.0), (0, 1, 0), (0, 0, 1), 0.0, float(xs[k + 1] - xs[k])))
-    return G.union(prisms)
 
 
 def skin_section(C: "Ctx", x: float, ya: float, yb: float, t: float, n: int = 17, m: float = 0.0005) -> Polygon:

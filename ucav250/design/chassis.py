@@ -1859,6 +1859,7 @@ def build_trunnion(C: Ctx) -> G.Mesh:
     # lightening: each lug keeps a web of the checked lug thickness (layout lug t_m) on its yoke side and the full
     # 26 mm bushing boss (radius = lug end distance e_m); the top plate between the lugs is pocketed from below
     t_web, r_boss = float(f["lug"]["t_m"]), float(f["lug"]["e_m"])
+    dl = f.get("downlock")
     for b in f["bearings"]:
         xc = float(b["x"])
         if xc < px:                                   # forward lug: yoke (inner) face aft
@@ -1866,7 +1867,15 @@ def build_trunnion(C: Ctx) -> G.Mesh:
         else:
             xa_, xb_ = xc - TRUN_LUG_HALF + t_web, xc + TRUN_LUG_HALF + 0.001
         pocket = box3((xa_, TRUN_LUG_Y[0] - 0.001, -0.16), (xb_, TRUN_LUG_Y[1], TRUN_PLATE_Z1 - TRUN_ROOF_PLATE_T))
-        cuts.append(diff(pocket, [bore((xa_ - 0.002, py, pz), (xb_ + 0.002, py, pz), r_boss)]))
+        keep = [bore((xa_ - 0.002, py, pz), (xb_ + 0.002, py, pz), r_boss)]
+        if dl and xc > px:                            # gear detail round (GD-03): full-width boss round the lock bolt
+            q = np.asarray(dl["point"], float)
+            keep.append(bore((xa_ - 0.002, q[1], q[2]), (xb_ + 0.002, q[1], q[2]), DL_BOSS_R))
+            keep.append(box3((xa_ - 0.002, q[1] - DL_BOSS_R, q[2]), (xb_ + 0.002, q[1] + DL_BOSS_R, pz)))
+        cuts.append(diff(pocket, keep))
+    if dl:                                            # lock-bolt bore (d 14 H8, bushed in the gear-unit kit)
+        q = np.asarray(dl["point"], float)
+        cuts.append(bore((q[0] - 0.02, q[1], q[2]), (q[0] + 0.02, q[1], q[2]), 0.5 * float(dl["d"]) + DL_BORE_CLR, n=40))
     # the 12 mm strip of the top plate inboard of the lugs: 8 mm like the roof-bolt plates (V03)
     cuts.append(box3((TRUN_LUG_X[0] - 0.026 - 0.001, ya - 0.001, TRUN_PLATE_Z0 - 0.001),
                      (TRUN_LUG_X[1] + 0.026 + 0.001, TRUN_LUG_Y[0], TRUN_PLATE_Z1 - TRUN_ROOF_PLATE_T)))
@@ -1876,6 +1885,8 @@ def build_trunnion(C: Ctx) -> G.Mesh:
 
 
 TRUN_LUG_HALF = 0.013           # bushing boss / lug envelope half length in x (layout 26 mm)
+DL_BOSS_R = 0.014               # boss round the down-lock bolt bore in the aft-lug extension (2 D edge for d 14 / 2)
+DL_BORE_CLR = 0.00005           # lock-bolt bore radial clearance (H8 / f7 class)
 TRUN_ROOF_PLATE_T = 0.008       # roof-bolt plates fore / aft of the lugs (the layout's 20 mm top plate over the lugs)
 TRUN_BUSH_OD = 0.023            # sleeve bushing 20 H7 x OD 23 x 26 (metal-polymer class, estimate; layout: match the
 #                                 selected gear unit)
@@ -1919,20 +1930,26 @@ def wellroof_face_t(C: Ctx) -> float:
 
 
 def build_uplock(C: Ctx) -> G.Mesh:
+    """Up-lock hook fitting: base plate on the well roof (4 x M4 into potted inserts) and the hook boss carrying the
+    catch pivot pin (layout F-UPLOCK pin: d 5, 10 mm = 2 D to the boss bottom, 10.5 mm to its fore / aft faces; gear
+    detail round GD-10 - the boss was 16 mm long with the pin 6 mm above its bottom)."""
     f = C.fit["F-UPLOCK"]
     lo, hi = f["box"]
     px, py, pz = f["point"]
+    pin = f.get("pin") or {"point": [px, py, pz + 0.006], "d": 0.005, "boss_half_x": 0.008}
+    hx = float(pin["boss_half_x"])
+    qx, qy, qz = (float(v) for v in pin["point"])
     xs = (px - UPLOCK_BOLT_DX, px + UPLOCK_BOLT_DX)
     base = box3((xs[0] - 0.010, UPLOCK_BOLT_Y[0] - 0.010, hi[2] - UPLOCK_BASE_T),
                 (xs[-1] + 0.010, UPLOCK_BOLT_Y[1] + 0.010, hi[2]))
-    boss = box3((px - 0.008, py - 0.012, lo[2]), (px + 0.008, py + 0.012, hi[2] - UPLOCK_BASE_T + OV))
+    boss = box3((px - hx, py - 0.012, lo[2]), (px + hx, py + 0.012, hi[2] - UPLOCK_BASE_T + OV))
     m = union([base, boss])
-    return diff(m, [bore((px, py - 0.02, pz + 0.006), (px, py + 0.02, pz + 0.006), 0.0026)])   # hook pivot pin
+    return diff(m, [bore((qx, qy - 0.02, qz), (qx, qy + 0.02, qz), 0.5 * float(pin["d"]) + 0.0001)])   # pivot pin
 
 
 UPLOCK_BASE_T = 0.005
 UPLOCK_BOLT_Y = (0.240, 0.260)  # rows of the layout F-UPLOCK bolts (20 mm)
-UPLOCK_BOLT_DX = 0.0135         # bolt columns +-13.5 mm about the hook point: heads clear of the hook boss
+UPLOCK_BOLT_DX = 0.0150         # bolt columns +-15 mm about the hook point: heads clear of the hook boss (+-10.5, GD-10)
 # layout F-UPLOCK (PK2-05): blind potted inserts from the well side, the fuel-side facesheet of the roof is not pierced
 # (V09): the insert depth is the lower facesheet + core; an M5 needs 6.5 mm of thread depth (1.2 D + 0.5 mm) that the
 # 6.2 mm leave, so the bolts are M4 12.9 (insert pull-out, the governing structures G-UPLOCK mode, is set by the potting

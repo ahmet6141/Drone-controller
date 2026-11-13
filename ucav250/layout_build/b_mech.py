@@ -102,38 +102,45 @@ def mechanisms() -> dict:
                    scale=ang, expr=f"{ang:.5f}*clamp((gear_up-0.15)/0.7,0,1)", side="L", mirror_of="main_gear_R",
                    moves="YK250-LG-620-L, YK250-LG-622-L, YK250-LG-672-L"))
     y_h = 0.5 * float(MG["well_gap"])
-    x_w = 0.5 * (float(ZP["main_gear_wells"]["box"][0][0]) + float(ZP["main_gear_wells"]["box"][1][0]))
-    o_d = np.array([x_w, y_h, z_bot(x_w, y_h) + 0.002])
+    x_w = 0.5 * float(ZP["main_gear_wells"]["box"][0][0] + ZP["main_gear_wells"]["box"][1][0])
+    # gear detail round (GD-06): the hinge line follows the belly: minimax straight line through z_bot + HINGE_OFF_IN
+    # over the hinge-station range (the belly rises 15 mm along the door; the old x-parallel line lay inside the door
+    # laminate only over x 2.914-2.950), so that three hinge stations at full pitch sit on it
+    o_d, a_d, dev_d = inner_door_hinge_line()
     a_door = 90.0 * DEG       # gear detail design (GD-02): at 95 deg the two inner-door leaves crossed below the
     #                           centre line (their planes contain the hinge lines at y +-0.010)
-    J.append(joint("main_inner_door_R", "revolute", o_d, [-1.0, 0.0, 0.0], 0.0, a_door, prop="", scale=1.0,
+    J.append(joint("main_inner_door_R", "revolute", o_d, a_d, 0.0, a_door, prop="", scale=1.0,
                    expr=f"{a_door:.5f}*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))", side="R",
                    moves="YK250-LG-670-R",
-                   notes="hinged at the inboard well edge (y = well_gap/2); opens down 90 deg before the leg moves "
-                         "and closes after the up-/down-lock (closed at both ends of the sequence)"))
-    J.append(joint("main_inner_door_L", "revolute", o_d * np.array([1, -1, 1]), [1.0, 0.0, 0.0], 0.0, a_door,
-                   prop="", scale=1.0, expr=f"{a_door:.5f}*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))",
+                   notes="hinged at the inboard well edge (y = well_gap/2) on a straight line that follows the belly "
+                         f"(z_bot + {HINGE_OFF_IN * 1000:.0f} mm +- {dev_d * 1000:.1f} mm over the hinge stations, GD-06); "
+                         "opens down 90 deg before the leg moves and closes after the up-/down-lock (closed at both "
+                         "ends of the sequence); driven by the DA 22 EQ-DOORACT through a shaft in FS-GEAR, crank and "
+                         "link to the horn on the door (over-centre in the closed position)"))
+    J.append(joint("main_inner_door_L", "revolute", o_d * np.array([1, -1, 1]), mirror_axis_same_sense(a_d), 0.0,
+                   a_door, prop="", scale=1.0,
+                   expr=f"{a_door:.5f}*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))",
                    side="L", mirror_of="main_inner_door_R", moves="YK250-LG-670-L"))
     # fix round 2 (PK2-03): trunnion door per well, hinged on the lower edge of the gear beam (chine corner), closing the
-    # leg-slot strip from the trimmed leg door (y 0.30) to the beam; opens outward-down before the leg moves and closes
-    # after it; fix round 3 (PK3-07): leg-driven through a slotted (lost-motion) link with an opening spring - the
-    # inner-door DA 22 drives the inner door only (open, then reverse to close), so no dual-dwell linkage is needed
+    # leg-slot strip from the trimmed leg door (y 0.30) to the beam. Gear detail round (GD-07): the leg-driven slotted
+    # link of fix round 3 (PK3-07) has no realisable geometry (leg / door 4-bars in the free planes of the slot either
+    # cross the leg door or keep a transmission angle below 35 deg; docs/detail/gear.md), so the door has its own drive:
+    # a micro gearmotor in the yoke pocket above the beam notch, crank + link to a horn at the hinge, over-centre closed.
+    # The door now moves like the inner doors: open before the leg moves, closed after the up-lock (expr = sequence).
     from .b_chassis import Y_GB, T_SW as T_SW_GB
     y_th = round(Y_GB + T_SW_GB, 4)                    # outboard lower edge of the gear beam (skin corner)
     o_t = np.array([x_w, y_th, z_bot(float(MG["trunnion"][0]), y_th) + 0.002])
     a_tdoor = 125.0 * DEG
-    g_e = round(0.15 + 0.70 * TDOOR_ENGAGE_DEG / float(MG["retraction"]["angle_deg"]), 4)   # link engages the door
-    e_td = f"{a_tdoor:.5f}*(1-clamp((gear_up-{g_e})/{round(0.85 - g_e, 4)},0,1))"
+    e_td = f"{a_tdoor:.5f}*(1-clamp((gear_up-0.85)/0.15,0,1))"
     J.append(joint("main_trunnion_door_R", "revolute", o_t, [1.0, 0.0, 0.0], 0.0, a_tdoor, rest=a_tdoor, prop="",
                    scale=1.0, expr=e_td, side="R",
                    moves="YK250-LG-673-R", hinge_parent="M-GEARBEAM", hinge_zone_m=0.015,
                    notes="hinged on the lower edge of the gear beam (axis along x), + = free edge down and outboard; "
-                         "open 125 deg while the down leg passes through its strip; fix round 3 (PK3-07): driven by "
-                         "the leg through a slotted (lost-motion) link - an opening spring holds the door on its open "
-                         f"stop until the leg reaches {TDOOR_ENGAGE_DEG:.0f} deg of its retraction, the link pin then "
-                         "takes up the slot and pulls the door shut over the last part of the leg stroke (closed when "
-                         "the leg up-locks, gear_up 0.85; on extension the spring opens it as the pin backs off in the slot); "
-                         "fix round 3 (PK3-03): rest = open (the gear-down state), modelled open; value 0 = closed "
+                         "open 125 deg while the leg moves (the down leg passes through its strip); gear detail round "
+                         "(GD-07): driven by its own micro gearmotor (yoke pocket above the beam notch) through crank, "
+                         "link and hinge horn, over-centre lock in the closed position; closes after the up-lock "
+                         "(gear_up 0.85-1.0) and opens before the extension, like the inner door (the expr and the "
+                         "sequence agree); rest = open (the gear-down state, fix round 3 PK3-03), value 0 = closed "
                          "(door_outlines closed_at lo)"))
     J.append(joint("main_trunnion_door_L", "revolute", o_t * np.array([1, -1, 1]), [-1.0, 0.0, 0.0], 0.0, a_tdoor,
                    rest=a_tdoor, prop="", scale=1.0, expr=e_td,
@@ -161,8 +168,9 @@ def mechanisms() -> dict:
                        moves=f"YK250-LG-674-{sd}",
                        notes="clamshell hinged at the keel-slot edge; open (90 deg, hanging) whenever the gear is not "
                              "up-locked, closed for gear_up > 0.85 + 0.15; driven together with the other door by one "
-                             "DA 22 (EQ-NDOORACT, centre-line bellcrank and links NDOOR-LINKAGE; fix round 2 PK2-13: a "
-                             "leg-driven link cannot close the doors while the leg stands still); fix round 3 (PK3-03): "
+                             "DA 22 (EQ-NDOORACT; gear detail round GD-08: crank on its shaft and two links to the "
+                             "horns of the aft door knuckles, both links over-centre in the closed position; fix round 2 "
+                             "PK2-13: a leg-driven link cannot close the doors while the leg stands still); fix round 3 (PK3-03): "
                              "rest = open (gear-down state), modelled open; value 0 = closed (door_outlines closed_at "
                              "lo)"))
     # ---------------------------------------------------------------- turret elevator + sliding bay doors
@@ -210,7 +218,7 @@ def mechanisms() -> dict:
         d_in = a_door * (cl(g / 0.15) - cl((g - 0.85) / 0.15))
         seq_g.append({"gear_up": r3(g, 3), "main_gear_R": r3(ang * leg, 5), "main_gear_L": r3(ang * leg, 5),
                       "main_inner_door_R": r3(d_in, 5), "main_inner_door_L": r3(d_in, 5),
-                      "main_trunnion_door_R": r3(a_tdoor * (1 - cl((g - 0.85) / 0.15)), 5),
+                      "main_trunnion_door_R": r3(a_tdoor * (1 - cl((g - 0.85) / 0.15)), 5),       # = e_td (GD-07)
                       "main_trunnion_door_L": r3(a_tdoor * (1 - cl((g - 0.85) / 0.15)), 5),
                       "nose_gear": r3(an * leg, 5), "nose_steer": 0.0,
                       "nose_door_R": r3(90 * DEG * (1 - cl((g - 0.85) / 0.15)), 5),
@@ -259,6 +267,39 @@ def rudder_span() -> tuple:
     return e0 + float(rc.get("eta0", (0.300 - e0) / sp)) * sp, e0 + float(rc.get("eta1", (0.880 - e0) / sp)) * sp
 
 
+HINGE_OFF_IN = 0.004        # inner-door hinge line above the OML (minimax fit; knuckles d 7 within ~1.5 mm of the OML)
+HINGE_COVE_R = 0.0042      # skin cove round a door hinge axis at a hinge station (knuckle r 3.5 + 0.7 mm)
+IN_HINGE_ST = (0.012, 0.012)   # first / last inner-door hinge station: inset from the well-zone ends (m)
+
+
+def inner_door_hinge_line():
+    """Gear detail round (GD-06): straight inner-door hinge line (starboard) that follows the belly at y = well_gap/2:
+    minimax (Chebyshev) line through z_bot(x, y_h) + HINGE_OFF_IN over the hinge-station range. Returns (origin at the
+    well-zone centre x, axis (+ = door opens down, like the old [-1, 0, 0]), max deviation)."""
+    y_h = 0.5 * float(MG["well_gap"])
+    wb = ZP["main_gear_wells"]["box"]
+    xa, xb = float(wb[0][0]) + IN_HINGE_ST[0], float(wb[1][0]) - IN_HINGE_ST[1]
+    xs = np.linspace(xa, xb, 41)
+    zs = np.array([z_bot(x, y_h) + HINGE_OFF_IN for x in xs])
+    k = (zs[-1] - zs[0]) / (xb - xa)
+    r = zs - (zs[0] + k * (xs - xa))
+    c0 = zs[0] + 0.5 * (r.max() + r.min())
+    dev = 0.5 * (r.max() - r.min())
+    x_w = 0.5 * (float(wb[0][0]) + float(wb[1][0]))
+    o = np.array([x_w, y_h, c0 + k * (x_w - xa)])
+    a = -unit([1.0, 0.0, k])
+    return np.asarray(r3(o, 5), float), a, float(dev)
+
+
+def inner_door_hinge_stations():
+    """Three inner-door hinge stations (x0, x1) at full pitch along the well zone (the aft one ahead of the drive horn
+    at the aft end of the door)."""
+    wb = ZP["main_gear_wells"]["box"]
+    x0, x1 = float(wb[0][0]), float(wb[1][0])
+    c = (x0 + 0.020, 0.5 * (x0 + x1) - 0.012, x1 - 0.034)
+    return [r3([v - 0.0065, v + 0.0065]) for v in c]
+
+
 Y_LEGDOOR = 0.300          # outboard edge of the main leg door (fix round 2, PK2-03)
 
 
@@ -283,6 +324,10 @@ def door_outlines() -> dict:
     out = {
         "main_inner_door_R": {"joint": "main_inner_door_R", "thickness": 0.004,
                               "outline": r3([[x0, y_in], [x1, y_in], [x1, y_out], [x0, y_out]]),
+                              "hinge": {"stations": inner_door_hinge_stations(), "pin_d": 0.003, "cove_r": HINGE_COVE_R,
+                                        "text": "GD-06: three stations (fixed bracket on the well keel web, door knuckle, "
+                                                "pin d 3); the centre-strip skin carries a cove of cove_r round the "
+                                                "hinge axis over each station (shell owner)"},
                               "text": "inner door (well zone x range, from the inboard hinge edge to "
                                       "landing_gear.doors.main_inner_door_outer_edge_y)"},
         "main_leg_door_R": {"joint": "main_gear_R", "thickness": 0.004, "closed_at": "hi",
@@ -295,10 +340,21 @@ def door_outlines() -> dict:
         "main_trunnion_door_R": {"joint": "main_trunnion_door_R", "thickness": 0.004, "closed_at": "lo",
                                  "outline": r3([[xt0 - 0.032, Y_LEGDOOR], [xt0 + 0.032, Y_LEGDOOR],
                                                 [xt0 + 0.032, Y_GB + 0.0068], [xt0 - 0.032, Y_GB + 0.0068]]),
+                                 "hinge": {"stations": [r3([xt0 - 0.042, xt0 + 0.042])], "pin_d": 0.003,
+                                           "cove_r": HINGE_COVE_R,
+                                           "text": "GD-08: hinge blocks either side of the leg slot bolted to the gear-"
+                                                   "beam land, door knuckle over the slot length; skin cove of cove_r "
+                                                   "round the hinge axis over the station (shell owner)"},
                                  "text": "trunnion door hinged on the lower edge of the gear beam: closes the leg-slot "
                                          f"strip y {Y_LEGDOOR}-{Y_GB} when the gear is up (fix round 2, PK2-03)"},
         "nose_door_R": {"joint": "nose_door_R", "thickness": 0.004, "closed_at": "lo",
                         "outline": r3([[xs0, 0.0005], [xs1, 0.0005], [xs1, yh], [xs0, yh]]),
+                        "hinge": {"stations": [[0.700, 0.746], r3([xs1 - 0.031, xs1 - 0.0085])], "pin_d": 0.003,
+                                  "cove_r": HINGE_COVE_R,
+                                  "text": "two stations where neither the yoke nor the tyre passes near the hinge line "
+                                          "(layout clearances); blocks bolted through the keel wall, the aft door "
+                                          "knuckle carries the drive horn (GD-08); skin cove of cove_r round the hinge "
+                                          "axis over each station (shell owner)"},
                         "text": "clamshell door hinged at the keel-slot edge (y = slot half width), meets its "
                                 "partner on the centre line; fix round 3 (PK3-02): aft edge 1 mm ahead of the turret "
                                 "ring insert P-TURRETRING, its 12 mm edge band on the slot-end sill M-NGSILL (the ring "
@@ -423,7 +479,6 @@ def engine_envelope() -> list:
             {"id": "prop_flange_hub_spacer", "u": [0.0, r3(h0)], "v": [-0.045, 0.045], "w": [-0.045, 0.045]}]
 
 
-TDOOR_ENGAGE_DEG = 90.0     # main-leg retraction angle at which the slotted link takes up the trunnion door (PK3-07)
 
 
 def keep_outs() -> list:
@@ -648,8 +703,9 @@ def sweep_keep_outs(L: dict) -> list:
             rods.append({"equipment": e["id"], "from_axis": lk["servo_axis"], "to_axis": lk["horn_axis"],
                          "arm": float(lk["servo_arm_m"]), "horn": float(lk["horn_m"]), "through": "C-FW-PUSHROD",
                          "radius": 0.012})
-    rods.append({"equipment": "EQ-DOORACT", "through": "C-DOORLINK", "radius": 0.010,
-                 "text": "crank + pushrod from the DA 22 on the aft face of FS-GEAR to the inner-door hinge horn"})
+    rods.append({"equipment": "EQ-DOORACT", "through": "C-DOORSHAFT", "radius": 0.010,
+                 "text": "gear detail round (GD-05): DA 22 shaft through FS-GEAR (bearing housing), crank and link in the "
+                         "plane x ~3.08 aft of the swept tyre (x <= 3.071) to the horn on the aft end of the inner door"})
     K.append({"id": "KO-CORRIDOR-PUSHRODS", "kind": "corridor (pushrods)", "mirror": True, "items": rods,
               "text": "pushrod corridors: rod + rod ends (d 8 mm rod, 12 mm swept radius over the actuator travel) "
                       "from the actuator arm to the horn; the frame crossings use the declared cut-outs (fireproof "

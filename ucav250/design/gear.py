@@ -1305,7 +1305,8 @@ class NoseDoors:
             if xb_ - xa_ < 1e-4:
                 continue
             nn = max(2, int((xb_ - xa_) / 0.03) + 2)
-            cuts.append(relief_cutter(np.linspace(xa_ + 1e-5, xb_ - 1e-5, nn), obst, self.O, self.a, lo_, hi_))
+            # neighbouring cutters overlap by 0.6 mm (obst is evaluated per x): no uncut sliver at the segment ends
+            cuts.append(relief_cutter(np.linspace(xa_ - 0.0003, xb_ + 0.0003, nn), obst, self.O, self.a, lo_, hi_))
         for xa, xb in self.blocks:
             pa = self.on_axis(xa)
             z_b = float(min(pa[2], self.on_axis(xb)[2])) - 0.0015
@@ -1419,7 +1420,7 @@ class InnerDoorDrive:
         cb = 0.5 * H_ - DA30["shaft_from_edge"]            # 85 mm side outboard along e1 (y), 30 mm along e2
         flange = G.box((DA30["flange_t"], H_, W_), center=self.at(tc + 0.5 * DA30["flange_t"], cb, 0.0), R=self.R)
         f0 = DA30["flange_t"] - 0.001                       # body overlaps the flange by 1 mm (clean union)
-        body = G.box((L_ - f0, H_ - 0.020, W_ - 0.002), center=self.at(tc + 0.5 * (L_ + f0), cb, 0.0), R=self.R)
+        body = G.box((L_ - f0, H_ - DA30["body_inset"], W_ - 0.002), center=self.at(tc + 0.5 * (L_ + f0), cb, 0.0), R=self.R)
         holes = [G.cylinder(0.5 * DA30["hole_d"], self.at(tc - 0.001, b, c), self.at(tc + DA30["flange_t"] + 0.001, b, c),
                             n=16) for b, c in self.lug_bc()]
         bore = G.cylinder(0.00405, self.at(tc - 0.001), self.at(tc + 0.0105), n=32)
@@ -1446,34 +1447,71 @@ class InnerDoorDrive:
     def plate_bc(self):
         """(b range, c range) of the wedge plate: the flange footprint plus the strap ears and 8 mm (2 D) round
         their bolts."""
-        bs = [b for b, _c in self.lug_bc()]
+        bs = [self.strap_b(0), self.strap_b(1)]
         ce = 0.5 * DA30["W"] + STRAP["ear"]
-        return (min(bs) - 0.5 * STRAP["w"], max(bs) + 0.5 * STRAP["w"]), (-ce - 0.0005, ce + 0.0005)
+        return (min(bs) - 0.5 * STRAP["w"] - 0.0005, max(bs) + 0.5 * STRAP["w"] + 0.0005), (-ce - 0.0005, ce + 0.0005)
 
     def strap(self, k: int) -> G.Mesh:
-        """702 (IR-02): 7075 clamp strap k (0/1) across the DA 30 flange on the line of a lug-hole pair: bar over the
-        flange aft face + two feet beside the flange down to the wedge plate (the case is clamped, no bolt passes
-        through the purchased flange, whose lug holes sit 4 mm from its ends)."""
+        """702 (IR-02): 7075 clamp strap k (0 inboard / 1 outboard) over the flange end beside the DA 30 body: bar
+        over the flange aft face + two feet beside the flange down to the wedge plate (the case is clamped, no bolt
+        passes through the purchased flange, whose lug holes sit 4 mm from its ends). The inboard strap's upper
+        foot is doglegged outboard (foot_b) so that its bolt keeps 2.5 D to the C-HARN-CL cut-out of FS-GEAR."""
         tc = self.t_case
-        b = self.lug_bc()[2 * k][0]
+        b = self.strap_b(k)
         ft, t, w, ear = DA30["flange_t"], STRAP["t"], STRAP["w"], STRAP["ear"]
         hw = 0.5 * DA30["W"]
-        bar = G.box((t, w, 2 * (hw + ear)), center=self.at(tc + ft + 0.5 * t, b, 0.0), R=self.R)
-        feet = [G.box((ft + 0.0002, w, ear - 0.0004), center=self.at(tc + 0.5 * (ft + 0.0002), b,
-                                                                       sg * (hw + 0.0004 + 0.5 * (ear - 0.0004))),
-                      R=self.R) for sg in (-1.0, 1.0)]
-        holes = [G.cylinder(0.5 * FC.clearance(4), self.at(tc - 0.001, b, c), self.at(tc + ft + t + 0.001, b, c), n=24)
-                 for c in self.strap_c()]
-        return _clean(G.difference(G.union([bar] + feet), holes))
+        parts = [G.box((t, w, 2 * (hw + ear)), center=self.at(tc + ft + 0.5 * t, b, 0.0), R=self.R)]
+        for sg in (-1.0, 1.0):
+            bf = self.foot_b(k, sg)
+            b0, b1 = min(b, bf) - 0.5 * w, max(b, bf) + 0.5 * w
+            cm = sg * (hw + 0.0004 + 0.5 * (ear - 0.0004))
+            parts.append(G.box((ft + 0.0002, w, ear - 0.0004), center=self.at(tc + 0.5 * (ft + 0.0002), bf, cm), R=self.R))
+            if bf != b:                                 # dogleg: bar + foot widened along e1 to the offset foot
+                parts.append(G.box((ft + t, b1 - b0, ear - 0.0004), center=self.at(tc + 0.5 * (ft + t), 0.5 * (b0 + b1),
+                                                                                     cm), R=self.R))
+        holes, sf = [], []
+        for sg, c in zip((-1.0, 1.0), self.strap_c()):
+            bf = self.foot_b(k, sg)
+            holes.append(G.cylinder(0.5 * FC.clearance(4), self.at(tc - 0.001, bf, c), self.at(tc + ft + t + 0.001, bf, c),
+                                    n=24))
+            # 1 mm spot face under the bolt head, floor normal to the bolt axis (x, normal to the frame): the wedge
+            # makes the grips differ by ~4 mm; the spot face keeps >= 1.2 D thread engagement in the frame insert
+            q = self.at(tc + ft + t - STRAP_SF, bf, c)
+            sf.append(G.cylinder(0.5 * FC.ISO4762[4][0] + 0.0005, q, q + np.array([0.004, 0.0, 0.0]), n=24))
+        return _clean(G.difference(G.union(parts), holes + sf))
+
+    def foot_b(self, k: int, sg: float) -> float:
+        """e1 position of the foot (and bolt) of strap k on side sg of the flange: under the bar, except the inboard
+        strap's upper foot, moved outboard until its bolt is 2.5 D + 0.5 mm from the FS-GEAR C-HARN-CL cut-out
+        (layout) when it would otherwise fall beside it."""
+        b = self.strap_b(k)
+        if k != 0 or sg < 0:
+            return b
+        cl = next((c_ for c_ in self.C.st["FS-GEAR"].get("cutouts", []) if c_["id"] == "C-HARN-CL"), None)
+        if cl is None:
+            return b
+        p = self.at(self.t_case, b, self.strap_c()[1])
+        need = float(cl["y"][1]) + 2.5 * 0.004 + 0.0005
+        if float(cl["z"][0]) - 2.5 * 0.004 < p[2] and p[1] < need:
+            return b + (need - p[1]) / self.e1[1]
+        return b
+
+    def strap_b(self, k: int) -> float:
+        """Strap k centre line along e1: beside the case body (0.2 mm clear of it) over the flange end it clamps,
+        overhanging the flange end (the lug holes, 4 mm from the ends, stay unused)."""
+        cb = 0.5 * DA30["H"] - DA30["shaft_from_edge"]
+        off = 0.5 * (DA30["H"] - DA30["body_inset"]) + 0.0002 + 0.5 * STRAP["w"]
+        return cb - off if k == 0 else cb + off
 
     def strap_c(self):
         hw = 0.5 * DA30["W"]
-        return (-(hw + 0.5 * STRAP["ear"]), hw + 0.5 * STRAP["ear"])
+        c = hw + 0.0002 + 0.5 * STRAP["ear"]          # centred in the foot (foot from hw + 0.4 mm to hw + ear)
+        return (-c, c)
 
     def ear_bolts(self):
         """Strap-bolt head points (M4 through strap foot and wedge plate into the frame inserts), [(point, strap)]."""
-        return [(self.at(self.t_case + DA30["flange_t"] + STRAP["t"], self.lug_bc()[2 * k][0], c), k)
-                for k in (0, 1) for c in self.strap_c()]
+        return [(self.at(self.t_case + DA30["flange_t"] + STRAP["t"] - STRAP_SF, self.foot_b(k, sg), c), k)
+                for k in (0, 1) for sg, c in zip((-1.0, 1.0), self.strap_c())]
 
     def housing(self) -> G.Mesh:
         """689: flanged bearing housing (7075) on the forward face of FS-GEAR, spigot in C-DOORSHAFT, two sealed
@@ -1490,10 +1528,11 @@ class InnerDoorDrive:
         return [np.array([self.xf0 - 0.003, y + dy, z]) for dy in (-0.0175, 0.0175)]
 
 
-STRAP = dict(t=0.004, w=0.016, ear=0.016)   # DA 30 clamp straps (7075, IR-02): bar 4 mm, 16 mm wide, feet 16 mm
-#                                             beside the flange: bolts 8 mm (2 D) from every strap / foot edge
+STRAP = dict(t=0.004, w=0.020, ear=0.020)   # DA 30 clamp straps (7075, IR-02): bar 4 mm, 20 mm wide, feet 20 mm
+#                                             beside the flange: bolts 10 mm (2.5 D, composite frame) from every edge
+STRAP_SF = 0.001                             # spot face under the strap-bolt heads
 DA30 = dict(L=0.1585, H=0.085, W=0.030, holes=(0.077, 0.018), axis_from_holes=0.0216, hole_d=0.0041,
-            shaft_from_edge=0.0256, flange_t=0.008, mass=0.630)
+            shaft_from_edge=0.0256, flange_t=0.008, body_inset=0.020, mass=0.630)
 #   Volz DA 30 (components.yaml volz_da30: envelope incl. D-Sub, lug pattern 77 x 18 mm, d 4.1, output 21.6 mm from
 #   the hole line; flange thickness 8 mm read from the drawing 7.1/7.2 (estimate)); inner-door drive, IR-02
 HS_YZ = (0.044, -0.135)             # bearing housing centre on the forward face of FS-GEAR (C-DOORSHAFT centre)
@@ -2434,7 +2473,7 @@ class Build:
             pin_through(reg, f"{pid(687)}-{nm}", ID_PIN, mv(p0), mv(p1), ids, step=STEP_DOOR,
                         notes="ISO 2341-B d 4 + split pin; shim washers set the 0.5 mm plane gaps")
         for k, (p, ks) in enumerate(I.ear_bolts()):
-            te = (DA30["flange_t"] + STRAP["t"]) / I.u[0]         # strap bar + foot along x (bolt normal to the frame)
+            te = (DA30["flange_t"] + STRAP["t"] - STRAP_SF) / I.u[0]   # strap foot under the spot face along x
             J.bolt(reg, f"{pid(702 + ks)}-B{k % 2 + 1}", 4, mv(p), (-1.0, 0.0, 0.0), [(pid(702 + ks), te),
                    (pid(685), p[0] - I.xf1 - te)], nut="insert", insert_part=fr, insert_depth=0.0068, grade="12.9", step=STEP_DOOR,
                    notes="potted insert of the FS-GEAR sandwich (no through-bolts in the fuel-bay bulkhead)")

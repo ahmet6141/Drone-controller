@@ -436,7 +436,12 @@ def antennas() -> list:
 
 ANT_DIPOLE = (0.109, 0.013)          # components.yaml southwest_antennas_1001_202 height, radome d (layout size)
 ANT_XC = 0.42                         # chord fraction of the fin-tip dipoles on the tip rib (IR-06)
-LT_TAIL_XC = 0.50                     # chord fraction of the tail light centre on the fin tip face (IR-06)
+LT_TAIL_XC = 0.40                     # chord fraction of the tail light centre on the fin tip face (IR-06): its aft
+#                                       screw keeps 2.5 D in the mounting block (section thins aft of 45 % chord)
+LT_SEAT_GAP = 0.0003                  # light base above the cap tip face (the loft end plane leans ~0.1 mm on w)
+Y_FUELB = 0.0146                      # H-FUEL in the spine channel: midway between the bridle aft leg and the
+#                                       starboard wall, room for the floor grommet (bore r 4.2 + 2 mm rim)
+FIN_XC_BOX = 0.27                     # H-FIN chord line in the fin box between the front spar and the rudder actuator
 
 
 FIN_RIB_T = 0.0068                    # fin rib laminate (layups.rib_panel; tail module C.t_rib)
@@ -449,16 +454,33 @@ def fin_branch() -> dict:
     p0 = np.array([3.520, 0.120, round(z_top(3.520, 0.120) - 0.025, 4)])        # = H-TAIL path end
     d0 = unit(p0 - np.array([3.500, 0.092, 0.215]))                             # H-TAIL last leg (systems path)
     e_r = 0.26
-    p1 = surf_point(F, e_r, ANT_XC)
+    p1 = surf_point(F, e_r, 0.46)
     p_a = np.array([3.575, 0.128, 0.275])           # under the dorsal longeron M-DORSAL (y 0.15, z 0.30 under the fin
-    p_in = np.array([3.600, 0.172, 0.275])          # root), across it, then up into the fin root outboard of it
-    p2 = surf_point(F, fin_cap_eta() - FIN_RIB_T - 0.004, ANT_XC)
+    p_in = np.array([3.640, 0.172, 0.275])          # root), across it, then up into the fin root aft of its end (x 3.627)
+    # up the fin box on FIN_XC_BOX between the front-spar web and the rudder actuator (eta 0.42-0.55), then to the
+    # antenna chord line above the servo rib, ending 6.5 mm under the tip rib (jack + 4 mm jam nut, coax plug)
+    pb = surf_point(F, 0.40, FIN_XC_BOX)
+    pc = surf_point(F, 0.58, FIN_XC_BOX)
+    pd = surf_point(F, 0.66, ANT_XC)
+    p2 = surf_point(F, fin_cap_eta() - FIN_RIB_T - 0.0065, ANT_XC)
     return {"id": "H-FIN", "part": "YK250-SY-794", "name": "fin branch (each side): tip-cap antenna coax, tail light",
             "diameter": 0.008, "mirror": True, "in_tail": True,
-            "path": [r3(p0 + 0.0003 * d0), r3(p0 + 0.010 * d0), r3(p_a), r3(p_in), r3(p1), r3(p2)],
-            "text": "fin root (end of H-TAIL) -> up the fin box on the chord line of the tip dipole between the spars, "
+            "path": [r3(p0 + 0.0001 * d0, 6), r3(p0 + 0.010 * d0, 6), r3(p_a), r3(p_in), r3(p1), r3(pb), r3(pc),
+                     r3(pd), r3(p2)],
+            "text": "fin root (end of H-TAIL) -> up the fin box between the front spar and the rudder actuator, then on "
+                    "the chord line of the tip dipole between the spars, "
                     "through bores (grommets) in the root, box and servo ribs -> TNC bulkhead jack in the tip rib "
                     "(dipole ANT-BKP / ANT-C2B) and, starboard, the tail light LT-TAIL lead through the tip rib"}
+
+
+def fuel_breakout(a, b, x, nxt, r_trunk=0.008, stub=0.004):
+    """IR-07: start of the H-FUEL breakout on the H-COAX leg a -> b at station x: the branch leaves the coax bundle
+    radially (towards ``nxt``) from its surface, so the two bundles touch without overlapping."""
+    ax = unit(b - a)
+    c = a + (x - a[0]) / (b[0] - a[0]) * (b - a)
+    n = nxt - c
+    n = unit(n - (n @ ax) * ax)
+    return c + (r_trunk + 0.0002) * n, c + (r_trunk + stub) * n
 
 
 def fin_cap_eta() -> float:
@@ -501,12 +523,12 @@ def air_data_lights() -> list:
                 "mount": "wing-tip fairing (wing module), M5 screws (components.yaml mounting)",
                 "source": "components.yaml aveoflash_lp_lsa 0.1 x 0.045 x 0.03 m, 0.083 kg"})
     # integration round (IR-06): the 100 x 45 x 30 mm unit does not fit the 4 mm cap trailing edge: it sits on the tip
-    # face of the starboard fin-tip cap (aft part, 100 mm along the chord, 30 mm high along the span), screwed (2 x M5)
+    # face of the starboard fin-tip cap (mid chord, 100 mm along the chord, 30 mm high along the span), screwed (2 x M4)
     # into a GFRP mounting block bonded inside the cap (tail module); white aft-facing + strobe, visible over the tip
     Ft = af.tail["fin"]
     e1 = float(Ft.span_coords()[-1])
     o_, c_, u_, w_ = Ft.frame_at(e1)
-    pc = surf_point(Ft, e1, LT_TAIL_XC) + 0.015 * unit(w_)
+    pc = surf_point(Ft, e1, LT_TAIL_XC) + (0.015 + LT_SEAT_GAP) * unit(w_)
     R_ = np.column_stack([unit(c_), unit(u_), unit(w_)])
     hl = np.array([0.050, 0.0225, 0.015])
     corners = np.array([pc + R_ @ (hl * np.array(sg)) for sg in itertools.product((-1, 1), repeat=3)])
@@ -514,7 +536,7 @@ def air_data_lights() -> list:
                 "name_tr": "kuyruk seyir ışığı", "box": r3([corners.min(0), corners.max(0)]),
                 "frame": {"center": r3(pc), "axes": r3(R_.T, 6), "half": r3(hl),
                           "text": "light case on the tip face: axes = chord, thickness normal, span (half sizes)"},
-                "mount": "tip face of the starboard fin-tip cap (GFRP), aft part, 2 x M5 into potted inserts of the "
+                "mount": "tip face of the starboard fin-tip cap (GFRP), mid chord, 2 x M4 (as the wing-tip units) into potted inserts of the "
                          "bonded GFRP mounting block inside the cap (tail module, integration round IR-06)",
                 "source": "components.yaml aveoflash_lp_lsa"})
     return out
@@ -746,13 +768,14 @@ def harness() -> dict:
         # into the aft equipment bay; the probes' flying leads (purchased with the probes) end at those connectors
         {"id": "H-FUEL", "part": "YK250-SY-777", "name": "fuel level probe branch (forward / saddle cells)",
          "diameter": 0.006,
-         "path": P([1.850, 0.2108, 0.0066], [1.880, 0.090, 0.110], [1.930, 0.0165, 0.140], [1.930, 0.0165, 0.177],
-                   [2.775, 0.0165, 0.177]),
+         "path": P(*fuel_breakout(np.array([X_PFR, 0.195, 0.035]), np.array([2.000, 0.270, Z_HL]), 1.850,
+                                  np.array([1.880, 0.090, 0.110])), [1.880, 0.090, 0.110], [1.930, Y_FUELB, 0.140], [1.930, Y_FUELB, 0.177],
+                   [2.775, Y_FUELB, 0.177]),
          "supports": ["M-SPINE"],
-         "penetrations": [{"member": "M-SPINE", "point": r3([1.930, 0.0165, 0.163]),
+         "penetrations": [{"member": "M-SPINE", "point": r3([1.930, Y_FUELB, 0.163]),
                            "kind": "sealed split grommet in the spine-channel floor (mission bay side)"}],
          "text": "breakout of H-COAX in the mission bay -> up through the floor of the dorsal spine channel M-SPINE -> "
-                 "along its starboard wall (y 0.0165, 5 mm outboard of the parachute bridle aft leg, under the fuel-bay "
+                 "along its starboard wall (y 0.0146, midway between the parachute bridle aft leg (|y| 0.008) and the wall (0.0212), under the fuel-bay "
                  "panels' inboard flange) over the forward and saddle cells -> wall connectors of the probe flying leads "
                  "at x 2.33 / 2.64; the bundle stays in the sealed trough, outside the vapour-tight bays"},
         {"id": "H-FUEL-A", "part": "YK250-SY-778", "name": "fuel level probe branch (aft cell)", "diameter": 0.006,

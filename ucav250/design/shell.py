@@ -1578,8 +1578,12 @@ def body_panels(sc: SC) -> dict[str, Pan]:
     mu = add("P-MID-UPPER", "U", full(f1110 + GAP, f1490 - GAP).difference(para.buffer(GAP_LIFT, join_style=2)),
              f1110, f1490, pads=up_pads(f1110, f1490), step=STEP["skin"], parent=sc.st["FS1110"]["part"],
              explode=(0.0, 0.0, 0.22))
+    # the opening of the mid lower skin follows the ring's un-notched rectangle (IR-01/03): the keel-slot notch of
+    # the ring's forward edge (x 1.1055 at |y| < 0.046) must not move the skin edge aft into the sliding-door band
+    # (doors and the front rail start at x 1.123 / 1.1241, layout door_outlines turret_door_R), so the land over
+    # the ring is 17.5 mm wide on the centre line instead of 28 mm
     ml_reg = full(f1110 + GAP, f1490 - GAP).difference(grow("P-TDOORACC")).difference(
-        ring.buffer(-LAND_W, join_style=2))
+        sbox(*ring.bounds).buffer(-LAND_W, join_style=2))
     ml = add("P-MID-LOWER", "L", ml_reg, f1110, f1490, pads=lo_pads(f1110, f1490), step=STEP["skin"],
              parent=sc.st["FS1110"]["part"], explode=(0.0, 0.0, -0.22))
     add("P-TDOORACC", "L", o["P-TDOORACC"].buffer(-GAP, join_style=2), f1330, f1490, pads=lo_pads(f1330, f1490),

@@ -1142,6 +1142,12 @@ class Systems:
         for mir in (False, True):
             y0_, y1_, z0_, z1_ = C.cutout("FS-GEAR", "C-DOORSHAFT", mir)
             extra["FS-GEAR"].append(box3((xgf - 0.010, y0_ - 0.020, z0_ - 0.010), (xgf, y1_ + 0.020, z1_ + 0.004)))
+        # IR-07: C-HARN-FUELA opens into the aft fuel cell: the probe lead's bulkhead connector seals on the aft face,
+        # no grommet flange / plug end on the forward (fuel-bay liner) face
+        fa = [c for c in C.st["FS-GEAR"].get("cutouts", []) if c["id"] == "C-HARN-FUELA"]
+        if fa:
+            y0_, y1_, z0_, z1_ = C.cutout("FS-GEAR", "C-HARN-FUELA", False)
+            extra["FS-GEAR"].append(box3((xgf - 0.010, y0_ - 0.010, z0_ - 0.010), (xgf, y1_ + 0.010, z1_ + 0.010)))
         for sid in [s_["id"] for s_ in C.L["stations"]]:
             st = C.st[sid]
             cuts = [c for c in st.get("cutouts", []) if c["id"].startswith(("C-HARN", "C-COAX", "C-FW-HARN"))]
@@ -1266,7 +1272,7 @@ class Systems:
         z0 = float(C.mem["M-SPINE"]["box"][0][2])
         fb = C.mem["M-SPINE"].get("boxes", [C.mem["M-SPINE"]["box"]])[0]
         t_fl = float(fb[1][2]) - float(fb[0][2])                   # channel floor band of the layout member
-        r_b = 0.5 * float(t["diameter"]) + 0.002
+        r_b = 0.5 * float(t["diameter"]) + 0.0012           # 1 mm plug wall: rim (2 mm) clears the bridle and the wall
         p0 = np.array([q[0], q[1], z0 - 0.0002])
         self.reg.parts[spine].add_hole(p0 - np.array([0.0, 0.0, 0.003]), p0 + np.array([0.0, 0.0, t_fl + 0.003]), r_b)
         self.ring_grommet(self.pid(779), "harness grommet, spine-channel floor (fuel probe branch)",
@@ -1733,7 +1739,8 @@ class Systems:
             J.bolt_through(self.reg, f"{lid}-B{k + 1}", 4, q, -w, [lid, "YK250-TL-258-R"], owner=lid, nut="insert",
                            insert_part=blk, insert_depth=r1 - r0, step=STEP_ANTENNA,
                            notes="light through its mounting holes and the cap tip face into potted inserts of the "
-                                 "mounting block (M4 as the wing-tip units)")
+                                 "mounting block (M4 as the wing-tip units; hole spacing 38 mm along the chord: "
+                                 "estimate, the datasheet gives no pattern)")
 
     # =================================================================================================================
     # harness mass: cables 70 % by length x d^2, connectors / grommets / breakouts 30 % of the layout item

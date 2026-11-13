@@ -153,9 +153,17 @@ class Part:
                 cut = [h if isinstance(h, Mesh) else cylinder(float(h[2]), h[0], h[1], n=24) for h in self.holes]
                 out = difference(base, cut)
                 # merge sub-micron sliver edges the hole cuts can leave next to existing faces (they fail the
-                # triangle self-intersection test, e.g. the spar frame CH-009 after the fuel / systems pass-throughs);
-                # manifold simplify at 0.1 um changes the volume by << 1 mm^3
-                self._mesh = Mesh.from_manifold(out.to_manifold().simplify(1e-7))
+                # triangle self-intersection test, e.g. the spar frame CH-009 after the fuel / systems pass-throughs):
+                # manifold simplify at growing tolerance (0.1 .. 10 um, volume change << 1 mm^3) only when the test
+                # flags the result; a clean result is kept unchanged
+                if not out.check(self_intersect=True)["ok"]:
+                    man = out.to_manifold()
+                    for tol in (1e-7, 1e-6, 4e-6, 1e-5):
+                        s_ = Mesh.from_manifold(man.simplify(tol))
+                        if s_.check(self_intersect=True)["ok"]:
+                            out = s_
+                            break
+                self._mesh = out
             else:
                 self._mesh = base
             self._n_holes = len(self.holes)

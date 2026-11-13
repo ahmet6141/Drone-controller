@@ -5113,6 +5113,11 @@ def design_closure(S_in: dict, verbose: bool = True, max_iter: int = 30) -> dict
         movers = ("wing_structure", "wing_carry", "fuel_", "control_surfaces_a", "control_surfaces_f",
                   "actuators_ailerons", "actuators_flaps")
         f_move = (sum(i["mass_kg"] for i in items if i["name"].startswith(movers)) + fuel + pay * 0.88) / m0
+        if (S["mass"].get("registry") or {}).get("groups"):
+            # detail-design closure: the empty mass, the fuel CG and the payload bay (on the empty CG) are the measured
+            # registry values, which do not move with the wing inside this closure (they follow it through the
+            # layout and the next registry build): only the neutral point moves with the wing station
+            f_move = 0.0
         cbar = float(S["wing"]["mac"])
         # aim 0.1 % MAC above the R-09 minimum so the converged point (dead band 0.4 mm) never lands below it
         d_sm = (float(S["aero"]["stability_rules"]["sm_min"]) + SM_CLOSURE_MARGIN - stab["sm_min"]) * cbar / (1.0 - f_move)

@@ -1,5 +1,5 @@
 """Landing-gear producer (YK-250 HANCER): retractable tricycle gear, wheels, brakes, retraction drives, locks and every
-gear door with its hinges and drive linkage (``spec.landing_gear``, ``spec.layout.mechanisms``).
+gear door with its hinges (``spec.landing_gear``, ``spec.layout.mechanisms``).
 
 What it builds (part numbers from ``spec.layout.part_numbers.gear``: 620-669 legs, wheels, brakes, actuators; 670-719
 doors, hinges, locks, door drives; the ids fixed by the layout are kept, the detail parts use free numbers of the
@@ -8,20 +8,21 @@ range, see ``docs/detail/gear.md``):
 * main legs (starboard modelled, port = ``mirror_part``): machined 7075 yoke + outer cylinder of the telescopic
   spring / oil damper leg (``structures.sizing.gear.main_leg`` OD 42 x 3.5) on the 18 deg splay line from the trunnion
   to the axle, flanged 4130 stub axles (d 20 x 30) in the 20 H7 bushings of F-TRUNNION, sliding tube with the axle
-  carrier, scissor torque links, the cantilever 4130 axle with its nut, the TOST SB Max II 3.5 in disc-brake wheel
-  with the TOST 200x50 6 PR tyre and the BZT M caliper on a keyed torque plate; damper cartridge (envelope);
+  carrier, the cantilever 4130 axle with its nut, the TOST SB Max II 3.5 in disc-brake wheel with the TOST 200x50 6 PR
+  tyre and the BZT M caliper on a keyed torque plate; damper cartridge (envelope);
 * main retraction: rotary EMA on the trunnion axis (layout ACT-MLG-EMA envelope, output spline into the forward stub
-  axle), its reaction flange bolted through the main-well forward wall; up-lock: catch on the F-UPLOCK pivot boss and a
-  twin roller on the leg; down-lock: lock bolt of the EMA unit (gear-unit item, see the open items);
-* main doors: sequenced inner door (DA 22 actuator on FS-GEAR, crank + pushrod through C-DOORLINK to the door horn),
-  leg door on two standoff brackets of the leg, trunnion door on the gear-beam hinge line driven by the leg through a
-  slotted (lost-motion) link with an opening spring;
-* nose leg: 7075 yoke + outer cylinder (OD 36 x 3), flanged stub axles d 16 in the F-NG-PIVOT bushings, steering
-  sleeve + trailing fork (trail 30 mm) with the TOST LR Max II wheel, steering DA 26 on the aft face of the leg (belt
-  drive), friction shimmy damper on the steering collar, retraction EMA (ACT-NLG-EMA) with crank and over-centre drag
-  link (down-lock), up-lock hook under the keel wall engaging a roller on the fork crown;
-* nose clamshell doors with their hinge pins, bearing blocks, horns, centre-line bellcrank and links (NDOOR-LINKAGE)
-  driven by one DA 22 (EQ-NDOORACT); brake actuator + master cylinder (EQ-BRAKE_UNIT).
+  axle, integral lock bolt), its reaction flange bolted through the main-well forward wall; up-lock: catch on the
+  F-UPLOCK pivot boss and a twin roller on the leg;
+* main doors: inner door on a three-ear hinge bracket of the well keel web (DA 22 actuator on FS-GEAR), leg door on two
+  standoff brackets of the leg, trunnion door on hinge blocks either side of the leg slot;
+* nose leg: 7075 yoke + outer cylinder (OD 36 x 3), flanged stub axles d 16 in the F-NG-PIVOT bushings, steering tube
+  + trailing fork (trail 30 mm) with the TOST LR Max II wheel, steering DA 26 on the aft face of the leg (belt drive),
+  friction shimmy damper, retraction EMA (ACT-NLG-EMA), up-lock rollers on the axle ends and catches on the keel walls;
+* nose clamshell doors on hinge blocks of the keel walls, nose-door DA 22 (EQ-NDOORACT) on the side-bay tray.
+
+Door hinge edges are shaped by swept reliefs against the fixed skin / structure (``relief_cutter``). Door drive
+linkages, the leg-driven trunnion-door link, the nose crank / drag link and the brake unit are open items
+(``docs/detail/gear.md`` section 11): the layout geometry does not leave a collision-free path for them.
 
 Interfaces read (never another module's geometry for placement): ``spec.landing_gear`` (trunnion, axle, splay,
 tyre, nose pivot / axle / trail, door scheme), ``spec.layout`` (part_numbers, mechanisms joints / sequences /
@@ -53,7 +54,7 @@ GROUP = "gear"
 # ---------------------------------------------------------------------------------------------------------------------
 M7075, M4130, MPW = "al_7075_t651_plate", "steel_4130_n", "cfrp_pw_mtm45_as4"
 P_CNC, P_PREG, P_BUY = "cnc_milling_metal", "prepreg_ooa_vacbag", "purchased"
-STEP_MAIN, STEP_NOSE, STEP_DOOR, STEP_BRAKE = 28, 29, 30, 20
+STEP_MAIN, STEP_NOSE, STEP_DOOR = 28, 29, 30
 
 YOKE_GAP = 0.001            # yoke arm to fitting lug face (each side)
 ARM_T = 0.013               # yoke arm thickness = layout pivot_scheme stub_axle arm_m
@@ -258,7 +259,8 @@ class MainLeg:
             if fl[0] < xa:
                 shaft = G.cylinder(r, (xa, T[1], T[2]), (xb, T[1], T[2]), n=48)
             flange = G.cylinder(STUB_FL_R, (fl[0], T[1], T[2]), (fl[1], T[1], T[2]), n=48)
-            ms.append(G.union([shaft, flange]))
+            bore = G.cylinder(0.005, (min(xa, fl[0]) - 0.001, T[1], T[2]), (max(xb, fl[1]) + 0.001, T[1], T[2]), n=32)
+            ms.append(G.difference(G.union([shaft, flange]), [bore]))      # gun-drilled d 10 (lightening)
         return G.merge(ms)
 
     def stub_bolts(self):
@@ -295,8 +297,8 @@ class MainLeg:
     def axle(self) -> G.Mesh:
         A = self.C.A
         y = A[1]
-        head = G.cylinder(0.016, (A[0], y + CARR_Y[0] - 0.004, A[2]), (A[0], y + CARR_Y[0], A[2]), n=48)
-        shaft = G.cylinder(AXLE_R, (A[0], y + CARR_Y[0] - 0.0001, A[2]), (A[0], y + NUT_Y[1], A[2]), n=48)
+        head = G.tube(0.016, 0.006, (A[0], y + CARR_Y[0] - 0.004, A[2]), (A[0], y + CARR_Y[0], A[2]), n=48)
+        shaft = G.tube(AXLE_R, 0.006, (A[0], y + CARR_Y[0] - 0.0001, A[2]), (A[0], y + NUT_Y[1], A[2]), n=48)
         collar = G.tube(0.0145, AXLE_R - 0.0002, (A[0], y + CARR_Y[1], A[2]), (A[0], y - HUB_HW, A[2]), n=48)
         nut = G.tube(0.0145, AXLE_R - 0.0002, (A[0], y + NUT_Y[0], A[2]), (A[0], y + NUT_Y[1], A[2]), n=6)
         return G.union([head, shaft, collar, nut])
@@ -1087,7 +1089,7 @@ class Build:
                  parent=pid(620), contacts=(pid(620),),
                  notes="envelope only: stroke 80 mm (landing_gear.main.stroke), mass estimate 0.35 kg")
         self.add(pid(634), "main axle d 20 with nut (4130 N), starboard", "ana aks d 20, somunlu (4130 N), sağ",
-                 M4130, P_CNC, M.axle, thickness=0.0045, joint=jR, parent=pid(621), contacts=(pid(621), pid(622),
+                 M4130, P_CNC, M.axle, thickness=AXLE_R - 0.006, joint=jR, parent=pid(621), contacts=(pid(621), pid(622),
                                                                                              pid(635)),
                  notes="cantilever axle pressed in the carrier bore (head inboard), keyed torque plate and "
                        "M20x1.5 castellated nut outboard; wheel bearings 20 mm (TOST)")
@@ -1329,8 +1331,8 @@ class Build:
             J.bolt_through(reg, f"{lg(632)}-B{k + 1}", 5, (xb, hi[1], hi[2] - 0.0115), (0.0, 1.0, 0.0), [lg(632), kw],
                            grade="12.9", step=STEP_NOSE, notes="EMA flange through the keel-wall land, nut in the "
                                                                "starboard side bay")
-        sk = reg.parts[C.pan["P-NOSE-LOWER"]["part"]]
-        for cv in self.ND.cove():
+        sk = reg.parts.get(C.pan["P-NOSE-LOWER"]["part"])
+        for cv in self.ND.cove() if sk is not None else []:
             sk.holes += [cv, cv.mirrored_y()]
 
     # ---------------------------------------------------------------- door actuators (DA 22) on their frames
@@ -1433,8 +1435,8 @@ class Build:
         for k, xb in enumerate((self.Dr.ears[0][0] + 0.008, self.Dr.ears[-1][1] - 0.008)):
             J.bolt_through(reg, f"{pid(671)}-B{k + 1}", 4, mv((xb, yw1 + 0.002, zb + 0.016)), mv((0.0, -1.0, 0.0)),
                            [pid(671), wk], grade="12.9", step=STEP_DOOR, notes="nut in the harness channel")
-        sk = reg.parts[C.pan["P-CENTRE-LOWER"]["part"]]
-        for cv in [self.Dr.cove()] + self.Dr.tr_notch():
+        sk = reg.parts.get(C.pan["P-CENTRE-LOWER"]["part"])
+        for cv in ([self.Dr.cove()] + self.Dr.tr_notch()) if sk is not None else []:
             sk.holes.append(cv if side == "R" else cv.mirrored_y())
         s0, s1 = M.roller_s
         pin_through(reg, f"{pid(620)}-P9", ROLLER_PIN_D, mv(C.P(s0 - 0.001, ROLLER_E)),

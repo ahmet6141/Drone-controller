@@ -143,6 +143,7 @@ NDA_PLANE_X = 1.0695                # nose-door drive crank plane (DA 22 crank; 
 #                                     coupling horn in the planes behind it, aft of the nose-tyre swing)
 NDA_SHAFT_YZ = (-0.0868, -0.1277)   # DA 22 output axis in that plane (port side bay; mechanism study docs/detail/gear.md)
 NDA_SHAFT_END = 0.014               # output axis from the lower end of the 65.9 mm case side (estimate, as EQ-DOORACT)
+NDA_ROLL_DEG = -20.0                # case roll about the output axis (top towards the keel wall)
 NDA_SLIDE_X = (1.0680, 1.0860)      # symmetric coupling of the two doors: horns, links, slide bar and guide plate
 #                                     (x range on the door axes; >= 10 mm aft of the stowed tyre, ahead of the sill)
 
@@ -157,8 +158,11 @@ def ndooract() -> dict:
     doors stand in the turret-ring insert."""
     J = {j["name"]: j for j in b_mech_joints()}
     a = unit(J["nose_door_R"]["axis"])
-    e1 = np.array([0.0, 1.0, 0.0])
-    e2 = np.cross(a, e1)
+    e1_ = np.array([0.0, 1.0, 0.0])
+    e2_ = np.cross(a, e1_)
+    ph = math.radians(NDA_ROLL_DEG)                  # case rolled about its output axis (clear of the side-bay skin)
+    e1 = math.cos(ph) * e1_ + math.sin(ph) * e2_
+    e2 = -math.sin(ph) * e1_ + math.cos(ph) * e2_
     C = np.array([NDA_PLANE_X, NDA_SHAFT_YZ[0], NDA_SHAFT_YZ[1]])
     pts = []
     for t in (-0.0230, -0.0010):                    # case ahead of the crank, output on its aft face
@@ -180,8 +184,9 @@ def ndooract() -> dict:
               {"zone": "aft lower corner of the port avionics side bay, through the cut-out of the side-bay tray",
                "tray": "YK250-CH-118"}, src,
               extra={"mass_item": "gear_doors_wells_locks_sensors",
-                     "shaft": {"point": r3(C, 5), "axis": r3(a, 6),
-                               "text": "crank axis in the drive plane (parallel to the door hinge axes)"},
+                     "shaft": {"point": r3(C, 5), "axis": r3(a, 6), "roll_deg": NDA_ROLL_DEG,
+                               "text": "crank axis in the drive plane (parallel to the door hinge axes); case rolled "
+                                       "about it (roll_deg, from the case side normal to y)"},
                      "drive_envelope": {"id": "NDOOR-LINKAGE", "part": "YK250-LG-679",
                                         "box": r3([[NDA_SLIDE_X[0], -0.0415, z0], [NDA_SLIDE_X[1], 0.0415, -0.075]]),
                                         "text": "swept envelope of the door coupling (two horns, two links, slide bar and "

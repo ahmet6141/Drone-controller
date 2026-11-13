@@ -1892,6 +1892,13 @@ def build_trunnion(C: Ctx) -> G.Mesh:
     if dl:                                            # lock-bolt bore (d 14 H8, bushed in the gear-unit kit)
         q = np.asarray(dl["point"], float)
         cuts.append(bore((q[0] - 0.02, q[1], q[2]), (q[0] + 0.02, q[1], q[2]), 0.5 * float(dl["d"]) + DL_BORE_CLR, n=40))
+        xf = max(float(b_[1][0]) for b_ in (np.asarray(bb, float) for bb in f["boxes"])
+                 if abs(float(b_[0][2]) - float(dl["lug_bottom_z"])) < 1e-6)
+        # threaded counterbore of the lock solenoid neck (gear LG-638) in the aft face
+        cuts.append(bore((xf - DL_SOL_CB[1], q[1], q[2]), (xf + 0.002, q[1], q[2]), DL_SOL_CB[0], n=48))
+        # the extension stops at the members' inset from the lower skin
+        reg_ = box3((xf - 0.03, q[1] - 0.02, float(dl["lug_bottom_z"]) - 0.002), (xf + 0.001, q[1] + 0.02, q[2]))
+        cuts.append(diff(reg_, [C.body_env(MEM_IN, xf - 0.04, xf + 0.01)]))
     # the 12 mm strip of the top plate inboard of the lugs: 8 mm like the roof-bolt plates (V03)
     cuts.append(box3((TRUN_LUG_X[0] - 0.026 - 0.001, ya - 0.001, TRUN_PLATE_Z0 - 0.001),
                      (TRUN_LUG_X[1] + 0.026 + 0.001, TRUN_LUG_Y[0], TRUN_PLATE_Z1 - TRUN_ROOF_PLATE_T)))
@@ -1903,6 +1910,7 @@ def build_trunnion(C: Ctx) -> G.Mesh:
 TRUN_LUG_HALF = 0.013           # bushing boss / lug envelope half length in x (layout 26 mm)
 DL_BOSS_R = 0.014               # boss round the down-lock bolt bore in the aft-lug extension (2 D edge for d 14 / 2)
 DL_BORE_CLR = 0.00005           # lock-bolt bore radial clearance (H8 / f7 class)
+DL_SOL_CB = (0.00945, 0.006)    # solenoid neck counterbore (M19 x 1 thread modelled at nominal) radius / depth
 TRUN_ROOF_PLATE_T = 0.008       # roof-bolt plates fore / aft of the lugs (the layout's 20 mm top plate over the lugs)
 TRUN_BUSH_OD = 0.023            # sleeve bushing 20 H7 x OD 23 x 26 (metal-polymer class, estimate; layout: match the
 #                                 selected gear unit)

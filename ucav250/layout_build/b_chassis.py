@@ -233,7 +233,7 @@ def members() -> list:
                     "nose-gear loads -> pivot bushings -> keel walls -> FS0600 / FS1110 + avionics deck -> chine "
                     "longerons", mirror=True, layup="rib_panel",
                     touch=["ST-FS0600", "ST-FS1110", "M-DECK-NOSE", "F-NG-PIVOT", "EQ-*"]))
-    M[-1]["openings"] = [{"id": "W-NDOOR-LINK", "side": "L", "x": [1.0720, 1.0800], "z": [-0.1680, -0.1320],
+    M[-1]["openings"] = [{"id": "W-NDOOR-LINK", "side": "L", "x": [1.0705, 1.0815], "z": [-0.1720, -0.1310],
                           "text": "gear detail round (GD-08): window in the port keel wall for the nose-door drive link "
                                   "(DA 22 crank in the side bay -> drive arm of the port coupling horn); solid laminate "
                                   "land round it (the wall's aft end, 27 mm ahead of FS1110)"}]
@@ -834,9 +834,10 @@ def fittings() -> list:
               "name_tr": "ana takım yukarı kilit kancası bağlantısı", "material": "al_7075_t651_plate",
               "process": "cnc_milling_metal", "mirror": True, "box": r3(ub),
               "point": r3([xu, yu, -0.090]),
-              "pin": {"point": r3([xu, yu, -0.080]), "d": 0.005, "axis": [0.0, 1.0, 0.0], "boss_half_x": 0.0105,
-                      "text": "catch pivot pin bore in the hook boss: 10 mm (2 D) edge distance to the boss bottom and "
-                              "10.5 mm to its fore / aft faces (gear detail round GD-10)"},
+              "pin": {"point": r3([xu, yu, -0.081]), "d": 0.004, "axis": [0.0, 1.0, 0.0], "boss_half_x": 0.0105,
+                      "text": "catch pivot pin bore (d 4) in the hook boss: 9 mm (2.25 D) edge distance to the boss "
+                              "bottom, 10.5 mm to its fore / aft faces and 8.7 mm in the catch plates below the "
+                              "fitting base (gear detail round GD-10)"},
               "bolts": [bolt(f"B{k + 1}", [xu + dx, yu + dy, -0.0668], AZ, 0.005, M5, ["M-WELLROOF"], "well roof")
                         for k, (dx, dy) in enumerate((dx, dy) for dx in (-0.010, 0.010) for dy in (-0.010, 0.010))],
               "attach": "machined bracket bolted 4 x M5 (axis z, 20 mm square) to the underside of the well roof deck "

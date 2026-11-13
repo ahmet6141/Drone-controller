@@ -2183,8 +2183,8 @@ mass:
         mass_kg_each: 0.02
       nose_door_drive:
         bellcrank_links_kg: 0.05
-        basis: 'estimate: crank 0.008 + drive link 0.006 + drive horn 0.004 + two horns 0.006 + two links 0.008 + slide
-          bar 0.008 + guide plate and pins 0.010 (mass.rules.gear_doors.nose_door_drive)'
+        basis: 'estimate: crank 0.008 + drive link 0.006 + two horns (port with the drive arm) 0.010 + two links 0.008 +
+          slide bar 0.008 + guide plate and pins 0.010 (mass.rules.gear_doors.nose_door_drive)'
         note: 'fix round 2: one DA 22 (counted in inner_door_actuator) drives both clamshell doors through this bellcrank,
           two links and two horns on the hinge-pin extensions (layout NDOOR-LINKAGE)'
     spinner_hub_spacer_kg: 0.5
@@ -5545,10 +5545,11 @@ layout:
       openings:
       - id: W-NDOOR-LINK
         side: L
-        x: [1.0505, 1.0595]
-        z: [-0.168, -0.131]
+        x: [1.0705, 1.0815]
+        z: [-0.172, -0.131]
         text: 'gear detail round (GD-08): window in the port keel wall for the nose-door drive link (DA 22 crank in the
-          side bay -> drive horn on the port door); solid laminate land round it (the wall''s aft end, 47 mm ahead of FS1110)'
+          side bay -> drive arm of the port coupling horn); solid laminate land round it (the wall''s aft end, 27 mm ahead
+          of FS1110)'
     - id: M-DECK-NOSE
       part: YK250-CH-022
       name: avionics deck
@@ -6422,12 +6423,12 @@ layout:
       box: [[2.9559, 0.23, -0.09], [2.9959, 0.27, -0.0668]]
       point: [2.9759, 0.25, -0.09]
       pin:
-        point: [2.9759, 0.25, -0.08]
-        d: 0.005
+        point: [2.9759, 0.25, -0.081]
+        d: 0.004
         axis: [0.0, 1.0, 0.0]
         boss_half_x: 0.0105
-        text: 'catch pivot pin bore in the hook boss: 10 mm (2 D) edge distance to the boss bottom and 10.5 mm to its fore
-          / aft faces (gear detail round GD-10)'
+        text: 'catch pivot pin bore (d 4) in the hook boss: 9 mm (2.25 D) edge distance to the boss bottom, 10.5 mm to its
+          fore / aft faces and 8.7 mm in the catch plates below the fitting base (gear detail round GD-10)'
       bolts:
       - id: B1
         point: [2.9659, 0.24, -0.0668]
@@ -10321,7 +10322,7 @@ layout:
       name: nose-door actuator Volz DA 22 (28 V), drives both clamshell doors
       name_tr: burun kapağı eyleyicisi DA 22 (iki kapak)
       group: gear
-      box: [[1.0593, -0.1016, -0.1384], [1.0869, -0.06, -0.0708]]
+      box: [[1.0448, -0.1111, -0.1478], [1.0734, -0.0496, -0.07]]
       mass_kg: 0.132
       mount:
         zone: aft lower corner of the port avionics side bay, through the cut-out of the side-bay tray
@@ -10329,23 +10330,26 @@ layout:
       source: 'fix round 2 (PK2-13): the clamshell doors open before and close after the leg moves (sequence gear_retraction),
         which a leg-driven link cannot do; ONE DA 22 drives both doors (components.yaml volz_da22_28v 41.5 x 65.9 x 22 mm,
         0.132 kg; mass.rules.gear_doors.inner_door_actuator count 3 = 2 main + 1 nose); gear detail round (GD-08): output
-        parallel to the door hinge axes, crank + drive link through a window in the port keel wall to the drive horn of
-        the port door (over-centre lock with the doors closed); the starboard door is coupled as an exact mirror through
-        two horns, two links and a vertically guided slide bar on the centre line (NDOOR-LINKAGE)'
+        parallel to the door hinge axes, crank + drive link through a window in the port keel wall to the drive arm of the
+        port coupling horn (over-centre lock with the doors closed; all door-level parts aft of the nose-tyre swing, x >=
+        1.068); the starboard door is coupled as an exact mirror through two horns, two links and a vertically guided slide
+        bar on the centre line (NDOOR-LINKAGE)'
       mass_item: gear_doors_wells_locks_sensors
       shaft:
-        point: [1.055, -0.0808, -0.122]
+        point: [1.0695, -0.0868, -0.1277]
         axis: [0.996145, 0.0, -0.08772]
-        text: crank axis in the drive plane (parallel to the door hinge axes)
+        roll_deg: -20.0
+        text: crank axis in the drive plane (parallel to the door hinge axes); case rolled about it (roll_deg, from the
+          case side normal to y)
       drive_envelope:
         id: NDOOR-LINKAGE
         part: YK250-LG-679
-        box: [[1.068, -0.0415, -0.204], [1.087, 0.0415, -0.075]]
+        box: [[1.068, -0.0415, -0.204], [1.086, 0.0415, -0.075]]
         text: swept envelope of the door coupling (two horns, two links, slide bar and its guide plate on the keel walls)
           over the door travel, between the keel walls, >= 10 mm aft of the stowed nose tyre and ahead of the slot-end sill
         mass_kg: 0.05
-        mass_basis: 'estimate: crank 0.008 + drive link 0.006 + drive horn 0.004 + two horns 0.006 + two links 0.008 + slide
-          bar 0.008 + guide plate and pins 0.010 (mass.rules.gear_doors.nose_door_drive)'
+        mass_basis: 'estimate: crank 0.008 + drive link 0.006 + two horns (port with the drive arm) 0.010 + two links 0.008
+          + slide bar 0.008 + guide plate and pins 0.010 (mass.rules.gear_doors.nose_door_drive)'
     - id: EQ-STABACT
       part: YK250-FC-302
       name: stabilator actuator Volz DA 30
@@ -11193,7 +11197,7 @@ layout:
       position_sizing_phase: [1.8253, 0.0, -0.05]
     wiring_harness_connectors_coax:
       mode: absolute
-      position: [2.3005, -0.0166, 0.0151]
+      position: [2.3004, -0.0166, 0.015]
       basis: cables 70 % (estimate) by trunk length x diameter^2 (layout.systems.harness) + outer-panel harnesses; connectors,
         backshells and coax terminations 30 % (estimate) equally over the connection points of the layout (equipment, actuators,
         antennas, lights, gear EMAs)
@@ -11221,7 +11225,7 @@ layout:
         at: [2.8707, 0.0, 0.076]
       - what: connectors at 53 connection points
         fraction: 0.3
-        at: [1.8578, 0.0, 0.0518]
+        at: [1.8575, 0.0, 0.0517]
       position_sizing_phase: [1.9, 0.0, 0.0]
     flight_termination_lights:
       mode: absolute
@@ -11539,7 +11543,7 @@ layout:
       position_sizing_phase: [0.8443, 0.0, -0.1244]
     gear_doors_wells_locks_sensors:
       mode: absolute
-      position: [2.3678, -0.0058, -0.1402]
+      position: [2.3668, -0.0058, -0.1405]
       basis: sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout door
         outlines (closed), well centres and door drives
       components:
@@ -11566,10 +11570,10 @@ layout:
         at: [2.9759, 0.0, -0.2]
       - what: nose-door DA 22 + crank/pushrod (EQ-NDOORACT)
         fraction: 0.0723
-        at: [1.0731, -0.0808, -0.1046]
+        at: [1.0591, -0.0804, -0.1089]
       - what: nose-door bellcrank, links and horns (NDOOR-LINKAGE)
         fraction: 0.021
-        at: [1.0775, 0.0, -0.1395]
+        at: [1.077, 0.0, -0.1395]
       - what: door seals (main)
         fraction: 0.027
         at: [2.9759, 0.0, -0.1309]

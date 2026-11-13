@@ -150,9 +150,9 @@ def seg_len(P) -> np.ndarray:
     return np.linalg.norm(np.diff(np.asarray(P, float), axis=0), axis=1)
 
 
-def fillet(P, r: float, n_arc: int = 10, share: float = 0.48) -> np.ndarray:
+def fillet(P, r: float, n_arc: int = 10, share: float = 0.48, radius_of=None) -> np.ndarray:
     """Polyline with every corner replaced by a circular arc of radius r (reduced to fit ``share`` of each shared leg
-    and 0.9 of an end leg)."""
+    and 0.9 of an end leg); ``radius_of(vertex)`` may return a different radius for a corner."""
     P = np.asarray(P, float)
     P = P[np.r_[True, seg_len(P) > 1e-9]]
     if len(P) < 3:
@@ -166,7 +166,9 @@ def fillet(P, r: float, n_arc: int = 10, share: float = 0.48) -> np.ndarray:
         if math.pi - phi < 1e-3:
             out.append(b)
             continue
-        t = min(r / math.tan(phi / 2), L[i - 1] * (share if i - 1 > 0 else 0.9), L[i] * (share if i + 1 < len(P) - 1
+        rr = radius_of(b) if radius_of is not None else None
+        rr = r if rr is None else rr
+        t = min(rr / math.tan(phi / 2), L[i - 1] * (share if i - 1 > 0 else 0.9), L[i] * (share if i + 1 < len(P) - 1
                                                                                          else 0.9))
         R = t * math.tan(phi / 2)
         cen = b + G.unit(u + v) * (R / math.sin(phi / 2))
@@ -899,60 +901,133 @@ class Systems:
     # harness: trunks, frame grommets, member penetration grommets, centre-line conduit, wing receptacles
     # =================================================================================================================
     def trunk_path(self, tid: str) -> np.ndarray:
-        """Centre line of a trunk (starboard copy for mirrored branches): the layout path, with three detail changes
-        inside the declared corridors: H-WING starts beside the trunk it branches from (side by side in the shared
-        cut-outs instead of inside it) and ends at the backshell of the CN-WING receptacle; H-TAIL passes FS3480
-        inside the ring opening (the fin-root lands of the ring start at |y| 0.110 above z 0.21); H-NOSE runs through
-        the FS0300 cut-out to the forward face."""
+        """Centre line of a trunk (starboard copy for mirrored branches): the layout path with detail changes inside
+        the declared corridors (bundles are solid round sections here, the layout corridors are centre lines):
+
+        * H-MAIN / H-COAX turn into the centre-line channel inside the 30 mm lateral duct (centre lines 4.6 / 6.2 mm
+          aft of the layout x, bend radius 20 mm) and end at the aft-bay junction bracket CN-TAIL;
+        * H-WING starts beside the trunk it branches from, passes the main-spar frame straight, crosses over the trunk
+          before turning inboard, runs straight through the centre-box cover and ends at the CN-WING backshell;
+        * H-TAIL / H-ENGINE start at CN-TAIL; H-TAIL passes FS3480 inside the ring opening (the fin-root lands of the
+          ring start at |y| 0.110 above z 0.21);
+        * H-NOSE runs through the FS0300 cut-out to 3 mm short of the forward face."""
         C = self.C
         P = np.asarray(C.trunk[tid]["path"], float).copy()
-        if tid == "H-WING":
+        J_ = self.junction
+        if tid in ("H-MAIN", "H-COAX"):
+            r = 0.5 * float(C.trunk[tid]["diameter"])
+            xd = float(C.member_box("M-PAYWALL-AFT")[1][0]) + r + 0.0005       # duct: payload-bay aft wall + 0.5 mm
+            x_duct = float(P[-3][0]) if tid == "H-MAIN" else float(P[-4][0])
+            P[np.abs(P[:, 0] - x_duct) < 1e-6, 0] = xd
+            i_g = int(np.argmin(np.abs(P[:, 0] - self.x_gear_vertex(tid))))
+            yc, zc = J_["conn"][tid]
+            P = np.vstack([P[:i_g + 1], [J_["x_f"] - 0.050, yc, zc], [J_["x_f"] - TOUCH, yc, zc]])
+        elif tid == "H-WING":
             r_main = 0.5 * float(C.trunk["H-MAIN"]["diameter"])
             r_w = 0.5 * float(C.trunk[tid]["diameter"])
-            y0 = abs(float(C.trunk["H-MAIN"]["path"][6][1])) + r_main + r_w + 0.0002
-            P[0, 1] = y0
-            P[1, 1] = max(P[1, 1], y0 + 0.001)
-            P = trim(P, 0.0, 0.0)
-            P[-1] = self.cn_wing_end
+            y0 = abs(float(C.trunk["H-MAIN"]["path"][6][1])) + r_main + r_w + 0.0006
+            cn = self.cn_wing_end
+            P = np.array([[P[0][0], y0, P[0][2]], [P[1][0], y0 + 0.001, P[1][2]], P[2], [2.545, 0.2985, -0.100],
+                          [2.570, 0.288, -0.080], [2.600, 0.250, -0.075], [2.620, 0.250, -0.052], [2.6357, 0.250, -0.010],
+                          [2.670, 0.300, -0.013], P[8], P[9], [cn[0], cn[1] - 0.030, cn[2]], cn])
         elif tid == "H-TAIL":
-            P = np.array([P[0], [3.440, 0.082, 0.170], [3.500, 0.092, 0.215], P[-1]])
+            yc, zc = J_["conn"]["H-TAIL"]
+            P = np.array([[J_["x_a"] + TOUCH, yc, zc], [J_["x_a"] + 0.025, yc, zc], [3.440, 0.082, 0.170],
+                          [3.500, 0.092, 0.215], P[-1]])
+        elif tid == "H-ENGINE":
+            yc, zc = J_["conn"]["H-ENGINE"]
+            P = np.array([[J_["x_a"] + TOUCH, yc, zc], [J_["x_a"] + 0.025, yc, zc], P[1], P[2]])
         elif tid == "H-NOSE":
             xf, _ = C.face("FS0300", -1)
-            P = np.vstack([P, [xf - 0.003, P[-1][1], P[-1][2]]])
+            u = G.unit(P[-1] - P[-2])
+            P[-1] = P[-2] + (xf - 0.003 - P[-2][0]) / u[0] * u
         return P
+
+    def x_gear_vertex(self, tid: str) -> float:
+        """x of the layout vertex just aft of FS-GEAR (the climb into the aft bay starts there)."""
+        P = np.asarray(self.C.trunk[tid]["path"], float)
+        xg = self.C.face("FS-GEAR", 1)[0]
+        return float(min(P[P[:, 0] > xg][:, 0]))
+
+    def corner_radius(self, tid: str):
+        """Corner radii differing from 4 D: the turn into the centre-line channel (20 mm, inside the lateral duct) and
+        the climb into the aft bay right behind FS-GEAR (40 mm)."""
+        C = self.C
+        if tid not in ("H-MAIN", "H-COAX"):
+            return None
+        x_gear = self.x_gear_vertex(tid)
+
+        def f(b):
+            if abs(b[1]) < 1e-9 and b[0] < 2.9:
+                return 0.020
+            if abs(b[0] - x_gear) < 1e-6:
+                return 0.040
+            return None
+        return f
 
     def bundle(self, tid: str, grow: float = 0.0) -> G.Mesh:
         d = float(self.C.trunk[tid]["diameter"])
         Q = self.bundle_line(tid)
         return G.sweep_circle(Q, 0.5 * d + grow, n=24)
 
+    def straight_through_frames(self, P: np.ndarray) -> np.ndarray:
+        """A layout path vertex on a frame plane becomes a pass-through point: the bundle continues straight for 14 mm
+        (frame + grommet flange) and bends after it, so that the bend stays clear of the cut-out edges."""
+        C = self.C
+        out = [P[0]]
+        for i in range(1, len(P) - 1):
+            V = P[i]
+            out.append(V)
+            for s_ in C.L["stations"]:
+                if not s_.get("cutouts"):
+                    continue
+                xc = 0.5 * (C.face(s_["id"], -1)[0] + C.face(s_["id"], 1)[0]) + abs(V[1]) * C.face(s_["id"], -1)[1]
+                if abs(V[0] - xc) < 0.015:
+                    u = G.unit(V - P[i - 1])
+                    out.append(V + 0.014 * u)
+                    break
+        out.append(P[-1])
+        return np.asarray(out)
+
     def bundle_line(self, tid: str) -> np.ndarray:
         if tid not in self._lines:
             d = float(self.C.trunk[tid]["diameter"])
-            self._lines[tid] = densify(fillet(self.trunk_path(tid), 4.0 * d), 0.008)
+            P = self.straight_through_frames(self.trunk_path(tid))
+            self._lines[tid] = densify(fillet(P, 4.0 * d, radius_of=self.corner_radius(tid)), 0.008)
         return self._lines[tid]
+
+    def link(self, pid: str, other: str):
+        """Declare a contact on ``pid`` (now, or when the part is created later: port copies)."""
+        if pid in self.reg.parts:
+            self.reg.parts[pid].contacts = tuple(dict.fromkeys(self.reg.parts[pid].contacts + (other,)))
+        else:
+            self.pending.setdefault(pid, []).append(other)
 
     def harness(self):
         C = self.C
         self._lines = {}
+        self.pending = {}
         # wing receptacle (CN-WING) geometry first: the H-WING bundle ends at its backshell
         jr = C.member_box("M-JOINTRIB")
         y_rib = float(jr[0][1])
         cn = np.asarray(C.conn["CN-WING"]["point"], float)
         RC = dict(plate_t=0.002, fl=0.033, fl_t=0.002, r_body=0.0125, r_bs=0.011, bs_len=0.016, y_front=y_rib + 0.004)
-        y_p1 = y_rib - 0.0001
-        y_p0 = y_p1 - RC["plate_t"]
-        y_f1 = y_p0 - TOUCH
-        y_f0 = y_f1 - RC["fl_t"]
-        y_bs = y_f0 - RC["bs_len"]
-        self.cn_wing_end = np.array([cn[0], y_bs - TOUCH, cn[2]])
-        names = {"H-MAIN": STEP_HARNESS, "H-COAX": STEP_HARNESS, "H-WING": STEP_HARNESS, "H-TAIL": STEP_HARNESS,
-                 "H-ENGINE": STEP_HARNESS, "H-NOSE": STEP_HARNESS}
+        RC["y_p1"] = y_rib - 0.0001
+        RC["y_p0"] = RC["y_p1"] - RC["plate_t"]
+        RC["y_f1"] = RC["y_p0"] - TOUCH
+        RC["y_f0"] = RC["y_f1"] - RC["fl_t"]
+        RC["y_bs"] = RC["y_f0"] - RC["bs_len"]
+        self.cn_wing_end = np.array([cn[0], RC["y_bs"] - TOUCH, cn[2]])
+        # aft-bay junction bracket CN-TAIL (on TR-AFTBAY): H-MAIN / H-COAX end at its forward connectors, H-TAIL R/L
+        # and H-ENGINE start at its aft connectors
+        self.junction = dict(x_w0=3.2835, x_w1=3.2855, x_f=3.2735, x_a=3.2955,
+                             conn={"H-MAIN": (0.0, 0.030), "H-COAX": (0.0, -0.025), "H-TAIL": (0.030, 0.045),
+                                   "H-ENGINE": (-0.050, 0.010)})
         parents = {"H-MAIN": C.mem["M-MIDFLOOR"]["part"], "H-COAX": C.mem["M-MIDFLOOR"]["part"],
                    "H-WING": C.mem["M-CTBOX"]["part"], "H-TAIL": C.stp("FS3480"), "H-ENGINE": C.stp("FS3670"),
                    "H-NOSE": C.mem["M-DECK-NOSE"]["part"]}
         self.trunk_ids = {}
-        for tid in names:
+        for tid in parents:
             t = C.trunk[tid]
             pid = t["part"] + ("-R" if t.get("mirror") else "")
             self.trunk_ids[tid] = [pid] + ([t["part"] + "-L"] if t.get("mirror") else [])
@@ -966,18 +1041,30 @@ class Systems:
                      explode=(0.0, 0.0, 0.12 if tid != "H-ENGINE" else -0.12),
                      notes=f"d {d * 1000:.0f} mm bundle on layout.systems.harness {tid}; " + t["text"][:240])
             self.harness_parts.append(pid)
-        # frame grommets
         self.frame_grommets()
         self.member_grommets()
         self.conduit()
-        self.wing_receptacles(RC, cn, y_p0, y_p1, y_f0, y_f1, y_bs)
-        # mirrored branches (after the grommets so the port copies carry the same geometry)
+        self.junction_bracket()
+        self.aft_tray_passage()
+        self.wing_receptacle(RC, cn, 1)
+        self.wing_receptacle(RC, cn, -1)
+        # port copies of the mirrored branches and of the H-WING penetration grommets
         for tid in ("H-WING", "H-TAIL"):
             pr, pl = self.trunk_ids[tid]
-            idm = {pr: pl}
-            idm.update(self.mirror_map)
-            self.reg.add(mirror_part(self.reg.parts[pr], pl, id_map=idm))
+            q = mirror_part(self.reg.parts[pr], pl)
+            q.contacts = ()
+            self.reg.add(q)
             self.harness_parts.append(pl)
+        for g in self.member_grommets_R:
+            q = mirror_part(self.reg.parts[g], g[:-1] + "L")
+            q.parent = q.parent[:-1] + "L" if q.parent.endswith("-R") else q.parent
+            q.contacts = (q.parent, self.trunk_ids["H-WING"][-1])
+            self.reg.add(q)
+            self.harness_fixed[q.id] = None
+            self.link(self.trunk_ids["H-WING"][-1], q.id)
+        for pid, others in self.pending.items():
+            self.reg.parts[pid].contacts = tuple(dict.fromkeys(self.reg.parts[pid].contacts + tuple(others)))
+        self.pending = {}
 
     def crossings(self, sid: str):
         """[(trunk id, side, point)] where a bundle centre line crosses the mid plane of frame ``sid``."""
@@ -998,7 +1085,7 @@ class Systems:
 
     def chevron(self, poly, sid: str, t0: float, t1: float) -> G.Mesh:
         """Prism over the (y, z) polygon between the planes x = x_fwd_face(y) + t0 and + t1 (swept frames: sheared
-        per half, the polygons here lie on one side of y = 0)."""
+        per half; the polygons here lie on one side of y = 0)."""
         C = self.C
         xf, k = C.face(sid, -1)
         m = prism_x(poly, xf + t0, xf + t1)
@@ -1008,22 +1095,37 @@ class Systems:
             m = G.Mesh(V, m.F)
         return m
 
+    def bundle_env(self, tid: str, side: int, grow: float = TOUCH) -> G.Mesh:
+        key = (tid, side, grow)
+        if key not in self._env:
+            env = self.bundle(tid, grow)
+            self._env[key] = env if side > 0 else env.mirrored_y()
+        return self._env[key]
+
     def frame_grommets(self):
+        """One grommet set per frame: a moulded split grommet in every harness cut-out a bundle crosses."""
         C = self.C
         n = N["grom0"]
-        self.mirror_map = {}
-        member_cut = [box3(np.asarray(m["box"][0]) - 0.0002, np.asarray(m["box"][1]) + 0.0002)
-                      for m in C.L["chassis"]["members"] if "box" in m]
-        member_cut_m = [m for mm in C.L["chassis"]["members"] if "box" in mm and mm.get("mirror")
-                        for m in [box3(np.asarray(mm["box"][0]) * [1, -1, 1] - 0.0002, np.asarray(mm["box"][1]) * [1, -1, 1]
-                                       + 0.0002)]]
-        for sid in [s["id"] for s in C.L["stations"]]:
+        self._env = {}
+        member_cut = []
+        for m in C.L["chassis"]["members"]:
+            if "box" not in m:
+                continue
+            lo, hi = np.asarray(m["box"][0], float), np.asarray(m["box"][1], float)
+            member_cut.append(box3(lo - 0.0002, hi + 0.0002))
+            if m.get("mirror"):
+                member_cut.append(box3(np.array([lo[0], -hi[1], lo[2]]) - 0.0002,
+                                       np.array([hi[0], -lo[1], hi[2]]) + 0.0002))
+        xg = C.face("FS-GEAR", 1)[0]
+        extra = {"FS-GEAR": [box3((xg, -0.11, -0.100), (xg + 0.010, 0.11, -0.050))]}   # TR-AFTBAY flange (notched)
+        for sid in [s_["id"] for s_ in C.L["stations"]]:
             st = C.st[sid]
             cuts = [c for c in st.get("cutouts", []) if c["id"].startswith(("C-HARN", "C-COAX", "C-FW-HARN"))]
             if not cuts:
                 continue
             xs = self.crossings(sid)
             w = C.face(sid, 1)[0] - C.face(sid, -1)[0]
+            items = []
             for c in cuts:
                 for mir in ((False, True) if c.get("mirror") else (False,)):
                     y0, y1, z0, z1 = C.cutout(sid, c["id"], mir)
@@ -1034,116 +1136,109 @@ class Systems:
                         r = 0.5 * float(C.trunk[tid]["diameter"])
                         if not (y0 + r + 0.001 <= p[1] <= y1 - r - 0.001 and z0 + r + 0.001 <= p[2] <= z1 - r - 0.001):
                             raise ValueError(f"{tid} does not clear cut-out {sid}/{c['id']}: {p}")
-                    is_fw = c["id"] == "C-FW-HARN"
-                    pid = self.pid("fw_grommet") if is_fw else self.pid(n)
-                    if not is_fw:
-                        n += 1
-                        if n >= N["cn_wing"]:
-                            raise ValueError("grommet part numbers overrun")
+                    items.append((c["id"] + ("-L" if mir else ""), (y0, y1, z0, z1), [(t_, s_) for t_, s_, _ in inside]))
+            if not items:
+                continue
+            is_fw = sid == "FS3670"
+            pid = self.pid("fw_grommet") if is_fw else self.pid(n)
+            if not is_fw:
+                n += 1
+                if n > N["grom_ct"]:
+                    raise ValueError("grommet part numbers overrun")
+
+            def mesh(items=items, sid=sid, w=w):
+                bodies = []
+                for _cid, (y0, y1, z0, z1), bundles in items:
                     plug = sbox(y0 + GROM_CLR, z0 + GROM_CLR, y1 - GROM_CLR, z1 - GROM_CLR)
                     rim = sbox(y0 - GROM_RIM, z0 - GROM_RIM, y1 + GROM_RIM, z1 + GROM_RIM)
-                    bundles = [(tid, side) for tid, side, _p in inside]
+                    g = union([self.chevron(plug, sid, -TOUCH - GROM_FL, w + TOUCH + GROM_FL),
+                               self.chevron(rim, sid, -TOUCH - GROM_FL, -TOUCH),
+                               self.chevron(rim, sid, w + TOUCH, w + TOUCH + GROM_FL)])
+                    cut = [self.bundle_env(t_, s_) for t_, s_ in bundles] + extra.get(sid, [])
+                    lo, hi = g.bounds()
+                    for mc in member_cut:
+                        mlo, mhi = mc.bounds()
+                        if np.all(mhi >= lo) and np.all(mlo <= hi):
+                            cut.append(mc)
+                    bodies.append(finish(diff(g, cut)))
+                return G.merge(bodies) if len(bodies) > 1 else bodies[0]
+            bids = []
+            for _cid, _r, bundles in items:
+                for t_, s_ in bundles:
+                    ids = self.trunk_ids[t_]
+                    bids.append(ids[0] if s_ > 0 else ids[-1])
+            bids = list(dict.fromkeys(bids))
+            fr = st["part"]
+            cl = ", ".join(i[0] for i in items)
+            nm = "fireproof harness grommet, firewall" if is_fw else f"harness grommet set {sid}"
+            nm_tr = "yangın perdesi yangına dayanıklı kablo geçiş rondelası" if is_fw else f"kablo geçiş rondela takımı {sid}"
+            self.add(pid, nm, nm_tr, P_BUY, P_BUY, mesh, purchased=True,
+                     vendor=("fire-resistant silicone grommet with stainless retainer, harness in fire sleeve (ISO 2685 "
+                             "fireproof pass-through)") if is_fw else
+                     "moulded split silicone grommets (VMQ 60 Shore A), bonded, harness tied to them",
+                     mass_kg=0.0, parent=fr, contacts=(fr,), step=STEP_HARNESS, explode=(0.0, 0.0, 0.10),
+                     notes=f"cut-outs {cl} of {sid}: plug 0.2 mm inside the cut-out, {GROM_FL * 1000:.1f} mm flanges on "
+                           "both web faces (trimmed at the members meeting the frame), holes for " + ", ".join(bids))
+            self.harness_fixed[pid] = None
+            for b in bids:
+                self.link(pid, b)
+                self.link(b, pid)
 
-                    def mesh(plug=plug, rim=rim, sid=sid, w=w, bundles=bundles):
-                        g = union([self.chevron(plug, sid, -TOUCH - GROM_FL, w + TOUCH + GROM_FL),
-                                   self.chevron(rim, sid, -TOUCH - GROM_FL, -TOUCH),
-                                   self.chevron(rim, sid, w + TOUCH, w + TOUCH + GROM_FL)])
-                        cut = []
-                        for tid, side in bundles:
-                            env = self.bundle(tid, TOUCH)
-                            cut.append(env if side > 0 else env.mirrored_y())
-                        lo, hi = g.bounds()
-                        for mc in member_cut + member_cut_m:
-                            mlo, mhi = mc.bounds()
-                            if np.all(mhi >= lo) and np.all(mlo <= hi):
-                                cut.append(mc)
-                        return finish(diff(g, cut))
-                    bids = []
-                    for tid, side in bundles:
-                        ids = self.trunk_ids[tid]
-                        bids.append(ids[0] if side > 0 else ids[-1])
-                    side_s = "-L" if mir else ""
-                    nm = "fireproof harness grommet, firewall" if is_fw else f"harness grommet {sid} {c['id']}{side_s}"
-                    nm_tr = "yangın perdesi yangına dayanıklı kablo geçiş rondelası" if is_fw else \
-                        f"kablo geçiş rondelası {sid} {c['id']}{side_s}"
-                    fr = st["part"]
-                    self.add(pid, nm, nm_tr, P_BUY, P_BUY, mesh, purchased=True,
-                             vendor=("fire-resistant silicone grommet with stainless retainer and fire sleeve (ISO 2685 "
-                                     "fireproof pass-through)") if is_fw else
-                             "moulded split silicone grommet (VMQ 60 Shore A), bonded, harness tied to it",
-                             mass_kg=0.0, parent=fr, contacts=(fr,) + tuple(bids), step=STEP_HARNESS,
-                             explode=(0.0, 0.0, 0.10),
-                             notes=f"fills cut-out {c['id']}{side_s} of {sid} (0.2 mm clearance), {GROM_FL * 1000:.1f} mm "
-                                   "flanges on both web faces (trimmed at the members meeting the frame), holes for "
-                                   + ", ".join(bids))
-                    self.harness_fixed[pid] = None
-                    for b in bids:
-                        self.reg.parts[b].contacts = tuple(dict.fromkeys(self.reg.parts[b].contacts + (pid,)))
-
-    def ring_grommet(self, key_pid, name, name_tr, member_part, point, axis, t_wall, bore_r, bundles, trim=None):
-        """Split ring grommet in a round bore of a panel (axis normal to the panel, panel from point to point +
-        t_wall * axis): plug 0.2 mm inside the bore, 1.5 mm flanges 3.5 mm beyond it on both faces, bundle holes."""
+    def ring_grommet(self, pid, name, name_tr, member_part, point, axis, t_wall, bore_r, bundles, rim=0.0035):
+        """Split ring grommet in a round bore of a panel (panel from ``point`` to point + t_wall * axis): plug 0.2 mm
+        inside the bore, 1.5 mm flanges 3.5 mm beyond it on both faces, bundle holes."""
         a = G.unit(axis)
         p = np.asarray(point, float)
 
         def mesh():
             g = union([G.cylinder(bore_r - GROM_CLR, p - (TOUCH + GROM_FL) * a, p + (t_wall + TOUCH + GROM_FL) * a, n=40),
-                       G.cylinder(bore_r + 0.0035, p - (TOUCH + GROM_FL) * a, p - TOUCH * a, n=40),
-                       G.cylinder(bore_r + 0.0035, p + (t_wall + TOUCH) * a, p + (t_wall + TOUCH + GROM_FL) * a, n=40)])
-            cut = [self.bundle(tid, TOUCH) if side > 0 else self.bundle(tid, TOUCH).mirrored_y()
-                   for tid, side in bundles]
-            if trim is not None:
-                cut += trim
-            return finish(diff(g, cut))
-        bids = [self.trunk_ids[tid][0] if side > 0 else self.trunk_ids[tid][-1] for tid, side in bundles]
-        self.add(key_pid, name, name_tr, P_BUY, P_BUY, mesh, purchased=True,
-                 vendor="moulded split silicone grommet (VMQ 60 Shore A), sealed with polysulphide where the panel "
-                        "is a vapour or fuel boundary", mass_kg=0.0, parent=member_part,
-                 contacts=(member_part,) + tuple(bids), step=STEP_HARNESS, explode=(0.0, 0.0, 0.10),
-                 notes="layout.systems.harness penetration; holes for " + ", ".join(bids))
-        self.harness_fixed[key_pid] = None
+                       G.cylinder(bore_r + rim, p - (TOUCH + GROM_FL) * a, p - TOUCH * a, n=40),
+                       G.cylinder(bore_r + rim, p + (t_wall + TOUCH) * a, p + (t_wall + TOUCH + GROM_FL) * a, n=40)])
+            return finish(diff(g, [self.bundle_env(t_, s_) for t_, s_ in bundles]))
+        bids = [self.trunk_ids[t_][0] if s_ > 0 else self.trunk_ids[t_][-1] for t_, s_ in bundles]
+        self.add(pid, name, name_tr, P_BUY, P_BUY, mesh, purchased=True,
+                 vendor="moulded split silicone grommet (VMQ 60 Shore A), sealed with polysulphide", mass_kg=0.0,
+                 parent=member_part, contacts=(member_part,) + tuple(bids), step=STEP_HARNESS,
+                 explode=(0.0, 0.0, 0.10), notes="layout.systems.harness penetration; holes for " + ", ".join(bids))
+        self.harness_fixed[pid] = None
         for b in bids:
-            self.reg.parts[b].contacts = tuple(dict.fromkeys(self.reg.parts[b].contacts + (key_pid,)))
-        return key_pid
+            self.link(b, pid)
+        return pid
 
     def member_grommets(self):
         C = self.C
-        hw = C.trunk["H-WING"]
-        pen = {p["member"]: np.asarray(p["point"], float) for p in hw["penetrations"]}
-        n = 770
-        # centre box lower cover (outer face = box z0), side-of-body rib, glove rib: starboard here, mirrored later
+        pen = {p_["member"]: np.asarray(p_["point"], float) for p_ in C.trunk["H-WING"]["penetrations"]}
         box_lo, _ = C.member_box("M-CTBOX")
         t_cov = layup_props(self.spec, "ct_box_cover")["thickness"]
         p = pen["M-CTBOX"].copy()
-        p[2] = float(box_lo[2]) + 0.0002
-        g1 = self.ring_grommet(self.pid(n, "R"), "harness grommet, centre-box lower cover, starboard",
+        p[2] = float(box_lo[2])
+        g1 = self.ring_grommet(self.pid("grom_ct", "R"), "harness grommet, centre-box lower cover, starboard",
                                "kablo geçiş rondelası, orta kutu alt kapağı, sağ", C.mem["M-CTBOX"]["part"], p,
-                               (0, 0, 1), t_cov - 0.0004, 0.010, [("H-WING", 1)])
+                               (0, 0, 1), t_cov, 0.010, [("H-WING", 1)])
         sob = C.member_box("M-SOB")
         p = pen["M-SOB"].copy()
         p[1] = float(sob[0][1])
-        g2 = self.ring_grommet(self.pid(n + 1, "R"), "harness grommet, side-of-body rib, starboard",
+        g2 = self.ring_grommet(self.pid("grom_sob", "R"), "harness grommet, side-of-body rib, starboard",
                                "kablo geçiş rondelası, gövde yanı kaburgası, sağ", C.mem["M-SOB"]["part"] + "-R", p,
-                               (0, 1, 0), float(sob[1][1] - sob[0][1]), 0.010, [("H-WING", 1)])
+                               (0, 1, 0), float(sob[1][1] - sob[0][1]), 0.010, [("H-WING", 1)], rim=0.0015)
         gl = C.member_box("M-GLOVERIB")
         p = pen["M-GLOVERIB"].copy()
         p[1] = float(gl[0][1])
-        g3 = self.ring_grommet(self.pid(n + 2, "R"), "harness grommet, glove rib, starboard",
-                               "kablo geçiş rondelası, eldiven kaburgası, sağ", C.mem["M-GLOVERIB"]["part"] + "-R", p,
+        glove = self.find_part("YK250-CH-", ("glove rib", "box piece", "starboard")) or C.mem["M-GLOVERIB"]["part"] + "-R"
+        g3 = self.ring_grommet(self.pid("grom_glove", "R"), "harness grommet, glove rib, starboard",
+                               "kablo geçiş rondelası, eldiven kaburgası, sağ", glove, p,
                                (0, 1, 0), float(gl[1][1] - gl[0][1]), 0.010, [("H-WING", 1)])
-        self.mirror_map.update({g: g[:-1] + "L" for g in (g1, g2, g3)})
         self.member_grommets_R = (g1, g2, g3)
         # main-well forward wall: H-MAIN over H-COAX in one sealed two-hole grommet (aft flange inside the channel)
         ww = C.member_box("M-WELLWALL-FWD")
         x0w, x1w = float(ww[0][0]), float(ww[1][0])
-        pm = {p_["member"]: np.asarray(p_["point"], float) for t in ("H-MAIN", "H-COAX")
-              for p_ in C.trunk[t]["penetrations"]}
-        pts = [np.asarray(pp["point"], float) for t in ("H-MAIN", "H-COAX") for pp in C.trunk[t]["penetrations"]]
-        rs = [0.5 * float(C.trunk[t]["diameter"]) + 0.003 for t in ("H-MAIN", "H-COAX")]
-        del pm
-        wid = self.pid(n + 3)
-        kw = C.member_box("M-WELLKEEL")
-        y_in = float(kw[0][1]) - 0.0004
+        pts, rs = [], []
+        for t in ("H-MAIN", "H-COAX"):
+            pp = next(p_ for p_ in C.trunk[t]["penetrations"] if p_["member"] == "M-WELLWALL-FWD")
+            pts.append(np.asarray(pp["point"], float))
+            rs.append(0.5 * float(C.trunk[t]["diameter"]) + 0.001)          # wall bore: d + 2 mm (sealed entry)
+        wid = self.pid("grom_well")
+        y_in = float(C.member_box("M-WELLKEEL")[0][1]) - 0.0004
 
         def wmesh():
             g = []
@@ -1153,25 +1248,24 @@ class Systems:
                 g.append(G.cylinder(r + 0.0035, (x0w - TOUCH - GROM_FL, q[1], q[2]), (x0w - TOUCH, q[1], q[2]), n=40))
                 g.append(G.cylinder(r + 0.0035, (x1w + TOUCH, q[1], q[2]), (x1w + TOUCH + GROM_FL, q[1], q[2]), n=40))
             m = union(g)
-            cut = [self.bundle("H-MAIN", TOUCH), self.bundle("H-COAX", TOUCH)]
-            for s in (1, -1):        # aft flange stays between the channel keel webs
-                cut.append(box3((x1w, s * y_in if s > 0 else -0.1, -0.3), (x1w + 0.01, 0.1 if s > 0 else -y_in, 0.0)))
+            cut = [self.bundle_env("H-MAIN", 1), self.bundle_env("H-COAX", 1),
+                   box3((x1w, y_in, -0.3), (x1w + 0.01, 0.1, 0.0)), box3((x1w, -0.1, -0.3), (x1w + 0.01, -y_in, 0.0))]
             return finish(diff(m, cut))
+        wall = C.mem["M-WELLWALL-FWD"]["part"]
+        hm, hc = self.trunk_ids["H-MAIN"][0], self.trunk_ids["H-COAX"][0]
         self.add(wid, "sealed harness entry, main-well forward wall", "sızdırmaz kablo girişi, ana kuyu ön duvarı",
                  P_BUY, P_BUY, wmesh, purchased=True, vendor="moulded two-hole silicone grommet, sealed (polysulphide)",
-                 mass_kg=0.0, parent=C.mem["M-WELLWALL-FWD"]["part"],
-                 contacts=(C.mem["M-WELLWALL-FWD"]["part"], self.trunk_ids["H-MAIN"][0], self.trunk_ids["H-COAX"][0]),
-                 step=STEP_HARNESS, explode=(0.0, 0.0, -0.10),
+                 mass_kg=0.0, parent=wall, contacts=(wall, hm, hc), step=STEP_HARNESS, explode=(0.0, 0.0, -0.10),
                  notes="H-MAIN over H-COAX through M-WELLWALL-FWD into the centre-line conduit")
         self.harness_fixed[wid] = None
-        for b in (self.trunk_ids["H-MAIN"][0], self.trunk_ids["H-COAX"][0]):
-            self.reg.parts[b].contacts = tuple(dict.fromkeys(self.reg.parts[b].contacts + (wid,)))
+        self.link(hm, wid)
+        self.link(hc, wid)
 
     def conduit(self):
         """CFRP U-conduit (4 plies PW, 0.8 mm) closing the centre-line harness channel between the main wells:
         side walls bonded to the keel webs M-WELLKEEL, flanges under the well roof, floor under the coax tier."""
         C = self.C
-        kw_lo, kw_hi = C.member_box("M-WELLKEEL")
+        kw_lo, _ = C.member_box("M-WELLKEEL")
         roof_lo, _ = C.member_box("M-WELLROOF")
         ww = C.member_box("M-WELLWALL-FWD")
         t = 0.0008
@@ -1186,69 +1280,137 @@ class Systems:
         x1 = C.face("FS-GEAR", -1)[0] - TOUCH - GROM_FL - 0.0005
         cid = self.pid("conduit")
         prof = Polygon([(-yo, zt), (-yi, zt), (-yi, zb1), (yi, zb1), (yi, zt), (yo, zt), (yo, zb0), (-yo, zb0)])
+        kw = C.mem["M-WELLKEEL"]["part"]
         self.add(cid, "centre-line harness conduit (between the main wells)", "orta hat kablo kanalı (ana kuyular arası)",
-                 MAT_PW, P_PREG, (lambda: prism_x(prof, x0, x1)), thickness=t,
-                 parent=C.mem["M-WELLKEEL"]["part"] + "-R",
-                 contacts=(C.mem["M-WELLKEEL"]["part"] + "-R", C.mem["M-WELLKEEL"]["part"] + "-L",
-                           C.mem["M-WELLROOF"]["part"]), step=STEP_HARNESS, explode=(0.0, 0.0, -0.15),
-                 notes="OOA prepreg U 30 x 52 mm, 4 plies PW (0.8 mm), bonded to the keel webs (closes the channel "
-                       "towards the wells: layout H-MAIN 'sealed CFRP conduit'); H-MAIN upper tier, H-COAX lower tier")
+                 MAT_PW, P_PREG, (lambda: prism_x(prof, x0, x1)), thickness=t, parent=kw + "-R",
+                 contacts=(kw + "-R", kw + "-L", C.mem["M-WELLROOF"]["part"]), step=STEP_HARNESS,
+                 explode=(0.0, 0.0, -0.15),
+                 notes="OOA prepreg U, 4 plies PW (0.8 mm), bonded to the keel webs (closes the channel towards the "
+                       "wells: layout H-MAIN 'sealed CFRP conduit'); H-MAIN upper tier, H-COAX lower tier")
 
-    def wing_receptacles(self, RC, cn, y_p0, y_p1, y_f0, y_f1, y_bs):
+    def junction_bracket(self):
+        """CN-TAIL: formed 6061 bracket on TR-AFTBAY (layout chassis.trays TR-AFTBAY 'tail connector bracket') with
+        the bulkhead connectors that split H-MAIN / H-COAX into the tail branches and the engine harness."""
         C = self.C
-        rib = C.mem["M-JOINTRIB"]["part"] + "-R"
+        Jn = self.junction
+        tray = C.trays["TR-AFTBAY"]["part"]
+        z_tray = float(C.boxes["equipment_bay_aft"]["z"][0])
+        t = SHEET_T
+        xm = 0.5 * (Jn["x_w0"] + Jn["x_w1"])
+        zf = z_tray + TOUCH + 0.5 * t
+        x_end = 3.308
+        prof = bent_profile([(xm, 0.062), (xm, zf), (x_end, zf)], t, R_AL)
+        foot = Polygon([(Jn["x_w1"] + R_AL, zf - 0.5 * t), (x_end, zf - 0.5 * t), (x_end, zf + 0.5 * t),
+                        (Jn["x_w1"] + R_AL, zf + 0.5 * t)])
+        conns = [(tid, 1, Jn["conn"][tid]) for tid in ("H-MAIN", "H-COAX", "H-ENGINE")] + \
+            [("H-TAIL", s_, (s_ * Jn["conn"]["H-TAIL"][0], Jn["conn"]["H-TAIL"][1])) for s_ in (1, -1)]
+        rc = {tid: 0.5 * float(C.trunk[tid]["diameter"]) + 0.0025 for tid in Jn["conn"]}
+        bid = self.pid(774)
+
+        def bmesh():
+            m = union([prism_y(prof, -0.0685, 0.045), prism_y(foot, -0.098, 0.098)])
+            cuts = [cyl((Jn["x_w0"] - 0.001, y, z), (Jn["x_w1"] + 0.001, y, z), rc[tid] + 0.0003, 40)
+                    for tid, _s, (y, z) in conns]
+            return finish(diff(m, cuts))
+        self.add(bid, "aft-bay connector bracket CN-TAIL", "arka bölme konnektör braketi CN-TAIL", MAT_AL, P_SHEET,
+                 bmesh, thickness=t, parent=tray, contacts=(tray,), step=STEP_HARNESS, explode=(0.0, 0.0, 0.10),
+                 notes="6061-T6 2 mm, web with five bulkhead connector holes, foot on TR-AFTBAY (3 x M4, nylocs)")
+        for k, y in enumerate((0.0, 0.090, -0.090)):
+            self.nyloc(f"{bid}-B{k + 1}", 4, (3.2995, y, zf + 0.5 * t), (0.0, 0.0, -1.0), [(bid, t + TOUCH), (tray, 0.002)],
+                       step=STEP_HARNESS, notes="connector bracket foot through TR-AFTBAY")
+        cid = self.pid(775)
+        hids = []
+        for tid, side, _yz in conns:
+            ids = self.trunk_ids[tid]
+            hids.append(ids[0] if side > 0 else ids[-1])
+
+        def cmesh():
+            ms = []
+            for tid, _s, (y, z) in conns:
+                ms.append(cyl((Jn["x_f"], y, z), (Jn["x_a"], y, z), rc[tid], 40))
+                ms.append(cyl((Jn["x_w1"] + TOUCH, y, z), (Jn["x_w1"] + TOUCH + 0.0015, y, z), rc[tid] + 0.003, 40))
+            return union(ms)
+        self.add(cid, "connector set CN-TAIL (5 bulkhead receptacles + plugs)",
+                 "konnektör takımı CN-TAIL (5 adet geçiş konnektörü)", P_BUY, P_BUY, cmesh, purchased=True,
+                 vendor="MIL-DTL-38999 series III jam-nut receptacles with mated plugs and backshells (layout CN-TAIL)",
+                 mass_kg=5 * PLUG_MASS, parent=bid, contacts=(bid,) + tuple(dict.fromkeys(hids)), step=STEP_HARNESS,
+                 explode=(0.0, 0.0, 0.14), notes=C.conn["CN-TAIL"]["location"])
+        self.harness_fixed[cid] = 5 * PLUG_MASS
+        for h in dict.fromkeys(hids):
+            self.link(h, cid)
+
+    def aft_tray_passage(self):
+        """H-MAIN and H-COAX climb from the centre-line channel through TR-AFTBAY into the aft bay: clearance notch in
+        the tray's FS-GEAR flange and slots in the tray floor (cut here, holes of a part registered earlier) with
+        split edge-protection sleeves in the floor slots."""
+        C = self.C
+        tray = C.trays["TR-AFTBAY"]["part"]
+        z_tray = float(C.boxes["equipment_bay_aft"]["z"][0])
+        xg = C.face("FS-GEAR", 1)[0]
+        region = box3((xg - 0.0005, -0.04, -0.105), (3.25, 0.04, -0.045))
+        for tid in ("H-MAIN", "H-COAX"):
+            self.reg.parts[tray].holes.append(inter(self.bundle(tid, 0.0035), region))
+        slab = box3((xg + 0.008, -0.04, z_tray - 0.002 - 0.0015), (3.25, 0.04, z_tray + 0.0015))
+        sid = self.pid(776)
+
+        def smesh():
+            ms = []
+            for tid in ("H-MAIN", "H-COAX"):
+                ring_ = diff(self.bundle(tid, 0.0033), [self.bundle(tid, TOUCH)])
+                ms.append(finish(inter(ring_, slab)))
+            return G.merge(ms)
+        hm, hc = self.trunk_ids["H-MAIN"][0], self.trunk_ids["H-COAX"][0]
+        self.add(sid, "harness edge sleeves, TR-AFTBAY floor slots", "kablo kenar koruma kılıfları, TR-AFTBAY taban",
+                 P_BUY, P_BUY, smesh, purchased=True, vendor="split nylon edge-protection grommet strip (caterpillar "
+                 "grommet), bonded", mass_kg=0.0, parent=tray, contacts=(tray, hm, hc), step=STEP_HARNESS,
+                 explode=(0.0, 0.0, 0.10), notes="lines the two floor slots cut in TR-AFTBAY for the climbing trunks")
+        self.harness_fixed[sid] = None
+        self.link(hm, sid)
+        self.link(hc, sid)
+
+    def wing_receptacle(self, RC, cn, side: int):
+        C = self.C
+        sfx = "R" if side > 0 else "L"
+        rib = C.mem["M-JOINTRIB"]["part"] + "-" + sfx
         x0p, x1p, z0p, z1p = 2.6935, 2.7565, -0.034, 0.014
         cx, cz = float(cn[0]), float(cn[2])
-        plate = self.pid("cn_wing", "R")
-        plate = self.pid(N["cn_wing"] + 1, "R")
-        rec = self.pid("cn_wing", "R")
+        plate, rec = self.pid("cn_plate", sfx), self.pid("cn_wing", sfx)
+        M = np.array([1.0, side, 1.0])
+
+        def mir(m):
+            return m if side > 0 else m.mirrored_y()
 
         def pmesh():
-            m = box3((x0p, y_p0, z0p), (x1p, y_p1, z1p))
-            return diff(m, [cyl((cx, y_p0 - 0.001, cz), (cx, y_p1 + 0.001, cz), RC["r_body"] + 0.0005, 48)])
-        self.add(plate, "wing connector float plate, starboard", "kanat konnektörü yüzer plakası, sağ", MAT_AL, P_CNC,
+            m = box3((x0p, RC["y_p0"], z0p), (x1p, RC["y_p1"], z1p))
+            return mir(diff(m, [cyl((cx, RC["y_p0"] - 0.001, cz), (cx, RC["y_p1"] + 0.001, cz), RC["r_body"] + 0.0005,
+                                    48)]))
+        self.add(plate, f"wing connector float plate, {'starboard' if side > 0 else 'port'}",
+                 f"kanat konnektörü yüzer plakası, {'sağ' if side > 0 else 'sol'}", MAT_AL, P_CNC,
                  pmesh, thickness=RC["plate_t"], parent=rib, contacts=(rib,), step=STEP_HARNESS,
-                 explode=(0.0, -0.06, 0.0),
+                 explode=(0.0, -0.06 * side, 0.0),
                  notes="6061-T6 2 mm on the inboard face of the joint rib (2 x M3 into potted inserts); the receptacle "
                        "floats +-0.5 mm in its bore (blind mate in the last 8 mm of the panel stroke)")
 
         def rmesh():
-            fl = box3((cx - 0.5 * RC["fl"], y_f0, cz - 0.5 * RC["fl"]), (cx + 0.5 * RC["fl"], y_f1, cz + 0.5 * RC["fl"]))
-            body = cyl((cx, y_f1 - OV, cz), (cx, RC["y_front"], cz), RC["r_body"], 48)
-            bs = cyl((cx, y_bs, cz), (cx, y_f0 + OV, cz), RC["r_bs"], 48)
-            return union([fl, body, bs])
-        hw_r = self.trunk_ids["H-WING"][0]
-        self.add(rec, "wing connector CN-WING (receptacle), starboard", "kanat konnektörü CN-WING (dişi), sağ", P_BUY,
-                 P_BUY, rmesh, purchased=True, vendor="MIL-DTL-38999 series III receptacle, 19 pins + 2 coax inserts, "
-                 "jam-nut, with backshell (layout CN-WING type, estimate)", mass_kg=RECEPT_MASS, parent=plate,
-                 contacts=(plate, hw_r), step=STEP_HARNESS, explode=(0.0, -0.08, 0.0),
+            fl = box3((cx - 0.5 * RC["fl"], RC["y_f0"], cz - 0.5 * RC["fl"]),
+                      (cx + 0.5 * RC["fl"], RC["y_f1"], cz + 0.5 * RC["fl"]))
+            body = cyl((cx, RC["y_f1"] - OV, cz), (cx, RC["y_front"], cz), RC["r_body"], 48)
+            bs = cyl((cx, RC["y_bs"], cz), (cx, RC["y_f0"] + OV, cz), RC["r_bs"], 48)
+            return mir(union([fl, body, bs]))
+        hw = self.trunk_ids["H-WING"][0 if side > 0 else -1]
+        self.add(rec, f"wing connector CN-WING (receptacle), {'starboard' if side > 0 else 'port'}",
+                 f"kanat konnektörü CN-WING (dişi), {'sağ' if side > 0 else 'sol'}", P_BUY, P_BUY, rmesh,
+                 purchased=True, vendor="MIL-DTL-38999 series III receptacle, 19 pins + 2 coax inserts, jam-nut, "
+                 "with backshell (layout CN-WING type, estimate)", mass_kg=RECEPT_MASS, parent=plate,
+                 contacts=(plate, hw), step=STEP_HARNESS, explode=(0.0, -0.08 * side, 0.0),
                  notes=C.conn["CN-WING"]["location"])
         self.harness_fixed[rec] = RECEPT_MASS
-        self.reg.parts[hw_r].contacts = tuple(dict.fromkeys(self.reg.parts[hw_r].contacts + (rec,)))
+        self.link(hw, rec)
+        t_rib = float(C.member_box("M-JOINTRIB")[1][1] - C.member_box("M-JOINTRIB")[0][1])
         for k, x in enumerate((cx - 0.024, cx + 0.024)):
-            self.insert_bolt(f"{plate}-B{k + 1}", 3, (x, y_p0, cz), (0.0, 1.0, 0.0), [(plate, y_p1 - y_p0 + 0.0001)],
-                             rib, float(C.member_box("M-JOINTRIB")[1][1] - C.member_box("M-JOINTRIB")[0][1]),
-                             step=STEP_HARNESS, notes="float plate into a potted M3 insert of the joint rib")
-        self.mirror_map.update({plate: plate[:-1] + "L", rec: rec[:-1] + "L", rib: rib[:-1] + "L"})
-        self.cn_ids = (plate, rec)
-
-    def mirror_wing_items(self):
-        """Port copies of the H-WING grommets and the wing receptacle (after the starboard holes are cut)."""
-        idm = dict(self.mirror_map)
-        idm.update({self.trunk_ids["H-WING"][0]: self.trunk_ids["H-WING"][-1]})
-        for pid in list(self.member_grommets_R) + list(self.cn_ids):
-            p = self.reg.parts[pid]
-            q = mirror_part(p, pid[:-1] + "L", id_map=idm)
-            if q.parent and q.parent.endswith("-R"):
-                q.parent = q.parent[:-1] + "L"
-            q.contacts = tuple(c[:-1] + "L" if (c.endswith("-R") and c[:-1] + "L" in self.reg.parts) else c
-                               for c in q.contacts)
-            self.reg.add(q)
-            if pid in self.harness_fixed:
-                self.harness_fixed[q.id] = self.harness_fixed[pid]
-            for f in q.fasteners:                         # port inserts / holes in the mirrored rib
-                for j in f.joins[1:]:
-                    pass
+            self.insert_bolt(f"{plate}-B{k + 1}", 3, M * (x, RC["y_p0"], cz), (0.0, float(side), 0.0),
+                             [(plate, RC["y_p1"] - RC["y_p0"] + 0.0001)], rib, t_rib, step=STEP_HARNESS,
+                             notes="float plate into a potted M3 insert of the joint rib")
 
     def parachute(self):
         pass

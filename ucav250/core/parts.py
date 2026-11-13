@@ -151,7 +151,11 @@ class Part:
             if self.holes:
                 from .geom import cylinder, difference
                 cut = [h if isinstance(h, Mesh) else cylinder(float(h[2]), h[0], h[1], n=24) for h in self.holes]
-                self._mesh = difference(base, cut)
+                out = difference(base, cut)
+                # merge sub-micron sliver edges the hole cuts can leave next to existing faces (they fail the
+                # triangle self-intersection test, e.g. the spar frame CH-009 after the fuel / systems pass-throughs);
+                # manifold simplify at 0.1 um changes the volume by << 1 mm^3
+                self._mesh = Mesh.from_manifold(out.to_manifold().simplify(1e-7))
             else:
                 self._mesh = base
             self._n_holes = len(self.holes)

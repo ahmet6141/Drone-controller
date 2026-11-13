@@ -1027,6 +1027,10 @@ class Systems:
         parents = {"H-MAIN": C.mem["M-MIDFLOOR"]["part"], "H-COAX": C.mem["M-MIDFLOOR"]["part"],
                    "H-WING": C.mem["M-CTBOX"]["part"], "H-TAIL": C.stp("FS3480"), "H-ENGINE": C.stp("FS3670"),
                    "H-NOSE": C.mem["M-DECK-NOSE"]["part"]}
+        # integration round (IR-07): fuel level probe branches (layout H-FUEL in the spine channel, H-FUEL-A aft)
+        for tid, par in (("H-FUEL", C.mem["M-SPINE"]["part"]), ("H-FUEL-A", C.stp("FS-GEAR"))):
+            if tid in C.trunk:
+                parents[tid] = par
         self.trunk_ids = {}
         for tid in parents:
             t = C.trunk[tid]
@@ -1044,6 +1048,7 @@ class Systems:
             self.harness_parts.append(pid)
         self.frame_grommets()
         self.member_grommets()
+        self.spine_grommet()
         self.conduit()
         self.junction_bracket()
         self.aft_tray_passage()
@@ -1217,6 +1222,31 @@ class Systems:
         for b in bids:
             self.link(b, pid)
         return pid
+
+    def spine_grommet(self):
+        """Integration round (IR-07): H-FUEL enters the dorsal spine channel through its floor in the mission bay
+        (layout penetration on M-SPINE): bore in the channel floor (cut here) with a sealed split ring grommet; the
+        branch starts as a breakout of H-COAX (declared contact)."""
+        C = self.C
+        if "H-FUEL" not in C.trunk:
+            return
+        t = C.trunk["H-FUEL"]
+        pen = next(p_ for p_ in t["penetrations"] if p_["member"] == "M-SPINE")
+        q = np.asarray(pen["point"], float)
+        spine = C.mem["M-SPINE"]["part"]
+        z0 = float(C.mem["M-SPINE"]["box"][0][2])
+        fb = C.mem["M-SPINE"].get("boxes", [C.mem["M-SPINE"]["box"]])[0]
+        t_fl = float(fb[1][2]) - float(fb[0][2])                   # channel floor band of the layout member
+        r_b = 0.5 * float(t["diameter"]) + 0.002
+        p0 = np.array([q[0], q[1], z0 - 0.0002])
+        self.reg.parts[spine].add_hole(p0 - np.array([0.0, 0.0, 0.003]), p0 + np.array([0.0, 0.0, t_fl + 0.003]), r_b)
+        self.ring_grommet(self.pid(779), "harness grommet, spine-channel floor (fuel probe branch)",
+                          "kablo geçiş rondelası, sırt kanalı tabanı (yakıt algılayıcı kolu)", spine, p0, (0, 0, 1),
+                          t_fl + 0.0004, r_b, [("H-FUEL", 1)], rim=0.002)
+        self.harness_fixed[self.pid(779)] = None
+        hf, hc = self.trunk_ids["H-FUEL"][0], self.trunk_ids["H-COAX"][0]
+        self.link(hf, hc)
+        self.link(hc, hf)
 
     def member_grommets(self):
         C = self.C

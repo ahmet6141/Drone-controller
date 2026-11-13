@@ -241,6 +241,16 @@ class TestGearBuild(unittest.TestCase):
         for mech in (self.B.ID.m, self.B.TD.m, self.B.NG.m, self.B.NDD.m):
             self.assertGreater(mech.mu_min(), 30.0)
 
+    def test_inner_door_drive_travel_matches_layout(self):
+        """Integration round (IR-02): the door-work check (structures G-DOOR-DRIVE: DA 30 rated torque x crank travel)
+        uses the layout crank travel; it must be the travel of the built mechanism (within 1 deg), and the actuator is
+        the DA 30."""
+        seq = self.reg.sequences["gear_retraction"]
+        travel = max(abs(s["main_idoor_crank_R"]) for s in seq)
+        eq = next(e for e in self.spec["layout"]["systems"]["equipment"] if e["id"] == "EQ-DOORACT")
+        self.assertAlmostEqual(float(np.degrees(travel)), float(eq["shaft"]["crank_travel_deg"]), delta=1.0)
+        self.assertIn("DA 30", self.reg.parts["YK250-FC-676-R"].vendor)
+
     def test_nose_door_coupling_mirrors_the_doors(self):
         """Both coupling links meet at the slide-bar pin in every state; the doors move as mirror images."""
         seq = self.reg.sequences["gear_retraction"]

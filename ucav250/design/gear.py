@@ -1410,8 +1410,8 @@ class InnerDoorDrive:
         L_, H_, W_ = DA30["L"], DA30["H"], DA30["W"]
         cb = 0.5 * H_ - DA30["shaft_from_edge"]            # 85 mm side outboard along e1 (y), 30 mm along e2
         flange = G.box((DA30["flange_t"], H_, W_), center=self.at(tc + 0.5 * DA30["flange_t"], cb, 0.0), R=self.R)
-        body = G.box((L_ - DA30["flange_t"], H_ - 0.020, W_ - 0.002),
-                     center=self.at(tc + 0.5 * (L_ + DA30["flange_t"]), cb, 0.0), R=self.R)
+        f0 = DA30["flange_t"] - 0.001                       # body overlaps the flange by 1 mm (clean union)
+        body = G.box((L_ - f0, H_ - 0.020, W_ - 0.002), center=self.at(tc + 0.5 * (L_ + f0), cb, 0.0), R=self.R)
         holes = [G.cylinder(0.5 * DA30["hole_d"], self.at(tc - 0.001, b, c), self.at(tc + DA30["flange_t"] + 0.001, b, c),
                             n=16) for b, c in self.lug_bc()]
         bore = G.cylinder(0.00405, self.at(tc - 0.001), self.at(tc + 0.0105), n=32)

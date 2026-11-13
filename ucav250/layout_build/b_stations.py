@@ -179,7 +179,9 @@ def stations() -> list:
              [-0.062, -0.036]),
          cut("C-HARN-CL", "centre-line harness conduit (H-MAIN over H-COAX; sealed grommets; fix round 3: 30 mm "
              "channel tiers, PK3-05)", [-0.025, 0.025], [-0.120, -0.068]),
-         cut("C-DOORSHAFT", "inner-door drive shaft (DA 22 EQ-DOORACT on the aft face -> flanged bearing housing on the "
+         cut("C-HARN-FUELA", "aft-cell fuel level probe lead H-FUEL-A (integration round IR-07): sealed split grommet "
+             "with the probe flying lead's bulkhead connector on the aft face", [-0.110, -0.080], [0.115, 0.145]),
+         cut("C-DOORSHAFT", "inner-door drive shaft (DA 30 EQ-DOORACT on the aft face -> flanged bearing housing on the "
              "forward face -> crank and link in the well; gear detail round GD-05: replaces the 35 x 18 mm pushrod window "
              "C-DOORLINK, which could not pass a pushrod over the 90 deg door travel)",
              [0.035, 0.053], [-0.144, -0.126], mirror=True)],

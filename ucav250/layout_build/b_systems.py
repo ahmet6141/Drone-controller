@@ -666,7 +666,26 @@ def harness() -> dict:
          "path": P([0.795, 0.082, 0.034], [0.700, 0.082, 0.034], [0.640, 0.0625, 0.030], [0.600, 0.0625, 0.030],
                    [0.395, 0.055, 0.030], [0.370, 0.055, 0.030], [0.335, 0.0, 0.012], [0.300, 0.0, 0.010]),
          "supports": ["M-DECK-NOSE"],
-         "text": "FTS, nose-cone antennas (coax), transponder blade feed, pitot heater; pitot lines alongside"}]
+         "text": "FTS, nose-cone antennas (coax), transponder blade feed, pitot heater; pitot lines alongside"},
+        # integration round (IR-07): fuel level probe branches (no harness inside a vapour-tight fuel bay): the forward
+        # and saddle probes (FU-578 / 579) through sealed bulkhead connectors in the starboard wall of the dorsal spine
+        # channel M-SPINE (a sealed trough through the fuel bays), the aft probe (FU-595) through FS-GEAR (C-HARN-FUELA)
+        # into the aft equipment bay; the probes' flying leads (purchased with the probes) end at those connectors
+        {"id": "H-FUEL", "part": "YK250-SY-777", "name": "fuel level probe branch (forward / saddle cells)",
+         "diameter": 0.006,
+         "path": P([1.850, 0.2108, 0.0066], [1.880, 0.090, 0.110], [1.930, 0.0165, 0.140], [1.930, 0.0165, 0.177],
+                   [2.775, 0.0165, 0.177]),
+         "supports": ["M-SPINE"],
+         "penetrations": [{"member": "M-SPINE", "point": r3([1.930, 0.0165, 0.163]),
+                           "kind": "sealed split grommet in the spine-channel floor (mission bay side)"}],
+         "text": "breakout of H-COAX in the mission bay -> up through the floor of the dorsal spine channel M-SPINE -> "
+                 "along its starboard wall (y 0.0165, 5 mm outboard of the parachute bridle aft leg, under the fuel-bay "
+                 "panels' inboard flange) over the forward and saddle cells -> wall connectors of the probe flying leads "
+                 "at x 2.33 / 2.64; the bundle stays in the sealed trough, outside the vapour-tight bays"},
+        {"id": "H-FUEL-A", "part": "YK250-SY-778", "name": "fuel level probe branch (aft cell)", "diameter": 0.006,
+         "path": P([3.093, -0.095, 0.130], [3.120, -0.095, 0.130], [3.200, -0.060, 0.070], [3.235, -0.022, 0.040]),
+         "text": "bulkhead connector of the aft-cell probe flying lead in FS-GEAR (C-HARN-FUELA, sealed) -> aft "
+                 "equipment bay -> breakout into H-MAIN ahead of the junction CN-TAIL"}]
     return {"trunks": trunks,
             "rules": "trunks are keep-out corridors (diameter + 10 mm: no object within 5 mm of the trunk surface, "
                      "layout_check C04, fix round 3 PK3-05) except the members a trunk is clamped to ('supports'), "

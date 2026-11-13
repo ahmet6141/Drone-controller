@@ -97,7 +97,10 @@ N = dict(collector=573, coupling=574, coupling_bracket=575, fw_block=577, probe_
          drain_g=614, support=615, clamps=616, gascolator=617)
 CELL_KEYS = ("forward_cell", "saddle_cell", "aft_cell")
 CELL_TR = {"forward_cell": "ön hücre", "saddle_cell": "eyer hücresi", "aft_cell": "arka hücre"}
-PROBE_AT = {"forward_cell": (2.33, 0.15), "saddle_cell": (2.64, 0.10), "aft_cell": (2.95, 0.15)}   # (x, y)
+PROBE_AT = {"forward_cell": (2.33, 0.15), "saddle_cell": (2.64, 0.10), "aft_cell": (2.98, -0.10)}   # (x, y)
+#   integration round (IR-07): the aft probe moved to the port aft corner of the aft cell, its flying lead to the sealed
+#   bulkhead connector in FS-GEAR (C-HARN-FUELA, layout harness H-FUEL-A); forward / saddle leads to the spine-channel
+#   wall connectors (H-FUEL)
 RING_TRIES = (256, 244, 268, 232, 280)   # bladder loft ring point counts tried in turn
 
 
@@ -1277,8 +1280,9 @@ class Fuel:
                      f"custom length {L * 1000:.0f} mm (components.yaml gill_micro_level_sensor)",
                      mass_kg=PROBE["mass"], parent=c.pid, contacts=(c.pid,), explode=(0.0, 0.0, 0.40),
                      notes="installed along the top-wall normal through the bladder's top fitting, under the fuel-bay "
-                           "access panel; tilt compensated in the fuel quantity computation; probe cable exit through "
-                           "the access panel: open item (layout.systems.harness has no fuel-probe branch)")
+                           "access panel; tilt compensated in the fuel quantity computation; flying lead to a sealed "
+                           "bulkhead connector of the bay boundary (forward / saddle: spine-channel wall, harness H-FUEL; "
+                           "aft: FS-GEAR C-HARN-FUELA, harness H-FUEL-A; integration round IR-07)")
             self.reg.parts[c.liner].add_hole(pt - 0.004 * n, pt + 0.004 * n, PROBE["boss_r"] + 0.0008)
 
     # ------------------------------------------------------------------ frame pass-through seals

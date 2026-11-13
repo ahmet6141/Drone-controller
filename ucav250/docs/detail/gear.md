@@ -88,7 +88,7 @@ alan × `shell_secondary` alan kütlesi), menteşe çizgisi layout eklem ekseni:
 * *Burun istiridye kapakları (LG-674-R/L):* menteşe istasyonları yalnız bacak çatalının ve lastiğin menteşe çizgisine
   yaklaşmadığı yerlerde (x 0,700–0,746 ve 1,063–1,085): omurga duvarı iç yüzüne yapıştırılmış bloklar (LG-683),
   Ø3 pimler (LG-684).
-* Kapak eyleyicileri: ana iç kapak DA 22'leri (FC-676-R/L) FS-GEAR arka yüzünde bağlantı plakasıyla (LG-685, gömme
+* Kapak eyleyicileri: ana iç kapak DA 30'ları (FC-676-R/L; entegrasyon turu IR-02, önceden DA 22) FS-GEAR arka yüzünde bağlantı plakasıyla (LG-685, gömme
   dişli burç, yakıt bölmesi tarafına delik yok), burun kapağı DA 22'si (LG-678) sol yan bölme tepsisinin oyuğundan
   geçerek iki kulakla tepsiye (2 × M4 + somun plakası).
 
@@ -116,7 +116,7 @@ alan × `shell_secondary` alan kütlesi), menteşe çizgisi layout eklem ekseni:
 | LG-680-R/L | bacak kapağı mesafe braketleri | 7075-T651, CNC | 0,087 |
 | LG-681-R/L | mafsal kapağı menteşe blokları | 7075-T651, CNC | 0,015 |
 | LG-685-R/L | iç kapak eyleyici plakası | 7075-T651, CNC | 0,024 |
-| FC-676-R/L | iç kapak eyleyicisi Volz DA 22 | satın alma | 0,132 |
+| FC-676-R/L | iç kapak eyleyicisi Volz DA 30 (IR-02) | satın alma | 0,630 |
 | LG-624 | burun bacağı çatal + silindir | 7075-T651, CNC | 0,316 |
 | LG-626 | TOST LR Max II + 200x50 + iç lastik | satın alma | 0,895 |
 | LG-631 | yönlendirme borusu + çatal | 7075-T651, CNC | 0,349 |
@@ -134,7 +134,7 @@ alan × `shell_secondary` alan kütlesi), menteşe çizgisi layout eklem ekseni:
 | LG-686-R/L | iç kapak tahrik krankı + Ø8 mil | 4130 N, CNC | 0,026 |
 | LG-687-R/L / -688-R/L | iç kapak biyeli / kapak boynuzu | 7075-T651, CNC | 0,008 / 0,002 |
 | LG-689-R/L | iç kapak mili yatak yuvası (2 × 688-2RS) | 7075-T651, CNC | 0,012 |
-| LG-685-R/L | DA 22 kama plakası (eğik bağlantı) | 7075-T651, CNC | 0,033 |
+| LG-685-R/L | DA 30 kama plakası (eğik bağlantı, 85 × 30 mm flanş izi) | 7075-T651, CNC | 0,033 |
 | LG-691-R/L | mafsal kapağı mikro dişli motoru | satın alma (tahmin) | 0,045 |
 | LG-692-R/L / -693-R/L / -694-R/L | mafsal kapağı krankı / biyeli / boynuzu | 4130 N / 7075 | 0,005 / 0,003 / 0,003 |
 | LG-695-R/L | dişli motor braketi | 7075-T651, CNC | 0,009 |
@@ -209,7 +209,7 @@ pimi = çıkış boynuzu pimi, her durumda < 0,05 mm), ölü noktayı ve iletim 
 
 | Mekanizma (eklemler) | Seçilen düzen | Krank r / biyel l | Krank hareketi | min. iletim açısı | Pim |
 |---|---|---|---:|---:|---|
-| İç kapak (`main_idoor_crank/link_R/L`) | DA 22 FS-GEAR arka yüzünde, çıkışı menteşe hattına paralel (3,9° eğik kama plaka), mil C-DOORSHAFT'taki yataktan kuyuya; krank 686 + biyel 687 + kapak boynuzu 688 | 34,0 / 78,0 mm | 131° | 57° | Ø3 |
+| İç kapak (`main_idoor_crank/link_R/L`) | DA 30 (IR-02) FS-GEAR arka yüzünde, çıkışı menteşe hattına paralel (3,9° eğik kama plaka), mil C-DOORSHAFT'taki yataktan kuyuya; krank 686 + biyel 687 + kapak boynuzu 688 | 34,0 / 78,0 mm | 131° | 57° | Ø3 |
 | Mafsal kapağı (`main_tdoor_crank/link_R/L`) | kendi mikro dişli motoru 691 (Ø16 × 18 mm, tahmin) kiriş gövdesinde tek M3 burçlu yarım kelepçe 695 ile, krank 692 + biyel 693 + boynuz 694 | 16,0 / 38,0 mm | 160° | 33° | Ø3 |
 | Burun sürükleme (`nose_drag_crank/link`) | EMA çıkışı (sağ yarıda) → krank 655 + sürükleme biyeli 653 orta düzlemde → çatala tümleşik boynuz (r 33 mm, 116°) | 34,1 / 74,2 mm | 134° | 55° | Ø6 (ısıl işlemli) |
 | Burun kapak tahriki (`nose_ddrive_crank/link`) | DA 22 sol yan bölmede (gövdesi krankın önünde), çıkışı menteşe eksenlerine paralel; krank 679 + biyel 696 sol omurga duvarındaki W-NDOOR-LINK penceresinden sol eşleme boynuzunun (698-L) tahrik koluna | 16,9 / 89,2 mm | 127° | 43° | Ø3 |
@@ -278,7 +278,7 @@ pimi = çıkış boynuzu pimi, her durumda < 0,05 mm), ölü noktayı ve iletim 
 | yukarı kilit makara pimi, mandal pimi | 4 × ISO 2341-B Ø5 | |
 | DA 26 → burun bacağı kulakları | 4 × M3 12.9 (diş kulakta) | |
 | burun EMA sekmeleri → sağ omurga duvarı | 2 × M4 12.9 + ISO 7040 | somun sağ yan bölmede |
-| DA 22 (ana) üst kulakları → kama plaka → FS-GEAR | 4 × M3 12.9, gömme dişli burç | yakıt bölmesi tarafına delik yok |
+| DA 30 (ana) flanşı (77 × 18 mm kulak düzeni) → kama plaka → FS-GEAR | 4 × M4 12.9, gömme dişli burç | yakıt bölmesi tarafına delik yok (IR-02) |
 | iç kapak yatak yuvası → FS-GEAR ön yüzü | 4 × M3 12.9, gömme dişli burç | |
 | DA 22 (burun) dış kulağı → yan bölme tepsisi | 2 × M3 12.9 + somun plakası | |
 | tahrik pimleri (krank–biyel, biyel–boynuz) | ana: 8 × Ø3 (iki taraf); burun: 2 × Ø6, 2 × Ø3 (tahrik), 3 × Ø3 + 2 × Ø3 kılavuz (eşleme) | ISO 2341-B + kopilya, düzlem aralığı 0,5 mm pul |
@@ -316,19 +316,13 @@ değerlendirilmelidir (toplanmış konum, burun takımı daha hafif).
 
 ## 11. Açık konular
 
-1. **G-DOOR-DRIVE:** iç kapak işi (|Cp| 1,0 üst sınırında 14,0 J) DA 22'nin anma torku × 180° işinden (5,7 J)
-   büyüktür (`structures` G-DOOR-DRIVE, değişmedi). Yeni bağlantıda krank 131° döner (kapak/krank oranı 0,69);
-   DA 22'nin bu açıyı verdiği ve tork açığı (daha güçlü eyleyici ya da açma yayı) tedarikçiyle kapatılmalı. Kapalı
-   kapak ölü nokta ötesi kilitle tutulur (G-DOOR-LOCK eyleyiciden alınmaz).
+1. **G-DOOR-DRIVE (kapandı, entegrasyon turu IR-02):** iç kapak işi |Cp| 1,0 üst sınırında 9,3 J limit (× 1,5 = 14,0 J); DA 22 anma torku × krank hareketi (1,8 N m × 131° = 4,1 J) yetmiyordu. Ana iç kapak eyleyicisi Volz DA 30 oldu (components.yaml volz_da30: 8,0 N m anma, ±85° hareket, 158,5 × 85 × 30 mm D-Sub sürümü, 0,630 kg): 8,0 N m × 131° = 18,3 J → `structures` G-DOOR-DRIVE artık marj satırı, MS +0,31. Krank / biyel / boynuz zinciri değişmedi (mil noktası, krank 34 mm, biyel 78 mm, hareket 131° < DA 30'un 170°'si, iletim açısı 57°, kapalı konumda ölü nokta ötesi kilit); test eklenen krank hareketinin layout `EQ-DOORACT.shaft.crank_travel_deg` değerine eşit olduğunu doğrular. DA 30 gövdesi FS-GEAR'ın arka yüzünden arka ekipman bölmesine uzanır (çıkış ucu öne, 85 mm kenar y boyunca dışa, 30 mm düşey: gövde altı arkaya doğru yükseldiği için); veri sayfası çiziminden: çıkış ekseni kulak deliği sırasından 21,6 mm, 85 mm kenarın iç ucundan 25,6 mm, 30 mm genişlikte ortada. Gaskolatör ve arka hücre boşaltma hatları (FL-DRAIN, FL-DRAIN-A) DA 30'ların dışından y ±0,118'e alındı. `mass.rules.gear_doors.inner_door_actuator` (boyutlandırma kuralı: 3 × DA 22) kütle yeniden dağıtım adımında DA 30'a göre güncellenmeli (+2 × 0,498 kg; C06 kütle konumu da o adımda kapanır).
 2. **Mafsal kapağı dişli motoru 691:** zarf (Ø16 × 18 mm) ve kütle (0,045 kg) tahmindir; 0,3 N m çıkış, enkoder ve
    uç sınır anahtarları ile seçilmeli (Faulhaber / maxon sınıfı).
 3. **Aşağı kilit solenoidi 638:** katalog sınıfı tahmin zarfı/kütlesi; pim konum sensörü takım ünitesi kalemidir.
 4. **Fren hattı:** H-MAIN boyunca boru, mafsal geçişinde esnek hortum halkası ve bacak boyunca hortum modellenmedi
    (yol tarifi); döner rakor için kulak yüzünde yer yok (§7.1).
-9. **layout_check C05 (burun lastiği ↔ NDOOR-LINKAGE ≥ 12 mm):** −0,8 mm. Lastik dönüşü x 1,0713'e, kapı seviyesi
-   eşik x 1,0806'da başlar; iki kapağı ayna olarak eşleyen her bağlantı kapı seviyesinde bu 9 mm'lik bantta kalır.
-   Gerçek parçalar checks'te çakışmasız (statik + 21 durumlu tarama) ama 12 mm yerleşim payı sağlanmıyor → lastik
-   dönüşü / eşik konumu layout kararı gerektirir (açık).
+9. **layout_check C05 (kapandı, entegrasyon turu IR-01):** burun lastiğinin dönüşü x 1,0714'e kadar uzanır; kapı seviyesindeki kapak eşleme / tahrik yığını 13,5 mm arkaya alındı: boynuzlar x 1,0815–1,0845 (lastiğe ≥ 10 mm), yarığı geçen biyeller, kızak ve kılavuz plakası x 1,0848–1,0995 (lastiğe ≥ 12 mm; NDOOR-LINKAGE zarfı x 1,0840 başlar, C05 12,7 mm). Kapaklar açılırken boynuz ve biyeller yarıktan aşağı salındığı için önlerinde yapı olmamalı: FS1110'un ön T-flanşı yarık içinde (|y| < 0,0415) yarık sonu eşiğinin ön kenarına (x 1,0915) kadar kırpıldı (chassis `_cap_trims`), eşik M-NGSILL x 1,0915–1,1045'e, kapak arka kenarı x 1,1045'e (12 mm kenar bandı eşik + kırpılmış flanş üzerinde) taşındı, taret açıklık halkası P-TURRETRING yarık üstünde (|y| < 0,040) x 1,1055'e kadar çentiklendi (kenarları omurga duvarı ayak flanşına oturur). W-NDOOR-LINK penceresi x 1,0840–1,0950'ye kaydı; DA 22 gövdesi yerinde kaldı (P-SIDEBAY-L açıklığından aşağı sökülür), krank 13,5 mm'lik kamalı uzatma miliyle arkadaki düzleme taşınır.
 5. Yukarı kilit pençeleri ve çözme solenoidleri (takım ünitesi) zarfları modellenmedi.
 6. Yönlendirme DA 26'nın milinin yatay olması nedeniyle 90° dişli kafa (tahmin) — DA 26 + kayış SAGITTA uygulaması.
 7. Kütle bütçesi farkı (§9) ve EMA/amortisör tahminleri, tedarikçi seçimiyle güncellenmeli.

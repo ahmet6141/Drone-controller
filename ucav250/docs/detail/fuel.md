@@ -305,10 +305,8 @@ yakıt AM'si, satın alma verilerinin components.yaml ile eşliği, bağlantı e
 
 ## 15. Açık konular
 
-1. **Pompa kütlesinin bütçe grubu:** `analysis/mass.py` `Part.group` ile topluyor; FU-584 için layout `mass_item`
-   (`engine_group_installed`) dikkate alınmalı ya da bütçe yeniden bölünmeli (entegrasyon, görev #130).
-2. **Algılayıcı kablo yolu:** `layout.systems.harness` içinde yakıt seviye algılayıcıları için kol yok; kablolar
-   şimdilik erişim kapaklarının altından çıkıyor (layout'a kol eklenmeli).
+1. **Pompa kütlesinin bütçe grubu (kapandı, IR-08):** `analysis/mass.py` artık bütçe grubunu kütle kalemine göre alır (parçanın `mass_item`'ı ya da onu adlandıran layout nesnesinin `mass_item`'ı); FU-584 `engine_group_installed` üzerinden propulsion grubunda sayılır.
+2. **Algılayıcı kablo yolu (kapandı, IR-07):** layout'a H-FUEL (sırt kanalı) ve H-FUEL-A (FS-GEAR arkası) kolları eklendi; arka hücre algılayıcısı sol arka köşeye (x 2,98, y −0,10) taşındı, uçuş kablosu FS-GEAR C-HARN-FUELA kesiğine. Gaskolatör boşaltması (FL-DRAIN) ve toplayıcı boşaltması (FL-DRAIN-A) ana iç kapak DA 30'larının üstünden arkaya yürür ve gövdelerinin arkasında (x 3,275 / 3,265, y ±0,07) P-AFTHATCH'teki valflere iner (IR-02); gaskolatör kâsesi y 0,070'e kaydı.
 3. **Toplayıcı düşük seviye anahtarı** tipi seçilmedi (kapakta yer ayrıldı).
 4. **Tedarikçi verileri:** kuru bağlantı kaplini boyutları (Ø32 × 40 mm zarf), çek valf, boşaltma valfi, havalandırma
    çıkışı ve kesme valfi kütleleri tahmindir; teklif / veri sayfası ile güncellenmeli.

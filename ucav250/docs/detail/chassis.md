@@ -270,6 +270,11 @@ alt sınırı nedeniyle 0,4 yerine 0,6 mm'dir; (4) tepsiler layout kalınlığı
 * Kenar çizgisi ön parçası FS-MS T başlığının 0,5 mm önünde, arka parça yangın perdesi uç bağlantısının önünde biter.
 * Birleşim kaburgası yuva bağlantısının üzerine kadar uzatıldı (x 2,905; layout 2,8719).
 
+### 9.1 Entegrasyon turu değişiklikleri
+
+* **IR-01:** FS1110'un ön T-başlığı burun takımı omurga yarığında (|y| < 0,0415) yarık sonu eşiğinin ön kenarına (x 1,0915) kadar kırpıldı (`_cap_trims`): kapak eşleme boynuzları ve biyelleri kapaklar açılırken yarıktan aşağı salınır. Eşik M-NGSILL x 1,0915–1,1045'e (kapak arka kenar bandı eşik ve kırpılmış başlık üzerinde), sol omurga duvarındaki W-NDOOR-LINK penceresi x 1,0824–1,0934'e taşındı.
+* **IR-03:** taret asansörü ray bağlantılarının (CH-125 / CH-126) duvar cıvataları ray ekseninden 16 → 18 mm (taşıyıcı bloklarına pay), çerçeve ayağı alt ucu 4 mm yukarı (ön kayar kapak rayına 0,3 → 3,7 mm).
+
 ## 10. Açık konular
 
 1. **Kütle:** şasi 20,75 kg, tavan 12,61 kg (+8,14 kg). Sistem düzeyinde yeniden dağıtım (MTOM 149,9 kg sabit) veya

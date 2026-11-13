@@ -135,6 +135,7 @@ alan × `shell_secondary` alan kütlesi), menteşe çizgisi layout eklem ekseni:
 | LG-687-R/L / -688-R/L | iç kapak biyeli / kapak boynuzu | 7075-T651, CNC | 0,008 / 0,002 |
 | LG-689-R/L | iç kapak mili yatak yuvası (2 × 688-2RS) | 7075-T651, CNC | 0,012 |
 | LG-685-R/L | DA 30 kama plakası (eğik bağlantı, 85 × 30 mm flanş izi) | 7075-T651, CNC | 0,033 |
+| LG-702/703-R/L | DA 30 bağlama kuşakları (7075-T651, IR-02) | 7075-T651, CNC | ~0,01 |
 | LG-691-R/L | mafsal kapağı mikro dişli motoru | satın alma (tahmin) | 0,045 |
 | LG-692-R/L / -693-R/L / -694-R/L | mafsal kapağı krankı / biyeli / boynuzu | 4130 N / 7075 | 0,005 / 0,003 / 0,003 |
 | LG-695-R/L | dişli motor braketi | 7075-T651, CNC | 0,009 |
@@ -278,7 +279,7 @@ pimi = çıkış boynuzu pimi, her durumda < 0,05 mm), ölü noktayı ve iletim 
 | yukarı kilit makara pimi, mandal pimi | 4 × ISO 2341-B Ø5 | |
 | DA 26 → burun bacağı kulakları | 4 × M3 12.9 (diş kulakta) | |
 | burun EMA sekmeleri → sağ omurga duvarı | 2 × M4 12.9 + ISO 7040 | somun sağ yan bölmede |
-| DA 30 (ana) flanşı (77 × 18 mm kulak düzeni) → kama plaka → FS-GEAR | 4 × M4 12.9, gömme dişli burç | yakıt bölmesi tarafına delik yok (IR-02) |
+| DA 30 (ana) flanşı → iki 7075 kuşak (LG-702/703) → kama plaka → FS-GEAR | 4 × M4 12.9 kuşak ayaklarından, gömme dişli burç | satın alınan flanşın kulak delikleri (uçlardan 4 mm) cıvata almaz; yakıt bölmesi tarafına delik yok (IR-02) |
 | iç kapak yatak yuvası → FS-GEAR ön yüzü | 4 × M3 12.9, gömme dişli burç | |
 | DA 22 (burun) dış kulağı → yan bölme tepsisi | 2 × M3 12.9 + somun plakası | |
 | tahrik pimleri (krank–biyel, biyel–boynuz) | ana: 8 × Ø3 (iki taraf); burun: 2 × Ø6, 2 × Ø3 (tahrik), 3 × Ø3 + 2 × Ø3 kılavuz (eşleme) | ISO 2341-B + kopilya, düzlem aralığı 0,5 mm pul |
@@ -316,7 +317,7 @@ değerlendirilmelidir (toplanmış konum, burun takımı daha hafif).
 
 ## 11. Açık konular
 
-1. **G-DOOR-DRIVE (kapandı, entegrasyon turu IR-02):** iç kapak işi |Cp| 1,0 üst sınırında 9,3 J limit (× 1,5 = 14,0 J); DA 22 anma torku × krank hareketi (1,8 N m × 131° = 4,1 J) yetmiyordu. Ana iç kapak eyleyicisi Volz DA 30 oldu (components.yaml volz_da30: 8,0 N m anma, ±85° hareket, 158,5 × 85 × 30 mm D-Sub sürümü, 0,630 kg): 8,0 N m × 131° = 18,3 J → `structures` G-DOOR-DRIVE artık marj satırı, MS +0,31. Krank / biyel / boynuz zinciri değişmedi (mil noktası, krank 34 mm, biyel 78 mm, hareket 131° < DA 30'un 170°'si, iletim açısı 57°, kapalı konumda ölü nokta ötesi kilit); test eklenen krank hareketinin layout `EQ-DOORACT.shaft.crank_travel_deg` değerine eşit olduğunu doğrular. DA 30 gövdesi FS-GEAR'ın arka yüzünden arka ekipman bölmesine uzanır (çıkış ucu öne, 85 mm kenar y boyunca dışa, 30 mm düşey: gövde altı arkaya doğru yükseldiği için); veri sayfası çiziminden: çıkış ekseni kulak deliği sırasından 21,6 mm, 85 mm kenarın iç ucundan 25,6 mm, 30 mm genişlikte ortada. Gaskolatör ve arka hücre boşaltma hatları (FL-DRAIN, FL-DRAIN-A) DA 30'ların üstünden arkaya yürür ve gövdelerinin arkasında (x 3,265 / 3,275, y ±0,07) P-AFTHATCH'teki boşaltma valflerine iner. `mass.rules.gear_doors.inner_door_actuator` (boyutlandırma kuralı: 3 × DA 22) kütle yeniden dağıtım adımında DA 30'a göre güncellenmeli (+2 × 0,498 kg; C06 kütle konumu da o adımda kapanır).
+1. **G-DOOR-DRIVE (kapandı, entegrasyon turu IR-02):** iç kapak işi |Cp| 1,0 üst sınırında 9,3 J limit (× 1,5 = 14,0 J); DA 22 anma torku × krank hareketi (1,8 N m × 131° = 4,1 J) yetmiyordu. Ana iç kapak eyleyicisi Volz DA 30 oldu (components.yaml volz_da30: 8,0 N m anma, ±85° hareket, 158,5 × 85 × 30 mm D-Sub sürümü, 0,630 kg): 8,0 N m × 131° = 18,3 J → `structures` G-DOOR-DRIVE artık marj satırı, MS +0,31. Gövde, kulak delik sırası boyunca flanşı kama plakasına sıkan iki 7075 kuşakla (LG-702/703, 4 × M4) tutulur: veri sayfasındaki kulak delikleri flanş uçlarına 4 mm (2 D'nin altında) olduğundan satın alınan flanştan cıvata geçirilmez. Krank / biyel / boynuz zinciri değişmedi (mil noktası, krank 34 mm, biyel 78 mm, hareket 131° < DA 30'un 170°'si, iletim açısı 57°, kapalı konumda ölü nokta ötesi kilit); test eklenen krank hareketinin layout `EQ-DOORACT.shaft.crank_travel_deg` değerine eşit olduğunu doğrular. DA 30 gövdesi FS-GEAR'ın arka yüzünden arka ekipman bölmesine uzanır (çıkış ucu öne, 85 mm kenar y boyunca dışa, 30 mm düşey: gövde altı arkaya doğru yükseldiği için); veri sayfası çiziminden: çıkış ekseni kulak deliği sırasından 21,6 mm, 85 mm kenarın iç ucundan 25,6 mm, 30 mm genişlikte ortada. Gaskolatör ve arka hücre boşaltma hatları (FL-DRAIN, FL-DRAIN-A) DA 30'ların üstünden arkaya yürür ve gövdelerinin arkasında (x 3,265 / 3,275, y ±0,07) P-AFTHATCH'teki boşaltma valflerine iner. `mass.rules.gear_doors.inner_door_actuator` (boyutlandırma kuralı: 3 × DA 22) kütle yeniden dağıtım adımında DA 30'a göre güncellenmeli (+2 × 0,498 kg; C06 kütle konumu da o adımda kapanır).
 2. **Mafsal kapağı dişli motoru 691:** zarf (Ø16 × 18 mm) ve kütle (0,045 kg) tahmindir; 0,3 N m çıkış, enkoder ve
    uç sınır anahtarları ile seçilmeli (Faulhaber / maxon sınıfı).
 3. **Aşağı kilit solenoidi 638:** katalog sınıfı tahmin zarfı/kütlesi; pim konum sensörü takım ünitesi kalemidir.

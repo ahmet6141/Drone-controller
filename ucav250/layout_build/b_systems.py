@@ -450,10 +450,12 @@ def fin_branch() -> dict:
     d0 = unit(p0 - np.array([3.500, 0.092, 0.215]))                             # H-TAIL last leg (systems path)
     e_r = 0.26
     p1 = surf_point(F, e_r, ANT_XC)
+    p_a = np.array([3.575, 0.128, 0.275])           # under the dorsal longeron M-DORSAL (y 0.15, z 0.30 under the fin
+    p_in = np.array([3.600, 0.172, 0.275])          # root), across it, then up into the fin root outboard of it
     p2 = surf_point(F, fin_cap_eta() - FIN_RIB_T - 0.004, ANT_XC)
     return {"id": "H-FIN", "part": "YK250-SY-794", "name": "fin branch (each side): tip-cap antenna coax, tail light",
-            "diameter": 0.008, "mirror": True,
-            "path": [r3(p0 + 0.0003 * d0), r3(p0 + 0.012 * d0), r3(p1), r3(p2)],
+            "diameter": 0.008, "mirror": True, "in_tail": True,
+            "path": [r3(p0 + 0.0003 * d0), r3(p0 + 0.010 * d0), r3(p_a), r3(p_in), r3(p1), r3(p2)],
             "text": "fin root (end of H-TAIL) -> up the fin box on the chord line of the tip dipole between the spars, "
                     "through bores (grommets) in the root, box and servo ribs -> TNC bulkhead jack in the tip rib "
                     "(dipole ANT-BKP / ANT-C2B) and, starboard, the tail light LT-TAIL lead through the tip rib"}

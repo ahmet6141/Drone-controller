@@ -174,9 +174,8 @@ Uyarı: `turret_lift_mechanism_doors` kalemi (1,786 kg temel / 1,875 kg büyüme
 
 ## 11. Açık konular
 
-1. **Kuyruk ucu öğeleri kurulmadı:** ANT-C2B / ANT-BKP (109 mm dipol) uç kapağı boşluğuna sığmaz (layout noktasında
-   açıklık boyunca ~82 mm); LT-TAIL kutusu (30 mm genişlik) kapağın ~4 mm kalınlıktaki firar kenarına biner. Kuyruk
-   modülünde anten boşluğu / ışık yuvası ya da daha kısa (PCB) 2,4 GHz dipol seçimi gerekir.
+1. **Kuyruk ucu öğeleri (kapandı, entegrasyon turu IR-06):** ANT-C2B (sol) / ANT-BKP (sağ) Southwest Antennas 1001-202 dipolleri artık dikey kuyruk açıklığı boyunca (22° eğik) uç kaburgasının üstünde, GFRP uç kapağının içinde durur: kapak eklemi üstünde 133 mm açıklık, 109 mm radom; taban %42 veterde, TNC geçiş jakı uç kaburgasındaki delikten geçer, altta kontra somun (jak kütlesi 0,012 kg tahmin). Polarizasyon 22° eğik (düşey yer antenine −0,3 dB). LT-TAIL (AveoFlash LSA, 100 × 45 × 30 mm) sağ uç kapağının uç yüzüne, %31–69 veterde oturur; 2 × M4 kapaktan geçip kuyruk modülünün GFRP bağlantı bloğu TL-292'nin gömme burçlarına girer (kanat ucu ışıklarıyla aynı M4; veri sayfası M5). Koaks ve ışık beslemesi yeni kol H-FIN'de (SY-794, iki taraf, Ø8): H-TAIL ucundan sırt kirişi M-DORSAL'ın altından geçip dikey kökünde orta düzlemin dışından girer, %42 veter çizgisinde kirişler arasında uç kaburgasının 4 mm altına çıkar; geçtiği kuyruk kaburgalarına (kök, kutu, servo) kol + 1,5 mm delik açılır (kalıplı yarık rondela, çizim notu). layout_check C03, kuyrukta bildirilen kolları (in_tail) dikey gövdesinde de ölçer.
+
 2. **Y-kayış ön ayak güzergâhı:** C-BRIDLE-F, şasi çerçevesinde yalnız başlık boşluğu olarak yapılmıştır; FS1810 web üstü
    ile kapak arasında 2,3 mm kalır. Ayakların konteyner ağzına serbest uzantısı modellenmedi; çentiğin ağda açılması
    (şasi) gerekir.
@@ -187,7 +186,8 @@ Uyarı: `turret_lift_mechanism_doors` kalemi (1,786 kg temel / 1,875 kg büyüme
    (CH-007) bağlandı.
 5. **TR-AFTBAY:** şasi tepsisinin FS-GEAR flanşı C-HARN-CL kesiğini örter ve taban demet geçişi içermez; bu modül
    tepside çentik + yuva açar (şasi çiziminde işlenmeli).
-6. **Yakıt seviye probu kablo kolu** layout.systems.harness'te yok (yakıt modülü notu); eklenmedi.
+6. **Yakıt seviye probu kolları (kapandı, IR-07):** H-FUEL (SY-777, Ø6) H-COAX'tan görev bölmesinde ayrılır, sırt kanalı M-SPINE'ın tabanından contalı yarık rondela (SY-779) ile kanala girer ve sancak duvarı boyunca (y 0,0165, paraşüt kayışına 5,5 mm) ön ve eyer hücreleri üstünde x 2,775'e kadar uzanır; algılayıcıların uçuş kabloları kanal duvarındaki sızdırmaz bağlantılara gelir (yakıt bölmesinin içinde kol yok). Arka hücre algılayıcısı sol arka köşeye alındı (x 2,98, y −0,10); kablosu FS-GEAR'daki C-HARN-FUELA kesiğindeki sızdırmaz rondelaya, oradan H-FUEL-A (SY-778, Ø6) arka ekipman bölmesinde CN-TAIL önündeki H-MAIN ayrımına gider.
+
 7. **Isıl doğrulama:** PDU / DC-DC / kontaktör iletimle soğuyor; deneme ile fan gereksinimi belirlenecek.
 8. **Kütle:** payload modülünün sistem grubuna ekleyeceği taret mekanizmasıyla grup tavanı ~0,1 kg aşabilir (§9).
 9. Satın alma ünitelerinin montaj dişleri (taban M3) ve konnektör yerleri üretici çizimleriyle doğrulanacak; FTS bandı ve

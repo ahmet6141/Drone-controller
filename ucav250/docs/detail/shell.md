@@ -245,6 +245,14 @@ için ayrılan `mass.budget.hardware` 1,51 kg ile çelişir (§11).
 11. **Eldiven alt/üst ayrımı** kiriş çizgisi yerine her kesitin **orta eğri (camber) çizgisi**: kök kesitleri ters
     kamburlu, firar kenarı yakınında alt yüzey kiriş çizgisinin üstüne çıkar.
 
+### 10.1 Entegrasyon turu değişiklikleri
+
+* **IR-01:** taret açıklık halkası P-TURRETRING omurga yarığı üstünde (|y| < 0,046) x 1,1055'e kadar çentiklendi (burun kapakları x 1,1045'e uzandı; açık kapak menteşe hattında 4 mm dışa taşar); çentik yanları omurga duvarı ayak flanşlarına oturur (layout ring lands + M-KEELWALL).
+* **IR-03 (kayar kapak bandı):** taret kapaklarının taradığı bant (layout `turret_door_R.band`, FS1110 arka / FS1330 ön gövde yüzleri arası, yüzey boyunca yay uzunluğu ≤ 0,235 m + 14 mm) içinde sabit kaplamanın somun plakası bırakılmaz (SH-361 başlık sıraları bant dışında kalır); halkanın bu banttaki yan vidaları M3 ISO 7380 ve P-MID-LOWER halka yan karasında gömme M3 burç (kara 3,6 mm + yapıştırılan 5 kat PW 1,0 mm takviye, y 0,100–0,135, raylar arasında; iç yüzü OML'den 6,8 mm, kapak yolu 8,2 mm).
+* **IR-05:** kabuk, bağlantı elemanını kesinleştirmeden önce kenar mesafesini tasarım kuralı denetiminin ölçüsüyle (checks: malzeme orta düzleminde ışınsal ölçü, kompozitte 2,5 D, metalde 2,0 D) de doğrular (SH-370-B3/B4, FS1810 başlığındaki sırt çentiği).
+* **IR-09:** alt kaporta yarımları SH-451, egzoz çıkış levhası bölgelerinde (layout `heat_protection.inserts` HS-COWL-EXIT) 0,5 mm boşlukla kesilir; kesik çevresinde 30 mm 1,6 mm katı kenar bandı (PR-520 bindirmesi, Monel perçinler); iç bükey bot kuyruğunda kesitler 2,5 mm'de bir (DX'te kesitler arası kiriş OML'nin 0,8 mm dışına çıkıyordu). Soğutma yolu (S-kanal PR-546, geçiş kanalı PR-548, körük PR-550; propulsion geometri işlevleriyle) kabuk bağlantı elemanı donanımına yasak bölgedir (SH-450 Camloc, SH-391 perçinleri).
+* **IR-08:** halka (SH-363) kütlesi layout'ta `turret_lift_mechanism_doors` kalemine yazılır (mass.py bütçe grubu).
+
 ## 11. Açık konular
 
 * **Donanım bütçesi:** kabuk bağlantı elemanları 3,34 kg ↔ uçak toplamı `mass.budget.hardware` 1,51 kg. Ya bütçe

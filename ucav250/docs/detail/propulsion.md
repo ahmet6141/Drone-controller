@@ -204,13 +204,7 @@ karşı 1,0 kg pay) ve motor yatağı kalemleri bunları karşılar.
    balans.
 4. **Soğutma akış denetimi:** kanal çıkışı 0,0118 m², körük kesiti 0,0079 m² (%67, motor yatağı kafesinin üstünde
    daralma); giriş alanı 0,031 m² ilk tahmin — basınç kaybı ve silindir sıcaklığı hesabı yapılmalı.
-5. **Kabuk arayüzü:** (a) SH-451 alt kaporta yarımları `heat_protection.inserts[HS-COWL-EXIT].regions` bölgelerini
-   kesmelidir (geliştirilmekte olan kabuk modülü henüz kesmiyor: `chassis,shell,propulsion` çalıştırmasında egzoz /
-   kaporta girişimi ve 25 mm kuralı ihlali bundan kaynaklanır; kesik uygulandığında egzoz–kaporta 29,4 mm, kalkan–kaporta
-   ≥ 3,5 mm, perçin satırları temiz); (b) SH-451 dış yüzü x 3,96–3,97'de OML'nin ~0,8 mm dışına çıkıyor (iç bükey
-   bölgede seyrek x örneklemesi; levha bindirmesiyle 63 mm³ çakışma); (c) kabuğun NACA ağzı x 3,205'te başlıyor,
-   koridor 3,30'da — 3,205 … 3,30 rampası koridor dışında, layout'ta karara bağlanmalı; (d) S-kanalı flanşlarının dudak
-   inişine yapışma teması, kabuk inişleri oluşunca beyan edilecek.
+5. **Kabuk arayüzü (entegrasyon turu IR-09):** (a) SH-451 artık HS-COWL-EXIT bölgelerini kesiyor ve kesik çevresinde 30 mm 1,6 mm kenar bandı var; (b) kaporta bot kuyruğu kesitleri 2,5 mm'de bir (OML dışına taşma giderildi); körük / geçiş kanalı üst yüzü `TRANS.z_hi` 0,328 → 0,3265 (körük köşeleri SH-395'in 1,1 mm altında; körük kesiti 0,00758 m² = S-kanal çıkışının %64'ü), kabuk Camloc / perçinleri soğutma yolundan uzak tutar; (c) NACA ağzı rampası ve (d) S-kanalı flanş temas beyanı açık.
 6. **Egzoz:** susturucu akustik / geri basınç performansı doğrulanmadı; kap ve boru port flanşından konsol (2 × M6);
    titreşim / yorulma ve gerekirse esnek bağlantı.
 7. Ateşleme bobinlerinin konumu (ECU payında sayıldı), DA 22 bağlantısı ve kelebek mili kaplini tahmindir.

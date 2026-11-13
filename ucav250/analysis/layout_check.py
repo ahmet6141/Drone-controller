@@ -2014,7 +2014,9 @@ def check_inside(ctx: Ctx) -> list:
             if t.get("mirror"):
                 P = np.vstack([P, P * [1, -1, 1]])
                 ok = None if ok is None else np.concatenate([ok, ok])
-            res = _worst(ctx, P, ctx.skin_t(P) + r + rad_add, ok_mask=ok)
+            # a trunk declared in the tail (H-FIN, integration round IR-06) is measured in the fin loft as well, like
+            # the tail actuators and fittings
+            res = _worst(ctx, P, ctx.skin_t(P) + r + rad_add, ok_mask=ok, tail=bool(t.get("in_tail")))
             if res[0] < w[0]:
                 w = (res[0], t["id"])
             if res[0] < -1e-6:

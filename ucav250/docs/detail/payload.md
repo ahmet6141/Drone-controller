@@ -146,6 +146,8 @@ altındadır (temel 1,786 kg + `growth_allowance` %5; temelin 84 g üstü). Kale
 (bölme duvarları / tavanı şasinin, halka kabuğun parçasıdır). Büyüme payının %94'ü kullanılmıştır (§11).
 Bağlantı elemanları (0,22 kg) donanım grubundadır.
 
+**Bütçe grubu (IR-08):** taret HD59 + izolatörlü bağlantı `eo_ir_turret_hd59_mount` (faydalı yük), diğer bütün parçalar (asansör, kapaklar, tahrikler, conta, servis döngüsü) `turret_lift_mechanism_doors` (systems) kalemine yazılır (`Part.mass_item`); `analysis/mass.py` bu eşlemeyle toplar ve faydalı yüksüz durumlarda yalnız taret setini çıkarır.
+
 ## 10. Doğrulama
 
 - Tasarım kuralı denetimleri (`chassis,shell,payload`, odak YK250-PL): mesh 0, açıklık 0 (taret–halka ≥ 5,0 mm,

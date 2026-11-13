@@ -31,7 +31,7 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 | shell | 10,82 | 2,260 |
 | controls | 8,15 | 3,037 |
 | tail | 7,74 | 3,782 |
-| hardware | 5,51 | 2,542 |
+| hardware | 5,51 | 2,543 |
 | fuel | 2,37 | 2,832 |
 | payload | 1,74 | 1,220 |
 
@@ -49,10 +49,10 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 
 | Grup | Hesap (kg) | Bütçe (kg) | Tolerans | Durum |
 |---|---:|---:|---:|---|
-| chassis | 19,78 | 19,68 | ±0,59 | ✓ |
+| chassis | 19,78 | 19,78 | ±0,59 | ✓ |
 | controls | 8,15 | 8,15 | ±0,24 | ✓ |
 | fuel | 2,37 | 2,37 | ±0,07 | ✓ |
-| gear | 12,94 | 12,92 | ±0,39 | ✓ |
+| gear | 12,94 | 12,94 | ±0,39 | ✓ |
 | hardware | 5,51 | 5,52 | ±0,17 | ✓ |
 | propulsion | 12,97 | 12,97 | ±0,39 | ✓ |
 | shell | 10,82 | 10,82 | ±0,32 | ✓ |
@@ -103,10 +103,10 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 
 | Parça | Kütle (kg) |
 |---|---:|
-| YK250-FU-596 | 14,442 |
-| YK250-FU-598 | 11,125 |
+| YK250-FU-596 | 14,444 |
+| YK250-FU-598 | 11,127 |
 | YK250-PR-500 | 6,533 |
-| YK250-FU-597 | 4,983 |
+| YK250-FU-597 | 4,984 |
 | YK250-SY-800 | 4,412 |
 | YK250-CH-001 | 2,550 |
 | YK250-SY-726 | 1,980 |
@@ -131,6 +131,4 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 
 ## Sorunlar
 
-- minimum_flying_turret_only: CG x 2.6077 outside [2.58405, 2.60759]
-- spec.mass.registry groups.hardware stale: 5.517 kg [2.543, -0.0004, 0.0224] vs registry 5.511 kg [2.5425, -0.0004, 0.0226]
-- spec.mass.registry fuel stale: 30.184 kg [2.6119, 0.0, 0.0114] vs registry 30.550 kg [2.6122, 0.0, 0.0121]
+- minimum_flying_turret_only: CG x 2.6077 outside [2.5842, 2.60771]

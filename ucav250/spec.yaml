@@ -10322,7 +10322,7 @@ layout:
       name: nose-door actuator Volz DA 22 (28 V), drives both clamshell doors
       name_tr: burun kapağı eyleyicisi DA 22 (iki kapak)
       group: gear
-      box: [[1.0448, -0.1111, -0.1478], [1.0734, -0.0496, -0.07]]
+      box: [[1.045, -0.11, -0.1456], [1.0733, -0.0557, -0.0708]]
       mass_kg: 0.132
       mount:
         zone: aft lower corner of the port avionics side bay, through the cut-out of the side-bay tray
@@ -10338,7 +10338,7 @@ layout:
       shaft:
         point: [1.0695, -0.0868, -0.1277]
         axis: [0.996145, 0.0, -0.08772]
-        roll_deg: -20.0
+        roll_deg: -12.0
         text: crank axis in the drive plane (parallel to the door hinge axes); case rolled about it (roll_deg, from the
           case side normal to y)
       drive_envelope:
@@ -11543,7 +11543,7 @@ layout:
       position_sizing_phase: [0.8443, 0.0, -0.1244]
     gear_doors_wells_locks_sensors:
       mode: absolute
-      position: [2.3668, -0.0058, -0.1405]
+      position: [2.3668, -0.006, -0.1405]
       basis: sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout door
         outlines (closed), well centres and door drives
       components:
@@ -11570,7 +11570,7 @@ layout:
         at: [2.9759, 0.0, -0.2]
       - what: nose-door DA 22 + crank/pushrod (EQ-NDOORACT)
         fraction: 0.0723
-        at: [1.0591, -0.0804, -0.1089]
+        at: [1.0591, -0.0829, -0.1082]
       - what: nose-door bellcrank, links and horns (NDOOR-LINKAGE)
         fraction: 0.021
         at: [1.077, 0.0, -0.1395]

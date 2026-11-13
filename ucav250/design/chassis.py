@@ -2854,7 +2854,9 @@ def build_sidebay_tray(C: Ctx, side: int) -> G.Mesh:
         eq = next(e for e in C.L["systems"]["equipment"] if e["id"] == "EQ-NDOORACT")["box"]
         lo, hi = eq
         # gear detail round (GD-08): the tilted DA 22 ends 20 mm ahead of FS1110, the frame flange stays whole
-        m = diff(m, [box3((lo[0] - 0.003, -hi[1] - 0.003, lo[2] - 0.003), (hi[0] + 0.003, -lo[1] + 0.003, hi[2] + 0.003))])
+        # (the keel-wall flange of the tray is kept: the rolled case clears it)
+        m = diff(m, [box3((lo[0] - 0.003, max(-hi[1] - 0.003, yk + TRAY_T + OV), lo[2] - 0.003),
+                          (hi[0] + 0.003, -lo[1] + 0.003, hi[2] + 0.003))])
     m = inter(m, C.body_env(MEM_IN, x0 - 0.01, xf + 0.01))
     m = pieces_above(m, 1e-7)
     return m if side > 0 else m.mirrored_y()

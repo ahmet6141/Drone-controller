@@ -143,7 +143,7 @@ NDA_PLANE_X = 1.0695                # nose-door drive crank plane (DA 22 crank; 
 #                                     coupling horn in the planes behind it, aft of the nose-tyre swing)
 NDA_SHAFT_YZ = (-0.0868, -0.1277)   # DA 22 output axis in that plane (port side bay; mechanism study docs/detail/gear.md)
 NDA_SHAFT_END = 0.014               # output axis from the lower end of the 65.9 mm case side (estimate, as EQ-DOORACT)
-NDA_ROLL_DEG = -20.0                # case roll about the output axis (top towards the keel wall)
+NDA_ROLL_DEG = -12.0                # case roll about the output axis (top towards the keel wall)
 NDA_SLIDE_X = (1.0680, 1.0860)      # symmetric coupling of the two doors: horns, links, slide bar and guide plate
 #                                     (x range on the door axes; >= 10 mm aft of the stowed tyre, ahead of the sill)
 

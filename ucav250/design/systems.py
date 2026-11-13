@@ -1241,7 +1241,7 @@ class Systems:
     def dorsal_grommets(self):
         """IR-06: H-FIN enters the fin root between the webs of the dorsal longeron's hat section through a bore in
         its crown (layout penetration on M-DORSAL, both sides): bore cut here, sealed split ring grommet (SY-795-R/L;
-        flanges 2 mm, inside the webs)."""
+        flanges 1 mm, clear of the crown-web fillets; the bore lies 9 mm ahead of the web bolts of CH-092)."""
         C = self.C
         if "H-FIN" not in self.trunk_ids:
             return
@@ -1264,7 +1264,8 @@ class Systems:
             self.ring_grommet(self.pid(795, sd), f"harness grommet, dorsal longeron crown (fin branch), "
                               f"{'starboard' if sd == 'R' else 'port'}",
                               f"kablo geçiş rondelası, sırt uzun kirişi tabanı (dikey kolu), {'sağ' if sd == 'R' else 'sol'}",
-                              part, p0, a, t_w, r_b, [("H-FIN", 1 if sd == "R" else -1)], rim=0.002)
+                              part, p0 - 0.0003 * a, a, t_w + 0.0006, r_b, [("H-FIN", 1 if sd == "R" else -1)],
+                              rim=0.001)          # flanges 0.35 mm off the crown faces (crown slopes ~2 deg along x)
             self.harness_fixed[self.pid(795, sd)] = None
 
     def fin_bores(self):

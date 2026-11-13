@@ -10789,8 +10789,13 @@ layout:
         diameter: 0.008
         mirror: true
         in_tail: true
-        path: [[3.520022, 0.12003, 0.301393], [3.522153, 0.123014, 0.310589], [3.575, 0.128, 0.275], [3.6, 0.1795, 0.275],
-          [3.603, 0.1795, 0.3], [3.6218, 0.1724, 0.3507], [3.6326, 0.2249, 0.4805], [3.7538, 0.2923, 0.6474], [3.8671, 0.3223,
+        penetrations:
+        - member: M-DORSAL
+          point: [3.5865, 0.15, 0.304]
+          kind: grommeted bore (d 10.4 mm) in the crown of the longeron's hat section between its webs, 35 mm ahead of the
+            F-FW-CORNER splice tongue
+        path: [[3.520022, 0.12003, 0.301393], [3.522153, 0.123014, 0.310589], [3.575, 0.128, 0.275], [3.585, 0.15, 0.275],
+          [3.588, 0.15, 0.333], [3.6218, 0.1724, 0.3507], [3.6326, 0.2249, 0.4805], [3.7538, 0.2923, 0.6474], [3.8671, 0.3223,
             0.7215], [3.9915, 0.3983, 0.9096]]
         text: fin root (end of H-TAIL) -> up the fin box between the front spar and the rudder actuator, then on the chord
           line of the tip dipole between the spars, through bores (grommets) in the root, box and servo ribs -> TNC bulkhead
@@ -11271,13 +11276,13 @@ layout:
       position_sizing_phase: [1.8253, 0.0, -0.05]
     wiring_harness_connectors_coax:
       mode: absolute
-      position: [2.3294, -0.0156, 0.0304]
+      position: [2.3291, -0.0156, 0.0304]
       basis: cables 70 % (estimate) by trunk length x diameter^2 (layout.systems.harness) + outer-panel harnesses; connectors,
         backshells and coax terminations 30 % (estimate) equally over the connection points of the layout (equipment, actuators,
         antennas, lights, gear EMAs)
       components:
       - what: H-MAIN
-        fraction: 0.2195
+        fraction: 0.2196
         at: [2.1988, -0.1764, -0.0419]
       - what: H-COAX
         fraction: 0.1334
@@ -11295,8 +11300,8 @@ layout:
         fraction: 0.0154
         at: [0.5362, 0.0568, 0.0286]
       - what: H-FIN (x2)
-        fraction: 0.0244
-        at: [3.735, 0.0, 0.5633]
+        fraction: 0.0241
+        at: [3.7354, 0.0, 0.5682]
       - what: H-FUEL
         fraction: 0.0082
         at: [2.2365, 0.0373, 0.1562]

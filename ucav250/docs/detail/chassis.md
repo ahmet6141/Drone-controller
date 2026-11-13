@@ -274,6 +274,7 @@ alt sınırı nedeniyle 0,4 yerine 0,6 mm'dir; (4) tepsiler layout kalınlığı
 
 * **IR-01:** FS1110'un ön T-başlığı burun takımı omurga yarığında (|y| < 0,0415) yarık sonu eşiğinin ön kenarına (x 1,0915) kadar kırpıldı (`_cap_trims`): kapak eşleme boynuzları ve biyelleri kapaklar açılırken yarıktan aşağı salınır. Eşik M-NGSILL x 1,0915–1,1045'e (kapak arka kenar bandı eşik ve kırpılmış başlık üzerinde), sol omurga duvarındaki W-NDOOR-LINK penceresi x 1,0824–1,0934'e taşındı.
 * **IR-03:** taret asansörü ray bağlantılarının (CH-125 / CH-126) duvar cıvataları ray ekseninden 16 → 18 mm (taşıyıcı bloklarına pay), çerçeve ayağı alt ucu 4 mm yukarı (ön kayar kapak rayına 0,3 → 3,7 mm).
+* **IR-06:** sırt uzun kirişi CH-032-R/L şapka tabanında, x 3,585 / y ±0,150'de H-FIN için Ø10,4 mm delik (sistem modülü keser, contalı rondela SY-795; layout M-DORSAL geçişi). Delik F-FW-CORNER eki dilinin 35 mm önünde, tabanda 5 mm bağ kalır; `structures` bu kesiti henüz modellemiyor (açık konu: yerel takviye / net kesit kontrolü).
 
 ## 10. Açık konular
 

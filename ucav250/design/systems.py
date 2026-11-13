@@ -1,0 +1,1267 @@
+"""Systems producer (``layout.part_numbers.systems``, YK250-SY-720..819): avionics, electrical power, harness, antennas,
+air data, lights and the recovery parachute installation of the YK-250 HANCER (civil EO/IR surveillance UAV).
+
+What is built (every part with material + process + thickness, a parent, an assembly step, an explode vector and
+contacts that really touch; fasteners through ``design/joints.py``):
+
+* power: VISIONAIRtronics 1000 W PDU on six machined spacers (through-bolted from the side bays into the PDU base),
+  main contactor / fuse block and 28-12 V DC-DC on a pocketed 6061 power-switching plate (potted M3 inserts in the
+  avionics deck), 12S2P Li-ion buffer battery in a 6061 cradle frame with two stainless hold-down straps on TR-FWDBAY,
+  independent FTS unit hung under the tray on two formed 6061 angles;
+* avionics: Veronte 1x autopilot, Silvus SC4200EP and Microhard pDDL2450 datalinks and the ping200X transponder on a
+  machined 6061 rack (base, inboard web and shelf with screw bosses) through-bolted to TR-SIDEBAY-R, the Dronetag
+  Remote ID beacon on an SLS PA12 cradle on the FS0300 forward face (inside the GFRP nose cone);
+* connectors: mated MIL-DTL-38999 plug + backshell on every unit connector face (inside the layout connector
+  allowance), the blind-mate wing receptacles CN-WING on float-mount plates on the joint ribs, the fireproof firewall
+  harness grommet (C-FW-HARN);
+* harness: the trunks of ``layout.systems.harness`` (H-MAIN, H-COAX, H-WING, H-TAIL, H-ENGINE, H-NOSE) as round
+  bundles on their declared paths (filleted corners), moulded split grommets in every frame cut-out they cross and in
+  the declared member penetrations (centre box lower cover, side-of-body and glove ribs, main-well forward wall), and
+  the CFRP centre-line harness conduit between the main wells;
+* antennas / air data / lights: GNSS 1 and 2 (Calian HC977EXF) on formed 6061 frame brackets under their GFRP RF
+  windows, the 2.4 GHz C2 dipole and the FTS antenna on SLS PA12 pedestals bonded into the GFRP nose cone, the
+  transponder blade on the belly with a bonded copper-mesh ground-plane doubler, the heated nose pitot-static probe
+  in the cone tip; wing / tail items (HASA pitot, wing-tip and tail lights, fin-tip dipoles) only when the wing / tail
+  modules are in the registry (their parents);
+* recovery: UAVOS 200 container on four pads and a girth strap through the four CH-114 brackets, the stowed Y-bridle
+  legs with their spools on the two shackle pins (F-RISER-FWD / F-RISER-AFT), the pin-puller hatch latch on its
+  bracket on FS1810.
+
+Interfaces (``spec.layout`` only, never another module's geometry): ``systems.equipment`` / ``antennas`` /
+``air_data_lights`` / ``harness`` (boxes, points, paths, penetrations, connectors), ``rules.boxes`` (bay boxes),
+``chassis.members`` (deck, walls, floors, keel webs, ribs, spine), ``chassis.trays``, ``chassis.fittings`` (F-RISER-*
+with their bridle spools), ``chassis.parachute``, ``stations`` (faces, cut-outs, sweep), ``shell.panels`` (RF
+windows), ``mechanisms.joints`` (para_hatch) and the OML (``oml.fuselage_from_spec``: GFRP cone inner surface = OML
+inset 6.0 mm, layout antenna notes).
+
+Manufacturing: brackets and plates are CNC-milled 6061-T6 (ISO 2768-mK) or press-brake 6061-T6 sheet (inner bend
+radius 3 t), straps are 304 sheet (0.5 t), pedestals / cradles SLS PA12, the conduit OOA prepreg (4 plies PW);
+purchased units carry vendor datasheet masses (components.yaml) or labelled estimates; fasteners are metric
+(ISO 4762 / ISO 7380, ISO 7040 nyloc nuts, potted inserts), clearance holes ISO 273 medium, edge distance >= 2 D
+(metal / polymer) and >= 2.5 D (composite).
+"""
+from __future__ import annotations
+
+import math
+
+import numpy as np
+from shapely.geometry import LineString, Point, Polygon, box as sbox
+from shapely.ops import unary_union
+
+from ..core import geom as G
+from ..core.parts import Part, Registry, layup_props, mirror_part, part_number
+from . import fastener_catalog as FC
+from . import joints as J
+from . import oml as O
+from . import structgen as SG
+
+# =====================================================================================================================
+# module constants (detailing choices; interface values come from spec.layout)
+# =====================================================================================================================
+OV = 1e-4                    # boolean overlap of fused features
+TOUCH = 5e-5                 # declared contact faces: 0.05 mm apart (no volume overlap, within the 0.3 mm contact test)
+STEP_HARNESS, STEP_AVIONICS, STEP_ANTENNA, STEP_PARA = 19, 20, 21, 22      # spec.assembly steps
+
+MAT_AL, MAT_SS, MAT_PA12, MAT_PW = "al_6061_t6_sheet", "ss_304_annealed", "pa12_sls", "cfrp_pw_mtm45_as4"
+P_CNC, P_SHEET, P_SHEET_SS, P_SLS, P_PREG, P_BUY = ("cnc_milling_metal", "sheet_metal_aluminium", "sheet_metal_steel",
+                                                    "sls_pa12", "prepreg_ooa_vacbag", "purchased")
+
+SHEET_T = 0.002              # formed 6061-T6 brackets
+R_AL = 3.0 * SHEET_T         # 6061-T6 inner bend radius 3 t (processes.sheet_metal_aluminium)
+ANGLE_T = 0.0016             # FTS hanger angles
+STRAP_T = 0.0008             # battery hold-down straps (304, inner bend radius 0.5 t)
+STRAP_W = 0.020
+PLATE_T = 0.0016             # web of the pocketed plates / rack base
+BOSS_R = 0.0065              # screw bosses (>= 2 D edge distance for M3)
+CB_DEPTH = FC.ISO7380[3][1] + 0.0001     # counterbore for an ISO 7380 M3 button head (flush under the plate)
+CB_R = 0.5 * FC.ISO7380[3][0] + 0.0004
+TAP_DEPTH = 0.007            # threaded holes in the purchased unit bases (vendor M3 mounting threads)
+SPACER_R = 0.0065            # PDU spacers d 13
+
+CONN_LEN_MARGIN = 0.002      # mated plug + backshell stops 2 mm short of the layout connector allowance
+PLUG_MASS = 0.025            # mated MIL-DTL-38999 plug + backshell (estimate, from the harness connector share)
+RECEPT_MASS = 0.035          # wing receptacle + float plate (estimate)
+GROM_RHO = 1250.0            # moulded silicone grommet (estimate)
+GROM_CLR, GROM_RIM, GROM_FL = 0.0002, 0.004, 0.0015
+HARNESS_BASE_KG = 2.70       # mass.items wiring_harness_connectors_coax base mass (cables + connectors + coax)
+CABLE_SHARE = 0.70           # cables 70 % (layout.mass_placement basis), connectors / grommets 30 %
+
+CONE_T = 0.006               # GFRP nose cone wall (layout antenna notes: "6.0 mm GFRP cone")
+
+# part numbers (layout.part_numbers.systems = 720..819); layout-fixed ids are read from the layout
+N = dict(pdu_spacers=721, sw_plate=723, batt_cradle=725, strap_f=727, strap_a=729, rack=731, rid_cradle=737,
+         fts_angle=739, gnss1_brkt=740, gnss2_brkt=741, grom0=756, grom_ct=766, grom_sob=767, grom_glove=768,
+         grom_well=769, fw_grommet=770, conduit=771, cn_wing=772, cn_plate=773, xpdr_doubler=785, ped_c2a=792,
+         ped_fts=793, bridle_fwd=801, bridle_aft=802, spool_f=803, spool_a=805, latch_brkt=806, para_strap=807,
+         para_pad=808, para_pad2=809)
+PLUG_NUMS = (742, 743, 744, 745, 746, 747, 748, 749, 733)     # mated connectors, in the order of Systems.connectors
+
+
+# =====================================================================================================================
+# small geometry helpers
+# =====================================================================================================================
+def box3(lo, hi) -> G.Mesh:
+    lo, hi = np.asarray(lo, float), np.asarray(hi, float)
+    return G.box(hi - lo, center=0.5 * (lo + hi))
+
+
+def finish(m: G.Mesh) -> G.Mesh:
+    """Round trip through manifold (1 micrometre simplification): removes boolean slivers."""
+    return G.Mesh.from_manifold(m.to_manifold().simplify(1e-6))
+
+
+def union(ms) -> G.Mesh:
+    ms = [m for m in ms if m is not None]
+    return ms[0] if len(ms) == 1 else G.union(ms)
+
+
+def diff(a: G.Mesh, cutters) -> G.Mesh:
+    cutters = [c for c in cutters if c is not None]
+    return G.difference(a, cutters) if cutters else a
+
+
+def inter(a: G.Mesh, b: G.Mesh) -> G.Mesh:
+    r = G.intersection(a, b)
+    if r is None:
+        raise ValueError("empty intersection")
+    return r
+
+
+def prism_z(poly, z0: float, z1: float) -> G.Mesh:
+    return G.extrude(poly, z1 - z0, origin=(0.0, 0.0, z0), u=(1.0, 0.0, 0.0), v=(0.0, 1.0, 0.0))
+
+
+def prism_x(poly, x0: float, x1: float) -> G.Mesh:
+    """(y, z) polygon extruded along +x."""
+    return G.extrude(poly, x1 - x0, origin=(x0, 0.0, 0.0), u=(0.0, 1.0, 0.0), v=(0.0, 0.0, 1.0))
+
+
+def prism_y(poly, y0: float, y1: float) -> G.Mesh:
+    """(x, z) polygon extruded along +y."""
+    m = G.extrude(poly, y1 - y0, origin=(0.0, y1, 0.0), u=(1.0, 0.0, 0.0), v=(0.0, 0.0, 1.0))
+    return m                         # u x v = -y: the extrusion runs from y1 towards y0
+
+
+def cyl(p0, p1, r: float, n: int = 32) -> G.Mesh:
+    return G.cylinder(r, np.asarray(p0, float), np.asarray(p1, float), n=n)
+
+
+def seg_len(P) -> np.ndarray:
+    return np.linalg.norm(np.diff(np.asarray(P, float), axis=0), axis=1)
+
+
+def fillet(P, r: float, n_arc: int = 10, share: float = 0.48) -> np.ndarray:
+    """Polyline with every corner replaced by a circular arc of radius r (reduced to fit ``share`` of each shared leg
+    and 0.9 of an end leg)."""
+    P = np.asarray(P, float)
+    P = P[np.r_[True, seg_len(P) > 1e-9]]
+    if len(P) < 3:
+        return P
+    L = seg_len(P)
+    out = [P[0]]
+    for i in range(1, len(P) - 1):
+        a, b, c = P[i - 1], P[i], P[i + 1]
+        u, v = G.unit(a - b), G.unit(c - b)
+        phi = math.acos(float(np.clip(np.dot(u, v), -1.0, 1.0)))
+        if math.pi - phi < 1e-3:
+            out.append(b)
+            continue
+        t = min(r / math.tan(phi / 2), L[i - 1] * (share if i - 1 > 0 else 0.9), L[i] * (share if i + 1 < len(P) - 1
+                                                                                         else 0.9))
+        R = t * math.tan(phi / 2)
+        cen = b + G.unit(u + v) * (R / math.sin(phi / 2))
+        d1, d2 = b + u * t - cen, b + v * t - cen
+        ang = math.acos(float(np.clip(np.dot(G.unit(d1), G.unit(d2)), -1, 1)))
+        for s in np.linspace(0.0, 1.0, n_arc):
+            w1, w2 = math.sin((1 - s) * ang) / math.sin(ang), math.sin(s * ang) / math.sin(ang)
+            out.append(cen + w1 * d1 + w2 * d2)
+    out.append(P[-1])
+    Q = np.asarray(out)
+    return Q[np.r_[True, seg_len(Q) > 1e-7]]
+
+
+def densify(Q, step: float = 0.01) -> np.ndarray:
+    """Extra points on long straight legs (smooth parallel-transport frames for the sweep)."""
+    out = [Q[0]]
+    for a, b in zip(Q[:-1], Q[1:]):
+        k = max(1, int(math.ceil(np.linalg.norm(b - a) / step)))
+        for s in np.linspace(0.0, 1.0, k + 1)[1:]:
+            out.append(a + s * (b - a))
+    return np.asarray(out)
+
+
+def trim(Q, s0: float, s1: float) -> np.ndarray:
+    """Polyline with arc length s0 removed at the start and s1 at the end."""
+    Q = np.asarray(Q, float).copy()
+    for which, s in ((0, s0), (1, s1)):
+        if which == 1:
+            Q = Q[::-1].copy()
+        if s > 0:
+            Lc = np.r_[0.0, np.cumsum(seg_len(Q))]
+            i = min(int(np.searchsorted(Lc, s, side="right")) - 1, len(Q) - 2)
+            t = (s - Lc[i]) / max(Lc[i + 1] - Lc[i], 1e-12)
+            Q = np.vstack([Q[i] + t * (Q[i + 1] - Q[i]), Q[i + 1:]])
+        if which == 1:
+            Q = Q[::-1].copy()
+    return Q
+
+
+def bent_profile(points, t: float, r_in: float) -> Polygon:
+    """Cross-section of a formed sheet part: the mid-thickness polyline ``points`` (2-D) filleted with the centre-line
+    radius r_in + t/2 and thickened by t/2 each side (flat ends): inner bend radius r_in, outer r_in + t."""
+    P = np.asarray(points, float)
+    P3 = np.column_stack([P, np.zeros(len(P))])
+    Q = fillet(P3, r_in + 0.5 * t, n_arc=12, share=0.5)[:, :2]
+    return LineString(Q).buffer(0.5 * t, cap_style=2, join_style=2, mitre_limit=1.5)
+
+
+WALLS = dict(xm=0.002, xp=0.002, ym=0.002, yp=0.002, zm=0.008, zp=0.002)   # enclosure walls (base 8 mm: threads)
+
+
+def enclosure(lo, hi, w: dict) -> G.Mesh:
+    """Purchased unit envelope as a closed enclosure (outer box minus the cavity): the M3 mounting threads sit in the
+    8 mm base wall (vendor drawing to be confirmed); mass from the datasheet, CG from this envelope."""
+    lo, hi = np.asarray(lo, float), np.asarray(hi, float)
+    ilo = lo + np.array([w["xm"], w["ym"], w["zm"]])
+    ihi = hi - np.array([w["xp"], w["yp"], w["zp"]])
+    return diff(box3(lo, hi), [box3(ilo, ihi)])
+
+
+def can(p0, p1, r: float, base: float, wall: float = 0.0015, n: int = 48) -> G.Mesh:
+    """Closed cylindrical housing (antennas): base wall ``base`` at p0 for the mounting threads."""
+    p0, p1 = np.asarray(p0, float), np.asarray(p1, float)
+    a = G.unit(p1 - p0)
+    return diff(G.cylinder(r, p0, p1, n=n), [G.cylinder(r - wall, p0 + base * a, p1 - wall * a, n=n)])
+
+
+def counterbores(pts, z_bottom: float):
+    """Counterbores from below for ISO 7380 M3 button heads (flush under a plate whose bottom face is z_bottom)."""
+    return [cyl((x, y, z_bottom - 0.001), (x, y, z_bottom + CB_DEPTH), CB_R) for x, y in pts]
+
+
+# =====================================================================================================================
+# context
+# =====================================================================================================================
+class Ctx:
+    def __init__(self, reg: Registry, spec: dict):
+        self.reg, self.S = reg, spec
+        L = self.L = spec["layout"]
+        self.fus = O.fuselage_from_spec(spec)
+        self.st = {s["id"]: s for s in L["stations"]}
+        self.st_by_part = {s["part"]: s for s in L["stations"]}
+        self.mem = {m["id"]: m for m in L["chassis"]["members"]}
+        self.fit = {f["id"]: f for f in L["chassis"]["fittings"]}
+        self.trays = {t["id"]: t for t in L["chassis"]["trays"]}
+        self.boxes = L["rules"]["boxes"]
+        sy = L["systems"]
+        self.eq = {e["id"]: e for e in sy["equipment"]}
+        self.ant = {a["id"]: a for a in sy["antennas"]}
+        self.adl = {a["id"]: a for a in sy["air_data_lights"]}
+        self.trunk = {t["id"]: t for t in sy["harness"]["trunks"]}
+        self.conn = {c["id"]: c for c in sy["harness"]["connectors"]}
+        self.panels = {p["id"]: p for p in L["shell"]["panels"]}
+        self.mech = {j["name"]: j for j in L["mechanisms"]["joints"]}
+        self.skin_t = layup_props(spec, "shell_secondary")["thickness"]
+
+    def eqbox(self, eid: str):
+        b = self.eq[eid]["box"]
+        return np.asarray(b[0], float), np.asarray(b[1], float)
+
+    def member_box(self, mid: str):
+        b = self.mem[mid]["box"]
+        return np.asarray(b[0], float), np.asarray(b[1], float)
+
+    def stp(self, sid: str) -> str:
+        return self.st[sid]["part"]
+
+    def face(self, sid: str, side: int):
+        """(x at the centre line, sweep tangent) of the forward (-1) / aft (+1) web face of a frame."""
+        st = self.st[sid]
+        xf = st.get("x_faces") or [st["x"] - 0.5 * st["t"], st["x"] + 0.5 * st["t"]]
+        return float(xf[0] if side < 0 else xf[1]), math.tan(math.radians(float(st.get("sweep_deg", 0.0))))
+
+    def x_face(self, sid: str, side: int, y: float) -> float:
+        x0, k = self.face(sid, side)
+        return x0 + abs(y) * k
+
+    def cutout(self, sid: str, cid: str, mirror: bool = False):
+        c = next(c for c in self.st[sid]["cutouts"] if c["id"] == cid)
+        y0, y1 = (float(v) for v in c["y"])
+        if mirror:
+            y0, y1 = -y1, -y0
+        return y0, y1, float(c["z"][0]), float(c["z"][1])
+
+    def cone_cavity(self, x0: float, x1: float, inset: float, n: int = 6, ring_n: int = 96) -> G.Mesh:
+        """Solid of the nose-cone cavity between x0 and x1: OML section inset by ``inset`` (the GFRP cone inner
+        surface is the OML inset by CONE_T), lofted through n stations."""
+        rings = []
+        for x in np.linspace(x0, x1, n):
+            poly = SG.fuselage_section2d(self.fus, float(x), inset, n=256)
+            R = SG.resample_ring(poly, ring_n, start_dir=(0.0, 1.0))
+            rings.append(np.column_stack([np.full(len(R), x), R[:, 0], R[:, 1]]))
+        return G.loft(rings)
+
+    def body_band(self, x0: float, x1: float, inset0: float, inset1: float, n: int = 6, ring_n: int = 160) -> G.Mesh:
+        """Shell of the body between OML insets inset0 < inset1 (negative = outside the OML)."""
+        def solid(ins):
+            rings = []
+            for x in np.linspace(x0, x1, n):
+                poly = Polygon(self.fus.point(np.full(256, x), np.linspace(0, 2 * math.pi, 256, endpoint=False))
+                               [:, 1:3]).buffer(0)
+                poly = poly.buffer(-ins, join_style=2) if ins != 0 else poly
+                poly = SG.largest(poly)
+                R = SG.resample_ring(poly, ring_n, start_dir=(0.0, 1.0))
+                rings.append(np.column_stack([np.full(len(R), x), R[:, 0], R[:, 1]]))
+            return G.loft(rings)
+        return diff(solid(inset0), [solid(inset1)])
+
+
+# =====================================================================================================================
+# the producer
+# =====================================================================================================================
+class Systems:
+    def __init__(self, reg: Registry, spec: dict):
+        self.reg, self.spec = reg, spec
+        self.C = Ctx(reg, spec)
+        self.n0, self.n1 = self.C.L["part_numbers"]["systems"]
+        self.plugs = []              # (pid, unit pid) mated connectors
+        self.harness_parts = []      # trunk part ids (cable mass share)
+        self.harness_fixed = {}      # connector / grommet part id -> mass (connector share)
+
+    # ------------------------------------------------------------------ helpers
+    def pid(self, key_or_num, side: str = "C") -> str:
+        n = N[key_or_num] if isinstance(key_or_num, str) else int(key_or_num)
+        if not self.n0 <= n <= self.n1:
+            raise ValueError(f"systems part number {n} outside {self.n0}..{self.n1}")
+        return part_number("systems", n, side=side)
+
+    def add(self, pid, name, name_tr, material, process, mesh_fn, *, thickness=None, purchased=False, vendor="",
+            mass_kg=None, parent=None, step=STEP_AVIONICS, explode=(0.0, 0.0, 0.1), contacts=(), notes="") -> Part:
+        side = "R" if pid.endswith("-R") else ("L" if pid.endswith("-L") else "C")
+        p = Part(id=pid, name=name, name_tr=name_tr, group="systems", material=material, process=process,
+                 mesh_fn=mesh_fn, thickness=thickness, purchased=purchased, vendor=vendor, mass_kg=mass_kg,
+                 side=side, parent=parent, step=step, explode=tuple(float(v) for v in explode),
+                 contacts=tuple(dict.fromkeys(c for c in contacts if c)), notes=notes, color="systems")
+        return self.reg.add(p)
+
+    def has(self, pid: str) -> bool:
+        return pid in self.reg.parts
+
+    def find_part(self, prefix: str, words) -> str | None:
+        """Parent lookup by id prefix and name words (wing / tail parts whose numbers the layout does not fix)."""
+        for pid, p in self.reg.parts.items():
+            if pid.startswith(prefix) and all(w in p.name for w in words):
+                return pid
+        return None
+
+    # ------------------------------------------------------------------ main
+    def build(self):
+        self.power_switching()
+        self.pdu()
+        self.battery_and_fts()
+        self.sidebay_rack()
+        self.remote_id()
+        self.connectors()
+        self.gnss()
+        self.nose_antennas()
+        self.transponder_blade()
+        self.pitot_nose()
+        self.harness()
+        self.parachute()
+        self.wing_tail_items()
+        self.harness_masses()
+
+    # =================================================================================================================
+    # purchased units (layout boxes; M3 vendor threads in the base)
+    # =================================================================================================================
+    def unit(self, eid: str, vendor: str, mass: float, *, parent: str, contacts=(), notes: str = "",
+             step: int = STEP_AVIONICS, explode=(0.0, 0.0, 0.12), walls=None) -> str:
+        e = self.C.eq[eid]
+        lo, hi = self.C.eqbox(eid)
+        pid = e["part"]
+        w = dict(WALLS, **(walls or {}))
+        self.add(pid, e["name"], e["name_tr"], P_BUY, P_BUY, (lambda lo=lo, hi=hi, w=w: enclosure(lo, hi, w)),
+                 purchased=True,
+                 vendor=vendor, mass_kg=mass, parent=parent, contacts=contacts, step=step, explode=explode,
+                 notes=(notes + "; " if notes else "") + f"envelope = layout box ({e['source'][:120]})")
+        return pid
+
+    def tapped(self, fid, unit: str, plate: str, x: float, y: float, z_plate_bottom: float, z_unit: float,
+               step: int = STEP_AVIONICS):
+        """ISO 7380 M3 button head from below, head in a counterbore of ``plate`` (bottom face z_plate_bottom), thread
+        in the vendor M3 mounting hole of ``unit`` (base face z_unit)."""
+        p = (x, y, z_plate_bottom + CB_DEPTH)
+        J.bolt(self.reg, fid, 3, p, (0.0, 0.0, 1.0), [(plate, z_unit - p[2])], head="ISO 7380", nut="tapped",
+               tapped_part=unit, tapped_depth=TAP_DEPTH, owner=plate, step=step,
+               notes=f"{unit} on its mount (vendor M3 base threads, thread-locking compound)")
+
+    def insert_bolt(self, fid, size, point, axis, stack, insert_part, depth, step=STEP_AVIONICS, notes=""):
+        J.bolt(self.reg, fid, size, point, axis, stack, nut="insert", insert_part=insert_part, insert_depth=depth,
+               owner=stack[0][0], step=step, notes=notes)
+
+    def nyloc(self, fid, size, point, axis, stack, step=STEP_AVIONICS, notes=""):
+        J.bolt(self.reg, fid, size, point, axis, stack, nut="ISO 7040", owner=stack[0][0], step=step, notes=notes)
+
+    # =================================================================================================================
+    # power switching: contactor / fuse block + DC-DC on a pocketed plate on the avionics deck
+    # =================================================================================================================
+    def power_switching(self):
+        C = self.C
+        deck = C.mem["M-DECK-NOSE"]["part"]
+        z_deck = float(C.member_box("M-DECK-NOSE")[1][2])
+        t_deck = float(C.mem["M-DECK-NOSE"]["section"]["t"])
+        bb = C.boxes["power_switching_bay"]
+        clo, chi = C.eqbox("EQ-CONTACTOR_FUSES")
+        dlo, dhi = C.eqbox("EQ-DCDC_28_12")
+        z_top = float(min(clo[2], dlo[2]))
+        assert abs(clo[2] - dlo[2]) < 1e-9, "contactor and DC-DC share one plate level"
+        x0, x1 = float(bb["x"][0]) + 0.005, float(bb["x"][1]) + 0.0025
+        hw = float(bb["half_width"]) - 0.003
+        inset = 0.0065
+        u_pts = {"c": [(clo[0] + inset, clo[1] + inset), (clo[0] + inset, chi[1] - inset), (chi[0] - inset, clo[1] + inset),
+                       (chi[0] - inset, chi[1] - inset)],
+                 "d": [(dlo[0] + inset, dlo[1] + inset), (dlo[0] + inset, dhi[1] - inset), (dhi[0] - inset, dlo[1] + inset),
+                       (dhi[0] - inset, dhi[1] - inset)]}
+        d_pts = [(x0 + 0.006, s * (hw - 0.006)) for s in (1, -1)] + [(x1 - 0.006, s * (hw - 0.006)) for s in (1, -1)]
+        self.sw_geom = dict(x0=x0, x1=x1, hw=hw, z0=z_deck, z1=z_top, u_pts=u_pts, d_pts=d_pts)
+
+        def mesh():
+            body = box3((x0, -hw, z_deck + TOUCH), (x1, hw, z_top))
+            # pockets from below: 1.6 mm web under the units, bosses round every screw, 6 mm rims
+            pk = sbox(x0 + 0.006, -hw + 0.006, x1 - 0.006, hw - 0.006)
+            keep = unary_union([Point(p).buffer(BOSS_R, 24) for p in u_pts["c"] + u_pts["d"] + d_pts])
+            pocket = pk.difference(keep)
+            cuts = [prism_z(g, z_deck - 0.001, z_top - PLATE_T) for g in getattr(pocket, "geoms", [pocket])]
+            cuts += counterbores(u_pts["c"] + u_pts["d"], z_deck + TOUCH)
+            return finish(diff(body, cuts))
+        plate = self.pid("sw_plate")
+        self.add(plate, "power-switching mounting plate", "güç anahtarlama montaj plakası", MAT_AL, P_CNC, mesh,
+                 thickness=PLATE_T, parent=deck, contacts=(deck,), explode=(0.0, 0.0, 0.10),
+                 notes="6061-T6 plate milled from 6 mm stock, pocketed from below (1.6 mm web, screw bosses d 13); "
+                       "heat spreader of the contactor / DC-DC bases (thermal pad); 4 x M3 into potted "
+                       "through-inserts of the avionics deck (outboard of the keel slot)")
+        c = self.unit("EQ-CONTACTOR_FUSES", "main contactor + fuse block, 28 V (allocation, components.yaml electrical)",
+                      float(C.eq["EQ-CONTACTOR_FUSES"]["mass_kg"]), parent=plate, contacts=(plate,))
+        d = self.unit("EQ-DCDC_28_12", "RECOM 28-to-12 V DC-DC module (components.yaml electrical.recom)",
+                      float(C.eq["EQ-DCDC_28_12"]["mass_kg"]), parent=plate, contacts=(plate,))
+        for k, (x, y) in enumerate(u_pts["c"]):
+            self.tapped(f"{c}-B{k + 1}", c, plate, x, y, z_deck + TOUCH, z_top)
+        for k, (x, y) in enumerate(u_pts["d"]):
+            self.tapped(f"{d}-B{k + 1}", d, plate, x, y, z_deck + TOUCH, z_top)
+        for k, (x, y) in enumerate(d_pts):
+            self.insert_bolt(f"{plate}-B{k + 1}", 3, (x, y, z_top), (0.0, 0.0, -1.0),
+                             [(plate, z_top - z_deck)], deck, t_deck,
+                             notes="power-switching plate rim into a potted M3 insert of the avionics deck")
+
+    # =================================================================================================================
+    # PDU on six spacers, bolted from below through the deck (heads in the side bays)
+    # =================================================================================================================
+    def pdu(self):
+        C = self.C
+        deck = C.mem["M-DECK-NOSE"]["part"]
+        lo_d, hi_d = C.member_box("M-DECK-NOSE")
+        z_deck, z_bot = float(hi_d[2]), float(lo_d[2])
+        lo, hi = C.eqbox("EQ-PDU")
+        xs = (float(lo[0]) + 0.017, 0.5 * float(lo[0] + hi[0]), float(hi[0]) - 0.012)
+        ys = (float(hi[1]) - 0.0125, float(lo[1]) + 0.0125)
+        pts = [(x, y) for x in xs for y in ys]
+        self.pdu_pts = pts
+        sp = self.pid("pdu_spacers")
+
+        def mesh():
+            ms = [G.tube(SPACER_R, 0.5 * FC.clearance(3), (x, y, z_deck + TOUCH), (x, y, float(lo[2])), n=40)
+                  for x, y in pts]
+            return G.merge(ms)
+        self.add(sp, "PDU mounting spacers (6x)", "PDU montaj burçları (6 adet)", MAT_AL, P_CNC, mesh,
+                 thickness=SPACER_R - 0.5 * FC.clearance(3), parent=deck, contacts=(deck,), explode=(0.0, 0.0, 0.10),
+                 notes="6061-T6 turned spacers d 13 x 3.4 mm (deck top to the PDU base, thermal pad between)")
+        pdu = self.unit("EQ-PDU", "VISIONAIRtronics 1000 W PDU (components.yaml vat_1000w_pdu, IP67, MIL-DTL-38999)",
+                        float(C.eq["EQ-PDU"]["mass_kg"]), parent=sp, contacts=(sp,),
+                        notes="conduction-cooled through its base; the unit's thermostatic fan outputs are wired for an "
+                              "optional cooling fan (open item, thermal test)")
+        t_deck = z_deck - z_bot
+        for k, (x, y) in enumerate(pts):
+            J.bolt(self.reg, f"{pdu}-B{k + 1}", 3, (x, y, z_bot), (0.0, 0.0, 1.0),
+                   [(deck, t_deck), (sp, float(lo[2]) - z_deck)], nut="tapped", tapped_part=pdu,
+                   tapped_depth=TAP_DEPTH, owner=sp, step=STEP_AVIONICS,
+                   notes="from below through a potted bushing of the deck (access through the side-bay panels)")
+
+    # =================================================================================================================
+    # buffer battery (cradle + straps) and the FTS unit (two hanger angles under TR-FWDBAY)
+    # =================================================================================================================
+    def battery_and_fts(self):
+        C = self.C
+        tray = C.trays["TR-FWDBAY"]["part"]
+        z_tray = float(C.boxes["forward_bay"]["z"][0])
+        t_tray = 0.003
+        lo, hi = C.eqbox("EQ-BUFFER_BATTERY")
+        z_c0, z_c1 = z_tray + TOUCH, float(lo[2])
+        xa, xb = float(lo[0]) - 0.002, float(hi[0]) + 0.002
+        ysd = float(hi[1])
+        hw = 0.054
+        x_straps = (0.470, 0.555)
+        yb = 0.048
+        x_hang = 0.582
+        flo, fhi = C.eqbox("EQ-FTS_UNIT")
+        # cradle outline: follows the tray taper (tray half-width 41.5 mm at x 0.39 growing aft)
+        outline = Polygon([(xa, -0.040), (0.410, -0.0455), (0.440, -0.0510), (0.462, -hw), (xb, -hw), (xb, hw),
+                           (0.462, hw), (0.440, 0.0510), (0.410, 0.0455), (xa, 0.040)])
+        bolt_pts = [(x, s * yb) for x in x_straps + (x_hang,) for s in (1, -1)]
+
+        def cradle():
+            body = prism_z(outline, z_c0, z_c1)
+            inner = sbox(xa + 0.010, -ysd + 0.008, xb - 0.010, ysd - 0.008)
+            bars = unary_union([sbox(x - 0.012, -1, x + 0.012, 1) for x in x_straps])
+            pocket = inner.difference(bars)
+            cuts = [prism_z(g, z_c0 - 0.001, z_c1 + 0.001) for g in getattr(pocket, "geoms", [pocket])]
+            lips = [box3((xa, -0.028, z_c1 - OV), (float(lo[0]) - TOUCH, 0.028, z_c1 + 0.006)),
+                    box3((float(hi[0]) + TOUCH, -0.028, z_c1 - OV), (xb, 0.028, z_c1 + 0.006))]
+            return finish(union([diff(body, cuts)] + lips))
+        cr = self.pid("batt_cradle")
+        self.add(cr, "buffer-battery cradle", "tampon batarya beşiği", MAT_AL, P_CNC, cradle, thickness=0.002,
+                 parent=tray, contacts=(tray,), explode=(0.0, 0.0, 0.14),
+                 notes="6061-T6 frame 3.4 mm (rim 10 mm, two cross bars under the straps), fore / aft lips 6 mm "
+                       "(9 g forward crash restraint of the 1.98 kg pack)")
+        bat = self.unit("EQ-BUFFER_BATTERY", "12S2P Molicel INR-21700-P45B Li-ion pack, cell-fused vented box "
+                        "(components.yaml liion_12s2p_molicel_p45b)", float(C.eq["EQ-BUFFER_BATTERY"]["mass_kg"]),
+                        parent=cr, contacts=(cr,), explode=(0.0, 0.0, 0.20),
+                        notes="vent outlet ducted to the flame-arresting grille of the forward-bay hatch P-FWDHATCH")
+        # hold-down straps (304, 0.8 mm, inner bend radius 0.4 mm), 0.2 mm off the box sides and top
+        g = 0.0002
+        yl = ysd + g + 0.5 * STRAP_T
+        zt = float(hi[2]) + g + 0.5 * STRAP_T
+        zf = z_c1 + 0.5 * STRAP_T + TOUCH
+        prof = bent_profile([(-0.060, zf), (-yl, zf), (-yl, zt), (yl, zt), (yl, zf), (0.060, zf)], STRAP_T,
+                            0.5 * STRAP_T)
+        straps = []
+        for key, x in zip(("strap_f", "strap_a"), x_straps):
+            sid = self.pid(key)
+            straps.append(sid)
+            self.add(sid, f"battery hold-down strap ({'fwd' if key == 'strap_f' else 'aft'})",
+                     f"batarya bağlama kayışı ({'ön' if key == 'strap_f' else 'arka'})", MAT_SS, P_SHEET_SS,
+                     (lambda x=x: prism_x(prof, x - 0.5 * STRAP_W, x + 0.5 * STRAP_W)), thickness=STRAP_T,
+                     parent=cr, contacts=(cr, bat), explode=(0.0, 0.0, 0.26),
+                     notes="304 sheet 0.8 x 20 mm formed over the pack (inner radius 0.5 t), feet on the cradle bars")
+        # FTS hanger angles (6061-T6 1.6 mm, inner radius 3 t), legs 0.05 mm off the unit sides
+        yleg = float(fhi[1]) + TOUCH + 0.5 * ANGLE_T
+        zfl = z_tray - t_tray - 0.5 * ANGLE_T - TOUCH
+        z_leg_bot = float(flo[2]) + 0.0035
+        prof_a = bent_profile([(0.0545, zfl), (yleg, zfl), (yleg, z_leg_bot)], ANGLE_T, 3.0 * ANGLE_T)
+        hx0, hx1 = 0.512, 0.5905
+        ang = self.pid("fts_angle", "R")
+
+        def angle():
+            return prism_x(prof_a, hx0, hx1)
+        fts = self.unit("EQ-FTS_UNIT", "independent flight-termination unit (components.yaml recovery_and_safety."
+                        "flight_termination, receiver + controller + backup cell)", float(C.eq["EQ-FTS_UNIT"]["mass_kg"]),
+                        parent=ang, contacts=(ang, ang[:-1] + "L"), explode=(0.0, 0.0, -0.12),
+                        walls=dict(ym=0.008, yp=0.008, zm=0.002),
+                        notes="hung between the two angles (2 x M3 each side into the vendor side threads)")
+        self.add(ang, "FTS hanger angle, starboard", "FTS askı köşebendi, sağ", MAT_AL, P_SHEET, angle,
+                 thickness=ANGLE_T, parent=tray, contacts=(tray, fts), explode=(0.0, 0.05, -0.08),
+                 notes="6061-T6 1.6 mm angle, flange under TR-FWDBAY clamped by the cradle / strap bolts")
+        self.reg.add(mirror_part(self.reg.parts[ang], ang[:-1] + "L", id_map={ang: ang[:-1] + "L"}))
+        angL = ang[:-1] + "L"
+        # bolts: strap feet + cradle + tray (+ hanger flange) with nyloc nuts under the tray / hanger
+        k = 0
+        for (x, y) in bolt_pts:
+            k += 1
+            stack = []
+            if x in x_straps:
+                stack.append((straps[x_straps.index(x)], STRAP_T + TOUCH))
+            if x <= xb - 0.006:
+                stack.append((cr, z_c1 - z_c0))
+            stack += [(tray, t_tray + TOUCH)]
+            if hx0 + 0.006 <= x <= hx1 - 0.006:
+                stack.append((ang if y > 0 else angL, ANGLE_T + TOUCH))
+            top = z_c1 + (STRAP_T + TOUCH if x in x_straps else 0.0) if x <= xb - 0.006 else z_tray
+            self.nyloc(f"{cr}-B{k}", 3, (x, y, top), (0.0, 0.0, -1.0), stack,
+                       notes="battery strap / cradle / tray / FTS hanger stack, nyloc under the tray")
+        for s, a_id in ((1, ang), (-1, angL)):
+            for j, x in enumerate((0.530, 0.575)):
+                yf = s * (float(fhi[1]) + TOUCH + ANGLE_T)
+                J.bolt(self.reg, f"{a_id}-B{j + 1}", 3, (x, yf, -0.095), (0.0, -s, 0.0), [(a_id, ANGLE_T + TOUCH)],
+                       nut="tapped", tapped_part=fts, tapped_depth=TAP_DEPTH, owner=a_id, step=STEP_AVIONICS,
+                       notes="FTS unit side thread (vendor)")
+
+    # =================================================================================================================
+    # starboard side bay: avionics rack on TR-SIDEBAY-R
+    # =================================================================================================================
+    def sidebay_rack(self):
+        C = self.C
+        tray = C.trays["TR-SIDEBAY-R"]["part"]
+        z0 = float(C.boxes["avionics_side_bays"]["z"][0])
+        a_lo, a_hi = C.eqbox("EQ-AUTOPILOT")
+        s_lo, s_hi = C.eqbox("EQ-DATALINK_PRIMARY")
+        m_lo, m_hi = C.eqbox("EQ-DATALINK_BACKUP")
+        t_lo, t_hi = C.eqbox("EQ-TRANSPONDER")
+        yw0, yw1 = 0.0565, 0.0605                       # inboard web (clear of the tray keel-flange bolt heads)
+        xr0, xr1 = 0.858, 1.092
+        x_sh1 = 1.018
+        z_b0 = z0 + TOUCH
+        z_b1 = z_b0 + PLATE_T
+        z_s0, z_s1 = float(m_lo[2]) - 0.0035, float(m_lo[2]) - 0.0015        # shelf 2 mm, bosses up to the units
+        base = Polygon([(xr0, yw0), (xr1, yw0), (xr1, 0.150), (0.955, 0.150), (xr0, 0.1345)])
+        ins = 0.0065
+
+        def corners(lo, hi, i=ins):
+            return [(float(lo[0]) + i, float(lo[1]) + i), (float(lo[0]) + i, float(hi[1]) - i),
+                    (float(hi[0]) - i, float(lo[1]) + i), (float(hi[0]) - i, float(hi[1]) - i)]
+        pa, ps, pm, pt = corners(a_lo, a_hi), corners(s_lo, s_hi), corners(m_lo, m_hi), corners(t_lo, t_hi, 0.006)
+        tray_pts = [(0.968, 0.075), (0.968, 0.125), (1.086, 0.080), (1.086, 0.125), (0.990, 0.1435), (1.050, 0.1435)]
+        self.rack_geom = dict(base=base, z0=z_b0)
+
+        def rack():
+            ms = [prism_z(base, z_b0, z_b1)]
+            for pts, zt in ((pa, float(a_lo[2])), (ps, float(s_lo[2]))):
+                ms += [G.cylinder(BOSS_R, (x, y, z_b1 - OV), (x, y, zt), n=32) for x, y in pts]
+            ms.append(box3((xr0, yw0, z_b1 - OV), (x_sh1, yw1, z_s1)))                         # inboard web
+            ms.append(prism_z(Polygon([(xr0, yw0), (x_sh1, yw0), (x_sh1, 0.1345), (xr0, 0.1345)]), z_s0, z_s1))
+            for pts, zt in ((pm, float(m_lo[2])), (pt, float(t_lo[2]))):
+                ms += [G.cylinder(BOSS_R, (x, y, z_s1 - OV), (x, y, zt), n=32) for x, y in pts]
+            m = union(ms)
+            cuts = counterbores(pa + ps, z_b0) + counterbores(pm + pt, z_s0)
+            # lightening holes in the shelf between the bosses
+            cuts += [cyl((x, 0.100, z_s0 - 0.001), (x, 0.100, z_s1 + 0.001), 0.014) for x in (0.898, 0.990)]
+            return finish(diff(m, cuts))
+        rk = self.pid("rack")
+        self.add(rk, "avionics rack, starboard side bay", "aviyonik rafı, sağ yan bölme", MAT_AL, P_CNC, rack,
+                 thickness=PLATE_T, parent=tray, contacts=(tray,), explode=(0.0, 0.10, -0.12),
+                 notes="one-piece 6061-T6 rack: 1.6 mm base with screw bosses (autopilot, C2 datalink), 4 mm inboard "
+                       "web, 2 mm shelf with bosses (backup link, transponder); 6 x M3 through TR-SIDEBAY-R, nylocs below")
+        units = [("EQ-AUTOPILOT", "Embention Veronte Autopilot 1x, ADS-B variant (components.yaml veronte_autopilot_1x, "
+                  "M3 mounting screws)", 0.209, pa, z_b0),
+                 ("EQ-DATALINK_PRIMARY", "Silvus StreamCaster SC4200EP, module variant (components.yaml silvus_sc4200ep)",
+                  float(C.eq["EQ-DATALINK_PRIMARY"]["mass_kg"]), ps, z_b0),
+                 ("EQ-DATALINK_BACKUP", "Microhard pDDL2450, enclosed (components.yaml microhard_pddl2450)",
+                  float(C.eq["EQ-DATALINK_BACKUP"]["mass_kg"]), pm, z_s0),
+                 ("EQ-TRANSPONDER", "uAvionix ping200X Mode S ES (components.yaml uavionix_ping200x)",
+                  float(C.eq["EQ-TRANSPONDER"]["mass_kg"]), pt, z_s0)]
+        for eid, vendor, mass, pts, zb in units:
+            u = self.unit(eid, vendor, mass, parent=rk, contacts=(rk,), explode=(0.0, 0.14, -0.16))
+            zu = float(C.eqbox(eid)[0][2])
+            for k, (x, y) in enumerate(pts):
+                self.tapped(f"{u}-B{k + 1}", u, rk, x, y, zb, zu)
+        t_tray = 0.003
+        for k, (x, y) in enumerate(tray_pts):
+            self.nyloc(f"{rk}-B{k + 1}", 3, (x, y, z_b1), (0.0, 0.0, -1.0), [(rk, PLATE_T), (tray, t_tray + TOUCH)],
+                       notes="rack base through TR-SIDEBAY-R, nyloc under the tray (side-bay panel access)")
+
+    # =================================================================================================================
+    # Remote ID beacon on an SLS cradle on the FS0300 forward face
+    # =================================================================================================================
+    def remote_id(self):
+        C = self.C
+        fr = C.stp("FS0300")
+        xf, _ = C.face("FS0300", -1)
+        t_fr = float(C.st["FS0300"]["t"])
+        lo, hi = C.eqbox("EQ-REMOTE_ID")
+        tp = 0.0026
+        x_p0 = xf - tp
+        z_l1 = float(lo[2]) - TOUCH
+        z_l0 = z_l1 - 0.0024
+        ya, yb = -0.050, -0.016
+
+        def cradle():
+            plate = box3((x_p0, ya, -0.001), (xf - 0.0002, yb, z_l1))
+            ledge = box3((float(lo[0]) - 0.001, float(lo[1]) - 0.003, z_l0), (x_p0 + OV, float(hi[1]) + 0.001, z_l1))
+            cheek = box3((float(lo[0]) - 0.001, float(lo[1]) - 0.003, z_l1 - OV),
+                         (float(lo[0]) + 0.012, float(lo[1]) - TOUCH, float(lo[2]) + 0.008))
+            return finish(union([plate, ledge, cheek]))
+        cid = self.pid("rid_cradle")
+        self.add(cid, "Remote ID beacon cradle", "uzaktan kimlik vericisi beşiği", MAT_PA12, P_SLS, cradle,
+                 thickness=0.0024, parent=fr, contacts=(fr,), explode=(-0.10, 0.0, 0.0), step=STEP_ANTENNA,
+                 notes="SLS PA12 (RF-transparent) back plate 2.6 mm + ledge 2.4 mm + side cheek; beacon held with a "
+                       "hook-and-loop pad and a cable tie through the ledge slot")
+        self.unit("EQ-REMOTE_ID", "Dronetag Beacon (components.yaml dronetag_beacon, integral antennas ANT-RID)",
+                  float(C.eq["EQ-REMOTE_ID"]["mass_kg"]), parent=cid, contacts=(cid,), step=STEP_ANTENNA,
+                  explode=(-0.14, 0.0, 0.0))
+        for k, y in enumerate((-0.0225, -0.044)):
+            self.insert_bolt(f"{cid}-B{k + 1}", 3, (x_p0, y, 0.005), (1.0, 0.0, 0.0), [(cid, tp)], fr, t_fr,
+                             step=STEP_ANTENNA, notes="cradle into a potted M3 insert of FS0300")
+
+    # =================================================================================================================
+    # mated connectors (plug + backshell) on every unit connector face
+    # =================================================================================================================
+    def connectors(self):
+        C = self.C
+        nums = iter(PLUG_NUMS)
+        spec = [("EQ-PDU", (0.050, -0.050)), ("EQ-CONTACTOR_FUSES", (None,)), ("EQ-DCDC_28_12", (None,)),
+                ("EQ-BUFFER_BATTERY", (None,)), ("EQ-AUTOPILOT", (None,)), ("EQ-DATALINK_PRIMARY", (None,)),
+                ("EQ-DATALINK_BACKUP", (None,)), ("EQ-TRANSPONDER", (None,)), ("EQ-FTS_UNIT", (None,))]
+        for eid, ys in spec:
+            e = C.eq[eid]
+            lo, hi = C.eqbox(eid)
+            ew = np.asarray(e["envelope_with_connector"], float)
+            face = e["connector"].split()[0]                     # "+x" / "-x"
+            sgn = 1.0 if face.startswith("+") else -1.0
+            xf = float(hi[0] if sgn > 0 else lo[0])
+            allow = abs(float(ew[1][0] if sgn > 0 else ew[0][0]) - xf)
+            L = allow - CONN_LEN_MARGIN
+            h = float(hi[2] - lo[2])
+            w = float(hi[1] - lo[1])
+            zc = 0.5 * float(lo[2] + hi[2])
+            r = 0.5 * min(0.75 * h, 0.75 * w / len(ys), 0.026)
+            cs = [(0.5 * float(lo[1] + hi[1]) if y is None else y) for y in ys]
+            pid = self.pid(next(nums))
+            unit = e["part"]
+
+            def mesh(xf=xf, sgn=sgn, L=L, r=r, cs=cs, zc=zc):
+                ms = []
+                for yc in cs:
+                    p0 = np.array([xf + sgn * TOUCH, yc, zc])
+                    ms.append(G.cylinder(r, p0, p0 + sgn * 0.6 * L * np.array([1.0, 0, 0]), n=32))
+                    ms.append(G.cylinder(0.8 * r, p0 + sgn * (0.6 * L - OV) * np.array([1.0, 0, 0]),
+                                         p0 + sgn * L * np.array([1.0, 0, 0]), n=32))
+                return union(ms)
+            self.add(pid, f"mated connector + backshell, {e['id']}", f"bağlı konnektör + arka kılıf, {e['id']}",
+                     P_BUY, P_BUY, mesh, purchased=True, vendor="MIL-DTL-38999 series III plug + backshell (harness "
+                     "side)", mass_kg=PLUG_MASS * len(cs), parent=unit, contacts=(unit,), step=STEP_HARNESS,
+                     explode=(sgn * 0.06, 0.0, 0.0),
+                     notes=f"{len(cs)} plug(s) on the {face} face inside the layout connector allowance "
+                           f"({allow * 1000:.0f} mm); breakout cables to the trunk dressed at installation")
+            self.harness_fixed[pid] = PLUG_MASS * len(cs)
+
+    # =================================================================================================================
+    # GNSS antennas on formed frame brackets
+    # =================================================================================================================
+    def gnss_bracket(self, key: str, aid: str, sid: str, z_screw: float, x_arm0: float):
+        C = self.C
+        a = C.ant[aid]
+        p = np.asarray(a["point"], float)
+        d, h = float(a["size"][0]), float(a["size"][2])
+        z_ab = float(p[2]) - 0.5 * h                         # antenna base
+        xf, _ = C.face(sid, -1)
+        fr = C.stp(sid)
+        t = SHEET_T
+        zc_arm = z_ab - TOUCH - 0.5 * t
+        xw = xf - TOUCH - 0.5 * t
+        z_fl0 = z_screw - 0.010
+        prof = bent_profile([(x_arm0, zc_arm), (xw, zc_arm), (xw, z_fl0)], t, R_AL)
+        yc = float(p[1])
+        wy = 0.5 * d + 0.004
+        bid = self.pid(key)
+
+        def mesh():
+            m = prism_y(prof, yc - wy, yc + wy)
+            return m
+        self.add(bid, f"GNSS antenna bracket ({aid})", f"GNSS anten braketi ({aid})", MAT_AL, P_SHEET, mesh,
+                 thickness=t, parent=fr, contacts=(fr,), step=STEP_ANTENNA, explode=(-0.06, 0.0, 0.05),
+                 notes="6061-T6 2 mm, one 90 deg bend (inner radius 3 t); flange on the frame forward face with "
+                       "2 x M4 into potted inserts, arm under the antenna (no carbon above it: RF window "
+                       f"{a['window']})")
+        ant = a["part"]
+        self.add(ant, a["name"], a["name_tr"], P_BUY, P_BUY,
+                 (lambda p=p, d=d, h=h: can(p - [0, 0, 0.5 * h], p + [0, 0, 0.5 * h], 0.5 * d, 0.007)),
+                 purchased=True, vendor="Calian (Tallysman) HC977EXF embedded helical (components.yaml calian_hc977exf)",
+                 mass_kg=0.008, parent=bid, contacts=(bid,), step=STEP_ANTENNA, explode=(0.0, 0.0, 0.08),
+                 notes=f"{a['link']}; SSMA pigtail to the autopilot")
+        for k, s in enumerate((1, -1)):
+            self.insert_bolt(f"{bid}-B{k + 1}", 4, (xf - TOUCH - t, yc + s * (wy - 0.0085), z_screw), (1.0, 0.0, 0.0),
+                             [(bid, t + TOUCH)], fr, float(C.st[sid]["t"]), step=STEP_ANTENNA,
+                             notes="GNSS bracket flange into a potted M4 insert of the frame")
+        for k, s in enumerate((1, -1)):
+            J.bolt(self.reg, f"{ant}-B{k + 1}", 3, (float(p[0]), yc + s * 0.012, zc_arm - 0.5 * t), (0.0, 0.0, 1.0),
+                   [(bid, t + TOUCH)], head="ISO 7380", nut="tapped", tapped_part=ant, tapped_depth=TAP_DEPTH, owner=bid,
+                   step=STEP_ANTENNA, notes="antenna base thread (vendor)")
+
+    def gnss(self):
+        self.gnss_bracket("gnss1_brkt", "ANT-GNSS1", "FS1110", 0.080, 0.944)
+        self.gnss_bracket("gnss2_brkt", "ANT-GNSS2", "FS-FUEL", 0.044, 2.064)
+
+    # =================================================================================================================
+    # nose-cone antennas on SLS pedestals bonded to the GFRP cone inner surface
+    # =================================================================================================================
+    def nose_antennas(self):
+        C = self.C
+        cone = C.panels["P-NOSECONE"]["part"]
+        for aid, key, r_ped, vendor, mass in (
+                ("ANT-C2A", "ped_c2a", 0.010, "Southwest Antennas 1001-202 omni dipole 2.1-2.5 GHz, TNC (components.yaml "
+                 "southwest_antennas_1001_202)", 0.0227),
+                ("ANT-FTS", "ped_fts", 0.008, "FTS command antenna, band per the selected FTS (estimate)", 0.010)):
+            a = C.ant[aid]
+            p = np.asarray(a["point"], float)
+            d, h = float(a["size"][0]), float(a["size"][2])
+            z_b = float(p[2]) - 0.5 * h
+            ped = self.pid(key)
+
+            def ped_mesh(p=p, r=r_ped, z_b=z_b):
+                cav = C.cone_cavity(float(p[0]) - r - 0.004, float(p[0]) + r + 0.004, CONE_T + 0.0001)
+                c = G.cylinder(r, (p[0], p[1], -0.2), (p[0], p[1], z_b - TOUCH), n=48)
+                return finish(inter(c, cav))
+            self.add(ped, f"antenna pedestal ({aid})", f"anten kaidesi ({aid})", MAT_PA12, P_SLS, ped_mesh,
+                     thickness=2 * r_ped, parent=cone, contacts=(cone,), step=STEP_ANTENNA, explode=(-0.08, 0.0, -0.04),
+                     notes="SLS PA12 (RF transparent), foot follows the cone inner surface, bonded (epoxy paste); "
+                           "the antenna base nut clamps on its top face")
+            self.add(a["part"], a["name"], a["name_tr"], P_BUY, P_BUY,
+                     (lambda p=p, d=d, h=h: G.cylinder(0.5 * d, p - [0, 0, 0.5 * h], p + [0, 0, 0.5 * h], n=40)),
+                     purchased=True, vendor=vendor, mass_kg=mass, parent=ped, contacts=(ped,), step=STEP_ANTENNA,
+                     explode=(-0.10, 0.0, 0.0), notes=f"{a['link']}; coax pigtail through C-COAX-NC (service loop "
+                                                       "for cone removal)")
+
+    # =================================================================================================================
+    # transponder blade on the belly with its bonded ground-plane doubler
+    # =================================================================================================================
+    def lower_point(self, x: float, y: float):
+        """OML point and outward unit normal on the lower body surface at (x, y)."""
+        fus = self.C.fus
+        lo_, hi_ = 0.5 * math.pi + 1e-4, math.pi if y >= 0 else 1.5 * math.pi - 1e-4
+        if y < 0:
+            lo_, hi_ = math.pi, 1.5 * math.pi - 1e-4
+        for _ in range(60):
+            m = 0.5 * (lo_ + hi_)
+            yy = float(fus.point(x, m)[1])
+            if yy > y:
+                lo_ = m
+            else:
+                hi_ = m
+        ph = 0.5 * (lo_ + hi_)
+        return np.asarray(fus.point(x, ph), float), np.asarray(fus.normal(x, ph), float)
+
+    def transponder_blade(self):
+        C = self.C
+        a = C.ant["ANT-XPDR"]
+        p = np.asarray(a["point"], float)
+        L, W, H = (float(v) for v in a["size"])
+        x0, x1 = float(p[0]) - 0.5 * L, float(p[0]) + 0.5 * L
+        skin = C.panels["P-FWDSKIN"]["part"]
+        z_b = float(p[2]) - 0.5 * H
+        t_base, gap = 0.003, 0.00015
+        fp = sbox(x0, -0.030, x1, 0.030)
+
+        def blade():
+            band = C.body_band(x0 - 0.002, x1 + 0.002, -t_base - gap, -gap, n=7)
+            base = inter(band, prism_z(fp, -0.4, 0.0))
+            zr = float(p[2]) + 0.5 * H
+            fin = G.hull(np.array([[x0 + 0.003, -0.5 * W, zr], [x1 - 0.002, -0.5 * W, zr], [x0 + 0.003, 0.5 * W, zr],
+                                   [x1 - 0.002, 0.5 * W, zr], [x1 - 0.002, -0.5 * W, z_b], [x1 - 0.032, -0.5 * W, z_b],
+                                   [x1 - 0.002, 0.5 * W, z_b], [x1 - 0.032, 0.5 * W, z_b]]))
+            fin = diff(fin, [self._oml_solid(x0 - 0.01, x1 + 0.01, -t_base - gap + OV)])
+            return finish(union([base, fin]))
+        bid = a["part"]
+        self.add(bid, a["name"], a["name_tr"], P_BUY, P_BUY, blade, purchased=True,
+                 vendor="L-band 1090 MHz blade antenna (allocation 60 x 8 x 70 mm, estimate 0.03 kg per components.yaml "
+                        "avionics mass basis)", mass_kg=0.030, parent=skin, contacts=(skin,), step=STEP_ANTENNA,
+                 explode=(0.0, 0.0, -0.10), notes=f"{a['notes'][:200]}")
+        dbl = self.pid("xpdr_doubler")
+        t_d = 0.0012
+
+        def doubler():
+            band = C.body_band(x0 - 0.014, x1 + 0.014, C.skin_t + 0.0001, C.skin_t + 0.0001 + t_d, n=7)
+            return finish(inter(band, prism_z(sbox(x0 - 0.014, -0.044, x1 + 0.014, 0.044), -0.4, 0.0)))
+        self.add(dbl, "transponder ground-plane doubler", "transponder zemin düzlemi takviyesi", MAT_PW, P_PREG,
+                 doubler, thickness=t_d, parent=skin, contacts=(skin,), step=STEP_ANTENNA, explode=(0.0, 0.0, 0.06),
+                 notes="bonded copper-mesh ground plane in a 4-ply PW doubler (1.2 mm) on the skin inner face, "
+                       "bonded to the airframe earth")
+        k = 0
+        for dx in (-0.019, 0.019):
+            for yb in (0.020, -0.020):
+                k += 1
+                q, nrm = self.lower_point(float(p[0]) + dx, yb)
+                ax = -nrm
+                # stack measured locally (the line would cross the opposite V face of the keel further in)
+                iv = J.measure_stack(self.reg, [bid, skin, dbl], q, ax, 0.5 * FC.clearance(4) * 1.6, search=0.015)
+                head = q + iv[0][1] * ax
+                stack = [(pid_, e - s_) for pid_, s_, e in iv]
+                stack[-1] = (stack[-1][0], stack[-1][1] + (iv[-1][2] - iv[0][1] - sum(t for _p, t in stack)))
+                J.bolt(self.reg, f"{bid}-B{k}", 4, head, ax, stack, owner=bid, step=STEP_ANTENNA,
+                       notes="blade base through the skin and the ground-plane doubler (normal to the "
+                                     "skin), nyloc inside")
+
+    def _oml_solid(self, x0, x1, inset):
+        rings = []
+        for x in np.linspace(x0, x1, 7):
+            poly = Polygon(self.C.fus.point(np.full(256, x), np.linspace(0, 2 * math.pi, 256, endpoint=False))
+                           [:, 1:3]).buffer(0)
+            poly = SG.largest(poly.buffer(-inset, join_style=2)) if inset else poly
+            R = SG.resample_ring(poly, 160, start_dir=(0.0, 1.0))
+            rings.append(np.column_stack([np.full(len(R), x), R[:, 0], R[:, 1]]))
+        return G.loft(rings)
+
+    # =================================================================================================================
+    # heated nose pitot-static probe in the bored GFRP cone tip
+    # =================================================================================================================
+    def pitot_nose(self):
+        C = self.C
+        it = C.adl["AD-PITOT-NOSE"]
+        p0, p1 = np.asarray(it["p0"], float), np.asarray(it["p1"], float)
+        r = 0.5 * float(it["diameter"])
+        cone = C.panels["P-NOSECONE"]["part"]
+        ax = G.unit(p1 - p0)
+        self.reg.parts[cone].add_hole(p1 - 0.05 * ax, p1 + 0.002 * ax, r + TOUCH)
+        self.add(it["part"], it["name"], it["name_tr"], P_BUY, P_BUY,
+                 (lambda: G.cylinder(r, p0, p1, n=32)), purchased=True,
+                 vendor="Aeroprobe heated pitot-static probe, 28 V / 42 W (components.yaml aeroprobe_heated_pitot_static)",
+                 mass_kg=0.020, parent=cone, contacts=(cone,), step=STEP_ANTENNA, explode=(-0.15, 0.0, 0.0),
+                 notes=f"{it['mount']}; bonded into the bore of the solid GFRP cone tip")
+
+    # =================================================================================================================
+    # harness: trunks, frame grommets, member penetration grommets, centre-line conduit, wing receptacles
+    # =================================================================================================================
+    def trunk_path(self, tid: str) -> np.ndarray:
+        """Centre line of a trunk (starboard copy for mirrored branches): the layout path, with three detail changes
+        inside the declared corridors: H-WING starts beside the trunk it branches from (side by side in the shared
+        cut-outs instead of inside it) and ends at the backshell of the CN-WING receptacle; H-TAIL passes FS3480
+        inside the ring opening (the fin-root lands of the ring start at |y| 0.110 above z 0.21); H-NOSE runs through
+        the FS0300 cut-out to the forward face."""
+        C = self.C
+        P = np.asarray(C.trunk[tid]["path"], float).copy()
+        if tid == "H-WING":
+            r_main = 0.5 * float(C.trunk["H-MAIN"]["diameter"])
+            r_w = 0.5 * float(C.trunk[tid]["diameter"])
+            y0 = abs(float(C.trunk["H-MAIN"]["path"][6][1])) + r_main + r_w + 0.0002
+            P[0, 1] = y0
+            P[1, 1] = max(P[1, 1], y0 + 0.001)
+            P = trim(P, 0.0, 0.0)
+            P[-1] = self.cn_wing_end
+        elif tid == "H-TAIL":
+            P = np.array([P[0], [3.440, 0.082, 0.170], [3.500, 0.092, 0.215], P[-1]])
+        elif tid == "H-NOSE":
+            xf, _ = C.face("FS0300", -1)
+            P = np.vstack([P, [xf - 0.003, P[-1][1], P[-1][2]]])
+        return P
+
+    def bundle(self, tid: str, grow: float = 0.0) -> G.Mesh:
+        d = float(self.C.trunk[tid]["diameter"])
+        Q = self.bundle_line(tid)
+        return G.sweep_circle(Q, 0.5 * d + grow, n=24)
+
+    def bundle_line(self, tid: str) -> np.ndarray:
+        if tid not in self._lines:
+            d = float(self.C.trunk[tid]["diameter"])
+            self._lines[tid] = densify(fillet(self.trunk_path(tid), 4.0 * d), 0.008)
+        return self._lines[tid]
+
+    def harness(self):
+        C = self.C
+        self._lines = {}
+        # wing receptacle (CN-WING) geometry first: the H-WING bundle ends at its backshell
+        jr = C.member_box("M-JOINTRIB")
+        y_rib = float(jr[0][1])
+        cn = np.asarray(C.conn["CN-WING"]["point"], float)
+        RC = dict(plate_t=0.002, fl=0.033, fl_t=0.002, r_body=0.0125, r_bs=0.011, bs_len=0.016, y_front=y_rib + 0.004)
+        y_p1 = y_rib - 0.0001
+        y_p0 = y_p1 - RC["plate_t"]
+        y_f1 = y_p0 - TOUCH
+        y_f0 = y_f1 - RC["fl_t"]
+        y_bs = y_f0 - RC["bs_len"]
+        self.cn_wing_end = np.array([cn[0], y_bs - TOUCH, cn[2]])
+        names = {"H-MAIN": STEP_HARNESS, "H-COAX": STEP_HARNESS, "H-WING": STEP_HARNESS, "H-TAIL": STEP_HARNESS,
+                 "H-ENGINE": STEP_HARNESS, "H-NOSE": STEP_HARNESS}
+        parents = {"H-MAIN": C.mem["M-MIDFLOOR"]["part"], "H-COAX": C.mem["M-MIDFLOOR"]["part"],
+                   "H-WING": C.mem["M-CTBOX"]["part"], "H-TAIL": C.stp("FS3480"), "H-ENGINE": C.stp("FS3670"),
+                   "H-NOSE": C.mem["M-DECK-NOSE"]["part"]}
+        self.trunk_ids = {}
+        for tid in names:
+            t = C.trunk[tid]
+            pid = t["part"] + ("-R" if t.get("mirror") else "")
+            self.trunk_ids[tid] = [pid] + ([t["part"] + "-L"] if t.get("mirror") else [])
+            d = float(t["diameter"])
+            self.add(pid, t["name"] + (", starboard" if t.get("mirror") else ""),
+                     "kablo demeti " + tid + (", sağ" if t.get("mirror") else ""), P_BUY, P_BUY,
+                     (lambda tid=tid: self.bundle(tid)), purchased=True,
+                     vendor="harness assembly to the YK-250 wiring drawing (EN 2266 / AS50881 practice): SPEC 55 "
+                            "wires, shielded twisted pairs, RG-316 / LMR-100 coax, PTFE sleeving, lacing",
+                     mass_kg=0.0, parent=parents[tid], contacts=(), step=STEP_HARNESS,
+                     explode=(0.0, 0.0, 0.12 if tid != "H-ENGINE" else -0.12),
+                     notes=f"d {d * 1000:.0f} mm bundle on layout.systems.harness {tid}; " + t["text"][:240])
+            self.harness_parts.append(pid)
+        # frame grommets
+        self.frame_grommets()
+        self.member_grommets()
+        self.conduit()
+        self.wing_receptacles(RC, cn, y_p0, y_p1, y_f0, y_f1, y_bs)
+        # mirrored branches (after the grommets so the port copies carry the same geometry)
+        for tid in ("H-WING", "H-TAIL"):
+            pr, pl = self.trunk_ids[tid]
+            idm = {pr: pl}
+            idm.update(self.mirror_map)
+            self.reg.add(mirror_part(self.reg.parts[pr], pl, id_map=idm))
+            self.harness_parts.append(pl)
+
+    def crossings(self, sid: str):
+        """[(trunk id, side, point)] where a bundle centre line crosses the mid plane of frame ``sid``."""
+        C = self.C
+        xc = 0.5 * (C.face(sid, -1)[0] + C.face(sid, 1)[0])
+        k = C.face(sid, -1)[1]
+        out = []
+        for tid in self.trunk_ids:
+            Q = self.bundle_line(tid)
+            for side in ((1, -1) if C.trunk[tid].get("mirror") else (1,)):
+                Qs = Q * np.array([1.0, side, 1.0])
+                f = Qs[:, 0] - (xc + np.abs(Qs[:, 1]) * k)
+                for i in range(len(Qs) - 1):
+                    if f[i] == 0 or f[i] * f[i + 1] < 0:
+                        tt = f[i] / (f[i] - f[i + 1]) if f[i] != f[i + 1] else 0.0
+                        out.append((tid, side, Qs[i] + tt * (Qs[i + 1] - Qs[i])))
+        return out
+
+    def chevron(self, poly, sid: str, t0: float, t1: float) -> G.Mesh:
+        """Prism over the (y, z) polygon between the planes x = x_fwd_face(y) + t0 and + t1 (swept frames: sheared
+        per half, the polygons here lie on one side of y = 0)."""
+        C = self.C
+        xf, k = C.face(sid, -1)
+        m = prism_x(poly, xf + t0, xf + t1)
+        if k:
+            V = m.V.copy()
+            V[:, 0] += np.abs(V[:, 1]) * k
+            m = G.Mesh(V, m.F)
+        return m
+
+    def frame_grommets(self):
+        C = self.C
+        n = N["grom0"]
+        self.mirror_map = {}
+        member_cut = [box3(np.asarray(m["box"][0]) - 0.0002, np.asarray(m["box"][1]) + 0.0002)
+                      for m in C.L["chassis"]["members"] if "box" in m]
+        member_cut_m = [m for mm in C.L["chassis"]["members"] if "box" in mm and mm.get("mirror")
+                        for m in [box3(np.asarray(mm["box"][0]) * [1, -1, 1] - 0.0002, np.asarray(mm["box"][1]) * [1, -1, 1]
+                                       + 0.0002)]]
+        for sid in [s["id"] for s in C.L["stations"]]:
+            st = C.st[sid]
+            cuts = [c for c in st.get("cutouts", []) if c["id"].startswith(("C-HARN", "C-COAX", "C-FW-HARN"))]
+            if not cuts:
+                continue
+            xs = self.crossings(sid)
+            w = C.face(sid, 1)[0] - C.face(sid, -1)[0]
+            for c in cuts:
+                for mir in ((False, True) if c.get("mirror") else (False,)):
+                    y0, y1, z0, z1 = C.cutout(sid, c["id"], mir)
+                    inside = [(tid, side, p) for tid, side, p in xs if y0 < p[1] < y1 and z0 < p[2] < z1]
+                    if not inside:
+                        continue
+                    for tid, side, p in inside:
+                        r = 0.5 * float(C.trunk[tid]["diameter"])
+                        if not (y0 + r + 0.001 <= p[1] <= y1 - r - 0.001 and z0 + r + 0.001 <= p[2] <= z1 - r - 0.001):
+                            raise ValueError(f"{tid} does not clear cut-out {sid}/{c['id']}: {p}")
+                    is_fw = c["id"] == "C-FW-HARN"
+                    pid = self.pid("fw_grommet") if is_fw else self.pid(n)
+                    if not is_fw:
+                        n += 1
+                        if n >= N["cn_wing"]:
+                            raise ValueError("grommet part numbers overrun")
+                    plug = sbox(y0 + GROM_CLR, z0 + GROM_CLR, y1 - GROM_CLR, z1 - GROM_CLR)
+                    rim = sbox(y0 - GROM_RIM, z0 - GROM_RIM, y1 + GROM_RIM, z1 + GROM_RIM)
+                    bundles = [(tid, side) for tid, side, _p in inside]
+
+                    def mesh(plug=plug, rim=rim, sid=sid, w=w, bundles=bundles):
+                        g = union([self.chevron(plug, sid, -TOUCH - GROM_FL, w + TOUCH + GROM_FL),
+                                   self.chevron(rim, sid, -TOUCH - GROM_FL, -TOUCH),
+                                   self.chevron(rim, sid, w + TOUCH, w + TOUCH + GROM_FL)])
+                        cut = []
+                        for tid, side in bundles:
+                            env = self.bundle(tid, TOUCH)
+                            cut.append(env if side > 0 else env.mirrored_y())
+                        lo, hi = g.bounds()
+                        for mc in member_cut + member_cut_m:
+                            mlo, mhi = mc.bounds()
+                            if np.all(mhi >= lo) and np.all(mlo <= hi):
+                                cut.append(mc)
+                        return finish(diff(g, cut))
+                    bids = []
+                    for tid, side in bundles:
+                        ids = self.trunk_ids[tid]
+                        bids.append(ids[0] if side > 0 else ids[-1])
+                    side_s = "-L" if mir else ""
+                    nm = "fireproof harness grommet, firewall" if is_fw else f"harness grommet {sid} {c['id']}{side_s}"
+                    nm_tr = "yangın perdesi yangına dayanıklı kablo geçiş rondelası" if is_fw else \
+                        f"kablo geçiş rondelası {sid} {c['id']}{side_s}"
+                    fr = st["part"]
+                    self.add(pid, nm, nm_tr, P_BUY, P_BUY, mesh, purchased=True,
+                             vendor=("fire-resistant silicone grommet with stainless retainer and fire sleeve (ISO 2685 "
+                                     "fireproof pass-through)") if is_fw else
+                             "moulded split silicone grommet (VMQ 60 Shore A), bonded, harness tied to it",
+                             mass_kg=0.0, parent=fr, contacts=(fr,) + tuple(bids), step=STEP_HARNESS,
+                             explode=(0.0, 0.0, 0.10),
+                             notes=f"fills cut-out {c['id']}{side_s} of {sid} (0.2 mm clearance), {GROM_FL * 1000:.1f} mm "
+                                   "flanges on both web faces (trimmed at the members meeting the frame), holes for "
+                                   + ", ".join(bids))
+                    self.harness_fixed[pid] = None
+                    for b in bids:
+                        self.reg.parts[b].contacts = tuple(dict.fromkeys(self.reg.parts[b].contacts + (pid,)))
+
+    def ring_grommet(self, key_pid, name, name_tr, member_part, point, axis, t_wall, bore_r, bundles, trim=None):
+        """Split ring grommet in a round bore of a panel (axis normal to the panel, panel from point to point +
+        t_wall * axis): plug 0.2 mm inside the bore, 1.5 mm flanges 3.5 mm beyond it on both faces, bundle holes."""
+        a = G.unit(axis)
+        p = np.asarray(point, float)
+
+        def mesh():
+            g = union([G.cylinder(bore_r - GROM_CLR, p - (TOUCH + GROM_FL) * a, p + (t_wall + TOUCH + GROM_FL) * a, n=40),
+                       G.cylinder(bore_r + 0.0035, p - (TOUCH + GROM_FL) * a, p - TOUCH * a, n=40),
+                       G.cylinder(bore_r + 0.0035, p + (t_wall + TOUCH) * a, p + (t_wall + TOUCH + GROM_FL) * a, n=40)])
+            cut = [self.bundle(tid, TOUCH) if side > 0 else self.bundle(tid, TOUCH).mirrored_y()
+                   for tid, side in bundles]
+            if trim is not None:
+                cut += trim
+            return finish(diff(g, cut))
+        bids = [self.trunk_ids[tid][0] if side > 0 else self.trunk_ids[tid][-1] for tid, side in bundles]
+        self.add(key_pid, name, name_tr, P_BUY, P_BUY, mesh, purchased=True,
+                 vendor="moulded split silicone grommet (VMQ 60 Shore A), sealed with polysulphide where the panel "
+                        "is a vapour or fuel boundary", mass_kg=0.0, parent=member_part,
+                 contacts=(member_part,) + tuple(bids), step=STEP_HARNESS, explode=(0.0, 0.0, 0.10),
+                 notes="layout.systems.harness penetration; holes for " + ", ".join(bids))
+        self.harness_fixed[key_pid] = None
+        for b in bids:
+            self.reg.parts[b].contacts = tuple(dict.fromkeys(self.reg.parts[b].contacts + (key_pid,)))
+        return key_pid
+
+    def member_grommets(self):
+        C = self.C
+        hw = C.trunk["H-WING"]
+        pen = {p["member"]: np.asarray(p["point"], float) for p in hw["penetrations"]}
+        n = 770
+        # centre box lower cover (outer face = box z0), side-of-body rib, glove rib: starboard here, mirrored later
+        box_lo, _ = C.member_box("M-CTBOX")
+        t_cov = layup_props(self.spec, "ct_box_cover")["thickness"]
+        p = pen["M-CTBOX"].copy()
+        p[2] = float(box_lo[2]) + 0.0002
+        g1 = self.ring_grommet(self.pid(n, "R"), "harness grommet, centre-box lower cover, starboard",
+                               "kablo geçiş rondelası, orta kutu alt kapağı, sağ", C.mem["M-CTBOX"]["part"], p,
+                               (0, 0, 1), t_cov - 0.0004, 0.010, [("H-WING", 1)])
+        sob = C.member_box("M-SOB")
+        p = pen["M-SOB"].copy()
+        p[1] = float(sob[0][1])
+        g2 = self.ring_grommet(self.pid(n + 1, "R"), "harness grommet, side-of-body rib, starboard",
+                               "kablo geçiş rondelası, gövde yanı kaburgası, sağ", C.mem["M-SOB"]["part"] + "-R", p,
+                               (0, 1, 0), float(sob[1][1] - sob[0][1]), 0.010, [("H-WING", 1)])
+        gl = C.member_box("M-GLOVERIB")
+        p = pen["M-GLOVERIB"].copy()
+        p[1] = float(gl[0][1])
+        g3 = self.ring_grommet(self.pid(n + 2, "R"), "harness grommet, glove rib, starboard",
+                               "kablo geçiş rondelası, eldiven kaburgası, sağ", C.mem["M-GLOVERIB"]["part"] + "-R", p,
+                               (0, 1, 0), float(gl[1][1] - gl[0][1]), 0.010, [("H-WING", 1)])
+        self.mirror_map.update({g: g[:-1] + "L" for g in (g1, g2, g3)})
+        self.member_grommets_R = (g1, g2, g3)
+        # main-well forward wall: H-MAIN over H-COAX in one sealed two-hole grommet (aft flange inside the channel)
+        ww = C.member_box("M-WELLWALL-FWD")
+        x0w, x1w = float(ww[0][0]), float(ww[1][0])
+        pm = {p_["member"]: np.asarray(p_["point"], float) for t in ("H-MAIN", "H-COAX")
+              for p_ in C.trunk[t]["penetrations"]}
+        pts = [np.asarray(pp["point"], float) for t in ("H-MAIN", "H-COAX") for pp in C.trunk[t]["penetrations"]]
+        rs = [0.5 * float(C.trunk[t]["diameter"]) + 0.003 for t in ("H-MAIN", "H-COAX")]
+        del pm
+        wid = self.pid(n + 3)
+        kw = C.member_box("M-WELLKEEL")
+        y_in = float(kw[0][1]) - 0.0004
+
+        def wmesh():
+            g = []
+            for q, r in zip(pts, rs):
+                g.append(G.cylinder(r - GROM_CLR, (x0w - TOUCH - GROM_FL, q[1], q[2]), (x1w + TOUCH + GROM_FL, q[1], q[2]),
+                                    n=40))
+                g.append(G.cylinder(r + 0.0035, (x0w - TOUCH - GROM_FL, q[1], q[2]), (x0w - TOUCH, q[1], q[2]), n=40))
+                g.append(G.cylinder(r + 0.0035, (x1w + TOUCH, q[1], q[2]), (x1w + TOUCH + GROM_FL, q[1], q[2]), n=40))
+            m = union(g)
+            cut = [self.bundle("H-MAIN", TOUCH), self.bundle("H-COAX", TOUCH)]
+            for s in (1, -1):        # aft flange stays between the channel keel webs
+                cut.append(box3((x1w, s * y_in if s > 0 else -0.1, -0.3), (x1w + 0.01, 0.1 if s > 0 else -y_in, 0.0)))
+            return finish(diff(m, cut))
+        self.add(wid, "sealed harness entry, main-well forward wall", "sızdırmaz kablo girişi, ana kuyu ön duvarı",
+                 P_BUY, P_BUY, wmesh, purchased=True, vendor="moulded two-hole silicone grommet, sealed (polysulphide)",
+                 mass_kg=0.0, parent=C.mem["M-WELLWALL-FWD"]["part"],
+                 contacts=(C.mem["M-WELLWALL-FWD"]["part"], self.trunk_ids["H-MAIN"][0], self.trunk_ids["H-COAX"][0]),
+                 step=STEP_HARNESS, explode=(0.0, 0.0, -0.10),
+                 notes="H-MAIN over H-COAX through M-WELLWALL-FWD into the centre-line conduit")
+        self.harness_fixed[wid] = None
+        for b in (self.trunk_ids["H-MAIN"][0], self.trunk_ids["H-COAX"][0]):
+            self.reg.parts[b].contacts = tuple(dict.fromkeys(self.reg.parts[b].contacts + (wid,)))
+
+    def conduit(self):
+        """CFRP U-conduit (4 plies PW, 0.8 mm) closing the centre-line harness channel between the main wells:
+        side walls bonded to the keel webs M-WELLKEEL, flanges under the well roof, floor under the coax tier."""
+        C = self.C
+        kw_lo, kw_hi = C.member_box("M-WELLKEEL")
+        roof_lo, _ = C.member_box("M-WELLROOF")
+        ww = C.member_box("M-WELLWALL-FWD")
+        t = 0.0008
+        yo = float(kw_lo[1]) - 0.0001
+        yi = yo - t
+        zt = float(roof_lo[2]) - 0.0001
+        rc = 0.5 * float(C.trunk["H-COAX"]["diameter"])
+        zc = float(C.trunk["H-COAX"]["path"][-3][2])
+        zb1 = zc - rc - 0.0015
+        zb0 = zb1 - t
+        x0 = float(ww[1][0]) + TOUCH + GROM_FL + 0.0005
+        x1 = C.face("FS-GEAR", -1)[0] - TOUCH - GROM_FL - 0.0005
+        cid = self.pid("conduit")
+        prof = Polygon([(-yo, zt), (-yi, zt), (-yi, zb1), (yi, zb1), (yi, zt), (yo, zt), (yo, zb0), (-yo, zb0)])
+        self.add(cid, "centre-line harness conduit (between the main wells)", "orta hat kablo kanalı (ana kuyular arası)",
+                 MAT_PW, P_PREG, (lambda: prism_x(prof, x0, x1)), thickness=t,
+                 parent=C.mem["M-WELLKEEL"]["part"] + "-R",
+                 contacts=(C.mem["M-WELLKEEL"]["part"] + "-R", C.mem["M-WELLKEEL"]["part"] + "-L",
+                           C.mem["M-WELLROOF"]["part"]), step=STEP_HARNESS, explode=(0.0, 0.0, -0.15),
+                 notes="OOA prepreg U 30 x 52 mm, 4 plies PW (0.8 mm), bonded to the keel webs (closes the channel "
+                       "towards the wells: layout H-MAIN 'sealed CFRP conduit'); H-MAIN upper tier, H-COAX lower tier")
+
+    def wing_receptacles(self, RC, cn, y_p0, y_p1, y_f0, y_f1, y_bs):
+        C = self.C
+        rib = C.mem["M-JOINTRIB"]["part"] + "-R"
+        x0p, x1p, z0p, z1p = 2.6935, 2.7565, -0.034, 0.014
+        cx, cz = float(cn[0]), float(cn[2])
+        plate = self.pid("cn_wing", "R")
+        plate = self.pid(N["cn_wing"] + 1, "R")
+        rec = self.pid("cn_wing", "R")
+
+        def pmesh():
+            m = box3((x0p, y_p0, z0p), (x1p, y_p1, z1p))
+            return diff(m, [cyl((cx, y_p0 - 0.001, cz), (cx, y_p1 + 0.001, cz), RC["r_body"] + 0.0005, 48)])
+        self.add(plate, "wing connector float plate, starboard", "kanat konnektörü yüzer plakası, sağ", MAT_AL, P_CNC,
+                 pmesh, thickness=RC["plate_t"], parent=rib, contacts=(rib,), step=STEP_HARNESS,
+                 explode=(0.0, -0.06, 0.0),
+                 notes="6061-T6 2 mm on the inboard face of the joint rib (2 x M3 into potted inserts); the receptacle "
+                       "floats +-0.5 mm in its bore (blind mate in the last 8 mm of the panel stroke)")
+
+        def rmesh():
+            fl = box3((cx - 0.5 * RC["fl"], y_f0, cz - 0.5 * RC["fl"]), (cx + 0.5 * RC["fl"], y_f1, cz + 0.5 * RC["fl"]))
+            body = cyl((cx, y_f1 - OV, cz), (cx, RC["y_front"], cz), RC["r_body"], 48)
+            bs = cyl((cx, y_bs, cz), (cx, y_f0 + OV, cz), RC["r_bs"], 48)
+            return union([fl, body, bs])
+        hw_r = self.trunk_ids["H-WING"][0]
+        self.add(rec, "wing connector CN-WING (receptacle), starboard", "kanat konnektörü CN-WING (dişi), sağ", P_BUY,
+                 P_BUY, rmesh, purchased=True, vendor="MIL-DTL-38999 series III receptacle, 19 pins + 2 coax inserts, "
+                 "jam-nut, with backshell (layout CN-WING type, estimate)", mass_kg=RECEPT_MASS, parent=plate,
+                 contacts=(plate, hw_r), step=STEP_HARNESS, explode=(0.0, -0.08, 0.0),
+                 notes=C.conn["CN-WING"]["location"])
+        self.harness_fixed[rec] = RECEPT_MASS
+        self.reg.parts[hw_r].contacts = tuple(dict.fromkeys(self.reg.parts[hw_r].contacts + (rec,)))
+        for k, x in enumerate((cx - 0.024, cx + 0.024)):
+            self.insert_bolt(f"{plate}-B{k + 1}", 3, (x, y_p0, cz), (0.0, 1.0, 0.0), [(plate, y_p1 - y_p0 + 0.0001)],
+                             rib, float(C.member_box("M-JOINTRIB")[1][1] - C.member_box("M-JOINTRIB")[0][1]),
+                             step=STEP_HARNESS, notes="float plate into a potted M3 insert of the joint rib")
+        self.mirror_map.update({plate: plate[:-1] + "L", rec: rec[:-1] + "L", rib: rib[:-1] + "L"})
+        self.cn_ids = (plate, rec)
+
+    def mirror_wing_items(self):
+        """Port copies of the H-WING grommets and the wing receptacle (after the starboard holes are cut)."""
+        idm = dict(self.mirror_map)
+        idm.update({self.trunk_ids["H-WING"][0]: self.trunk_ids["H-WING"][-1]})
+        for pid in list(self.member_grommets_R) + list(self.cn_ids):
+            p = self.reg.parts[pid]
+            q = mirror_part(p, pid[:-1] + "L", id_map=idm)
+            if q.parent and q.parent.endswith("-R"):
+                q.parent = q.parent[:-1] + "L"
+            q.contacts = tuple(c[:-1] + "L" if (c.endswith("-R") and c[:-1] + "L" in self.reg.parts) else c
+                               for c in q.contacts)
+            self.reg.add(q)
+            if pid in self.harness_fixed:
+                self.harness_fixed[q.id] = self.harness_fixed[pid]
+            for f in q.fasteners:                         # port inserts / holes in the mirrored rib
+                for j in f.joins[1:]:
+                    pass
+
+    def parachute(self):
+        pass
+
+    def wing_tail_items(self):
+        pass
+
+    def harness_masses(self):
+        pass
+
+
+def register(reg: Registry, spec: dict) -> None:
+    if any(p.group == "systems" for p in reg.parts.values()):
+        reg.note("systems: already registered, second call ignored")
+        return
+    Systems(reg, spec).build()

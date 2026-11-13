@@ -1,0 +1,795 @@
+{
+ "parts": 2463,
+ "empty": {
+  "mass": 107.43820895409786,
+  "cg": [
+   2.644975960103625,
+   -0.0011859713781119205,
+   0.030718745026801313
+  ]
+ },
+ "by_group": {
+  "chassis": {
+   "mass": 19.19310571526014,
+   "cg": [
+    2.590396674179151,
+    0.0004141811397916052,
+    0.013196970193124607
+   ]
+  },
+  "propulsion": {
+   "mass": 13.445780401032748,
+   "cg": [
+    3.6314570570264486,
+    -0.0008875190651581041,
+    0.135399467227589
+   ]
+  },
+  "wing": {
+   "mass": 12.296916581146808,
+   "cg": [
+    2.770028831702253,
+    -0.0032883716358559777,
+    0.05245482719446246
+   ]
+  },
+  "controls": {
+   "mass": 8.150285153970406,
+   "cg": [
+    3.0375269377988583,
+    -0.003966425638591858,
+    0.14881768284339533
+   ]
+  },
+  "tail": {
+   "mass": 7.332105937961977,
+   "cg": [
+    3.781898550352291,
+    -0.00013532954220721162,
+    0.3361044725975401
+   ]
+  },
+  "shell": {
+   "mass": 10.208470223718026,
+   "cg": [
+    2.258318164909096,
+    0.00042181107200953366,
+    -0.003157115155886615
+   ]
+  },
+  "systems": {
+   "mass": 15.207834269823366,
+   "cg": [
+    1.4453940867439055,
+    -0.00437926887593012,
+    -0.007488798744235069
+   ]
+  },
+  "fuel": {
+   "mass": 2.366197608378505,
+   "cg": [
+    2.8323929571007604,
+    0.010528167062631717,
+    0.016777507562275445
+   ]
+  },
+  "gear": {
+   "mass": 12.702935651759848,
+   "cg": [
+    2.427737880871353,
+    -0.0009484412632807505,
+    -0.24706643036263773
+   ]
+  },
+  "payload": {
+   "mass": 1.7363239836780784,
+   "cg": [
+    1.2199999999999978,
+    -3.184561828123231e-16,
+    -0.06502446511054859
+   ]
+  },
+  "hardware": {
+   "mass": 6.534577411045803,
+   "cg": [
+    2.5250992561709302,
+    -3.805606794097293e-05,
+    0.022820084709228503
+   ]
+  }
+ },
+ "cases": {
+  "mtow_design_payload_turret_retracted": {
+   "mass": 139.46363293777497,
+   "cg": [
+    2.6201871307571727,
+    -0.0009135359881288389,
+    0.025376479176980694
+   ],
+   "inertia": [
+    [
+     70.05425629942516,
+     -0.18974004906373604,
+     -10.293808288603014
+    ],
+    [
+     -0.1897400490637218,
+     122.16906219072517,
+     -0.053726785708267714
+    ],
+    [
+     -10.293808288602937,
+     -0.053726785708266674,
+     183.45230117330635
+    ]
+   ],
+   "cg_mac": 0.08646761528189091
+  },
+  "mtow_design_payload_turret_extended": {
+   "mass": 139.46363293777497,
+   "cg": [
+    2.6201871307571727,
+    -0.0009135359881288389,
+    0.025376479176980694
+   ],
+   "inertia": [
+    [
+     70.05425629942516,
+     -0.18974004906373604,
+     -10.293808288603014
+    ],
+    [
+     -0.1897400490637218,
+     122.16906219072517,
+     -0.053726785708267714
+    ],
+    [
+     -10.293808288602937,
+     -0.053726785708266674,
+     183.45230117330635
+    ]
+   ],
+   "cg_mac": 0.08646761528189091
+  },
+  "mtow_max_payload_turret_retracted": {
+   "mass": 137.46364366477496,
+   "cg": [
+    2.6202986135584285,
+    -0.0009268337567210363,
+    0.0255767822310021
+   ],
+   "inertia": [
+    [
+     69.98207475758461,
+     -0.18975394330096332,
+     -10.292855887746494
+    ],
+    [
+     -0.189753943300951,
+     122.01287387805267,
+     -0.053752304264855305
+    ],
+    [
+     -10.292855887746413,
+     -0.05375230426485437,
+     183.23190180597248
+    ]
+   ],
+   "cg_mac": 0.08669780421306275
+  },
+  "mtow_max_payload_turret_extended": {
+   "mass": 137.46364366477496,
+   "cg": [
+    2.6202986135584285,
+    -0.0009268337567210363,
+    0.0255767822310021
+   ],
+   "inertia": [
+    [
+     69.98207475758461,
+     -0.18975394330096332,
+     -10.292855887746494
+    ],
+    [
+     -0.189753943300951,
+     122.01287387805267,
+     -0.053752304264855305
+    ],
+    [
+     -10.292855887746413,
+     -0.05375230426485437,
+     183.23190180597248
+    ]
+   ],
+   "cg_mac": 0.08669780421306275
+  },
+  "full_fuel_baseline_sensors_only": {
+   "mass": 145.0253174797748,
+   "cg": [
+    2.619893277448532,
+    -0.0008784849017336347,
+    0.024848507916009448
+   ],
+   "inertia": [
+    [
+     70.25492684960795,
+     -0.1897034716172958,
+     -10.296425743107186
+    ],
+    [
+     -0.18970347161728146,
+     122.60332654515597,
+     -0.053659524279935374
+    ],
+    [
+     -10.29642574310711,
+     -0.053659524279934846,
+     184.0651828181314
+    ]
+   ],
+   "cg_mac": 0.0858608689651914
+  },
+  "zero_fuel_design_payload": {
+   "mass": 109.17453293777594,
+   "cg": [
+    2.622312983041908,
+    -0.00116710955665632,
+    0.029196034303316378
+   ],
+   "inertia": [
+    [
+     68.95957759360533,
+     -0.1900062375161006,
+     -10.278544540508573
+    ],
+    [
+     -0.19000623751608378,
+     119.80167105887448,
+     -0.05421344940059713
+    ],
+    [
+     -10.278544540508504,
+     -0.05421344940059656,
+     180.1139598674974
+    ]
+   ],
+   "cg_mac": 0.09085706064691572
+  },
+  "zero_fuel_max_payload": {
+   "mass": 109.17453293777594,
+   "cg": [
+    2.622312983041908,
+    -0.00116710955665632,
+    0.029196034303316378
+   ],
+   "inertia": [
+    [
+     68.95957759360533,
+     -0.1900062375161006,
+     -10.278544540508573
+    ],
+    [
+     -0.19000623751608378,
+     119.80167105887448,
+     -0.05421344940059713
+    ],
+    [
+     -10.278544540508504,
+     -0.05421344940059656,
+     180.1139598674974
+    ]
+   ],
+   "cg_mac": 0.09085706064691572
+  },
+  "reserve_fuel_design_payload": {
+   "mass": 112.80922493777594,
+   "cg": [
+    2.6219976055544185,
+    -0.0011294910468899293,
+    0.028629390182410064
+   ],
+   "inertia": [
+    [
+     69.09114788955812,
+     -0.18996661176288768,
+     -10.280491920688434
+    ],
+    [
+     -0.18996661176287255,
+     120.0860303416482,
+     -0.0541412453305177
+    ],
+    [
+     -10.280491920688354,
+     -0.05414124533051657,
+     180.51462615279524
+    ]
+   ],
+   "cg_mac": 0.09020587135185815
+  },
+  "minimum_flying_turret_only": {
+   "mass": 112.20344293777593,
+   "cg": [
+    2.6220487495434,
+    -0.001135591547798562,
+    0.028721281461355625
+   ],
+   "inertia": [
+    [
+     69.06922442342088,
+     -0.18997303518799896,
+     -10.280170081709278
+    ],
+    [
+     -0.18997303518798073,
+     120.03864353911236,
+     -0.0541529543752042
+    ],
+    [
+     -10.280170081709208,
+     -0.05415295437520371,
+     180.44784997646508
+    ]
+   ],
+   "cg_mac": 0.09031147311308886
+  },
+  "e180_growth_turret_full_fuel": {
+   "mass": 139.46363293777497,
+   "cg": [
+    2.6201871307571727,
+    -0.0009135359881288389,
+    0.025376479176980694
+   ],
+   "inertia": [
+    [
+     70.05425629942516,
+     -0.18974004906373604,
+     -10.293808288603014
+    ],
+    [
+     -0.1897400490637218,
+     122.16906219072517,
+     -0.053726785708267714
+    ],
+    [
+     -10.293808288602937,
+     -0.053726785708266674,
+     183.45230117330635
+    ]
+   ],
+   "cg_mac": 0.08646761528189091
+  }
+ },
+ "budget": [
+  {
+   "group": "chassis",
+   "computed_kg": 19.19310571526014,
+   "target_kg": 12.61,
+   "tol_kg": 0.37,
+   "ok": false
+  },
+  {
+   "group": "controls",
+   "computed_kg": 8.150285153970406,
+   "target_kg": 8.29,
+   "tol_kg": 0.25,
+   "ok": true
+  },
+  {
+   "group": "fuel",
+   "computed_kg": 2.366197608378505,
+   "target_kg": 2.35,
+   "tol_kg": 0.07,
+   "ok": true
+  },
+  {
+   "group": "gear",
+   "computed_kg": 12.702935651759848,
+   "target_kg": 14.57,
+   "tol_kg": 0.44,
+   "ok": false
+  },
+  {
+   "group": "hardware",
+   "computed_kg": 6.534577411045803,
+   "target_kg": 1.51,
+   "tol_kg": 0.05,
+   "ok": false
+  },
+  {
+   "group": "propulsion",
+   "computed_kg": 13.445780401032748,
+   "target_kg": 14.54,
+   "tol_kg": 0.44,
+   "ok": false
+  },
+  {
+   "group": "shell",
+   "computed_kg": 10.208470223718026,
+   "target_kg": 10.48,
+   "tol_kg": 0.31,
+   "ok": true
+  },
+  {
+   "group": "systems",
+   "computed_kg": 15.207834269823366,
+   "target_kg": 14.79,
+   "tol_kg": 0.44,
+   "ok": true
+  },
+  {
+   "group": "tail",
+   "computed_kg": 7.332105937961977,
+   "target_kg": 7.35,
+   "tol_kg": 0.22,
+   "ok": true
+  },
+  {
+   "group": "wing",
+   "computed_kg": 12.296916581146808,
+   "target_kg": 15.18,
+   "tol_kg": 0.46,
+   "ok": false
+  }
+ ],
+ "rebooked": [
+  {
+   "id": "YK250-FU-584",
+   "producer_group": "fuel",
+   "group": "propulsion",
+   "mass_item": "engine_group_installed",
+   "mass": 0.35
+  },
+  {
+   "id": "YK250-PL-822",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.13791976053070118
+  },
+  {
+   "id": "YK250-PL-823",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.04
+  },
+  {
+   "id": "YK250-PL-824",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.2
+  },
+  {
+   "id": "YK250-PL-825",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.085
+  },
+  {
+   "id": "YK250-PL-826-L",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.0569037993304593
+  },
+  {
+   "id": "YK250-PL-826-R",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.05690379933033852
+  },
+  {
+   "id": "YK250-PL-827",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.057447308265647486
+  },
+  {
+   "id": "YK250-PL-828",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.1469
+  },
+  {
+   "id": "YK250-PL-829",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.1469
+  },
+  {
+   "id": "YK250-PL-830-L",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.132
+  },
+  {
+   "id": "YK250-PL-830-R",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.132
+  },
+  {
+   "id": "YK250-PL-831-L",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.03673414146715815
+  },
+  {
+   "id": "YK250-PL-831-R",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.03673414146716302
+  },
+  {
+   "id": "YK250-PL-832",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.03853952523799135
+  },
+  {
+   "id": "YK250-PL-833",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.03
+  },
+  {
+   "id": "YK250-PL-834-L",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.018365250008948748
+  },
+  {
+   "id": "YK250-PL-834-R",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.018365250008977083
+  },
+  {
+   "id": "YK250-PL-835-L",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.019670758254653135
+  },
+  {
+   "id": "YK250-PL-835-R",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.019670758254549534
+  },
+  {
+   "id": "YK250-PL-836-L",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.03575588006644205
+  },
+  {
+   "id": "YK250-PL-836-R",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.03575588006641638
+  },
+  {
+   "id": "YK250-PL-837-L",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.04357895936870469
+  },
+  {
+   "id": "YK250-PL-837-R",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.04357895936872087
+  },
+  {
+   "id": "YK250-PL-838-L",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.03811640523455991
+  },
+  {
+   "id": "YK250-PL-838-R",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.03811640523455364
+  },
+  {
+   "id": "YK250-PL-839",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.034
+  },
+  {
+   "id": "YK250-PL-840",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.034
+  },
+  {
+   "id": "YK250-PL-841",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.034
+  },
+  {
+   "id": "YK250-PL-842",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.034
+  },
+  {
+   "id": "YK250-PL-847",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.012
+  },
+  {
+   "id": "YK250-PL-848",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.016211987787781785
+  },
+  {
+   "id": "YK250-PL-849",
+   "producer_group": "payload",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.06
+  },
+  {
+   "id": "YK250-SH-363",
+   "producer_group": "shell",
+   "group": "systems",
+   "mass_item": "turret_lift_mechanism_doors",
+   "mass": 0.15487586273707482
+  }
+ ],
+ "failures": [
+  "mtow_design_payload_turret_retracted: CG x 2.6202 outside [2.58402, 2.60535]",
+  "mtow_design_payload_turret_extended: CG x 2.6202 outside [2.58402, 2.60535]",
+  "mtow_max_payload_turret_retracted: CG x 2.6203 outside [2.58402, 2.60535]",
+  "mtow_max_payload_turret_extended: CG x 2.6203 outside [2.58402, 2.60535]",
+  "full_fuel_baseline_sensors_only: CG x 2.6199 outside [2.58402, 2.60535]",
+  "zero_fuel_design_payload: CG x 2.6223 outside [2.58402, 2.60535]",
+  "zero_fuel_max_payload: CG x 2.6223 outside [2.58402, 2.60535]",
+  "reserve_fuel_design_payload: CG x 2.6220 outside [2.58402, 2.60535]",
+  "minimum_flying_turret_only: CG x 2.6220 outside [2.58402, 2.60535]",
+  "e180_growth_turret_full_fuel: CG x 2.6202 outside [2.58402, 2.60535]",
+  "budget chassis: 19.19 kg vs 12.61 \u00b1 0.37",
+  "budget gear: 12.70 kg vs 14.57 \u00b1 0.44",
+  "budget hardware: 6.53 kg vs 1.51 \u00b1 0.05",
+  "budget propulsion: 13.45 kg vs 14.54 \u00b1 0.44",
+  "budget wing: 12.30 kg vs 15.18 \u00b1 0.46"
+ ],
+ "ok": false,
+ "top_parts": [
+  {
+   "id": "YK250-FU-596",
+   "mass": 14.3166
+  },
+  {
+   "id": "YK250-FU-598",
+   "mass": 11.0306
+  },
+  {
+   "id": "YK250-PR-500",
+   "mass": 6.532584059724739
+  },
+  {
+   "id": "YK250-FU-597",
+   "mass": 4.9419
+  },
+  {
+   "id": "YK250-SY-800",
+   "mass": 4.4113
+  },
+  {
+   "id": "YK250-CH-001",
+   "mass": 2.545279263600441
+  },
+  {
+   "id": "YK250-SY-726",
+   "mass": 1.98
+  },
+  {
+   "id": "YK250-SY-720",
+   "mass": 1.6
+  },
+  {
+   "id": "YK250-PL-820",
+   "mass": 1.55
+  },
+  {
+   "id": "YK250-LG-622-R",
+   "mass": 1.39
+  },
+  {
+   "id": "YK250-LG-622-L",
+   "mass": 1.39
+  },
+  {
+   "id": "YK250-WG-151-R",
+   "mass": 1.2828896617205516
+  },
+  {
+   "id": "YK250-WG-151-L",
+   "mass": 1.2828896617205516
+  },
+  {
+   "id": "YK250-WG-150-R",
+   "mass": 1.0639239220824313
+  },
+  {
+   "id": "YK250-WG-150-L",
+   "mass": 1.0639239220824313
+  },
+  {
+   "id": "YK250-TL-256-R",
+   "mass": 1.0385699811241096
+  },
+  {
+   "id": "YK250-TL-256-L",
+   "mass": 1.0385699811240412
+  },
+  {
+   "id": "YK250-WG-153-R",
+   "mass": 0.9857879019657505
+  },
+  {
+   "id": "YK250-WG-153-L",
+   "mass": 0.9857879019657505
+  },
+  {
+   "id": "YK250-CH-085",
+   "mass": 0.9558812168155667
+  },
+  {
+   "id": "YK250-LG-626",
+   "mass": 0.895
+  },
+  {
+   "id": "YK250-WG-154-R",
+   "mass": 0.8623222444644297
+  },
+  {
+   "id": "YK250-WG-154-L",
+   "mass": 0.8623222444644297
+  },
+  {
+   "id": "YK250-PR-510",
+   "mass": 0.8
+  },
+  {
+   "id": "YK250-SH-383",
+   "mass": 0.778412641767705
+  }
+ ]
+}

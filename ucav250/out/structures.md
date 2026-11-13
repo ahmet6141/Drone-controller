@@ -2,7 +2,7 @@
 
 Üreten: `python3 -m ucav250.analysis.structures` (el hesapları, `analysis/structlib.py`); yöntem ve açıklamalar: `docs/04_yapi_hesaplari.md`. Uygulanan değer LİMİT yük/gerilme/birim şekil değiştirme (yalnız nihai durumlarda nihai), izin verilen değer NİHAİ tasarım değeridir; **MS = izin verilen / (uygulanan × toplam katsayı) − 1**.
 
-- Satır sayısı: 323 (300 emniyet payı, 23 gereksinim / bilgi satırı)
+- Satır sayısı: 323 (301 emniyet payı, 22 gereksinim / bilgi satırı)
 - En küçük MS: **0,000** (W-CAP-24); negatif MS: 0
 - Arayüz kontrolleri (yerleşim ↔ yapı boyutları): 18/18 uygun
 
@@ -290,7 +290,7 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | G-EMA-NOSE | burun takımı toplama EMA'sı: mafsal ekseninde gerekli çıkış torku (1,25 x (n 2'de ağırlık momenti + teker/bacak sürüklemesi x bacak boyu, akışa karşı açılma)) | YD-33 | 25,71 | – | N m | - | gereksinim | takım ünitesi EMA gereksinimi |
 | G-DOOR-HINGE | ana iç kapak menteşeleri (3 x Ø4 pim, 3 mm 7075 kulak), ezilme | YD-34 | 62,55 | 12907 | N | FoS 1,5 x ezilme 2 | 67,785 | ezilme katsayısı 2,0 (dönen bağlantı) |
 | G-DOOR-LOCK | ana iç kapak: kapalı konumda tutma momenti (gereksinim: ölü nokta bağlantısı veya kapak kilidi; DA 22 anma torku 1,8 N m için bağlantı oranı >= değer / 1,8) | YD-34 | 17,64 | – | N m | - | gereksinim | nihai tutma momenti; kapalı kapağı tutmak için eyleyiciye güvenilmez |
-| G-DOOR-DRIVE | ana iç kapak tahriki (EQ-DOORACT, yalnız iç kapak; düzeltme turu 3, PK3-07): |Cp| 1,0 basınç üst sınırında gerekli nihai menteşe momenti; kapak işi 14,0 J / DA 22 anma torku x 180 derece = 5,7 J - hiçbir bağlantı oranı kapatmaz: AÇIK KONU (V_LO'da gövde altı basıncı ya da DA 26 sınıfı tahrik) | YD-35 | 8,45 | – | N m | - | gereksinim | DA 22 anma torku 1,8 N m (components.yaml); the closed door is held by the over-centre lock (G-DOOR-LOCK) |
+| G-DOOR-DRIVE | ana iç kapak tahriki Volz DA 30 (EQ-DOORACT, yalnız iç kapak; düzeltme turu 3 PK3-07, entegrasyon turu IR-02): |Cp| 1,0 basınç üst sınırında 95 derecelik kapak işi / DA 30 anma torku 8,0 N m x krank hareketi 131 derece = 18,3 J (DA 22: 4,1 J) | YD-35 | 9,34 | 18,29 | J | FoS 1,5 (işlevsel) | 0,306 | components.yaml volz_da30 anma torku (continuous duty at rated speed); the closed door is held by the over-centre lock (G-DOOR-LOCK) |
 | G-TDOOR-LINK | ana mafsal kapağı (kendi mikro dişli motoru, krank + biyel, kapalıyken ölü nokta ötesi; GD-07): kapak menteşe momenti (V_LO'da hava yükü + ağırlık, limit) | YD-35 | 0,257 | – | N m | - | gereksinim | requirement for the gearmotor (estimate class ~0,3 N m output, docs/detail/gear.md) |
 | G-NDOOR-DRIVE | burun kapağı tahriki: iki kapak için tek Volz DA 22 (EQ-NDOORACT, kol NDOOR-LINKAGE), gerekli tork / anma torku | YD-36 | 0,632 | 1,8 | N m | FoS 1,5 (işlevsel) | 0,899 | components.yaml volz_da22_28v anma torku; the closed doors are held by the over-centre lock, not by the actuator |
 | G-UPLOCK | ana yukarı kilit bağlantısı F-UPLOCK: kuyu tavanının dökme insertlerine 4 x M5 (dökme r 12 mm, çekirdek 5,6 mm), insert sökülmesi (en yüklü, kanca kaçıklığı) | YD-58 | 172,6 | 422,2 | N | FoS 1,5 x kompozit 1,2 | 0,359 | structlib.insert_pullout P = 2 pi b_p c tau_c (core minimum shear, no test correction) |
@@ -370,16 +370,16 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 
 | No | Eleman / kontrol | Yük durumu | Uygulanan | İzin verilen | Birim | Katsayılar | MS | Referans |
 |---|---|---|---|---|---|---|---|---|
-| B-DORSAL | sırt uzun kirişi (şapka 25 x 20 x 2,0, UD başlık + PW) FS-GEAR'de, birim şekil değiştirme (<= 2 mm) | YD-48 | 617,2 | 2600,0 | µε | FoS 1,5 | 1,808 | STANAG UL13.1.2; yalnız uzun kirişler (kaplamalar = kesme gövdeleri) |
-| B-CHINE-AFT | kenar uzun kirişi (J 35 x 30 x 2,4) FS-GEAR'de, birim şekil değiştirme (> 2 mm) | YD-48 | 463,3 | 3000,0 | µε | FoS 1,5 | 3,317 | STANAG UL13.1.2 |
-| B-DORSAL-COL | FS-GEAR ile FS3480 arasında sırt uzun kirişi kolonu (L 0,385 m, yalnız şapka, PW modülü, mafsallı) | YD-48 | 7108,3 | 42396 | N | FoS 1,5 x kompozit 1,2 | 2,314 | Euler; bağlı kaplama (25-32 mm somun plakaları) hesaba katılmadı |
-| B-CHINE-FWD | FS-FUEL'de kenar uzun kirişi, birim şekil değiştirme (> 2 mm) | YD-49 | 492,2 | 3000,0 | µε | FoS 1,5 | 3,064 | STANAG UL13.1.2 |
-| B-MIDFLOOR | alt başlık olarak görev bölmesi tabanı M-MIDFLOOR (tepsi kesiği dışında sabit dış şeritler net 0,470 m, rib_panel yüzleri), birim şekil değiştirme (sandviç) | YD-49 | 907,3 | 2600,0 | µε | FoS 1,5 | 0,910 | STANAG UL13.1.2 |
+| B-DORSAL | sırt uzun kirişi (şapka 25 x 20 x 2,0, UD başlık + PW) FS-GEAR'de, birim şekil değiştirme (<= 2 mm) | YD-48 | 618,4 | 2600,0 | µε | FoS 1,5 | 1,803 | STANAG UL13.1.2; yalnız uzun kirişler (kaplamalar = kesme gövdeleri) |
+| B-CHINE-AFT | kenar uzun kirişi (J 35 x 30 x 2,4) FS-GEAR'de, birim şekil değiştirme (> 2 mm) | YD-48 | 464,2 | 3000,0 | µε | FoS 1,5 | 3,308 | STANAG UL13.1.2 |
+| B-DORSAL-COL | FS-GEAR ile FS3480 arasında sırt uzun kirişi kolonu (L 0,385 m, yalnız şapka, PW modülü, mafsallı) | YD-48 | 7121,8 | 42396 | N | FoS 1,5 x kompozit 1,2 | 2,307 | Euler; bağlı kaplama (25-32 mm somun plakaları) hesaba katılmadı |
+| B-CHINE-FWD | FS-FUEL'de kenar uzun kirişi, birim şekil değiştirme (> 2 mm) | YD-49 | 492,1 | 3000,0 | µε | FoS 1,5 | 3,064 | STANAG UL13.1.2 |
+| B-MIDFLOOR | alt başlık olarak görev bölmesi tabanı M-MIDFLOOR (tepsi kesiği dışında sabit dış şeritler net 0,470 m, rib_panel yüzleri), birim şekil değiştirme (sandviç) | YD-49 | 907,2 | 2600,0 | µε | FoS 1,5 | 0,911 | STANAG UL13.1.2 |
 | B-MIDFLOOR-BUCK | görev bölmesi taban şeridi 0,38 x 0,235 m, kenar uzun kirişi ile kesik kenarı takviyesi arasında (2 yapıştırılmış şapka takviye) burkulma (bası) | YD-49 | 1 | 2,26 | yük çarpanı | FoS 1,5 x kompozit 1,2 | 0,258 | CLT D*, sandviç kesme düzeltmesi; SS edges |
-| B-SKIN-SHEAR | sabit arka kaplamalar P-AFT-UPPER / -LOWER (shell_secondary 0,4/5/0,4): yüz kesmesi, ilk katman hasarı | YD-50 | 12,57 | 97,04 | N/mm | FoS 1,5 x kompozit 1,2 | 3,290 | CLT |
-| B-SKIN-BUCK | sabit arka kaplama paneli kesme burkulması (çerçeve aralığı x uzun kirişler arası 0,25 m) | YD-50 | 1 | 4,86 | yük çarpanı | FoS 1,5 x kompozit 1,2 | 1,697 | Kollár & Springer uzun levha, sandviç düzeltmesi |
-| B-SCREW-SH | kaplama vida sırası ISO 7380 M4 A2-70, 32 mm aralık: kesme (yuvarlak baş 0,8 x sınıf) | YD-50 | 402,1 | 2950,1 | N | FoS 1,5 x bağlantı 1,15 | 3,253 | ISO 3506-1 A2-70; materials.yaml screw_types |
-| B-SCREW-BR | kaplama vida sırası M4: 1,6 mm dolu kenar bandında ezilme | YD-50 | 402,1 | 2662,1 | N | FoS 1,5 x kompozit 1,2 | 2,678 | QI ezilme ETW |
+| B-SKIN-SHEAR | sabit arka kaplamalar P-AFT-UPPER / -LOWER (shell_secondary 0,4/5/0,4): yüz kesmesi, ilk katman hasarı | YD-50 | 12,58 | 97,04 | N/mm | FoS 1,5 x kompozit 1,2 | 3,285 | CLT |
+| B-SKIN-BUCK | sabit arka kaplama paneli kesme burkulması (çerçeve aralığı x uzun kirişler arası 0,25 m) | YD-50 | 1 | 4,85 | yük çarpanı | FoS 1,5 x kompozit 1,2 | 1,694 | Kollár & Springer uzun levha, sandviç düzeltmesi |
+| B-SCREW-SH | kaplama vida sırası ISO 7380 M4 A2-70, 32 mm aralık: kesme (yuvarlak baş 0,8 x sınıf) | YD-50 | 402,6 | 2950,1 | N | FoS 1,5 x bağlantı 1,15 | 3,247 | ISO 3506-1 A2-70; materials.yaml screw_types |
+| B-SCREW-BR | kaplama vida sırası M4: 1,6 mm dolu kenar bandında ezilme | YD-50 | 402,6 | 2662,1 | N | FoS 1,5 x kompozit 1,2 | 2,673 | QI ezilme ETW |
 
 ### frames
 
@@ -469,9 +469,9 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | YD-45 | VD'de kapalı kapak emmesi (limit) |
 | YD-46 | taşıma kızağı, orta gövde 82,0 kg (boş, dış paneller, stabilatörler ve pervane yok), AM x 2,55: kızak tepkileri 1 g'de 340 / 465 N; 3 g düşey (tasarım kararı) |
 | YD-47 | dış panel 7,9 kg, 3 g düşey (tasarım kararı) |
-| YD-48 | FS-GEAR'de arka gövde: arka kalemlerin n 6,99 (teçhizat n'i) ataleti + iki stabilatör paneli 471 N (aynı yön): M 1917 N m, V 2990 N (limit) |
+| YD-48 | FS-GEAR'de arka gövde: arka kalemlerin n 6,99 (teçhizat n'i) ataleti + iki stabilatör paneli 471 N (aynı yön): M 1921 N m, V 2994 N (limit) |
 | YD-49 | FS-FUEL'de ön gövde: ön kalemlerin ataleti, n 6,99 (teçhizat n'i, belirleyici işaret): M 1984 N m (limit) |
-| YD-50 | arka gövde burulması 760 N m (iki dikey 572 N + %28 simetrik olmayan stabilatör) + yan kaplamalarda düşey kesme 2990 N (limit): q = 12567 N/m |
+| YD-50 | arka gövde burulması 760 N m (iki dikey 572 N + %28 simetrik olmayan stabilatör) + yan kaplamalarda düşey kesme 2994 N (limit): q = 12583 N/m |
 | YD-51 | CS-LUAS Ek H: n_j 5,40; ana bacak başına P_v 3970 N (limit), bütün ana takım durumları; kiriş ucu tepkisi 3621 N (düşey bacak yükü payı % 55 + sürükleme çifti M_y / L) |
 | YD-52 | CS-LUAS Ek H: n_j 5,40; ana bacak başına P_v 3970 N (limit), bütün ana takım durumları; kiriş ucu tepkisi 3758 N (düşey bacak yükü payı % 45 + sürükleme çifti M_y / L) |
 | YD-53 | CS-LUAS Ek H: n_j 5,40; ana bacak başına P_v 3970 N (limit), bütün ana takım durumları; yan yük 735 N |
@@ -615,7 +615,6 @@ Grup tavanları (mass.budget) ve sizing tahminleri (büyüme payı dahil):
 
 ## Açık konular
 
-- ana iç kapak tahriki (düzeltme turu 3, PK3-07): |Cp| 1,0 basınç üst sınırında kapak 95 derecelik stroku boyunca 8,4 N m nihai moment (14,0 J iş) ister; DA 22 anma torku 1,8 N m (5,7 J, 180 derecede): hiçbir bağlantı oranı bunu kapatmaz. Ya V_LO'da gövde altı basıncı (HAD / uçuş testi; alt yüzey çoğunlukla basınç tarafıdır) belirlenip üst sınırın yaklaşık üçte birinin altında gösterilmeli ya da iki ana iç kapağa DA 26 sınıfı tahrik verilmeli (+0,28 kg; kütle bütçesi payı bugün bunu taşımıyor); mafsal kapakları bacakla tahriklidir (eyleyici yok)
 - sandviç çekirdek izin verilen değerleri (ROHACELL 51 / 71 WF: Ec, Gc, Fsu, Fcu) oda sıcaklığı üretici minimum değerleridir (materials.yaml'da sıcaklık verisi yok), yüzeyler ise MTM45-1 ETW B-tabanı kullanır: çekirdeğin belirlediği paylar tasarım ortamında gösterilmiyor. Her payın karşılayabildiği çekirdek özellik koruma oranı (dayanım satırları çekirdek özelliğiyle doğrusal; burkulma / buruşma satırları yaklaşık, Ec ve Gc'nin kesirli kuvvetiyle ölçeklenir): FW-FOOT-CORE MS 0,014 (koruma >= 0,99), W-SKINBUCK-CT MS 0,024 (koruma >= 0,98), W-SKINBUCK-OP-UP-IN MS 0,042 (koruma >= 0,96), W-SKINBUCK-GLOVE-UP MS 0,079 (koruma >= 0,93), W-SEC-CT-7 MS 0,104 (koruma >= 0,91), W-SKINBUCK-LERX-UP MS 0,109 (koruma >= 0,90), W-SKINCRIMP-LERX-UP MS 0,112 (koruma >= 0,90), TR-PAD MS 0,195 (koruma >= 0,84). Ayrıntılı tasarımdan önce WF sınıflarının ETW tasarım sıcaklığındaki Evonik sıcaklık eğrileri Ec, Gc ve Fsu'ya uygulanmalı ya da azami sandviç sıcaklığı sınırlanıp gerekçelendirilmeli (düzeltme turu 3, VS3-05)
 - çırpınma / ıraksama / kanatçık tersinmesi analiz edilmedi (kanat ve kuyruğun rijitlik / kütle modeli henüz yok): ilk uçuştan önce yer titreşim testi (GVT) ve çırpınma analizi (CS-LUAS.629); ±45 ağırlıklı kaplamalar burulma rijitliğini artırır
 - metal parçaların (pimler, burçlar, arka kulak, düğüm ve takım bağlantıları, motor bağlantısı kaynakları) yorulması / hasar toleransı ve kompozit BVID/CVID kanıtı (CS-LUAS.572/573) testle; el hesapları yalnız STANAG UL13.1.2 birim şekil değiştirme sınırlarını kullanır

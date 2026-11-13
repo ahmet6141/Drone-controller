@@ -338,5 +338,9 @@ değerlendirilmelidir (toplanmış konum, burun takımı daha hafif).
 ## 12. Doğrulama
 
 * `python3 -m ucav250.analysis.checks --modules chassis,shell,gear --focus YK250-LG,YK250-FC-6,YK250-CH,YK250-SH --no-write`
-* `python3 -m unittest tests.test_ucav250_gear`
+* `python3 -m unittest tests.test_ucav250_gear` — 15 test (4'ü ayrıntı turu: eklem ifadesi = dizi, zincir kapanması
+  < 0,05 mm + ölü nokta + iletim açısı, burun kapak eşlemesi ayna, aşağı kilit bacak hareketinden önce açık) geçer.
+* Ayrıntı turu sonucu: checks (chassis, shell, gear; odak LG, FC-6, CH, SH) takım parçalarında 0 ihlal; kalan 3 ihlal
+  ayrıntı turundan önce de vardı (CH-009 ağ öz-kesişimi, SH-370-B3/B4 kenar mesafesi). `layout_build --check`,
+  `structures --check`, `sizing --check` temiz; `layout_check` 98/99 (C05 burun lastiği ↔ NDOOR-LINKAGE, §11 madde 9).
 * Önizleme: `python3 -m ucav250.blender.build --modules chassis,gear --previews --no-blend --out /tmp/...`

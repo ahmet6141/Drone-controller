@@ -451,7 +451,11 @@ class Systems:
         lo_d, hi_d = C.member_box("M-DECK-NOSE")
         z_deck, z_bot = float(hi_d[2]), float(lo_d[2])
         lo, hi = C.eqbox("EQ-PDU")
-        xs = (float(lo[0]) + 0.017, 0.5 * float(lo[0] + hi[0]), float(hi[0]) - 0.012)
+        # middle pair aft of the brake-unit box under the deck (its hanger lies against the deck underside there):
+        # bolt heads >= 3 mm from the EQ-BRAKE_UNIT box in x
+        _, hi_b = C.eqbox("EQ-BRAKE_UNIT")
+        x_mid = max(0.5 * float(lo[0] + hi[0]), float(hi_b[0]) + 0.003 + 0.5 * FC.ISO4762[3][0])
+        xs = (float(lo[0]) + 0.017, x_mid, float(hi[0]) - 0.012)
         ys = (float(hi[1]) - 0.0125, float(lo[1]) + 0.0125)
         pts = [(x, y) for x in xs for y in ys]
         self.pdu_pts = pts
@@ -1120,6 +1124,12 @@ class Systems:
             y0_, y1_ = (float(da_lo[1]), float(da_hi[1])) if s_ > 0 else (-float(da_hi[1]), -float(da_lo[1]))
             extra["FS-GEAR"].append(box3((xg, y0_ - 0.004, float(da_lo[2]) - 0.004),
                                          (xg + 0.010, y1_ + 0.004, -0.050)))
+        # inner-door drive bearing housings on the forward face, flanged round the C-DOORSHAFT cut-outs: the grommet
+        # flange keeps 4 mm above the cut-out and 20 mm to the sides of it free on that face
+        xgf = C.face("FS-GEAR", -1)[0]
+        for mir in (False, True):
+            y0_, y1_, z0_, z1_ = C.cutout("FS-GEAR", "C-DOORSHAFT", mir)
+            extra["FS-GEAR"].append(box3((xgf - 0.010, y0_ - 0.020, z0_ - 0.010), (xgf, y1_ + 0.020, z1_ + 0.004)))
         for sid in [s_["id"] for s_ in C.L["stations"]]:
             st = C.st[sid]
             cuts = [c for c in st.get("cutouts", []) if c["id"].startswith(("C-HARN", "C-COAX", "C-FW-HARN"))]

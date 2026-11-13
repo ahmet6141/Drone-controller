@@ -35,7 +35,8 @@ kurtarma paraşütü sistemleridir. Sistemde silah, mühimmat, dış yük taşı
   54,5 mm, 1,60 kg, IP67, MIL-DTL-38999). Aviyonik güverte (M-DECK-NOSE, CH-022) üstünde altı adet 6061-T6 torna
   burç (SY-721, Ø13 × 3,4 mm, güverte üstü ile PDU tabanı arası) üzerinde durur; altı ISO 4762 M3 cıvata güvertenin
   altından (yan bölme kapaklarından erişim) güvertedeki dökme burçlardan ve burçlardan geçip PDU tabanındaki üretici M3
-  dişlerine girer. Cıvatalar omurga yarığının dışında (|y| = 0,085 m) kalır. PDU iletimle soğur (taban – burç – güverte,
+  dişlerine girer. Cıvatalar omurga yarığının dışında (|y| = 0,085 m) kalır; orta çift, güverte altındaki fren birimi
+  kutusunun (EQ-BRAKE_UNIT, askısı güverte altına dayanır) arka kenarından cıvata başı ≥ 3 mm uzakta (x 0,977 m). PDU iletimle soğur (taban – burç – güverte,
   ısı ileten ped); birimin termostatik fan çıkışları isteğe bağlı bir fan için kablolanır (ısıl deneme açık konusu).
 - **Ana kontaktör + sigorta bloğu (SY-722) ve 28→12 V DC-DC (SY-724).** Güç anahtarlama bölmesinde, alttan cepli 6061-T6
   montaj plakası (SY-723: 1,6 mm ağ, Ø13 vida göbekleri, 6 mm kenar) üzerinde. Üniteler plakaya alttan, plaka yüzeyiyle
@@ -95,7 +96,8 @@ içeride kalır (layout notu), önlerinde karbon yoktur.
   - H-NOSE FS0300 kesiğinden ön yüze 3 mm kalana kadar uzanır.
 - **Geçiş rondelaları.** Her çerçevede bir takım (SY-756…765: FS0300, FS0600, FS1110, FS1330, FS1490, FS1810, FS-FUEL,
   FS-MS, FS-RS, FS-GEAR) ve yangın perdesinde yangına dayanıklı rondela (SY-770): kesiği 0,2 mm boşlukla dolduran tıkaç,
-  iki yüzde 1,5 mm flanş (çerçeveye gelen elemanlarda kırpılır), demet delikleri. Eleman geçişleri: orta kutu alt kapağı
+  iki yüzde 1,5 mm flanş (çerçeveye gelen elemanlarda kırpılır; FS-GEAR'da arka yüzde iç kapak eyleyicileri,
+  ön yüzde C-DOORSHAFT çevresindeki yatak yuvası flanşları için kırpılır), demet delikleri. Eleman geçişleri: orta kutu alt kapağı
   (SY-766-R/L), gövde yanı kaburgası (SY-767-R/L, alt flanş için 1,5 mm kenar), eldiven kaburgası kutu parçası
   (SY-768-R/L, CH-058), ana kuyu ön duvarı (iki delikli sızdırmaz giriş, SY-769; arka flanş omurga ağlarının arasında).
 - **Merkez kanal (SY-771).** Ana tekerlek kuyuları arasında, omurga ağlarına (M-WELLKEEL) yapıştırılan 4 kat PW (0,8 mm)

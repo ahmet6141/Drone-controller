@@ -1068,6 +1068,7 @@ class Systems:
             for fi, ti in zip(self.trunk_ids["H-FIN"], self.trunk_ids["H-TAIL"]):
                 self.link(fi, ti)
                 self.link(ti, fi)
+        self.dorsal_grommets()
         for g in self.member_grommets_R:
             q = mirror_part(self.reg.parts[g], g[:-1] + "L")
             q.parent = q.parent[:-1] + "L" if q.parent.endswith("-R") else q.parent
@@ -1236,6 +1237,35 @@ class Systems:
         for b in bids:
             self.link(b, pid)
         return pid
+
+    def dorsal_grommets(self):
+        """IR-06: H-FIN enters the fin root between the webs of the dorsal longeron's hat section through a bore in
+        its crown (layout penetration on M-DORSAL, both sides): bore cut here, sealed split ring grommet (SY-795-R/L;
+        flanges 2 mm, inside the webs)."""
+        C = self.C
+        if "H-FIN" not in self.trunk_ids:
+            return
+        pen = next((p_ for p_ in C.trunk["H-FIN"].get("penetrations", []) if p_["member"] == "M-DORSAL"), None)
+        if pen is None:
+            return
+        base = C.mem["M-DORSAL"]["part"]
+        a = np.array([0.0, 0.0, 1.0])
+        r_b = 0.5 * float(C.trunk["H-FIN"]["diameter"]) + 0.0012
+        for k, (sd, fy) in enumerate((("R", 1.0), ("L", -1.0))):
+            part = f"{base}-{sd}"
+            if part not in self.reg.parts:
+                continue
+            q = np.asarray(pen["point"], float) * np.array([1.0, fy, 1.0])
+            o = q - 0.03 * a
+            (_r, r0, r1), = J.measure_stack(self.reg, [part], o, a, 0.0035, search=0.03)
+            p0 = o + r0 * a
+            t_w = r1 - r0
+            self.reg.parts[part].add_hole(p0 - 0.003 * a, p0 + (t_w + 0.003) * a, r_b)
+            self.ring_grommet(self.pid(795, sd), f"harness grommet, dorsal longeron crown (fin branch), "
+                              f"{'starboard' if sd == 'R' else 'port'}",
+                              f"kablo geçiş rondelası, sırt uzun kirişi tabanı (dikey kolu), {'sağ' if sd == 'R' else 'sol'}",
+                              part, p0, a, t_w, r_b, [("H-FIN", 1 if sd == "R" else -1)], rim=0.002)
+            self.harness_fixed[self.pid(795, sd)] = None
 
     def fin_bores(self):
         """IR-06: H-FIN runs up the fin box through bores in the tail ribs it crosses (bundle + 1.5 mm, moulded split

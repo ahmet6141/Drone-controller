@@ -456,8 +456,11 @@ def fin_branch() -> dict:
     e_r = 0.26
     p1 = surf_point(F, e_r, ANT_XC)
     p_a = np.array([3.575, 0.128, 0.275])           # under the dorsal longeron M-DORSAL (y 0.15, z 0.30 under the fin
-    p_in = np.array([3.615, 0.150, 0.275])          # root), then up between the longeron's two webs (y 0.140 / 0.160,
-    p_up = np.array([3.618, 0.150, 0.333])          # z >= 0.29) ahead of the FS3670 top cap (x >= 3.627) into the fin
+    p_in = np.array([3.600, 0.150, 0.275])          # root), then up between the webs of the longeron's hat (y 0.140 /
+    p_up = np.array([3.603, 0.150, 0.333])          # 0.160) through a grommeted bore in its crown (declared penetration
+    #                                                 of M-DORSAL), ahead of the dorsal splice tongue of F-FW-CORNER
+    #                                                 (x >= 3.620), into the fin root (the only way in that keeps the
+    #                                                 C03 depth: outboard of the hat the fuselage OML is 7 mm away)
     # up the fin box on FIN_XC_BOX between the front-spar web and the rudder actuator (eta 0.42-0.55), then to the
     # antenna chord line above the servo rib, ending 6.5 mm under the tip rib (jack + 4 mm jam nut, coax plug)
     pb = surf_point(F, 0.40, FIN_XC_BOX)
@@ -466,6 +469,9 @@ def fin_branch() -> dict:
     p2 = surf_point(F, fin_cap_eta() - FIN_RIB_T - 0.0065, ANT_XC)
     return {"id": "H-FIN", "part": "YK250-SY-794", "name": "fin branch (each side): tip-cap antenna coax, tail light",
             "diameter": 0.008, "mirror": True, "in_tail": True,
+            "penetrations": [{"member": "M-DORSAL", "point": r3(0.5 * (p_in + p_up)),
+                              "kind": "grommeted bore (d 10.4 mm) in the crown of the longeron's hat section between "
+                                      "its webs, 20 mm ahead of the F-FW-CORNER splice tongue"}],
             "path": [r3(p0 + 0.0001 * d0, 6), r3(p0 + 0.010 * d0, 6), r3(p_a), r3(p_in), r3(p_up), r3(p1), r3(pb), r3(pc),
                      r3(pd), r3(p2)],
             "text": "fin root (end of H-TAIL) -> up the fin box between the front spar and the rudder actuator, then on "

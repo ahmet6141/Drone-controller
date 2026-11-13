@@ -107,6 +107,14 @@ def engine_mount(fittings: list) -> dict:
         "design_load_case": "DL-ENGINE-MOUNT"}
 
 
+# payload detail phase: rail / screw lower end raised from z -0.150 (the corner angles reached down to the skin and
+# blocked the sliding doors crossing under the bay walls); the ball screw moved 3 mm aft and 12 mm inboard of the rail
+# corner line so that the ball nut flange (moving with the turret) keeps the 6 mm turret-to-wall / frame margin
+# (layout.clearances "turret vs bay walls and frames", payload.turret.bay.wall_margin)
+Z_RAIL_LOW = -0.110
+X_SCREW, Y_SCREW = 0.082, 0.082
+
+
 def turret_elevator() -> dict:
     xt = X_TUR
     zr = float(TU["ball_center_retracted_z"])
@@ -114,15 +122,18 @@ def turret_elevator() -> dict:
         "joint": "turret_elevator",
         "part": "YK250-PL-824",
         "rails": [{"id": f"RAIL-{c}", "part": "YK250-PL-828" if c == "FR" else "YK250-PL-829", "corner": c,
-                   "line": r3([[xt + sx * 0.085, sy * 0.094, -0.150], [xt + sx * 0.085, sy * 0.094, 0.095]])}
+                   "line": r3([[xt + sx * 0.085, sy * 0.094, Z_RAIL_LOW], [xt + sx * 0.085, sy * 0.094, 0.095]])}
                   for c, sx, sy in (("FR", -1, 1), ("AL", 1, -1))],
-        "rail_spec": "2 miniature profile rails 9 mm (MGN9 class, steel, estimate) in two diagonal bay corners "
-                     "(front-starboard, aft-port), bonded and screwed (M3 into potted inserts) to the wall corner "
-                     "angles; 2 carriages each on the turret carriage plate",
+        "rail_spec": "2 miniature profile rails 12 mm (MGN12 class, steel, estimate; payload detail phase: the 9 mm "
+                     "rail cannot give the 2 D edge distance of its M3 screws) in two diagonal bay corners "
+                     "(front-starboard, aft-port), bonded and screwed (4 x M3 per rail end into floating anchor "
+                     "nutplates on the back of the corner-angle seat) to the wall corner angles; 2 carriages each on "
+                     "the turret carriage plate; payload detail phase: the rails end at z -0.110 so that the corner "
+                     "angles stay above the sliding doors and their rails crossing under the bay walls",
         "drive": {"spec": "ball screw d 8 x 2 mm in the front-port corner, BLDC gear motor with spring-applied brake "
                           "on the bay roof, 2 limit switches + absolute encoder (estimate)",
-                  "screw_axis": r3([[xt - 0.085, -0.094, 0.095], [xt - 0.085, -0.094, -0.150]]),
-                  "top_anchor": {"member": "M-TURRETROOF", "point": r3([xt - 0.085, -0.094, 0.106]),
+                  "screw_axis": r3([[xt - X_SCREW, -Y_SCREW, 0.095], [xt - X_SCREW, -Y_SCREW, Z_RAIL_LOW]]),
+                  "top_anchor": {"member": "M-TURRETROOF", "point": r3([xt - X_SCREW, -Y_SCREW, 0.106]),
                                  "attach": "bearing block 4 x M4 into potted inserts of the roof sandwich"},
                   "rail_anchors": "rail ends on FS1110 (front rail) and FS1330 (aft rail) through the wall corner "
                                   "angles"},

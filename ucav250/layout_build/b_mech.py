@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from .b_common import *  # noqa: F401,F403
 
+TDOOR_RAIL_DEG = 32.0       # sliding turret-door rails inclined 32 deg to the y axis (payload detail phase)
+
 DEG = math.pi / 180.0
 
 
@@ -174,13 +176,16 @@ def mechanisms() -> dict:
                          "the bay doors are fully open (turret 0.2 -> 1.0) and the doors close only after it is fully "
                          "retracted"))
     zs0 = z_bot(xt, 0.0) + 0.002
-    zs1 = z_bot(xt, 0.100) + 0.002
-    ad = unit([0.0, 0.100, zs1 - zs0])
+    # payload detail phase: the doors are rigid and slide on straight rails; along the 26 deg chord of the belly
+    # (z_bot + 2 mm at y 0 and 0.100) the open door would leave the curved V belly (12 mm outside the OML at y 0.2), so
+    # the rail is inclined 32 deg: the door rises into the body while it slides outboard, stays inside the lower skin
+    # when open and passes under the free lower edge of the bay wall (design choice, payload module, docs/detail/payload.md)
+    ad = unit([0.0, math.cos(math.radians(TDOOR_RAIL_DEG)), math.sin(math.radians(TDOOR_RAIL_DEG))])
     for sd, sgn in (("R", 1.0), ("L", -1.0)):
         J.append(joint(f"turret_door_{sd}", "prismatic", [xt, 0.0, zs0], ad * np.array([1, sgn, 1]), 0.0, 0.120,
                        prop="", scale=1.0, expr="0.12*clamp(turret/0.2,0,1)", side=sd, moves=f"YK250-PL-826-{sd}",
-                       notes="sliding door on the inner face of the V belly, running in rails through a slot in the "
-                             "lower edge of the bay wall to outboard of it; driven by its own DA 22 + rack "
+                       notes="sliding door on the inner face of the V belly, running in straight rails inclined "
+                             "32 deg through a slot in the lower edge of the bay wall to outboard of it; driven by its own DA 22 + rack "
                              "(EQ-TDOORACT): fully open (0.12 m along the skin each, clear of the E180 ring) before the elevator "
                              "starts, closed only after full retraction"))
     # ---------------------------------------------------------------- parachute hatch (tethered lift-off, VPK-11)

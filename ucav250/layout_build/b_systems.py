@@ -139,10 +139,11 @@ def dooract_main() -> dict:
                                        "of FS-GEAR carries it; the DA 22 spline drives it through a splined coupling)"}})
 
 
-NDA_PLANE_X = 1.0550                # nose-door drive plane (DA 22 crank / drive link / drive horn on the port door)
-NDA_SHAFT_YZ = (-0.0808, -0.1220)   # DA 22 output axis in that plane (port side bay; mechanism study docs/detail/gear.md)
+NDA_PLANE_X = 1.0695                # nose-door drive crank plane (DA 22 crank; drive link and drive arm of the port
+#                                     coupling horn in the planes behind it, aft of the nose-tyre swing)
+NDA_SHAFT_YZ = (-0.0868, -0.1277)   # DA 22 output axis in that plane (port side bay; mechanism study docs/detail/gear.md)
 NDA_SHAFT_END = 0.014               # output axis from the lower end of the 65.9 mm case side (estimate, as EQ-DOORACT)
-NDA_SLIDE_X = (1.0680, 1.0870)      # symmetric coupling of the two doors: horns, links, slide bar and guide plate
+NDA_SLIDE_X = (1.0680, 1.0860)      # symmetric coupling of the two doors: horns, links, slide bar and guide plate
 #                                     (x range on the door axes; >= 10 mm aft of the stowed tyre, ahead of the sill)
 
 
@@ -160,7 +161,7 @@ def ndooract() -> dict:
     e2 = np.cross(a, e1)
     C = np.array([NDA_PLANE_X, NDA_SHAFT_YZ[0], NDA_SHAFT_YZ[1]])
     pts = []
-    for t in (0.0055, 0.0275):
+    for t in (-0.0230, -0.0010):                    # case ahead of the crank, output on its aft face
         for b in (-0.02075, 0.02075):
             for c in (-NDA_SHAFT_END, 0.0659 - NDA_SHAFT_END):
                 pts.append(C + t * a + b * e1 + c * e2)
@@ -169,7 +170,8 @@ def ndooract() -> dict:
            "gear_retraction), which a leg-driven link cannot do; ONE DA 22 drives both doors (components.yaml "
            "volz_da22_28v 41.5 x 65.9 x 22 mm, 0.132 kg; mass.rules.gear_doors.inner_door_actuator count 3 = 2 main + 1 "
            "nose); gear detail round (GD-08): output parallel to the door hinge axes, crank + drive link through a "
-           "window in the port keel wall to the drive horn of the port door (over-centre lock with the doors closed); "
+           "window in the port keel wall to the drive arm of the port coupling horn (over-centre lock with the doors "
+           "closed; all door-level parts aft of the nose-tyre swing, x >= 1.068); "
            "the starboard door is coupled as an exact mirror through two horns, two links and a vertically guided "
            "slide bar on the centre line (NDOOR-LINKAGE)")
     z0 = round(z_bot(1.08, 0.0) + 0.006, 4)
@@ -187,9 +189,9 @@ def ndooract() -> dict:
                                                 "keel walls, >= 10 mm aft of the stowed nose tyre and ahead of the "
                                                 "slot-end sill",
                                         "mass_kg": 0.05,
-                                        "mass_basis": "estimate: crank 0.008 + drive link 0.006 + drive horn 0.004 + two "
-                                                      "horns 0.006 + two links 0.008 + slide bar 0.008 + guide plate and "
-                                                      "pins 0.010 (mass.rules.gear_doors.nose_door_drive)"}})
+                                        "mass_basis": "estimate: crank 0.008 + drive link 0.006 + two horns (port with the "
+                                                      "drive arm) 0.010 + two links 0.008 + slide bar 0.008 + guide plate "
+                                                      "and pins 0.010 (mass.rules.gear_doors.nose_door_drive)"}})
 
 
 def b_mech_joints() -> list:

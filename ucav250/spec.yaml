@@ -3534,16 +3534,17 @@ structures:
           7075-T6 sheet values (estimate)
       main_trunnion_pin_d_m: 0.02
       main_trunnion_lug_t_m: 0.012
-      main_downlock_pin_d_m: 0.01
-      main_downlock_radius_m: 0.035
+      main_downlock_pin_d_m: 0.014
+      main_downlock_radius_m: 0.028
       main_downlock:
         material: steel_4130_n
-        ear_t_m: 0.006
-        inner_t_m: 0.01
-        gap_m: 0.0005
-        text: 'fix round 2 (VS2-07): down-lock = 4130 lock bolt d 10 in double shear in a tight clevis of F-TRUNNION (ears
-          2 x 6 mm, gaps <= 0.5 mm) through a 10 mm lock lug of the leg yoke at r 35 mm from the retraction axis; requirement
-          for the gear-unit supplier (lock bolt d >= 10 mm 4130 or equivalent, clevis gaps <= 0.5 mm)'
+        shear: single
+        engaged_t_m: 0.0115
+        gap_m: 0.001
+        text: 'gear detail round (GD-03): spring-engaged, solenoid-withdrawn 4130 lock bolt d 14 in a bore of the aft F-TRUNNION
+          lug extension, engaging 11.5 mm of the aft yoke arm 28 mm below the retraction axis; single shear across the 1
+          mm lug-to-arm gap (a second clevis ear would stand in the swept leg); bolt bending as a cantilever from the lug
+          bore, uniform bearing over the engaged length'
       trunnion_fitting:
         insert_flange_od_m: 0.014
         nutplate_base_m: 0.02
@@ -6407,7 +6408,7 @@ layout:
         d: 0.014
         lug_bottom_z: -0.1739
         text: bore of the lock bolt in the aft-lug extension (boss to z lug_bottom_z) and in the aft yoke arm; bolt withdrawn
-          aft (14 mm stroke) by the gear-unit solenoid before the leg moves (mechanism main_downlock_R/L)
+          aft (15 mm stroke) by the gear-unit solenoid before the leg moves (mechanism main_downlock_R/L)
       inspection: beam bolts and roof bolts from the well (gear down); the dome nutplates on the fuel side are reached only
         with the aft cell removed (assembly.maintenance_access)
       touch: [M-GEARBEAM, M-WELLROOF, M-CHINE]

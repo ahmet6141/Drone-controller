@@ -130,6 +130,25 @@ alan × `shell_secondary` alan kütlesi), menteşe çizgisi layout eklem ekseni:
 | LG-683-R/L / -684-R/L | burun kapağı menteşe blokları / pimleri | 7075 / satın alma | 0,006 / 0,025 |
 | LG-678 | burun kapağı eyleyicisi Volz DA 22 | satın alma | 0,132 |
 | FC-628 | yönlendirme eyleyicisi Volz DA 26 (+ dişli kafa) | satın alma | 0,270 |
+| **Ayrıntı turu (GD-01 … GD-12)** | | | |
+| LG-686-R/L | iç kapak tahrik krankı + Ø8 mil | 4130 N, CNC | 0,026 |
+| LG-687-R/L / -688-R/L | iç kapak biyeli / kapak boynuzu | 7075-T651, CNC | 0,008 / 0,002 |
+| LG-689-R/L | iç kapak mili yatak yuvası (2 × 688-2RS) | 7075-T651, CNC | 0,012 |
+| LG-685-R/L | DA 22 kama plakası (eğik bağlantı) | 7075-T651, CNC | 0,033 |
+| LG-691-R/L | mafsal kapağı mikro dişli motoru | satın alma (tahmin) | 0,045 |
+| LG-692-R/L / -693-R/L / -694-R/L | mafsal kapağı krankı / biyeli / boynuzu | 4130 N / 7075 | 0,005 / 0,003 / 0,003 |
+| LG-695-R/L | dişli motor braketi | 7075-T651, CNC | 0,009 |
+| LG-641-R/L | ana aşağı kilit pimi Ø14 | 4130 N, CNC | 0,052 |
+| LG-638-R/L | aşağı kilit solenoidi | satın alma (tahmin) | 0,060 |
+| LG-643-R/L | dönme önleyici anahtar | 4130 N | 0,001 |
+| LG-651-R/L | fren hattı döner rakoru | satın alma (tahmin) | 0,025 |
+| LG-653 / LG-655 | burun sürükleme biyeli / EMA krankı | 4130 N, CNC | 0,069 / 0,057 |
+| LG-656 | burun saplama aralık burcu (krikolu) | 7075 / 4130 | 0,013 |
+| LG-679 / -696 / -697 | burun kapak tahrik krankı / biyeli / boynuzu | 4130 N / 7075 | 0,012 / 0,007 / 0,003 |
+| LG-698-R/L / -699-R/L | eşleme boynuzları / biyelleri | 7075-T651 | 0,003 / 0,005 |
+| LG-700 / -701 | eşleme kızağı / kılavuz plakası | 7075-T651 | 0,004 / ≈0,035 |
+| FC-629 | fren birimi Volz DA 26 + ana silindir | satın alma (0,27 veri sayfası + 0,065 tahmin) | 0,335 |
+| LG-658 | fren birimi askısı | 7075-T651, CNC | ≈0,040 |
 
 ## 4. İmalat
 
@@ -173,11 +192,71 @@ gerekir, §11).
 
 * `main_gear_R/L`: 0 → 108° (eksen −x / +x), bacak + tekerlek + bacak kapağı birlikte; `nose_gear` 0 → 90° arkaya;
   `nose_steer` ±20° (yalnız takım açıkken, toplamadan önce ortalanır).
-* `main_inner_door_R/L` 0 → 90° (toplama ve açmanın başı/sonu), `main_trunnion_door_R/L` 125° açık → 0 kapalı,
-  `nose_door_R/L` 90° açık → 0 kapalı; bütün eklemler `expr` ile bağlıdır, checks onları yalnız `gear_retraction`
-  dizisinde tarar (21 durum).
+* `main_inner_door_R/L` 0 → 90° (gear_up 0–0,15 açılır, 0,85–1,0 kapanır), `main_trunnion_door_R/L` 125° açık →
+  0 kapalı (0,85–1,0), `nose_door_R/L` 90° açık → 0 kapalı (0,85–1,0); layout eklemleri aynen kullanılır.
 * Kapak menteşe kenarları, kapak açılırken çevredeki sabit kaplamanın (ve kiriş/omurga duvarının) süpürdüğü bölge
   çıkarılarak (kesit kesit döndürülmüş engel birleşimi, prizmatik kesici) şekillendirilmiştir.
+
+### 7.1 Ayrıntı turu (GD-01 … GD-12): bağlantı mekanizmalarının modellenmesi
+
+Her düzlemsel tahrik (krank – biyel – boynuz) tam düzlem kinematiğiyle çözülür (`gear.FourBar`): bütün eksenler
+paraleldir, mekanizma eksene dik düzlemde çözülür ve iki zincirli döner eklemle konumlanır — krank eklemi (merkez C,
+eksen u) ve onun alt eklemi olan biyel eklemi (merkez = dinlenme konumundaki krank pimi K). Eklem değerleri
+`gear_retraction` dizisinin 21 örneğinde hesaplanır, diziye eklenir ve aynı değerler `gear_up`'ın parçalı doğrusal
+`clamp` ifadesi (`expr`) olarak yazılır (örneklerde dizi = ifade; checks bağlı eklemleri yalnız dizi boyunca tarar).
+Bütün yeni eklemler takım açıkken (dinlenme) 0'dır. Kilitli konumda krank ve biyel aynı doğru üzerindedir (katlanmış
+ölü nokta = ölü nokta ötesi kilit): çıkış yükü krank eksenine moment vermez. Testler zincirin kapandığını (biyel ucu
+pimi = çıkış boynuzu pimi, her durumda < 0,05 mm), ölü noktayı ve iletim açısını doğrular.
+
+| Mekanizma (eklemler) | Seçilen düzen | Krank r / biyel l | Krank hareketi | min. iletim açısı | Pim |
+|---|---|---|---:|---:|---|
+| İç kapak (`main_idoor_crank/link_R/L`) | DA 22 FS-GEAR arka yüzünde, çıkışı menteşe hattına paralel (3,9° eğik kama plaka), mil C-DOORSHAFT'taki yataktan kuyuya; krank 686 + biyel 687 + kapak boynuzu 688 | 34,0 / 78,0 mm | 131° | 57° | Ø4 |
+| Mafsal kapağı (`main_tdoor_crank/link_R/L`) | kendi mikro dişli motoru 691 (tahmin) F-TRUNNION flanşında, krank 692 + biyel 693 + boynuz 694 | 16,0 / 38,0 mm | 160° | 33° | Ø3 |
+| Burun sürükleme (`nose_drag_crank/link`) | EMA çıkışı (sağ yarıda) → krank 655 + sürükleme biyeli 653 orta düzlemde → çatala tümleşik boynuz (r 31 mm, 116°) | 34,1 / 74,8 mm | 129° | 56° | Ø10 |
+| Burun kapak tahriki (`nose_ddrive_crank/link`) | DA 22 sol yan bölmede, çıkışı menteşe eksenlerine paralel; krank 679 + biyel 696 sol omurga duvarındaki W-NDOOR-LINK penceresinden sol kapak boynuzu 697'ye | 16,9 / 82,6 mm | 141° | 41° | Ø4 |
+| Burun kapak eşleme (`nose_dbar`, `nose_dlink_R/L`) | her kapakta boynuz 698 (r 28 mm, 160°), iki biyel 699 (50,9 mm) orta düzlemde kızak 700'e; kızak iki Ø5 kılavuz pimiyle kılavuz plakası 701'in yarığında kayar (43,6 mm) | — | — | 55° | Ø4 |
+| Ana aşağı kilit (`main_downlock_R/L`, prizmatik) | yay itmeli, solenoid 638 çekmeli Ø14 4130 kilit pimi 641, arka mafsal kulağının alt uzantısında, mafsal ekseninin 28 mm altında, arka çatal kolundaki göbeğe 11,5 mm girer | — | 15 mm | — | — |
+
+Çalışılan ve elenen düzenler (özet):
+
+* **İç kapak (GD-05):** C-DOORLINK penceresinden itme çubuğu 90° kapak hareketini geçirmiyordu (en iyi pay −0,8 mm).
+  DA 22'yi döndürüp çıkışını menteşe hattına paralel yapmak mekanizmayı tek düzleme indirir; krank merkezi
+  (y 44, z −136 mm) ve boynuz pimi (y 41, z −180 mm) 2-B taramada (5 400 aday) sabit kesitlere ≥ 23 mm pay ve 57°
+  iletim açısıyla seçildi. Düzlem sırası (u boyunca): boynuz x 3,0745–3,0775 (kapakta), biyel 3,078–3,081, krank
+  3,0815–3,0845; bacak parçaları x ≥ 3,0745'e hiç ulaşmaz. Mil, FS-GEAR ön yüzündeki flanşlı yatak yuvası 689'dan
+  (2 × 688-2RS, dudak keçe) geçer; C-DOORSHAFT 18 × 18 mm.
+* **Mafsal kapağı (GD-07):** bacaktan tahrik (dört çubuk, makara-kam, Cenevre, dişli) tek tek çalışıldı: dört
+  çubuk ya bacak kapağını keser ya da iletim açısı 24–34° ve kiriş köşesine girer; makara/kam izin verilen kapanma
+  eğrisini (≈ 125° − 1,16 θ) ihlal eder. Kapak kendi motoruyla, bacak kilitlendikten sonra (0,85–1,0) kapanır —
+  dizi ve eklem ifadesi artık tutarlıdır (§10). Gerekli moment G-TDOOR-LINK 0,257 N m (limit); kapalı konum ölü
+  nokta ötesi olduğundan tutma momenti gerekmez.
+* **Burun sürükleme (GD-04):** EMA kutusu sağ yarıya kaydırıldı (layout ACT-NLG-EMA x 0,636–0,696, y 0,006–0,041);
+  krank, biyel ve boynuz orta düzlemde (y −10,5…+5,5 mm). Boynuz pimi r 31 mm'de: boynuz gözü r ≥ 20,5 mm'de kalır,
+  saplama aksların içeriden takılma yolu (r ≤ 19 mm) serbesttir (r 25 mm'lik ilk çözüm bu yolu kapatıyordu; sabit
+  EMA çıkışıyla yeniden tarandı, 60 000 aday, 2-B pay 8,6 mm). F-NG-PIVOT cıvata başlarına dokunulmadı.
+* **Burun kapakları (GD-08):** layout'taki x eksenli orta dirsek iki kapağı ayna görüntüsü olarak hareket
+  ettiremez. Tahrik sol kapağa, eşleme kızaklı simetrik bağlantıyla sağ kapağa: sağ kapak tam ayna (testte her
+  durumda doğrulanır). Kızak ilk çözümde iki sabit pimde kayan uzun bir çubuktu (üst ucu −0,041'e çıkıp layout
+  zarfını aşıyordu); pimler kızağa, yarık kılavuz plakasına alındı (plaka −0,170 … −0,095, eşiğin 2 mm üstünde).
+* **Ana aşağı kilit (GD-03):** çift kesmeli çatal, süpürülen bacak hacminde ikinci kulak gerektirdiği için olanaksız;
+  tek kesme (1 mm boşluk) ve Ø14: G-DOWNLOCK MS 2,52, G-DOWNLOCK-BEND MS 0,52 (`structures`). Pim gear_up 0,02–0,10
+  arasında 15 mm geri çekilir, bacak 0,15'te hareket eder; açık konumda uç, kolun 3,5 mm arkasındadır.
+* **Tork bağlantısı (GD-12):** kayar boru makaslı tork bağlantısı yerine anahtarla (643, 3 × 2,5 × 9 mm, keçe
+  yuvasında) döndürülmez; 64 mm bacak yarığında OD 42 silindirin yanına makas (≈ 10 mm) + paylar sığmaz.
+* **Burun saplama akslarının tutulması (GD-11):** iki flanş arasında krikolu aralık burcu 656 (iki yarım, sağ-sol
+  dişli; emniyet teli) aksların içeri kaymasını önler; dönmeyi mevcut Ø3 pim tutar.
+* **Fren (GD-09):** FC-629 (DA 26 + ana silindir) aviyonik güvertenin altına askı 658 ile asılır (4 × M4 güverte
+  burçlarına); iki fren hattı H-MAIN boyunca ana takımlara, arka mafsal kulağı yüzündeki döner rakor 651'e
+  (mafsal ekseninde), oradan delikli saplama aksından çatala ve bacak boyunca esnek hortumla kalipere (yol tarifi;
+  bacak hortumu modellenmedi, §11).
+* **Menteşeler (GD-06/07/08):** iç kapak menteşe hattı, kapak iç yüzü + 4 mm'den geçen en iyi (minimax) eğik doğru
+  (sapma 1,33 mm); üç istasyon (x 2,8824–2,8954 / 2,9574–2,9704 / 3,0424–3,0554), her istasyonda 3 mm kulak çifti ve
+  bir M4. Kabuk SH-383/SH-352 menteşe oyukları (r 4,2 mm, istasyon ± 1,5 mm) artık `shell.py` tarafından açılır
+  (layout `door_outlines.*.hinge`); takım modülü kabuğa delik eklemez. Yapıştırılan menteşe blokları cıvatalıdır:
+  mafsal kapağı blokları kiriş gövdesine 2 × M4 burç (çentik dışındaki flanşla), burun kapağı blokları ve yukarı kilit
+  mandalları omurga duvarından M4 ile.
+* **F-UPLOCK (GD-10):** mandal pim deliği layout `F-UPLOCK.pin` (z −0,080): göbek tabanına 10 mm (2 D), yüzlere
+  10,5 mm; göbek cıvataları 15 mm'ye alındı (şasi).
 
 ## 8. Bağlantı elemanları
 
@@ -187,12 +266,21 @@ gerekir, §11).
 | EMA flanşı → kuyu ön duvarı | 6 × M5 12.9 + ISO 7040 | baş tarafında pul |
 | kaliper → tork plakası | 4 × M5 12.9 (diş kaliperde) | |
 | bacak kapağı braketi → bacak kulağı | 8 × kör perçin Ø3,2 | başlar yarık genişliği içinde |
-| iç kapak menteşe braketi → kuyu omurga gövdesi | 4 × M4 12.9 + ISO 7040 | somunlar kablo kanalında |
+| iç kapak menteşe braketi → kuyu omurga gövdesi | 6 × M4 12.9 + ISO 7040 (istasyon başına 1) | somunlar kablo kanalında |
 | yukarı kilit makara pimi, mandal pimi | 4 × ISO 2341-B Ø5 | |
 | DA 26 → burun bacağı kulakları | 4 × M3 12.9 (diş kulakta) | |
 | burun EMA flanşı → sağ omurga duvarı | 2 × M5 12.9 + ISO 7040 | somun sağ yan bölmede |
-| DA 22 (ana) → plaka → FS-GEAR | 4 × M3 12.9, gömme dişli burç | yakıt bölmesi tarafına delik yok |
-| DA 22 (burun) → yan bölme tepsisi | 2 × M4 12.9 + somun plakası | |
+| DA 22 (ana) üst kulakları → kama plaka → FS-GEAR | 4 × M3 12.9, gömme dişli burç | yakıt bölmesi tarafına delik yok |
+| iç kapak yatak yuvası → FS-GEAR ön yüzü | 4 × M3 12.9, gömme dişli burç | |
+| DA 22 (burun) ön kulağı → yan bölme tepsisi | 2 × M4 12.9 + somun plakası | |
+| tahrik pimleri (krank–biyel, biyel–boynuz) | ana: 8 × Ø4 + 4 × Ø3; burun: 2 × Ø10, 2 × Ø4 (tahrik), 3 × Ø4 + 2 × Ø5 kılavuz (eşleme) | ISO 2341-B + kopilya, düzlem aralığı 0,5 mm pul |
+| mafsal kapağı menteşe blokları → kiriş gövdesi | 8 × M4 12.9, gömme dişli burç | GD-08 |
+| dişli motor braketi → F-TRUNNION flanşı | 4 × M3 12.9 (diş flanşta) | |
+| aşağı kilit solenoidi / fren döner rakoru → arka kulak yüzü | 4 + 4 × M3 12.9 (diş kulakta) | |
+| burun kapak menteşe blokları → omurga duvarı | 6 × M4 12.9 + ISO 7040 | somun yan bölmede |
+| burun yukarı kilit mandalı → omurga duvarı | 4 × M4 12.9 (diş mandal göbeğinde) | yan bölmeden |
+| eşleme kılavuz plakası → omurga duvarları | 2 × M4 12.9 + ISO 7040 | |
+| fren birimi askısı → aviyonik güvertesi / birim gövdesi | 4 × M4 12.9 burç / 4 × M3 A2-70 | |
 
 Kenar mesafesi ≥ 2 D (metal) / 2,5 D (kompozit), adım ≥ 3 D: checks ile doğrulanır.
 
@@ -210,39 +298,33 @@ değerlendirilmelidir (toplanmış konum, burun takımı daha hafif).
 
 * Ana EMA gövdesinde düzlük: F-TRUNNION B2 kiriş cıvatasının başı layout EMA zarfına girer.
 * Burun saplama akslarının boyu bushing ucunda biter (layout 22 mm duvara girer); layout'taki 3 × M4 flanş vidası
-  9 mm kola ve cıvata başları arasına sığmaz → pim + çatal ile tutma.
-* Burun kapak menteşe istasyonları yalnız iki bölgede (yukarıda) — layout kuralları (kapak–bacak 10 mm, lastik–kapak
-  12 mm) sürekli bir menteşeyi engeller.
-* `gear_retraction` dizisinde mafsal kapağı değerleri layout'tan aynen alındı; bunlar kapağın kendi `expr`inden farklıdır
-  (§11).
+  9 mm kola ve cıvata başları arasına sığmaz → pim + aralık burcu 656 ile tutma (GD-11).
+* Burun kapak menteşe istasyonları yalnız iki bölgede — layout kuralları (kapak–bacak 10 mm, lastik–kapak 12 mm)
+  sürekli bir menteşeyi engeller.
+* Ayrıntı turunda layout'un kendisi düzeltildi (sapma değil): iç kapak menteşe hattı ve istasyonları, mafsal kapağı
+  `expr`i = dizi (0,85–1,0), EQ-DOORACT / EQ-NDOORACT / ACT-NLG-EMA konumları ve mil eksenleri, C-DOORSHAFT,
+  W-NDOOR-LINK, F-TRUNNION aşağı kilit uzantısı, F-UPLOCK pimi, `door_outlines.*.hinge`.
 
 ## 11. Açık konular
 
-1. **İç kapak tahriki (DA 22 krank + itme çubuğu + boynuz):** FS-GEAR'daki C-DOORLINK penceresi (35 × 18 mm) 90° kapak
-   hareketinde itme çubuğunu geçirmez (bağlantı taraması: Ø5 çubukta en iyi pay −0,8 mm; tek çözüm boynuzu kapak
-   ortasına alıp 12° krank hareketi veriyor — tork yetersiz, R/L boynuzlar çakışır). Pencerenin büyütülmesi ya da
-   kuyuda bir dirsek (bellcrank) gerekir → layout değişikliği. DA 22'ler yerinde, bağlantı modellenmedi.
-2. **Mafsal kapağının bacakla tahriki (yarıklı bağlantı):** kapak, bacağın son 18°'sinde 125° dönmeli; boynuz kirişin
-   çentik üstüne girmeden ve bacak pimi s ≥ 45 mm'de olacak bir geometri bulunamadı. Ayrıca layout dizisi kapağı bacak
-   kilitlendikten sonra (gear_up 0,9–1,0) kapatıyor, `expr` ise 0,733–0,85 arasında — layout tutarsızlığı.
-3. **Burun kapakları bağlantısı (NDOOR-LINKAGE dirsek + bağlantılar + boynuzlar):** modellenmedi; DA 22 yerinde.
-4. **Burun toplama krankı + ölü nokta sürükleme çubuğu (burun aşağı kilidi):** çubuk düzlemi F-NG-PIVOT cıvatalarının
-   omurga duvarlarının iç yüzündeki başları (pivot çevresinde |y| 28–35,5 mm) ve EMA kutusu (|y| < 30 mm) arasında
-   kalmıyor → cıvataların ters takılması (başlar yan bölmelerde) ya da EMA'nın kaydırılması gerekir.
-5. **Ana aşağı kilit:** layout'taki F-TRUNNION çatallı kilit cıvatası şasi geometrisinde yok ve çatal/kiriş/flanş
-   arasında süpürmeyi engellemeyen bir kilit kulağı yeri yok → EMA ünitesine tümleşik kilit pimi (tedarikçi gereksinimi
-   G-DOWNLOCK), ayrı modellenmedi.
-6. Yukarı kilit pençeleri ve çözme solenoidleri (takım ünitesi) zarfları; F-UPLOCK yuvası Ø5 pim için 6 mm (1,2 D)
-   kenar mesafesi veriyor (şasi konusu; pim yalnız mandal plakalarına bağlı sayıldı).
-7. Kabuğa açılan menteşe oyukları ve mafsal kapağı menteşe bloklarının kaplamaya yapıştırılması: kabuk kenar şeritleri
-   ve conta tasarımı.
-8. **EQ-BRAKE_UNIT (FC-629):** layout kutusu tepsisinin 67 mm üstünde — destek braketi ya da layout düzeltmesi; fren
-   hatları (esnek hortum bacak boyunca).
-9. Yönlendirme DA 26'nın milinin yatay olması nedeniyle 90° dişli kafa (tahmin) — DA 26 + kayış SAGITTA uygulaması.
-10. Kütle bütçesi farkı (−4,03 kg, §9) ve EMA/amortisör tahminleri, tedarikçi seçimiyle güncellenmeli.
+1. **G-DOOR-DRIVE:** iç kapak işi (|Cp| 1,0 üst sınırında 14,0 J) DA 22'nin anma torku × 180° işinden (5,7 J)
+   büyüktür (`structures` G-DOOR-DRIVE, değişmedi). Yeni bağlantıda krank 131° döner (kapak/krank oranı 0,69);
+   DA 22'nin bu açıyı verdiği ve tork açığı (daha güçlü eyleyici ya da açma yayı) tedarikçiyle kapatılmalı. Kapalı
+   kapak ölü nokta ötesi kilitle tutulur (G-DOOR-LOCK eyleyiciden alınmaz).
+2. **Mafsal kapağı dişli motoru 691:** zarf (Ø16 × 21 mm) ve kütle (0,045 kg) tahmindir; 0,3 N m çıkış, enkoder ve
+   uç sınır anahtarları ile seçilmeli (Faulhaber / maxon sınıfı).
+3. **Aşağı kilit solenoidi 638 ve fren döner rakoru 651:** katalog sınıfı tahmin zarfları/kütleleri; pim konum
+   sensörü takım ünitesi kalemidir.
+4. **Fren hattı:** H-MAIN boyunca boru ve bacak boyunca esnek hortum (döner rakordan kalipere) modellenmedi; FC-629
+   bağlantı dişleri Volz kurulum resmine göre doğrulanmalı.
+5. Yukarı kilit pençeleri ve çözme solenoidleri (takım ünitesi) zarfları modellenmedi.
+6. Yönlendirme DA 26'nın milinin yatay olması nedeniyle 90° dişli kafa (tahmin) — DA 26 + kayış SAGITTA uygulaması.
+7. Kütle bütçesi farkı (§9) ve EMA/amortisör tahminleri, tedarikçi seçimiyle güncellenmeli.
+8. Ana bacak anahtar yuvası: kayar borunun tam basma konumunda (50 mm) yuva boyu borunun alt tapasına kadar
+   uzatılmıştır; tam stroklu boru boyu amortisör tedarikçisiyle kesinleşmeli.
 
 ## 12. Doğrulama
 
-* `python3 -m ucav250.analysis.checks --modules chassis,shell,gear --focus YK250-LG,YK250-FC-6 --no-write`
+* `python3 -m ucav250.analysis.checks --modules chassis,shell,gear --focus YK250-LG,YK250-FC-6,YK250-CH,YK250-SH --no-write`
 * `python3 -m unittest tests.test_ucav250_gear`
 * Önizleme: `python3 -m ucav250.blender.build --modules chassis,gear --previews --no-blend --out /tmp/...`

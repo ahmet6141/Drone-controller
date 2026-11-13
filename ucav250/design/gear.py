@@ -13,16 +13,21 @@ range, see ``docs/detail/gear.md``):
 * main retraction: rotary EMA on the trunnion axis (layout ACT-MLG-EMA envelope, output spline into the forward stub
   axle, integral lock bolt), its reaction flange bolted through the main-well forward wall; up-lock: catch on the
   F-UPLOCK pivot boss and a twin roller on the leg;
-* main doors: inner door on a three-ear hinge bracket of the well keel web (DA 22 actuator on FS-GEAR), leg door on two
-  standoff brackets of the leg, trunnion door on hinge blocks either side of the leg slot;
+* main doors: inner door on three hinge stations of the well keel web along the inclined hinge line, leg door on two
+  standoff brackets of the leg, trunnion door on hinge blocks either side of the leg slot (bolted to the beam web);
 * nose leg: 7075 yoke + outer cylinder (OD 36 x 3), flanged stub axles d 16 in the F-NG-PIVOT bushings, steering tube
   + trailing fork (trail 30 mm) with the TOST LR Max II wheel, steering DA 26 on the aft face of the leg (belt drive),
   friction shimmy damper, retraction EMA (ACT-NLG-EMA), up-lock rollers on the axle ends and catches on the keel walls;
-* nose clamshell doors on hinge blocks of the keel walls, nose-door DA 22 (EQ-NDOORACT) on the side-bay tray.
+* nose clamshell doors on hinge blocks of the keel walls, nose-door DA 22 (EQ-NDOORACT) on the side-bay tray;
+* gear detail round (GD-01..12, ``docs/detail/gear.md`` section 7.1): inner-door drive (DA 22 crank + link + horn,
+  bearing housing in C-DOORSHAFT), trunnion-door drive (own micro gearmotor, crank + link + horn), nose drag link
+  (EMA crank + link to the yoke horn, over-centre down-lock), nose-door drive + symmetric slide-bar coupling, main
+  down-lock bolt + solenoid, anti-rotation key, nose stub spreader, brake unit hanger and brake swivel. Each planar
+  linkage is solved exactly (``FourBar``) and posed by a crank joint and a child link joint whose values are added to
+  gear_retraction and written as piecewise-linear expressions of gear_up.
 
-Door hinge edges are shaped by swept reliefs against the fixed skin / structure (``relief_cutter``). Door drive
-linkages, the leg-driven trunnion-door link, the nose crank / drag link and the brake unit are open items
-(``docs/detail/gear.md`` section 11): the layout geometry does not leave a collision-free path for them.
+Door hinge edges are shaped by swept reliefs against the fixed skin / structure (``relief_cutter``); the skin coves at
+the hinge stations are cut by the shell module (layout ``door_outlines.*.hinge``).
 
 Interfaces read (never another module's geometry for placement): ``spec.landing_gear`` (trunnion, axle, splay,
 tyre, nose pivot / axle / trail, door scheme), ``spec.layout`` (part_numbers, mechanisms joints / sequences /
@@ -974,6 +979,7 @@ class NoseLeg:
         self.stub_d = float(f["pivot_scheme"]["stub_axle"]["d"])
         self.stub_l = float(f["pivot_scheme"]["stub_axle"]["length"])
         self.ret = float(C.jl["nose_gear"]["hi"])
+        self.extra = []                  # integral features added by the gear detail round (drag-link horn)
 
     def X(self, x_, y_, z_):
         return np.array([self.Pv[0] + x_, y_, self.Pv[2] + z_])
@@ -998,7 +1004,7 @@ class NoseLeg:
         lugs = [_box((Pv[0] + 0.012, sg * 0.0165 - 0.0075, c[2] + dz - 0.0095), (c[0], sg * 0.0165 + 0.0075, c[2] + dz + 0.0095))
                 for sg in (1, -1) for dz in (0.034, -0.034)]
         parts.append(G.difference(G.union(lugs), [self.steer_case()]))
-        m = G.union(parts)
+        m = G.union(parts + list(self.extra))
         cuts = [G.cylinder(0.5 * self.stub_d + 0.00002, (Pv[0], -0.05, Pv[2]), (Pv[0], 0.05, Pv[2]), n=48),
                 G.cylinder(self.ri, self.X(0, 0, N_CROWN[1] - 0.0001), self.X(0, 0, N_CYL[1] - 0.01), n=48)]
         return G.difference(m, cuts)
@@ -1138,14 +1144,48 @@ class NoseLeg:
         return G.extrude(outer.difference(inner), z1 - z0, origin=(0, 0, z0), u=(1, 0, 0), v=(0, 1, 0))
 
     def ema(self) -> G.Mesh:
+        """632: retraction EMA envelope (layout ACT-NLG-EMA) with the spline bore of the crank on its port face and a
+        flange on the starboard keel-wall land (2 x M5)."""
         a = self.C.act["ACT-NLG-EMA"]
         lo, hi = np.asarray(a["box"][0], float), np.asarray(a["box"][1], float)
-        body = _box(lo + np.array([0, 0.0005, 0.0005]), hi - np.array([0, 0.0005, 0.0005]))
-        xc, zc = 0.5 * (lo[0] + hi[0]), lo[2] + 0.030      # output shaft (port face): crank + drag link, see the open items
-        shaft = G.cylinder(0.006, (xc, lo[1] + 0.001, zc), (xc, lo[1] - 0.003, zc), n=32)
+        sp = np.asarray(a["shaft"]["point"], float)
+        body = _box(lo + np.array([0, 0.0, 0.0005]), hi - np.array([0, 0.0005, 0.0005]))
         wall_y = float(self.C.mem["M-KEELWALL"]["box"][0][1])
         flange = _box((lo[0], hi[1] - 0.001, hi[2] - 0.022), (hi[0], wall_y, hi[2] - 0.0005))
-        return G.union([body, shaft, flange])
+        bore = G.cylinder(0.00605, (sp[0], lo[1] - 0.001, sp[2]), (sp[0], lo[1] + 0.0125, sp[2]), n=32)
+        return G.difference(G.union([body, flange]), [bore])
+
+    def spreader(self) -> G.Mesh:
+        """656 (GD-11): stub-axle spreader sleeve between the two stub flanges (jack-screw pair, 7075 / 4130): it
+        holds both flanges against the yoke arms so neither stub can walk inward out of its bushing."""
+        Pv = self.Pv
+        y = N_STUB_FL[0] - 0.0001
+        tube = G.tube(0.0065, 0.0030, (Pv[0], -y, Pv[2]), (Pv[0], y, Pv[2]), n=40)
+        hexn = G.tube(0.0080, 0.0030, (Pv[0], -0.004, Pv[2]), (Pv[0], 0.004, Pv[2]), n=6)
+        return G.union([tube, hexn])
+
+    def catch(self) -> G.Mesh:
+        """650: nose up-lock catch (4130 plate, starboard; port = mirror) on the keel-wall inner face: the axle-end
+        roller enters its notch from below at the end of the retraction (latch pawl + solenoid: gear-unit item); two
+        tapped bosses above the notch take 2 x M4 from the side bay (GD-08)."""
+        a = self.stowed_axle()
+        wall = float(self.C.mem["M-KEELWALL"]["box"][0][1])
+        prof = Polygon([(-0.020, -0.016), (0.020, -0.016), (0.020, CATCH_TOP), (-0.020, CATCH_TOP)])
+        notch = unary_union([Point(0.0, 0.0).buffer(0.0065, 48),
+                             Polygon([(-0.0065, 0.0), (0.0065, 0.0), (0.0065, -0.03), (-0.0065, -0.03)])])
+        pl = _plate(prof.difference(notch), (a[0], wall - 0.0001, a[2]), (1, 0, 0), (0, 0, 1), 0.0,
+                    wall - 0.0001 - N_UPL_Y[0] + 0.0004)
+        boss = _box((a[0] - 0.020, CATCH_BOSS_Y, a[2] + CATCH_BOSS_Z), (a[0] + 0.020, wall - 0.0001, a[2] + CATCH_TOP))
+        return G.union([pl, boss])
+
+    def catch_bolts(self):
+        a = self.stowed_axle()
+        wall_o = float(self.C.mem["M-KEELWALL"]["box"][1][1])
+        return [(np.array([a[0] + dx, wall_o, a[2] + CATCH_BOLT_Z]), np.array([0.0, -1.0, 0.0])) for dx in (-0.010, 0.010)]
+
+
+CATCH_TOP, CATCH_BOSS_Y, CATCH_BOSS_Z, CATCH_BOLT_Z = 0.034, 0.0345, 0.019, 0.0265   # catch bosses above the notch
+#                                                     (clear of the axle nut r 14.5), M4 tapped 7 mm
 
 
 class NoseDoors:
@@ -1179,11 +1219,16 @@ class NoseDoors:
         return [G.cylinder(0.0042, self.on_axis(xa - 0.0015), self.on_axis(xb + 0.0015), n=32) for xa, xb in self.stations()]
 
     def block_mesh(self) -> G.Mesh:
+        """683: hinge blocks (7075) on the keel-wall inner face, each with a flange above the hinge line (out of the
+        door's swept space) bolted through the wall (one M4, nut in the side bay; GD-08)."""
         ms = []
         for xa, xb in self.blocks:
             pa, pb = self.on_axis(xa), self.on_axis(xb)
             kn = G.cylinder(0.0035, pa, pb, n=32)
             zt = max(pa[2], pb[2]) + 0.014
+            xc = 0.5 * (xa + xb)
+            zc = float(self.on_axis(xc)[2])
+            ms.append(_box((xc - 0.010, self.O[1] - 0.0015, zc + 0.008), (xc + 0.010, self.wall_y, zc + 0.024)))
             blk = _box((xa, self.O[1] - 0.0015, min(pa[2], pb[2]) - 0.001), (xb, self.wall_y, zt))
             big = rect(xa - 0.01, xb + 0.01, 0.0, 0.09)
             blk = G.difference(blk, [oml_panel(self.C, big, 0.03 + self.t_skin + 0.003, off=-0.03, nx=8, ny=40)])
@@ -1191,6 +1236,10 @@ class NoseDoors:
         bores = [G.cylinder(0.0015 + 0.00002, self.on_axis(xa - 0.001), self.on_axis(xb + 0.001), n=24)
                  for xa, xb in self.stations()]
         return G.difference(G.union(ms), bores)
+
+    def block_bolts(self):
+        return [(np.array([0.5 * (xa + xb), self.O[1] - 0.0015, float(self.on_axis(0.5 * (xa + xb))[2]) + 0.016]),
+                 np.array([0.0, 1.0, 0.0])) for xa, xb in self.blocks]
 
     def pin(self) -> G.Mesh:
         return G.merge([G.cylinder(0.0015 - 0.00001, self.on_axis(xa + 0.0005), self.on_axis(xb - 0.0005), n=24)
@@ -1241,6 +1290,422 @@ class NoseDoors:
     def door(self) -> G.Mesh:
         m = self.door_closed()
         return G.Mesh(_rot(m.V, self.O, self.a, float(self.j["rest"])), m.F)
+
+
+# =====================================================================================================================
+# gear detail round: door drives, nose drag link, main down-lock, brake installation (docs/detail/gear.md section 7)
+# =====================================================================================================================
+ID_RC, ID_FOLD = 0.034, True                          # inner-door crank radius, folded toggle with the door closed
+ID_Q = (0.041, -0.180)                                # inner-door horn pin, door closed (y, z in the drive plane)
+ID_T = {"horn": (-0.00475, -0.00175), "link": (-0.0015, 0.0015), "crank": (0.00175, 0.00475)}  # along the shaft axis
+#                                                     (0.25 mm plane gaps: shim washers on the pins)
+ID_PIN, ID_EYE = 0.003, 0.006                         # pins d 3, eyes r 6 (2 D edge distance)
+TD_X, TD_OM, TD_RC = 2.9845, (0.3657, -0.1166), 0.016   # trunnion-door drive plane (link), gearmotor axis, crank
+TD_Q = (0.3761, -0.1360)                              # trunnion-door horn pin, door closed (y, z)
+TD_T = {"crank": (-0.00425, -0.00125), "link": (-0.0010, 0.0020), "horn": (0.00225, 0.00525)}
+TD_MOT = (0.008, 2.9620, 2.9800)                      # gearmotor envelope r 8 x 18 mm (estimate), x range
+TD_PIN, TD_EYE = 0.003, 0.006
+NG_RH, NG_AL, NG_RC = 0.032, math.radians(116.0), 0.0341   # nose drag-link horn pin (radius, angle about the pivot in
+#                                                            (x, z)), crank radius; folded toggle with the gear down
+NG_Y = {"horn": (-0.01025, -0.00525), "link": (-0.0050, 0.0000), "crank": (0.00025, 0.00475)}
+NG_PIN, NG_EYE = 0.006, 0.012                         # pins d 6 (heat-treated, gear-unit requirement G-NLOCK)
+ND_XP, ND_RC, ND_QREL = 1.07275, 0.0233, (0.0060, 0.0232)  # nose-door drive: link plane (port hinge point), crank
+#                                     radius, drive pin on the port coupling horn rel. the port hinge (inboard, up; closed)
+NC_XP, NC_B, NC_BETA, NC_ZC0 = 1.073, 0.028, math.radians(160.0), -0.130   # coupling plane x, horn radius / angle
+#                                                                            (starboard), slide-bar pin z (closed)
+NC_X = {"horn_L": (1.0680, 1.0710), "horn_R": (1.0680, 1.0710), "crank": (1.0680, 1.0710),
+        "link_R": (1.07125, 1.07425), "dlink": (1.07125, 1.07425), "link_L": (1.0745, 1.0775),
+        "bar": (1.07775, 1.08175), "guide": (1.0820, 1.0860)}   # all door-level parts aft of the tyre swing (x 1.0713)
+NC_PIN, NC_EYE, NC_GP = 0.003, 0.006, (0.010, 0.020)  # coupling pins d 3, eyes r 6, bar guide pins d 3 above the bar pin
+ND_PIN, ND_EYE = 0.003, 0.006
+
+
+def _seq_bounds(vals, pad=1e-6):
+    return min(0.0, min(vals)) - pad, max(0.0, max(vals)) + pad
+
+
+class InnerDoorDrive:
+    """GD-05: DA 22 on the aft face of FS-GEAR, shaft parallel to the inner-door hinge line through a bearing housing
+    in C-DOORSHAFT; crank 686 + link 687 to the horn 688 bonded at the aft end of the door; folded toggle with the
+    door closed (over-centre lock)."""
+
+    def __init__(self, C: Ctx, Dr: "Doors"):
+        self.C, self.Dr = C, Dr
+        eq = C.eq["EQ-DOORACT"]
+        self.Cp = np.asarray(eq["shaft"]["point"], float)
+        u = _u(eq["shaft"]["axis"])
+        self.u = u
+        d_max = float(Dr.ji["hi"])
+        fb = best_fourbar(u, self.Cp, self.Cp, Dr.on_axis(self.Cp[0]), ID_RC, (self.Cp[0], ID_Q[0], ID_Q[1]),
+                          math.copysign(1.0, float(Dr.a_i @ u)), ID_FOLD, d_max)
+        self.m = Mech(fb, lambda st: st["main_inner_door_R"], 0.0, d_max)
+        lo, hi = np.asarray(eq["box"][0], float), np.asarray(eq["box"][1], float)
+        self.t_case = (lo[0] - self.Cp[0] + 0.02075 * abs(u[2])) / u[0]   # DA 22 case forward face along u
+        self.e1 = np.array([0.0, 1.0, 0.0])
+        self.e2 = np.cross(u, self.e1)
+        self.R = np.column_stack([u, self.e1, self.e2])
+        st = C.st["FS-GEAR"]
+        self.xf0, self.xf1 = float(st["x_faces"][0]), float(st["x_faces"][1])
+
+    def at(self, t, b=0.0, c=0.0):
+        return self.Cp + t * self.u + b * self.e1 + c * self.e2
+
+    def crank(self) -> G.Mesh:
+        m, fb = self.m, self.m.fb
+        t0, t1 = ID_T["crank"]
+        plate = bar_mesh(fb, self.Cp, m.K3(), 0.009, ID_EYE, t0, t1, hole1=0.5 * ID_PIN + 0.000025)
+        shaft = G.cylinder(0.004, self.at(t1 - 0.0005), self.at(self.t_case + 0.010), n=32)
+        return G.union([plate, shaft])
+
+    def link(self) -> G.Mesh:
+        t0, t1 = ID_T["link"]
+        h = 0.5 * ID_PIN + 0.000025
+        return bar_mesh(self.m.fb, self.m.K3(), self.m.q3(), ID_EYE, ID_EYE, t0, t1, hole0=h, hole1=h)
+
+    def horn(self) -> G.Mesh:
+        fb = self.m.fb
+        t0, t1 = ID_T["horn"]
+        q2 = fb.to2(self.m.q3())
+        foot = inner_face_2d(self.C, fb, 0.5 * (t0 + t1), np.linspace(ID_Q[0] - 0.012, ID_Q[0] + 0.012, 7), self.Dr.t)
+        poly = horn_poly(fb, q2, ID_EYE, foot).difference(Point(*q2).buffer(0.5 * ID_PIN + 0.000025, 32))
+        return _plate(poly, fb.p0, fb.e1, fb.e2, t0, t1)
+
+    def case(self) -> G.Mesh:
+        """676: DA 22 case (41.5 x 65.9 x 22, datasheet) on its tilted axes, two top ears, spline bore."""
+        tc = self.t_case
+        body = G.box((0.022, 0.0659, 0.0415), center=self.at(tc + 0.011, 0.5 * 0.0659 - 0.014, 0.0), R=self.R)
+        ears = [G.box((0.003, 0.012, 0.012), center=self.at(tc + 0.0015, b, 0.02075 + 0.006), R=self.R)
+                for b in DA_EAR_B]
+        bore = G.cylinder(0.00405, self.at(tc - 0.001), self.at(tc + 0.0105), n=32)
+        return G.difference(G.union([body] + ears), [bore])
+
+    def plate(self) -> G.Mesh:
+        """685: wedge plate between the aft face of FS-GEAR and the tilted case face (3.6 mm at the shaft)."""
+        tc = self.t_case
+        pts = [self.at(tc, b, c) for b in (-0.016, 0.0539) for c in (-0.02075, 0.02075 + 0.012)]
+        P = np.array(pts)
+        Pf = P.copy()
+        Pf[:, 0] = self.xf1
+        m = G.hull(np.vstack([P, Pf]))
+        return G.difference(m, [G.cylinder(0.0045, self.at(tc - 0.02), self.at(tc + 0.001), n=32)])
+
+    def ear_bolts(self):
+        return [self.at(self.t_case + 0.003, b, 0.02075 + 0.006) for b in DA_EAR_B]
+
+    def housing(self) -> G.Mesh:
+        """689: flanged bearing housing (7075) on the forward face of FS-GEAR, spigot in C-DOORSHAFT, two sealed
+        deep-groove bearings 8 x 12 (catalogue class) for the d 8 shaft."""
+        y, z = HS_YZ
+        fl = _box((self.xf0 - 0.003, y - 0.023, z - 0.012), (self.xf0, y + 0.023, z + 0.012))
+        sp = G.cylinder(0.0085, (self.xf0 - 0.0001, y, z), (self.xf1 - 0.0003, y, z), n=40)
+        t0 = (self.xf0 - 0.004 - self.Cp[0]) / self.u[0]
+        t1 = (self.xf1 + 0.001 - self.Cp[0]) / self.u[0]
+        return G.difference(G.union([fl, sp]), [G.cylinder(0.00405, self.at(t0), self.at(t1), n=32)])
+
+    def housing_bolts(self):
+        y, z = HS_YZ
+        return [np.array([self.xf0 - 0.003, y + dy, z]) for dy in (-0.016, 0.016)]
+
+
+DA_EAR_B = (-0.006, 0.044)          # DA 22 top ears along the case (e1), M3 into the frame inserts
+HS_YZ = (0.044, -0.135)             # bearing housing centre on the forward face of FS-GEAR (C-DOORSHAFT centre)
+
+
+class TrunnionDoorDrive:
+    """GD-07: micro gearmotor 691 (estimate) in the yoke pocket above the beam notch, clamped to the inboard face of the
+    F-TRUNNION flange (bracket 695); crank 692 + link 693 to the horn 694 bonded on the trunnion door; folded toggle
+    with the door closed. The door closes at gear_up 0.85..1.0 (sequence = joint expression)."""
+
+    def __init__(self, C: Ctx, Dr: "Doors"):
+        self.C, self.Dr = C, Dr
+        jt = Dr.jt
+        self.jt = jt
+        u = np.array([1.0, 0.0, 0.0])
+        self.Cp = np.array([TD_X, TD_OM[0], TD_OM[1]])
+        d_max = float(jt["hi"])
+        fb = best_fourbar(u, self.Cp, self.Cp, jt["origin"], TD_RC, (TD_X, TD_Q[0], TD_Q[1]),
+                          math.copysign(1.0, float(_u(jt["axis"]) @ u)), True, d_max)
+        self.m = Mech(fb, lambda st: st["main_trunnion_door_R"], float(jt["rest"]), d_max)
+
+    def x(self, t):
+        return TD_X + t
+
+    def motor(self) -> G.Mesh:
+        r, x0, x1 = TD_MOT
+        y, z = TD_OM
+        return G.difference(G.cylinder(r, (x0, y, z), (x1, y, z), n=40),
+                            [G.cylinder(0.00155, (x1 - 0.0035, y, z), (x1 + 0.001, y, z), n=24)])
+
+    def crank(self) -> G.Mesh:
+        m, fb = self.m, self.m.fb
+        t0, t1 = TD_T["crank"]
+        plate = bar_mesh(fb, self.Cp, m.K3(), 0.0045, TD_EYE, t0, t1, hole1=0.5 * TD_PIN + 0.000025)
+        y, z = TD_OM
+        stub = G.cylinder(0.0015, (TD_MOT[2] - 0.003, y, z), (self.x(t0) + 0.0005, y, z), n=24)
+        return G.union([plate, stub])
+
+    def link(self) -> G.Mesh:
+        t0, t1 = TD_T["link"]
+        h = 0.5 * TD_PIN + 0.000025
+        return bar_mesh(self.m.fb, self.m.K3(), self.m.q3(), TD_EYE, TD_EYE, t0, t1, hole0=h, hole1=h)
+
+    def horn(self) -> G.Mesh:
+        """Built with the door closed (toggle pose) and turned to the rest (open) pose with the door."""
+        fb, jt = self.m.fb, self.jt
+        t0, t1 = TD_T["horn"]
+        q2 = fb.q_rest
+        ymax = float(self.Dr.door_poly(self.Dr.o_tr).bounds[3]) - 0.0015
+        foot = inner_face_2d(self.C, fb, 0.5 * (t0 + t1), np.linspace(TD_Q[0] - 0.008, ymax, 6), self.Dr.t)
+        poly = horn_poly(fb, q2, TD_EYE, foot).difference(Point(*q2).buffer(0.5 * TD_PIN + 0.000025, 32))
+        m = _plate(poly, fb.p0, fb.e1, fb.e2, t0, t1)
+        return G.Mesh(_rot(m.V, jt["origin"], jt["axis"], float(jt["rest"])), m.F)
+
+    def bracket(self) -> G.Mesh:
+        """695: half-clamp over the gearmotor with a tab on the inboard face of the F-TRUNNION flange (2 x M3)."""
+        y, z = TD_OM
+        r = TD_MOT[0]
+        ang = np.linspace(0.0, math.pi, 25)
+        ring = Polygon([(y + (r + 0.0018) * math.cos(a), z + (r + 0.0018) * math.sin(a)) for a in ang] +
+                       [(y + r * math.cos(a), z + r * math.sin(a)) for a in ang[::-1]])
+        yf = float(TD_FLANGE_Y)
+        web = rect(y - 0.004, yf - 0.002, z + r + 0.0008, z + r + 0.0038)
+        tab = rect(yf - 0.003, yf, z + r + 0.0008, TD_TAB_Z)
+        poly = unary_union([ring.buffer(0), web, tab])
+        return _plate(poly, (TD_MOT[1], 0.0, 0.0), (0, 1, 0), (0, 0, 1), 0.0, TD_MOT[2] - TD_MOT[1])
+
+    def bracket_bolts(self):
+        return [np.array([x, TD_FLANGE_Y - 0.003, TD_BOLT_Z]) for x in (TD_MOT[1] + 0.006, TD_MOT[2] - 0.006)]
+
+
+TD_FLANGE_Y = 0.377                 # inboard face of the F-TRUNNION flange between the lugs (layout box)
+TD_TAB_Z, TD_BOLT_Z = -0.0860, -0.0935
+
+
+class NoseDrag:
+    """GD-04: nose retraction EMA crank 655 + drag link 653 in the centre plane to the horn of the yoke (integral,
+    r 31 about the pivot: the stub-axle insertion path r < 19.5 stays free); folded toggle with the gear down =
+    over-centre down-lock (stop on the EMA housing)."""
+
+    def __init__(self, C: Ctx, N: "NoseLeg"):
+        self.C, self.N = C, N
+        a = C.act["ACT-NLG-EMA"]
+        sp = np.asarray(a["shaft"]["point"], float)
+        self.Cp = np.array([sp[0], 0.0, sp[2]])
+        self.h0 = np.array([N.Pv[0] + NG_RH * math.cos(NG_AL), 0.0, N.Pv[2] + NG_RH * math.sin(NG_AL)])
+        u = np.array([0.0, 1.0, 0.0])
+        jn = C.jl["nose_gear"]
+        d_max = float(jn["hi"])
+        fb = best_fourbar(u, self.Cp, self.Cp, N.Pv, NG_RC, self.h0, math.copysign(1.0, float(_u(jn["axis"]) @ u)),
+                          True, d_max)
+        self.m = Mech(fb, lambda st: st["nose_gear"], 0.0, d_max)
+        self.y_ema = float(sp[1])
+
+    def crank(self) -> G.Mesh:
+        fb = self.m.fb
+        t0, t1 = NG_Y["crank"]
+        plate = bar_mesh(fb, self.Cp, self.m.K3(), 0.013, NG_EYE, t0, t1, hole1=0.5 * NG_PIN + 0.000025)
+        spl = G.cylinder(0.006, (self.Cp[0], t1 - 0.0005, self.Cp[2]), (self.Cp[0], self.y_ema + 0.012, self.Cp[2]), n=32)
+        return G.union([plate, spl])
+
+    def link(self) -> G.Mesh:
+        t0, t1 = NG_Y["link"]
+        h = 0.5 * NG_PIN + 0.000025
+        return bar_mesh(self.m.fb, self.m.K3(), self.m.q3(), NG_EYE, NG_EYE, t0, t1, hole0=h, hole1=h)
+
+    def horn_poly_xz(self) -> Polygon:
+        """Yoke horn outline in (x, z) about the pivot: pin eye r 10.5 at r 31 / 116 deg and a web down the forward
+        side of the stub-insertion path (r >= 20.5) into the crown."""
+        P = self.N.Pv
+        h = self.h0[[0, 2]] - P[[0, 2]]
+        ang = np.linspace(NG_AL, math.radians(235.0), 30)
+        sector = Polygon([(0.0365 * math.cos(a), 0.0365 * math.sin(a)) for a in ang] +
+                         [(0.0205 * math.cos(a), 0.0205 * math.sin(a)) for a in ang[::-1]])
+        eye = Point(*h).buffer(NG_EYE, 48)
+        crown = rect(-self.N.ro, 0.0, N_CROWN[1], N_CROWN[0] + 0.004)
+        poly = unary_union([sector, eye, crown]).difference(Point(0.0, 0.0).buffer(0.0205, 64))
+        return poly.difference(Point(*h).buffer(0.5 * NG_PIN + 0.000025, 32))
+
+    def horn(self) -> G.Mesh:
+        P = self.N.Pv
+        y0, y1 = NG_Y["horn"]
+        return _plate(self.horn_poly_xz(), (P[0], y0, P[2]), (1, 0, 0), (0, 0, 1), -(y1 - y0), 0.0)
+
+
+class NoseDoorDrive:
+    """GD-08: DA 22 678 in the port side bay, output parallel to the door hinge axes, case ahead of its crank 679; drive
+    link 696 through the port keel-wall window W-NDOOR-LINK to the drive arm of the port coupling horn 698-L (folded
+    toggle with the doors closed = over-centre lock). Coupling: horns 698-R/L, links 699-R/L to the slide bar 700
+    guided by two pins in the slot of the guide plate 701 (bolted to both keel walls): the starboard door follows the
+    port door as its exact mirror. Every door-level part lies aft of the nose-tyre swing (x >= 1.068) and ahead of the
+    slot-end sill (x < 1.0806)."""
+
+    def __init__(self, C: Ctx, ND: "NoseDoors"):
+        self.C, self.ND = C, ND
+        eq = C.eq["EQ-NDOORACT"]
+        self.eq = eq
+        self.Cp = np.asarray(eq["shaft"]["point"], float)
+        u = _u(eq["shaft"]["axis"])
+        self.u = u
+        jl, jr = C.jl["nose_door_L"], C.jl["nose_door_R"]
+        self.jl, self.jr = jl, jr
+        oL, aL = np.asarray(jl["origin"], float), _u(jl["axis"])
+        d_max = float(jl["hi"])
+        pL = oL + (ND_XP - oL[0]) / aL[0] * aL
+        self.pL = pL
+        e1, e2, _u3 = plane_frame(u)
+        q = pL + ND_QREL[0] * e1 + ND_QREL[1] * e2
+        fb = best_fourbar(u, pL, self.Cp, pL, ND_RC, q, math.copysign(1.0, float(aL @ u)), True, d_max)
+        self.m = Mech(fb, lambda st: st["nose_door_L"], float(jl["rest"]), d_max)
+        self.e1 = np.array([0.0, 1.0, 0.0])
+        self.e2 = np.cross(u, self.e1)
+        self.R = np.column_stack([u, self.e1, self.e2])
+        self.t_case = (-0.0230, -0.0010)               # layout EQ-NDOORACT: case ahead of the crank plane
+        # coupling (planar in the plane normal to u; both door axes are parallel to u)
+        oR = np.asarray(jr["origin"], float)
+        zax = oR[2] + (NC_XP - oR[0]) / u[0] * u[2]
+        self.cp = FourBar(u, (NC_XP, 0.0, zax), (NC_XP, 0.0, zax), (NC_XP, 0.0, zax), 0.01, (NC_XP, 0.0, zax + 0.02),
+                          1.0, True, 1.0)                  # plane frame helper only (to2 / to3)
+        self.HR = self.cp.to2(oR + (NC_XP - oR[0]) / u[0] * u)
+        self.HL = np.array([-self.HR[0], self.HR[1]])
+        self.qR0 = self.HR + NC_B * np.array([math.cos(NC_BETA), math.sin(NC_BETA)])
+        self.B0 = np.array([0.0, NC_ZC0 - zax])
+        self.lc = float(np.linalg.norm(self.B0 - self.qR0))
+        self.sR = math.copysign(1.0, float(_u(jr["axis"]) @ u))
+        self.v_rest = float(jr["rest"])
+
+    def at(self, t, b=0.0, c=0.0):
+        return self.Cp + t * self.u + b * self.e1 + c * self.e2
+
+    # ---------------- coupling kinematics (v = door opening, both doors)
+    def cpl(self, v: float) -> dict:
+        qR = self.HR + _r2(self.sR * v) @ (self.qR0 - self.HR)
+        qL = np.array([-qR[0], qR[1]])
+        B = np.array([0.0, qR[1] + math.sqrt(self.lc ** 2 - qR[0] ** 2)])
+        return {"qR": qR, "qL": qL, "B": B, "lamR": _ang(qR - B), "lamL": _ang(qL - B),
+                "mu": math.degrees(math.acos(min(1.0, abs((qR - B) @ (qR - self.HR)) /
+                                                 (np.linalg.norm(qR - B) * np.linalg.norm(qR - self.HR)))))}
+
+    def cpl_values(self, st: dict) -> tuple[float, float, float]:
+        a, r = self.cpl(st["nose_door_R"]), self.cpl(self.v_rest)
+        return a["B"][1] - r["B"][1], a["lamR"] - r["lamR"], a["lamL"] - r["lamL"]
+
+    def tx(self, key, ref=None):
+        """Plane offsets along u of the plane ``key`` (x at the hinge level) from the coupling plane point."""
+        x0 = NC_XP if ref is None else ref
+        return tuple((x - x0) / self.u[0] for x in NC_X[key])
+
+    def td(self, key):
+        """Plane offsets of ``key`` from the drive plane point (port hinge at ND_XP)."""
+        return self.tx(key, ND_XP)
+
+    # ---------------- drive parts
+    def case(self) -> G.Mesh:
+        """678: DA 22 case on its tilted axes ahead of the crank, outboard ear on the side-bay tray (2 x M3 +
+        nutplates), spline bore on the aft face."""
+        t0, t1 = self.t_case
+        body = G.box((t1 - t0, 0.0415, 0.0659), center=self.at(0.5 * (t0 + t1), 0.0, 0.5 * 0.0659 - 0.014), R=self.R)
+        y_o = self.Cp[1] - 0.02075
+        ear = _box((NDA_EAR_X[0], y_o - 0.018, NDA_TRAY_Z), (NDA_EAR_X[1], y_o + 0.001, NDA_TRAY_Z + 0.003))
+        bore = G.cylinder(0.00405, self.at(t1 - 0.0105), self.at(t1 + 0.001), n=32)
+        return _clean(G.difference(G.union([body, ear]), [bore]))
+
+    def case_bolts(self):
+        y = self.Cp[1] - 0.02075 - 0.012
+        return [np.array([x, y, NDA_TRAY_Z + 0.003]) for x in (NDA_EAR_X[0] + 0.006, NDA_EAR_X[1] - 0.006)]
+
+    def crank(self) -> G.Mesh:
+        fb = self.m.fb
+        t0, t1 = self.td("crank")
+        plate = bar_mesh(fb, fb.C3, self.m.K3(), 0.0085, ND_EYE, t0, t1, hole1=0.5 * ND_PIN + 0.000025)
+        tc = (fb.C3 - self.Cp) @ self.u                    # crank plane offset from the layout shaft point
+        shaft = G.cylinder(0.004, self.at(self.t_case[1] - 0.010), self.at(tc + t0 + 0.0005), n=32)
+        return _clean(G.union([plate, shaft]))
+
+    def link(self) -> G.Mesh:
+        t0, t1 = self.td("dlink")
+        h = 0.5 * ND_PIN + 0.000025
+        return _clean(bar_mesh(self.m.fb, self.m.K3(), self.m.q3(), ND_EYE, ND_EYE, t0, t1, hole0=h, hole1=h))
+
+    def _door_horn(self, fb, pins2, t0, t1, side, j, eye) -> G.Mesh:
+        """Horn bonded on a nose door: built with the doors closed (pins in the frame of ``fb``), turned to the rest
+        (open) pose."""
+        q2 = pins2[0]
+        qy = float(fb.to3(q2)[1])
+        ys = np.linspace(qy - 0.009, qy + 0.009, 7)
+        ys = np.clip(ys, -0.0345, 0.0345)
+        ys = ys[np.abs(ys) > 0.0012]
+        foot = inner_face_2d(self.C, fb, 0.5 * (t0 + t1), ys, self.ND.t, side=side)
+        poly = unary_union([Point(*p).buffer(eye, 48) for p in pins2] + [Polygon(list(foot) + [tuple(p) for p in pins2])
+                                                                        .buffer(0)]).convex_hull
+        for p in pins2:
+            poly = poly.difference(Point(*p).buffer(0.5 * ND_PIN + 0.000025, 32))
+        m = _plate(poly, fb.p0, fb.e1, fb.e2, t0, t1)
+        return _clean(G.Mesh(_rot(m.V, j["origin"], j["axis"], float(j["rest"])), m.F))
+
+    def drive_pin2(self):
+        """Drive pin of the port horn in the coupling frame, doors closed."""
+        return self.cp.to2(self.m.fb.to3(self.m.fb.q_rest))
+
+    # ---------------- coupling parts (rest pose: doors open)
+    def c_horn(self, side: str) -> G.Mesh:
+        q2 = self.qR0 if side == "R" else np.array([-self.qR0[0], self.qR0[1]])
+        pins = [q2] if side == "R" else [q2, self.drive_pin2()]
+        t0, t1 = self.tx("horn_" + side)
+        return self._door_horn(self.cp, pins, t0, t1, 1.0 if side == "R" else -1.0,
+                               self.jr if side == "R" else self.jl, NC_EYE)
+
+    def c_link(self, side: str) -> G.Mesh:
+        r = self.cpl(self.v_rest)
+        t0, t1 = self.tx("link_" + side)
+        h = 0.5 * NC_PIN + 0.000025
+        return _clean(bar_mesh(self.cp, self.cp.to3(r["B"]), self.cp.to3(r["q" + side]), NC_EYE, NC_EYE, t0, t1,
+                               hole0=h, hole1=h))
+
+    def bar(self) -> G.Mesh:
+        """700: slide bar 13 x 4 (7075) with the coupling pin at its lower end and two guide pins above it."""
+        B = self.cpl(self.v_rest)["B"]
+        t0, t1 = self.tx("bar")
+        hw = 0.0065
+        poly = unary_union([Point(*B).buffer(hw, 40), rect(B[0] - hw, B[0] + hw, B[1], B[1] + NC_GP[1] + hw)])
+        for d in (0.0,) + NC_GP:
+            poly = poly.difference(Point(B[0], B[1] + d).buffer(0.5 * NC_PIN + 0.000025, 32))
+        return _clean(_plate(poly, self.cp.p0, self.cp.e1, self.cp.e2, t0, t1))
+
+    def guide_slot(self):
+        r0, r1 = self.cpl(self.v_rest)["B"][1], self.cpl(0.0)["B"][1]
+        return min(r0, r1) + NC_GP[0] - 0.0016, max(r0, r1) + NC_GP[1] + 0.0016
+
+    def guide(self) -> G.Mesh:
+        """701: guide plate (7075, 4 mm) across the keel slot with the vertical guide slot, lightening windows and two
+        flanges forward along the keel walls (one M4 each through the wall)."""
+        t0, t1 = self.tx("guide")
+        s0, s1 = self.guide_slot()
+        wy = float(self.C.mem["M-KEELWALL"]["box"][0][1])
+        zb = NC_GUIDE_ZB - self.cp.p0[2]
+        plate = rect(-wy + 0.0005, wy - 0.0005, zb, s1 + 0.008).difference(rect(-0.0016, 0.0016, s0, s1))
+        for sg in (1.0, -1.0):                    # lightening windows (8 mm webs)
+            plate = plate.difference(rect(sg * 0.0096, sg * (wy - 0.0115), zb + 0.008, s1 - 0.024))
+        m = _plate(plate, self.cp.p0, self.cp.e1, self.cp.e2, t0, t1)
+        fls = [_plate(rect(min(sg * wy, sg * (wy - 0.003)), max(sg * wy, sg * (wy - 0.003)), s1 - 0.022, s1 + 0.008),
+                      self.cp.p0, self.cp.e1, self.cp.e2, t0 - NC_FL_L, t0 + 0.0005) for sg in (1.0, -1.0)]
+        return _clean(G.union([m] + fls))
+
+    def guide_bolts(self):
+        """(head point on the flange inner face, axis) of the guide-plate bolts (through the keel walls)."""
+        t0, _t1 = self.tx("guide")
+        s0, s1 = self.guide_slot()
+        wy = float(self.C.mem["M-KEELWALL"]["box"][0][1])
+        return [(self.cp.to3(np.array([sg * (wy - 0.003), s1 - 0.007])) + (t0 - 0.5 * NC_FL_L) * self.cp.u,
+                 np.array([0.0, sg, 0.0])) for sg in (1.0, -1.0)]
+
+
+NDA_TRAY_Z = -0.089                 # side-bay tray top face (TR-SIDEBAY-L)
+NDA_EAR_X = (1.0480, 1.0720)        # nose-door DA 22 outboard ear on the side-bay tray (outboard of its cut-out)
+NC_GUIDE_ZB = -0.1700               # guide plate lower edge (above the slot-end sill)
+SIDE_EN, SIDE_TR = {"R": "starboard", "L": "port"}, {"R": "sağ", "L": "sol"}
+PIN_X = 0.0003                      # pin ends beyond the outer plates
+TRAY_T_SB = 0.003                   # side-bay tray plate thickness (chassis TR-SIDEBAY, measured on the mesh)
+NC_FL_L = 0.016                     # guide-plate flange length on the keel walls
 
 
 # =====================================================================================================================
@@ -1419,8 +1884,8 @@ class Build:
         self.add(pid(671), "main inner-door fixed hinge bracket (7075-T651, 3 ears), starboard",
                  "ana iç kapak sabit menteşe braketi (7075-T651, 3 kulak), sağ", M7075, P_CNC, Dr.fixed_hinge,
                  thickness=0.003, parent=wk, contacts=(wk,), step=STEP_DOOR, explode=(0.0, 0.0, -0.15),
-                 notes="layout M-WELLKEEL: bolted to the outboard face of the well keel web (2 x M4, nuts in the "
-                       "harness channel); ears 4 mm round the layout hinge line where it lies in the door laminate")
+                 notes="layout M-WELLKEEL: three stations on the inclined hinge line (GD-06), each bolted to the "
+                       "outboard face of the well keel web (1 x M4, nut in the harness channel); ears 3 mm")
         self.add(pid(670), "main inner door (CFRP sandwich), starboard", "ana iç kapak (CFRP sandviç), sağ", MPW,
                  P_PREG, Dr.inner_door, thickness=Dr.t, joint="main_inner_door_R", parent=pid(671),
                  contacts=(pid(677),), step=STEP_DOOR, explode=(0.0, 0.05, -0.25),
@@ -1449,8 +1914,9 @@ class Build:
         self.add(pid(681), "trunnion-door hinge end blocks (7075-T651, pair), starboard",
                  "mafsal kapağı menteşe uç blokları (7075-T651, çift), sağ", M7075, P_CNC, lambda: Dr.tr_blocks()[0],
                  thickness=0.003, parent=skin, contacts=(skin,), step=STEP_DOOR, explode=(0.0, 0.05, -0.15),
-                 notes="bonded (EA 9394, 0.1 mm) on the inner face of the lower skin either side of the leg slot, "
-                       "inside the notch of the gear beam; knuckles in a 4.2 mm cove of the skin edge")
+                 notes="either side of the leg slot inside the notch of the gear beam, each with a flange on the beam "
+                       "web outside the notch (2 x M4 into potted inserts, GD-08); 0.3 mm bond line to the skin; "
+                       "knuckles in the 4.2 mm cove of the skin edge (shell)")
         self.add(pid(682), "trunnion-door hinge pin d 3 (ISO 2338 h8, 4130) + retaining rings, starboard",
                  "mafsal kapağı menteşe pimi d 3 (ISO 2338 h8, 4130) + segmanlar, sağ", P_BUY, P_BUY, Dr.tr_pin,
                  purchased=True, vendor="ISO 2338 h8 dowel d 3 x 82 + 2 x DIN 6799 retaining rings (catalogue)",
@@ -1465,6 +1931,8 @@ class Build:
         self.N = N
         ND = NoseDoors(C)
         self.ND = ND
+        self.NG = NoseDrag(C, N)
+        N.extra.append(self.NG.horn())
         jn, js = "nose_gear", "nose_steer"
         lg = lambda n, side="C": C.pid(n, side)
         bush_r, bush_l = "YK250-CH-073-R", "YK250-CH-073-L"
@@ -1475,7 +1943,8 @@ class Build:
                  "burun bacağı: çatal + dış silindir + toplama kolu (7075-T651 dövme, işlenmiş)", M7075, P_CNC, N.leg,
                  thickness=N.ro - N.ri, joint=jn, parent=lg(640), contacts=(lg(640),), step=S, explode=ex,
                  notes="OD 36 x 3 (structures.sizing.gear.nose_leg); yoke arms 9 mm (layout F-NG-PIVOT arm_m); "
-                       "horn of the over-centre drag link on the port arm; steering-actuator lugs aft")
+                       "integral horn of the drag link (pin d 10 at r 31 mm, centre plane y -10.5..-5.5 mm, GD-04); "
+                       "steering-actuator lugs aft")
         self.add(lg(640), "nose-leg flanged stub axle pair (4130 N, d 16 x 22)", "burun bacağı flanşlı mil çifti (4130 N, "
                  "d 16 x 22)", M4130, P_CNC, N.stubs, thickness=0.004, joint=jn, parent=bush_r,
                  contacts=(bush_r, bush_l, lg(624)), step=S, explode=ex,
@@ -1524,8 +1993,9 @@ class Build:
                  "burun takımı toplama EMA'sı (BLDC + planet dişli; yer ayırma zarfı)", P_BUY, P_BUY, N.ema,
                  purchased=True, vendor="DA-26-class BLDC EMA + planetary stage (layout ACT-NLG-EMA, mass estimate "
                  "0.27 kg per layout.mass_placement)", mass_kg=0.27, parent=kw + "-R", contacts=(kw + "-R",), step=S,
-                 explode=(0.0, 0.0, 0.2), notes="layout ACT-NLG-EMA: between the keel walls above the pivot, flange "
-                 "bolted to the starboard keel-wall land (2 x M5); output shaft to the port side crank")
+                 explode=(0.0, 0.0, 0.2), notes="layout ACT-NLG-EMA (GD-04): starboard half of the slot above the pivot, "
+                 "flange bolted to the starboard keel-wall land (2 x M5); spline output on the port face drives the "
+                 "crank 655")
         self.add(lg(647), "nose up-lock rollers on the axle ends (pair)", "burun yukarı kilit makaraları (aks uçlarında, "
                  "çift)", P_BUY, P_BUY, N.rollers, purchased=True, vendor="plain bearing rollers d 12 x 1.5 (catalogue "
                  "class, mass estimate)", mass_kg=0.004, joint=js, parent=lg(648), contacts=(lg(648),), step=S,
@@ -1533,16 +2003,17 @@ class Build:
         self.add(lg(650, "R"), "nose up-lock catch plate (4130 N), starboard", "burun yukarı kilit mandal plakası "
                  "(4130 N), sağ", M4130, P_CNC, N.catch, thickness=0.0023, parent=kw + "-R", contacts=(kw + "-R",),
                  step=S, explode=(0.0, 0.05, 0.0),
-                 notes="layout F-NG-PIVOT locks: up-lock engaging the axle roller (here on the keel-wall face beside "
-                       "the stowed axle; bonded + latch pawl and release solenoid of the gear unit, open item)")
+                 notes="layout F-NG-PIVOT locks: up-lock engaging the axle roller on the keel-wall face beside the "
+                       "stowed axle; 2 x M4 from the side bay into tapped bosses (GD-08); latch pawl and release "
+                       "solenoid of the gear unit")
         # nose doors
         from ..core.parts import layup_props
         areal = layup_props(C.S, "shell_secondary")["areal_mass"]
         self.add(lg(683, "R"), "nose-door hinge blocks (7075-T651, 3 off), starboard",
                  "burun kapağı menteşe blokları (7075-T651, 3 adet), sağ", M7075, P_CNC, ND.block_mesh, thickness=0.003,
                  parent=kw + "-R", contacts=(kw + "-R",), step=STEP_DOOR, explode=(0.0, 0.05, -0.15),
-                 notes="bonded (EA 9394) to the inner face of the keel wall at the slot edge; knuckles in a 4.2 mm "
-                       "cove of the lower nose skin edge")
+                 notes="one M4 per block through the keel wall (nut in the side bay, GD-08) above the hinge line; "
+                       "knuckles in the 4.2 mm coves of the lower nose skin edge (shell)")
         self.add(lg(684, "R"), "nose-door hinge pin d 3 (ISO 2338 h8, 4130), starboard",
                  "burun kapağı menteşe pimi d 3 (ISO 2338 h8, 4130), sağ", P_BUY, P_BUY, ND.pin, purchased=True,
                  vendor="ISO 2338 h8 dowel d 3 x 450 + retaining rings (catalogue)", mass_kg=0.025,
@@ -1552,7 +2023,7 @@ class Build:
                  contacts=(lg(684, "R"),), step=STEP_DOOR, explode=(0.0, 0.08, -0.2),
                  mass_kg=float(ND.o.buffer(-DOOR_GAP, join_style=2).area) * areal,
                  notes="layout door_outlines nose_door_R; modelled open (rest = gear down); knuckle tube on the hinge "
-                       "line; drive horn on the aft pin extension (NDOOR-LINKAGE, see open items)")
+                       "line; coupling horn 698 bonded on the door (on the port door with the drive arm, GD-08)")
 
     def nose_fasteners(self):
         C, N = self.C, self.N
@@ -1570,81 +2041,393 @@ class Build:
             J.bolt_through(reg, f"{lg(632)}-B{k + 1}", 5, (xb, hi[1], hi[2] - 0.0115), (0.0, 1.0, 0.0), [lg(632), kw],
                            grade="12.9", step=STEP_NOSE, notes="EMA flange through the keel-wall land, nut in the "
                                                                "starboard side bay")
-        sk = reg.parts.get(C.pan["P-NOSE-LOWER"]["part"])
-        for cv in self.ND.cove() if sk is not None else []:
-            sk.holes += [cv, cv.mirrored_y()]
+        for sd in ("R", "L"):
+            kws = C.mem["M-KEELWALL"]["part"] + f"-{sd}"
+            sg = 1.0 if sd == "R" else -1.0
+            wt = float(C.mem["M-KEELWALL"]["box"][1][1] - C.mem["M-KEELWALL"]["box"][0][1])
+            for k, (p, ax) in enumerate(N.catch_bolts()):
+                J.bolt(reg, f"{lg(650, sd)}-B{k + 1}", 4, p * np.array([1.0, sg, 1.0]), ax * np.array([1.0, sg, 1.0]),
+                       [(kws, wt)], owner=lg(650, sd), nut="tapped", tapped_part=lg(650, sd), tapped_depth=0.0069,
+                       grade="12.9", step=STEP_NOSE, notes="from the side bay into the tapped catch boss")
+            for k, (p, ax) in enumerate(self.ND.block_bolts()):
+                J.bolt_through(reg, f"{lg(683, sd)}-B{k + 1}", 4, p * np.array([1.0, sg, 1.0]),
+                               ax * np.array([1.0, sg, 1.0]), [lg(683, sd), kws], grade="12.9", step=STEP_DOOR,
+                               notes="hinge block through the keel wall, nut in the side bay")
 
-    # ---------------------------------------------------------------- door actuators (DA 22) on their frames
-    def door_actuators(self):
-        C = self.C
-        eq = C.eq["EQ-DOORACT"]
-        lo, hi = np.asarray(eq["box"][0], float), np.asarray(eq["box"][1], float)
-        fr = C.st["FS-GEAR"]
-        xf = float(fr["x_faces"][1])
-        yc = 0.5 * (lo[1] + hi[1])
-        ears = ((lo[2] - 0.0115, lo[2] + 0.0015), (hi[2] - 0.0015, hi[2] + 0.0115))
-        self.da_main = dict(lo=lo, hi=hi, xf=xf, yc=yc, ears=ears)
-
-        def da22():
-            case = _box(lo, hi)
-            e = [_box((lo[0], lo[1], za), (lo[0] + 0.003, hi[1], zb)) for za, zb in ears]
-            shaft = G.cylinder(0.004, (hi[0] - 0.012, lo[1] + 0.0005, lo[2] + 0.012), (hi[0] - 0.012, lo[1] - 0.004,
-                                                                                       lo[2] + 0.012), n=24)
-            return G.union([case, shaft] + e)
-
-        def plate():                        # top edge below the TR-AFTBAY tray flange on the same frame face
-            return _box((xf, lo[1] - 0.002, ears[0][0] - 0.002), (lo[0], hi[1] + 0.002, ears[1][1]))
-        frame = fr["part"]
-        self.add(C.pid(685, "R"), "inner-door actuator mounting plate (7075-T651), starboard",
-                 "iç kapak eyleyicisi bağlantı plakası (7075-T651), sağ", M7075, P_CNC, plate, thickness=lo[0] - xf,
-                 parent=frame, contacts=(frame,), step=STEP_DOOR, explode=(0.1, 0.0, 0.0),
-                 notes="layout EQ-DOORACT: on the aft face of FS-GEAR (potted inserts, the frame is the vapour-tight "
-                       "aft fuel-bay bulkhead: no through-bolts)")
-        self.add(C.pid(676, "R", "FC"), "main inner-door actuator Volz DA 22 (28 V), starboard",
-                 "ana iç kapak eyleyicisi Volz DA 22 (28 V), sağ", P_BUY, P_BUY, da22, purchased=True,
-                 vendor="Volz DA 22-30-4128 (28 V, long case) 41.5 x 65.9 x 22 mm, 0.132 kg (datasheet)",
-                 mass_kg=0.132, parent=C.pid(685, "R"), contacts=(C.pid(685, "R"),), step=STEP_DOOR,
-                 explode=(0.12, 0.0, 0.0),
-                 notes="layout EQ-DOORACT; crank + pushrod through C-DOORLINK to the inner-door horn: see the open "
-                       "items (the 35 x 18 mm frame window does not pass a pushrod for the 90 deg door travel)")
-        eqn = C.eq["EQ-NDOORACT"]
-        lo2, hi2 = np.asarray(eqn["box"][0], float), np.asarray(eqn["box"][1], float)
-        tray = eqn["mount"]["tray"]
-        # the case passes through the cut-out of the side-bay tray; two ears rest on the tray top (z -0.089)
-        z_tr = -0.089
-        ears2 = ((lo2[1] - 0.0245, lo2[1] + 0.0015), (hi2[1] - 0.0015, hi2[1] + 0.0245))
-        bolt_y = (lo2[1] - 0.0135, hi2[1] + 0.0135)
-        xm2 = 0.5 * (lo2[0] + hi2[0])
-        self.da_nose = dict(lo=lo2, hi=hi2, xm=xm2, ears=ears2, tray=tray, z_tr=z_tr, bolt_y=bolt_y)
-
-        def da22n():
-            case = _box(lo2, hi2)
-            e = [_box((xm2 - 0.0105, ya, z_tr), (xm2 + 0.0105, yb, z_tr + 0.003)) for ya, yb in ears2]
-            return G.union([case] + e)
-        self.add(C.pid(678), "nose-door actuator Volz DA 22 (28 V), drives both clamshell doors",
-                 "burun kapağı eyleyicisi Volz DA 22 (28 V), iki kapağı tahrik eder", P_BUY, P_BUY, da22n, purchased=True,
-                 vendor="Volz DA 22-30-4128 (28 V, long case), 0.132 kg (datasheet)", mass_kg=0.132,
-                 parent=tray, contacts=(tray,), step=STEP_DOOR, explode=(-0.12, 0.0, 0.1),
-                 notes="layout EQ-NDOORACT (port side bay at FS1110), through the cut-out of the side-bay tray "
-                       "TR-SIDEBAY-L, two ears on the tray (2 x M4 + nutplates); crank, pushrod, centre-line bellcrank and door links (NDOOR-LINKAGE): see "
-                       "the open items")
-
-    def door_actuator_fasteners(self, side: str):
-        C, reg = self.C, self.reg
-        d = self.da_main
-        s = 1.0 if side == "R" else -1.0
+    # ---------------------------------------------------------------- door drives, locks, brake installation
+    def drives(self):
+        """Gear detail round parts (GD-01..GD-12): door drives, nose drag link, main down-lock, brake installation."""
+        C, M, Dr, N, ND = self.C, self.M, self.Dr, self.N, self.ND
+        pid = lambda n: C.pid(n, "R")
+        lg = lambda n, side="C": C.pid(n, side)
         fr = C.st["FS-GEAR"]["part"]
-        for k, (za, zb) in enumerate(d["ears"]):
-            zc = 0.5 * (za + zb) + (-0.0005 if k == 0 else 0.0005)
-            J.bolt(reg, f"{C.pid(676, side, 'FC')}-B{k + 1}", 3, (d["lo"][0] + 0.003, s * d["yc"], zc), (-1.0, 0.0, 0.0),
-                   [(C.pid(676, side, "FC"), 0.003), (C.pid(685, side), d["lo"][0] - d["xf"])], nut="insert",
+        # ---- main inner-door drive (GD-05)
+        I = InnerDoorDrive(C, Dr)
+        self.ID = I
+        self.add(pid(685), "inner-door actuator wedge plate (7075-T651), starboard",
+                 "iç kapak eyleyicisi kama plakası (7075-T651), sağ", M7075, P_CNC, I.plate, thickness=0.0036,
+                 parent=fr, contacts=(fr,), step=STEP_DOOR, explode=(0.1, 0.0, 0.0),
+                 notes="on the aft face of FS-GEAR (potted inserts): tilts the DA 22 so that its output is parallel to "
+                       "the inner-door hinge line (3.9 deg)")
+        self.add(C.pid(676, "R", "FC"), "main inner-door actuator Volz DA 22 (28 V), starboard",
+                 "ana iç kapak eyleyicisi Volz DA 22 (28 V), sağ", P_BUY, P_BUY, I.case, purchased=True,
+                 vendor="Volz DA 22-30-4128 (28 V, long case) 41.5 x 65.9 x 22 mm, 0.132 kg (datasheet)",
+                 mass_kg=0.132, parent=pid(685), contacts=(pid(685),), step=STEP_DOOR, explode=(0.12, 0.0, 0.0),
+                 notes="layout EQ-DOORACT (GD-05): 2 x M3 through the top ears and the wedge plate into the frame "
+                       "inserts; output spline drives the crank shaft through the bearing housing in C-DOORSHAFT")
+        self.add(pid(689), "inner-door drive bearing housing (7075-T651, 2 x 688-2RS bearings), starboard",
+                 "iç kapak tahrik yatak yuvası (7075-T651, 2 x 688-2RS rulman), sağ", M7075, P_CNC, I.housing,
+                 thickness=0.003, parent=fr, contacts=(fr,), step=STEP_DOOR, explode=(-0.08, 0.0, 0.0),
+                 notes="flange on the forward face of FS-GEAR (2 x M3 into potted inserts), spigot in C-DOORSHAFT, "
+                       "lip seal on the d 8 shaft (vapour-tight bulkhead)")
+        self.add(pid(686), "inner-door drive crank with d 8 shaft (4130 N), starboard",
+                 "iç kapak tahrik krankı, d 8 milli (4130 N), sağ", M4130, P_CNC, I.crank, thickness=0.003,
+                 joint="main_idoor_crank_R", parent=pid(689), contacts=(pid(689), C.pid(676, "R", "FC")),
+                 step=STEP_DOOR, explode=(-0.08, 0.0, 0.0),
+                 notes=f"crank r {ID_RC * 1000:.0f} mm on the DA 22 spline; folded toggle with the door closed "
+                       "(over-centre lock against the link stop)")
+        self.add(pid(687), "inner-door drive link (7075-T651), starboard", "iç kapak tahrik biyeli (7075-T651), sağ",
+                 M7075, P_CNC, I.link, thickness=0.003, joint="main_idoor_link_R", parent=pid(686),
+                 contacts=(pid(686), pid(688)), step=STEP_DOOR, explode=(-0.08, 0.0, -0.05),
+                 notes=f"link {I.m.fb.l * 1000:.1f} mm, pins d 4 (ISO 2341-B)")
+        self.add(pid(688), "inner-door drive horn (7075-T651, bonded + 2 rivets on the door), starboard",
+                 "iç kapak tahrik kolu (7075-T651, kapağa yapıştırma + 2 perçin), sağ", M7075, P_CNC, I.horn,
+                 thickness=0.003, joint="main_inner_door_R", parent=pid(670), contacts=(pid(670), pid(687)),
+                 step=STEP_DOOR, explode=(0.0, 0.0, -0.1),
+                 notes="foot bonded (EA 9394, 0.3 mm) on the door inner skin at the aft end of the door")
+        # ---- trunnion-door drive (GD-07)
+        T = TrunnionDoorDrive(C, Dr)
+        self.TD = T
+        trun = "YK250-CH-070-R"
+        self.add(pid(695), "trunnion-door gearmotor bracket (7075-T651), starboard",
+                 "mafsal kapağı dişli motor braketi (7075-T651), sağ", M7075, P_CNC, T.bracket, thickness=0.003,
+                 parent=trun, contacts=(trun, pid(691)), step=STEP_DOOR, explode=(0.0, -0.05, 0.0),
+                 notes="half-clamp over the gearmotor (bonded, Loctite 638) with a tab on the inboard face of the "
+                       "F-TRUNNION flange, 2 x M3 tapped in the flange")
+        self.add(pid(691), "trunnion-door gearmotor (d 16 x 21 mm micro DC gearmotor + encoder; estimate), starboard",
+                 "mafsal kapağı dişli motoru (d 16 x 21 mm mikro DC dişli motor + enkoder; tahmin), sağ", P_BUY, P_BUY,
+                 T.motor, purchased=True, vendor="micro DC gearmotor class d 16 mm, ~0.3 N m output (Faulhaber / "
+                 "maxon class; envelope and mass are estimates)", mass_kg=0.045, parent=pid(695),
+                 contacts=(pid(695),), step=STEP_DOOR, explode=(0.0, -0.05, 0.0),
+                 notes="structures G-TDOOR-LINK: 0.257 N m limit at the crank; holding torque not needed in the "
+                       "closed toggle (over-centre)")
+        self.add(pid(692), "trunnion-door crank (4130 N), starboard", "mafsal kapağı krankı (4130 N), sağ",
+                 M4130, P_CNC, T.crank, thickness=0.003, joint="main_tdoor_crank_R", parent=pid(691),
+                 contacts=(pid(691),), step=STEP_DOOR, explode=(0.0, -0.05, 0.0),
+                 notes=f"crank r {TD_RC * 1000:.0f} mm, folded toggle with the door closed")
+        self.add(pid(693), "trunnion-door link (7075-T651), starboard", "mafsal kapağı biyeli (7075-T651), sağ",
+                 M7075, P_CNC, T.link, thickness=0.003, joint="main_tdoor_link_R", parent=pid(692),
+                 contacts=(pid(692), pid(694)), step=STEP_DOOR, explode=(0.0, -0.05, -0.03),
+                 notes=f"link {T.m.fb.l * 1000:.1f} mm, pins d 3")
+        self.add(pid(694), "trunnion-door horn (7075-T651, bonded on the door), starboard",
+                 "mafsal kapağı kolu (7075-T651, kapağa yapıştırılmış), sağ", M7075, P_CNC, T.horn, thickness=0.003,
+                 joint="main_trunnion_door_R", parent=pid(673), contacts=(pid(673), pid(693)), step=STEP_DOOR,
+                 explode=(0.0, 0.05, -0.1))
+        # ---- main down-lock (GD-03), anti-rotation key (GD-12), brake swivel (GD-09)
+        dl = M.downlock()
+        x_face = float(next(b for b in C.fit["F-TRUNNION"]["boxes"] if abs(b[0][2] - dl["lug_bottom_z"]) < 1e-6)[1][0])
+        self.dl = dict(dl, x_face=x_face)
+
+        def lock_bolt():
+            p = dl["p"]
+            return G.cylinder(dl["r"] - 0.00001, (M.arm_a[0] + DL_TIP, p[1], p[2]), (x_face + DL_TAIL, p[1], p[2]), n=48)
+
+        def solenoid():
+            p = dl["p"]
+            pts = [G.cylinder(SOL_R, (x_face, p[1], p[2]), (x_face + 0.003, p[1], p[2]), n=48).V]
+            for b in self.sol_bolts():
+                pts.append(G.cylinder(0.0045, (x_face, b[1], b[2]), (x_face + 0.003, b[1], b[2]), n=24).V)
+            fl = G.hull(np.vstack(pts))
+            body = G.cylinder(SOL_R, (x_face + 0.0029, p[1], p[2]), (x_face + SOL_L, p[1], p[2]), n=48)
+            bore = G.cylinder(dl["r"] + 0.0002, (x_face - 0.001, p[1], p[2]), (x_face + DL_TAIL + DL_STROKE + 0.003,
+                                                                                p[1], p[2]), n=40)
+            return G.difference(G.union([fl, body]), [bore])
+
+        def swivel():
+            Tt = C.T
+            pts = [G.cylinder(0.009, (x_face, Tt[1], Tt[2]), (x_face + 0.003, Tt[1], Tt[2]), n=40).V]
+            for b in self.swv_bolts():
+                pts.append(G.cylinder(0.004, (x_face, b[1], b[2]), (x_face + 0.003, b[1], b[2]), n=24).V)
+            return G.union([G.hull(np.vstack(pts)), G.cylinder(0.009, (x_face + 0.0029, Tt[1], Tt[2]),
+                                                                (x_face + 0.016, Tt[1], Tt[2]), n=40)])
+        self.add(pid(641), "main down-lock bolt d 14 (4130 N, 36-40 HRC), starboard",
+                 "ana aşağı kilit pimi d 14 (4130 N, 36-40 HRC), sağ", M4130, P_CNC, lock_bolt, thickness=0.007,
+                 joint="main_downlock_R", parent=trun, contacts=(trun, pid(620)), step=STEP_MAIN,
+                 notes="GD-03: spring-engaged in the aft yoke-arm boss with the gear down (single shear across the "
+                       "1 mm lug-to-arm gap), withdrawn 15 mm aft by the solenoid before the leg moves; bores "
+                       "bushed (layout F-TRUNNION downlock)")
+        self.add(pid(638), "main down-lock solenoid (push-pull, 28 V, spring return; estimate), starboard",
+                 "ana aşağı kilit solenoidi (it-çek, 28 V, yay dönüşlü; tahmin), sağ", P_BUY, P_BUY, solenoid,
+                 purchased=True, vendor="tubular push-pull solenoid d 26 x 27 mm, 15 mm stroke, 28 V (catalogue "
+                 "class; envelope and mass are estimates)", mass_kg=0.060, parent=trun, contacts=(trun,),
+                 step=STEP_MAIN, notes="2 x M3 tapped in the aft lug face; lock-bolt spring inside; proximity "
+                                       "sensor of the bolt position (gear-unit item)")
+        self.add(pid(643), "main-leg anti-rotation key 3 x 2.5 x 9 (4130 N), starboard",
+                 "ana bacak dönme önleyici kama 3 x 2,5 x 9 (4130 N), sağ", M4130, P_CNC,
+                 lambda: M.key_box(0.0, (KEY[1], 0.0)), thickness=KEY[1], joint="main_gear_R", parent=pid(620),
+                 contacts=(pid(620), pid(621)), step=STEP_MAIN,
+                 notes="GD-12: the sliding tube is keyed to the gland instead of a scissor torque link (the 64 mm "
+                       "leg slot leaves no room for a scissor beside the OD 42 cylinder); key in the gland keyway, "
+                       "slot in the tube over the stroke")
+        self.add(pid(651), "main brake-line swivel on the trunnion axis (rotary union, 1/8 in; estimate), starboard",
+                 "ana fren hattı döner bağlantısı, mafsal ekseninde (döner rakor; tahmin), sağ", P_BUY, P_BUY, swivel,
+                 purchased=True, vendor="miniature hydraulic rotary union 1/8 in (catalogue class; mass estimate)",
+                 mass_kg=0.025, parent=trun, contacts=(trun,), step=STEP_MAIN,
+                 notes="GD-09: brake line from EQ-BRAKE_UNIT along H-MAIN to this swivel on the aft lug face; the "
+                       "gun-drilled stub axle carries the line into the yoke, flexible hose down the leg to the "
+                       "caliper (routing, docs/detail/gear.md)")
+        # ---- brake master unit (GD-09)
+        eqb = C.eq["EQ-BRAKE_UNIT"]
+        blo, bhi = np.asarray(eqb["box"][0], float), np.asarray(eqb["box"][1], float)
+        self.brk = (blo, bhi)
+        deck = eqb["mount"]["tray"]
+        z_deck = float(self.reg.parts[deck].mesh.V[:, 2].min()) if deck in self.reg.parts else 0.014
+
+        def hanger():
+            xc = 0.5 * (blo[0] + bhi[0])
+            top = G.difference(_box((blo[0] + 0.002, blo[1] - 0.003, z_deck - 0.003), (bhi[0] - 0.002, bhi[1] + 0.003, z_deck)),
+                               [_box((blo[0] + 0.018, blo[1] + 0.013, z_deck - 0.004), (bhi[0] - 0.018, bhi[1] - 0.013,
+                                                                                       z_deck + 0.001))])
+            st = [_box((xc - 0.020, y0, blo[2] + 0.004), (xc + 0.020, y1, z_deck - 0.0029))
+                  for y0, y1 in ((blo[1] - 0.003, blo[1]), (bhi[1], bhi[1] + 0.003))]
+            return G.union([top] + st)
+        self.z_deck = z_deck
+        self.add(C.pid(629, "C", "FC"), "brake actuator Volz DA 26 + master cylinder (brake-by-wire unit)",
+                 "fren eyleyicisi Volz DA 26 + ana silindir (elektrikli fren birimi)", P_BUY, P_BUY,
+                 lambda: _box(blo + 0.0002, bhi - 0.0002), group="controls", purchased=True,
+                 vendor="Volz DA 26 (0.270 kg datasheet, case 102.8 x 54 x 26 mm) + master cylinder on its output "
+                 "(0.065 kg estimate; layout.rules.bay_contents brake_unit 0.335 kg)", mass_kg=0.335,
+                 parent=lg(658), contacts=(lg(658),), step=STEP_MAIN, explode=(0.0, -0.1, -0.1),
+                 notes="layout EQ-BRAKE_UNIT (GD-09): hung from the avionics deck; two brake lines (Nylon 1/8 in) "
+                       "along H-MAIN to the main-gear swivels")
+        self.add(lg(658), "brake-unit hanger (7075-T651)", "fren birimi askısı (7075-T651)", M7075, P_CNC, hanger,
+                 thickness=0.003, parent=deck, contacts=(deck,), step=STEP_MAIN, explode=(0.0, 0.0, -0.08),
+                 notes="4 x M4 into potted inserts of the avionics deck, 4 x M3 into the unit case (mounting "
+                       "threads per the Volz installation drawing, to be confirmed)")
+        # ---- nose drag link (GD-04), spreader (GD-11)
+        G4 = self.NG
+        self.add(lg(655), "nose retraction crank (4130 N)", "burun toplama krankı (4130 N)", M4130, P_CNC,
+                 G4.crank, thickness=0.005, joint="nose_drag_crank", parent=lg(632), contacts=(lg(632),),
+                 step=STEP_NOSE, explode=(0.0, -0.05, 0.1),
+                 notes=f"crank r {NG_RC * 1000:.1f} on the EMA spline; folded toggle with the gear down = down-lock")
+        self.add(lg(653), "nose drag link (4130 N)", "burun sürükleme biyeli (4130 N)", M4130, P_CNC,
+                 G4.link, thickness=0.005, joint="nose_drag_link", parent=lg(655), contacts=(lg(655), lg(624)),
+                 step=STEP_NOSE, explode=(0.0, -0.05, 0.1),
+                 notes=f"link {G4.m.fb.l * 1000:.1f} mm, pins d 10 (G-NLOCK)")
+        self.add(lg(656), "nose stub-axle spreader sleeve with jack nut (7075-T651 / 4130)",
+                 "burun mil aralık burcu, kriko somunlu (7075-T651 / 4130)", M7075, P_CNC, N.spreader, thickness=0.0035,
+                 joint="nose_gear", parent=lg(624), contacts=(lg(640),), step=STEP_NOSE, explode=(0.0, 0.0, -0.3),
+                 notes="GD-11: jacked against both stub flanges after insertion and lock-wired; the flange dowel "
+                       "keys rotation")
+        # ---- nose-door drive and coupling (GD-08)
+        ND2 = NoseDoorDrive(C, ND)
+        self.NDD = ND2
+        tray = C.eq["EQ-NDOORACT"]["mount"]["tray"]
+        self.add(C.pid(678), "nose-door actuator Volz DA 22 (28 V), drives both clamshell doors",
+                 "burun kapağı eyleyicisi Volz DA 22 (28 V), iki kapağı tahrik eder", P_BUY, P_BUY, ND2.case,
+                 purchased=True, vendor="Volz DA 22-30-4128 (28 V, long case), 0.132 kg (datasheet)", mass_kg=0.132,
+                 parent=tray, contacts=(tray,), step=STEP_DOOR, explode=(-0.12, 0.0, 0.1),
+                 notes="layout EQ-NDOORACT (GD-08): output parallel to the door hinge axes; forward ear on the "
+                       "side-bay tray (2 x M4 + nutplates)")
+        kwL = C.mem["M-KEELWALL"]["part"] + "-L"
+        self.add(lg(679), "nose-door drive crank with shaft (4130 N)", "burun kapağı tahrik krankı, milli "
+                 "(4130 N)", M4130, P_CNC, ND2.crank, thickness=0.003, joint="nose_ddrive_crank",
+                 parent=C.pid(678), contacts=(C.pid(678),), step=STEP_DOOR, explode=(-0.05, -0.05, 0.0))
+        self.add(lg(696), "nose-door drive link (7075-T651)", "burun kapağı tahrik biyeli (7075-T651)", M7075, P_CNC,
+                 ND2.link, thickness=0.003, joint="nose_ddrive_link", parent=lg(679), contacts=(lg(679), lg(698, "L")),
+                 step=STEP_DOOR, explode=(-0.05, -0.05, 0.0),
+                 notes=f"link {ND2.m.fb.l * 1000:.1f} mm through the port keel-wall window W-NDOOR-LINK to the drive "
+                       "arm of the port coupling horn")
+        for sd in ("R", "L"):
+            self.add(lg(698, sd), f"nose-door coupling horn (7075-T651, bonded on the door{', with the drive arm' if sd == 'L' else ''}), {SIDE_EN[sd]}",
+                     f"burun kapağı bağlantı kolu (7075-T651, kapağa yapıştırılmış), {SIDE_TR[sd]}", M7075, P_CNC,
+                     lambda sd=sd: ND2.c_horn(sd), thickness=0.003, joint=f"nose_door_{sd}", parent=lg(674, sd),
+                     contacts=(lg(674, sd), lg(699, sd)) + ((lg(696),) if sd == "L" else ()), step=STEP_DOOR,
+                     explode=(0.0, 0.0, -0.1), mirror=False)
+            self.add(lg(699, sd), f"nose-door coupling link (7075-T651), {SIDE_EN[sd]}",
+                     f"burun kapağı bağlantı biyeli (7075-T651), {SIDE_TR[sd]}", M7075, P_CNC,
+                     lambda sd=sd: ND2.c_link(sd), thickness=0.003, joint=f"nose_dlink_{sd}", parent=lg(700),
+                     contacts=(lg(698, sd),) + ((lg(700),) if sd == "L" else (lg(699, "L"),)), step=STEP_DOOR,
+                     explode=(0.0, 0.0, -0.1), mirror=False,
+                     notes=f"link {ND2.lc * 1000:.1f} mm, pins d 4")
+        self.add(lg(700), "nose-door coupling slide bar (7075-T651) with two guide pins", "burun kapağı bağlantı "
+                 "kızağı (7075-T651), iki kılavuz pimli", M7075, P_CNC, ND2.bar, thickness=0.004, joint="nose_dbar",
+                 parent=lg(701), contacts=(lg(701),), step=STEP_DOOR, explode=(0.0, 0.0, 0.05))
+        kwR = C.mem["M-KEELWALL"]["part"] + "-R"
+        self.add(lg(701), "nose-door coupling guide plate (7075-T651)", "burun kapağı bağlantı kılavuz plakası "
+                 "(7075-T651)", M7075, P_CNC, ND2.guide, thickness=0.004, parent=kwR, contacts=(kwR, kwL),
+                 step=STEP_DOOR, explode=(0.0, 0.0, 0.05),
+                 notes="across the keel slot, flanges bolted through both keel walls (M4, nuts in the side bays)")
+
+    def mech_joints(self):
+        """Joints of the gear detail round: crank / link chains posed by exact planar kinematics, the joint values on
+        the gear_retraction sequence and the same values as piecewise-linear expressions of gear_up."""
+        reg = self.reg
+        seq = self.C.L["mechanisms"]["sequences"]["gear_retraction"]
+        gs = [float(v) for v in seq["values"]]
+        base = [{k: float(v) for k, v in st.items()} for st in seq["states"]]
+        tables: dict[str, list[float]] = {}
+        defs = []                                 # (name, kind, origin, axis, parent, mirror)
+
+        def mech(prefix, m: Mech, mirror):
+            vals = [m.values(st) for st in base]
+            c, k = prefix + "crank" + ("_" if mirror else ""), prefix + "link" + ("_" if mirror else "")
+            tables[c] = [v[0] for v in vals]
+            tables[k] = [v[1] for v in vals]
+            defs.append((c, "revolute", m.fb.C3, m.fb.u, None, mirror))
+            defs.append((k, "revolute", m.K3(), m.fb.u, c, mirror))
+        mech("main_idoor_", self.ID.m, True)
+        mech("main_tdoor_", self.TD.m, True)
+        mech("nose_drag_", self.NG.m, False)
+        mech("nose_ddrive_", self.NDD.m, False)
+        tables["main_downlock_"] = [DL_STROKE * min(max((g - 0.02) / 0.08, 0.0), 1.0) for g in gs]
+        defs.append(("main_downlock_", "prismatic", self.dl["p"], np.array([1.0, 0.0, 0.0]), None, True))
+        cv = [self.NDD.cpl_values(st) for st in base]
+        r = self.NDD.cpl(self.NDD.v_rest)
+        tables["nose_dbar"] = [v[0] for v in cv]
+        tables["nose_dlink_R"] = [v[1] for v in cv]
+        tables["nose_dlink_L"] = [v[2] for v in cv]
+        cp = self.NDD.cp
+        defs.append(("nose_dbar", "prismatic", cp.to3(r["B"]), cp.e2, None, False))
+        defs.append(("nose_dlink_R", "revolute", cp.to3(r["B"]), cp.u, "nose_dbar", False))
+        defs.append(("nose_dlink_L", "revolute", cp.to3(r["B"]), cp.u, "nose_dbar", False))
+        self.seq_tables = {}
+        for name, kind, o, a, par, mir in defs:
+            vals = tables[name]
+            lo, hi = _seq_bounds(vals)
+            expr = pl_expr(gs, vals)
+            names = [(name + "R" if mir else name, o, a, (par + "R") if (mir and par) else par)]
+            if mir:
+                a_l = np.array([a[0], -a[1], a[2]]) if kind == "prismatic" else -np.array([a[0], -a[1], a[2]])
+                names.append((name + "L", np.array([o[0], -o[1], o[2]]), a_l, (par + "L") if par else None))
+            for nm, o_, a_, p_ in names:
+                reg.add_joint(Joint(name=nm, kind=kind, origin=np.asarray(o_, float), axis=np.asarray(a_, float), lo=lo,
+                                    hi=hi, rest=0.0, parent=p_, expr=expr,
+                                    notes="gear detail round: exact planar kinematics sampled on gear_retraction "
+                                          "(docs/detail/gear.md section 7)"))
+                self.seq_tables[nm] = vals
+
+    def seq_extra(self, g: float, st: dict) -> dict:
+        gs = [float(v) for v in self.C.L["mechanisms"]["sequences"]["gear_retraction"]["values"]]
+        k = min(range(len(gs)), key=lambda i: abs(gs[i] - g))
+        return {nm: v[k] for nm, v in self.seq_tables.items()}
+
+    def drive_fasteners(self, side: str):
+        """Pins and bolts of the gear detail round (main gear: both sides on their own parts; nose: once)."""
+        C, reg = self.C, self.reg
+        s = 1.0 if side == "R" else -1.0
+        mv = lambda v: np.asarray(v, float) * np.array([1.0, s, 1.0])
+        pid = lambda n: C.pid(n, side)
+        fr = C.st["FS-GEAR"]["part"]
+        I, T = self.ID, self.TD
+        # inner-door drive
+        for nm, P, ids, t in (("P1", I.m.K3(), (pid(686), pid(687)), (ID_T["crank"][1], ID_T["link"][0])),
+                              ("P2", I.m.q3(), (pid(687), pid(688)), (ID_T["link"][1], ID_T["horn"][0]))):
+            a = I.m.fb.u
+            p0 = P + (max(t) + 0.0005) * a
+            p1 = P + (min(t) - 0.0005) * a
+            pin_through(reg, f"{pid(687)}-{nm}", ID_PIN, mv(p0), mv(p1), ids, step=STEP_DOOR,
+                        notes="ISO 2341-B d 4 + split pin; shim washers set the 0.5 mm plane gaps")
+        for k, p in enumerate(I.ear_bolts()):
+            J.bolt_through(reg, f"{C.pid(676, side, 'FC')}-B{k + 1}", 3, mv(p), mv(-I.u), [C.pid(676, side, "FC"), pid(685)],
+                           nut="insert", insert_part=fr, insert_depth=0.0068, grade="12.9", step=STEP_DOOR,
+                           notes="potted insert of the FS-GEAR sandwich (no through-bolts in the fuel-bay bulkhead)")
+        for k, p in enumerate(I.housing_bolts()):
+            J.bolt(reg, f"{pid(689)}-B{k + 1}", 3, mv(p), (1.0, 0.0, 0.0), [(pid(689), 0.003)], nut="insert",
                    insert_part=fr, insert_depth=0.0068, grade="12.9", step=STEP_DOOR)
-        if side == "R":
-            n = self.da_nose
-            for k, yb_ in enumerate(n["bolt_y"]):
-                J.bolt_through(reg, f"{C.pid(678)}-B{k + 1}", 4, (n["xm"], yb_, n["z_tr"] + 0.003),
-                               (0.0, 0.0, -1.0), [C.pid(678), n["tray"]], nut="nutplate", grade="12.9", step=STEP_DOOR,
-                               notes="nutplate under the side-bay tray")
+        # trunnion-door drive
+        trun = f"YK250-CH-070-{side}"
+        for nm, P, ids, t in (("P1", T.m.K3(), (pid(692), pid(693)), (TD_T["crank"][0], TD_T["link"][1])),
+                              ("P2", T.m.q3(), (pid(693), pid(694)), (TD_T["link"][0], TD_T["horn"][1]))):
+            p0 = P + (min(t) - 0.0005) * T.m.fb.u
+            p1 = P + (max(t) + 0.0005) * T.m.fb.u
+            pin_through(reg, f"{pid(693)}-{nm}", TD_PIN, mv(p0), mv(p1), ids, step=STEP_DOOR)
+        for k, p in enumerate(T.bracket_bolts()):
+            J.bolt(reg, f"{pid(695)}-B{k + 1}", 3, mv(p), (0.0, s, 0.0), [(pid(695), 0.003)], nut="tapped",
+                   tapped_part=trun, tapped_depth=0.0075, grade="12.9", step=STEP_DOOR)
+        # trunnion-door hinge blocks on the beam web (GD-08)
+        beam = C.mem["M-GEARBEAM"]["part"] + f"-{side}"
+        beam = beam if beam in reg.parts else C.mem["M-GEARBEAM"]["part"]
+        for k, (p, ax) in enumerate(self.Dr.tr_bolts()):
+            J.bolt(reg, f"{pid(681)}-B{k + 1}", 4, mv(p), mv(ax), [(pid(681), TR_FL_T)], nut="insert", insert_part=beam,
+                   insert_depth=0.0068, grade="12.9", step=STEP_DOOR, notes="potted insert in the gear-beam web")
+        # down-lock solenoid, brake swivel, up-lock catch pin
+        for k, b in enumerate(self.sol_bolts()):
+            J.bolt(reg, f"{pid(638)}-B{k + 1}", 3, mv((self.dl["x_face"] + 0.003, b[1], b[2])), (-1.0, 0.0, 0.0),
+                   [(pid(638), 0.003)], nut="tapped", tapped_part=trun, tapped_depth=0.008, grade="12.9", step=STEP_MAIN)
+        for k, b in enumerate(self.swv_bolts()):
+            J.bolt(reg, f"{pid(651)}-B{k + 1}", 3, mv((self.dl["x_face"] + 0.003, b[1], b[2])), (-1.0, 0.0, 0.0),
+                   [(pid(651), 0.003)], nut="tapped", tapped_part=trun, tapped_depth=0.008, grade="12.9", step=STEP_MAIN)
+
+    def sol_bolts(self):
+        p = self.dl["p"]
+        return [np.array([0.0, p[1] + dy, p[2] + 0.0089]) for dy in (-0.016, 0.016)]
+
+    def swv_bolts(self):
+        Tt = self.C.T
+        return [np.array([0.0, Tt[1] + dy, Tt[2]]) for dy in (-0.0135, 0.0135)]
+
+    def nose_drive_fasteners(self):
+        C, reg = self.C, self.reg
+        lg = lambda n, side="C": C.pid(n, side)
+        G4, D2 = self.NG, self.NDD
+        u = G4.m.fb.u
+        pin_through(reg, f"{lg(653)}-P1", NG_PIN, G4.m.K3() + (NG_Y["link"][0] - PIN_X) * u,
+                    G4.m.K3() + (NG_Y["crank"][1] + PIN_X) * u, (lg(655), lg(653)), step=STEP_NOSE,
+                    notes="clevis bolt d 6, heat-treated alloy steel (gear-unit requirement G-NLOCK), castellated nut")
+        pin_through(reg, f"{lg(653)}-P2", NG_PIN, G4.m.q3() + (NG_Y["horn"][0] - PIN_X) * u,
+                    G4.m.q3() + (NG_Y["link"][1] + PIN_X) * u, (lg(653), lg(624)), step=STEP_NOSE)
+        fb = D2.m.fb
+        for nm, P, ids, keys in (("P1", D2.m.K3(), (lg(679), lg(696)), ("crank", "dlink")),
+                                 ("P2", D2.m.q3(), (lg(696), lg(698, "L")), ("horn_L", "dlink"))):
+            t = D2.td(keys[0]) + D2.td(keys[1])
+            pin_through(reg, f"{lg(696)}-{nm}", ND_PIN, P + (min(t) - PIN_X) * fb.u, P + (max(t) + PIN_X) * fb.u, ids,
+                        step=STEP_DOOR)
+        r = D2.cpl(D2.v_rest)
+        cp = D2.cp
+        tt = D2.tx
+        on = lambda P, t: P + (t - (P - cp.p0) @ cp.u) * cp.u
+        for sd in ("R", "L"):
+            P = cp.to3(r["q" + sd])
+            t = tt("horn_" + sd) + tt("link_" + sd)
+            pin_through(reg, f"{lg(699, sd)}-P1", NC_PIN, on(P, min(t) - PIN_X), on(P, max(t) + PIN_X),
+                        (lg(699, sd), lg(698, sd)), step=STEP_DOOR)
+        Bp = cp.to3(r["B"])
+        pin_through(reg, f"{lg(700)}-P1", NC_PIN, on(Bp, tt("link_R")[0] - PIN_X), on(Bp, tt("bar")[1] + PIN_X),
+                    (lg(699, "L"), lg(699, "R"), lg(700)), step=STEP_DOOR)
+        for k, d in enumerate(NC_GP):
+            Pg = cp.to3(r["B"] + np.array([0.0, d]))
+            pin_through(reg, f"{lg(700)}-P{k + 2}", NC_PIN, on(Pg, tt("bar")[0] + PIN_X), on(Pg, tt("guide")[1] + 0.0012),
+                        (lg(700),), step=STEP_DOOR,
+                        notes="shouldered guide pin pressed in the bar, running in the slot of the guide plate, "
+                              "washer + retaining ring behind the plate")
+        tray = C.eq["EQ-NDOORACT"]["mount"]["tray"]
+        for k, p in enumerate(D2.case_bolts()):
+            J.bolt(reg, f"{C.pid(678)}-B{k + 1}", 3, p, (0.0, 0.0, -1.0), [(C.pid(678), 0.003), (tray, TRAY_T_SB)],
+                   nut="nutplate", grade="12.9", step=STEP_DOOR, notes="nutplate under the side-bay tray")
+        kw = C.mem["M-KEELWALL"]["part"]
+        wt = float(C.mem["M-KEELWALL"]["box"][1][1] - C.mem["M-KEELWALL"]["box"][0][1])
+        for k, (p, ax) in enumerate(D2.guide_bolts()):
+            sd = "R" if ax[1] > 0 else "L"
+            J.bolt(reg, f"{lg(701)}-B{k + 1}", 4, p, ax, [(lg(701), 0.003), (f"{kw}-{sd}", wt)], grade="12.9",
+                   step=STEP_DOOR, notes="nut in the side bay")
+        # brake hanger
+        blo, bhi = self.brk
+        deck = C.eq["EQ-BRAKE_UNIT"]["mount"]["tray"]
+        k = 0
+        for x in (blo[0] + 0.010, bhi[0] - 0.010):
+            for y in (blo[1] + 0.008, bhi[1] - 0.008):
+                k += 1
+                J.bolt(reg, f"{lg(658)}-B{k}", 4, (x, y, self.z_deck - 0.003), (0.0, 0.0, 1.0), [(lg(658), 0.003)],
+                       nut="insert", insert_part=deck, insert_depth=0.0068, grade="12.9", step=STEP_MAIN)
+        xc = 0.5 * (blo[0] + bhi[0])
+        k = 0
+        for y, ay in ((blo[1] - 0.003, 1.0), (bhi[1] + 0.003, -1.0)):
+            for dx in (-0.010, 0.010):
+                k += 1
+                J.bolt(reg, f"{lg(658)}-S{k}", 3, (xc + dx, y, blo[2] + 0.013), (0.0, ay, 0.0), [(lg(658), 0.003)],
+                       nut="tapped", tapped_part=C.pid(629, "C", "FC"), tapped_depth=0.007, grade="A2-70", step=STEP_MAIN)
+
 
     def main_fasteners(self, side: str):
         """Fasteners of one main gear (built on each side's own parts so every hole is drilled)."""
@@ -1671,21 +2454,20 @@ class Build:
         wk = C.mem["M-WELLKEEL"]["part"] + f"-{side}"
         zb = float(C.mem["M-WELLKEEL"]["box"][0][2])
         yw1 = float(C.mem["M-WELLKEEL"]["box"][1][1])
-        for k, xb in enumerate((self.Dr.ears[0][0] + 0.008, self.Dr.ears[-1][1] - 0.008)):
-            J.bolt_through(reg, f"{pid(671)}-B{k + 1}", 4, mv((xb, yw1 + 0.002, zb + 0.016)), mv((0.0, -1.0, 0.0)),
-                           [pid(671), wk], grade="12.9", step=STEP_DOOR, notes="nut in the harness channel")
-        sk = reg.parts.get(C.pan["P-CENTRE-LOWER"]["part"])
-        for cv in ([self.Dr.cove()] + self.Dr.tr_notch()) if sk is not None else []:
-            sk.holes.append(cv if side == "R" else cv.mirrored_y())
+        for k, (x0, x1) in enumerate(self.Dr.stations):
+            J.bolt_through(reg, f"{pid(671)}-B{k + 1}", 4, mv((0.5 * (x0 + x1), yw1 + 0.002, zb + 0.015)),
+                           mv((0.0, -1.0, 0.0)), [pid(671), wk], grade="12.9", step=STEP_DOOR,
+                           notes="one M4 per hinge station, nut in the harness channel")
         s0, s1 = M.roller_s
         pin_through(reg, f"{pid(620)}-P9", ROLLER_PIN_D, mv(C.P(s0 - 0.001, ROLLER_E)),
                     mv(C.P(s1 + 0.001, ROLLER_E)), (pid(620),), step=STEP_MAIN,
                     notes="roller pin through the leg lug; rollers ride on it against the lug faces")
         pv = M.hook_pivot()
+        upl = C.fit["F-UPLOCK"]["part"] + f"-{side}"
         pin_through(reg, f"{pid(642)}-P1", HOOK_PIN_D, mv((pv[0], HOOK_Y[0] - 0.001, pv[2])),
-                    mv((pv[0], HOOK_Y[3] + 0.001, pv[2])), (pid(642),), step=STEP_MAIN,
-                    notes="catch pivot pin through the F-UPLOCK boss bore (d 5.2); the boss gives 6 mm edge "
-                          "distance (1.2 D): chassis open item, the catch plates bear on the boss faces")
+                    mv((pv[0], HOOK_Y[3] + 0.001, pv[2])), (pid(642), upl), step=STEP_MAIN,
+                    notes="catch pivot pin through the F-UPLOCK boss bore (layout pin, GD-10: 10 mm = 2 D edge "
+                          "distance to the boss bottom, 10.5 mm to its faces)")
 
     # ---------------------------------------------------------------- mirror
     def mirror(self):
@@ -1732,10 +2514,12 @@ def register(reg: Registry, spec: dict) -> None:
     B.main_gear()
     B.main_doors()
     B.nose_gear()
-    B.door_actuators()
+    B.drives()
+    B.mech_joints()
     B.mirror()
     for side in ("R", "L"):
         B.main_fasteners(side)
-        B.door_actuator_fasteners(side)
+        B.drive_fasteners(side)
     B.nose_fasteners()
-    B.sequence()
+    B.nose_drive_fasteners()
+    B.sequence(extra=B.seq_extra)

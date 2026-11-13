@@ -233,10 +233,10 @@ def members() -> list:
                     "nose-gear loads -> pivot bushings -> keel walls -> FS0600 / FS1110 + avionics deck -> chine "
                     "longerons", mirror=True, layup="rib_panel",
                     touch=["ST-FS0600", "ST-FS1110", "M-DECK-NOSE", "F-NG-PIVOT", "EQ-*"]))
-    M[-1]["openings"] = [{"id": "W-NDOOR-LINK", "side": "L", "x": [1.0505, 1.0595], "z": [-0.1680, -0.1310],
+    M[-1]["openings"] = [{"id": "W-NDOOR-LINK", "side": "L", "x": [1.0720, 1.0800], "z": [-0.1680, -0.1320],
                           "text": "gear detail round (GD-08): window in the port keel wall for the nose-door drive link "
-                                  "(DA 22 crank in the side bay -> drive horn on the port door); solid laminate land "
-                                  "round it (the wall's aft end, 47 mm ahead of FS1110)"}]
+                                  "(DA 22 crank in the side bay -> drive arm of the port coupling horn); solid laminate "
+                                  "land round it (the wall's aft end, 27 mm ahead of FS1110)"}]
     M.append(member("M-DECK-NOSE", "YK250-CH-022", "avionics deck", "aviyonik güverte",
                     "horizontal deck above the nose-gear well, chine to chine: PDU and power-switching equipment "
                     "tray, roof of the keel slot and of the side bays, upper chord of the nose box",
@@ -821,7 +821,7 @@ def fittings() -> list:
               "downlock": {"point": r3([x0 + 0.049, y0, z0 - DL_R]), "axis": [1.0, 0.0, 0.0], "d": 0.014,
                            "lug_bottom_z": r3(z0 - DL_R - 0.015),
                            "text": "bore of the lock bolt in the aft-lug extension (boss to z lug_bottom_z) and in the "
-                                   "aft yoke arm; bolt withdrawn aft (14 mm stroke) by the gear-unit solenoid before "
+                                   "aft yoke arm; bolt withdrawn aft (15 mm stroke) by the gear-unit solenoid before "
                                    "the leg moves (mechanism main_downlock_R/L)"},
               "inspection": "beam bolts and roof bolts from the well (gear down); the dome nutplates on the fuel side "
                             "are reached only with the aft cell removed (assembly.maintenance_access)",

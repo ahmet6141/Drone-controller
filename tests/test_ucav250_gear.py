@@ -44,6 +44,13 @@ class TestGearBuild(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.reg = build_registry(modules=["chassis", "shell", "gear", "gear", "hardware"], strict=False)
+        from ucav250.core import spec as S
+        cls.B = GR.Build(build_registry(modules=["chassis"], strict=False), S.load())   # mechanism objects (math only)
+        cls.B.joints()
+        cls.B.main_gear()
+        cls.B.main_doors()
+        cls.B.nose_gear()
+        cls.B.drives()
         cls.spec = cls.reg.spec
         cls.gear = {pid: p for pid, p in cls.reg.parts.items() if _gear_part(pid)}
         cls.summary = K.run_all(cls.reg, quick=False, write=False, focus=set(cls.gear))
@@ -168,6 +175,102 @@ class TestGearBuild(unittest.TestCase):
             for j in self.reg.joint_chain(p.joint):
                 c = j.apply(c, up.get(j.name, j.rest))
             np.testing.assert_allclose(c[0], LG[key]["retraction"]["stowed_wheel_center"], atol=0.001, err_msg=pid)
+
+    # ------------------------------------------------------------------ gear detail round mechanisms (GD-01..12)
+    MECHS = (  # crank joint, link joint, output joint, link-end pin part, output pin part, toggle at gear_up
+        ("main_idoor_crank_R", "main_idoor_link_R", "main_inner_door_R", 0.0),
+        ("main_idoor_crank_L", "main_idoor_link_L", "main_inner_door_L", 0.0),
+        ("main_tdoor_crank_R", "main_tdoor_link_R", "main_trunnion_door_R", 1.0),
+        ("main_tdoor_crank_L", "main_tdoor_link_L", "main_trunnion_door_L", 1.0),
+        ("nose_drag_crank", "nose_drag_link", "nose_gear", 0.0),
+        ("nose_ddrive_crank", "nose_ddrive_link", "nose_door_L", 1.0))
+
+    def _pose(self, P, joint, st):
+        V = np.asarray(P, float)[None]
+        for j in self.reg.joint_chain(joint):
+            V = j.apply(V, st.get(j.name, j.rest))
+        return V[0]
+
+    def _pin(self, link_joint):
+        """Rest-pose output pin of a crank / link chain: the link-end eye of the link part."""
+        lj = self.reg.joints[link_joint]
+        part = next(p for p in self.gear.values() if p.joint == link_joint)
+        f = next(f for f in part.fasteners if f.id.endswith("-P2"))
+        return f.position + 0.5 * f.length * f.axis, lj
+
+    def test_mechanism_joints_follow_the_sequence(self):
+        """Every detail-round joint has an expression equal to its gear_retraction values at every sample and is set
+        in every state (coupled: swept only along the sequence); all are 0 in the rest pose."""
+        seq = self.reg.sequences["gear_retraction"]
+        gs = [float(v) for v in self.spec["layout"]["mechanisms"]["sequences"]["gear_retraction"]["values"]]
+        names = [n for n in self.reg.joints if n.startswith(("main_idoor_", "main_tdoor_", "main_downlock_",
+                                                              "nose_drag_", "nose_ddrive_", "nose_dbar", "nose_dlink_"))]
+        self.assertEqual(len(names), 17)
+        for n in names:
+            j = self.reg.joints[n]
+            self.assertTrue(j.expr, n)
+            self.assertEqual(j.rest, 0.0, n)
+            for g, st in zip(gs, seq):
+                self.assertIn(n, st, n)
+                self.assertAlmostEqual(GR.eval_pl_expr(j.expr, g), st[n], places=5, msg=f"{n} at {g}")
+                self.assertTrue(j.lo - 1e-9 <= st[n] <= j.hi + 1e-9, n)
+            moving = [p.id for p in self.reg.moving_parts(n)]
+            self.assertTrue(moving, n)
+
+    def test_linkages_close_and_lock_over_centre(self):
+        """Closure: the link-end pin posed through crank + link coincides with the horn pin posed by the output joint
+        in every sequence state (0.05 mm); travel and transmission angle; crank and link collinear (toggle =
+        over-centre lock) in the locked pose."""
+        seq = self.reg.sequences["gear_retraction"]
+        gs = [float(v) for v in self.spec["layout"]["mechanisms"]["sequences"]["gear_retraction"]["values"]]
+        for cj, lj, oj, g_lock in self.MECHS:
+            q, _j = self._pin(lj)
+            C = self.reg.joints[cj].origin
+            K = self.reg.joints[lj].origin
+            for st in seq:
+                a, b = self._pose(q, lj, st), self._pose(q, oj, st)
+                self.assertLess(float(np.linalg.norm(a - b)), 5e-5, f"{cj}: chain does not close")
+            k = gs.index(g_lock)
+            st = seq[k]
+            Cp, Kp, qp = C, self._pose(K, cj, st), self._pose(q, lj, st)
+            u = self.reg.joints[cj].axis
+            c = np.cross(Kp - Cp, qp - Kp) @ u / (np.linalg.norm(Kp - Cp) * np.linalg.norm(qp - Kp))
+            self.assertLess(abs(c), 1e-3, f"{cj}: not in toggle in the locked pose")
+            travel = max(abs(s[cj]) for s in seq)
+            self.assertTrue(np.radians(100) < travel < np.radians(170), f"{cj}: crank travel {np.degrees(travel):.0f}")
+        for mech in (self.B.ID.m, self.B.TD.m, self.B.NG.m, self.B.NDD.m):
+            self.assertGreater(mech.mu_min(), 30.0)
+
+    def test_nose_door_coupling_mirrors_the_doors(self):
+        """Both coupling links meet at the slide-bar pin in every state; the doors move as mirror images."""
+        seq = self.reg.sequences["gear_retraction"]
+        D = self.B.NDD
+        for st in seq:
+            self.assertAlmostEqual(st["nose_door_R"], st["nose_door_L"], places=9)
+            r = D.cpl(st["nose_door_R"])
+            self.assertAlmostEqual(float(np.linalg.norm(r["qR"] - r["B"])), D.lc, places=9)
+            self.assertAlmostEqual(float(np.linalg.norm(r["qL"] - r["B"])), D.lc, places=9)
+            self.assertGreater(r["mu"], 35.0)
+        for sd in ("R", "L"):
+            hp = next(f for f in self.reg.parts[f"YK250-LG-699-{sd}"].fasteners if f.id.endswith("-P1"))
+            q = hp.position + 0.5 * hp.length * hp.axis
+            for st in seq:
+                a = self._pose(q, f"nose_dlink_{sd}", st)
+                b = self._pose(q, f"nose_door_{sd}", st)
+                self.assertLess(float(np.linalg.norm(a - b)), 5e-5, sd)
+
+    def test_main_downlock_withdrawn_before_the_leg_moves(self):
+        """The lock bolt is engaged (11.5 mm in the aft yoke arm) with the gear down and clear of the arm in every
+        state in which the leg has left the down position."""
+        M = self.B.M
+        seq = self.reg.sequences["gear_retraction"]
+        bolt = self.reg.parts["YK250-LG-641-R"].mesh.V
+        x_tip = float(bolt[:, 0].min())
+        self.assertGreater(M.arm_a[1] - x_tip, 0.010)
+        for st in seq:
+            if st["main_gear_R"] > 1e-9:
+                self.assertGreater(x_tip + st["main_downlock_R"] - M.arm_a[1], 0.002)
+        self.assertEqual(seq[0]["main_downlock_R"], 0.0)
 
     # ------------------------------------------------------------------ mass
     def test_group_mass_reported(self):

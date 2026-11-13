@@ -262,12 +262,13 @@ DESIGN = {
                      "text": "outer cylinder of the telescopic spring/oil damper leg (SAGITTA architecture); bar "
                              "allowables taken as the 7075-T6 sheet values (estimate)"},
         "main_trunnion_pin_d_m": 0.020, "main_trunnion_lug_t_m": 0.012,
-        "main_downlock_pin_d_m": 0.010, "main_downlock_radius_m": 0.035,
-        "main_downlock": {"material": "steel_4130_n", "ear_t_m": 0.006, "inner_t_m": 0.010, "gap_m": 0.0005,
-                          "text": "fix round 2 (VS2-07): down-lock = 4130 lock bolt d 10 in double shear in a tight "
-                                  "clevis of F-TRUNNION (ears 2 x 6 mm, gaps <= 0.5 mm) through a 10 mm lock lug of the "
-                                  "leg yoke at r 35 mm from the retraction axis; requirement for the gear-unit "
-                                  "supplier (lock bolt d >= 10 mm 4130 or equivalent, clevis gaps <= 0.5 mm)"},
+        "main_downlock_pin_d_m": 0.014, "main_downlock_radius_m": 0.028,
+        "main_downlock": {"material": "steel_4130_n", "shear": "single", "engaged_t_m": 0.0115, "gap_m": 0.001,
+                          "text": "gear detail round (GD-03): spring-engaged, solenoid-withdrawn 4130 lock bolt d 14 "
+                                  "in a bore of the aft F-TRUNNION lug extension, engaging 11.5 mm of the aft yoke arm "
+                                  "28 mm below the retraction axis; single shear across the 1 mm lug-to-arm gap (a "
+                                  "second clevis ear would stand in the swept leg); bolt bending as a cantilever "
+                                  "from the lug bore, uniform bearing over the engaged length"},
         "trunnion_fitting": {"insert_flange_od_m": 0.014, "nutplate_base_m": 0.020, "k_axial_over_shear": 1.0,
                              "text": "fix round 2 (VS2-02): F-TRUNNION bolt group analysed as a rigid fitting on 9 "
                                      "elastic bolts (5 x M6 12.9 axis y into flanged through-thickness inserts of the "
@@ -2796,12 +2797,23 @@ def check_gear(c: Ctx, R: Rows) -> dict:
     Dl = float(GD["main_downlock_pin_d_m"])
     dl = GD.get("main_downlock") or {}
     stl = mat(c, dl.get("material", "steel_4130_n"))
+    single = dl.get("shear") == "single"
+    n_sh, sh_en, sh_tr = (1, "single shear", "tek kesme") if single else (2, "double shear", "çift kesme")
     R.add("G-DOWNLOCK", "gear", f"main down-lock bolt d {Dl * 1000:.0f} (4130) at r {GD['main_downlock_radius_m'] * 1000:.0f} "
-          f"mm from the retraction axis, double shear (governing: {nm})", f"ana takım aşağı kilit cıvatası Ø{Dl * 1000:.0f} "
-          f"(4130), toplama ekseninden r {GD['main_downlock_radius_m'] * 1000:.0f} mm, çift kesme (belirleyici: {nm})",
-          gl_txt, gl_tr, v, 2 * math.pi * Dl ** 2 / 4 * float(stl["Fsu"]), "N", total_factor(c, fit=True),
-          "moment about the trunnion axis / lock radius", part="YK250-CH-070 / gear unit")
-    if dl:
+          f"mm from the retraction axis, {sh_en} (governing: {nm})", f"ana takım aşağı kilit cıvatası Ø{Dl * 1000:.0f} "
+          f"(4130), toplama ekseninden r {GD['main_downlock_radius_m'] * 1000:.0f} mm, {sh_tr} (belirleyici: {nm})",
+          gl_txt, gl_tr, v, n_sh * math.pi * Dl ** 2 / 4 * float(stl["Fsu"]), "N", total_factor(c, fit=True),
+          "moment about the trunnion axis / lock radius", part="YK250-CH-070 / YK250-LG-641")
+    if dl and single:
+        Mlk = v * (float(dl["gap_m"]) + 0.5 * float(dl["engaged_t_m"]))
+        R.add("G-DOWNLOCK-BEND", "gear", f"main down-lock bolt d {Dl * 1000:.0f} bending, single shear (cantilever from "
+              f"the lug bore: gap {dl['gap_m'] * 1000:.1f} mm + half the {dl['engaged_t_m'] * 1000:.1f} mm engagement), "
+              f"elastic (governing: {nm})", f"ana takım aşağı kilit cıvatası Ø{Dl * 1000:.0f} eğilmesi, tek kesme (kulak "
+              f"deliğinden ankastre: boşluk {dec(dl['gap_m'] * 1000, 1)} mm + {dec(dl['engaged_t_m'] * 1000, 1)} mm "
+              f"kavramanın yarısı), elastik (belirleyici: {nm})", gl_txt, gl_tr, ST.pin_bending_stress(Mlk, Dl) / 1e6,
+              float(stl["Ftu"]) / 1e6, "MPa", total_factor(c, fit=True), "M = P (gap + engagement / 2), "
+              "structlib.pin_bending_stress, Ftu (no plastic factor) - gear detail round GD-03", part="YK250-LG-641")
+    elif dl:
         Mlk = ST.pin_bending_moment(v, float(dl["ear_t_m"]), float(dl["inner_t_m"]), float(dl["gap_m"]))
         R.add("G-DOWNLOCK-BEND", "gear", f"main down-lock bolt d {Dl * 1000:.0f} bending in the clevis (Melcon-Hoblit: "
               f"ears {dl['ear_t_m'] * 1000:.0f} mm, lock lug {dl['inner_t_m'] * 1000:.0f} mm, gaps "
@@ -3185,12 +3197,11 @@ def check_gear(c: Ctx, R: Rows) -> dict:
     w_td = float(V_td[:, 1].max() - V_td[:, 1].min())
     A_td = float(V_td[:, 0].max() - V_td[:, 0].min()) * w_td
     H_td = 1.0 * q_LO * A_td * w_td / 2 + 2.0 * A_td * k_ar * G * w_td / 2
-    R.info("G-TDOOR-LINK", "gear", "main trunnion door (leg-driven slotted link, opening spring): closing moment the leg "
-           "supplies over the last 18 deg of retraction and the opening-spring preload (>= air load + weight at V_LO, "
-           "limit)", "ana mafsal kapağı (bacakla tahrikli yarıklı bağlantı, açma yayı): toplamanın son 18 derecesinde "
-           "bacağın sağladığı kapatma momenti ve açma yayı ön yükü (V_LO'da hava yükü + ağırlık, limit)", cs_md, cs_md_tr,
-           H_td, "N m", "requirement for the spring / link detail design (small against the main-gear EMA torque "
-           "G-EMA-MAIN)", part="YK250-LG-673")
+    R.info("G-TDOOR-LINK", "gear", "main trunnion door (own micro gearmotor, crank + link, over-centre when closed; gear "
+           "detail round GD-07): hinge moment at the door (air load + weight at V_LO, limit)", "ana mafsal kapağı (kendi "
+           "mikro dişli motoru, krank + biyel, kapalıyken ölü nokta ötesi; GD-07): kapak menteşe momenti (V_LO'da hava "
+           "yükü + ağırlık, limit)", cs_md, cs_md_tr, H_td, "N m", "requirement for the gearmotor (estimate class "
+           "~0.3 N m output, docs/detail/gear.md)", part="YK250-LG-673 / YK250-LG-691")
     # fix round 2 (PK2-13 / mass closure): ONE DA 22 drives both nose clamshell doors through the centre-line bellcrank
     nb_ = np.asarray(LG["nose"]["stowed_envelope"]["box"], float)
     A_nd = gdg["area_nose_m2"] / 2

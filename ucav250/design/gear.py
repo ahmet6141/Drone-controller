@@ -1704,7 +1704,6 @@ NDA_EAR_X = (1.0480, 1.0720)        # nose-door DA 22 outboard ear on the side-b
 NC_GUIDE_ZB = -0.1700               # guide plate lower edge (above the slot-end sill)
 SIDE_EN, SIDE_TR = {"R": "starboard", "L": "port"}, {"R": "sağ", "L": "sol"}
 PIN_X = 0.0003                      # pin ends beyond the outer plates
-TRAY_T_SB = 0.003                   # side-bay tray plate thickness (chassis TR-SIDEBAY, measured on the mesh)
 NC_FL_L = 0.016                     # guide-plate flange length on the keel walls
 
 
@@ -2403,8 +2402,8 @@ class Build:
                               "washer + retaining ring behind the plate")
         tray = C.eq["EQ-NDOORACT"]["mount"]["tray"]
         for k, p in enumerate(D2.case_bolts()):
-            J.bolt(reg, f"{C.pid(678)}-B{k + 1}", 3, p, (0.0, 0.0, -1.0), [(C.pid(678), 0.003), (tray, TRAY_T_SB)],
-                   nut="nutplate", grade="12.9", step=STEP_DOOR, notes="nutplate under the side-bay tray")
+            J.bolt_through(reg, f"{C.pid(678)}-B{k + 1}", 3, p, (0.0, 0.0, -1.0), [C.pid(678), tray], nut="nutplate",
+                           grade="12.9", step=STEP_DOOR, notes="nutplate under the side-bay tray")
         kw = C.mem["M-KEELWALL"]["part"]
         wt = float(C.mem["M-KEELWALL"]["box"][1][1] - C.mem["M-KEELWALL"]["box"][0][1])
         for k, (p, ax) in enumerate(D2.guide_bolts()):

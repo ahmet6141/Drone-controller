@@ -23,7 +23,7 @@ mühimmat, dış yük askı noktası ya da bırakma düzeneği yoktur ve öngör
 | Parça kimliği (820–849 kullanıldı) | 38 (19 satın alma, 19 imalat); 7 çift sağ/sol ayna (kapak, iki kızak, iki kapak rayı, pinyon, DA 22 + braket) |
 | Bağlantı elemanı (`joints.py`, geometri `hardware.py`) | 82: 34 × ISO 4762 M3, 26 × ISO 4762 M4, 22 × ISO 7380 M3 (A2-70); gömme insert, yüzer somun plakası, nyloc, ünite dişleri |
 | Hareketli eklem | `turret_elevator` (prizmatik, 0,128 m, rest = içeride), `turret_door_R/L` (prizmatik, 32° eğik, 0,12 m); bağlı dizi `turret_extension` (13 durum) |
-| Tasarım kuralı denetimleri | `python3 -m ucav250.analysis.checks --modules chassis,shell,payload --focus YK250-PL --no-write`: **0 ihlal** (§10) |
+| Tasarım kuralı denetimleri | `python3 -m ucav250.analysis.checks --modules chassis,shell,payload --focus YK250-PL --no-write`: PL parçalarının kendi aralarında ve şasi / kabuk parçalarıyla 0 ihlal; şasi / kabuk **bağlantı elemanlarıyla** 6 statik + 14 süpürme ihlali (§10, §11-1) |
 | Kütle | HD59 + yalıtımlı bağlantı 1,736 kg (`payload.turret_mass_kg` 1,75); mekanizma 1,870 kg (kalem `turret_lift_mechanism_doors` 1,786 temel / 1,875 büyüme dahil) — §9 |
 | Üçgen sayısı (PL parçaları) | ≈ 52 000 |
 | Montaj adımı | 24 (`spec.assembly`: taret asansörü, kayar kapaklar ve HD59) |
@@ -148,9 +148,12 @@ Bağlantı elemanları (0,22 kg) donanım grubundadır.
 
 ## 10. Doğrulama
 
-- Tasarım kuralı denetimleri (`chassis,shell,payload`, odak YK250-PL): mesh 0, statik 0, süpürme (13 dizi durumu) 0,
-  açıklık 0 (taret–halka ≥ 5,0 mm, taret–duvar / çerçeve ≥ 6 mm, kapak–taret ≥ 5 mm), kalınlık 0, bağlantı elemanı 0,
-  temas 0, bağlanma 0.
+- Tasarım kuralı denetimleri (`chassis,shell,payload`, odak YK250-PL): mesh 0, açıklık 0 (taret–halka ≥ 5,0 mm,
+  taret–duvar / çerçeve ≥ 6 mm, kapak–taret ≥ 5 mm), kalınlık 0, bağlantı elemanı 0, temas 0, bağlanma 0; statik 6 ve
+  süpürme 14 ihlalin **tamamı** başka modüllerin bağlantı elemanlarıyladır (§11-1): SH-361-B1…B4 (alt kaplamanın FS1110
+  başlığındaki yüzer somun plakaları, ön kapak rayı / kızağı içinde), SH-363-B5…B8 (halka yan alanındaki yüzer somun
+  plakaları, kapak yolunda), CH-125 / CH-126-B3 / B4 (ray oturmasının M4 başları, MGN12 blok zarfında). PL
+  parçalarının şasi / kabuk parçalarıyla ve kendi aralarında ihlali yoktur.
 - `tests/test_ucav250_payload.py`: denetimler; tek kayıt; kimlik aralığı ve aynalar; layout sabit kimlikleri (EQ-TURRET,
   EQ-ELEVATOR, EQ-TDOORACT, raylar, kapaklar); parça sözleşmesi; silah ifadesi yokluğu; kapalı ağ ve ayna hacmi; taret
   zarfı ve layout kutuları; eklem / dizi layout uyumu (kapaklar tam açılmadan asansör oynamaz); **dizi taraması
@@ -163,21 +166,33 @@ Bağlantı elemanları (0,22 kg) donanım grubundadır.
 
 ## 11. Açık konular
 
-1. **HD59 bağlantı ICD'si** yayımlanmamış: taban Ø120 ve M4 cıvata dairesi (r 42 mm) tahmindir; Trillium ICD/STEP
+1. **Başka modüllerden arayüz düzeltmesi gerekir (bu modülde çözülemez):**
+   - *Kabuk (shell.py):* halka insertinin yan alan vidaları SH-363-B5…B8 (x 1,181 / 1,259, |y| 0,113) layout
+     P-TURRETRING `fastening` metnindeki gibi **kaplama içinde gömme M4 insert** olmalı; yüzer somun plakası kaplamanın
+     ~13 mm üstüne çıkıp kayar kapakların yoluna girer (layout `door_outlines` "band"). Alt orta kaplamanın FS1110
+     başlığındaki SH-361-B1…B4 (x 1,125, |y| 0,147 / 0,171) yüzer somun plakaları da kapak bandında (x 1,123–1,317)
+     ön kapak raylarının ve kızaklarının içinden geçer: bu satır için bant içinde gömme insert (ya da somun plakası
+     bandın dışına) gerekir. Arka başlıktaki SH-361-B13… raylara değmez.
+   - *Şasi (chassis.py):* ray oturmalarının CH-125 / CH-126-B3 / B4 cıvataları (ISO 4762 M4, ray ekseninden 16 mm,
+     baş Ø7 × 4) MGN12 bloğunun zarfına (yarı genişlik 13,5 mm, blok altı 3 mm) 1 mm girer; blok bu z'lerden geçer.
+     Cıvatalar ray ekseninden ≥ 18 mm'ye alınmalı ya da havşa başlı / ISO 7380 (k 2,2 mm) olmalı.
+   Bu düzeltmeler gelene kadar `tests/test_ucav250_payload.py::test_design_rule_checks_clean` yalnız bu 20 ihlalle
+   kalır; diğer bütün testler geçer.
+2. **HD59 bağlantı ICD'si** yayımlanmamış: taban Ø120 ve M4 cıvata dairesi (r 42 mm) tahmindir; Trillium ICD/STEP
    ile adaptör delikleri doğrulanacak.
-2. **Kütle:** mekanizma (1,870 kg), kalemin %5 büyüme payının %94'ünü kullanır. Kalem dökümü güncellenmeli: raylar /
+3. **Kütle:** mekanizma (1,870 kg), kalemin %5 büyüme payının %94'ünü kullanır. Kalem dökümü güncellenmeli: raylar /
    taşıyıcı 0,35 → 0,57, kapak tahrikleri 0,304 → ≈ 0,64; bölme astarı 0,40 ve halka 0,06 şasi / kabuk bütçesinde
    ise kalem ≈ 1,88 kg temel olmalıdır. MTOM payı (R-56 0,021 kg) dar olduğundan bu, kütle sahibinin kararıdır
    (spec değişikliği yapılmadı). Ayrıca parçalar `payload` grubunda, kalem `systems` grubundadır.
-3. **Ray–şasi boşlukları:** ön kapak rayı ile CH-125 oturma köşebendi arası durağan 0,33 mm, rayların duvar uç
+4. **Ray–şasi boşlukları:** ön kapak rayı ile CH-125 oturma köşebendi arası durağan 0,33 mm, rayların duvar uç
    direklerine 1,1 mm. Şasi çiziminde köşebendin alt ucunda 2 mm pah önerilir.
-4. **Satın alma tahminleri:** elastomer izolatör sertliği (HD59 titreşim spektrumuna göre ayar), tahrik birimi
+5. **Satın alma tahminleri:** elastomer izolatör sertliği (HD59 titreşim spektrumuna göre ayar), tahrik birimi
    (BLDC + sonsuz vida + fren + kodlayıcı, 0,20 kg), MGN12 sınıfı ray / blok, bilyalı vida ve somun boyutları üretici
    kataloğuyla doğrulanacak.
-5. **Kapak tahriki:** pinyon diş yorulması (7075, sert eloksal) ve DA 22 çıkışına kama bağlantısı deneyle
+6. **Kapak tahriki:** pinyon diş yorulması (7075, sert eloksal) ve DA 22 çıkışına kama bağlantısı deneyle
    doğrulanacak; kapak konum algılayıcıları (layout kilitlemesi) modellenmedi.
-6. **Servis döngüsü** U-dönüşü deforme olduğundan modellenmedi; 10 tam çevrim montaj denemesi (adım 24) ile kablo
+7. **Servis döngüsü** U-dönüşü deforme olduğundan modellenmedi; 10 tam çevrim montaj denemesi (adım 24) ile kablo
    ömrü doğrulanacak.
-7. **E180 takımı** (0,19 m halka SH-364, adaptör, conta) bu modülde kurulmaz; yalnız zarf uyumu doğrulanır.
-8. Layout'un aynı aralıkta kimlik verdiği EQ-MC (PL-850 görev bilgisayarı) ve TR-PAYLOAD (PL-852 yük tepsisi) bu
+8. **E180 takımı** (0,19 m halka SH-364, adaptör, conta) bu modülde kurulmaz; yalnız zarf uyumu doğrulanır.
+9. Layout'un aynı aralıkta kimlik verdiği EQ-MC (PL-850 görev bilgisayarı) ve TR-PAYLOAD (PL-852 yük tepsisi) bu
    üretici kapsamı dışında bırakılmıştır (taret bölmesi dışı); ayrı iş olarak üretilmelidir.

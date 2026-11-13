@@ -1222,7 +1222,7 @@ class NoseDoors:
         x0, x1 = self.o.bounds[0], self.o.bounds[2]
         # hinge stations only where neither the leg yoke (pivot) nor the tyre passes near the hinge line
         # (layout clearances: doors vs legs 10 mm, nose tyre vs doors 12 mm): forward of the stowed tyre and aft of it
-        self.blocks = ((0.700, 0.710), (0.736, 0.746), (x1 - 0.031, x1 - 0.021))
+        self.blocks = ((0.700, 0.710), (0.736, 0.746), (x1 - 0.031, x1 - 0.026))   # the last ends ahead of the coupling horns
         self.knuck = ((0.7105, 0.7355), (x1 - 0.0205, x1 - 0.0085))
         self.wall_y = float(C.mem["M-KEELWALL"]["box"][0][1])
 
@@ -1724,11 +1724,11 @@ class NoseDoorDrive:
         s0, s1 = self.guide_slot()
         wy = float(self.C.mem["M-KEELWALL"]["box"][0][1])
         zb = NC_GUIDE_ZB - self.cp.p0[2]
-        plate = rect(-wy + 0.0005, wy - 0.0005, zb, s1 + 0.008).difference(rect(-0.0016, 0.0016, s0, s1))
+        plate = rect(-wy + 0.0005, wy - 0.0005, zb, s1 + 0.016).difference(rect(-0.0016, 0.0016, s0, s1))
         for sg in (1.0, -1.0):                    # lightening windows (8 mm webs)
             plate = plate.difference(rect(sg * 0.0096, sg * (wy - 0.0115), zb + 0.008, s1 - 0.024))
         m = _plate(plate, self.cp.p0, self.cp.e1, self.cp.e2, t0, t1)
-        fls = [_plate(rect(min(sg * wy, sg * (wy - 0.003)), max(sg * wy, sg * (wy - 0.003)), s1 - 0.022, s1 + 0.008),
+        fls = [_plate(rect(min(sg * wy, sg * (wy - 0.003)), max(sg * wy, sg * (wy - 0.003)), s1 - 0.012, s1 + 0.016),
                       self.cp.p0, self.cp.e1, self.cp.e2, t0 - NC_FL_L, t0 + 0.0005) for sg in (1.0, -1.0)]
         return _clean(G.union([m] + fls))
 
@@ -1737,7 +1737,7 @@ class NoseDoorDrive:
         t0, _t1 = self.tx("guide")
         s0, s1 = self.guide_slot()
         wy = float(self.C.mem["M-KEELWALL"]["box"][0][1])
-        return [(self.cp.to3(np.array([sg * (wy - 0.003), s1 - 0.007])) + (t0 - 0.5 * NC_FL_L) * self.cp.u,
+        return [(self.cp.to3(np.array([sg * (wy - 0.003), s1 + 0.006])) + (t0 - 0.5 * NC_FL_L) * self.cp.u,
                  np.array([0.0, sg, 0.0])) for sg in (1.0, -1.0)]
 
 

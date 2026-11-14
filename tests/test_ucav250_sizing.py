@@ -421,8 +421,14 @@ class TestSizingCheck(unittest.TestCase):
         self.assertFalse(pp["no_payload"]["permitted"])
         self.assertLess(pp["no_payload"]["static_margin_range"][0], sm_min)
         self.assertGreater(pp["no_payload"]["nose_ballast_at_turret_mount_kg"], 0.0)
-        self.assertLess(pp["turret_only"]["fuel_max_for_R09_kg"], out["mass"]["fuel_capacity_kg"])
         cap = out["mass"]["fuel_capacity_kg"]
+        # V4-02: the turret-only fuel limit is consistent with its own static-margin range. Verification round of the
+        # mass/CG closure (REG-01): the fuel stands at its level CG and the range covers the burn to empty; with the
+        # nose EMA allowance and the ballast forward, the turret-only loading keeps R-09 with full tanks, so the limit
+        # is the capacity. The loading is fuel-limited exactly when its full-tank range leaves R-09.
+        to = pp["turret_only"]
+        self.assertLessEqual(to["fuel_max_for_R09_kg"], cap + 1e-9)
+        self.assertEqual(to["fuel_max_for_R09_kg"] < cap - 1e-6, to["static_margin_range_full_tanks"][0] < sm_min - 1e-9)
         ff = next(c for c in S["mass"]["cases"] if c["name"] == "full_fuel_baseline_sensors_only")
         self.assertEqual(ff["fuel_rule"], "capacity")
         self.assertAlmostEqual(ff["fuel_fraction"] * float(S["mass"]["fuel_kg"]), cap, delta=0.05)

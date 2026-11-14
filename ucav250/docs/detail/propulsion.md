@@ -174,6 +174,8 @@ ek parçaları PR-520 paslanmaz kaldı (egzoz sıcaklığı). Vidalar Ti-6Al-4V;
 A2-70 kalır. Açık: susturucu PR-504 iç yapısızdır (0,40 kg; gerçek susturucu +0,3…0,6 kg, x 3,86); CHT/EGT
 algılayıcıları modellenmedi.
 
+**Kapanışın doğrulama turu (MC-02, REG-04).** İtki bütçe grubu: kayıt defteri 12,967 kg + susturucu iç yapısı payı 0,601 kg = **13,569 kg**; tavan **13,57 ± 0,41 kg**. PR-504-L/R boş 0,8 mm 304 kabuktur (susturucu kutusu OD 38 × 94 mm, iç yapı yok); ikisi 0,399 kg'dır. Motor kalemi `engine.installed_items_kg.exhaust_with_silencers` ise 1,0 kg'dır (Hirth 4201 ikiz egzozu 1,15 kg'dan ölçeklenmiş). Aradaki 0,601 kg, iç yapı modellenene kadar PR-504 merkezinde (x 3,861) adlı paydır (`registry_allowance`). Göbek vidası PR-542-B1 artık A2-70'tir: 7075 ezme plakasına dişli girer ve alüminyum dişte titanyum kullanılmaz.
+
 ## 11. Doğrulama
 
 - `python3 -m ucav250.analysis.checks --modules chassis,propulsion --focus YK250-PR --no-write` → 0 ihlal.

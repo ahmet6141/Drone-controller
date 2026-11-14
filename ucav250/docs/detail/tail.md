@@ -257,6 +257,8 @@ TL-301 soket kaburgasının 0,1 mm önünde biter (layout `span_y` 0,1 mm'ye yuv
 kulak, kök parçası ve stabilatör çapraz cıvataları 12.9 → Ti-6Al-4V (doc 04 §7a; T-FINROOT-FRONT 3,41, T-VENTRAL-BOLT
 3,17, T-NODE-STUB-BOLTS 6,90, T-CROSSBOLT 47,8); motor bölmesindeki somunlar ISO 7042 tam metal.
 
+**Kapanışın doğrulama turu (REG-04, REG-05, MC-04).** Kuyruk bütçe grubu: kayıt defteri 7,426 kg + boya 0,308 kg = **7,734 kg**; tavan **7,74 ± 0,23 kg**. Stabilatör 0,6236 m²'dir (kuyruk kuralı ölü bant içinde; R-36 0,6945). Alüminyuma dişli giren vidalar artık A2-70'tir: dikey arka kulağı 2 × M5 (TL-267 7075 köşe bağlantısında; T-FINROOT-REAR MS 2,51), stabilatör çapraz cıvatası M5 (7075 kök parçasında; T-CROSSBOLT MS 25,1) ve FC-303 dümen DA 26 flanşı (helisel ekli servo kaburgası; `joints.bolt` kuralı). Ön kulak 2 × M6 Ti, ventral kulakları M5 Ti olarak kalır. Yapı satırları artık kuyruk modülünün yaptığı M5 boyutunu kullanır (önce M6 gerilme alanı ve ezilme çapı; T-VENTRAL-BOLT MS 1,95).
+
 ## 10. Layout'tan / yapı hesabından sapmalar (gerekçeli)
 
 * **F-FIN-FRONT B1/B2:** layout'taki düşey M6 çifti (y 0,1492, z 0,2772 / 0,2592) yerine yatay çift y 0,1400 / 0,1584,

@@ -328,7 +328,7 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | P-SPINE-LOCAL | omurga kanalı duvarları (24 mm, iki kenar mesnetli) eksenel gerilme altında yerel burkulma | YD-41 | 66,89 | 174,2 | MPa | yalnız nihai x kompozit 1,2 | 1,170 | SS plate k = 4 (Bruhn C5), QI modulus |
 | P-SPINE-SCREWS | omurga flanşları - P-MB-UPPER: 20 x M4 Ti-6Al-4V (32 mm aralık, FS1810 - FS-FUEL), x bileşeninin kesmesi (yuvarlak baş 0,8 x sınıf) | YD-41 | 567,2 | 2950,1 | N | yalnız nihai x bağlantı 1,15 | 3,522 | Ti-6Al-4V screws credited at ISO 3506-1 A2-70 (conservative) |
 | P-SPINE-SCREW-BR | omurga flanşı vidaları M4: kaplamanın 1,6 mm dolu kenar bandında ezilme | YD-41 | 567,2 | 2662,1 | N | yalnız nihai x kompozit 1,2 | 2,911 | QI ezilme ETW |
-| P-SPINE-TEAR | koparılabilir şerit P-SPINE ayrılması: 4 x M3 PA66 kesme vidasının bir uç çifti kuru akmada çekmede (825 N; kayış şeridi ön uçtan soyar) + cırt bant soyulması (9 N), açılmadaki kayış çekmesine karşı | YD-42 | 833,7 | 1301,2 | N | release check: pull / release (both bounds, no factor) | 0,561 | Zytel 101L ISO 527 dry yield 82 MPa x A_s; A-A-55126B Table I peel; opening force ~ q |
+| P-SPINE-TEAR | koparılabilir şerit P-SPINE ayrılması: 4 x M3 PA66 kesme vidasının bir uç çifti kuru akmada çekmede (825 N; kayış şeridi ön uçtan soyar) + cırt bant soyulması (9 N), açılmadaki kayış çekmesine karşı | YD-42 | 833,7 | 1301,2 | N | tear-out check: pull / tear-out load (both bounds, no factor) | 0,561 | Zytel 101L ISO 527 dry yield 82 MPa x A_s; A-A-55126B Table I peel; opening force ~ q |
 | P-SPINE-SKIN | görev bölmesi üst kaplaması P-MB-UPPER (shell_secondary): net x bileşeninin omurga flanşlarından kenar uzun kirişlerine kesme akışı, yüz ilk katman hasarı | YD-41 | 14,97 | 97,04 | N/mm | yalnız nihai x kompozit 1,2 | 4,402 | CLT |
 
 ### Yakıt bölmeleri
@@ -583,16 +583,16 @@ Grup tavanları (mass.budget) ve sizing tahminleri (büyüme payı dahil):
 
 | Grup | Tavan (kg) | Tahmin (kg) | Pay (kg) |
 |---|---|---|---|
-| chassis | 19,86 | 19,82 | 0,0413 |
-| controls | 8,15 | 8,16 | -0,00633 |
+| chassis | 19,82 | 19,82 | 0,0013 |
+| controls | 8,16 | 8,16 | 0,00367 |
 | fuel | 2,37 | 2,37 | 1,00e-05 |
-| gear | 12,94 | 14,49 | -1,55 |
-| hardware | 5,26 | 5,36 | -0,101 |
-| propulsion | 12,97 | 13,57 | -0,598 |
-| shell | 10,82 | 10,97 | -0,154 |
-| systems | 15,21 | 15,32 | -0,113 |
+| gear | 14,49 | 14,49 | 0,0021 |
+| hardware | 5,37 | 5,36 | 0,00921 |
+| propulsion | 13,57 | 13,57 | 0,0015 |
+| shell | 10,98 | 10,97 | 0,0064 |
+| systems | 15,33 | 15,32 | 0,0072 |
 | tail | 7,74 | 7,73 | 0,00592 |
-| wing | 12,88 | 12,91 | -0,033 |
+| wing | 12,92 | 12,91 | 0,007 |
 
 ## Arayüz kontrolleri
 

@@ -4521,7 +4521,7 @@ materials:
     name: PA66 moulded (Celanese Zytel 101L NC010 class; tear-away shear screws)
     kind: polymer
     basis: 'datasheet ISO 527 yield stress dry 82 MPa / conditioned 55 MPa, tensile modulus 3100 / 1400 MPa, density ISO
-      1183 1140 kg/m3; Ftu = dry yield (the stronger state: upper bound of a release load, structures P-SPINE-TEAR); Ftu_cond
+      1183 1140 kg/m3; Ftu = dry yield (the stronger state: upper bound of a tear-out load, structures P-SPINE-TEAR); Ftu_cond
       = conditioned yield'
     density: 1140.0
     E: 3100000000.0

@@ -280,6 +280,8 @@ DA 30'un arkasında FS-GEAR + 0,173 m'dedir (eyleyici FS-GEAR'a bağlı, kapanı
 yakıt ağırlık merkezi artık kayıt defterindeki yakıt içeriğinin merkezidir (`spec.mass.fuel_cg` =
 `spec.mass.registry.fuel`, tasarım yakıtı 30,23 kg).
 
+**Kapanışın doğrulama turu (REG-01, REG-06).** Yakıt içeriği artık üç hücrede **ortak bir serbest yüzeyle** doldurulur: hücreler alttan birleşik kaplardır (FL-XFER-LO, FL-XFER-SA besleme hücresine; motor arka hücreden beslenir). Önceki eşit doluluk oranı yaklaşımının yerini bu aldı. Tasarım yükünde (30,19 kg) yüzey z ≈ 0,077 m'dedir; ön hücre ≈ %81, eyer ≈ %37, arka ≈ %80 doludur. Modül 41 seviyelik bir ızgarada hücre iç katılarının o seviyenin altındaki hacmini ve momentlerini hesaplar ve **seviye tablosunu** yazar (`Registry.tables["fuel_levels"]`, kütle ve AM; `analysis/mass.py` → `spec.mass.registry.fuel.levels`). Yakıt azaldıkça AM arka besleme hücresine kayar (30 kg'da x 2,606 m, 5,8 kg'da 2,628 m, 0,56 kg'da 2,920 m). Her yükleme durumu yakıtını bu merkeze koyar; R-09 yakıt bitimine kadar her seviyeyi denetler. Alt ara bağlantı y 0,340 → 0,335 m'ye alındı: ana takım kuyusu 3,7 mm öne geldi ve arka hücre alt bağlantısı ön-dış köşe ile kuyu duvarı arasında cıvata deseni bulamıyordu. Testler: içerik AM'si spec'e değil, bağımsız olarak yeniden hesaplanmış ortak yüzey dağılımına karşılaştırılır (2 mm); seviye tablosu ayrıca denetlenir. Alüminyum parçalara dişli giren vidalar A2-70'tir (REG-04). Bütçe grubu **2,370 kg**, tavan 2,37 ± 0,07 kg.
+
 ## 13. Layout değişiklikleri (yakıt ayrıntılı tasarımı sırasında; builder üzerinden)
 
 `ucav250/layout_build/b_systems.py` içinde (sonra `python3 -m ucav250.layout_build.build --write`; `layout_check`,

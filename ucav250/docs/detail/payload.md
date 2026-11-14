@@ -154,6 +154,8 @@ mekanizması ve kapakları sistem grubundadır. `analysis/mass.py` yükleme duru
 olmayan faydalı yük kalemlerini (görev bilgisayarı, tepsi, araştırma yükü payı, E180 farkı) kendi spec konumlarında
 taşır. Vidalar Ti-6Al-4V.
 
+**Kapanışın doğrulama turu (MC-03, REG-04).** Taret açık yükleme durumlarında taret parçaları (1,736 kg), asansör ve kayar kapaklar artık `turret_extension` dizisinin son durumunda konumlanır (önce yalnız 14 g'lık nokta kütle kalanı iniyordu). Taret grubunun AM z'si içeride −0,065 m, dışarıda −0,193 m'dir. PL-824 dişli kutusu vidaları 6061 yatak gövdesine dişli girdiği için A2-70'tir.
+
 ## 10. Doğrulama
 
 - Tasarım kuralı denetimleri (`chassis,shell,payload`, odak YK250-PL): mesh 0, açıklık 0 (taret–halka ≥ 5,0 mm,

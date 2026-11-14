@@ -2458,7 +2458,7 @@ SPINE_ROW_Y = 0.045 + GAP + EDGE_M4 + OWN_MARGIN
 SPINE_ROW_END = 0.034                  # row ends 34 mm from the FS1810 / FS-FUEL station planes (frame cap rows there)
 # tear-away strip screws (REG-02): PA66 (Celanese Zytel 101L class, spec.materials pa66_zytel_101l); installation
 # torque = nut factor 0.2 x preload x d with the preload at 25 % of the screw's dry yield load (estimate: hand-tight,
-# the screw must not be pre-loaded towards its release load)
+# the screw must not be pre-loaded towards its tear-out load)
 TEAR_SCREW = {"grade": "PA66", "size": 3, "count": 4, "torque_nm": round(0.2 * 0.25 * 82e6 * 5.03e-6 * 0.003, 3)}
 
 
@@ -2800,7 +2800,7 @@ class Rows:
             t = np.cross([1.0, 0.0, 0.0], N[i])
             self._commit(keys["P-NOSECONE"], "P-NOSECONE", "nut", P[i], -N[i], t, "nose cone radial screw (FS0300)")
         # tear-away strip: 4 nylon M3 shear screws into the spine-channel flanges (inner part); verification REG-02:
-        # registered as polyamide (PA66) screws, hand-tight (TEAR_SCREW), so that the bridle pull releases the strip
+        # registered as polyamide (PA66) screws, hand-tight (TEAR_SCREW), so that the bridle pull tears the strip out
         # (structures P-SPINE-TEAR)
         lx = sc.mem["M-SPINE"]["lands"][0]["x"]
         for xx in (float(lx[0]) + 0.070, float(lx[1]) - 0.070):

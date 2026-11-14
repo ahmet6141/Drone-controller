@@ -5615,7 +5615,7 @@
   {
    "id": "P-SPINE-TEAR",
    "group": "parachute",
-   "member": "tear-away strip P-SPINE release: one end pair of the 4 x M3 PA66 shear screws in tension at the dry yield (825 N; the bridle leg peels the strip from the forward end) + hook-and-loop peel (9 N) against the bridle pull at deployment",
+   "member": "tear-away strip P-SPINE separation: one end pair of the 4 x M3 PA66 shear screws in tension at the dry yield (825 N; the bridle leg peels the strip from the forward end) + hook-and-loop peel (9 N) against the bridle pull at deployment",
    "member_tr": "koparılabilir şerit P-SPINE ayrılması: 4 x M3 PA66 kesme vidasının bir uç çifti kuru akmada çekmede (825 N; kayış şeridi ön uçtan soyar) + cırt bant soyulması (9 N), açılmadaki kayış çekmesine karşı",
    "part": "YK250-SH-376",
    "case": "canopy opening force 13.1 kN (GRS 4/240 at VNE 66.7 m/s) scaled by q to the 1-g clean stall speed 21.0 m/s of the lightest flying mass 115.5 kg",
@@ -5623,11 +5623,11 @@
    "applied": 833.6763425196851,
    "allowable": 1301.2207330834149,
    "unit": "N",
-   "factor_text": "release check: pull / release (both bounds, no factor)",
+   "factor_text": "tear-out check: pull / tear-out load (both bounds, no factor)",
    "factor_total": 1.0,
    "ms": 0.5608224279828233,
    "ref": "Zytel 101L ISO 527 dry yield 82 MPa x A_s; A-A-55126B Table I peel; opening force ~ q",
-   "note": "all 4 screws at once (1659 N) would release from 23.7 m/s",
+   "note": "all 4 screws at once (1659 N) would tear out from 23.7 m/s",
    "kind": "strength"
   },
   {

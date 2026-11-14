@@ -269,6 +269,8 @@ yeni yapı satırları ister (J-flanş buruşma, ayak plakası eğilmesi, EMA fl
 
 **Önceki sürüm (entegrasyon turu 1, tarihçe).** Registry kütlesi 20,75 kg, tavan 12,61 kg idi (+8,14 kg aşım).
 
+**Kapanışın doğrulama turu (MC-01, MC-02, REG-01).** Burun safrası BAL-NOSE artık ağırlık merkezi eksenine değil, kararlılık sınırına göre boyutlanır. Hesap kayıt defterini uçuş duruşunda alır, adlı payları ekler ve yakıtı seviyesine göre yakıt bitimine kadar yerleştirir. Safra en küçük statik marjı sizing ölü bandına koyar ve kanat konumunu yerinde bırakır: **0,705 kg** (0,74 kg'dan; blok yüksekliği 35,4 → 33,7 mm). En küçük statik marj %10,15'tir. Safra bir ayar kütlesidir: burun EMA'sı daha hafif çıkarsa safra artar, arkada yeni bir kütle çıkarsa da artar. F-STUB-FRONT kutusu ve cıvataları artık 0,1 mm'ye yuvarlanmış kök parçası yüksekliğinden kurulur; böylece 2 D kenar mesafesi yuvarlamayla bozulmaz (layout_check C04). Şasi bütçe grubu **19,819 kg**, tavan **19,82 ± 0,59 kg**.
+
 ## 9. Layout'tan sapmalar (gerekçeli)
 
 * Yakıt astarları 3 kat PW 0,6 mm (layout 2 kat 0,4 mm < `prepreg_ooa_vacbag` en az 0,6 mm); FS-FUEL / FS-GEAR

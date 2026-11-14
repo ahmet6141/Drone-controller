@@ -223,6 +223,10 @@ yapısal kaplamalarda 28 → 32 mm (`PITCH_NUT`, = 8 D; B-SCREW-SH / B-SCREW-BR 
 panellerinde 28 → 30 mm (`PITCH_FUEL`), Camloc kapaklarında 85 → 100 mm (`PITCH_CAM`); kabuk bağlantı elemanı sayısı
 50 azaldı (P-CENTRE-UPPER'in FS-GEAR şeridi ≥ 4 vida için 28 mm'de kaldı, `PITCH_KEEP4`). Kabuk bağlantı elemanları `hardware` grubundadır (uçak geneli 5,25 kg; tavan 5,26 kg).
 
+**Kapanışın doğrulama turu (REG-02, REG-03, MC-02).** Kabuk bütçe grubu: kayıt defteri 10,210 kg + boya 0,611 kg + yakıt paneli contaları 0,153 kg (P-FUEL1-3 floro-silikon contası, 23,5 g/m × 6,5 m; geometride yok) = **10,974 kg**; tavan **10,98 ± 0,33 kg**.
+* **Kayış örtüsü vidaları.** SH-376'nın 4 × M3 kesme vidası artık kayıt defterinde de naylondur: ISO 7380 M3 PA66 (`pa66_zytel_101l`), elle sıkma 0,062 N·m (`TEAR_SCREW`; `Cand.grade` / `Cand.torque_nm` aday başına derece). Önceki turlar bunları A2-70 ve Ti-6Al-4V kaydediyordu; Ti M3 ≈ 2,8 kN kesme taşır ve şerit kayış çekmesiyle ayrılmazdı. Somun plakası A-286 sınıfı kalır. Ayrılma denetimi yapı satırı P-SPINE-TEAR'dir (MS 0,56; doc 04 §7a).
+* **Omurga flanş sırası.** `member_rows` M-SPINE flanş sırası hiç vida çakmıyordu: y 0,056'daki noktalar plan bölgesi sahiplik testinden geçmiyordu ve ölçülen kenar mesafesi 10,1 mm idi. Sıra artık P-MB-UPPER'e açıkça verilir (`owner_fixed`), y 0,0575'e alındı (`SPINE_ROW_Y`) ve FS1810 / FS-FUEL düzlemlerinden 34 mm içeride biter (`spine_row_span`). Sonuç: iki flanşta 32 mm aralıkla 20 × M4 Ti. Yapı satırı P-SPINE-SCREWS sayıyı `spine_row_count` ile alır; test kayıt defteriyle karşılaştırır.
+
 ## 10. Layout'tan sapmalar (gerekçeli)
 
 1. **Çerçeve başlığına düşen kapak kenarları gövde çizgisine taşındı** (P-FWDHATCH ön/arka FS0300/FS0600, P-AVHATCH

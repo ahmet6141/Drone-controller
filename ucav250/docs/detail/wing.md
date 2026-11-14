@@ -236,6 +236,8 @@ geometriye göre gruplar arasında yeniden dağıtılması entegrasyon işidir (
 kalemindeydi; kayıt defterinde CH-001 içinde şasi grubundadır (yalnız gruplama). Vidalar Ti-6Al-4V. Kanat kökü
 x_c4 2,4868 m (kapanışın ölü bandı içinde; entegrasyon turuna göre 0,25 mm önde).
 
+**Kapanışın doğrulama turu.** Uçuş duruşu ve yakıt seviyesiyle yükleme yayılımı 32,9 mm'ye çıktı. R-08 (tutunma ≤ 24 m/s, en ön AM E180) için alan kuralı kanat alanını 3,234 → **3,246 m²** büyüttü (açıklık 7,20 m aynı); c/4 kökü 2,4864 m. Kumanda boynuzlarının ve beşik kayışlarının 7075 parçalara dişli giren vidaları (FC-212…219) artık A2-70'tir (`joints.bolt`, REG-04). Kanat bütçe grubu: kayıt defteri 12,326 kg + boya 0,587 kg = **12,913 kg**; tavan **12,92 ± 0,39 kg**; kumanda grubu 8,156 kg (tavan 8,16 kg).
+
 ## 10. Layout'tan / yapı hesabından sapmalar (gerekçeli)
 
 * **Servo konumları:** layout ACT-FLAP / ACT-AILERON kutuları paketleme zarfıdır; modül servoyu kendi bölmesinde

@@ -3979,15 +3979,15 @@ def check_parachute(c: Ctx, R: Rows) -> dict:
     R.add("P-SPINE-SCREW-BR", "parachute", "spine flange screws M4: bearing in the 1.6 mm solid edge band of the skin",
           "omurga flanşı vidaları M4: kaplamanın 1,6 mm dolu kenar bandında ezilme", cx, cx_tr, Fx / n_sc,
           0.004 * 0.0016 * qi["bearing_Pa"], "N", fl, "QI bearing ETW", part="YK250-SH-370")
-    # verification REG-02: the tear-away cover strip P-SPINE must release under the bridle pull. The aft bridle leg
+    # verification REG-02: the tear-away cover strip P-SPINE must tear out under the bridle pull. The aft bridle leg
     # runs in the channel from the aft fitting to the confluence above the parachute bay, so on tension it rises at the
-    # forward end first and peels the strip aft-wards: the screws release pair by pair (one pair at each end of the
-    # strip, 2 x 2). Release load (upper bound) = one pair of PA66 M3 shear screws in tension at the dry yield stress
+    # forward end first and peels the strip aft-wards: the screws tear out pair by pair (one pair at each end of the
+    # strip, 2 x 2). Tear-out load (upper bound) = one pair of PA66 M3 shear screws in tension at the dry yield stress
     # (the stronger state) + the hook-and-loop peel across both flange lands (A-A-55126B Type II class 1 peel 1.0 lb/in,
-    # a specification minimum used as the estimate: < 1 % of the release load); bridle pull (lower bound) = the canopy
+    # a specification minimum used as the estimate: < 1 % of the tear-out load); bridle pull (lower bound) = the canopy
     # opening force scaled by dynamic pressure (opening force ~ q, Knacke) from the published 13.1 kN at the GRS VNE to
-    # the 1-g clean stall speed of the lightest flying mass. Margin = pull / release - 1 (no factor: both sides are
-    # bounds). All four screws at once would release from the speed reported in the note.
+    # the 1-g clean stall speed of the lightest flying mass. Margin = pull / tear-out load - 1 (no factor: both sides are
+    # bounds). All four screws at once would tear out from the speed reported in the note.
     pa = mat(c, "pa66_zytel_101l")
     tw = SHM.TEAR_SCREW
     F_sc1 = float(As[f"M{tw['size']}"]) * float(pa["Ftu"])
@@ -3999,7 +3999,7 @@ def check_parachute(c: Ctx, R: Rows) -> dict:
     F_pull = PARA_SHOCK_N * (V_s_min / v_ref) ** 2
     F_all = tw["count"] * F_sc1 + F_rel_hl
     V_all = v_ref * math.sqrt(F_all / PARA_SHOCK_N)
-    R.add("P-SPINE-TEAR", "parachute", f"tear-away strip P-SPINE release: one end pair of the {tw['count']} x "
+    R.add("P-SPINE-TEAR", "parachute", f"tear-away strip P-SPINE separation: one end pair of the {tw['count']} x "
           f"M{tw['size']} PA66 shear screws in tension at the dry yield ({n_pair * F_sc1:.0f} N; the bridle leg peels the "
           f"strip from the forward end) + hook-and-loop peel ({F_rel_hl:.0f} N) against the bridle pull at deployment",
           f"koparılabilir şerit P-SPINE ayrılması: {tw['count']} x M{tw['size']} PA66 kesme vidasının bir uç çifti kuru "
@@ -4009,9 +4009,9 @@ def check_parachute(c: Ctx, R: Rows) -> dict:
           f"{V_s_min:.1f} m/s of the lightest flying mass {c.m_min:.1f} kg",
           f"paraşüt açılma kuvveti 13,1 kN (GRS 4/240, VNE {v_ref:.1f} m/s) dinamik basınçla en hafif uçuş kütlesinin "
           f"({c.m_min:.1f} kg) 1 g temiz tutunma hızına ({V_s_min:.1f} m/s) ölçeklendi", n_pair * F_sc1 + F_rel_hl,
-          F_pull, "N", dict(total=1.0, text="release check: pull / release (both bounds, no factor)"),
+          F_pull, "N", dict(total=1.0, text="tear-out check: pull / tear-out load (both bounds, no factor)"),
           "Zytel 101L ISO 527 dry yield 82 MPa x A_s; A-A-55126B Table I peel; opening force ~ q", part="YK250-SH-376",
-          note=f"all {tw['count']} screws at once ({F_all:.0f} N) would release from {V_all:.1f} m/s")
+          note=f"all {tw['count']} screws at once ({F_all:.0f} N) would tear out from {V_all:.1f} m/s")
     sh = skin_faces(c, "shell_secondary")
     q_s = Fx / (2 * L_sk)
     fpf = ST.first_ply_failure(sh["outer"], (0.0, 0.0, q_s / 2), restrained=True)

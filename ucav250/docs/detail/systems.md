@@ -171,6 +171,8 @@ yukarıda (`LT_SEAT_GAP`). Sistemler ağırlık merkezinin önündedir (x 1,45):
 geri alır (1 kg ≈ +9 mm MTOM) ve burun safrasını artırır; özel eFuse PDU (≈ −1 kg) bu yüzden önerilmedi. Açık: kayıt
 defterindeki pDDL kutusu 0,050 kg (anakart değeri), kapalı birim 0,165 kg; kablo demeti payı aşağıdan yukarı değil.
 
+**Kapanışın doğrulama turu (MC-02).** Yedek C2 bağı Microhard pDDL2450 artık kapalı birim kütlesiyle sayılır: 0,165 kg (components.yaml `mass_kg.note`; önceki 0,050 kg anakart değeriydi, zarf zaten kapalı birim 77 × 55 × 28 mm idi). Değer `layout.rules.bay_contents[datalink_backup]` içindedir. Sistem bütçe grubu **15,323 kg**, tavan **15,33 ± 0,46 kg**.
+
 ## 10. Doğrulama
 
 - Tasarım kuralı denetimleri (`chassis,shell,systems`, odak YK250-SY): mesh 0, statik 0, süpürme 0, açıklık 0, kalınlık

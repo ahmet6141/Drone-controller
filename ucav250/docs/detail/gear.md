@@ -316,6 +316,8 @@ DA 26 veri sayfası kütlesiyle (0,27 kg) ama yapı G-EMA-MAIN 14,0 N·m / G-EMA
 dişli kademe ya da DA 30 / DA 30-HT kütlesi (+0,4…+1,55 kg) eklenmelidir; takım ve kapak konum algılayıcıları ve
 takım demet kolları kayıt defterinde yoktur.
 
+**Kapanışın doğrulama turu (MC-01, MC-02).** Modül hareketli parçaları dinlenme duruşunda (takım aşağıda, kapaklar açık) yapar. Bu yer duruşudur. Uçuş yükleme durumları artık kayıt defterini `gear_retraction` dizisinin son durumunda konumlar (takım yukarıda, kapaklar kapalı; `analysis/mass.py` pozları). Takım grubu AM'si uçuşta x 2,464 / z −0,128 m, yerde x 2,429 / z −0,248 m'dir. Takım toplama EMA'ları kayıt defterinde DA 26 zarfıyla (3 × 0,27 kg) kalır. Tork gereksinimi (G-EMA-MAIN 14,0 N·m, G-EMA-NOSE 25,7 N·m) adlı bir payla karşılanır: tepe torku yeten en hafif Volz birimleri ana takımda 2 × DA 30 (16 N·m), burunda DA 30-HT'dir (32 N·m). Fark +0,72 kg ana takımda (x 2,888), +0,83 kg burunda (x 0,666). Bu birimlerin kutuları bugünkü zarflara sığmaz; geometri açıktır. Burun payı AM'nin önündedir: daha hafif bir son birimde burun safrası artar. Takım ve kapak konum algılayıcıları ile takım demet kolları için kaynaklı kütle yoktur; açık kalır. Kapanış ana takımı faydalı yük bölmesi kuralıyla 3,7 mm öne aldı (x_mg 2,9734). Bütçe grubu: kayıt defteri 12,702 kg + paylar 1,785 kg (contalar 0,101, fren hatları 0,135, EMA birimleri 1,55) = **14,488 kg**; tavan **14,49 ± 0,43 kg**.
+
 ## 10. Layout'tan sapmalar (gerekçeli)
 
 * Ana EMA gövdesinde düzlük: F-TRUNNION B2 kiriş cıvatasının başı layout EMA zarfına girer.

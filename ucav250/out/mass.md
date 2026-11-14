@@ -25,16 +25,16 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 
 | Durum | Δx (mm) | Δz (mm) | Iyy kayıt defteri (kg·m²) |
 |---|---:|---:|---:|
-| mtow_design_payload_turret_retracted | -0,01 | 0,00 | 127,1 |
-| mtow_design_payload_turret_extended | -0,01 | 0,00 | 127,1 |
-| mtow_max_payload_turret_retracted | -0,01 | -0,00 | 126,4 |
-| mtow_max_payload_turret_extended | -0,01 | -0,00 | 126,5 |
-| full_fuel_baseline_sensors_only | -0,01 | -0,00 | 127,4 |
-| zero_fuel_design_payload | -0,01 | -0,00 | 124,6 |
-| zero_fuel_max_payload | -0,01 | -0,00 | 124,8 |
-| reserve_fuel_design_payload | -0,01 | -0,00 | 124,8 |
-| minimum_flying_turret_only | -0,01 | -0,00 | 124,2 |
-| e180_growth_turret_full_fuel | -0,01 | 0,00 | 131,5 |
+| mtow_design_payload_turret_retracted | -0,00 | 0,00 | 127,1 |
+| mtow_design_payload_turret_extended | -0,00 | 0,00 | 127,1 |
+| mtow_max_payload_turret_retracted | -0,00 | 0,00 | 126,4 |
+| mtow_max_payload_turret_extended | -0,00 | -0,00 | 126,5 |
+| full_fuel_baseline_sensors_only | -0,00 | -0,00 | 127,4 |
+| zero_fuel_design_payload | -0,00 | -0,00 | 124,6 |
+| zero_fuel_max_payload | -0,00 | -0,00 | 124,8 |
+| reserve_fuel_design_payload | -0,00 | -0,00 | 124,8 |
+| minimum_flying_turret_only | -0,00 | -0,00 | 124,2 |
+| e180_growth_turret_full_fuel | -0,00 | 0,00 | 131,5 |
 
 ## Gruplar
 
@@ -64,7 +64,7 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 | exhaust_silencer_internals | propulsion | 0,601 | 3,861 |
 | main_gear_retraction_emas_unit_delta | gear | 0,720 | 2,888 |
 | nose_gear_retraction_ema_unit_delta | gear | 0,830 | 0,666 |
-| fuel_panel_gaskets | shell | 0,153 | 2,641 |
+| fuel_panel_gaskets | shell | 0,153 | 2,640 |
 
 ## Kütle bütçesi karşılaştırması
 

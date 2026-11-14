@@ -78,6 +78,8 @@ PITCH_NUT = 0.032           # structural skins 25-32 mm (layout.shell.rules.conc
 #                             28 -> 32 mm = 8 D (M4), the pitch structures B-SCREW-SH / B-SCREW-BR already analyse
 PITCH_FUEL = 0.030          # fuel-bay panels 25-30 mm (mass/CG closure round, HW-05: 28 -> 30 mm, sealing range kept)
 PITCH_CAM = 0.100           # hatches 75-100 mm (mass/CG closure round, HW-06: 85 -> 100 mm; hatches non-structural)
+PITCH_KEEP4 = {"P-CENTRE-UPPER": 0.028}   # fixed skins whose only own row is a short land strip (FS-GEAR between the
+#                                          fuel-bay panels): 28 mm keeps >= 4 screws on the skin (32 mm left 2)
 PITCH_COWL = 0.080          # cowl 70-90 mm
 PITCH_INS = 0.080           # fairings 60-100 mm
 RIDGE_CLEAR = 0.012         # no fastener within 12 mm of the V-roof ridge (mid-plane ray leaves the laminate there)
@@ -2463,7 +2465,7 @@ def row_kind(sc: SC, key: str):
         pitch = PITCH_COWL
     if key.startswith("P-FUEL"):
         pitch = PITCH_FUEL
-    return kind, pitch
+    return kind, PITCH_KEEP4.get(key, pitch)
 
 
 def _resample(P, N, pitch: float, centre_sym: bool = False):

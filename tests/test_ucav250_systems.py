@@ -200,7 +200,7 @@ class TestSystemsBuild(unittest.TestCase):
         for f in fs:
             for pid in f.joins:
                 self.assertIn(pid, self.reg.parts, f.id)
-            self.assertRegex(f.spec, r"^ISO (4762|7380) M[345]x\d+-A2-70$", f.id)
+            self.assertRegex(f.spec, r"^ISO (4762|7380) M[345]x\d+-(A2-70|Ti-6Al-4V)$", f.id)   # closure round: Ti
             self.assertIn(f.step, STEPS, f.id)
             self.assertIn(f"YK250-HW-{f.id}", self.reg.parts)
 

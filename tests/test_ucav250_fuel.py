@@ -262,7 +262,10 @@ class TestFuelBuild(unittest.TestCase):
         ref = np.asarray(self.spec["mass"]["fuel_cg"], float)
         self.assertLess(abs(cg[0] - ref[0]), 0.01)
         self.assertLess(abs(cg[1]), 0.001)
-        self.assertLessEqual(cg[2], ref[2])            # fuel settles below the bay centroid
+        # mass/CG closure round: spec.mass.fuel_cg is now the registry fuel-contents centroid (spec.mass.registry.fuel),
+        # so the "below the bay" check uses the fuel-cell centroid height of the sizing (mean of the cell box mid-heights)
+        z_bay = float(np.mean([0.5 * (c["z"][0] + c["z"][1]) for c in self.spec["layout"]["fuel_cells"]]))
+        self.assertLessEqual(cg[2], z_bay)             # fuel settles below the bay centroid
 
     # ------------------------------------------------------------------ purchased data
     def test_purchased_data_from_components(self):
@@ -298,7 +301,7 @@ class TestFuelBuild(unittest.TestCase):
         for f in fs:
             for pid in f.joins:
                 self.assertIn(pid, self.reg.parts, f.id)
-            self.assertRegex(f.spec, r"^ISO (4762|7380) M[34]x\d+-A2-70$", f.id)
+            self.assertRegex(f.spec, r"^ISO (4762|7380) M[34]x\d+-Ti-6Al-4V$", f.id)   # mass/CG closure round: Ti
             self.assertEqual(f.step, STEP, f.id)
             self.assertIn(f"YK250-HW-{f.id}", self.reg.parts)
 

@@ -179,7 +179,13 @@ class TestShellBuild(unittest.TestCase):
 
     # ------------------------------------------------------------------ mass
     def test_group_mass_against_budget(self):
-        m = sum(self.reg.mass(p) for p in self.shell.values())
+        # mass/CG closure round: the shell budget group = shell parts booked to the shell group (SH-363 is booked in
+        # the systems turret item, analysis/mass.py budget_groups) + the itemised paint allowance (registry_allowance)
+        from ucav250.analysis import mass as MA
+        bg = MA.budget_groups(self.reg)
+        m = sum(self.reg.mass(p) for pid, p in self.shell.items() if bg[pid][0] == "shell")
+        m += sum(float(i["mass_kg"]) for i in self.spec["mass"]["items"]
+                 if i.get("registry_allowance") and i["group"] == "shell")
         b = self.spec["mass"]["budget"]["shell"]
         self.assertLessEqual(abs(m - float(b["target_kg"])), float(b["tol_kg"]), f"shell {m:.3f} kg")
 

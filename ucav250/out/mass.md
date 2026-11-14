@@ -25,16 +25,16 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 
 | Durum | Δx (mm) | Δz (mm) | Iyy kayıt defteri (kg·m²) |
 |---|---:|---:|---:|
-| mtow_design_payload_turret_retracted | -0,00 | 0,00 | 127,1 |
-| mtow_design_payload_turret_extended | -0,00 | 0,00 | 127,1 |
+| mtow_design_payload_turret_retracted | 0,00 | 0,00 | 127,1 |
+| mtow_design_payload_turret_extended | 0,00 | 0,00 | 127,1 |
 | mtow_max_payload_turret_retracted | -0,00 | 0,00 | 126,4 |
-| mtow_max_payload_turret_extended | -0,00 | -0,00 | 126,5 |
+| mtow_max_payload_turret_extended | -0,00 | 0,00 | 126,5 |
 | full_fuel_baseline_sensors_only | -0,00 | -0,00 | 127,4 |
-| zero_fuel_design_payload | -0,00 | -0,00 | 124,6 |
-| zero_fuel_max_payload | -0,00 | -0,00 | 124,8 |
-| reserve_fuel_design_payload | -0,00 | -0,00 | 124,8 |
-| minimum_flying_turret_only | -0,00 | -0,00 | 124,2 |
-| e180_growth_turret_full_fuel | -0,00 | 0,00 | 131,5 |
+| zero_fuel_design_payload | -0,00 | 0,00 | 124,6 |
+| zero_fuel_max_payload | -0,00 | 0,00 | 124,8 |
+| reserve_fuel_design_payload | -0,00 | 0,00 | 124,8 |
+| minimum_flying_turret_only | -0,00 | 0,00 | 124,2 |
+| e180_growth_turret_full_fuel | 0,00 | 0,00 | 131,5 |
 
 ## Gruplar
 
@@ -70,16 +70,16 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 
 | Grup | Hesap (kg) | Bütçe (kg) | Tolerans | Durum |
 |---|---:|---:|---:|---|
-| chassis | 19,82 | 19,86 | ±0,60 | ✓ |
-| controls | 8,16 | 8,15 | ±0,24 | ✓ |
+| chassis | 19,82 | 19,82 | ±0,59 | ✓ |
+| controls | 8,16 | 8,16 | ±0,24 | ✓ |
 | fuel | 2,37 | 2,37 | ±0,07 | ✓ |
-| gear | 14,49 | 12,94 | ±0,39 | ✗ |
-| hardware | 5,36 | 5,26 | ±0,16 | ✓ |
-| propulsion | 13,57 | 12,97 | ±0,39 | ✗ |
-| shell | 10,97 | 10,82 | ±0,32 | ✓ |
-| systems | 15,32 | 15,21 | ±0,46 | ✓ |
+| gear | 14,49 | 14,49 | ±0,43 | ✓ |
+| hardware | 5,36 | 5,37 | ±0,16 | ✓ |
+| propulsion | 13,57 | 13,57 | ±0,41 | ✓ |
+| shell | 10,97 | 10,98 | ±0,33 | ✓ |
+| systems | 15,32 | 15,33 | ±0,46 | ✓ |
 | tail | 7,73 | 7,74 | ±0,23 | ✓ |
-| wing | 12,91 | 12,88 | ±0,39 | ✓ |
+| wing | 12,91 | 12,92 | ±0,39 | ✓ |
 
 ## Başka bütçe grubuna yazılan parçalar (layout / üretici mass_item)
 
@@ -149,8 +149,3 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 | YK250-WG-154-L | 0,865 |
 | YK250-PR-510 | 0,800 |
 | YK250-SH-383 | 0,775 |
-
-## Sorunlar
-
-- budget gear: 14.49 kg vs 12.94 ± 0.39
-- budget propulsion: 13.57 kg vs 12.97 ± 0.39

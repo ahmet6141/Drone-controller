@@ -1015,7 +1015,9 @@ def fittings() -> list:
               "attach": "clevis fitting 42 x 60 mm on the aft face of FS3480: fin front-spar root lug in the clevis on 2 "
                         "x M6 12.9 (double shear along x), 2 x M6 to the frame land (and the dorsal longeron flange)",
               "touch": ["ST-FS3480", "M-DORSAL"]})
-    zst = float(STUB["params"]["z"])
+    # stub height rounded to the 0.1 mm grid of the layout first, so that the rounded box and bolt points keep the
+    # exact 2 D edge distances (mass/CG closure verification round: z 0.21845 rounded the box and B2 / B4 apart)
+    zst = round(float(STUB["params"]["z"]), 4)
     sb_ = [[xf, 0.205, zst - 0.033], [xf + 0.016, 0.245, zst + 0.020]]
     F.append({"id": "F-STUB-FRONT", "part": "YK250-CH-098", "name": "stabilator-stub front-spar fitting",
               "name_tr": "sabit kök parçası ön bağlantısı", "material": "al_7075_t651_plate",

@@ -589,7 +589,7 @@ Grup tavanları (mass.budget) ve sizing tahminleri (büyüme payı dahil):
 | propulsion | 12,97 | 12,97 | 0,0028 |
 | shell | 10,82 | 10,82 | 0,0025 |
 | systems | 15,21 | 15,21 | 0,0022 |
-| tail | 7,74 | 7,74 | 0,00392 |
+| tail | 7,74 | 7,74 | 0,00394 |
 | wing | 12,88 | 12,88 | 0,0046 |
 
 ## Arayüz kontrolleri

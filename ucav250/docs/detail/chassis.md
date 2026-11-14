@@ -12,13 +12,13 @@ noktası, pilon ya da bırakma mekanizması yoktur ve öngörülmemiştir.
 
 | Büyüklük | Değer |
 |---|---|
-| Şasi parçası (grup `chassis`, YK250-CH-001 … -126) | 121 parça kimliği (85 parça numarası; L/R çiftleri ayna) |
+| Şasi parçası (grup `chassis`, YK250-CH-001 … -127) | 122 parça kimliği (86 parça numarası; L/R çiftleri ayna; kütle/AM kapanış turunda burun safrası CH-127 eklendi) |
 | Şasinin ürettiği, `propulsion` grubunda numaralı parçalar | YK250-PR-088 ısı kalkanı, YK250-PR-094 mesafe parçaları (satın alma) |
-| Bağlantı elemanı (`joints.py` ile, `hardware.py` geometrisi) | 219 (M3 14, M4 83, M5 44, M6 62, M8 8, kör perçin 8) |
+| Bağlantı elemanı (`joints.py` ile, `hardware.py` geometrisi) | 242 şasi parçasına ait (kütle/AM kapanış turu; çoğu Ti-6Al-4V, §7): M3 14, M4 102, M5 48, M6 62, M8 8, kör perçin 8 |
 | Hareketli eklem | 0 (şasi sabit yapıdır) |
 | Kök parça | YK250-CH-001 orta kanat kutusu |
 | Tasarım kuralı denetimleri | `checks --modules chassis,chassis --focus YK250-CH`: **0 ihlal** (mesh, statik girişim, kalınlık, kenar mesafesi, bağlanma) |
-| Şasi grubu kütlesi (registry, `analysis/mass.py` yöntemi) | **20,75 kg** — bütçe tavanı 12,61 ± 0,37 kg (bkz. §8, açık konu) |
+| Şasi grubu kütlesi (registry, `analysis/mass.py` yöntemi) | **19,86 kg** (orta kutu UD başlıkları 1,01 kg ve burun safrası 0,72 kg dahil) — bütçe tavanı 19,86 ± 0,60 kg, ölçülen gruba eşitlendi (kütle/AM kapanış turu, §8; entegrasyon turu 1: 20,75 kg / tavan 12,61 kg) |
 
 Önizlemeler (`python3 -m ucav250.blender.build --modules chassis --previews --no-blend`): ön, yan, üst, alt, iki izometrik
 ve patlatılmış izometrik görünüş incelendi; yüzen parça, kopuk geometri ya da görünür girişim yoktur.
@@ -202,19 +202,25 @@ kılavuz dişlilerde anma çapında kozmetik diş açılır.
 
 ## 7. Bağlantı elemanları
 
-| Ölçü | Somun (ISO 7040 + pul) | Somun plakası | Geçme insert | Kılavuz dişli | Toplam |
+Kütle/AM kapanış turu sonrası, sahibi şasi parçası olan bağlantı elemanları (kayıt defteri, `YK250-HW-YK250-CH-*`;
+başka modüllerin şasi parçasına taktığı elemanlar dahil, BAL-NOSE'un 4 cıvatası dahil):
+
+| Ölçü / malzeme | Somun (+ pul) | Somun plakası | Geçme insert | Kılavuz dişli | Toplam |
 |---|---:|---:|---:|---:|---:|
-| M3 (Ti) | 14 | – | – | – | 14 |
-| M4 | 48 | 8 | 22 | 5 | 83 |
-| M5 | 36 | 8 | – | – | 44 |
-| M6 | 28 | 24 | 10 | – | 62 |
-| M8 12.9 | 8 | – | – | – | 8 |
-| Kör perçin d 4 (gömme) | – | – | – | – | 8 |
-| **Toplam** | | | | | **219** |
+| M3 Ti-6Al-4V | 14 | – | – | – | 14 |
+| M4 Ti-6Al-4V | 44 | 8 | 22 | – | 74 |
+| M4 12.9 | 14 | – | 8 | 6 | 28 |
+| M5 Ti-6Al-4V | 22 | – | – | – | 22 |
+| M5 12.9 | 26 | – | – | – | 26 |
+| M6 Ti-6Al-4V | 24 | 16 | – | – | 40 |
+| M6 12.9 (mafsal G-FIT-BOLTS vb.) | 4 | 8 | 10 | – | 22 |
+| M8 Ti-6Al-4V (motor ayakları) | 8 | – | – | – | 8 |
+| Kör perçin d 4 (gömme, A2) | – | – | – | – | 8 |
+| **Toplam** | | | | | **242** |
 
 Kenar mesafesi her parçada metalde ≥ 2 D, kompozitte ≥ 2,5 D; komşu delik kenarı da kenar sayılır (adımlar buna göre
 18,5 / 19 / 21 / 25 mm). Eğik yüzlerden geçen cıvatalar (ok çerçeveler, J gövdesi, arka kiriş gövdesi) yüze dik
-yönlendirilmiştir. Bağlantı elemanlarının toplam kütlesi 1,50 kg'dır (grup `hardware`).
+yönlendirilmiştir. Bu bağlantı elemanlarının toplam kütlesi 1,392 kg'dır (grup `hardware`; vida / cıvata kendi alaşımında, somun, somun plakası ve gömme somun A-286 sınıfı paslanmaz ya da 12.9 altında çelik — iki alaşımlı kütle, `hardware.py`). Motor bölmesindeki somunlar ISO 7042 tam metaldir (> 120 °C). Entegrasyon turu 1'de 301 eleman / 1,91 kg idi.
 
 ## 8. Kütle ve bütçe
 
@@ -293,12 +299,15 @@ yeni yapı satırları ister (J-flanş buruşma, ayak plakası eğilmesi, EMA fl
 
 ## 10. Açık konular
 
-1. **Kütle:** şasi 20,75 kg, tavan 12,61 kg (+8,14 kg). Sistem düzeyinde yeniden dağıtım (MTOM 149,9 kg sabit) veya
-   aşağıdaki hafifletmeler gerekir: düğüm kolu ve yanağında cepler (~0,1–0,2 kg), ray bağlantılarında duvar tarafı cepleri
-   (~0,2 kg), mafsal tavan uzantılarında punta cepleri (~0,1 kg), tepsilerde sandviç (layout değişikliği), astarların
-   yalnız temas bölgelerine indirilmesi (layout değişikliği). Kavram kalemleri ayrıntılı geometriye göre güncellenmeli.
-2. `hardware` tavanı (1,51 kg) yalnız şasi bağlantılarıyla dolmuştur; diğer modüllerin bağlantıları eklenince yeniden
-   dağıtılmalıdır.
+1. **Kütle (kütle/AM kapanış turu):** şasi grubu 19,86 kg, tavan ölçülen gruba eşitlendi (19,86 ± 0,60 kg; §8).
+   Uçak düzeyinde R-02b / R-56 açığı (6,44 kg) sürüyor (doc 02). Şasi çalışmasının ölçtüğü ek hafifletmeler henüz
+   uygulanmadı, çünkü yeni yapı satırları ister: arka tepsi TR-AFTBAY 6061 → CFRP (≈ 0,2 kg, gömme somun / sökülme),
+   sırt kirişi 2,0 → 1,4 mm (≈ 0,08 kg; kabuk vidası kavrama boyu ve flanş ezilmesi), arka kenar kirişi 1,8 mm (≈ 0,09 kg;
+   J-flanş buruşma satırı), kuyu ön duvarı 1,0 mm (≈ 0,13 kg; EMA flanşı ezilmesi), üst motor ayağı plakaları 2,5 mm
+   (≈ 0,05 kg; ayak plakası eğilmesi). Bunlar ağırlık merkezinin arkasındadır ve burun safrasını da azaltır. Öndeki
+   adaylar (tepsiler sandviç ≈ 0,33 kg, ön kenar kirişi 2,0 mm ≈ 0,13 kg, ray bağlantıları ≈ 0,09 kg) ağırlık merkezini
+   geri alır ve safrayı artırır.
+2. `hardware` tavanı ölçülen gruba eşitlendi (5,26 kg; uçak geneli 1623 eleman, 5,253 kg; doc 02 §14).
 3. Ana takım: bacak salınımı, EMA ve kilit cıvatası tutucusu iniş takımı modülüyle birlikte kontrol edilmeli (mafsal
    kulakları arasında üst plaka cebi bacak yoluna açılmaz; kilit kulağı modellenmedi, takım tedarikçisi gereği).
 4. Arka paraşüt kulağı somunları eyer yakıt bölmesi zarfına yakındır; yakıt modülü hücre geometrisiyle doğrulanmalı.

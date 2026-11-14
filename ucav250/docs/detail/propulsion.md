@@ -19,7 +19,7 @@ düzeneği yoktur ve öngörülmemiştir.
 |---|---|
 | Parça kimliği (500–569) | 27 (25 parça numarası; egzoz ve düğüm perdesi sağ/sol) + koşullu 4 (PR-520-R/L, PR-523-R/L, alt kaporta yarımları kayıtlı olduğunda) |
 | Grup `propulsion` toplamı | 30 parça (şasi modülünün ürettiği yangın perdesi katmanı PR-088 / -091 / -094 dahil) |
-| Bağlantı elemanı (`joints.py`, geometri `hardware.py`) | 65: 4 × M8×40 12.9, 6 × M6×55 12.9 (pervane), 10 × M6×16 12.9, 4 × M4×35 12.9, 4 × M4×12 12.9, 8 × M4×14 A2-70, 4 × ISO 7380 M4×8, 6 × M5×10 A2-70, 1 × ISO 7380 M5×14, 4 × M3×6 A2-70, 6 × Ø2,4 paslanmaz (Monel) perçin, 8 × Ø2,4 alüminyum perçin; koşullu +84 perçin (ısı koruması) |
+| Bağlantı elemanı (`joints.py`, geometri `hardware.py`) | 65: 4 × M8×40 12.9, 6 × M6×55 12.9 (pervane), 10 × M6×16 12.9, 4 × M4×35 12.9, 4 × M4×12 12.9, 8 × M4×14 A2-70, 4 × ISO 7380 M4×8, 6 × M5×10 A2-70, 1 × ISO 7380 M5×14, 4 × M3×6 A2-70, 6 × Ø2,4 paslanmaz (Monel) perçin, 8 × Ø2,4 alüminyum perçin; koşullu +84 perçin (ısı koruması) (kütle/AM kapanış turu: motorun alüminyum dişlerine girmeyen A2-70 vidalar Ti-6Al-4V oldu, §8) |
 | Hareketli eklem | 1: `prop_spin` (layout; 0 … 120°, üç pala simetrisi), PR-501 / -540 / -541 / -542 / -543 / -544 döner |
 | Tasarım kuralı denetimleri | `python3 -m ucav250.analysis.checks --modules chassis,propulsion --focus YK250-PR --no-write`: **0 ihlal** (mesh, statik, süpürme, açıklık, kalınlık, bağlantı elemanı, temas, bağlanma); `chassis,tail,propulsion` ile de 0 ihlal |
 | Isı koruması (vekil alt kaporta ile) | 0 ihlal (test `TestHeatProtection`) |

@@ -19,12 +19,12 @@ da bırakma düzeneği yoktur ve öngörülmemiştir.
 | Parça kimliği | 60 (grup `shell`, YK250-SH-350 … -424 ve 450 … 452; aralık `layout.part_numbers.shell` 350–499) |
 | Parça numarası | 45 (sağ taraf +y'de modellenir, sol `mirror_part` ile aynalanır: 15 çift) |
 | Layout panelleri | `layout.shell.panels` içindeki 43 panelin hepsi + kanat kökü birleşim kaplaması (SH-424, `wing_root_fairing`) + yakıt kapağı menteşe pimi (SH-386, satın alma) |
-| Bağlantı elemanı (`joints.py`, geometri `hardware.py`) | **759**: 571 × ISO 7380 M4 + yüzer somun plakası, 54 × ISO 7380 M3 + somun plakası, 106 × Camloc 4002 (2600 yuva), 28 × kör perçin (3,2 / 4 mm) |
+| Bağlantı elemanı (`joints.py`, geometri `hardware.py`) | **661** kabuk parçasına ait (kütle/AM kapanış turu; aralıklar 32 / 30 / 100 mm): 499 × ISO 7380 M4 Ti-6Al-4V + yüzer somun plakası (A-286), 54 × ISO 7380 M3 Ti-6Al-4V + somun plakası, 82 × Camloc 4002 (2600 yuva), 26 × kör perçin (3,2 / 4 mm); entegrasyon turu 1: 759 (A2-70) |
 | Hareketli eklem | 2: `para_hatch` (prizmatik, `layout.mechanisms.joints`), `refuel_door` (döner, `P-REFUEL.hinge`, 0…100°) |
 | Tasarım kuralı denetimleri | `checks --modules chassis,shell --focus YK250-SH --no-write`: **0 ihlal** (mesh, statik, süpürme, açıklık, kalınlık, bağlantı elemanı, temas, bağlanma) |
 | Kanat ve kuyrukla birlikte | `checks --modules chassis,wing,tail,shell --focus YK250-SH`: **0 ihlal** |
 | Kabuk grubu kütlesi (registry) | **10,561 kg** — bütçe 10,48 ± 0,31 kg (+0,081 kg, bant içinde; §9) |
-| Kabuk bağlantı elemanları (grup `hardware`) | 3,34 kg (bütçe uyuşmazlığı, §11) |
+| Kabuk bağlantı elemanları (grup `hardware`) | 2,303 kg, 661 eleman (kütle/AM kapanış turu; entegrasyon turu 1: 3,34 kg) |
 
 Önizlemeler (`python3 -m ucav250.blender.build --modules chassis,shell --previews --no-blend`): ön, yan, üst ve
 izometrik görünüşler incelendi. Kabuk kapalıdır; panel ayrım çizgileri çerçeve gövde çizgilerinde ve kenar çizgisindedir;
@@ -213,9 +213,7 @@ bölünmüş eşdeğer yoğunluğuyla (`Registry.density`) hesaplanır: kara dol
 bölgeler sandviç eşdeğer yoğunluğundadır (gerçekte katı laminat; bu fark ayrıca hesaplanmadı), sandviç kenar bantları
 da ayrı modellenmemiştir — gerçek kütle hesaplanandan biraz yüksek olabilir.
 
-Kabuk bağlantı elemanları (grup `hardware`): **3,34 kg** — 759 eleman (ortalama ≈ 4,4 g; `hardware.py` geometrisi). Bu, layout'un
-yapısal kaplamalar için istediği 25–32 mm aralıklı M4 somun plakalı vida kavramının doğrudan sonucudur; uçağın tamamı
-için ayrılan `mass.budget.hardware` 1,51 kg ile çelişir (§11).
+Kabuk bağlantı elemanları (grup `hardware`): entegrasyon turu 1'de **3,34 kg** (759 eleman; A2-70 vidalar, 28 mm aralık) idi. Kütle/AM kapanış turundan sonra sahibi kabuk parçası olan elemanlar **661 adet, 2,303 kg**'dır: 499 × ISO 7380 M4 Ti-6Al-4V + yüzer somun plakası (A-286), 54 × ISO 7380 M3 Ti-6Al-4V, 82 × Camloc 4002 (2600 yuva), 26 × kör perçin. Bu, layout'un 25–32 mm aralıklı M4 somun plakalı vida kavramının doğrudan sonucudur; `mass.budget.hardware` artık ölçülen uçak geneli gruba eşittir (5,26 kg).
 
 **Kütle/AM kapanış turu (güncel).** Kabuk bütçe grubu: kayıt defteri 10,207 kg + boya payı 0,611 kg (0,10 kg/m² × açık
 gövde ıslak alanı; geometride yok) = **10,818 kg**; tavan `mass.budget.shell` **10,82 ± 0,32 kg** (ölçülen gruba
@@ -264,9 +262,7 @@ panellerinde 28 → 30 mm (`PITCH_FUEL`), Camloc kapaklarında 85 → 100 mm (`P
 
 ## 11. Açık konular
 
-* **Donanım bütçesi:** kabuk bağlantı elemanları 3,34 kg ↔ uçak toplamı `mass.budget.hardware` 1,51 kg. Ya bütçe
-  layout'un M4 / 25–32 mm kavramına göre güncellenmeli ya da kavram (ör. sabit kaplamalarda yapıştırma + seyrek vida)
-  değiştirilmeli — sistem düzeyinde karar.
+* **Donanım bütçesi (kütle/AM kapanış turunda kapandı):** kabuk bağlantı elemanları 2,303 kg; `mass.budget.hardware` ölçülen uçak geneli gruba (5,26 kg) eşitlendi. Kalan seçenek (sistem düzeyi karar): sabit kaplamalarda bağlantı hattında 1,6 mm katı kenar bandı (B-SCREW-BR'nin varsaydığı) ile M4×16 → M4×12 (≈ −0,09 kg Ti ile) ya da yapıştırma + seyrek vida.
 * **Kaporta ön kenarı – yangın perdesi:** layout'a göre kaporta ön sırası paslanmaz kenar köşebendine (YK250-PR-091,
   propulsion) M3 ile bağlanır. Propulsion kabuktan sonra kaydedildiği için bu sıra kabukta delinmez; propulsion ya da
   entegrasyon tarafından delinmeli (kaporta 1,5 mm önden başlar, 2,5 D hazır).

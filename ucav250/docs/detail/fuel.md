@@ -20,7 +20,7 @@ ikmal bağlantısı ve yakıtın kendisi. Sistemde silah, mühimmat, dış yük 
 | Büyüklük | Değer |
 |---|---|
 | Parça kimliği (570–619) | 49: 46 donanım parçası (44 parça numarası; alt ara bağlantı hattı ve gömme çek valf sağ/sol) + 3 yakıt içeriği (`process: consumable`) |
-| Bağlantı elemanı (`joints.py`, geometri `hardware.py`) | 40: 24 × ISO 4762 M3×12, 8 × ISO 7380 M3×6, 2 × ISO 4762 M3×6, 4 × ISO 4762 M4×14, 2 × ISO 4762 M4×12 (hepsi A2-70) |
+| Bağlantı elemanı (`joints.py`, geometri `hardware.py`) | 40: 24 × ISO 4762 M3×12, 8 × ISO 7380 M3×6, 2 × ISO 4762 M3×6, 4 × ISO 4762 M4×14, 2 × ISO 4762 M4×12 (kütle/AM kapanış turu: hepsi Ti-6Al-4V; önce A2-70) |
 | Hareketli eklem | yok (yakıt sisteminde `layout.mechanisms` eklemi tanımlı değildir; valf klapeleri satın alma iç parçasıdır) |
 | Tasarım kuralı denetimleri | `python3 -m ucav250.analysis.checks --modules chassis,fuel --focus YK250-FU --no-write`: **0 ihlal** (mesh, statik, süpürme, açıklık, kalınlık, bağlantı elemanı, temas, bağlanma); kabuk ile birlikte (`chassis,shell,fuel`) de **0 ihlal** |
 | Hücre iç hacmi (yakıt) | ön 26,27 L + eyer 9,07 L + arka 20,24 L = **55,58 L** |

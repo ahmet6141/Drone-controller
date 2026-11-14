@@ -21,7 +21,7 @@ kanat üzerinde silah, mühimmat, dış yük taşıma ya da bırakma düzeneği 
 | Tasarım kuralı denetimleri | `checks --modules chassis,wing --focus YK250-WG,YK250-FC`: **0 ihlal** (mesh, statik, süpürme, açıklık, kalınlık, bağlantı elemanı, temas, bağlanma) |
 | Kanat grubu kütlesi (registry) | **12,30 kg** — bütçe 15,18 ± 0,46 kg (bkz. §9) |
 | Kumanda grubu (kanat payı) | **4,51 kg** — bütçe kalemleri toplamı 4,56 kg |
-| Kanat bağlantı elemanları (grup `hardware`) | 0,24 kg |
+| Kanat bağlantı elemanları (grup `hardware`) | 0,24 kg (entegrasyon turu 1); kütle/AM kapanış turunda sahibi kanat parçası olan 34 vida 0,095 kg, hepsi Ti-6Al-4V (menteşe pimleri kumanda parçalarına aittir) |
 
 Önizlemeler (`python3 -m ucav250.blender.build --modules chassis,wing --previews --no-blend`): ön, yan, üst, alt, iki
 izometrik ve patlatılmış izometrik görünüş incelendi; paneller birleşim düzleminde şasiye oturur, yüzen parça, kopuk

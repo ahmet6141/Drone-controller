@@ -99,7 +99,7 @@ Kapanıştan sonra yükleme durumları x 2,584–2,608 m arasındadır; statik m
 
 * Görev yükü kuralı (≥ 10,25 h) artık **11,5 kg** verir (10,292 h; 12,0 kg 10,098 h verirdi). R-02 karşılanır.
 * Azami 20 kg yükle dayanım **7,02 h**'tir (yakıt 21,73 kg). R-02b (≥ 9,5 h) için boş kütle en çok 101,726 kg olmalıdır; ölçülen 108,169 kg'dır. **Açık 6,44 kg**, R-56 payı **−6,524 kg**'dır.
-* Bulunan bütün dürüst önlemler uygulandı. Kalan açığın bilinen bir kaynağı yoktur: birincil yapı elemanlarının payları sıfıra yakındır (W-CAP-09 0,000, FW-FOOT-CORE 0,01), şasi çalışmasının kalan önerileri (tepsi sandviçleri, kalınlık azaltmaları, ≈ 1,1 kg) yeni yapı satırları ister ve bunların ön tarafta kalanları ağırlık merkezini geri alır (§16).
+* Yeni yapı satırı gerektirmeyen bütün dürüst önlemler uygulandı. Kalan açığın bilinen bir kaynağı yoktur: birincil yapı elemanlarının payları sıfıra yakındır (W-CAP-09 0,000, FW-FOOT-CORE 0,01), şasi çalışmasının kalan önerileri (tepsi sandviçleri, kalınlık azaltmaları, ≈ 1,1 kg) yeni yapı satırları ister ve bunların ön tarafta kalanları ağırlık merkezini geri alır (§16).
 * Gereksinimler, kontroller ve testler gevşetilmedi; tavanlar ölçülen tasarıma eşittir ve R-56 açığı gösterir. Bu bir **proje lideri kararı** gerektirir: R-02b'yi yeniden tanımlamak, kullanıcı özelliklerinden birinden vazgeçmek (içeri katlanır takım, geri çekilir taret) ya da birincil yapının yeniden boyutlandırılması.
 
 ## Gereksinim kararı: faydalı yük – dayanım

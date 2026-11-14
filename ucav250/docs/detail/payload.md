@@ -21,7 +21,7 @@ mühimmat, dış yük askı noktası ya da bırakma düzeneği yoktur ve öngör
 | Büyüklük | Değer |
 |---|---|
 | Parça kimliği (820–849 kullanıldı) | 38 (19 satın alma, 19 imalat); 7 çift sağ/sol ayna (kapak, iki kızak, iki kapak rayı, pinyon, DA 22 + braket) |
-| Bağlantı elemanı (`joints.py`, geometri `hardware.py`) | 82: 34 × ISO 4762 M3, 26 × ISO 4762 M4, 22 × ISO 7380 M3 (A2-70); gömme insert, yüzer somun plakası, nyloc, ünite dişleri |
+| Bağlantı elemanı (`joints.py`, geometri `hardware.py`) | 82: 34 × ISO 4762 M3, 26 × ISO 4762 M4, 22 × ISO 7380 M3 (kütle/AM kapanış turu: Ti-6Al-4V; önce A2-70); gömme insert, yüzer somun plakası, nyloc, ünite dişleri |
 | Hareketli eklem | `turret_elevator` (prizmatik, 0,128 m, rest = içeride), `turret_door_R/L` (prizmatik, 32° eğik, 0,12 m); bağlı dizi `turret_extension` (13 durum) |
 | Tasarım kuralı denetimleri | `python3 -m ucav250.analysis.checks --modules chassis,shell,payload --focus YK250-PL --no-write`: PL parçalarının kendi aralarında ve şasi / kabuk parçalarıyla 0 ihlal; şasi / kabuk **bağlantı elemanlarıyla** 6 statik + 14 süpürme ihlali (§10, §11-1) |
 | Kütle | HD59 + yalıtımlı bağlantı 1,736 kg (`payload.turret_mass_kg` 1,75); mekanizma 1,870 kg (kalem `turret_lift_mechanism_doors` 1,786 temel / 1,875 büyüme dahil) — §9 |

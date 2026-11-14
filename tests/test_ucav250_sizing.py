@@ -439,8 +439,12 @@ class TestSizingCheck(unittest.TestCase):
         pls = [r["payload_kg"] for r in p["payload_endurance"]]
         brk = pp["fuel_volume_break_payload_kg"]
         self.assertTrue(any(abs(x - brk) < 1e-3 for x in pls))
-        self.assertIn(math.floor(brk / 0.5) * 0.5, pls)
-        self.assertIn(math.ceil(brk / 0.5) * 0.5, pls)
+        # V4-02: only loadings at or above the permitted baseline set are flown (the sweep starts there), so a 0.5 kg
+        # neighbour below it is not a flown point; above it, both neighbours must be in the sweep
+        p_base = float(pp["baseline_set_kg"])
+        for nb in (math.floor(brk / 0.5) * 0.5, math.ceil(brk / 0.5) * 0.5):
+            if nb >= p_base - 1e-9:
+                self.assertIn(nb, pls)
         # V4-03: the door item is the door scheme (6 doors, 2 inner-door actuators, leg-door brackets); the drag joint
         # length includes the door split lines
         items = {i["name"]: i for i in S["mass"]["items"]}

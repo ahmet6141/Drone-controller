@@ -276,6 +276,11 @@ class TestChassisBuild(unittest.TestCase):
                 if side == "L" and not pth.get("mirror"):
                     continue
                 allow = set(movable.get(pth["name"], ()))
+                if pth["name"].startswith("main_stub_axle"):
+                    # the stub axle seats in the bonded 20 H7 sleeve bushing of its own side (CH-074-R / -L, bonded in
+                    # the F-TRUNNION lugs, chassis.py): contact with that bushing is the designed fit, every other part
+                    # is still checked
+                    allow.add(f"YK250-CH-074-{side}")
                 for e in pth.get("engages", []):
                     try:
                         allow.add(C.ref(e, side))

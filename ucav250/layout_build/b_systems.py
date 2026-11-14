@@ -809,8 +809,11 @@ def harness() -> dict:
                             "fire-resistant circular connector (engine side) / grommet"}]}
 
 
-Y_XLO, Z_XLO = 0.340, -0.0735          # bottom interconnect: lateral position and height under the deck / box (PK3-01;
-                                       # fuel detail design: 1.7 mm under the well roof, was -0.070 = 1.8 mm into it)
+Y_XLO, Z_XLO = 0.335, -0.0735          # bottom interconnect: lateral position and height under the deck / box (PK3-01;
+                                       # fuel detail design: 1.7 mm under the well roof, was -0.070 = 1.8 mm into it;
+                                       # mass/CG closure verification round: y 0.340 -> 0.335, the main gear and its
+                                       # well moved 3.5 mm forward and the aft-cell bottom fitting found no bolt pattern
+                                       # between the cell's forward-outboard corner and the well wall at y 0.340)
 XLO_WELL_GAP = 0.011                    # bottom interconnect up-leg forward of the main-well forward wall (fuel detail)
 OUTLET_ABOVE_FLOOR = 0.001             # flush outlet / sump fittings: inlet 1 mm above the bladder floor
 

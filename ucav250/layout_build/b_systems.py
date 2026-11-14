@@ -699,23 +699,34 @@ Y_WRISE = 0.250                        # wing branch rises into the box inboard 
 X_DUCT_C = None                        # lateral duct centre: set from the layout walls (PK3-05)
 
 
+def _duct_arc(C, B, L: float) -> list:
+    """Interior points of a smooth 90 deg bend (quadratic Bezier, tangent length L) from the straight run that arrives
+    at corner C (heading +x, from the -x side) to the leg that leaves C towards B (both legs are at least L long)."""
+    T1 = C - np.array([L, 0.0, 0.0])
+    T2 = C + L * (B - C) / np.linalg.norm(B - C)
+    out = []
+    for t in (0.25, 0.5, 0.75):
+        out.append((1 - t) ** 2 * T1 + 2 * t * (1 - t) * C + t ** 2 * T2)
+    out.append(T2)
+    return [list(map(float, q)) for q in [T1] + out]
+
+
 def harness() -> dict:
-    global X_DUCT_C, X_RS_HM
+    global X_DUCT_C
     from .b_chassis import DUCT_SHIFT
     X_DUCT_C = round(0.5 * ((X_PB1 - DUCT_SHIFT + 0.0016) + (X_W0 - 0.0016)), 4)
-    X_RS_HM = round(X_DUCT_C - 0.0125, 4)
-    # H-MAIN leaves FS-RS (C-HARN-RS) straight before it turns inboard into the lateral duct. The point before the 90 deg
-    # duct turn sits 12.5 mm forward of the duct centre (verification round, test_design_rule_checks_clean): the former
-    # 14 mm-aft-of-frame point left a 7.9 mm leg, shorter than the 10 mm trunk radius, and the swept rings of SY-750
-    # self-intersected; a straight run to the duct centre cut the rear-spar deck (CH-010 / CH-034). The leg is now
-    # 12.5 mm, the rings clear the frame's aft face.
+    # H-MAIN leaves FS-RS (C-HARN-RS) straight and turns inboard into the lateral duct on a smooth arc (verification
+    # round, test_design_rule_checks_clean): the sharp 90 deg corner at the duct centre self-intersected the swept rings
+    # of SY-750 (a 10 mm trunk needs a bend radius above 10 mm). Quadratic arc with a 17 mm tangent length (mid-arc radius
+    # 12 mm) from the straight run to the duct centre.
+    arc = _duct_arc(np.array([X_DUCT_C, -0.290, Z_HL]), np.array([X_DUCT_C, -0.150, Z_CH]), 0.017)
     def P(*pts):
         return [r3(p) for p in pts]
     trunks = [
         {"id": "H-MAIN", "part": "YK250-SY-750", "name": "main power/data trunk", "diameter": 0.020,
          "path": P([0.950, -0.110, 0.031], [1.110, -0.143, 0.035], [1.330, -0.1475, 0.049], [X_PFF, -0.195, 0.035],
                    [X_PFR, -0.195, 0.035], [2.000, -0.270, Z_HL], [X_FUELF, -0.270, Z_HL],
-                   [X_MS0 + 0.040, -0.280, Z_HL], [X_RS_HM, -0.2875, Z_HL], [X_DUCT_C, -0.290, Z_HL],
+                   [X_MS0 + 0.040, -0.280, Z_HL], *arc,
                    [X_DUCT_C, -0.150, Z_CH],
                    [X_DUCT_C, 0.0, Z_CH], [X_GEARF + 0.020, 0.0, Z_CH], [X_GEARF + 0.180, 0.0, 0.030]),
          "penetrations": [{"member": "M-WELLWALL-FWD", "point": r3([X_W0 - 0.0008, 0.0, Z_CH]),

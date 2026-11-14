@@ -76,6 +76,7 @@ COLLECTOR = dict(depth=0.036, y=(-0.062, 0.102), top=0.010, wall=0.002, inlet_r=
 PUMP = dict(mass=0.35)      # engine.installed_items_kg.fuel_pump_regulator_filter (Limbach EFI supply kit)
 GASCOLATOR = dict(r=0.019, mass=0.152)   # components.yaml andair_gas375 (0.152 kg manufacturer); bowl d estimate
 SHUTOFF = dict(mass=0.08)   # layout EQ-SHUTOFF (estimate)
+LEVEL_N = 41                # fuel level table: grid levels from the lowest bladder floor to the highest roof
 DRAIN = dict(r=0.0055, nut_r=0.0085, nut_h=0.004, mass=0.02)   # flush quick-drain valve (estimate)
 VENT_OUT = dict(r=0.008, flange_r=0.014, flange_h=0.0015, mass=0.025)  # flush vent outlet with flame arrestor
 BRACKET_T = 0.002           # 6061-T6 sheet brackets
@@ -1118,45 +1119,102 @@ class Fuel:
                 self.reg.add(mirror_part(pr, ln.pid + "-L", id_map=idm))
 
     # ------------------------------------------------------------------ fuel contents (consumable)
+    def _level_grid(self):
+        """Per cell, on a common z grid: volume and first moments of the bladder inside below z (the liquid of a free
+        surface at z). The three bladders communicate at their floors (bottom interconnects FL-XFER-LO with CV-FA,
+        saddle drain FL-XFER-SA with CV-SA into the aft feed cell; the engine is fed from the aft cell), so in level
+        flight the fuel stands at one free surface z in every cell that holds any (verification REG-01: the fuel CG
+        moves with the level instead of staying at the full-tank centroid)."""
+        inner = {k: c.inner_solid() for k, c in self.cell.items()}
+        lo = min(float(m.bounds()[0][2]) for m in inner.values())
+        hi = max(float(m.bounds()[1][2]) for m in inner.values())
+        zs = np.linspace(lo, hi, LEVEL_N)
+        grid = {}
+        for k, m in inner.items():
+            lo_b, hi_b = m.bounds()
+            rows = []
+            for z in zs:
+                if z <= float(lo_b[2]) + 1e-6:
+                    rows.append((0.0, np.zeros(3)))
+                    continue
+                cut = box3((lo_b[0] - 0.01, lo_b[1] - 0.01, lo_b[2] - 0.01), (hi_b[0] + 0.01, hi_b[1] + 0.01, z))
+                r = G.intersection(m, cut)
+                if r is None or r.volume() <= 0.0:
+                    rows.append((0.0, np.zeros(3)))
+                    continue
+                mp = r.mass_props(1.0)
+                rows.append((float(mp["mass"]), float(mp["mass"]) * np.asarray(mp["cg"], float)))
+            grid[k] = rows
+        return inner, zs, grid
+
+    def level_of(self, zs, grid, v_target: float) -> float:
+        """Common free-surface z holding ``v_target`` m^3 (linear between the grid levels)."""
+        tot = np.array([sum(grid[k][i][0] for k in grid) for i in range(len(zs))])
+        if v_target > tot[-1] + 1e-12:
+            raise ValueError("fuel load does not fit the bladders")
+        return float(np.interp(v_target, tot, zs))
+
     def register_contents(self):
         C = self.C
-        vols = {k: c.inner_solid().volume() for k, c in self.cell.items()}
+        inner, zs, grid = self._level_grid()
+        vols = {k: m.volume() for k, m in inner.items()}
         v_fuel = C.fuel_kg / C.rho
-        f = v_fuel / sum(vols.values())
-        if f > 1.0:
+        if v_fuel > sum(vols.values()):
             raise ValueError("design fuel does not fit the bladders")
-        self.fill_fraction = f
+        self.fill_fraction = v_fuel / sum(vols.values())
+        # level table (Registry.tables["fuel_levels"], analysis/mass.py -> spec.mass.registry.fuel.levels): fuel mass
+        # and CG at every grid level from the lowest floor to the full bladders
+        table = []
+        for i in range(len(zs)):
+            v = sum(grid[k][i][0] for k in grid)
+            if v <= 1e-9:
+                continue
+            mom = sum(grid[k][i][1] for k in grid)
+            table.append([v * C.rho] + list(mom / v))
+        self.reg.tables["fuel_levels"] = table
+        # design fuel load at its common free surface (refined by bisection on the exact solids)
+        z_fill = self.level_of(zs, grid, v_fuel)
+        cuts = {}
+
+        def vol_at(z):
+            out = 0.0
+            for k, m in inner.items():
+                lo_b, hi_b = m.bounds()
+                if z <= float(lo_b[2]):
+                    continue
+                r = G.intersection(m, box3((lo_b[0] - 0.01, lo_b[1] - 0.01, lo_b[2] - 0.01),
+                                           (hi_b[0] + 0.01, hi_b[1] + 0.01, z)))
+                out += 0.0 if r is None else r.volume()
+            return out
+        dz = float(zs[1] - zs[0])
+        a, b = z_fill - dz, z_fill + dz
+        for _ in range(30):
+            mid = 0.5 * (a + b)
+            if vol_at(mid) < v_fuel:
+                a = mid
+            else:
+                b = mid
+        z_fill = 0.5 * (a + b)
+        self.z_fill = z_fill
         names = {"forward_cell": ("fuel, forward cell", "yakıt, ön hücre", "fuel_f"),
                  "saddle_cell": ("fuel, saddle cell", "yakıt, eyer hücresi", "fuel_s"),
                  "aft_cell": ("fuel, aft cell", "yakıt, arka hücre", "fuel_a")}
         for key, c in self.cell.items():
-            inner = c.inner_solid()
-            target = f * vols[key]
-            lo_b, hi_b = inner.bounds()
-            z_lo, z_hi = float(lo_b[2]), float(hi_b[2])
-
-            def vol_at(z, inner=inner, lo_b=lo_b, hi_b=hi_b):
-                cut = box3((lo_b[0] - 0.01, lo_b[1] - 0.01, lo_b[2] - 0.01), (hi_b[0] + 0.01, hi_b[1] + 0.01, z))
-                r = G.intersection(inner, cut)
-                return 0.0 if r is None else r.volume()
-            a, b = z_lo, z_hi
-            for _ in range(40):
-                mid = 0.5 * (a + b)
-                if vol_at(mid) < target:
-                    a = mid
-                else:
-                    b = mid
-            z_fill = 0.5 * (a + b)
+            m = inner[key]
+            lo_b, hi_b = m.bounds()
+            if z_fill <= float(lo_b[2]) + 1e-5:
+                continue                        # cell empty at the design load (its floor above the free surface)
             cut = box3((lo_b[0] - 0.01, lo_b[1] - 0.01, lo_b[2] - 0.01), (hi_b[0] + 0.01, hi_b[1] + 0.01, z_fill))
-            mesh = finish(inter(inner, cut))
+            mesh = finish(inter(m, cut))
             mass = round(mesh.volume() * C.rho, 4)
             nm = names[key]
             self.add(self.pid(nm[2]), nm[0], nm[1], "fuel_mogas_oil_50_1", "consumable", (lambda m=mesh: m),
                      mass_kg=mass, parent=c.pid, contacts=(c.pid,), step=STEP_LOAD, explode=(0.0, 0.0, 0.32),
-                     notes=f"design fuel load mass.fuel_kg {C.fuel_kg} kg distributed in proportion to the bladder "
-                           f"volumes (fill fraction {f:.3f}, level z {z_fill:.4f}); density "
-                           f"engine.fuel.density_kg_per_m3 {C.rho:.0f}; scaled by the loading case fuel_fraction "
-                           f"(analysis/mass.py)")
+                     notes=f"design fuel load mass.fuel_kg {C.fuel_kg} kg at one free surface z {z_fill:.4f} in the "
+                           f"three communicating bladders (fill {mass / max(vols[key] * C.rho, 1e-9):.3f} of this "
+                           f"cell; all cells {self.fill_fraction:.3f}); density engine.fuel.density_kg_per_m3 "
+                           f"{C.rho:.0f}; per loading case the fuel mass is scaled and placed at the level-table CG "
+                           f"(analysis/mass.py, Registry.tables fuel_levels)")
 
     # ------------------------------------------------------------------ valves
     def inline_valve(self, ln: Line) -> G.Mesh:

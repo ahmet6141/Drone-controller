@@ -177,6 +177,31 @@ class TestShellBuild(unittest.TestCase):
             if pan.get("attach") == "fixed" and pan["fastening"]["type"] == "nutplate+screw":
                 self.assertGreaterEqual(len(by_owner.get(pan["part"], [])), 4, pan["id"])
 
+    def test_spine_flange_row_matches_structures(self):
+        """Verification REG-03: the M-SPINE flange row under P-MB-UPPER is committed (it was empty) and has the screw
+        count structures P-SPINE-SCREWS credits (shell.spine_row_count); every screw joins the skin and the channel."""
+        row = [f for f in self.fast if "M-SPINE flange row" in (f.notes or "")]
+        self.assertEqual(len(row), SH.spine_row_count(self.spec))
+        spine = next(m["part"] for m in self.spec["layout"]["chassis"]["members"] if m["id"] == "M-SPINE")
+        skin = next(p["part"] for p in self.spec["layout"]["shell"]["panels"] if p["id"] == "P-MB-UPPER")
+        xa, xb = SH.spine_row_span(self.spec)
+        for f in row:
+            self.assertEqual(re.sub(r"-[LR]$", "", f.joins[0]), skin, f.id)
+            self.assertIn(spine, f.joins, f.id)
+            self.assertTrue(xa - 0.001 <= f.position[0] <= xb + 0.001, f.id)
+
+    def test_tear_away_strip_screws_are_polyamide(self):
+        """Verification REG-02: the four tear-away strip screws are PA66 (hand-tight), registered with the PA66
+        material, so that the bridle pull releases the strip (structures P-SPINE-TEAR)."""
+        strip = next(p["part"] for p in self.spec["layout"]["shell"]["panels"] if p["id"] == "P-SPINE")
+        fs = [f for f in self.fast if re.sub(r"-[LR]$", "", f.joins[0]) == strip]
+        self.assertEqual(len(fs), SH.TEAR_SCREW["count"])
+        for f in fs:
+            self.assertIn("PA66", f.spec, f.id)
+            self.assertAlmostEqual(f.torque_nm, SH.TEAR_SCREW["torque_nm"], msg=f.id)
+            hw = self.reg.parts[f"YK250-HW-{f.id}"]
+            self.assertEqual(hw.material, "pa66_zytel_101l", f.id)
+
     # ------------------------------------------------------------------ mass
     def test_group_mass_against_budget(self):
         # mass/CG closure round: the shell budget group = shell parts booked to the shell group (SH-363 is booked in

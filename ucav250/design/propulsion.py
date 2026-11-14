@@ -1668,10 +1668,11 @@ class _Reg:
                                                                      b["w_face"] - EXH_FLANGE_T), C.ew,
                        [(ids["exh_" + side], EXH_FLANGE_T)], grade="12.9", nut="tapped", tapped_part=ids["engine"],
                        tapped_depth=0.012, step=STEP_ACC, notes="high-temperature anti-seize; exhaust gasket")
-        # spinner centre screw at the tip into the stand-off
+        # spinner centre screw at the tip into the stand-off (7075 crush plate thread: A2-70, no titanium in aluminium
+        # threads, verification REG-04)
         tip = SPINNER_BASE_U - SPINNER_L
         J.bolt(reg, f"{ids['spinner']}-B1", 5, C.P(tip, 0, 0), C.eu, [(ids["spinner"], SPINNER_TIP_T)],
-               head="ISO 7380", grade=GRADE_TI, nut="tapped", tapped_part=ids["crush"], tapped_depth=STANDOFF_SOLID,
+               head="ISO 7380", grade="A2-70", nut="tapped", tapped_part=ids["crush"], tapped_depth=STANDOFF_SOLID,
                step=STEP_PROP)
 
 

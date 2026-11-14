@@ -83,6 +83,9 @@ def measure_stack(reg: Registry, part_ids, point, axis, probe_r: float, search: 
     return sorted(out, key=lambda r: r[1])
 
 
+TI_IN_AL_GRADE = "A2-70"     # grade of a screw tapped into an aluminium part (no titanium in aluminium threads)
+
+
 def _spec(head: str, size, L: float, grade: str) -> str:
     return f"{head} M{size:g}x{L * 1000:.0f}-{grade}"
 
@@ -137,6 +140,11 @@ def bolt(reg: Registry, fid: str, size, position, axis, stack, *, owner: str | N
     elif "tapped" in nut_l:
         if tapped_part is None or tapped_depth is None:
             raise ValueError(f"{fid}: tapped joint needs tapped_part and tapped_depth")
+        if grade.startswith("Ti") and str(reg.parts[tapped_part].material or "").startswith("al_"):
+            # verification REG-04: no titanium screw in aluminium threads (galling on removal, galvanic couple;
+            # propulsion.py rule): the screw is A2-70 stainless
+            grade = TI_IN_AL_GRADE
+            notes = "; ".join(x for x in (notes, "A2-70: no titanium screw in aluminium threads (REG-04)") if x)
         L = std_length_floor(wh + grip + tapped_depth - 2 * pitch)
         if L - wh - grip < 1.2 * d:
             raise ValueError(f"{fid}: thread engagement {(L - wh - grip) * 1000:.1f} mm < 1.2 D in the tapped hole")

@@ -1219,29 +1219,73 @@ def body_shell(S: dict, af: Airframe) -> dict:
 # =====================================================================================================================
 # 6. mass properties from the spec mass items (+ fuel, payload per loading case)
 # =====================================================================================================================
-def mass_cases(S: dict, own_inertia: dict | None = None) -> list[dict]:
+def fuel_cg_at(M: dict, m_fuel: float) -> list:
+    """CG of ``m_fuel`` kg of fuel on board (verification REG-01): the registry fuel-level table
+    (spec.mass.registry.fuel.levels, fuel module: one free surface in the three communicating bladders, fed from the
+    aft cell) interpolated in mass; without the table the fixed mass.fuel_cg."""
+    lv = ((M.get("registry") or {}).get("fuel") or {}).get("levels")
+    if not lv:
+        return [float(v) for v in M["fuel_cg"]]
+    A = np.asarray(lv, float)
+    m = min(max(float(m_fuel), A[0, 0]), A[-1, 0])
+    return [float(np.interp(m, A[:, 0], A[:, k])) for k in (1, 2, 3)]
+
+
+def item_pos(i: dict, pose: str) -> tuple:
+    """(x, y, z) of a mass item in a pose: registry items carry ``cg_turret_extended`` / ``cg_ground`` (analysis/mass.py
+    poses; verification MC-01 / MC-03); every other item has one position."""
+    k = {"turret_extended": "cg_turret_extended", "ground": "cg_ground"}.get(pose)
+    if k and k in i:
+        return tuple(float(v) for v in i[k])
+    return float(i["x"]), float(i["y"]), float(i["z"])
+
+
+FUEL_BURN_N = 41                 # fuel-burn sweep points of a loading case (case fuel -> 0)
+
+
+def mass_cases(S: dict, own_inertia: dict | None = None, pose: str = "flight") -> list[dict]:
     """CG of every loading case from spec mass items (empty incl. growth), payload items and fuel. With
     ``own_inertia`` (distributed_pitch_inertia: specific own pitch inertia per item name and for the fuel, m^2) every
     case also carries its pitch moment of inertia about its CG, I_yy (kg m^2; point masses + the own inertia of the
-    distributed items)."""
+    distributed items). Detail-design closure: the registry items are placed in the case pose (flight: gear up; turret
+    extended cases: + turret extended; ``pose="ground"``: rest pose, sizing.ground_cases); the turret payload item is
+    split into its registry parts (spec.mass.registry.payload_parts, posed) and the remainder at the item position; the
+    fuel stands at the level-table CG of its mass (fuel_cg_at), and every case carries the fore/aft CG extremes of
+    the fuel burn from its fuel load to empty (``x_burn_fwd`` / ``x_burn_aft``; R-09 / R-10, cg_range_x)."""
     M = S["mass"]
     items = M["items"]
     pay = {p["name"]: p for p in M["payload_items"]}
+    reg_pay = (M.get("registry") or {}).get("payload_parts") or {}
     fuel = M["fuel_kg"]
-    fx, fy, fz = M["fuel_cg"]
     out = []
     for c in M["cases"]:
-        its = [(i["mass_kg"], i["x"], i["y"], i["z"], i["name"]) for i in items]
+        ext = c.get("turret") == "extended"
+        ps = "ground" if pose == "ground" else ("turret_extended" if ext else "flight")
+        its = [(i["mass_kg"],) + item_pos(i, ps) + (i["name"],) for i in items]
         names = c.get("payload", c.get("payload_items", []))
         for name in names:
             p = pay[name]
-            z = p["z_extended"] if (c.get("turret") == "extended" and "z_extended" in p) else p["z"]
-            its.append((p["mass_kg"], p["x"], p.get("y", 0.0), z, name))
-        its.append((fuel * c["fuel_fraction"], fx, fy, fz, "_fuel"))
+            z = p["z_extended"] if (ext and pose != "ground" and "z_extended" in p) else p["z"]
+            rp = reg_pay.get(name)
+            if rp:
+                q = rp.get("cg_turret_extended", rp["cg"]) if ps == "turret_extended" else \
+                    rp.get("cg_ground", rp["cg"]) if ps == "ground" else rp["cg"]
+                its.append((float(rp["mass_kg"]),) + tuple(float(v) for v in q) + (name,))
+                its.append((float(p["mass_kg"]) - float(rp["mass_kg"]), p["x"], p.get("y", 0.0), z, name))
+            else:
+                its.append((p["mass_kg"], p["x"], p.get("y", 0.0), z, name))
+        m_f = fuel * c["fuel_fraction"]
+        fx, fy, fz = fuel_cg_at(M, m_f)
+        m0 = sum(i[0] for i in its)
+        mx0 = sum(i[0] * i[1] for i in its)
+        its.append((m_f, fx, fy, fz, "_fuel"))
         m = sum(i[0] for i in its)
         cg = [sum(i[0] * i[k] for i in its) / m for k in (1, 2, 3)]
+        xb = [(mx0 + mf * fuel_cg_at(M, mf)[0]) / (m0 + mf) for mf in np.linspace(0.0, m_f, FUEL_BURN_N)] \
+            if m_f > 0 else [cg[0]]
         row = {"name": c["name"], "m": m, "x": cg[0], "y": cg[1], "z": cg[2],
-               "fuel_fraction": c["fuel_fraction"], "payload_kg": sum(pay[n]["mass_kg"] for n in names)}
+               "fuel_fraction": c["fuel_fraction"], "payload_kg": sum(pay[n]["mass_kg"] for n in names),
+               "x_burn_fwd": min(min(xb), cg[0]), "x_burn_aft": max(max(xb), cg[0])}
         if own_inertia is not None:
             row["I_yy"] = sum(i[0] * ((i[1] - cg[0]) ** 2 + (i[3] - cg[2]) ** 2 + own_inertia.get(i[4], 0.0))
                               for i in its)
@@ -1306,8 +1350,7 @@ def loading_cg_fn(S: dict, case_index: int = 0):
     for n in c.get("payload", []):
         m_z += pay[n]["mass_kg"]
         mx += pay[n]["mass_kg"] * pay[n]["x"]
-    fx = float(M["fuel_cg"][0])
-    return (lambda mf: (mx + mf * fx) / (m_z + mf)), m_z
+    return (lambda mf: (mx + mf * fuel_cg_at(M, mf)[0]) / (m_z + mf)), m_z
 
 
 def trimmed_clmax_at(S: dict, wa: dict, stab: dict, tail: dict, x_cg: float) -> float:
@@ -1792,6 +1835,10 @@ def stability(S: dict, af: Airframe, wa: dict, llm: dict, Cm0_sections: float, t
     x_np_b = sol_all["x_np"]
     x_np = min(x_np_a, x_np_b) if A["np_rule"] == "forward" else x_np_a
     sms = {c["name"]: (x_np - c["x"]) / cbar for c in cases}
+    # REG-01: every loading passes all fuel levels down to empty in flight (fuel at its level CG): the static margin
+    # range of R-09 / R-10 covers the burn extremes of each case
+    sms_burn = {c["name"]: [(x_np - c.get("x_burn_aft", c["x"])) / cbar, (x_np - c.get("x_burn_fwd", c["x"])) / cbar]
+                for c in cases}
     # Cm0 of the wing-body (sections + basic loading); body camber (droop/upsweep) moment by Multhopp's Cm0 term
     Cm0_wb = Cm0_sections + llm["Cm_basic"]
     # ---- directional stability
@@ -1816,7 +1863,9 @@ def stability(S: dict, af: Airframe, wa: dict, llm: dict, Cm0_sections: float, t
     return {"x_ac_wing_LL": llm["x_ac"], "x_ac_wing_vlm": x_ac_w, "x_ac_wb": x_ac_wb, "Cm0_wb": Cm0_wb, "Cm0_sections": Cm0_sections,
             "Cm_basic": llm["Cm_basic"], "multhopp": mh, "deps_vlm": deps_vlm, "deps_datcom": deps_datcom, "deps": deps,
             "x_np_classic": x_np_a, "x_np_vlm": x_np_b, "x_np": x_np, "static_margin": sms,
-            "sm_min": min(sms.values()), "sm_max": max(sms.values()), "l_h": st["x_ac"] - x_ac_w,
+            "static_margin_fuel_burn": sms_burn,
+            "sm_min": min(min(sms.values()), min(v[0] for v in sms_burn.values())),
+            "sm_max": max(max(sms.values()), max(v[1] for v in sms_burn.values())), "l_h": st["x_ac"] - x_ac_w,
             "V_H": tv["V_H"], "V_V": tv["V_V"], "arm_h_VH": tv["arm_h"], "arm_v_VV": tv["arm_v"],
             "S_h_exposed": S_h, "S_fins_h_proj": S_fin_h, "S_fin_exposed_each": fin["area"],
             "S_fins_v_proj": 2 * fin["area"] * math.cos(g) ** 2, "a_t": st["a"], "a_fin": fin["a"],
@@ -4750,12 +4799,26 @@ def mass_items(S: dict, af: Airframe, wing_m: dict, tail_m: dict, shell: dict, l
     add("fasteners_inserts_nutplates", "hardware", MR["hardware_fraction"] * struct, 1.95, 0.0,
         f"{MR['hardware_fraction']:.3f} x structure + gear base mass (estimate)")
     apply_mass_placement(S, I)
-    I += registry_closure_items(S, I, am, wing_m, tail_m, shell, gd, gp, x_mac40, z_wing)
+    I += registry_closure_items(S, I, am, wing_m, tail_m, shell, gd, gp, x_mac40, z_wing, af)
     return I
 
 
+GEAR_EMA_UNITS = ("volz_da26", "volz_da30", "volz_da30ht")     # components.yaml control_surface_actuators, light first
+
+
+def gear_ema_unit(T_req: float) -> dict:
+    """Lightest Volz unit of GEAR_EMA_UNITS whose datasheet PEAK torque covers the required retraction torque (gear
+    operation is a short-time duty: DA 26 datasheet 'short-time duty < 10 s with 60 s cool-down')."""
+    for u in GEAR_EMA_UNITS:
+        base = f"components.yaml#categories.control_surface_actuators.items[{u}]"
+        tq, m = float(research_item(base + ".torque_peak_Nm")), float(research_item(base + ".mass_kg"))
+        if tq >= T_req - 1e-9:
+            return {"id": u, "torque_peak_Nm": tq, "mass_kg": m}
+    raise ValueError(f"no gear EMA unit covers {T_req:.1f} N m")
+
+
 def registry_closure_items(S: dict, I: list, am: dict, wing_m: dict, tail_m: dict, shell: dict, gd: dict, gp: dict,
-                           x_mac40: float, z_wing: float) -> list:
+                           x_mac40: float, z_wing: float, af: "Airframe | None" = None) -> list:
     """Detail-design mass closure (mass/CG closure round): with ``spec.mass.registry`` (analysis/mass.py --update-spec,
     the registry of the detailed design) every budget group closes on its MEASURED mass and centroid instead of the
     concept estimate x (1 + growth allowance): per group one item withdraws the concept estimate of the group (minus its
@@ -4766,7 +4829,13 @@ def registry_closure_items(S: dict, I: list, am: dict, wing_m: dict, tail_m: dic
     items, also read by analysis/mass.py as point masses): paint (structures.paint_areal_kg_per_m2 on the exposed wetted
     areas, part of every concept areal mass), the gear-door perimeter seals (mass.rules.gear_doors.seal_kg_per_m on the
     sealed joint length) and the brake lines and fluid (components.yaml fixed-gear basis 'master cylinder and lines
-    0.20' less the 0.065 kg master cylinder in the brake unit FC-629). Without the registry block: no items."""
+    0.20' less the 0.065 kg master cylinder in the brake unit FC-629). Verification MC-02: also the exhaust silencer
+    internals (engine.installed_items_kg.exhaust_with_silencers less the modelled empty pipes PR-504, at their
+    centroid), the gear retraction EMAs (the lightest Volz unit whose peak torque covers structures G-EMA-MAIN /
+    G-EMA-NOSE, spec.structures.sizing.requirements, less the DA 26 mass of the registry envelopes, at the EMA
+    stations) and the fuel-panel gaskets (mass.rules.gear_doors.seal_kg_per_m x the P-FUEL1-3 perimeters, both sides).
+    The registry items carry the flight-pose centroid and ``cg_turret_extended`` / ``cg_ground`` (analysis/mass.py
+    poses). Without the registry block: no items."""
     R = (S["mass"].get("registry") or {})
     if not R.get("groups"):
         return []
@@ -4805,6 +4874,45 @@ def registry_closure_items(S: dict, I: list, am: dict, wing_m: dict, tail_m: dic
               "components.yaml landing_gear fixed-gear basis 'master cylinder and lines 0.20' (estimate) less the 0.065 "
               "kg master cylinder carried in the brake unit FC-629: two hydraulic lines + fluid along H-MAIN from the "
               "brake unit (EQ-BRAKE_UNIT) to the main calipers, at the mid-point (no line part in the registry)")
+    refs = R.get("refs") or {}
+    ex = refs.get("exhaust_pipes_silencers")
+    if ex:
+        m_b = float(S["engine"]["installed_items_kg"]["exhaust_with_silencers"])
+        c = ex["cg"]
+        allow("exhaust_silencer_internals", "propulsion", m_b - float(ex["mass_kg"]), c[0], c[1], c[2],
+              f"engine.installed_items_kg.exhaust_with_silencers {m_b:.2f} kg (engine.yaml: Hirth 4201 twin exhaust "
+              f"1.15 kg scaled, estimate) less the modelled exhaust pipes with empty silencer cans PR-504-L/R "
+              f"{float(ex['mass_kg']):.3f} kg (no internals in the registry), at their centroid")
+    tq = ((((S.get("structures") or {}).get("sizing") or {}).get("requirements") or {}).get("gear_ema_torque_Nm") or {})
+    for key, tk, n_txt in (("main_gear_retraction_emas", "main", "G-EMA-MAIN"),
+                           ("nose_gear_retraction_ema", "nose", "G-EMA-NOSE")):
+        r_ = refs.get(key)
+        if not r_ or tk not in tq:
+            continue
+        u = gear_ema_unit(float(tq[tk]))
+        n_u = len([q for q in r_["parts"] if not q.startswith("YK250-HW-")])
+        dm = n_u * u["mass_kg"] - float(r_["mass_kg"])
+        if dm > 1e-6:
+            c = r_["cg"]
+            allow(f"{key}_unit_delta", "gear", dm, c[0], c[1], c[2],
+                  f"structures {n_txt} {float(tq[tk]):.1f} N m (structures.sizing.requirements) needs "
+                  f"{n_u} x {u['id']} (datasheet peak {u['torque_peak_Nm']:.0f} N m, {u['mass_kg']:.3f} kg each; short-time "
+                  f"duty) against the DA-26-class allocation envelope(s) {float(r_['mass_kg']):.3f} kg in the "
+                  "registry: mass difference at the EMA station (the envelope geometry is open)")
+    pans = {p_["id"]: p_ for p_ in ((S["layout"].get("shell") or {}).get("panels") or [])}
+    fp = [pans[k] for k in ("P-FUEL1", "P-FUEL2", "P-FUEL3") if k in pans and pans[k].get("outline")]
+    if fp and af is not None:
+        from shapely.geometry import Polygon as _Poly
+        polys = [_Poly(np.asarray(p_["outline"], float)) for p_ in fp]
+        per = 2.0 * sum(q.length for q in polys)                          # starboard outlines, port mirrored
+        A_ = sum(q.area for q in polys)
+        xg = sum(q.area * q.centroid.x for q in polys) / A_
+        yg = sum(q.area * q.centroid.y for q in polys) / A_
+        k_s = float(S["mass"]["rules"]["gear_doors"]["seal_kg_per_m"])
+        allow("fuel_panel_gaskets", "shell", k_s * per, xg, 0.0, float(af.z_top(xg, yg)),
+              f"fluorosilicone panel gaskets of P-FUEL1-3 (layout.shell.panels fastening: vapour-tight fuel bay): "
+              f"{k_s * 1000:.1f} g/m (mass.rules.gear_doors.seal_kg_per_m, estimate) x {per:.2f} m of panel perimeter "
+              "(both sides), at the panel area centroid on the upper OML (no gasket part in the registry)")
     for g, rg in sorted(R["groups"].items()):
         est = [i for i in I if i["group"] == g]
         m_e = sum(float(i["mass_kg"]) for i in est)
@@ -4819,11 +4927,16 @@ def registry_closure_items(S: dict, I: list, am: dict, wing_m: dict, tail_m: dic
         c = [float(v) for v in rg["cg"]]
         # 6 decimals as spec.mass.registry (the 4-decimal rounding of the concept items left ~0.01 mm between the
         # sizing case CGs and analysis/mass.py)
-        out.append({"name": f"{g}_detail_design_registry", "group": g, "mass_base_kg": round(float(rg["mass_kg"]), 6),
-                    "mass_kg": round(float(rg["mass_kg"]), 6), "x": round(c[0], 6), "y": round(c[1], 6),
-                    "z": round(c[2], 6),
+        it_r = {"name": f"{g}_detail_design_registry", "group": g, "mass_base_kg": round(float(rg["mass_kg"]), 6),
+                "mass_kg": round(float(rg["mass_kg"]), 6), "x": round(c[0], 6), "y": round(c[1], 6),
+                "z": round(c[2], 6)}
+        for k_ in ("cg_turret_extended", "cg_ground"):
+            if k_ in rg:
+                it_r[k_] = [round(float(v), 6) for v in rg[k_]]
+        out.append(dict(it_r, **{
                     "basis": f"registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, "
-                             f"{R.get('parts', '?')} parts): measured {g} group mass and centroid, no growth allowance"})
+                             f"{R.get('parts', '?')} parts): measured {g} group mass and centroid (flight pose: gear "
+                             "up), no growth allowance"}))
     return out
 
 
@@ -4912,7 +5025,7 @@ def payload_items(S: dict, lz: dict) -> list:
 
 def sm_range_items(S: dict, stab: dict, cbar: float, m_add: float, x_add: float, fuel_kg: float) -> list:
     """Static-margin range [min, max] (fraction of MAC) of the empty aircraft + one added mass (m_add at x_add) over the
-    fuel load 0 .. fuel_kg (fuel at mass.fuel_cg)."""
+    fuel load 0 .. fuel_kg (fuel at its level CG, fuel_cg_at)."""
     M = S["mass"]
     m_z = sum(float(i["mass_kg"]) for i in M["items"]) + m_add
     mx = sum(float(i["mass_kg"]) * float(i["x"]) for i in M["items"]) + m_add * x_add
@@ -4937,8 +5050,7 @@ def payload_loading_cg_fn(S: dict, payload_kg: float):
         its.append((payload_kg - p_b, float(pay["research_payload_allowance"]["x"])))
     m_z = sum(m for m, _ in its)
     mx = sum(m * x for m, x in its)
-    fx = float(M["fuel_cg"][0])
-    return (lambda mf: (mx + mf * fx) / (m_z + mf)), m_z
+    return (lambda mf: (mx + mf * fuel_cg_at(M, mf)[0]) / (m_z + mf)), m_z
 
 
 def update_case_fuel(S: dict, fuel_cap: float | None = None) -> None:
@@ -4960,7 +5072,12 @@ def update_case_fuel(S: dict, fuel_cap: float | None = None) -> None:
 
 def ground_cases(S: dict, gp: dict, lz: dict, own_inertia: dict | None = None) -> list:
     """Loading cases with the gear EXTENDED (ground): gear items moved to their extended positions (with
-    ``own_inertia``: pitch moment of inertia I_yy of every case, mass_cases)."""
+    ``own_inertia``: pitch moment of inertia I_yy of every case, mass_cases). Detail-design closure (verification
+    MC-01): with spec.mass.registry the registry items are at their rest-pose centroids (``cg_ground``: gear down,
+    doors open, turret retracted) and the concept gear items are not moved (they are withdrawn by the fixed
+    ``*_concept_estimate_withdrawn`` items, so moving them would shift the CG a second time)."""
+    if (S["mass"].get("registry") or {}).get("groups"):
+        return mass_cases(S, own_inertia, pose="ground")
     S2 = copy.deepcopy(S)
     r_t = S["landing_gear"]["tyre"]["diameter"] / 2
     for it in S2["mass"]["items"]:
@@ -5817,12 +5934,19 @@ def evaluate(S: dict, verbose: bool = False, table_key: str | None = None, sens:
     x_lim = stab["x_np"] - sm_rule * cbar_
     f0, mz0 = payload_loading_cg_fn(S, 0.0)
     mx0 = f0(0.0) * mz0
-    fx_ = float(S["mass"]["fuel_cg"][0])
     xb_ = float(pay_it["eo_ir_turret_hd59_mount"]["x"])
-    ballast = max(max((mx0 + f_ * fx_ - x_lim * (mz0 + f_)) / (x_lim - xb_), 0.0) for f_ in (0.0, fuel_cap))
+    # fuel at its level CG (REG-01): sampled over the fuel range; a fuel load is permitted only if every lower level
+    # passed on the way to empty keeps R-09
+    fgrid = np.linspace(0.0, fuel_cap, FUEL_BURN_N)
+    fxs = [fuel_cg_at(S["mass"], f_)[0] for f_ in fgrid]
+    ballast = max(max((mx0 + f_ * fx_ - x_lim * (mz0 + f_)) / (x_lim - xb_), 0.0) for f_, fx_ in zip(fgrid, fxs))
     m_t = float(pay_it["eo_ir_turret_hd59_mount"]["mass_kg"])
     mz_t, mx_t = mz0 + m_t, mx0 + m_t * xb_
-    f_t = fuel_cap if fx_ <= x_lim else min(max((x_lim * mz_t - mx_t) / (fx_ - x_lim), 0.0), fuel_cap)
+    f_t = 0.0
+    for f_, fx_ in zip(fgrid, fxs):
+        if (mx_t + f_ * fx_) / (mz_t + f_) > x_lim + 1e-9:
+            break
+        f_t = float(f_)
     permitted = {"static_margin_min_rule": sm_rule, "x_cg_aft_limit_m": x_lim,
                  "baseline_set_kg": p_base, "fuel_volume_break_payload_kg": p_break, "fuel_capacity_kg": fuel_cap,
                  "e180_set_kg": e180_set_kg,
@@ -7685,7 +7809,9 @@ def refresh_spec(S_in: dict, verbose: bool = True) -> tuple[dict, dict]:
                                               "tip_mach": pr["static_wot"]["tip_mach"],
                                               "tip_speed_m_s": pr["static_tip_speed_m_s"]}
     cases = R["mass"]["cases"]
-    xs = [c["x"] for c in cases]
+    # REG-01: the CG range covers the fuel burn of every loading (fuel at its level CG)
+    xs = [c["x"] for c in cases] + [c.get("x_burn_fwd", c["x"]) for c in cases] + \
+        [c.get("x_burn_aft", c["x"]) for c in cases]
     TL = D["tail"]
     # the arms actually used for the tail volumes (design CG to the stabilator / exposed-fin aerodynamic centres)
     TL["volume_h"], TL["volume_v"] = st["V_H"], st["V_V"]
@@ -7755,7 +7881,9 @@ def refresh_spec(S_in: dict, verbose: bool = True) -> tuple[dict, dict]:
     D["stability"].update({"mac": D["wing"]["mac"], "mac_le_x": D["wing"]["mac_le_x"], "np_x": st["x_np"],
                            "cg_design": [cases[0]["x"], cases[0]["y"], cases[0]["z"]], "cg_range_x": [min(xs), max(xs)],
                            "static_margin_range": [st["sm_min"], st["sm_max"]],
-                           "cases_cg": [{"name": c["name"], "m": c["m"], "x": c["x"], "z": c["z"]} for c in cases],
+                           "cases_cg": [{"name": c["name"], "m": c["m"], "x": c["x"], "z": c["z"],
+                                         "x_burn": [c.get("x_burn_fwd", c["x"]), c.get("x_burn_aft", c["x"])]}
+                                        for c in cases],
                            "computed": ref["stability"]})
     D["performance"].update({"reference": ref["performance"], "payload_endurance": p["payload_endurance"],
                              "sensitivities_endurance_h": R["sensitivities_endurance_h"],

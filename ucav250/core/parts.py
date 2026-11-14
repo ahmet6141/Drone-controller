@@ -183,6 +183,7 @@ class Registry:
         self.parts: dict[str, Part] = {}
         self.joints: dict[str, Joint] = {}
         self.sequences: dict[str, list[dict[str, float]]] = {}   # named multi-joint motion sequences (sampled)
+        self.tables: dict[str, object] = {}     # producer data tables for the analyses (e.g. fuel module "fuel_levels")
         self.log: list[str] = []
 
     # ------------------------------------------------------------------ producers

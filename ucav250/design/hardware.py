@@ -202,19 +202,23 @@ class _FastenerGeom:
 
 # fastener material -> spec.materials key with a density (first present): dedicated fastener entries if the spec has
 # them, else the spec material of the same alloy family (12.9 alloy steel ~ 4130 N density, A2/A4 ~ 304, Ti-6Al-4V)
-_MAT_CANDIDATES = {"ti": ("fastener_ti", "ti_6al_4v_annealed_sheet"),
+_MAT_CANDIDATES = {"pa66": ("pa66_zytel_101l",),
+                   "ti": ("fastener_ti", "ti_6al_4v_annealed_sheet"),
                    "stainless": ("fastener_stainless", "ss_304_annealed"),
                    "steel": ("fastener_steel", "steel_4130_n")}
 
 
 _TI_RE = re.compile(r"(^|[-\s/(])Ti(-6Al-4V|-?6-4|\b)")          # titanium grade token (case-sensitive "Ti")
 _SS_RE = re.compile(r"(^|[-\s/(])(A[24]-\d|A-?286\b)", re.IGNORECASE)  # stainless / A-286 superalloy
+_PA_RE = re.compile(r"(^|[-\s/(])PA ?66\b")                        # polyamide 66 (tear-away screws, REG-02)
 
 
 def fastener_material(designation: str, mats: dict) -> str:
     """spec.materials key for a fastener designation: the alloy is read from its grade token only ("Ti-6Al-4V",
-    "A2-70" / "A4-80" / "A286"); any other text (e.g. "estimate", "captive") does not select a family."""
-    if _TI_RE.search(designation):
+    "A2-70" / "A4-80" / "A286", "PA66"); any other text (e.g. "estimate", "captive") does not select a family."""
+    if _PA_RE.search(designation):
+        fam = "pa66"
+    elif _TI_RE.search(designation):
         fam = "ti"
     elif _SS_RE.search(designation):
         fam = "stainless"
@@ -225,6 +229,8 @@ def fastener_material(designation: str, mats: dict) -> str:
 
 
 def _family(designation: str) -> str | None:
+    if _PA_RE.search(designation):
+        return "pa66"
     if _TI_RE.search(designation):
         return "ti"
     if _SS_RE.search(designation):
@@ -244,6 +250,8 @@ def far_side_material(f: Fastener, mats: dict) -> str:
             fam = "stainless"
         else:
             fam = "steel" if screw == "steel" else "stainless"
+        if fam == "pa66" and f.kind not in ("camloc", "quarter_turn"):
+            fam = "stainless"
     cands = _MAT_CANDIDATES[fam]
     return next((m for m in cands if m in mats), cands[0])
 

@@ -535,20 +535,24 @@ class TestChecksDetectFaults(unittest.TestCase):
 
     def test_nose_tyre_against_the_full_deck_detected(self):
         """C05 (fix round 2 re-closure): with the full 6.8 mm sandwich deck over the keel slot (no solid strip) the
-        stowed nose tyre comes closest to the avionics deck. Mass/CG closure round: the closure lowered the gear
-        (ground plane -0.7 mm), so the full deck now sits at the 12 mm tyre-to-well clearance itself; the check must
-        still see the deck: it becomes the governing object, the clearance drops by >= 0.5 mm, and a value below 12 mm
-        is reported as a failure."""
+        stowed nose tyre comes closest to the avionics deck. Mass/CG closure round: the closure lowered the gear, so the
+        full deck sits at the 12 mm tyre-to-well clearance itself; verification REG-06: the edit must inject a real
+        fault, so the full deck is also lowered by 1 mm, and C05 must report a failure naming M-DECK-NOSE."""
         def edit(S):
             m = next(q for q in S["layout"]["chassis"]["members"] if q["id"] == "M-DECK-NOSE")
             m.pop("boxes", None)
+            m["box"] = [[m["box"][0][0], m["box"][0][1], m["box"][0][2] - 0.001],
+                        [m["box"][1][0], m["box"][1][1], m["box"][1][2] - 0.001]]
         ctx0 = self._ctx(lambda S: None)
         base = next(r for r in LC.check_mechanisms(ctx0, LC.layout_objects(ctx0)) if "nose tyre" in r["item"])
+        self.assertTrue(base["ok"])
         ctx = self._ctx(edit)
-        row = next(r for r in LC.check_mechanisms(ctx, LC.layout_objects(ctx)) if "nose tyre" in r["item"])
+        rows = LC.check_mechanisms(ctx, LC.layout_objects(ctx))
+        row = next(r for r in rows if "nose tyre" in r["item"])
         self.assertEqual(row["detail"], "M-DECK-NOSE")
-        self.assertLessEqual(row["value"], base["value"] - 0.5)
-        self.assertEqual(row["ok"], row["value"] >= 12.0)
+        self.assertLess(row["value"], 12.0)
+        self.assertTrue(any("nose tyre" in r["item"] and r["detail"] == "M-DECK-NOSE"
+                            for r in self._failed(rows, "C05")))
 
     def test_nose_door_linkage_in_the_tyre_path_detected(self):
         """C05 (PK2-13): the nose-door bellcrank / link envelope moved 30 mm forward into the stowed tyre is flagged."""

@@ -4395,6 +4395,18 @@ materials:
     max_service_C: 100.0
     source: https://static.markforged.com/downloads/composites-data-sheet.pdf
     tag: estimate
+  pa66_zytel_101l:
+    name: PA66 moulded (Celanese Zytel 101L NC010 class; tear-away shear screws)
+    kind: polymer
+    basis: 'datasheet ISO 527 yield stress dry 82 MPa / conditioned 55 MPa, tensile modulus 3100 / 1400 MPa, density ISO
+      1183 1140 kg/m3; Ftu = dry yield (the stronger state: upper bound of a release load, structures P-SPINE-TEAR);
+      Ftu_cond = conditioned yield'
+    density: 1140.0
+    E: 3100000000.0
+    Ftu: 82000000.0
+    Ftu_cond: 55000000.0
+    source: https://quickparts.com/wp-content/uploads/2023/04/zytel®-101l-nc010-gb.pdf
+    tag: datasheet
 
 # ---------------------------------------------------------------------------------------------------------------------
 # adhesives: adhesives (materials.yaml spec_ready)
@@ -4853,9 +4865,9 @@ layout:
         center: [0.8985, 0.1, -0.021]
         connector_allowance: 0.02
         connector_face: +x
-        mass_kg: 0.05
-        source: 'components.yaml microhard_pddl2450 dimensions_m.note: enclosed unit 77 x 55 x 28 mm (the OEM board of the
-          mass estimate is smaller); connector allowance 20 mm (estimate)'
+        mass_kg: 0.165
+        source: 'components.yaml microhard_pddl2450 dimensions_m.note: enclosed unit 77 x 55 x 28 mm, mass_kg.note: enclosed
+          0.165 kg (verification MC-02: was the 0.050 kg motherboard value); connector allowance 20 mm (estimate)'
       - name: transponder
         zone: avionics_side_bays
         side: starboard

@@ -2503,11 +2503,11 @@ class _TailReg:
                                                                          "edge distance), head through the FS3480 access hole")
             for sgn in (1.0, -1.0):
                 reg.parts[ch12].add_hole((x_f + 0.0005, sgn * y, z), (x_f - 0.0105, sgn * y, z), 0.0065)
-        # ---- fin rear lug: 2 x M5 Ti-6Al-4V (was 12.9; T-FINROOT-REAR), head on the aft ear, thread in the
-        #      firewall-side web of F-FW-CORNER
+        # ---- fin rear lug: 2 x M5 A2-70 (T-FINROOT-REAR), head on the aft ear, thread in the firewall-side web of the
+        #      7075 F-FW-CORNER (verification REG-04: no titanium screw in aluminium threads)
         x_r = RF_SLOT[1] + 0.006
         for y, z in RF_BOLTS:
-            Fa.sym(5, (x_r, y, z), (-1.0, 0.0, 0.0), [ch86, P("rfit")], window=(-0.002, 0.0138), grade=TI,
+            Fa.sym(5, (x_r, y, z), (-1.0, 0.0, 0.0), [ch86, P("rfit")], window=(-0.002, 0.0138), grade="A2-70",
                    hole_d=0.0053,
                    nut="tapped", tapped_part=ch86, tapped_depth=0.0096, owner=P("rfit"), label=f"fin rear lug y{y}")
         # ---- web flanges (2 x M5 each), nyloc nuts behind the webs
@@ -2584,10 +2584,11 @@ class _TailReg:
         hp, hax, ht = sd.pinch_bolt()
         Fa.sym(4, hp, hax, [P("shorn")], window=(-0.001, ht + 0.001), grade=G129, max_gap=0.0011,
                label="horn pinch bolt")
-        # ---- stabilator cross bolt (M5 from the lower skin through the counterbored skin, tapped in the upper boss)
+        # ---- stabilator cross bolt (M5 from the lower skin through the counterbored skin, tapped in the upper boss of
+        #      the 7075 root fitting: A2-70, no titanium in aluminium threads, verification REG-04; T-CROSSBOLT)
         cb = g.axis_pt(g.y_cb)
         Fa.sym(5, cb, (0.0, 0.0, 1.0), [P("rootfit"), P("spindle"), P("plug")], window=(-0.030, SPINDLE_R - 0.0001),
-               nut="tapped", tapped_part=P("rootfit"), tapped_depth=0.011, grade=TI, label="stabilator cross bolt",
+               nut="tapped", tapped_part=P("rootfit"), tapped_depth=0.011, grade="A2-70", label="stabilator cross bolt",
                on_axis=True, hole_d=0.0053, spot=(P("rootfit"), None),
                notes="removable: stabilator slides off the spindle after this bolt is out")
         for sgn in (1.0, -1.0):

@@ -148,8 +148,10 @@ class TestTailBuild(unittest.TestCase):
             self.assertEqual(self.tail[pid].parent, ch, pid)
             joined = [f for f in fs if pid in f.joins and ch in f.joins]
             self.assertGreaterEqual(len(joined), 1 if fid.startswith("F-VENTRAL") else 2, f"{pid} -> {ch}")
-            # 12.9 alloy steel, or Ti-6Al-4V where structures carries the Ti bolt rows (mass/CG closure round, HW-03)
-            self.assertTrue(all("12.9" in f.spec or "Ti-6Al-4V" in f.spec for f in joined), pid)
+            # 12.9 alloy steel, or Ti-6Al-4V where structures carries the Ti bolt rows (mass/CG closure round, HW-03);
+            # A2-70 where the bolt is tapped in an aluminium fitting (verification REG-04: fin rear lug in F-FW-CORNER)
+            self.assertTrue(all("12.9" in f.spec or "Ti-6Al-4V" in f.spec or
+                                (f.spec.endswith("A2-70") and "tapped" in f.nut) for f in joined), pid)
 
     def test_stub_front_lug_in_clevis_slot(self):
         """The stub front-spar fitting lug lies between the CH-098 ears (0.1 mm each side) and seats on the slot

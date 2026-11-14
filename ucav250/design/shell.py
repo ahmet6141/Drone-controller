@@ -686,6 +686,8 @@ class Cand:
     note: str = ""
     step: int = 0
     head: str = "ISO 7380"
+    grade: str = "Ti-6Al-4V"            # screw grade (verification REG-02: the tear-away strip screws are PA66)
+    torque_nm: float | None = None      # installation torque when the grade's table does not apply (polymer screws)
 
 
 class Fix:
@@ -1012,11 +1014,12 @@ class Fix:
                 f = J.rivet(reg, fid, float(c.size) * 1e-3, head, a, thick, step=c.step, notes=c.note,
                             spec="blind rivet (CherryMAX class, A286 / monel)")
             elif c.kind == "ins":
-                f = J.bolt(reg, fid, int(c.size), head, a, thick[:-1], head=c.head, grade="Ti-6Al-4V", nut="insert",
-                           insert_part=thick[-1][0], insert_depth=thick[-1][1], step=c.step, notes=c.note)
+                f = J.bolt(reg, fid, int(c.size), head, a, thick[:-1], head=c.head, grade=c.grade, nut="insert",
+                           insert_part=thick[-1][0], insert_depth=thick[-1][1], step=c.step, notes=c.note,
+                           torque_nm=c.torque_nm)
             else:
-                f = J.bolt(reg, fid, int(c.size), head, a, thick, head=c.head, grade="Ti-6Al-4V", nut="nutplate",
-                           step=c.step, notes=c.note, orient=c.orient)
+                f = J.bolt(reg, fid, int(c.size), head, a, thick, head=c.head, grade=c.grade, nut="nutplate",
+                           step=c.step, notes=c.note, orient=c.orient, torque_nm=c.torque_nm)
         except ValueError as exc:
             if dry:
                 self._restore(holes, fl, thick)
@@ -2449,6 +2452,29 @@ DENSE = 0.002                   # dense sampling step of a row line before the p
 RING_EXTRA = {"P-GNSS2": 0.002}  # small RF window on the V-roof: its row 2 mm further in
 
 
+SPINE_ROW_Y = 0.045 + GAP + EDGE_M4   # spine flange row: 10.5 mm outboard of the tear-away strip edge (y 0.045)
+SPINE_ROW_END = 0.034                  # row ends 34 mm from the FS1810 / FS-FUEL station planes (frame cap rows there)
+# tear-away strip screws (REG-02): PA66 (Celanese Zytel 101L class, spec.materials pa66_zytel_101l); installation
+# torque = nut factor 0.2 x preload x d with the preload at 25 % of the screw's dry yield load (estimate: hand-tight,
+# the screw must not be pre-loaded towards its release load)
+TEAR_SCREW = {"grade": "PA66", "size": 3, "count": 4, "torque_nm": round(0.2 * 0.25 * 82e6 * 5.03e-6 * 0.003, 3)}
+
+
+def spine_row_span(sc_or_spec) -> tuple:
+    """x range of the M-SPINE flange row under P-MB-UPPER: the FS1810 and FS-FUEL station planes less SPINE_ROW_END
+    (shared with structures P-SPINE-SCREWS)."""
+    st = sc_or_spec.st if hasattr(sc_or_spec, "st") else \
+        {s_["id"]: s_ for s_ in sc_or_spec["layout"]["stations"]}
+    return float(st["FS1810"]["x"]) + SPINE_ROW_END, float(st["FS-FUEL"]["x"]) - SPINE_ROW_END
+
+
+def spine_row_count(spec: dict) -> int:
+    """Screws of the M-SPINE flange row (both flanges) as _resample lays them out at the P-MB-UPPER row pitch over
+    spine_row_span (the row runs along x on the near-flat roof: arc length ~ x length)."""
+    xa, xb = spine_row_span(spec)
+    return 2 * (int(math.floor((xb - xa) / PITCH_NUT + 1e-9)) + 1)
+
+
 def row_kind(sc: SC, key: str):
     """(kind, pitch) of a panel's fastener rows from its layout fastening type (fairings: M4 screws; their lands
     are 1.6 mm solid laminate, too thin for the 1.2 D thread of a potted insert, so floating nutplates are used)."""
@@ -2538,10 +2564,11 @@ class Rows:
             return pid[:-1] + "L"
         return pid
 
-    def _commit(self, pid: str, key: str, kind: str, p, a, orient, note: str, size: float = 4, step=None):
+    def _commit(self, pid: str, key: str, kind: str, p, a, orient, note: str, size: float = 4, step=None,
+                grade: str = "Ti-6Al-4V", torque_nm: float | None = None):
         st = step if step is not None else self.pans[key].step
         c1 = Cand(p=np.asarray(p, float), a=_unit(a), kind=kind, panel=pid, land="", size=size,
-                  orient=_unit(orient), note=note, step=st)
+                  orient=_unit(orient), note=note, step=st, grade=grade, torque_nm=torque_nm)
         group = [c1]
         if abs(float(p[1])) > 0.001:
             q = np.array([p[0], -p[1], p[2]])
@@ -2557,7 +2584,7 @@ class Rows:
                         break
             if mp is not None:
                 group.append(Cand(p=q, a=_unit(aq), kind=kind, panel=mp, land="", size=size, orient=_unit(oq),
-                                  note=note, step=st))
+                                  note=note, step=st, grade=grade, torque_nm=torque_nm))
         if self.fix.try_group(group):
             self.done += len(group)
             return True
@@ -2663,9 +2690,15 @@ class Rows:
     def member_rows(self):
         sc = self.sc
         M = sc.mem
-        # spine-channel flanges: the skins round the tear-away strip land on the outer part of the flanges
-        x0, x1 = (float(v) for v in M["M-SPINE"]["lands"][0]["x"])
-        self.line_rows(x0 + 0.004, x1 - 0.004, lambda x: 0.045 + GAP + EDGE_M4, "U", "M-SPINE flange row")
+        # spine-channel flanges: the mission-bay upper skin P-MB-UPPER lands on the outer part of the flanges beside the
+        # tear-away strip (FS1810 -> FS-FUEL; over the fuel bay the fuel panels' inner-edge M3 rows use the flanges,
+        # special_rows). Verification REG-03: the row is given to P-MB-UPPER explicitly (the plan-region owner test
+        # keeps 1.5 mm more than the 10.5 mm edge distance of the row and found no owner, so no screw was committed);
+        # span spine_row_span(), pitch of the panel's row kind (structures P-SPINE-SCREWS counts the same screws)
+        k_mb = "P-MB-UPPER"
+        xa, xb = spine_row_span(sc)
+        self.line_rows(xa, xb, lambda x: SPINE_ROW_Y, "U", "M-SPINE flange row",
+                       owner_fixed=(self.keys[k_mb], k_mb, row_kind(sc, k_mb)))
         # parachute-bay wall top flanges: surround skin outboard of the hatch
         ld = M["M-PARAWALL"]["lands"][0]
         self.line_rows(ld["x"][0] + 0.004, ld["x"][1] - 0.004, lambda x: 0.188 + GAP_LIFT + EDGE_M4, "U",
@@ -2763,12 +2796,15 @@ class Rows:
             i = int(np.argmin(np.abs(s_ - q)))
             t = np.cross([1.0, 0.0, 0.0], N[i])
             self._commit(keys["P-NOSECONE"], "P-NOSECONE", "nut", P[i], -N[i], t, "nose cone radial screw (FS0300)")
-        # tear-away strip: 4 nylon M3 shear screws into the spine-channel flanges (inner part)
+        # tear-away strip: 4 nylon M3 shear screws into the spine-channel flanges (inner part); verification REG-02:
+        # registered as polyamide (PA66) screws, hand-tight (TEAR_SCREW), so that the bridle pull releases the strip
+        # (structures P-SPINE-TEAR)
         lx = sc.mem["M-SPINE"]["lands"][0]["x"]
         for xx in (float(lx[0]) + 0.070, float(lx[1]) - 0.070):
             p, n = sc.oml_point(xx, 0.0325, "U")
             self._commit(keys["P-SPINE"], "P-SPINE", "nut", p, -n, [1.0, 0.0, 0.0],
-                         "nylon M3 shear screw (tear-away)", size=3)
+                         "nylon M3 shear screw (tear-away)", size=3, grade=TEAR_SCREW["grade"],
+                         torque_nm=TEAR_SCREW["torque_nm"])
         # fuel-bay panels, inner edge: the spine-channel flange reaches 17.5 mm under the panel (as built), so the
         # row is M3 (2.5 D = 7.5 mm to the panel edge and to the flange edge) at 22 mm (<= 8 D)
         o = outlines(sc)

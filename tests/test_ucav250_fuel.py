@@ -256,16 +256,58 @@ class TestFuelBuild(unittest.TestCase):
         self.assertGreaterEqual(v_in, ff * fuel_kg / rho)
 
     def test_fuel_cg_on_the_layout_station(self):
-        """Fuel CG of the contents (equal fill fraction) on the layout fuel CG station and on the centre line."""
+        """Fuel CG of the contents: one free surface in the three communicating bladders (verification REG-01), the CG
+        recomputed here independently of the spec (verification REG-06: spec.mass.fuel_cg is written from these
+        contents, so comparing with it is circular): the design fuel volume is put into the bladder inner solids at a
+        common level found by bisection on the exact solids; the contents CG must match it, sit on the centre line and
+        below the bay centroid."""
+        from ucav250.core import geom as G
         M = sum(p.mass_kg for p in self.contents.values())
         cg = sum(p.mass_kg * p.mesh.mass_props(1.0)["cg"] for p in self.contents.values()) / M
-        ref = np.asarray(self.spec["mass"]["fuel_cg"], float)
-        self.assertLess(abs(cg[0] - ref[0]), 0.01)
+        rho = float(self.spec["engine"]["fuel"]["density_kg_per_m3"])
+        v_t = float(self.spec["mass"]["fuel_kg"]) / rho
+        inner = [c.inner_solid() for c in self.F.cell.values()]
+
+        def below(z):
+            out = []
+            for m in inner:
+                lo, hi = m.bounds()
+                if z <= lo[2]:
+                    continue
+                r = G.intersection(m, FU.box3(lo - 0.01, (hi[0] + 0.01, hi[1] + 0.01, z)))
+                if r is not None and r.volume() > 0:
+                    out.append(r)
+            return out
+        a = min(m.bounds()[0][2] for m in inner)
+        b = max(m.bounds()[1][2] for m in inner)
+        for _ in range(32):
+            z = 0.5 * (a + b)
+            if sum(r.volume() for r in below(z)) < v_t:
+                a = z
+            else:
+                b = z
+        rs = below(0.5 * (a + b))
+        ref = sum(r.volume() * r.mass_props(1.0)["cg"] for r in rs) / sum(r.volume() for r in rs)
+        self.assertLess(float(np.abs(cg - ref).max()), 0.002)
         self.assertLess(abs(cg[1]), 0.001)
-        # mass/CG closure round: spec.mass.fuel_cg is now the registry fuel-contents centroid (spec.mass.registry.fuel),
-        # so the "below the bay" check uses the fuel-cell centroid height of the sizing (mean of the cell box mid-heights)
+        # one free surface: the tops of the contents agree
+        tops = [float(p.mesh.bounds()[1][2]) for p in self.contents.values()]
+        self.assertLess(max(tops) - min(tops), 0.0005)
         z_bay = float(np.mean([0.5 * (c["z"][0] + c["z"][1]) for c in self.spec["layout"]["fuel_cells"]]))
         self.assertLessEqual(cg[2], z_bay)             # fuel settles below the bay centroid
+
+    def test_fuel_level_table(self):
+        """REG-01: the level table (Registry.tables fuel_levels) ascends in mass up to the full bladders, reproduces the
+        contents at the design load and moves the CG aft as the fuel burns (the aft feed cell keeps the last fuel)."""
+        T = np.asarray(self.reg.tables["fuel_levels"], float)
+        self.assertTrue(np.all(np.diff(T[:, 0]) > 0))
+        rho = float(self.spec["engine"]["fuel"]["density_kg_per_m3"])
+        v_in = sum(c.inner_solid().volume() for c in self.F.cell.values())
+        self.assertAlmostEqual(T[-1, 0], v_in * rho, delta=0.01 * v_in * rho)
+        M = sum(p.mass_kg for p in self.contents.values())
+        cg = sum(p.mass_kg * p.mesh.mass_props(1.0)["cg"] for p in self.contents.values()) / M
+        x_t = float(np.interp(M, T[:, 0], T[:, 1]))
+        self.assertLess(abs(x_t - cg[0]), 0.005)
 
     # ------------------------------------------------------------------ purchased data
     def test_purchased_data_from_components(self):
@@ -301,7 +343,10 @@ class TestFuelBuild(unittest.TestCase):
         for f in fs:
             for pid in f.joins:
                 self.assertIn(pid, self.reg.parts, f.id)
-            self.assertRegex(f.spec, r"^ISO (4762|7380) M[34]x\d+-Ti-6Al-4V$", f.id)   # mass/CG closure round: Ti
+            # mass/CG closure round: Ti; verification REG-04: A2-70 where the thread is tapped in aluminium
+            self.assertRegex(f.spec, r"^ISO (4762|7380) M[34]x\d+-(Ti-6Al-4V|A2-70)$", f.id)
+            if f.spec.endswith("A2-70"):
+                self.assertIn("REG-04", f.notes, f.id)
             self.assertEqual(f.step, STEP, f.id)
             self.assertIn(f"YK250-HW-{f.id}", self.reg.parts)
 

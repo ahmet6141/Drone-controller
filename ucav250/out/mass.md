@@ -12,29 +12,29 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | mtow_design_payload_turret_retracted | 149,90 | 7,26 | 2,6013 | -0,7 | 0,0275 | 4,9 | 68,4 | 127,1 | 188,0 |
 | mtow_design_payload_turret_extended | 149,90 | 7,26 | 2,6013 | -0,7 | 0,0258 | 4,9 | 68,5 | 127,1 | 188,0 |
-| mtow_max_payload_turret_retracted | 149,90 | 18,26 | 2,6025 | -0,7 | 0,0142 | 5,2 | 68,3 | 126,4 | 186,7 |
-| mtow_max_payload_turret_extended | 149,90 | 18,26 | 2,6025 | -0,7 | 0,0124 | 5,2 | 68,4 | 126,5 | 186,8 |
+| mtow_max_payload_turret_retracted | 149,90 | 18,26 | 2,6024 | -0,7 | 0,0142 | 5,2 | 68,3 | 126,4 | 186,7 |
+| mtow_max_payload_turret_extended | 149,90 | 18,26 | 2,6024 | -0,7 | 0,0124 | 5,2 | 68,4 | 126,5 | 186,8 |
 | full_fuel_baseline_sensors_only | 149,81 | 1,51 | 2,6012 | -0,7 | 0,0359 | 4,9 | 68,5 | 127,4 | 188,7 |
 | zero_fuel_design_payload | 119,71 | 7,26 | 2,6002 | -0,8 | 0,0299 | 4,7 | 67,4 | 124,6 | 184,5 |
-| zero_fuel_max_payload | 130,71 | 18,26 | 2,6024 | -0,8 | 0,0165 | 5,2 | 67,7 | 124,8 | 184,5 |
+| zero_fuel_max_payload | 130,71 | 18,26 | 2,6024 | -0,8 | 0,0166 | 5,2 | 67,7 | 124,8 | 184,5 |
 | reserve_fuel_design_payload | 123,33 | 7,26 | 2,6017 | -0,8 | 0,0297 | 5,0 | 67,5 | 124,8 | 184,9 |
-| minimum_flying_turret_only | 115,48 | 0,01 | 2,6061 | -0,9 | 0,0395 | 5,9 | 67,3 | 124,2 | 184,4 |
+| minimum_flying_turret_only | 115,48 | 0,01 | 2,6060 | -0,9 | 0,0395 | 5,9 | 67,3 | 124,2 | 184,4 |
 | e180_growth_turret_full_fuel | 149,90 | 7,26 | 2,5802 | -0,7 | 0,0243 | 0,6 | 68,6 | 131,4 | 192,3 |
 
 ## sizing.mass_cases ile karşılaştırma (öz denetim)
 
 | Durum | Δx (mm) | Δz (mm) | Iyy kayıt defteri (kg·m²) |
 |---|---:|---:|---:|
-| mtow_design_payload_turret_retracted | 0,05 | 0,00 | 127,1 |
-| mtow_design_payload_turret_extended | 0,05 | 0,00 | 127,1 |
-| mtow_max_payload_turret_retracted | 0,05 | 0,00 | 126,4 |
-| mtow_max_payload_turret_extended | 0,05 | 0,00 | 126,5 |
-| full_fuel_baseline_sensors_only | 0,04 | 0,00 | 127,4 |
-| zero_fuel_design_payload | 0,06 | 0,00 | 124,6 |
-| zero_fuel_max_payload | 0,05 | 0,00 | 124,8 |
-| reserve_fuel_design_payload | 0,06 | 0,00 | 124,8 |
-| minimum_flying_turret_only | 0,06 | 0,00 | 124,2 |
-| e180_growth_turret_full_fuel | 0,05 | 0,00 | 131,4 |
+| mtow_design_payload_turret_retracted | 0,03 | 0,01 | 127,1 |
+| mtow_design_payload_turret_extended | 0,03 | 0,01 | 127,1 |
+| mtow_max_payload_turret_retracted | 0,03 | 0,01 | 126,4 |
+| mtow_max_payload_turret_extended | 0,03 | 0,01 | 126,5 |
+| full_fuel_baseline_sensors_only | 0,03 | 0,00 | 127,4 |
+| zero_fuel_design_payload | 0,03 | 0,01 | 124,6 |
+| zero_fuel_max_payload | 0,03 | 0,01 | 124,8 |
+| reserve_fuel_design_payload | 0,03 | 0,01 | 124,8 |
+| minimum_flying_turret_only | 0,03 | 0,01 | 124,2 |
+| e180_growth_turret_full_fuel | 0,03 | 0,01 | 131,4 |
 
 ## Gruplar
 

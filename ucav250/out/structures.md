@@ -181,8 +181,8 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | CT-WEBCRIMP-RS | orta kutu gövdesi FS-RS: kesme kıvrılması | YD-10 | 7,61 | 95,61 | N/mm | FoS 1,5 x kompozit 1,2 | 5,978 | N = G_c d^2 / c |
 | CT-ATT-BR-MS | kutu - FS-MS çerçevesi bağlantısı taraf başına 4 x M6 Ti: çerçeve kenar bandında ezilme (3,2 mm dolu lamine) | YD-11 | 740,0 | 8012,8 | N | FoS 1,5 x kompozit 1,2 | 5,015 | QI ezilme (%2 öteleme) ETW (materials.yaml design_values_for_code) |
 | CT-ATT-SH-MS | kutu - FS-MS cıvataları M6 Ti, tek kesme | YD-11 | 740,0 | 16960 | N | FoS 1,5 x bağlantı 1,15 | 12,286 | Ti-6Al-4V Fsu |
-| CT-ATT-BR-RS | kutu - FS-RS çerçevesi bağlantısı taraf başına 4 x M6 Ti: çerçeve kenar bandında ezilme (3,2 mm dolu lamine) | YD-11 | 335,7 | 8012,8 | N | FoS 1,5 x kompozit 1,2 | 12,262 | QI ezilme (%2 öteleme) ETW (materials.yaml design_values_for_code) |
-| CT-ATT-SH-RS | kutu - FS-RS cıvataları M6 Ti, tek kesme | YD-11 | 335,7 | 16960 | N | FoS 1,5 x bağlantı 1,15 | 28,292 | Ti-6Al-4V Fsu |
+| CT-ATT-BR-RS | kutu - FS-RS çerçevesi bağlantısı taraf başına 4 x M6 Ti: çerçeve kenar bandında ezilme (3,2 mm dolu lamine) | YD-11 | 335,6 | 8012,8 | N | FoS 1,5 x kompozit 1,2 | 12,263 | QI ezilme (%2 öteleme) ETW (materials.yaml design_values_for_code) |
+| CT-ATT-SH-RS | kutu - FS-RS cıvataları M6 Ti, tek kesme | YD-11 | 335,6 | 16960 | N | FoS 1,5 x bağlantı 1,15 | 28,293 | Ti-6Al-4V Fsu |
 | CT-KINK | y = 0 orta kırık bağlantısı (7075): ana başlık başına veter yönü kırılma kuvveti | YD-12 | 17308 | – | N | - | gereksinim | F = 2 F_cap sin(kink); kırık bağlantısıyla sandviç kapaklara ve FS-MS gövdesine aktarılır (detay tasarım) |
 | CT-KINK-COVER | kutu kapaklarının orta kırığı: kapak başına veter yönü kırılma kuvveti | YD-12 | 2907,0 | – | N | - | gereksinim | F = 2 N_cover w sin(kink), N_cover 37,1 N/mm over w 281 mm; added to CT-KINK-RIB / -BR / -RIBWEB (fix round 3, VS3-03) |
 | CT-KINK-BOLTS | kırık bağlantısı kulağı - orta hat kaburgası: 5 x M6 Ti, tek kesme | YD-13 | 3461,7 | 16960 | N | FoS 1,5 x bağlantı 1,15 | 1,840 | Ti-6Al-4V Fsu - fix round 2, VS2-03 |
@@ -280,7 +280,7 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | G-NLEG | burun bacağı 36 x 3,0 mm 7075, mafsal çatalında eğilme + eksenel (belirleyici: three_point_spin_up) | YD-31 | 83,63 | 537,8 | MPa | FoS 1,5 | 3,287 | elastik, Ftu |
 | G-NPIVOT-BR | burun mafsal blokları (7075, 2 x 6 mm, flanşlı burç dış çapı 22, e/D 0,91): burcun bloklarda kesme-ezilmesi (belirleyici: three_point_level) | YD-31 | 1370,3 | 51546 | N | FoS 1,5 x ezilme 2 | 11,539 | Bruhn D1.5 lug at the actual e/D (K_br 0,37, F_tu); ezilme katsayısı 2,0 |
 | G-NPIVOT-PIN | burun mafsal muyluları 2 x Ø16 (4130, dolu, flanşlı), her biri tek kesme | YD-31 | 1370,3 | 158035 | N | FoS 1,5 x bağlantı 1,15 | 65,859 | MMPDS 4130 Fsu; the pivot load shared by the two axles |
-| G-NPIVOT-AXLE-BEND | burun mafsal muylusu Ø16 eğilmesi: mafsal yükünün yarısı, çatal kolu yüzünden burç merkezine 9 mm kol (konsol), elastik | YD-31 | 15,33 | 655,0 | MPa | FoS 1,5 x bağlantı 1,15 | 23,763 | M = (P/2) arm, sigma = 32 M / (pi d^3); MMPDS 4130 Ftu (no plastic bending credit) - fix round 2, PK2-04 stub-axle scheme |
+| G-NPIVOT-AXLE-BEND | burun mafsal muylusu Ø16 eğilmesi: mafsal yükünün yarısı, çatal kolu yüzünden burç merkezine 9 mm kol (konsol), elastik | YD-31 | 15,33 | 655,0 | MPa | FoS 1,5 x bağlantı 1,15 | 23,762 | M = (P/2) arm, sigma = 32 M / (pi d^3); MMPDS 4130 Ftu (no plastic bending credit) - fix round 2, PK2-04 stub-axle scheme |
 | G-TOW-NLEG | çekme yükü altında burun bacağı (çatal dingili; belirleyici: +30 deg from the aft drag axis) | YD-32 | 60,61 | 537,8 | MPa | FoS 1,5 | 4,915 | elastik, Ftu - fix round 2, VS2-12 |
 | G-TOW-PIVOT | çekme yükü altında burun mafsal blokları (burçların kesme-ezilmesi) | YD-32 | 441,0 | 51546 | N | FoS 1,5 x ezilme 2 | 37,961 | Bruhn D1.5 lug (as G-NPIVOT-BR); ezilme katsayısı 2,0 |
 | G-NPIVOT-WALL | burun mafsal bloğu - omurga duvarı: taraf başına 4 x M6 Ti, CFRP bantta ezilme (t 3,2 mm) | YD-31 | 256,9 | 8012,8 | N | FoS 1,5 x kompozit 1,2 | 16,326 | en yüklü cıvata 1,5 x ortalama; QI ezilme ETW |
@@ -374,7 +374,7 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | B-DORSAL | sırt uzun kirişi (şapka 25 x 20 x 2,0, UD başlık + PW) FS-GEAR'de, birim şekil değiştirme (<= 2 mm) | YD-49 | 601,7 | 2600,0 | µε | FoS 1,5 | 1,881 | STANAG UL13.1.2; yalnız uzun kirişler (kaplamalar = kesme gövdeleri) |
 | B-CHINE-AFT | kenar uzun kirişi (J 35 x 30 x 2,4) FS-GEAR'de, birim şekil değiştirme (> 2 mm) | YD-49 | 451,6 | 3000,0 | µε | FoS 1,5 | 3,428 | STANAG UL13.1.2 |
 | B-DORSAL-COL | FS-GEAR ile FS3480 arasında sırt uzun kirişi kolonu (L 0,387 m, yalnız şapka, PW modülü, mafsallı) | YD-49 | 6928,9 | 41872 | N | FoS 1,5 x kompozit 1,2 | 2,357 | Euler; bağlı kaplama (25-32 mm somun plakaları) hesaba katılmadı |
-| B-CHINE-FWD | FS-FUEL'de kenar uzun kirişi, birim şekil değiştirme (> 2 mm) | YD-50 | 486,2 | 3000,0 | µε | FoS 1,5 | 3,114 | STANAG UL13.1.2 |
+| B-CHINE-FWD | FS-FUEL'de kenar uzun kirişi, birim şekil değiştirme (> 2 mm) | YD-50 | 486,1 | 3000,0 | µε | FoS 1,5 | 3,114 | STANAG UL13.1.2 |
 | B-MIDFLOOR | alt başlık olarak görev bölmesi tabanı M-MIDFLOOR (tepsi kesiği dışında sabit dış şeritler net 0,470 m, rib_panel yüzleri), birim şekil değiştirme (sandviç) | YD-50 | 896,3 | 2600,0 | µε | FoS 1,5 | 0,934 | STANAG UL13.1.2 |
 | B-MIDFLOOR-BUCK | görev bölmesi taban şeridi 0,38 x 0,235 m, kenar uzun kirişi ile kesik kenarı takviyesi arasında (2 yapıştırılmış şapka takviye) burkulma (bası) | YD-50 | 1 | 2,29 | yük çarpanı | FoS 1,5 x kompozit 1,2 | 0,273 | CLT D*, sandviç kesme düzeltmesi; SS edges |
 | B-SKIN-SHEAR | sabit arka kaplamalar P-AFT-UPPER / -LOWER (shell_secondary 0,4/5/0,4): yüz kesmesi, ilk katman hasarı | YD-51 | 12,40 | 97,04 | N/mm | FoS 1,5 x kompozit 1,2 | 3,347 | CLT |
@@ -590,8 +590,8 @@ Grup tavanları (mass.budget) ve sizing tahminleri (büyüme payı dahil):
 | hardware | 5,37 | 5,36 | 0,00921 |
 | propulsion | 13,57 | 13,57 | 0,0015 |
 | shell | 10,98 | 10,97 | 0,0064 |
-| systems | 15,33 | 15,32 | 0,0072 |
-| tail | 7,74 | 7,73 | 0,00592 |
+| systems | 15,33 | 15,32 | 0,007 |
+| tail | 7,74 | 7,73 | 0,00595 |
 | wing | 12,92 | 12,91 | 0,007 |
 
 ## Arayüz kontrolleri

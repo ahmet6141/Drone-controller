@@ -21,9 +21,9 @@ Bu rapor `python3 -m ucav250.analysis.layout_check` tarafından `ucav250/spec.ya
 | C02 | longeron notches (7 member crossings of straight frame webs): every crossing in a declared notch open to the frame edge, member section inside with >= 0.5 mm, insertion + shear clip + U-doubler declared (fix round 3, PK3-04) | 0 | 0 | GEÇTİ |
 | C02 | çerçeveler yakıt, taret, takım kuyusu, yük/paraşüt/teçhizat hacimlerini kesmiyor | 0 | 0 | GEÇTİ |
 | C02 | yakıt bölmeleri ok açılı kiriş çerçevelerini izliyor (çerçeve gövdesine boşluk) | 6,7 | >= 0 mm | GEÇTİ |
-| C02 | fuel bay volume of the chevron bays vs required (mass.fuel_kg, expansion space) | 50,92 | >= 41,68 L | GEÇTİ |
+| C02 | fuel bay volume of the chevron bays vs required (mass.fuel_kg, expansion space) | 50,92 | >= 41,67 L | GEÇTİ |
 | C02 | fuel system plumbing: every cell has a top vent valve and a floor sump / outlet, the feed pickup is in the feed cell, the interconnects into it carry check valves (fix round 3, PK3-01) | 0 | 0 | GEÇTİ |
-| C02 | ok açılı bölmelerin kullanılabilir yakıt hacmi >= gerekli hacim | 50,51 | >= 41,68 L | GEÇTİ |
+| C02 | ok açılı bölmelerin kullanılabilir yakıt hacmi >= gerekli hacim | 50,51 | >= 41,67 L | GEÇTİ |
 | C02 | unusable fuel (layer below the outlets x efficiency + contents of the non-vent lines, line OD as bore: conservative) <= trapped fuel booked by the sizing mission model (fuel_kg f / (1 + f), mission.trapped_fuel_fraction; fix round 3, PK3-01) | 0,493 | <= 0,593 kg | GEÇTİ |
 | C02 | kablo, yakıt hattı, itme çubuğu ve kayış geçişleri tanımlı çerçeve kesiklerinden | 0 | 0 | GEÇTİ |
 | C03 | teçhizat zarfları dış yüzeyin (OML) içinde, 10 mm pay | 1,1 | >= max(10 mm, skin + 2 mm) (value: worst margin, mm) | GEÇTİ |

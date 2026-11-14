@@ -16,8 +16,9 @@ is of the designation's grade (``Part.material``); the far side (nut + nut washe
 own alloy: the grade token of the nut designation if it has one, else a nutplate / potted insert / anchor is A-286
 class stainless (materials.yaml: fasteners in CFRP are titanium, A286 or passivated stainless) and a nut is of the
 screw's alloy family, except under a titanium screw, where it is an A-286 class stainless nut (no titanium nuts are
-assumed); a quarter-turn receptacle is of the stud's alloy. ``Part.mass_fn`` = screw volume x screw density + far-side
-volume x far-side density (geometry, no factor); the part's notes name the far-side alloy.
+assumed); a quarter-turn receptacle is of the stud's alloy. ``Part.mass_fn`` = (screw envelope volume - thread-groove
+volume at the pitch diameter, HW-07) x screw density + far-side volume x far-side density (geometry, no factor); the
+part's notes name the far-side alloy.
 """
 from __future__ import annotations
 
@@ -64,7 +65,7 @@ def _thread_length(f: Fastener, size: int) -> float:
     return min(f.length, 2.0 * f.d + extra)
 
 
-def _bolt_elements(f: Fastener) -> tuple[Mesh, Mesh | None]:
+def _bolt_elements(f: Fastener) -> tuple[Mesh, Mesh | None, float]:
     a = unit(f.axis)
     p = np.asarray(f.position, float)
     size = C.size_from_spec(f.spec) or max(3, int(round(f.d * 1000)))
@@ -136,7 +137,7 @@ def _bolt_elements(f: Fastener) -> tuple[Mesh, Mesh | None]:
     return head_group, union(parts), groove
 
 
-def _quarter_turn_elements(f: Fastener) -> tuple[Mesh, Mesh | None]:
+def _quarter_turn_elements(f: Fastener) -> tuple[Mesh, Mesh | None, float]:
     a = unit(f.axis)
     p = np.asarray(f.position, float)
     Q = C.QUARTER_TURN

@@ -109,7 +109,7 @@
    "item": "fuel bay volume of the chevron bays vs required (mass.fuel_kg, expansion space)",
    "ok": true,
    "value": 50.92,
-   "limit": ">= 41.68 L",
+   "limit": ">= 41.67 L",
    "detail": "tank efficiency 0.85"
   },
   {
@@ -125,7 +125,7 @@
    "item": "usable fuel volume above the cell outlets (layout.fuel_system.cells.outlet_z) vs required (mass.fuel_kg, expansion space; fix round 3, PK3-01)",
    "ok": true,
    "value": 50.51,
-   "limit": ">= 41.68 L",
+   "limit": ">= 41.67 L",
    "detail": "tank efficiency 0.85; below the outlets 0.41 L"
   },
   {
@@ -450,7 +450,7 @@
     -0.0
    ],
    "limit": "<= 1 mm",
-   "detail": "spec CG [2.6301, -0.0012, 0.0307] m, layout CG [2.6301, -0.0012, 0.0307] m, empty 108.16 kg"
+   "detail": "spec CG [2.6301, -0.0012, 0.0307] m, layout CG [2.6301, -0.0012, 0.0307] m, empty 108.17 kg"
   },
   {
    "check": "C07",
@@ -937,6 +937,6 @@
    -0.0012,
    0.0307
   ],
-  "empty_kg": 108.163
+  "empty_kg": 108.169
  }
 }

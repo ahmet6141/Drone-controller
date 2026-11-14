@@ -223,7 +223,7 @@ eşitlendi). Taret açıklık halkası SH-363 sistem grubunun taret kalemindedir
 ISO 7380 Ti-6Al-4V (somun plakaları ve gömme somunlar A-286 sınıfı paslanmaz; kütle iki alaşımlı), sıra aralıkları
 yapısal kaplamalarda 28 → 32 mm (`PITCH_NUT`, = 8 D; B-SCREW-SH / B-SCREW-BR zaten 32 mm ile hesaplanır), yakıt
 panellerinde 28 → 30 mm (`PITCH_FUEL`), Camloc kapaklarında 85 → 100 mm (`PITCH_CAM`); kabuk bağlantı elemanı sayısı
-52 azaldı. Kabuk bağlantı elemanları `hardware` grubundadır (uçak geneli 5,25 kg).
+50 azaldı (P-CENTRE-UPPER'in FS-GEAR şeridi ≥ 4 vida için 28 mm'de kaldı, `PITCH_KEEP4`). Kabuk bağlantı elemanları `hardware` grubundadır (uçak geneli 5,25 kg; tavan 5,26 kg).
 
 ## 10. Layout'tan sapmalar (gerekçeli)
 

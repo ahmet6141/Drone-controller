@@ -278,7 +278,7 @@ contalar **tahmindir** (parça notlarında belirtilir).
 Bu turda: alt bağlantı ve braket vidaları Ti-6Al-4V; arka hücre boşaltma hattı FL-DRAIN-A'nın iniş noktası iskele
 DA 30'un arkasında FS-GEAR + 0,173 m'dedir (eyleyici FS-GEAR'a bağlı, kapanış FS-GEAR'ı 1,3 mm geri aldı). Kapanışta
 yakıt ağırlık merkezi artık kayıt defterindeki yakıt içeriğinin merkezidir (`spec.mass.fuel_cg` =
-`spec.mass.registry.fuel`, tasarım yakıtı 30,24 kg).
+`spec.mass.registry.fuel`, tasarım yakıtı 30,23 kg).
 
 ## 13. Layout değişiklikleri (yakıt ayrıntılı tasarımı sırasında; builder üzerinden)
 

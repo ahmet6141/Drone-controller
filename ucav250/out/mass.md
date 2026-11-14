@@ -128,7 +128,3 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 | YK250-WG-154-L | 0,862 |
 | YK250-PR-510 | 0,800 |
 | YK250-SH-383 | 0,781 |
-
-## Sorunlar
-
-- spec.mass.registry fuel stale: 30.237 kg [2.6122, 0.0, 0.0115] vs registry 30.231 kg [2.6122, 0.0, 0.0115]

@@ -1790,7 +1790,7 @@ landing_gear:
     prop_clear_flat_tyre_bottomed: 0.0592493
     prop_strike_deg: 13.1146
     bumper_contact_deg: 9.17187
-    theta_lof_deg: 3.78411
+    theta_lof_deg: 3.78412
     theta_td_deg: 4.87165
     theta_flare_deg: 6.87165
     wingtip_ground_roll_deg: 10.2124
@@ -2001,13 +2001,13 @@ aero:
     loiter: out/sizing.json#aero.polars.loiter (trimmed CL-CD table, design CG; fit cd0/k/e)
     gear_down: out/sizing.json#aero.polars.gear_down (trimmed CL-CD table, design CG; fit cd0/k/e)
   power_on_trim:
-    max_abs_tail_cl_local: 0.693564
+    max_abs_tail_cl_local: 0.693567
     governing:
       case: e180_growth_turret_full_fuel
       V: 24.1893
       T: 331.609
-      tail_cl_local: 0.693564
-      thrust_arm_m: 0.0875062
+      tail_cl_local: 0.693567
+      thrust_arm_m: 0.0875086
       x_cg: 2.58035
       CL_wb: 1.41366
       gear: extended
@@ -2032,9 +2032,9 @@ mass:
   mtow_kg: 149.9
   mtow_cap_kg: 149.9
   empty_kg: 108.169
-  fuel_kg: 30.2312
+  fuel_kg: 30.2313
   payload_kg: 11.5
-  fuel_cg: [2.61218, 0.0, 0.011505]
+  fuel_cg: [2.61218, 0.0, 0.011493]
   budget:
     chassis:
       target_kg: 19.86
@@ -2122,14 +2122,14 @@ mass:
     payload: [eo_ir_turret_hd59_mount, mission_computer_recorder, payload_tray_harness, research_payload_allowance]
     note: 'payload: list of mass.payload_items names (truthy = with payload for analysis/mass.py)'
   - name: mtow_max_payload_turret_retracted
-    fuel_fraction: 0.718835
+    fuel_fraction: 0.718833
     fuel_rule: mtom
     turret: retracted
     payload: [eo_ir_turret_hd59_mount, mission_computer_recorder, payload_tray_harness, research_payload_allowance, research_payload_max_increment]
     note: 'payload: list of mass.payload_items names (truthy = with payload for analysis/mass.py); fuel_rule mtom: fuel
       fraction = (MTOM - zero-fuel mass) / mass.fuel_kg (derived)'
   - name: mtow_max_payload_turret_extended
-    fuel_fraction: 0.718835
+    fuel_fraction: 0.718833
     fuel_rule: mtom
     turret: extended
     payload: [eo_ir_turret_hd59_mount, mission_computer_recorder, payload_tray_harness, research_payload_allowance, research_payload_max_increment]
@@ -2840,11 +2840,11 @@ mass:
       at its centroid; replaced by the registry item below (mass/CG closure round)'
   - name: tail_detail_design_registry
     group: tail
-    mass_base_kg: 7.42828
-    mass_kg: 7.42828
+    mass_base_kg: 7.42826
+    mass_kg: 7.42826
     x: 3.78244
     y: -0.000134
-    z: 0.334477
+    z: 0.334479
     basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2416 parts): measured tail
       group mass and centroid, no growth allowance'
   - name: wing_concept_estimate_withdrawn
@@ -2979,14 +2979,14 @@ mass:
         mass_kg: 15.2078
         cg: [1.44537, -0.004381, -0.007502]
       tail:
-        mass_kg: 7.42828
-        cg: [3.78244, -0.000134, 0.334477]
+        mass_kg: 7.42826
+        cg: [3.78244, -0.000134, 0.334479]
       wing:
         mass_kg: 12.2905
         cg: [2.76967, -0.003285, 0.052448]
     fuel:
-      mass_kg: 30.2374
-      cg: [2.61218, 0.0, 0.011505]
+      mass_kg: 30.2313
+      cg: [2.61218, 0.0, 0.011493]
     payload_parts:
       eo_ir_turret_hd59_mount:
         mass_kg: 1.73632
@@ -2999,50 +2999,50 @@ stability:
   mac: 0.483876
   mac_le_x: 2.57816
   np_x: 2.65636
-  cg_design: [2.6055, -0.000862303, 0.0152831]
+  cg_design: [2.6055, -0.000862302, 0.0152807]
   cg_range_x: [2.58434, 2.60779]
   static_margin_range: [0.100366, 0.148841]
   cases_cg:
   - name: mtow_design_payload_turret_retracted
     m: 149.9
     x: 2.6055
-    z: 0.0152831
+    z: 0.0152807
   - name: mtow_design_payload_turret_extended
     m: 149.9
     x: 2.6055
-    z: 0.0137888
+    z: 0.0137864
   - name: mtow_max_payload_turret_retracted
     m: 149.9
     x: 2.60652
-    z: 0.00733287
+    z: 0.00733118
   - name: mtow_max_payload_turret_extended
     m: 149.9
     x: 2.60652
-    z: 0.00583854
+    z: 0.00583685
   - name: full_fuel_baseline_sensors_only
     m: 147.266
     x: 2.60438
-    z: 0.0232052
+    z: 0.0232023
   - name: zero_fuel_design_payload
     m: 119.669
     x: 2.60382
-    z: 0.0143657
+    z: 0.0143658
   - name: zero_fuel_max_payload
     m: 128.169
     x: 2.60556
-    z: 0.00487778
+    z: 0.00487784
   - name: reserve_fuel_design_payload
-    m: 123.297
+    m: 123.296
     x: 2.60406
-    z: 0.0160983
+    z: 0.016098
   - name: minimum_flying_turret_only
     m: 112.942
     x: 2.60779
-    z: 0.0281475
+    z: 0.0281473
   - name: e180_growth_turret_full_fuel
     m: 149.9
     x: 2.58434
-    z: 0.0123193
+    z: 0.0123169
   computed:
     np_x: 2.65636
     np_x_classic: 2.66682
@@ -3064,10 +3064,10 @@ stability:
 performance:
   reference:
     endurance_h: 10.2919
-    loiter_time_h: 7.98475
+    loiter_time_h: 7.98478
     range_km: 1144.36
     ceiling_service_m: 7106.81
-    roc_sl_m_s: 4.21503
+    roc_sl_m_s: 4.21502
     roc_3000m_m_s: 2.38435
     takeoff_ground_roll_m: 179.16
     takeoff_distance_15m_m: 325.884
@@ -3077,11 +3077,11 @@ performance:
     loiter_tas_3000m_m_s: 33.0569
     loiter_eas_m_s: 28.4777
     climb_time_to_loiter_altitude_min: 15.287
-    endurance_max_payload_h: 7.02353
+    endurance_max_payload_h: 7.02357
     loiter_fuel_flow_kg_h: 2.65245
     loiter_power_W: 4711.78
     loiter_rpm: 4946.6
-    mtow_for_10h_mission_kg: 147.892
+    mtow_for_10h_mission_kg: 147.891
     mission_loiter_start_tas_m_s: 32.4483
     mission_loiter_start_eas_m_s: 27.9534
     mission_loiter_start_rpm: 4853.83
@@ -3099,7 +3099,7 @@ performance:
     prop_clear_radial_m: 0.0313716
     prop_clear_longitudinal_m: 0.0286059
     generator_margin_loiter: 1.27614
-    stab_trim_cl_local_max: 0.693564
+    stab_trim_cl_local_max: 0.693567
     stab_hinge_peak_margin: 1.79318
   payload_endurance:
   - payload_kg: 3.25
@@ -3132,30 +3132,30 @@ performance:
     fuel_kg: 35.8469
     takeoff_mass_kg: 149.516
     endurance_h: 12.4943
-    loiter_time_h: 10.1801
+    loiter_time_h: 10.1802
     fuel_volume_limited: true
     turret: true
-    static_margin_range: [0.106621, 0.111451]
+    static_margin_range: [0.106621, 0.111452]
     permitted_loading: true
     e180_set_fits: true
     e180_peak_battery_draw_Wh: 160.886
-    e180_peak_supported_loiter_h: 8.04178
+    e180_peak_supported_loiter_h: 8.04176
     e180_peak_share_exceeded: true
-  - payload_kg: 5.8843
+  - payload_kg: 5.8844
     fuel_kg: 35.8469
     takeoff_mass_kg: 149.9
     endurance_h: 12.4746
     loiter_time_h: 10.1615
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.106487, 0.111258]
+    static_margin_range: [0.106487, 0.111259]
     permitted_loading: true
     e180_set_fits: true
     e180_peak_battery_draw_Wh: 159.06
     e180_peak_supported_loiter_h: 8.13053
     e180_peak_share_exceeded: true
   - payload_kg: 6.0
-    fuel_kg: 35.7312
+    fuel_kg: 35.7313
     takeoff_mass_kg: 149.9
     endurance_h: 12.4293
     loiter_time_h: 10.1164
@@ -3164,125 +3164,125 @@ performance:
     static_margin_range: [0.106458, 0.111201]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 158.298
+    e180_peak_battery_draw_Wh: 158.299
     e180_peak_supported_loiter_h: 8.13022
     e180_peak_share_exceeded: true
   - payload_kg: 7.5
-    fuel_kg: 34.2312
+    fuel_kg: 34.2313
     takeoff_mass_kg: 149.9
-    endurance_h: 11.8444
-    loiter_time_h: 9.53263
+    endurance_h: 11.8445
+    loiter_time_h: 9.53267
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.106088, 0.110462]
+    static_margin_range: [0.106088, 0.110463]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 148.443
+    e180_peak_battery_draw_Wh: 148.444
     e180_peak_supported_loiter_h: 8.12617
     e180_peak_share_exceeded: true
   - payload_kg: 10.0
-    fuel_kg: 31.7312
+    fuel_kg: 31.7313
     takeoff_mass_kg: 149.9
-    endurance_h: 10.8743
-    loiter_time_h: 8.56364
+    endurance_h: 10.8744
+    loiter_time_h: 8.56367
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.10547, 0.109273]
+    static_margin_range: [0.10547, 0.109274]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 132.085
+    e180_peak_battery_draw_Wh: 132.086
     e180_peak_supported_loiter_h: 8.11941
     e180_peak_share_exceeded: true
   - payload_kg: 11.5
-    fuel_kg: 30.2312
+    fuel_kg: 30.2313
     takeoff_mass_kg: 149.9
     endurance_h: 10.2919
-    loiter_time_h: 7.98475
+    loiter_time_h: 7.98478
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.105099, 0.108584]
+    static_margin_range: [0.105099, 0.108585]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 122.313
+    e180_peak_battery_draw_Wh: 122.314
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   - payload_kg: 12.0
-    fuel_kg: 29.7312
+    fuel_kg: 29.7313
     takeoff_mass_kg: 149.9
     endurance_h: 10.098
-    loiter_time_h: 7.7923
+    loiter_time_h: 7.79233
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.104976, 0.108358]
+    static_margin_range: [0.104976, 0.108359]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 119.064
+    e180_peak_battery_draw_Wh: 119.065
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   - payload_kg: 12.5
-    fuel_kg: 29.2312
+    fuel_kg: 29.2313
     takeoff_mass_kg: 149.9
-    endurance_h: 9.9044
-    loiter_time_h: 7.59986
+    endurance_h: 9.90444
+    loiter_time_h: 7.5999
     fuel_volume_limited: false
     turret: true
     static_margin_range: [0.104852, 0.108134]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 115.816
+    e180_peak_battery_draw_Wh: 115.817
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   - payload_kg: 15.0
-    fuel_kg: 26.7312
+    fuel_kg: 26.7313
     takeoff_mass_kg: 149.9
-    endurance_h: 8.9431
-    loiter_time_h: 6.64035
+    endurance_h: 8.94314
+    loiter_time_h: 6.64039
     fuel_volume_limited: false
     turret: true
     static_margin_range: [0.104235, 0.107041]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 99.6191
+    e180_peak_battery_draw_Wh: 99.6197
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   - payload_kg: 17.5
-    fuel_kg: 24.2312
+    fuel_kg: 24.2313
     takeoff_mass_kg: 149.9
-    endurance_h: 7.98158
-    loiter_time_h: 5.68079
+    endurance_h: 7.98161
+    loiter_time_h: 5.68083
     fuel_volume_limited: false
     turret: true
     static_margin_range: [0.103617, 0.105991]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 83.4215
+    e180_peak_battery_draw_Wh: 83.4221
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   - payload_kg: 20.0
-    fuel_kg: 21.7312
+    fuel_kg: 21.7313
     takeoff_mass_kg: 149.9
-    endurance_h: 7.02353
-    loiter_time_h: 4.72898
+    endurance_h: 7.02357
+    loiter_time_h: 4.72902
     fuel_volume_limited: false
     turret: true
     static_margin_range: [0.102999, 0.104982]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 67.4598
+    e180_peak_battery_draw_Wh: 67.4604
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   sensitivities_endurance_h:
-    bsfc_minus_12pct: 11.7253
-    bsfc_plus_12pct: 9.16577
-    cd0_plus_10pct_all_drag: 9.746
-    empty_plus_5pct: 8.20828
-    loiter_at_1000m: 9.72472
-    no_transit_loiter_only: 10.2431
-    turret_retracted_whole_mission: 10.4214
-    k_inst_0p90: 10.0999
+    bsfc_minus_12pct: 11.7254
+    bsfc_plus_12pct: 9.16581
+    cd0_plus_10pct_all_drag: 9.74604
+    empty_plus_5pct: 8.20832
+    loiter_at_1000m: 9.72475
+    no_transit_loiter_only: 10.2432
+    turret_retracted_whole_mission: 10.4215
+    k_inst_0p90: 10.1
     k_inst_0p95: 10.4143
     k_inst_0p97: 10.5318
-    low_load_fuel_flow_willans_line: 10.2315
+    low_load_fuel_flow_willans_line: 10.2316
   loiter_3000m:
     V: 33.0569
     EAS: 28.4777
@@ -3311,26 +3311,26 @@ performance:
     next_step_kg: 12.0
     endurance_at_next_step_h: 10.098
     consistent: true
-    endurance_margin_to_target_h: 0.0418716
-    empty_mass_headroom_kg: 0.107858
-    payload_at_target_kg_linear: 11.608
-    payload_headroom_kg: 0.107965
+    endurance_margin_to_target_h: 0.0419098
+    empty_mass_headroom_kg: 0.1083
+    payload_at_target_kg_linear: 11.6081
+    payload_headroom_kg: 0.108063
   max_payload_mission:
     payload_kg: 20.0
-    fuel_kg: 21.7312
+    fuel_kg: 21.7313
     takeoff_mass_kg: 149.9
-    endurance_h: 7.02353
-    loiter_time_h: 4.72898
+    endurance_h: 7.02357
+    loiter_time_h: 4.72902
     requirement_h: 9.5
     case: mtow_max_payload_turret_retracted
   low_load_bsfc_bound:
     endurance_h_bsfc_line: 10.2919
-    endurance_h_willans_line: 10.2315
+    endurance_h_willans_line: 10.2316
     descent_fuel_kg_bsfc_line: 0.236498
     descent_power_fraction_range_bsfc_line: [0.0512941, 0.0641872]
     descent_fuel_kg_willans_line: 0.361265
     descent_power_fraction_range_willans_line: [0.0514257, 0.0643102]
-    reserve_fuel_kg_bsfc_line: 2.02783
+    reserve_fuel_kg_bsfc_line: 2.02784
     reserve_power_fraction_range_bsfc_line: [0.178024, 0.179214]
     reserve_fuel_kg_willans_line: 2.04505
     reserve_power_fraction_range_willans_line: [0.178075, 0.179272]
@@ -3339,17 +3339,17 @@ performance:
     static_margin_min_rule: 0.1
     x_cg_aft_limit_m: 2.60797
     baseline_set_kg: 3.25
-    fuel_volume_break_payload_kg: 5.88426
+    fuel_volume_break_payload_kg: 5.88436
     fuel_capacity_kg: 35.8469
     e180_set_kg: 5.5
     no_payload:
-      static_margin_range: [0.054218, 0.0634494]
+      static_margin_range: [0.0542185, 0.0634492]
       permitted: false
-      nose_ballast_at_turret_mount_kg: 1.83509
+      nose_ballast_at_turret_mount_kg: 1.8351
       ballast_x_m: 1.22
     turret_only:
-      static_margin_range_full_tanks: [0.0983255, 0.100615]
-      fuel_max_for_R09_kg: 7.77412
+      static_margin_range_full_tanks: [0.0983254, 0.100615]
+      fuel_max_for_R09_kg: 7.77897
     rule_tr: izin verilen en hafif yükleme temel EO/IR setidir (taret + görev bilgisayarı + tepsi); yalnız taretle yakıt
       fuel_max_for_R09_kg ile sınırlıdır
   takeoff_pitch_inertia_effect:
@@ -3367,7 +3367,7 @@ performance:
       V_R_m_s: 25.12
       ground_roll_m: 180.675
       V_lof_m_s: 25.257
-      download_margin_min_N: 1.54775
+      download_margin_min_N: 1.54638
     delta_V_R_m_s: 0.16
     delta_ground_roll_m: 3.51451
 

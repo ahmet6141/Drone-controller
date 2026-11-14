@@ -31,14 +31,14 @@ python3 -m ucav250.analysis.sizing --render       # Workbench görüntüleri (do
 | Gövde | boy 4,00 m (pervane göbeğiyle 4,23 m), genişlik 0,80 m, yükseklik 0,46 m |
 | Pervane | Mejzlik 31x12 3B, Ø 0,787 m, 5° aşağı itki hattı, statik uç Mach 0,712; kurulum katsayısı k_inst 0,93 tahmini (küt kaporta tabanı; test yok, duyarlılık §6.5) |
 | Elektrik | SG750 marş/jeneratörü (DC = 800 W × rpm/7500 × 0,94); tampon batarya 12S2P Li-ion (Molicel P45B, 1,98 kg, 389 Wh); E180 tepe yükü bekleme boyunca jeneratör + batarya tepe destek payıyla (R-52 1,018; jeneratör açığı en çok 17 W) |
-| Dayanım | **10,29 h** tasarım görevinde, 11,5 kg görev yüküyle (R-02 ≥ 10 h; görev yükü kuralı ≥ 10,25 h; bekleme 7,99 h). Azami 20 kg yükle **7,03 h** (R-02b ≥ 9,5 h: **karşılanmıyor**, boş kütle 6,44 kg fazla). E180 büyüme görevi 10,05 h. Feribot menzili 1.145 km |
+| Dayanım | **10,29 h** tasarım görevinde, 11,5 kg görev yüküyle (R-02 ≥ 10 h; görev yükü kuralı ≥ 10,25 h; bekleme 7,98 h). Azami 20 kg yükle **7,02 h** (R-02b ≥ 9,5 h: **karşılanmıyor**, boş kütle 6,44 kg fazla). E180 büyüme görevi 10,04 h. Feribot menzili 1.144 km |
 | Aerodinamik | CD0 0,0351 (temiz), 0,0370 (taret dışarıda); (L/D)maks 17,3 / 16,8 |
 | Hızlar | VS 23,95 m/s (temiz, trimli, MTOM, en ön AM; kanat alanı kuralının hedefi 23,95 m/s). Görev beklemesi 27,95 → 27,86 m/s EAS. Düz uçuş Vmaks 54,0 m/s. VNE 51,3 m/s ve VNO 45,0 m/s EAS; uçuş kontrol sistemi hızı 45 m/s'de sınırlar |
 | Tırmanma / tavan | 4,21 m/s (DS), 2,38 m/s (3000 m); servis tavanı 7.107 m |
 | Pist | kalkış koşusu 179 m (belirleyici: E180 taretli MTOM; yunuslama ataletiyle), görev sonu iniş koşusu 183 m, MTOM'da acil iniş 219,5 m |
 | Kararlılık | statik marj %10,0–%14,9 OAK (en arka durum: en hafif uçuş, yalnız taret; burun safrası BAL-NOSE 0,72 kg ile); Cnβ 0,0586 1/rad |
 | Kumanda | stabilatör Volz DA 30 2,5:1, kanatçık ve dümen Volz DA 26 2:1, flap Volz DA 30 2:1; hepsi dört çubuk bağlantı, her sapmada menteşe momenti kontrolü (R-37, R-47, R-57…R-59) |
-| Doğrulama | **60/62 gereksinim** karşılanıyor; **R-02b (7,03 h < 9,5 h) ve R-56 (−6,514 kg) karşılanmıyor**. `--check` 1331 türetilmiş değerin hepsini tolerans içinde buluyor, kapanış yakınsıyor, çıkış kodu 1 |
+| Doğrulama | **60/62 gereksinim** karşılanıyor; **R-02b (7,02 h < 9,5 h) ve R-56 (−6,524 kg) karşılanmıyor**. `--check` 1331 türetilmiş değerin hepsini tolerans içinde buluyor, kapanış yakınsıyor, çıkış kodu 1 |
 
 **Kısa sonuç.** v1.4'te dürüst modelle 20 kg faydalı yükle dayanım 9,90 h idi ve R-02 (10 h) karşılanmıyordu. Proje lideri gereksinimi yeniden tanımladı (aşağıdaki bölüm): 10 h artık *tasarım görevi faydalı yüküyle* istenir. Bu yük sizing.py'de bir kuralla türetilir: aynı görevde ≥ 10,25 h veren, 0,5 kg'a aşağı yuvarlanmış en büyük faydalı yük. v1.5'te kural 19,0 kg vermişti. v1.6'da takım kapağı kalemi v1.5'in kapak düzenine göre yeniden kuruldu (kalem +0,59 kg, boş kütle +0,62 kg; V4-03) ve kural yeni kapanışta **18,0 kg** verdi. Yerleşim fazının yeniden kapanışında da kural 18,0 kg verir (10,35 h; 18,5 kg 10,16 h verirdi); yapı fazının yeniden kapanışında da 18,0 kg verir (10,37 h; 18,5 kg 10,17 h verirdi). Düzeltme turu 1'in yeniden kapanışında da 18,0 kg verir (10,36 h; 18,5 kg 10,17 h verirdi); düzeltme turu 2'nin yeniden kapanışında da 18,0 kg verir (10,32 h; 18,5 kg 10,12 h verirdi). Azami faydalı yük 20 kg olarak kalır ve aynı görevde 9,55 h verir (R-02b ≥ 9,5 h). Kütle bütçesi bu iki gereksinime göre +0,021 kg payla kapanır (düzeltme turu 3); hiçbir kalem silinmedi.
 
@@ -80,10 +80,10 @@ v1.5'te dördüncü doğrulamanın bulguları (V3-01…V3-11) işlenmişti: böl
 | Varsayılan vida / cıvata A2-70 → Ti-6Al-4V (kabuk, sistemler, faydalı yük, kumanda, şasi, kanat, yakıt; HW-01/02). Motorun alüminyum dişlerine giren vidalar A2-70 kalır | bağlantı elemanları | ≈ −0,7 kg |
 | 12.9 → Ti-6Al-4V: motor yatağı ayakları, stabilatör düğümü ve kök parçası, dikey ön / arka kök, ventral kulakları, stabilatör çapraz cıvatası, burun mafsalı (HW-03). Yapı satırları Ti Ftu ile yeniden hesaplandı (doc 04 §7a); motor bölmesinde naylon halkalı somun yerine ISO 7042 tam metal (A-286) | bağlantı elemanları | ≈ −0,3 kg, ağırlık merkezi öne |
 | Diş geometrisi: diş boyu hacim eşdeğeri bölüm çapı d2 = d − 0,6495 P ile (HW-07); ağ diş tepesi zarfı olarak kalır (delik ve temas denetimleri), diş oluğu hacmi kütleden düşülür | bağlantı elemanları | ≈ −0,4 kg |
-| Kabuk vida sıraları: yapısal kaplama 28 → 32 mm (= 8 D; B-SCREW-SH / B-SCREW-BR zaten 32 mm ile hesaplanır), yakıt panelleri 28 → 30 mm, Camloc kapakları 85 → 100 mm; hepsi layout aralıklarının içinde (HW-05/06): 52 bağlantı elemanı daha az | bağlantı elemanları | −0,26 kg |
+| Kabuk vida sıraları: yapısal kaplama 28 → 32 mm (= 8 D; B-SCREW-SH / B-SCREW-BR zaten 32 mm ile hesaplanır), yakıt panelleri 28 → 30 mm, Camloc kapakları 85 → 100 mm; hepsi layout aralıklarının içinde (HW-05/06). P-CENTRE-UPPER'in tek kendi sırası (FS-GEAR'de kısa kara şeridi) 28 mm'de kaldı (≥ 4 vida): 50 bağlantı elemanı daha az | bağlantı elemanları | ≈ −0,25 kg |
 | Yangın perdesi sacı AISI 304 0,4 mm → Ti-6Al-4V 0,41 mm (14 CFR 23.1191(e)(6): 0,016 in titanyum testsiz yangına dayanıklı; `standards.yaml` FIRE-001 also_in), soğutma geçiş kanalı ve kaporta ısı kalkanları Ti-6Al-4V, perde ara boruları Ti-6Al-4V | itki, şasi | ≈ −0,55 kg, hepsi x 3,6–3,9 (ağırlık merkezi öne) |
 
-Satır değerleri bağımsız bağlantı elemanı çalışmasının tahminleridir (etkiler tam toplanmaz); ölçülen sonuç: bağlantı elemanları grubu 6,53 → 5,25 kg (−1,28 kg, safra cıvataları dahil), itki 13,45 → 12,97 kg. Kayıt defteri boş kütlesi 107,44 → **106,42 kg** (aşağıdaki 0,72 kg safra dahil; safrasız 105,70 kg); kalemlendirilmiş paylarla boş kütle **108,16 kg**'dır.
+Satır değerleri bağımsız bağlantı elemanı çalışmasının tahminleridir (etkiler tam toplanmaz); ölçülen sonuç: bağlantı elemanları grubu 6,53 → 5,25 kg (−1,28 kg, safra cıvataları dahil), itki 13,45 → 12,97 kg. Kayıt defteri boş kütlesi 107,44 → **106,43 kg** (aşağıdaki 0,72 kg safra dahil; safrasız 105,71 kg); kalemlendirilmiş paylarla boş kütle **108,16 kg**'dır.
 
 **Ağırlık merkezi düzeltmesi.** Gereken boş kütle momenti yaklaşık −1,9 kg·m idi (belirleyen en hafif uçuş durumu). Bağımsız AM çalışması seçenekleri ölçtü:
 
@@ -97,8 +97,8 @@ Kapanıştan sonra yükleme durumları x 2,584–2,608 m arasındadır; statik m
 
 **Sonuç: R-02b ve R-56 karşılanmıyor (kesin açık).** MTOM sabit olduğundan her kilogram boş kütle bir kilogram yakıttır:
 
-* Görev yükü kuralı (≥ 10,25 h) artık **11,5 kg** verir (10,294 h; 12,0 kg 10,100 h verirdi). R-02 karşılanır.
-* Azami 20 kg yükle dayanım **7,03 h**'tir (yakıt 21,74 kg). R-02b (≥ 9,5 h) için boş kütle en çok 101,726 kg olmalıdır; ölçülen 108,163 kg'dır. **Açık 6,44 kg**, R-56 payı **−6,514 kg**'dır.
+* Görev yükü kuralı (≥ 10,25 h) artık **11,5 kg** verir (10,292 h; 12,0 kg 10,098 h verirdi). R-02 karşılanır.
+* Azami 20 kg yükle dayanım **7,02 h**'tir (yakıt 21,73 kg). R-02b (≥ 9,5 h) için boş kütle en çok 101,726 kg olmalıdır; ölçülen 108,169 kg'dır. **Açık 6,44 kg**, R-56 payı **−6,524 kg**'dır.
 * Bulunan bütün dürüst önlemler uygulandı. Kalan açığın bilinen bir kaynağı yoktur: birincil yapı elemanlarının payları sıfıra yakındır (W-CAP-09 0,000, FW-FOOT-CORE 0,01), şasi çalışmasının kalan önerileri (tepsi sandviçleri, kalınlık azaltmaları, ≈ 1,1 kg) yeni yapı satırları ister ve bunların ön tarafta kalanları ağırlık merkezini geri alır (§16).
 * Gereksinimler, kontroller ve testler gevşetilmedi; tavanlar ölçülen tasarıma eşittir ve R-56 açığı gösterir. Bu bir **proje lideri kararı** gerektirir: R-02b'yi yeniden tanımlamak, kullanıcı özelliklerinden birinden vazgeçmek (içeri katlanır takım, geri çekilir taret) ya da birincil yapının yeniden boyutlandırılması.
 
@@ -120,26 +120,26 @@ Bu iki değer v1.4 ödünleşimlerinin 20 kg'daki sonuçlarıdır; güncel değe
 | No | Yeni tanım | Sonuç (düzeltme turu 2 kapanışı → kütle/AM kapanış turu, ölçülen kayıt defteri) |
 |---|---|---|
 | R-02 | Tasarım görevi dayanımı ≥ 10 h, **tasarım görevi faydalı yüküyle**. Bu yük, MTOM 149,9 kg'da aynı görevde ≥ 10,25 h veren (≥ 0,25 h sağlamlık payı), 0,5 kg'a aşağı yuvarlanmış en büyük faydalı yüktür. Değer `mission.payload_design_kg` içindedir, sizing.py türetir ve `--check` kuralla karşılaştırır | 18,0 kg ile 10,32 h ✔ → 11,5 kg ile 10,29 h ✔ |
-| R-02b (yeni) | Azami faydalı yük 20 kg ile aynı görevde dayanım ≥ 9,5 h | 9,55 h ✔ → **7,03 h ✘** (boş kütle 6,44 kg fazla) |
+| R-02b (yeni) | Azami faydalı yük 20 kg ile aynı görevde dayanım ≥ 9,5 h | 9,55 h ✔ → **7,02 h ✘** (boş kütle 6,44 kg fazla) |
 | R-03 | Azami faydalı yük ≥ 20 kg: MTOM'daki yükleme durumlarından biri 20 kg taşır ve bütün kontroller bu yükle de yapılır | 20,0 kg ✔ |
-| R-56 | Kütle bütçesi (grup tavanları + yedek) R-02 ve R-02b'yi tam karşılayan iki boş kütlenin küçüğünü aşmaz | +0,021 kg ✔ → **−6,514 kg ✘** (belirleyen R-02b) |
+| R-56 | Kütle bütçesi (grup tavanları + yedek) R-02 ve R-02b'yi tam karşılayan iki boş kütlenin küçüğünü aşmaz | +0,021 kg ✔ → **−6,524 kg ✘** (belirleyen R-02b) |
 
 **Sayılar.** Görev yükü kuralı kapanmış uçakta uygulanır (`performance.payload_design_rule`):
 
 * 18,0 kg → 10,318 h ≥ 10,25 h;
 * 18,5 kg → 10,123 h < 10,25 h.
 
-**Kütle/AM kapanış turu (ölçülen boş kütle 108,163 kg).** Kural aynı yöntemle **11,5 kg** verir: 11,5 kg → 10,294 h ≥ 10,25 h; 12,0 kg → 10,100 h < 10,25 h. Eşiğe pay 0,044 h'tir, yani **+0,11 kg** boş kütle (eşik ≈ 11,61 kg). Görev yükü 3,25 kg temel sensör seti ve 8,25 kg araştırma yükü payıdır. R-52 11,5 kg ile 1,018'dir. Güncel faydalı yük – dayanım tablosu (`out/sizing.md`):
+**Kütle/AM kapanış turu (ölçülen boş kütle 108,169 kg).** Kural aynı yöntemle **11,5 kg** verir: 11,5 kg → 10,292 h ≥ 10,25 h; 12,0 kg → 10,098 h < 10,25 h. Eşiğe pay 0,042 h'tir, yani **+0,11 kg** boş kütle (eşik ≈ 11,61 kg). Görev yükü 3,25 kg temel sensör seti ve 8,25 kg araştırma yükü payıdır. R-52 11,5 kg ile 1,018'dir. Güncel faydalı yük – dayanım tablosu (`out/sizing.md`):
 
 | Faydalı yük | Yakıt | Kalkış kütlesi | Dayanım | Bekleme | Statik marj |
 |---|---|---|---|---|---|
 | 3,25 kg (temel set) | 35,85 kg (hacim) | 147,3 kg | 12,60 h | 10,28 h | %10,7–%11,3 |
-| 5,89 kg | 35,85 kg | 149,9 kg | 12,47 h | 10,16 h | %10,7–%11,1 |
-| 10 kg | 31,74 kg | 149,9 kg | 10,88 h | 8,57 h | %10,6–%10,9 |
-| **11,5 kg (görev yükü)** | 30,24 kg | 149,9 kg | **10,29 h** | 7,99 h | %10,5–%10,9 |
-| 12 kg | 29,74 kg | 149,9 kg | 10,10 h | 7,79 h | %10,5–%10,8 |
-| 15 kg | 26,74 kg | 149,9 kg | 8,95 h | 6,64 h | %10,4–%10,7 |
-| **20 kg (azami)** | 21,74 kg | 149,9 kg | **7,03 h** | 4,73 h | %10,3–%10,5 |
+| 5,88 kg | 35,85 kg | 149,9 kg | 12,47 h | 10,16 h | %10,6–%11,1 |
+| 10 kg | 31,73 kg | 149,9 kg | 10,87 h | 8,56 h | %10,5–%10,9 |
+| **11,5 kg (görev yükü)** | 30,23 kg | 149,9 kg | **10,29 h** | 7,98 h | %10,5–%10,9 |
+| 12 kg | 29,73 kg | 149,9 kg | 10,10 h | 7,79 h | %10,5–%10,8 |
+| 15 kg | 26,73 kg | 149,9 kg | 8,94 h | 6,64 h | %10,4–%10,7 |
+| **20 kg (azami)** | 21,74 kg | 149,9 kg | **7,02 h** | 4,73 h | %10,3–%10,5 |
 
 Aşağıdaki sayılar ve tablo düzeltme turu 2'nin kapanışındandır (kavramsal boş kütle 101,63 kg); karar ve kuralın kendisi değişmedi.
 
@@ -171,7 +171,7 @@ Görev yükü, yakıt ve bekleme süresi birlikte değişir. R-52'nin jeneratör
 
 12,44 kg'ın altında yakıt hücreleri doludur (kullanılabilir 35,85 kg); yük azaldıkça yalnız kalkış kütlesi düşer. Tablonun her satırı izin verilen bir yüklemedir: statik marj aralığı (yakıtsızdan o satırın yakıtına) R-09'un (%10) ve R-10'un (%30) içindedir. En hafif satırın dolu depolu yüklemesi (`full_fuel_baseline_sensors_only`) yükleme durumları arasındadır; R-09, R-10 ve ağırlık merkezi zarfı onu da denetler (V4-02).
 
-**İzin verilmeyen yüklemeler (V4-02).** v1.5 tablosunun "0 kg, 13,23 h" satırı uçulabilir bir yükleme değildi: taret olmadan ağırlık merkezi geri kayar ve statik marj bütün yakıt aralığında %5,2–%5,9'dur. Kanadın önündeki 1,75 kg'lık taret uçağı kararlı tutar. Taretsiz uçmak gerekirse taret bağlantısına (x = 1,22 m) en az 1,94 kg safra konmalıdır (kütle/AM kapanış turunda 1,83 kg; statik marj taretsiz %5,4–%6,3). Yalnız taretle (görev bilgisayarı ve tepsi yok) dolu depolarda statik marj %9,8'dir; bu yüklemede yakıt 8,5 kg ile sınırlıdır (`payload_permitted_loadings.turret_only`; V5-01; kütle/AM kapanış turu değeri). İşletme kuralı: temel EO/IR seti her uçuşta takılıdır.
+**İzin verilmeyen yüklemeler (V4-02).** v1.5 tablosunun "0 kg, 13,23 h" satırı uçulabilir bir yükleme değildi: taret olmadan ağırlık merkezi geri kayar ve statik marj bütün yakıt aralığında %5,2–%5,9'dur. Kanadın önündeki 1,75 kg'lık taret uçağı kararlı tutar. Taretsiz uçmak gerekirse taret bağlantısına (x = 1,22 m) en az 1,94 kg safra konmalıdır (kütle/AM kapanış turunda 1,83 kg; statik marj taretsiz %5,4–%6,3). Yalnız taretle (görev bilgisayarı ve tepsi yok) dolu depolarda statik marj %9,8'dir; bu yüklemede yakıt 7,8 kg ile sınırlıdır (`payload_permitted_loadings.turret_only`; V5-01; kütle/AM kapanış turu değeri). İşletme kuralı: temel EO/IR seti her uçuşta takılıdır.
 
 **Reddedilen seçenekler** (v1.4'te 20 kg yükle hesaplanan değerler; v1.6 ödünleşimleri §13'tedir):
 
@@ -484,7 +484,7 @@ Kısıt diyagramında tasarım noktası, VS = 23,95 m/s'ye karşılık gelen kan
 
 ### 6.2 Kütle
 
-**Kütle/AM kapanış turu (ayrıntılı tasarımın ölçülen kütlesi).** Boş kütle artık kayıt defterinden ölçülür (`spec.mass.registry`, 2414 parça) ve geometride olmayan kütle adlı kalemlerle eklenir (boya, kapak contaları, fren hatları; toplam 1,74 kg). Grup tavanları ölçülen değerlerin 10 g'a yukarı yuvarlanmışıdır:
+**Kütle/AM kapanış turu (ayrıntılı tasarımın ölçülen kütlesi).** Boş kütle artık kayıt defterinden ölçülür (`spec.mass.registry`, 2416 parça) ve geometride olmayan kütle adlı kalemlerle eklenir (boya, kapak contaları, fren hatları; toplam 1,74 kg). Grup tavanları ölçülen değerlerin 10 g'a yukarı yuvarlanmışıdır:
 
 | Grup | Kayıt defteri (kg) | Paylar (kg) | Toplam (kg) | Tavan (kg) | Düzeltme turu 2 tavanı (kg) |
 |---|---|---|---|---|---|
@@ -496,9 +496,9 @@ Kısıt diyagramında tasarım noktası, VS = 23,95 m/s'ye karşılık gelen kan
 | Gövde kabuğu | 10,207 | 0,611 (boya) | 10,818 | 10,82 | 10,48 |
 | Kumanda | 8,148 | — | 8,148 | 8,15 | 8,29 |
 | Kuyruk | 7,428 | 0,308 (boya) | 7,736 | 7,74 | 7,35 |
-| Bağlantı elemanları | 5,247 | — | 5,247 | 5,25 | 1,51 |
+| Bağlantı elemanları | 5,253 | — | 5,253 | 5,26 | 1,51 |
 | Yakıt sistemi | 2,366 | — | 2,366 | 2,37 | 2,35 |
-| **Boş kütle** | **106,423** | **1,740** | **108,163** | **108,19** | 101,67 |
+| **Boş kütle** | **106,430** | **1,740** | **108,169** | **108,20** | 101,67 |
 
 Taret (HD59 + bağlantı) kayıt defterinde 1,736 kg'dır ve faydalı yüktedir. Şasi tavanı kavramın orta kutu başlıklarını (kanat kaleminde bütçelenmiş, kayıt defterinde CH-001 içinde) da taşır; bu yalnız bir gruplama farkıdır, toplamı değiştirmez. Kavramın 0,025 × yapı kesirli bağlantı elemanı tavanının sayım dayanağı yoktu (1671 eleman × 0,9 g); itki ve iniş takımı tavanlarında da çift sayımlar vardı (motor yatağı şasi ve itki kaleminde, kuyu duvarları takım kaleminde ama şaside yapılmış). Ayrıntı ve önlemler: Ayrıntılı tasarımın kütle ve ağırlık merkezi kapanışı bölümü.
 
@@ -915,7 +915,7 @@ Bu iki seçenek bir arada yaklaşık 2,4 h dayanım verirdi (v1.5'te 2,0 h; v1.6
 * Yapı fazında kanat, orta kutu, şasi eklemeleri ve stabilatör millerinin aşağıdan yukarı kütleleriyle yeniden kuruldu (boş kütle 101,47 kg; doc 04). Kural yine 18,0 kg verdi: R-02 10,37 h, R-02b 9,59 h.
 * Düzeltme turu 2'de (doc 03 / doc 04: kayış pimleri, mafsal bağlantısı cıvata grupları, FS3738 alt parçası, kırık bağlantıları, ısı koruması; kütle kapanışı için incelen dil başlıkları, tek burun kapağı tahriki, aşağıdan yukarı yangın koruması) yeniden kuruldu (boş kütle 101,630 kg). Kural yine 18,0 kg verdi: R-02 10,32 h, R-02b 9,54 h; R-56 +0,013 kg.
 
-* Kütle/AM kapanış turunda kapanış ilk kez ayrıntılı tasarımın ölçülen kayıt defterine bağlandı (boş kütle 108,163 kg; titanyum bağlantı elemanları ve yangın perdesi, kabuk vida aralıkları, 0,72 kg burun safrası). Kural 11,5 kg verdi: R-02 10,29 h ✔, R-02b **7,03 h ✘**; R-56 **−6,514 kg ✘**.
+* Kütle/AM kapanış turunda kapanış ilk kez ayrıntılı tasarımın ölçülen kayıt defterine bağlandı (boş kütle 108,169 kg; titanyum bağlantı elemanları ve yangın perdesi, kabuk vida aralıkları, 0,72 kg burun safrası). Kural 11,5 kg verdi: R-02 10,29 h ✔, R-02b **7,02 h ✘**; R-56 **−6,524 kg ✘**.
 
 R-52 gereksinimi ve k_inst tahmini değişmedi; yalnız R-52'nin jeneratör açığı sınırı (bir tasarım tercihi) v1.5'te uzayan bekleme için 18 W'tan 17 W'a indirildi; v1.6'da 18,0 kg ile ve yerleşim fazında yeniden denetlendi (§12). Hiçbir gereksinim, kontrol ya da test gevşetilmedi.
 
@@ -935,7 +935,7 @@ R-52 gereksinimi ve k_inst tahmini değişmedi; yalnız R-52'nin jeneratör aç�
 | eldiven/dış panel birleşimi y = 0,82 m (v1.1) | 10,12 h | −0,20 h |
 | sivrilme 0,42 (v1.1) | 10,27 h | −0,05 h |
 
-**Kütle bütçesi — kütle/AM kapanış turu.** Tavanlar ölçülen gruplara (kayıt defteri + adlı paylar, 10 g'a yukarı) eşitlendi; toplam 108,19 kg + yedek 0,05 kg. R-02'yi tam karşılayan boş kütle 108,922 kg, R-02b'yi tam karşılayan 101,726 kg'dır; belirleyen R-02b, pay **−6,514 kg** (R-02'ye göre +0,682 kg). Tavanlar R-02b'ye göre kapatılmadı, çünkü bir tavan ancak ölçülen kütle onun altındaysa konabilir; açık R-56'da görünür (§16 madde 1). Ölçülen boş kütleden üç pay: görev yükü kuralı **+0,11 kg**, R-02b **−6,44 kg**, R-02 **+0,76 kg**. Aşağıdaki paragraflar ve tablo düzeltme turu 3'ün kavramsal kapanışındandır.
+**Kütle bütçesi — kütle/AM kapanış turu.** Tavanlar ölçülen gruplara (kayıt defteri + adlı paylar, 10 g'a yukarı) eşitlendi; toplam 108,20 kg + yedek 0,05 kg. R-02'yi tam karşılayan boş kütle 108,922 kg, R-02b'yi tam karşılayan 101,726 kg'dır; belirleyen R-02b, pay **−6,524 kg** (R-02'ye göre +0,672 kg). Tavanlar R-02b'ye göre kapatılmadı, çünkü bir tavan ancak ölçülen kütle onun altındaysa konabilir; açık R-56'da görünür (§16 madde 1). Ölçülen boş kütleden üç pay: görev yükü kuralı **+0,11 kg**, R-02b **−6,44 kg**, R-02 **+0,75 kg**. Aşağıdaki paragraflar ve tablo düzeltme turu 3'ün kavramsal kapanışındandır.
 
 **Kütle bütçesi (V1-03, R-56).** Grup tavanları ayrıntılı tasarım için kesin sınırdır. Her tavan, o grubun %5 büyüme paylı tahmininin 10 g'a yukarı yuvarlanmış değeridir. v1.6'da üç tavan, kalemlerin gerçek artışı kadar yükseltildi: iniş takımı 13,75 → 14,34 kg (yeniden kurulan kapak kalemi, V4-03), bağlantı elemanları 1,50 → 1,51 kg (takımın büyüyen payı), kuyruk 7,87 → 7,89 kg (stabilatör kapanışta +%0,4). Yerleşim fazında sistemler 14,66 → 14,79 kg (taret kapak eyleyicileri), kumanda 8,31 → 8,32 kg ve kuyruk 7,89 → 7,90 kg oldu (yeniden kapanış); kanat 16,40 kg'da kaldı. Hiçbir kalem silinmedi; tavan, kalem silerek değil, pay içinde kapanır. R-56 iki gereksinime göre denetlenir:
 
@@ -1040,7 +1040,7 @@ Görüntüler (`docs/fig/yk250_iso.png`, `yk250_rear.png`, `yk250_top.png`, `yk2
 
 ## 16. Açık konular
 
-1. **R-02b karşılanmıyor; proje lideri kararı gerekli (kütle/AM kapanış turu).** Ölçülen boş kütle 108,163 kg'dır; R-02b (20 kg, 9,5 h) en çok 101,726 kg'a izin verir. 20 kg ile dayanım 7,03 h'tir, açık 6,44 kg, R-56 payı −6,514 kg. Görev yükü kuralı 11,5 kg verir (v1.5 19,0 kg → v1.6 ve düzeltme turlarında 18,0 kg → kütle/AM kapanış turunda 11,5 kg). Seçenekler: R-02b'yi yeniden tanımlamak, bir kullanıcı özelliğinden vazgeçmek (sabit takım ≈ +1,3 h, sabit taret ≈ +0,7 h; §13 v1.4 değerleri) ya da birincil yapıyı (W-CAP, FW-FOOT, orta kutu; paylar sıfıra yakın) daha hafif bir kavramla yeniden boyutlandırmak. Tasarım ekibi gereksinimleri gevşetmedi.
+1. **R-02b karşılanmıyor; proje lideri kararı gerekli (kütle/AM kapanış turu).** Ölçülen boş kütle 108,169 kg'dır; R-02b (20 kg, 9,5 h) en çok 101,726 kg'a izin verir. 20 kg ile dayanım 7,02 h'tir, açık 6,44 kg, R-56 payı −6,524 kg. Görev yükü kuralı 11,5 kg verir (v1.5 19,0 kg → v1.6 ve düzeltme turlarında 18,0 kg → kütle/AM kapanış turunda 11,5 kg). Seçenekler: R-02b'yi yeniden tanımlamak, bir kullanıcı özelliğinden vazgeçmek (sabit takım ≈ +1,3 h, sabit taret ≈ +0,7 h; §13 v1.4 değerleri) ya da birincil yapıyı (W-CAP, FW-FOOT, orta kutu; paylar sıfıra yakın) daha hafif bir kavramla yeniden boyutlandırmak. Tasarım ekibi gereksinimleri gevşetmedi.
 2. **İtici kurulum katsayısı ve pervane iz uyarımı.** k_inst 0,93 bir tahmindir (V3-06). Küt kaporta tabanının ayrılmış izi diskin iç bölgesinde çalışır. Pervane/gövde kurulum testi k_inst'i, pala yük değişimini ve titreşimi (1P/2P/3P) Mejzlik ve Limbach ile birlikte ölçmelidir. k_inst 0,90 olsa dayanım 10,13 h olur (R-02 karşılanır, kural eşiğinin altında kalır).
 3. **Düşük yükte BSFC (V3-07).** Bekleme %23–%25 güçtedir. Alçalma (%5–6) ve yedek bekleme (%18) ise en düşük BSFC noktasının (%20) altındadır. Willans doğrusu (daha ihtiyatlı bir dışdeğerleme, sınır değil) dayanımı 0,06 h düşürür. Limbach'tan düşük yük haritası istenmelidir.
 4. **R-52 işletme sınırı (V3-09).** Tepe destek payı görev yüküyle tasarım görevinin ve E180 görevinin beklemelerine göre boyutlanmıştır. Daha hafif yükte pay bekleme bitmeden tükenir (§12). Güç yönetimi yazılımı payı izlemeli ve devir tabanını yükseltmelidir. E180 tepe yükünün gerçek süresi (arayüz belgesi) bu sınırı gevşetebilir.
@@ -1049,7 +1049,7 @@ Görüntüler (`docs/fig/yk250_iso.png`, `yk250_rear.png`, `yk250_top.png`, `yk2
 7. **Arka kapanışın görünüşü.** Küt kaporta ucu bir ödünleşimdir (§6.3, §13).
 8. **Li-ion tampon batarya.** Isıl kaçak önlemleri (hücre sigortası, havalandırma, yakıttan ayrım); marş akımı (90 A sürekli) SG750 ile doğrulanmalı; yaşlanmada kullanılabilir enerji (%80) izlenmeli.
 9. **Güç elektroniği verimi.** 0,94 bir tahmindir. iPS750 verisi alınmalı; R-32, R-52 ve devir tabanı buna göre güncellenmelidir.
-10. **MTOM payı yok (V4-04).** MTOM, M2 tavanı olan 149,9 kg'dadır. Her boş kütle artışı yakıttan düşülür. Kütle/AM kapanış turunda üç pay (ölçülen boş kütleden): görev yükü kuralı (11,5 kg) **+0,11 kg**, R-02b **−6,44 kg**, R-02 **+0,76 kg**; R-56 payı **−6,514 kg**. Düzeltme turu 2'de (kavramsal tahminden) üç ayrı pay vardı (§14; V5-05): türetilen görev yükü (18,0 kg) boş kütlenin **+0,19 kg** artmasına dayanır (dayanım kural eşiğinin 0,074 h üstünde); daha büyük bir artışta kural 17,5 kg'ı verir. R-02b **+0,13 kg**'a, R-02 (18,0 kg ile 10 h) **+0,84 kg**'a dayanır. R-56 payı tavan toplamı + yedekten ölçülür: **+0,021 kg**. v1.5 raporu "R-56 payı tükenirse kural daha küçük bir yük verir" diyordu; bu yanlıştı, çünkü kural eşiği (10,25 h) R-56'nın ölçtüğü 10 h'ten yüksektir.
+10. **MTOM payı yok (V4-04).** MTOM, M2 tavanı olan 149,9 kg'dadır. Her boş kütle artışı yakıttan düşülür. Kütle/AM kapanış turunda üç pay (ölçülen boş kütleden): görev yükü kuralı (11,5 kg) **+0,11 kg**, R-02b **−6,44 kg**, R-02 **+0,75 kg**; R-56 payı **−6,524 kg**. Düzeltme turu 2'de (kavramsal tahminden) üç ayrı pay vardı (§14; V5-05): türetilen görev yükü (18,0 kg) boş kütlenin **+0,19 kg** artmasına dayanır (dayanım kural eşiğinin 0,074 h üstünde); daha büyük bir artışta kural 17,5 kg'ı verir. R-02b **+0,13 kg**'a, R-02 (18,0 kg ile 10 h) **+0,84 kg**'a dayanır. R-56 payı tavan toplamı + yedekten ölçülür: **+0,021 kg**. v1.5 raporu "R-56 payı tükenirse kural daha küçük bir yük verir" diyordu; bu yanlıştı, çünkü kural eşiği (10,25 h) R-56'nın ölçtüğü 10 h'ten yüksektir.
 11. **Çırpınma ve burulma rijitliği.** AR 16 kanat, tek eyleyicili hareketli stabilatörler ve eğik dikeyler analiz edilmedi.
 12. **Kumanda hızları.** Stabilatör yüzey hızı −20°'de 36°/s'ye iner; dümen ve kanatçıkta da uçlara doğru düşer (§9). Menteşe momenti katsayıları tarama değerleridir (±%50); rüzgâr tüneli ya da CFD ile doğrulanmalıdır.
 13. **İşletme sınırları.** Uçuş kontrol sisteminin hız koruması (45 m/s EAS) zorunludur.
@@ -1062,6 +1062,6 @@ Görüntüler (`docs/fig/yk250_iso.png`, `yk250_rear.png`, `yk250_top.png`, `yk2
 20. **İçeri katlanır takım ve kapaklar.** Satın alınabilir birim yoktur. Kapak kütlesi v1.6'da kapak düzeninden kuruldu (V4-03), ama kapak alan kütlesi kimlik çalışmasının tahminidir; iç kapak bağlantıları ve bacak kapağı ayakları tahmindir. İç kapak eyleyicisinin (Volz DA 22) menteşe momenti sayısal olarak denetlenmedi; kapak akış düzleminde olduğundan küçük beklenir. Taret bölmesinin kayar kapaklarında da tahrik kuvveti (ray sürtünmesi, kapalıyken basınç yükü) sayısal olarak denetlenmedi; pinyon, kremayer ve raylar için 0,04 kg bir tahmindir. Bacak rijitliği, kilitler, acil indirme (iç kapakların serbest düşüşte açılması dahil), contalar ve sıralama ayrıntı fazında tasarlanmalıdır.
 21. **Referans kavramlar.** `data/concepts/*/calc.py` hâlâ kapalı biçimli Breguet bağıntısını kullanır (§1).
 22. **Yerleşim fazı.** Arayüz tanımı `layout` ve `assembly` altındadır (doc 03); `layout.zones_preliminary` kutuları sizing'in denetlediği bölge kutularıdır. `layout_check` basitleştirilmiş zarflarla çalışır; parça geometrisiyle denetim ayrıntılı tasarım modüllerine kalır. `analysis/mass.py` bütçeyi hâlâ iki yönlü bir bant olarak okur.
-23. **İzin verilen yüklemeler (V4-02).** Temel EO/IR seti her uçuşta takılı olmalıdır. Taretsiz uçuş taret bağlantısına en az 1,94 kg safra ister; yalnız taretle yakıt 8,5 kg ile sınırlıdır (kütle/AM kapanış turu). Bu sınırlar uçuş planlama yazılımına ve uçuş el kitabına taşınmalıdır.
+23. **İzin verilen yüklemeler (V4-02).** Temel EO/IR seti her uçuşta takılı olmalıdır. Taretsiz uçuş taret bağlantısına en az 1,94 kg safra ister; yalnız taretle yakıt 7,8 kg ile sınırlıdır (kütle/AM kapanış turu). Bu sınırlar uçuş planlama yazılımına ve uçuş el kitabına taşınmalıdır.
 24. **R-52 payı ince.** Görev yüküyle R-52 1,018'dir (kütle/AM kapanış turu, 11,5 kg; düzeltme turu 2'de 1,010). 10 kg ve altındaki yüklerde E180 tepesi bütün bekleme boyunca karşılanamaz (R-52 işletme sınırı, `out/sizing.md`). Görev yükü kuralı daha küçük bir yük verirse bekleme uzar ve jeneratör açığı sınırı yeniden aranmalıdır (§12).
-25. **Kütle payı.** Düzeltme turu 3'te R-56 payı +0,021 kg idi; kütle/AM kapanış turunda ölçülen kayıt defteriyle −6,514 kg'dır (madde 1). Tavanlar artık ölçülen gruplardır; her yeni kütle `analysis/mass.py --update-spec` ve `sizing --update-spec` ile görünür. Burun safrası (0,72 kg) yer değiştirmeler onaylanırsa azaltılabilir: paraşüt bölmesi 40–80 mm öne ve stabilatör DA 30'ları 0,12 m öne (−0,3…−0,5 kg·m ≈ −0,15…−0,2 kg safra). Öndeki hafifletmeler (şasi tepsileri sandviç, ön kenar kirişi inceltme, ≈ 0,56 kg; GP-08…GP-11) safrayı artırır, arkadakiler (arka tepsi sandviç, sırt kirişi 1,4 mm, ≈ 0,6 kg) azaltır; hepsi yeni yapı satırları ister (J-flanş buruşma, ayak plakası eğilmesi, EMA flanşı ezilmesi, gömme somun sökülmesi). Gerçek susturucu (PR-504 iç yapısız, +0,3…0,6 kg), dişli takım EMA'ları (G-EMA-MAIN 14 N·m / G-EMA-NOSE 25,7 N·m; DA 26 2,7 N·m anma) ve kapalı pDDL kutusu (+0,115 kg) kayıt defterinde henüz yoktur; açık tasarım konularıdır. Isı koruması ayakları (0,30 kg/m²), yangın perdesi ayakları ve perçinleri ile kompozit soğutma payı (temel 1 kg/m²) tahmindir (doc 04 §7, §9).
+25. **Kütle payı.** Düzeltme turu 3'te R-56 payı +0,021 kg idi; kütle/AM kapanış turunda ölçülen kayıt defteriyle −6,524 kg'dır (madde 1). Tavanlar artık ölçülen gruplardır; her yeni kütle `analysis/mass.py --update-spec` ve `sizing --update-spec` ile görünür. Burun safrası (0,72 kg) yer değiştirmeler onaylanırsa azaltılabilir: paraşüt bölmesi 40–80 mm öne ve stabilatör DA 30'ları 0,12 m öne (−0,3…−0,5 kg·m ≈ −0,15…−0,2 kg safra). Öndeki hafifletmeler (şasi tepsileri sandviç, ön kenar kirişi inceltme, ≈ 0,56 kg; GP-08…GP-11) safrayı artırır, arkadakiler (arka tepsi sandviç, sırt kirişi 1,4 mm, ≈ 0,6 kg) azaltır; hepsi yeni yapı satırları ister (J-flanş buruşma, ayak plakası eğilmesi, EMA flanşı ezilmesi, gömme somun sökülmesi). Gerçek susturucu (PR-504 iç yapısız, +0,3…0,6 kg), dişli takım EMA'ları (G-EMA-MAIN 14 N·m / G-EMA-NOSE 25,7 N·m; DA 26 2,7 N·m anma) ve kapalı pDDL kutusu (+0,115 kg) kayıt defterinde henüz yoktur; açık tasarım konularıdır. Isı koruması ayakları (0,30 kg/m²), yangın perdesi ayakları ve perçinleri ile kompozit soğutma payı (temel 1 kg/m²) tahmindir (doc 04 §7, §9).

@@ -274,6 +274,12 @@ kiti), gaskolatör 0,152 kg (üretici), kaplin 0,067 kg, algılayıcı 0,060 kg,
 (components.yaml); çek valfler, boşaltma valfleri, havalandırma çıkışı, kesme valfi, hortum / boru yoğunlukları ve
 contalar **tahmindir** (parça notlarında belirtilir).
 
+**Kütle/AM kapanış turu (güncel).** Yakıt sistemi bütçe grubu: **2,366 kg**; tavan `mass.budget.fuel` **2,37 ± 0,07 kg**.
+Bu turda: alt bağlantı ve braket vidaları Ti-6Al-4V; arka hücre boşaltma hattı FL-DRAIN-A'nın iniş noktası iskele
+DA 30'un arkasında FS-GEAR + 0,173 m'dedir (eyleyici FS-GEAR'a bağlı, kapanış FS-GEAR'ı 1,3 mm geri aldı). Kapanışta
+yakıt ağırlık merkezi artık kayıt defterindeki yakıt içeriğinin merkezidir (`spec.mass.fuel_cg` =
+`spec.mass.registry.fuel`, tasarım yakıtı 30,24 kg).
+
 ## 13. Layout değişiklikleri (yakıt ayrıntılı tasarımı sırasında; builder üzerinden)
 
 `ucav250/layout_build/b_systems.py` içinde (sonra `python3 -m ucav250.layout_build.build --write`; `layout_check`,

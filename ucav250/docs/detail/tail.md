@@ -250,6 +250,13 @@ panelleri hafiftir; stabilatör tahrik kalemine rulmanlar ve segmanlar (0,14 kg)
 adımları: kovan duvarı 3 → 2 mm, beşik pencereleri, mil kolu göbeği r 17,5 mm, kompozit yığınlarda Ti bağlantı
 elemanları.
 
+**Kütle/AM kapanış turu (güncel).** Kuyruk bütçe grubu: kayıt defteri 7,428 kg + boya payı 0,308 kg = **7,736 kg**; tavan
+`mass.budget.tail` **7,74 ± 0,23 kg**. Kapanış E180 kalkış trimi (R-36 0,694) için stabilatörü 0,607 → 0,624 m²
+büyüttü (tek yönlü kuyruk kuralı; burun safrası ve uçların yunuslama ataleti); panel kökü y 0,33851 → 0,34015. Mil
+TL-301 soket kaburgasının 0,1 mm önünde biter (layout `span_y` 0,1 mm'ye yuvarlıdır). Dikey ön / arka kök, ventral
+kulak, kök parçası ve stabilatör çapraz cıvataları 12.9 → Ti-6Al-4V (doc 04 §7a; T-FINROOT-FRONT 3,41, T-VENTRAL-BOLT
+3,17, T-NODE-STUB-BOLTS 6,90, T-CROSSBOLT 47,8); motor bölmesindeki somunlar ISO 7042 tam metal.
+
 ## 10. Layout'tan / yapı hesabından sapmalar (gerekçeli)
 
 * **F-FIN-FRONT B1/B2:** layout'taki düşey M6 çifti (y 0,1492, z 0,2772 / 0,2592) yerine yatay çift y 0,1400 / 0,1584,

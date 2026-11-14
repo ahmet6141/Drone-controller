@@ -231,6 +231,11 @@ kutu UD başlıkları, CH-053 çatal + burçlar, CH-054 yuva bağlantısı). Kum
 kalemlerini aşar, yüzeyler kavram kaleminden hafiftir; toplam kanat payı bütçe içinde. Bütçe kalemlerinin ayrıntılı
 geometriye göre gruplar arasında yeniden dağıtılması entegrasyon işidir (bkz. §11, açık konu 1).
 
+**Kütle/AM kapanış turu (güncel).** Kanat bütçe grubu: kayıt defteri 12,291 kg + boya payı 0,585 kg = **12,875 kg**; tavan
+`mass.budget.wing` **12,88 ± 0,39 kg** (ölçülen gruba eşitlendi). Orta kutunun UD başlıkları (1,01 kg) kavramda kanat
+kalemindeydi; kayıt defterinde CH-001 içinde şasi grubundadır (yalnız gruplama). Vidalar Ti-6Al-4V. Kanat kökü
+x_c4 2,4868 m (kapanışın ölü bandı içinde; entegrasyon turuna göre 0,25 mm önde).
+
 ## 10. Layout'tan / yapı hesabından sapmalar (gerekçeli)
 
 * **Servo konumları:** layout ACT-FLAP / ACT-AILERON kutuları paketleme zarfıdır; modül servoyu kendi bölmesinde

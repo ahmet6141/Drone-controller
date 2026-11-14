@@ -306,6 +306,16 @@ fren hatları ve kablo/sensörler, kilit pençeleri ve solenoidler (0,25 kg kura
 kütleleri tahmindir. Fark bütçenin aşağı yönlü olduğunu gösterir; ağırlık merkezi etkisi `analysis/mass.py` ile
 değerlendirilmelidir (toplanmış konum, burun takımı daha hafif).
 
+**Kütle/AM kapanış turu (güncel).** İniş takımı bütçe grubu: kayıt defteri 12,705 kg + kapak çevre contaları 0,101 kg +
+fren hatları ve sıvısı 0,135 kg (geometride yok; adlı paylar) = **12,941 kg**; tavan `mass.budget.gear` **12,94 ± 0,39
+kg**. `mass.rules.gear_doors.inner_door_actuator` artık 2 × Volz DA 30 (ana iç kapaklar, `main_drive`; G-DOOR-DRIVE
+14,0 J) + 1 × DA 22 (burun kapakları) sayar. Kapanış ana takımı 1,3 mm geri aldı (faydalı yük bölmesi kuralı, x_mg
+2,9771) ve yer düzlemi 0,7 mm alçaldı; mafsal kapağı tahriki (motor 691, krank, bağlantı) mafsal bağlantısına bağlı
+olduğundan x istasyonları layout mafsal ekseniyle kayar (`TD_PIVOT_X0`). Açık: takım EMA'ları kayıt defterinde
+DA 26 veri sayfası kütlesiyle (0,27 kg) ama yapı G-EMA-MAIN 14,0 N·m / G-EMA-NOSE 25,7 N·m ister (DA 26 2,7 N·m anma):
+dişli kademe ya da DA 30 / DA 30-HT kütlesi (+0,4…+1,55 kg) eklenmelidir; takım ve kapak konum algılayıcıları ve
+takım demet kolları kayıt defterinde yoktur.
+
 ## 10. Layout'tan sapmalar (gerekçeli)
 
 * Ana EMA gövdesinde düzlük: F-TRUNNION B2 kiriş cıvatasının başı layout EMA zarfına girer.

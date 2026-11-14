@@ -2103,13 +2103,13 @@ mass:
     kg) mass/CG closure round (detail design): the ceilings are re-based on the MEASURED registry of the detailed design
     (spec.mass.registry, analysis/mass.py --update-spec) + the itemised allowance items (paint, gear-door seals, brake lines;
     registry_allowance), rounded up to 10 g: chassis 12.61 -> 19.86 kg (incl. the 1.0 kg CT-box spar caps the concept booked
-    in the wing item and the 0.74 kg nose ballast BAL-NOSE), controls 8.29 -> 8.15, fuel 2.35 -> 2.37, gear 14.57 -> 12.94
-    (incl. door seals 0.10 and brake lines 0.135), hardware 1.51 -> 5.25 (bottom-up fasteners after the Ti-6Al-4V screw
-    change, two-alloy far side, thread geometry and the 32 / 30 / 100 mm shell row pitches; the 0.025 fraction had no count
-    basis), propulsion 14.54 -> 12.97, shell 10.48 -> 10.82 (incl. paint 0.61), systems 14.79 -> 15.21, tail 7.35 -> 7.74
-    (incl. paint 0.31), wing 15.18 -> 12.88 kg (incl. paint 0.58); sum 108.19 kg; tol_kg = 3 % of the ceiling (min 0.05
-    kg). The ceilings equal the measured design and are NOT closed against R-02b: R-56 reports the shortfall (docs/02 sec.
-    14); no requirement was changed'
+    in the wing item and the nose ballast BAL-NOSE, 0.72 kg net of its bolt holes (layout 0.74 kg)), controls 8.29 -> 8.15,
+    fuel 2.35 -> 2.37, gear 14.57 -> 12.94 (incl. door seals 0.10 and brake lines 0.135), hardware 1.51 -> 5.25 (bottom-up
+    fasteners after the Ti-6Al-4V screw change, two-alloy far side, thread geometry and the 32 / 30 / 100 mm shell row pitches;
+    the 0.025 fraction had no count basis), propulsion 14.54 -> 12.97, shell 10.48 -> 10.82 (incl. paint 0.61), systems
+    14.79 -> 15.21, tail 7.35 -> 7.74 (incl. paint 0.31), wing 15.18 -> 12.88 kg (incl. paint 0.58); sum 108.19 kg; tol_kg
+    = 3 % of the ceiling (min 0.05 kg). The ceilings equal the measured design and are NOT closed against R-02b: R-56 reports
+    the shortfall (docs/02 sec. 14); no requirement was changed'
   cases:
   - name: mtow_design_payload_turret_retracted
     fuel_fraction: 1.0

@@ -218,35 +218,50 @@ yönlendirilmiştir. Bağlantı elemanlarının toplam kütlesi 1,50 kg'dır (gr
 
 ## 8. Kütle ve bütçe
 
-Registry kütlesi (şasi grubu): **20,75 kg**; bütçe tavanı **12,61 ± 0,37 kg** → **+8,14 kg aşım** (`analysis/mass.py`
-bu grup için tavan aşımı bildirir). Ayrıca şasinin ürettiği PR-088 + PR-094 (0,63 kg) itki grubundaki soğutma/yangın
-perdesi kalemindedir; şasi bağlantı elemanları (1,50 kg) uçak geneli `hardware` tavanının (1,51 kg) neredeyse tamamıdır.
+**Kütle/AM kapanış turu (güncel).** Şasi bütçe grubu (registry, `analysis/mass.py`): **19,86 kg**; tavan
+`mass.budget.chassis` **19,86 ± 0,60 kg** (ölçülen gruba eşitlendi; doc 02 §6.2). Şasi üreticisinin
+kendi parçaları 19,91 kg'dır; PR-088/091/094 itki grubunda (yangın perdesi kalemi), bazı delikleri başka modüller açar.
+Kalem eşlemesi (`chassis.mass_reconciliation`; bütçe sütunu kavramsal kalemin %5 büyüme paylı değeri, artık yalnız soy
+kaydıdır):
 
-`spec.mass.items` şasi kalemlerine göre dağılım (eşleme bu belgenin; "frames" kalemine kapak çerçeveleri kalemi
-eklenmiştir çünkü kapak ayakları çerçeve/güverte parçalarının içindedir):
-
-| Bütçe kalemi | Bütçe (kg) | Ayrıntılı tasarım (kg) | Fark (kg) | Parçalar |
+| Bütçe kalemi | Kavram (kg) | Ayrıntılı tasarım (kg) | Fark (kg) | Parçalar |
 |---|---:|---:|---:|---|
-| keel_beams_longerons | 1.533 | 2.661 | +1.128 | CH-020/040/041/042–048/032/028/021/033/039/036/038/102 |
-| frames_bulkheads + hatch_frames_quick_access_fasteners | 3.571 | 3.482 | −0.089 | CH-002–015, 090, 092 |
-| wing_carry_through_box_fittings | 2.218 | 3.217 | +0.999 | CH-001, 050–058 |
-| main_gear_frame_trunnions_side_braces | 0.630 | 2.110 | +1.480 | CH-070, 072, 031, 035 |
-| nose_gear_trunnion_fitting | 0.193 | 0.090 | −0.103 | CH-071 |
-| engine_mount_4130 (+ yangın perdesi ayak bağlantıları) | 0.630 | 1.516 | +0.886 | CH-085, 086, 087, 093 |
-| parachute_attach_fitting | 0.468 | 0.499 | +0.030 | CH-037, 110–114, 123 |
-| turret_bay_frame_guides | 0.420 | 0.875 | +0.455 | CH-023, 024, 125, 126 |
-| floors_trays_rails | 1.530 | 3.301 | +1.771 | CH-022, 025–027, 029, 030, 034, 118–122 |
-| fuel_bay_liners_supports | 0.472 | 1.555 | +1.083 | CH-115–117 |
-| stabilator_spindle_bearing_housings | 0.626 | 0.989 | +0.363 | CH-095 |
-| fin_ventral_root_fittings | 0.315 | 0.453 | +0.138 | CH-096, 098–101 |
-| **Toplam** | **12.606** | **20.747** | **+8.140** | |
+| frames_bulkheads | 2,521 | 3,271 | +0,750 | CH-002–015, 089, 090 |
+| wing_carry_through_box_fittings (orta kutu başlıkları hariç) | 2,217 | 2,266 | +0,049 | CH-001, 050–058 |
+| orta kutu UD başlıkları (CH-001 içinde; kavramda kanat kaleminde) | — | 1,014 | — | CH-001 |
+| keel_beams_longerons | 1,533 | 2,807 | +1,274 | CH-020/021/028/032/033/036/039–049/102 |
+| floors_trays_rails | 1,531 | 3,153 | +1,622 | CH-022, 026, 027, 029, 030, 034, 035, 038, 118–122 |
+| main_gear_frame_trunnions_side_braces | 0,630 | 1,650 | +1,020 | CH-031, 070, 072, 074 |
+| nose_gear_trunnion_fitting | 0,193 | 0,104 | −0,089 | CH-071, 073 |
+| engine_mount_4130 (+ yangın perdesi ayak bağlantıları) | 0,630 | 1,638 | +1,008 | CH-085, 086, 087, 092, 093 |
+| parachute_attach_fitting | 0,468 | 0,417 | −0,051 | CH-037, 110–113 |
+| turret_bay_frame_guides | 0,420 | 0,532 | +0,112 | CH-023, 024, 125, 126 |
+| fuel_bay_liners_supports | 0,473 | 0,702 | +0,229 | CH-115–117 |
+| stabilator_spindle_bearing_housings | 0,626 | 0,809 | +0,183 | CH-095 |
+| fin_ventral_root_fittings | 0,315 | 0,453 | +0,138 | CH-096, 098–101 |
+| hatch_frames_quick_access_fasteners | 1,050 | 0,373 | −0,677 | CH-025, 114, 123 |
+| burun safrası BAL-NOSE (kavram kalemi yok) | — | 0,721 | — | CH-127 |
+| **Toplam (üretici)** | **12,606** | **19,909** | | |
 
-Aşımın nedenleri: (1) layout'un verdiği zarflar ve laminasyonlarla modellenen bütün parçalar kavram kalemlerinden
-ağırdır (çerçeveler hariç); (2) ana takım mafsalı (layout: 26 mm kulaklar, 20 mm üst plaka) — kulaklar 12 mm gövdeye,
-üst plaka 5 mm'ye ceplenerek 2,23'ten 1,74 kg'a indirildi; (3) yakıt astarları tüm küveti kaplar ve prepreg süreç
-alt sınırı nedeniyle 0,4 yerine 0,6 mm'dir; (4) tepsiler layout kalınlığında (CFRP 3 mm katı, 6061 2 mm);
-(5) motor yatağı + ayak bağlantıları kavramda yalnız boru kafes olarak sayılmış. Düzeltme sistem düzeyinde bir karardır
-(bkz. §10, açık konu 1).
+Bu turda şasiyi değiştirenler:
+
+* **Burun safrası BAL-NOSE (YK250-CH-127)**: AISI 304 blok 44 × 60 mm, yükseklik layout kütlesinden (0,74 kg; cıvata
+  delikleri düşülmüş 0,721 kg), TR-FWDBAY'de tampon bataryanın önünde (x 0,336–0,380), 4 × M4 Ti tepsiden geçme, somun
+  ve pul altta; cıvatalar blok kenarından 11 mm içeride (tepsi kenarına ≥ 2,5 D). Yapı satırları EQ-BALLAST /
+  EQ-BALLAST-BR (doc 04 §7a). Gerekçe: doc 02, kütle ve ağırlık merkezi kapanışı bölümü.
+* **Yangın perdesi**: sac Ti-6Al-4V 0,41 mm (PR-088, itki grubunda), ara borular CH-090 Ti-6Al-4V (0,039 kg / taraf).
+* **Bağlantı elemanları**: varsayılan Ti-6Al-4V; motor ayağı, düğüm ve burun mafsalı cıvataları 12.9 → Ti-6Al-4V;
+  motor bölmesinde ISO 7042 tam metal somun (A-286). Mafsal bağlantısı cıvataları (G-FIT-BOLTS) 12.9 kalır.
+* **Kapanışın kaydırdığı geometri**: kırık bağlantıları (CH-056/057) başlık yüzüne 0,1 mm yapıştırma çizgisiyle; arka
+  kiriş yuva bağlantısı (CH-054) arka kenarı arka pimin 18 mm arkasında, üst plakada 5 × 1 mm arka pah; ana takım mafsal
+  bağlantısının (CH-070) kulak, flanş ve tavan cıvatası istasyonları layout mafsal ekseniyle (`trun_dx`) kayar.
+
+Kalan aşım kavramın eksik saydığı parçalardandır (yukarıdaki tablo); şasi çalışmasının ölçtüğü ek hafifletmeler (arka
+tepsi sandviç 0,20 kg, sırt kirişi 1,4 mm 0,08 kg, kenar kirişi ve duvar kalınlıkları, ön tepsiler sandviç 0,33 kg)
+yeni yapı satırları ister (J-flanş buruşma, ayak plakası eğilmesi, EMA flanşı ezilmesi, gömme somun sökülmesi) ve
+öndekiler ağırlık merkezini geri alır; açık konudur (§10).
+
+**Önceki sürüm (entegrasyon turu 1, tarihçe).** Registry kütlesi 20,75 kg, tavan 12,61 kg idi (+8,14 kg aşım).
 
 ## 9. Layout'tan sapmalar (gerekçeli)
 

@@ -451,3 +451,14 @@ Her bulgu önce yeniden üretildi, sonra düzeltildi; hiçbir kontrol, test ya d
 | PK3-11 eski montaj ve panel metinleri | montaj adımındaki kalkan kalınlığı ve kayış bağlantısı cıvataları spec'ten üretilir (`b_assembly.shield_mm`, `bolt_text`); transponder takviyesi notu P-FWDSKIN'e taşındı | test: montaj adımlarındaki bağlantı elemanı ölçü ve sayıları `layout.chassis.fittings`, `M-CHINE.splices` ve FS3670 `shield_t` ile aynı |
 
 **Yeniden kapanış.** Bu turun yerleşim ve yapı değişiklikleri (doc 04 §6a) `build --write` → `structures --update-spec` → `sizing --update-spec` → `build --write` döngüsüyle sabit noktaya getirildi; arka kiriş başlıkları gövde içinde de dış yüzeyi izler (gövde üst yüzeyi y > 0,33'te eldiven loftuna iner) ve eldiven başlıkları birleşik dış yüzeye gerçek mesafeyle 1 mm dolu kaplama altında kalır (C03). Sonuçlar bu belgenin başındaki durum satırındadır.
+
+## 17. Kütle/AM kapanış turu: yerleşime etkileri
+
+Ayrıntılı tasarımın kütle ve ağırlık merkezi kapanışı ([02](02_konsept_ve_boyutlandirma.md), aynı adlı bölüm) boş kütleyi ve ağırlık merkezini kayıt defterinden ölçer; yerleşim şu noktalarda değişti (`layout_build --write`, `layout_check` 99/99, tam uçak denetimleri 0 ihlal):
+
+* **İstasyonlar.** Kanat kökü x_c4 2,4868 m (kapanışın ölü bandı içinde; FS-MS 2,4868, FS-RS 2,7995, FS-FUEL 2,1893). Faydalı yük bölmesi boş ağırlık merkezine ortalandığı için ana takım ekseni 1,3 mm geri (x_mg 2,9771) ve FS-GEAR 3,0965 m oldu; yer düzlemi 0,7 mm alçaldı. Panel ve istasyon tabloları (§4, §6) güncellendi.
+* **Burun safrası BAL-NOSE** (`layout.chassis.ballast`, YK250-CH-127): TR-FWDBAY'de tampon bataryanın önünde AISI 304 blok, x 0,336–0,380, y ±0,030, yükseklik kütleden (0,74 kg brüt); 4 × M4 Ti. Kütle yerleşiminde şasi grubundadır.
+* **Yangın perdesi katmanı.** CFRP sandviç 6,8 mm / hava boşluğu 7,59 mm / Ti-6Al-4V sac 0,41 mm (14 CFR 23.1191(e)(6)); toplam 14,8 mm değişmedi. Kaporta ısı kalkanı HS-COWL-SHIELD Ti-6Al-4V.
+* **Kabuk bağlama.** Vidalar ISO 7380 Ti-6Al-4V; üretici sıra aralıkları yapısal kaplamada 32 mm, yakıt panellerinde 30 mm, Camloc kapaklarında 100 mm (layout aralıklarının üst ucu).
+* **Yakıt hattı.** FL-DRAIN-A iskele DA 30'un arkasında FS-GEAR + 0,173 m'de iner (eyleyiciyle birlikte kayar).
+* **Kütle yerleşimi** (`layout.mass_placement`) yeniden üretildi; C06 kayıt defteriyle tutarlıdır. Kapanışın büyüttüğü stabilatör (0,624 m²) kuyruk yerleşimine işlendi.

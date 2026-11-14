@@ -163,6 +163,14 @@ Uyarı: `turret_lift_mechanism_doors` kalemi (1,786 kg temel / 1,875 kg büyüme
 (payload) modülünce üretilecektir; bu modülün parçalarıyla birlikte grup ≈ 14,9 kg olur — tavanın ~0,1 kg üstü
 (§11 açık konu: montaj donanımı hafifletmesi veya bütçe yeniden dağılımı).
 
+**Kütle/AM kapanış turu (güncel).** Sistem bütçe grubu (taret mekanizması PL-822…849 ve SH-363 dahil): **15,208 kg**;
+tavan `mass.budget.systems` **15,21 ± 0,46 kg** (ölçülen gruba eşitlendi). Bu turda: vidalar Ti-6Al-4V; orta kutu alt
+kapağı demet rondelası SY-766 artık layout penetrasyon noktasında (alt kapağın o noktadaki dış yüzü) oturur (önceden
+üye kutusunun zarf altına konuyordu ve kapağın 0,35 mm altında kalıyordu); kuyruk ışığı SY-791 uç yüzünden 0,2 mm
+yukarıda (`LT_SEAT_GAP`). Sistemler ağırlık merkezinin önündedir (x 1,45): buradaki her hafifletme ağırlık merkezini
+geri alır (1 kg ≈ +9 mm MTOM) ve burun safrasını artırır; özel eFuse PDU (≈ −1 kg) bu yüzden önerilmedi. Açık: kayıt
+defterindeki pDDL kutusu 0,050 kg (anakart değeri), kapalı birim 0,165 kg; kablo demeti payı aşağıdan yukarı değil.
+
 ## 10. Doğrulama
 
 - Tasarım kuralı denetimleri (`chassis,shell,systems`, odak YK250-SY): mesh 0, statik 0, süpürme 0, açıklık 0, kalınlık

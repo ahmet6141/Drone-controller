@@ -2,7 +2,7 @@
 
 Bu rapor `python3 -m ucav250.analysis.layout_check` tarafından `ucav250/spec.yaml` (`layout`, `assembly`) bölümlerinden üretilir; ayrıntılı tasarım modülleri (şasi, kanat, kuyruk, kabuk, itki, yakıt, takım, sistemler, faydalı yük) birbirlerinin geometrisini okumadan bu arayüzden çalışır. Açıklama ve gerekçeler: `docs/03_yerlesim_ve_yapi_konsepti.md`.
 
-**Sonuç: 99/99 kontrol geçti** (155 yerleşim nesnesi, 285 yakın çift).
+**Sonuç: 99/99 kontrol geçti** (159 yerleşim nesnesi, 317 yakın çift).
 
 ## 1. Kontrol özeti
 
@@ -21,40 +21,40 @@ Bu rapor `python3 -m ucav250.analysis.layout_check` tarafından `ucav250/spec.ya
 | C02 | longeron notches (7 member crossings of straight frame webs): every crossing in a declared notch open to the frame edge, member section inside with >= 0.5 mm, insertion + shear clip + U-doubler declared (fix round 3, PK3-04) | 0 | 0 | GEÇTİ |
 | C02 | çerçeveler yakıt, taret, takım kuyusu, yük/paraşüt/teçhizat hacimlerini kesmiyor | 0 | 0 | GEÇTİ |
 | C02 | yakıt bölmeleri ok açılı kiriş çerçevelerini izliyor (çerçeve gövdesine boşluk) | 6,7 | >= 0 mm | GEÇTİ |
-| C02 | fuel bay volume of the chevron bays vs required (mass.fuel_kg, expansion space) | 50,94 | >= 41,75 L | GEÇTİ |
+| C02 | fuel bay volume of the chevron bays vs required (mass.fuel_kg, expansion space) | 50,92 | >= 41,68 L | GEÇTİ |
 | C02 | fuel system plumbing: every cell has a top vent valve and a floor sump / outlet, the feed pickup is in the feed cell, the interconnects into it carry check valves (fix round 3, PK3-01) | 0 | 0 | GEÇTİ |
-| C02 | ok açılı bölmelerin kullanılabilir yakıt hacmi >= gerekli hacim | 50,51 | >= 41,75 L | GEÇTİ |
-| C02 | unusable fuel (layer below the outlets x efficiency + contents of the non-vent lines, line OD as bore: conservative) <= trapped fuel booked by the sizing mission model (fuel_kg f / (1 + f), mission.trapped_fuel_fraction; fix round 3, PK3-01) | 0,494 | <= 0,594 kg | GEÇTİ |
+| C02 | ok açılı bölmelerin kullanılabilir yakıt hacmi >= gerekli hacim | 50,51 | >= 41,68 L | GEÇTİ |
+| C02 | unusable fuel (layer below the outlets x efficiency + contents of the non-vent lines, line OD as bore: conservative) <= trapped fuel booked by the sizing mission model (fuel_kg f / (1 + f), mission.trapped_fuel_fraction; fix round 3, PK3-01) | 0,493 | <= 0,593 kg | GEÇTİ |
 | C02 | kablo, yakıt hattı, itme çubuğu ve kayış geçişleri tanımlı çerçeve kesiklerinden | 0 | 0 | GEÇTİ |
 | C03 | teçhizat zarfları dış yüzeyin (OML) içinde, 10 mm pay | 1,1 | >= max(10 mm, skin + 2 mm) (value: worst margin, mm) | GEÇTİ |
-| C03 | şasi elemanları OML içinde (kaplamaya oturan yüzler hariç) | 0 | >= skin (skin faces trimmed) (value: worst margin, mm) | GEÇTİ |
-| C03 | bağlantı parçaları OML / kuyruk içinde | 0,3 | >= skin (value: worst margin, mm) | GEÇTİ |
+| C03 | şasi elemanları OML içinde (kaplamaya oturan yüzler hariç) | 0,1 | >= skin (skin faces trimmed) (value: worst margin, mm) | GEÇTİ |
+| C03 | bağlantı parçaları OML / kuyruk içinde | 0,2 | >= skin (value: worst margin, mm) | GEÇTİ |
 | C03 | kanat / dikey eyleyicileri kesit içinde, 3 mm pay | 0,7 | >= skin + 2 mm (value: worst margin, mm) | GEÇTİ |
 | C03 | antenna envelopes inside the inner skin surface (true distance to the OML vs the local skin; fix round 2, PK2-01/06/10) | 0,1 | >= skin + 2 mm (value: worst margin, mm) | GEÇTİ |
-| C03 | kablo demetleri OML içinde (yarıçap + 3 mm) | 6 | >= 0 mm margin | GEÇTİ |
-| C03 | yakıt hatları OML içinde (yarıçap + 3 mm) | 12,1 | >= 0 mm margin | GEÇTİ |
+| C03 | kablo demetleri OML içinde (yarıçap + 3 mm) | 1,3 | >= 0 mm margin | GEÇTİ |
+| C03 | yakıt hatları OML içinde (yarıçap + 3 mm) | 12,4 | >= 0 mm margin | GEÇTİ |
 | C03 | motor bağlantı kafesi kaporta içinde | 18,4 | >= 0 mm margin | GEÇTİ |
 | C03 | taret büyüme zarfı (toplanmış) OML içinde | 0 | 0 | GEÇTİ |
 | C04 | içerik / yapı çakışması yok | 0 | 0 | GEÇTİ |
-| C04 | harness corridors: trunk diameter + 10 mm free of every other object except the clamping members ('supports'), declared penetrations and the 30 mm terminations (layout.systems.harness.rules, KO-CORRIDOR-HARNESS; fix round 3, PK3-05) (114 close pairs) | 0 | 0 | GEÇTİ |
+| C04 | harness corridors: trunk diameter + 10 mm free of every other object except the clamping members ('supports'), declared penetrations and the 30 mm terminations (layout.systems.harness.rules, KO-CORRIDOR-HARNESS; fix round 3, PK3-05) (146 close pairs) | 0 | 0 | GEÇTİ |
 | C04 | yapı – yapı (elemanlar, bağlantı parçaları): çakışma yalnız parçaların bildirdiği temaslarda ('touch'; düzeltme turu 1, VPK-01/VPK-06) | 0 | 0 | GEÇTİ |
 | C04 | bağlantı parçası zarfları kendi cıvata düzenlerini taşıyor: kenar >= 2 D metal / 2,5 D kompozit, aralık >= 3 D (düzeltme turu 1, VPK-07) | 0 | 0 | GEÇTİ |
 | C05 | takım toplama dizisi (21 durum): ana takım lastiği – yapı / içerik | 12 | >= 12 mm | GEÇTİ |
-| C05 | takım toplama dizisi (21 durum): burun takımı lastiği – yapı / içerik | 13,5 | >= 12 mm | GEÇTİ |
-| C05 | takım toplama dizisi (21 durum): ana takım bacağı – yapı / içerik | 12 | >= 10 mm | GEÇTİ |
-| C05 | takım toplama dizisi (21 durum): burun takımı bacağı – yapı / içerik | 15,8 | >= 10 mm | GEÇTİ |
-| C05 | takım toplama dizisi (21 durum): ana takım bacağı door – yapı / içerik | 28,6 | >= 10 mm | GEÇTİ |
+| C05 | takım toplama dizisi (21 durum): burun takımı lastiği – yapı / içerik | 12,7 | >= 12 mm | GEÇTİ |
+| C05 | takım toplama dizisi (21 durum): ana takım bacağı – yapı / içerik | 12,2 | >= 10 mm | GEÇTİ |
+| C05 | takım toplama dizisi (21 durum): burun takımı bacağı – yapı / içerik | 11,2 | >= 10 mm | GEÇTİ |
+| C05 | takım toplama dizisi (21 durum): ana takım bacağı door – yapı / içerik | 28,3 | >= 10 mm | GEÇTİ |
 | C05 | takım toplama dizisi (21 durum): main trunnion door – yapı / içerik | 10,4 | >= 10 mm | GEÇTİ |
-| C05 | takım toplama dizisi (21 durum): nose steering actuator – yapı / içerik | 14,5 | >= 10 mm | GEÇTİ |
-| C05 | takım toplama dizisi (21 durum): ana takım iç kapağı – hareketli takım | 22,7 | >= 10 mm | GEÇTİ |
-| C05 | takım toplama dizisi (21 durum): main trunnion door – hareketli takım | 12,3 | >= 10 mm | GEÇTİ |
-| C05 | takım toplama dizisi (21 durum): nose doors – hareketli takım | 13 | >= 10 mm | GEÇTİ |
+| C05 | takım toplama dizisi (21 durum): nose steering actuator – yapı / içerik | 12,4 | >= 10 mm | GEÇTİ |
+| C05 | takım toplama dizisi (21 durum): ana takım iç kapağı – hareketli takım | 18,6 | >= 10 mm | GEÇTİ |
+| C05 | takım toplama dizisi (21 durum): main trunnion door – hareketli takım | 13,3 | >= 10 mm | GEÇTİ |
+| C05 | takım toplama dizisi (21 durum): nose doors – hareketli takım | 14 | >= 10 mm | GEÇTİ |
 | C05 | taret E180 zarfı strok boyunca bölme duvarları / tavan / çerçevelere | 16,1 | >= 6 mm | GEÇTİ |
-| C05 | taret E180 zarfı asansör raylarına / bilyalı vidaya | 30,3 | >= 5 mm | GEÇTİ |
+| C05 | taret E180 zarfı asansör raylarına / bilyalı vidaya | 20,2 | >= 5 mm | GEÇTİ |
 | C05 | taret E180 zarfı kayar kapaklara (bağlı dizi) | 9 | >= 5 mm | GEÇTİ |
 | C05 | HD59 topu ile açıklık halkası arası (radyal) | 5 | >= 5 mm | GEÇTİ |
-| C05 | stabilatörler (tüm sapma) egzoz zarflarına | 123,5 | >= 50 mm | GEÇTİ |
-| C05 | stabilatörler egzoz duman konisinin dışında | 193 | >= 0 | GEÇTİ |
+| C05 | stabilatörler (tüm sapma) egzoz zarflarına | 125,2 | >= 50 mm | GEÇTİ |
+| C05 | stabilatörler egzoz duman konisinin dışında | 193,3 | >= 0 | GEÇTİ |
 | C05 | kanatçık / flap (tüm sapma) kanat eyleyicilerine | 74,4 | >= 3 mm | GEÇTİ |
 | C05 | paraşüt kapağı (bağlı kapak, prizmatik kalkış, V çatı zarfı) dış antenlere, sondalara, ışıklara | 100 | >= 10 mm | GEÇTİ |
 | C05 | dümen kökü (dikey açıklığının eta0 kesri) tüm sapmada gövde / kaporta yüzeyine | 19,6 | >= 8 mm | GEÇTİ |
@@ -69,7 +69,7 @@ Bu rapor `python3 -m ucav250.analysis.layout_check` tarafından `ucav250/spec.ya
 | C07 | GNSS antenleri üst yüzey pencerelerinin altında | 2 | – | GEÇTİ |
 | C07 | RF görüş hattı: iç antenler GFRP pencerelerinin >= %50'sini karbon / metal yapıya ve teçhizata takılmadan görüyor (düzeltme turu 1, VPK-10) | 98 | >= 50 % | GEÇTİ |
 | C08 | Li-ion tampon batarya ile yakıt hücreleri arası | 1,624 | >= 1,0 m | GEÇTİ |
-| C08 | yakıt hücreleri ile yangın perdesi ön yüzü arası (CS-LUAS.967(c)) | 0,6252 | >= 0,013 m | GEÇTİ |
+| C08 | yakıt hücreleri ile yangın perdesi ön yüzü arası (CS-LUAS.967(c)) | 0,6257 | >= 0,013 m | GEÇTİ |
 | C08 | hiçbir kompozit eleman ya da bağlantı parçası yangın perdesinden motor bölmesine geçmiyor (elemanlar ön yüzde biter; düzeltme turu 1, VPK-06) | 0 | 0 | GEÇTİ |
 | C08 | motor dinamik zarfı ile diğer nesneler arası | 10 | >= 10 mm | GEÇTİ |
 | C08 | motor bağlantı kafesi ile SG750 arası | 17,7 | >= 10 mm | GEÇTİ |
@@ -110,33 +110,33 @@ Bu rapor `python3 -m ucav250.analysis.layout_check` tarafından `ucav250/spec.ya
 
 ## 2. Kütle yerleşimi ve ağırlık merkezi
 
-Boş kütle 101,6 kg; spec kalemlerinden AM [2,629; -0,0003; 0,048] m, yerleşim nesnelerinden AM [2,629; -0,0003; 0,048] m. Aşağıdaki kalemlerin konumu boyutlandırma evresinde varsayımdı; yerleşim evresinde yerleştirilen nesnelerin ağırlık merkezinden hesaplanır (`layout.mass_placement`) ve `sizing.mass_items` bunu uygular. Boyutlandırma evresi konumları `position_sizing_phase` alanındadır.
+Boş kütle 108,2 kg; spec kalemlerinden AM [2,63; -0,0012; 0,0307] m, yerleşim nesnelerinden AM [2,63; -0,0012; 0,0307] m. Aşağıdaki kalemlerin konumu boyutlandırma evresinde varsayımdı; yerleşim evresinde yerleştirilen nesnelerin ağırlık merkezinden hesaplanır (`layout.mass_placement`) ve `sizing.mass_items` bunu uygular. Boyutlandırma evresi konumları `position_sizing_phase` alanındadır.
 
 | Kütle kalemi | Boyutlandırma evresi x (m) | Yerleşim x (m) | Δx (m) | Esas |
 |---|---|---|---|---|
-| engine_group_installed | 3,83 | 3,591 | -0,2394 | engine.installed_items_kg at the layout positions (engine on the inclined crank axis; ECU in the mission bay,  |
-| cooling_baffles_firewall_cowl_flap | 3,73 | 3,781 | 0,0511 | sizing.cooling_installation_mass components at the layout objects: firewall stainless layer (firewall_stackup. |
+| engine_group_installed | 3,83 | 3,591 | -0,2393 | engine.installed_items_kg at the layout positions (engine on the inclined crank axis; ECU in the mission bay,  |
+| cooling_baffles_firewall_cowl_flap | 3,73 | 3,796 | 0,0658 | sizing.cooling_installation_mass components at the layout objects: firewall stainless layer (firewall_stackup. |
 | dorsal_cooling_inlet_s_duct | 3,4 | 3,482 | 0,0815 | flush dorsal inlet (P-INLET) + S-duct to the firewall duct cut-out |
 | actuators_stabilators_2x_DA30 | 3,737 | 3,619 | -0,1181 | DA 30 lying along y on the cool side of the firewall, pushrods through fireproof boots |
 | actuators_nose_steering_brake_2x_DA26 | 1,825 | 0,8404 | -0,9849 | item basis: 2 x DA 26 datasheet + 0.10 installation (half each); the steering actuator travels with the leg (f |
-| wiring_harness_connectors_coax | 1,9 | 2,301 | 0,4006 | cables 70 % (estimate) by trunk length x diameter^2 (layout.systems.harness) + outer-panel harnesses; connecto |
-| flight_termination_lights | 1,684 | 2,32 | 0,6365 | FTS 0.15 kg + 3 x AveoFlash 0.083 kg at their installed places |
-| keel_beams_longerons | 2 | 2,243 | 0,2427 | length-weighted centroid of the longitudinal members (chine longerons, keel walls, keel beams, dorsal longeron |
-| frames_bulkheads | 1,88 | 2,408 | 0,5283 | 13 stations, mass ~ net web area (section inside the 6 mm skin inset minus the declared cut-outs and, for the  |
+| wiring_harness_connectors_coax | 1,9 | 2,329 | 0,4292 | cables 70 % (estimate) by trunk length x diameter^2 (layout.systems.harness) + outer-panel harnesses; connecto |
+| flight_termination_lights | 1,684 | 2,292 | 0,6086 | FTS 0.15 kg + 3 x AveoFlash 0.083 kg at their installed places |
+| keel_beams_longerons | 2 | 2,243 | 0,2426 | length-weighted centroid of the longitudinal members (chine longerons, keel walls, keel beams, dorsal longeron |
+| frames_bulkheads | 1,88 | 2,408 | 0,5284 | 13 stations, mass ~ net web area (section inside the 6 mm skin inset minus the declared cut-outs and, for the  |
 | engine_mount_4130 | 3,67 | 3,716 | 0,046 | mean of the truss tube mid-points and the ring nodes (layout.chassis.engine_mount) |
-| parachute_attach_fitting | 1,65 | 2,272 | 0,6223 | dorsal spine channel (structures P-SPINE-*, about 65 % of the bottom-up mass) + two bridle fittings (Y-bridle) |
+| parachute_attach_fitting | 1,65 | 2,272 | 0,622 | dorsal spine channel (structures P-SPINE-*, about 65 % of the bottom-up mass) + two bridle fittings (Y-bridle) |
 | floors_trays_rails | 1,4 | 1,766 | 0,3658 | area-weighted decks/floors + trays |
 | hatch_frames_quick_access_fasteners | 1,5 | 2,346 | 0,846 | perimeter-weighted removable panels/hatches (frame lands, Camlocs, nutplates) |
-| fin_ventral_root_fittings | 3,572 | 3,606 | 0,0341 | fin, stub and ventral root fittings at the frames |
-| actuators_ailerons_2x_DA26 | 3,1 | 2,831 | -0,2685 | item basis: 2 x DA 26 datasheet + horns/pushrods 0.10 at the layout actuators (fix round 2, PK2-07) |
-| actuators_flaps_2x_DA30 | 3,006 | 2,782 | -0,2242 | item basis: 2 x DA 30 datasheet + installation 0.10 + hinges/horns 0.20 at the layout actuators |
+| fin_ventral_root_fittings | 3,572 | 3,606 | 0,034 | fin, stub and ventral root fittings at the frames |
+| actuators_ailerons_2x_DA26 | 3,1 | 2,831 | -0,2689 | item basis: 2 x DA 26 datasheet + horns/pushrods 0.10 at the layout actuators (fix round 2, PK2-07) |
+| actuators_flaps_2x_DA30 | 3,006 | 2,782 | -0,2247 | item basis: 2 x DA 30 datasheet + installation 0.10 + hinges/horns 0.20 at the layout actuators |
 | actuators_rudders_2x_DA26 | 3,921 | 3,764 | -0,1572 | item basis: 2 x DA 26 datasheet + linkages 0.06 at the layout actuators (fin boxes) |
-| main_gear_legs_wheels_brakes_emas_pair | 3,001 | 2,97 | -0,0302 | SAGITTA main leg 4.0 kg each (components.yaml) split as TOST wheel assembly 1.79 kg (research estimate) + DA-2 |
-| nose_gear_leg_wheel_steering | 0,8443 | 0,8419 | -0,0024 | SAGITTA nose leg 3.5 kg (components.yaml) split as TOST nose wheel 0.365 + tyre 0.45 + tube 0.08 kg + DA-26-cl |
-| gear_doors_wells_locks_sensors | 2,499 | 2,369 | -0,1293 | sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout door  |
+| main_gear_legs_wheels_brakes_emas_pair | 3,001 | 2,972 | -0,029 | SAGITTA main leg 4.0 kg each (components.yaml) split as TOST wheel assembly 1.79 kg (research estimate) + DA-2 |
+| nose_gear_leg_wheel_steering | 0,8443 | 0,8428 | -0,0015 | SAGITTA nose leg 3.5 kg (components.yaml) split as TOST nose wheel 0.365 + tyre 0.45 + tube 0.08 kg + DA-26-cl |
+| gear_doors_wells_locks_sensors | 2,499 | 2,615 | 0,1168 | sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout door  |
 | turret_lift_mechanism_doors | 1,22 | 1,245 | 0,0254 | item basis split (mass.rules.turret_mechanism_kg, estimates) at the layout objects, turret retracted |
 | parachute_uavos_200 | 1,65 | 1,65 | 0 | container box centre (components.yaml compartment 0.300 x 0.300 x 0.275 m) |
-| fuel_system_3_cells | 2,642 | 2,607 | -0,0353 | components.yaml fuel_system + three-cell interconnection; the item has no published split, so it is placed at  |
+| fuel_system_3_cells | 2,642 | 2,607 | -0,0356 | components.yaml fuel_system + three-cell interconnection; the item has no published split, so it is placed at  |
 
 ## 3. Arayüz bağlantılarının ilk ön boyutlandırması
 
@@ -144,10 +144,10 @@ Yöntem: kapalı biçimli pim kesme / eğilme / ezilme ve cıvata grubu kesmesi,
 
 | Kalem | Uygulanan | İzin verilen | Emniyet payı | Esas |
 |---|---|---|---|---|
-| kanat birleşimi ana pimi, çift kesme | 134 | 599,8 | 3,48 | R = 35918 N (y = 0,7 m'de M_nihai 5483 N m, V_nihai 4467 N; pimler arası 184 mm) x 1,5 sık sökülen bağlantı katsayısı; MPa |
-| kanat birleşimi ana pimi, eğilme | 844,1 | 923,9 | 0,09 | M = R/2 (t_çatal/2 + t_dil/4) = 339 N m; Ftu ile (plastik eğilme kazancı alınmadı); MPa |
-| kanat birleşimi CFRP dil: burç ezilme basıncı (dış çap 22 x 30 mm, açık delik bası sınırı) | 107,4 | 175,4 | 0,63 | x 2,0 ezilme katsayısı; %2 kaymalı ezilme değeri e/D >= 3 ister, burç üstte ve altta UD flanşlarla kapalıdır, bu yüzden QI açık delik bası değeri kullanılır (muhafazakâr yerine koyma, eleman testi gerekli); MPa |
-| kanat birleşimi CFRP çatal kulakları: burç ezilme basıncı (2 x dış çap 22 x 10 mm) | 163,3 | 175,4 | 0,07 | x 2,0 ezilme katsayısı; dildeki gibi açık delik bası sınırı; MPa |
+| kanat birleşimi ana pimi, çift kesme | 134,2 | 599,8 | 3,47 | R = 35976 N (y = 0,7 m'de M_nihai 5492 N m, V_nihai 4474 N; pimler arası 184 mm) x 1,5 sık sökülen bağlantı katsayısı; MPa |
+| kanat birleşimi ana pimi, eğilme | 845,4 | 923,9 | 0,09 | M = R/2 (t_çatal/2 + t_dil/4) = 340 N m; Ftu ile (plastik eğilme kazancı alınmadı); MPa |
+| kanat birleşimi CFRP dil: burç ezilme basıncı (dış çap 22 x 30 mm, açık delik bası sınırı) | 107,6 | 175,4 | 0,63 | x 2,0 ezilme katsayısı; %2 kaymalı ezilme değeri e/D >= 3 ister, burç üstte ve altta UD flanşlarla kapalıdır, bu yüzden QI açık delik bası değeri kullanılır (muhafazakâr yerine koyma, eleman testi gerekli); MPa |
+| kanat birleşimi CFRP çatal kulakları: burç ezilme basıncı (2 x dış çap 22 x 10 mm) | 163,5 | 175,4 | 0,07 | x 2,0 ezilme katsayısı; dildeki gibi açık delik bası sınırı; MPa |
 | kayış bağlantısı çerçeve cıvataları 2 x M5 12.9 (tek kesme, şokun tamamı bu grupta) | 530,5 | 732 | 0,38 | 13,1 kN (GRS 4/240 yayımlanmış açılma şoku) yalnız nihai (CRASH-004) x 1,15 bağlantı katsayısı; ISO 898-1 12.9, gerilme alanında tau = 0,6 Rm; MPa |
 | kayış bağlantısı omurga tabanı cıvataları 4 x M4 12.9 (tek kesme, şokun tamamı bu grupta) | 429 | 732 | 0,71 | 13,1 kN (GRS 4/240 yayımlanmış açılma şoku) yalnız nihai (CRASH-004) x 1,15 bağlantı katsayısı; ISO 898-1 12.9, gerilme alanında tau = 0,6 Rm; MPa |
 | kayış kilit pimi Ø8 (Ti-6Al-4V, çift kesme) | 149,9 | 599,8 | 3 | MPa |
@@ -170,7 +170,7 @@ Yöntem: kapalı biçimli pim kesme / eğilme / ezilme ve cıvata grubu kesmesi,
 | FS-FUEL | 2,189 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-HARN-FUEL, C-SPINE-FUEL, C-CHINE |
 | FS-MS | 2,487 | fitting frame / spar frame | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-PAYLOAD-MS, C-FUEL-MS, C-FUEL-MS-LO, C-VENT-MS, C-SPINE-MS, C-HARN-MS |
 | FS-RS | 2,8 | fitting frame / spar frame | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-PAYLOAD-RS, C-FUEL-SAD, C-FUEL-RS-LO, C-VENT-RS, C-HARN-RS |
-| FS-GEAR | 3,095 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-FUEL-FEED, C-FUEL-RET, C-FUEL-VENT, C-FUEL-DRN, C-HARN-CL, C-DOORLINK, C-CHINE |
+| FS-GEAR | 3,096 | bulkhead | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-FUEL-FEED, C-FUEL-RET, C-FUEL-VENT, C-FUEL-DRN, C-HARN-CL, C-HARN-FUELA, C-DOORSHAFT, C-CHINE |
 | FS3480 | 3,48 | ring | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 6,8 | C-CHINE |
 | FS3670 | 3,67 | bulkhead / firewall | cfrp_pw_mtm45_as4 / prepreg_ooa_vacbag / rib_panel | 14,8 | C-DUCT, C-FW-FUEL, C-FW-HARN, C-FW-PUSHROD |
 | FS3738 | 3,738 | ring | al_2024_t3_sheet / sheet_metal_aluminium / – | 2 | – |
@@ -222,11 +222,11 @@ Yöntem: kapalı biçimli pim kesme / eğilme / ezilme ve cıvata grubu kesmesi,
 | F-RISER-FWD | YK250-CH-112 | paraşüt ön kayış bağlantısı | al_7075_t651_plate | U-lug fitting in the dorsal spine channel M-SPINE: flange 6 mm on the frame face with 2 x M5 12.9 (axis x) into the fram |
 | F-RISER-AFT | YK250-CH-113 | paraşüt arka kayış bağlantısı | al_7075_t651_plate | U-lug fitting in the dorsal spine channel M-SPINE: flange 6 mm on the frame face with 2 x M5 12.9 (axis x) into the fram |
 
-Dış panel birleşimi y = 0,7 m: pimli kompozit dil-çatal, iki Ø16 mm Ti-6Al-4V pim ([2.552, 0.463, -0.003], [2.578, 0.645, 0.005]), arka kirişte yuva bağlantısındaki kulak ve düşey Ø8 mm bilyalı kilit pimi (veter yönü kuvvet ve düzlem içi moment çifti); takma yolu ana kiriş ekseni boyunca 0,3 m.
+Dış panel birleşimi y = 0,7 m: pimli kompozit dil-çatal, iki Ø16 mm Ti-6Al-4V pim ([2.552, 0.463, -0.003], [2.577, 0.645, 0.005]), arka kirişte yuva bağlantısındaki kulak ve düşey Ø8 mm bilyalı kilit pimi (veter yönü kuvvet ve düzlem içi moment çifti); takma yolu ana kiriş ekseni boyunca 0,3 m.
 
-Motor bağlantısı: welded 4130 N tube bed mount: 4 feet on the firewall fittings (upper: F-FW-CORNER, lower: F-EMOUNT-LO, R/L) -> a welded ring (4130 tube 15.9 x 0.89 mm) in a plane 30 mm forward of the crankcase mount face; 4 elastomer isolators in the ring cups carry the engine on its 4 rear crankcase bosses — 4 x M8 cıvata, sönümleyici: Limbach optional 'Damper Shock Mount' (engine.yaml installation.mount.isolators; dimensions and stiffness not published); yangın perdesi yığını CFRP sandwich bulkhead (layups.rib_panel) 6,8 mm, air gap on 12 stainless stand-offs (insulation blanket optional) 7,6 mm, AISI 304 stainless sheet 0.4 mm, fireproof without test (>= 0.38 mm, standards.yaml FIRE-001; fix round 2: 0.5 -> 0.4 mm, air gap 7.5 -> 7.6 mm, stack unchanged 14.8 mm) 0,4 mm.
+Motor bağlantısı: welded 4130 N tube bed mount: 4 feet on the firewall fittings (upper: F-FW-CORNER, lower: F-EMOUNT-LO, R/L) -> a welded ring (4130 tube 15.9 x 0.89 mm) in a plane 30 mm forward of the crankcase mount face; 4 elastomer isolators in the ring cups carry the engine on its 4 rear crankcase bosses — 4 x M8 cıvata, sönümleyici: Limbach optional 'Damper Shock Mount' (engine.yaml installation.mount.isolators; dimensions and stiffness not published); yangın perdesi yığını CFRP sandwich bulkhead (layups.rib_panel) 6,8 mm, air gap on 12 stainless stand-offs (insulation blanket optional) 7,59 mm, Ti-6Al-4V sheet 0.41 mm, fireproof without test (titanium sheet 0.016 in, 14 CFR 23.1191(e)(6), standards.yaml FIRE-001 also_in; fix round 2: stainless 0.5 -> 0.4 mm; mass/CG closure round: AISI 304 0.4 mm -> Ti-6Al-4V 0.41 mm, air gap 7.6 -> 7.59 mm, stack unchanged 14.8 mm) 0,41 mm.
 
-Paraşüt: Y-kayış, ön ayak 1,598 m (F-RISER-FWD), arka ayak 1,36 m (F-RISER-AFT); açılma yükü 13,1 kN tek ayakta, nihai yalnız (CRASH-004).
+Paraşüt: Y-kayış, ön ayak 1,584 m (F-RISER-FWD), arka ayak 1,343 m (F-RISER-AFT); açılma yükü 13,1 kN tek ayakta, nihai yalnız (CRASH-004).
 
 ## 6. Mekanizmalar
 
@@ -242,17 +242,17 @@ Paraşüt: Y-kayış, ön ayak 1,598 m (F-RISER-FWD), arka ayak 1,36 m (F-RISER-
 | stabilator_L | revolute | [0.0, 1.0, 0.0] | -0,3491 / 0,2618 | elevator_deg  |
 | main_gear_R | revolute | [-1.0, 0.0, 0.0] | 0 / 1,885 | gear_up `1.88496*clamp((gear_up-0.15)/0.7,0,1)` |
 | main_gear_L | revolute | [1.0, 0.0, 0.0] | 0 / 1,885 | gear_up `1.88496*clamp((gear_up-0.15)/0.7,0,1)` |
-| main_inner_door_R | revolute | [-1.0, 0.0, 0.0] | 0 / 1,658 |  `1.65806*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))` |
-| main_inner_door_L | revolute | [1.0, 0.0, 0.0] | 0 / 1,658 |  `1.65806*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))` |
-| main_trunnion_door_R | revolute | [1.0, 0.0, 0.0] | 0 / 2,182 |  `2.18166*(1-clamp((gear_up-0.7333)/0.1167,0,1))` |
-| main_trunnion_door_L | revolute | [-1.0, 0.0, 0.0] | 0 / 2,182 |  `2.18166*(1-clamp((gear_up-0.7333)/0.1167,0,1))` |
+| main_inner_door_R | revolute | [-0.998, 0.0, -0.069] | 0 / 1,571 |  `1.57080*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))` |
+| main_inner_door_L | revolute | [0.998, 0.0, 0.069] | 0 / 1,571 |  `1.57080*(clamp(gear_up/0.15,0,1)-clamp((gear_up-0.85)/0.15,0,1))` |
+| main_trunnion_door_R | revolute | [1.0, 0.0, 0.0] | 0 / 2,182 |  `2.18166*(1-clamp((gear_up-0.85)/0.15,0,1))` |
+| main_trunnion_door_L | revolute | [-1.0, 0.0, 0.0] | 0 / 2,182 |  `2.18166*(1-clamp((gear_up-0.85)/0.15,0,1))` |
 | nose_gear | revolute | [0.0, -1.0, 0.0] | 0 / 1,571 |  `1.57080*clamp((gear_up-0.15)/0.7,0,1)` |
 | nose_steer | revolute | [0.0, 0.0, -1.0] | -0,3491 / 0,3491 | steer_deg  |
 | nose_door_R | revolute | [0.996, 0.0, -0.088] | 0 / 1,571 |  `1.57080*(1-clamp((gear_up-0.85)/0.15,0,1))` |
 | nose_door_L | revolute | [-0.996, 0.0, 0.088] | 0 / 1,571 |  `1.57080*(1-clamp((gear_up-0.85)/0.15,0,1))` |
 | turret_elevator | prismatic | [0.0, 0.0, -1.0] | 0 / 0,128 | turret `0.1280*clamp((turret-0.2)/0.8,0,1)` |
-| turret_door_R | prismatic | [0.0, 0.899, 0.438] | 0 / 0,12 |  `0.12*clamp(turret/0.2,0,1)` |
-| turret_door_L | prismatic | [0.0, -0.899, 0.438] | 0 / 0,12 |  `0.12*clamp(turret/0.2,0,1)` |
+| turret_door_R | prismatic | [0.0, 0.848, 0.53] | 0 / 0,12 |  `0.12*clamp(turret/0.2,0,1)` |
+| turret_door_L | prismatic | [0.0, -0.848, 0.53] | 0 / 0,12 |  `0.12*clamp(turret/0.2,0,1)` |
 | para_hatch | prismatic | [0.0, 0.0, 1.0] | 0 / 0,15 | para_hatch  |
 | prop_spin | revolute | [0.996, 0.0, 0.087] | 0 / 2,094 | prop_deg  |
 

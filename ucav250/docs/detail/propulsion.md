@@ -165,6 +165,15 @@ Grup tavanın 1,44 kg altındadır. Kalem bazında: spinner grubu +0,18 kg (ara 
 soğutma/ısı koruması +0,39 kg (0,4 mm sac, layout'taki 0,1 mm folyonun yerine; brüt kütle) aşar; egzoz (0,40 kg'a
 karşı 1,0 kg pay) ve motor yatağı kalemleri bunları karşılar.
 
+**Kütle/AM kapanış turu (güncel).** İtki bütçe grubu (EFI pompası FU-584 dahil): **12,967 kg**; tavan
+`mass.budget.propulsion` **12,97 ± 0,39 kg** (ölçülen gruba eşitlendi). Bu turda motor bölmesinde (ağırlık merkezinin
+arkasında, x 3,6–3,9) titanyuma geçildi: yangın perdesi sacı PR-088 Ti-6Al-4V 0,41 mm (14 CFR 23.1191(e)(6)), soğutma
+geçiş kanalı PR-548 Ti-6Al-4V 0,5 mm, kaporta ısı kalkanları PR-523 Ti-6Al-4V 0,4 mm (yangın perdesi değil, ısı
+kalkanı; kalkan sıcaklığı motor bölmesi ölçümünde doğrulanmalı, Ti-6Al-4V uzun süreli sınırı ~400 °C). Egzoz çıkış
+ek parçaları PR-520 paslanmaz kaldı (egzoz sıcaklığı). Vidalar Ti-6Al-4V; motorun alüminyum göbeklerine giren vidalar
+A2-70 kalır. Açık: susturucu PR-504 iç yapısızdır (0,40 kg; gerçek susturucu +0,3…0,6 kg, x 3,86); CHT/EGT
+algılayıcıları modellenmedi.
+
 ## 11. Doğrulama
 
 - `python3 -m ucav250.analysis.checks --modules chassis,propulsion --focus YK250-PR --no-write` → 0 ihlal.

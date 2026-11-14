@@ -217,6 +217,14 @@ Kabuk bağlantı elemanları (grup `hardware`): **3,34 kg** — 759 eleman (orta
 yapısal kaplamalar için istediği 25–32 mm aralıklı M4 somun plakalı vida kavramının doğrudan sonucudur; uçağın tamamı
 için ayrılan `mass.budget.hardware` 1,51 kg ile çelişir (§11).
 
+**Kütle/AM kapanış turu (güncel).** Kabuk bütçe grubu: kayıt defteri 10,207 kg + boya payı 0,611 kg (0,10 kg/m² × açık
+gövde ıslak alanı; geometride yok) = **10,818 kg**; tavan `mass.budget.shell` **10,82 ± 0,32 kg** (ölçülen gruba
+eşitlendi). Taret açıklık halkası SH-363 sistem grubunun taret kalemindedir. Bu turda: bütün kabuk vidaları
+ISO 7380 Ti-6Al-4V (somun plakaları ve gömme somunlar A-286 sınıfı paslanmaz; kütle iki alaşımlı), sıra aralıkları
+yapısal kaplamalarda 28 → 32 mm (`PITCH_NUT`, = 8 D; B-SCREW-SH / B-SCREW-BR zaten 32 mm ile hesaplanır), yakıt
+panellerinde 28 → 30 mm (`PITCH_FUEL`), Camloc kapaklarında 85 → 100 mm (`PITCH_CAM`); kabuk bağlantı elemanı sayısı
+52 azaldı. Kabuk bağlantı elemanları `hardware` grubundadır (uçak geneli 5,25 kg).
+
 ## 10. Layout'tan sapmalar (gerekçeli)
 
 1. **Çerçeve başlığına düşen kapak kenarları gövde çizgisine taşındı** (P-FWDHATCH ön/arka FS0300/FS0600, P-AVHATCH

@@ -315,6 +315,19 @@ Kapanış yeniden yapıldı: boş kütle **101,630 kg** (MTOM 149,9 kg sabit), k
 
 Grup tavanları yeni tahminlere (büyüme payı dahil, 10 g'a yukarı yuvarlanmış) göre yeniden dağıtıldı: şasi 12,38 → 12,46 kg (12,459), kumandalar 8,31 → 8,29 kg (8,281), iniş takımı 14,34 → 14,57 kg (14,565), itki 14,31 → 14,54 kg (14,532), kuyruk 7,60 → 7,35 kg (7,341), kanat 15,46 → 15,34 kg (15,340). Tavanların toplamı 101,53 → 101,68 kg'dır; R-56 payı (R-02b'nin tam karşılandığı boş kütle 101,743 kg − yedek 0,05 kg − tavanlar toplamı) **+0,013 kg** olarak pozitif kalır. Pay çok küçüktür: ayrıntılı tasarımda her kütle artışı başka bir kalemden karşılanmalıdır.
 
+## 7a. Kütle/AM kapanış turu: bağlantı elemanı malzemesi, safra ve küçük geometri düzeltmeleri
+
+Ayrıntılı tasarımın kütle / ağırlık merkezi kapanışı ([02](02_konsept_ve_boyutlandirma.md), aynı adlı bölüm) yapı hesaplarını şu noktalarda değiştirdi; `structures --check` **303 pay, en küçük MS 0,000 (W-CAP-09), negatif yok**, 18/18 arayüz:
+
+* **12.9 → Ti-6Al-4V cıvatalar** (`ti_bolt_rm`: `spec.materials` Ti-6Al-4V tavlanmış Ftu, A tabanı sac değeri çubuk tahmini olarak, Ti pimlerin kuralı; kesme 0,6 Rm): motor yatağı ayakları E-FOOT MS 3,96 (12.9 ile 5,43), stabilatör düğümü T-NODE-BASE-BOLTS 2,66 ve kök parçası T-NODE-STUB-BOLTS 6,90, dikey kökleri T-FINROOT-FRONT 3,41 / -REAR 5,56, ventral T-VENTRAL-BOLT 3,17, stabilatör çapraz cıvatası T-CROSSBOLT 47,8. Burun mafsalı cıvataları G-NPIVOT-WALL'un zaten varsaydığı Ti oldu (kayıt defteri 12.9 gösteriyordu). Motor bölmesindeki somunlar naylon halkalı ISO 7040 yerine tam metal ISO 7042 (A-286 sınıfı; > 120 °C). Yorulma için motor ayağı cıvataları haddelenmiş dişli olmalıdır.
+* **A2-70 → Ti-6Al-4V vidalar** (kabuk, sistemler, faydalı yük, kumanda, şasi, kanat, yakıt): bu satırlar (B-SCREW-SH 3,33, B-SCREW-BR 2,75, P-SPINE-SCREWS, TU-ROOF, TU-RAILSCR, EQ-PARA-BRK, EQ-PAYTRAY, C-RODEND-*) ihtiyatlı olarak A2-70 değeriyle kredilendirilir (Ti-6Al-4V Ftu 924 MPa > 700 MPa). Somun plakaları ve gömme somunlar A-286 sınıfı paslanmaz kalır (kütle modeli iki alaşımlıdır).
+* **Kabuk vida aralığı** yapısal kaplamalarda 28 → 32 mm: B-SCREW-SH ve B-SCREW-BR zaten 32 mm ile hesaplanıyordu (pay değişmedi). Yakıt panelleri 30 mm (sızdırmazlık aralığı 25–30 mm), Camloc kapakları 100 mm (yapısal olmayan kapaklar).
+* **Yangın perdesi sacı Ti-6Al-4V 0,41 mm** (14 CFR 23.1191(e)(6)); ara borular Ti-6Al-4V (E-FOOT-BR ve T-NODE-FW-BR boruları kredilendirmez; E-FOOT-BR 1,53). Katman kalınlığı 14,8 mm aynı kaldı (hava boşluğu 7,59 mm).
+* **Burun safrası BAL-NOSE** (layout 0,74 kg, ölçülen 0,721 kg; TR-FWDBAY, 4 × M4 Ti): EQ-BALLAST (kesme ileri + çekme yukarı etkileşimi, bağlantı katsayısı 1,15) ve EQ-BALLAST-BR (3 mm CFRP tepside ezilme, ETW) eklendi; paylar çok büyüktür. Cıvatalar tepsi kenarından ≥ 2,5 D için blok kenarından 11 mm içeride.
+* **Kapanışın kaydırdığı geometriye göre düzeltmeler** (kanat 0,25 mm öne, ana takım 1,3 mm geri, stabilatör 0,624 m²): kırık bağlantısı plakaları başlık yüzüne 0,1 mm yapıştırma çizgisiyle oturur; arka kiriş yuva bağlantısının arka kenarı arka pimin 18 mm arkasında (e/D 2,25) ve üst plakanın arka üst kenarında 5 × 1 mm pah (eldiven kaplaması); ana takım mafsal bağlantısının sabit istasyonları (kulaklar, flanş, tavan cıvataları) ve mafsal kapağı tahriki layout mafsal ekseniyle birlikte kayar; stabilatör mili soket kaburgasının 0,1 mm önünde biter.
+
+Kütle tallysi (`structures.sizing.mass`) değişmedi; boş kütle artık `spec.mass.registry`'den ölçülür ve tavanlar ölçülen gruplardır (doc 02 §6.2). R-02b ve R-56 açığı (6,44 kg) birincil yapının paylarıyla kapatılamaz: W-CAP-09 0,000, FW-FOOT-CORE 0,039; orta kutu W-SKINBUCK-CT, J-PRONG-BUSH ve CT-KINK-RIB payları da küçüktür.
+
 ---
 
 ## 8. Arayüzler

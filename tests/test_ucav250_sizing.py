@@ -1008,10 +1008,12 @@ class TestDoc02(unittest.TestCase):
                                bc["empty_kg_at_R02_limit"] - bc["empty_estimate_kg"],
                                delta=json_tol(bc["headroom_R02_over_estimate_kg"], bc["empty_kg_at_R02_limit"],
                                               bc["empty_estimate_kg"]))
+        def sg(v, n):                  # signed as the doc writes it (mass/CG closure round: negative margins, U+2212)
+            return ("+" if v >= 0 else "\u2212") + tr(abs(v), n)
         for v in (pr["empty_mass_headroom_kg"], bc["headroom_R02b_over_estimate_kg"],
                   bc["headroom_R02_over_estimate_kg"]):
-            self.assertIn(f"+{tr(v, 2)} kg", doc)
-        self.assertIn(f"+{tr(bc['margin_kg'], 3)} kg", doc)
+            self.assertIn(f"{sg(v, 2)} kg", doc)
+        self.assertIn(f"{sg(bc['margin_kg'], 3)} kg", doc)
         # V5-06: no 'nan' in the generated report; the stabilator hinge row carries its speed
         self.assertIsNone(re.search(r"\bnan\b", md, re.I))
         st = d["control_hinges"]["stabilator"]

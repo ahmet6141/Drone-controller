@@ -148,6 +148,12 @@ Bağlantı elemanları (0,22 kg) donanım grubundadır.
 
 **Bütçe grubu (IR-08):** taret HD59 + izolatörlü bağlantı `eo_ir_turret_hd59_mount` (faydalı yük), diğer bütün parçalar (asansör, kapaklar, tahrikler, conta, servis döngüsü) `turret_lift_mechanism_doors` (systems) kalemine yazılır (`Part.mass_item`); `analysis/mass.py` bu eşlemeyle toplar ve faydalı yüksüz durumlarda yalnız taret setini çıkarır.
 
+**Kütle/AM kapanış turu (güncel).** Taret (HD59 1,55 kg + 7075 levha + 4 izolatör) kayıt defterinde 1,736 kg'dır
+(`eo_ir_turret_hd59_mount` 1,75 kg kalemi; kalan 0,014 kg `analysis/mass.py`'de noktasal kütle). Taret kaldırma
+mekanizması ve kapakları sistem grubundadır. `analysis/mass.py` yükleme durumları artık kayıt defterinde parçası
+olmayan faydalı yük kalemlerini (görev bilgisayarı, tepsi, araştırma yükü payı, E180 farkı) kendi spec konumlarında
+taşır. Vidalar Ti-6Al-4V.
+
 ## 10. Doğrulama
 
 - Tasarım kuralı denetimleri (`chassis,shell,payload`, odak YK250-PL): mesh 0, açıklık 0 (taret–halka ≥ 5,0 mm,

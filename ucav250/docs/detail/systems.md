@@ -171,7 +171,7 @@ yukarıda (`LT_SEAT_GAP`). Sistemler ağırlık merkezinin önündedir (x 1,45):
 geri alır (1 kg ≈ +9 mm MTOM) ve burun safrasını artırır; özel eFuse PDU (≈ −1 kg) bu yüzden önerilmedi. Açık: kayıt
 defterindeki pDDL kutusu 0,050 kg (anakart değeri), kapalı birim 0,165 kg; kablo demeti payı aşağıdan yukarı değil.
 
-**Kapanışın doğrulama turu (MC-02).** Yedek C2 bağı Microhard pDDL2450 artık kapalı birim kütlesiyle sayılır: 0,165 kg (components.yaml `mass_kg.note`; önceki 0,050 kg anakart değeriydi, zarf zaten kapalı birim 77 × 55 × 28 mm idi). Değer `layout.rules.bay_contents[datalink_backup]` içindedir. Sistem bütçe grubu **15,323 kg**, tavan **15,33 ± 0,46 kg**.
+**Kapanışın doğrulama turu (MC-02).** Yedek C2 bağı Microhard pDDL2450 artık kapalı birim kütlesiyle sayılır: 0,165 kg (components.yaml `mass_kg.note`; önceki 0,050 kg anakart değeriydi, zarf zaten kapalı birim 77 × 55 × 28 mm idi). Değer `layout.rules.bay_contents[datalink_backup]` içindedir. Sistem bütçe grubu **15,323 kg**, tavan **15,33 ± 0,46 kg**. Ana takım kuyuları 3,7 mm öne geldiğinden yanal kanal merkezi de öne kaydı. H-MAIN'in kanala dönüşü FS-RS'in C-HARN-RS kesiğinin iç kenarında çerçeveyi kesiyordu (1,45 mm³). Hat artık çerçevenin arka yüzünün 14 mm gerisindeki bir noktaya kadar düz çıkar, sonra döner (`X_RS_HM`). H-FUEL-A başlangıcı sabit x 3,093 idi ve FS-GEAR 0,4 mm öne kayınca çerçeve düzleminin arkasında kaldı: geçiş ve rondela bulunmuyordu, demet hiçbir şeye bağlı değildi. Başlangıç artık FS-GEAR web düzleminin 0,2 mm önündedir (`X_GEARF − 0,0002`).
 
 ## 10. Doğrulama
 

@@ -90,8 +90,15 @@ Structures workflow after a change: `layout_build --write` -> `structures --upda
   `prop` and `scale`, optional `parent` joint, optional coupled `expr`.
 * `Fastener`: standard designation (`spec`), kind, diameter, length, head bearing point, insertion axis, joined part
   ids (head → nut order), nut/insert/nutplate designation, torque, assembly step.
-* Consumables (fuel contents) are parts with `process: consumable`: mass from their volume x density, scaled by
-  the loading case's fuel fraction; excluded from the BOM, interference and thickness checks.
+* Consumables (fuel contents) are parts with `process: consumable`: mass from their volume x density at the design
+  fuel load (one free surface in the communicating bladders); per loading case the fuel mass is scaled by the fuel
+  fraction and placed at the CG of the fuel module's level table (`Registry.tables["fuel_levels"]`: `[kg, x, y, z]`
+  rows); excluded from the BOM, interference and thickness checks.
+* Poses: every moving part is modelled at its joints' REST pose = the ground pose (gear down, doors open, turret
+  retracted). `analysis/mass.py` evaluates the flight pose (last state of the `gear_retraction` sequence) and the
+  turret-extended pose (+ last state of `turret_extension`) with `Registry.posed_mesh`; producers that add a sequence
+  whose last state is the in-flight configuration keep these names.
+* `Registry.tables`: named producer data tables read by the analyses (currently `fuel_levels`).
 * Part-number groups: CH chassis, SH shell, WG wing, TL tail, FC flight controls, PR propulsion, FU fuel, LG gear,
   SY systems, PL payload, HW hardware. Number ranges per module are allocated in `spec.yaml → layout.part_numbers`.
 
@@ -167,7 +174,7 @@ verifies the spec value against the computed one within a stated tolerance).
 | `fuselage` | `length`, `width_max`, `height_max`, `stations` (n × 6 or 7: x, w, h, zc, n_top, n_bot[, top_frac]) |
 | `landing_gear` | type, positions, track, wheelbase, tyres, static load split, tip-back/turnover angles, propeller ground clearance, tail-strike angle |
 | `aero` | drag build-up items, `cd0`, `e`, `k`, `clmax_clean/_to/_ld`, `ld_max`, polar references |
-| `mass` | `mtow_kg`, `empty_kg`, `fuel_kg`, `payload_kg`, `budget: {group: {target_kg, tol_kg}}` (groups = part groups), `cases` (`name`, `fuel_fraction`, `payload`), `registry` (written by `analysis/mass.py --update-spec`: measured group masses and centroids of the detailed design; sizing closes on it, items flagged `registry_allowance` itemise what the geometry does not model) |
+| `mass` | `mtow_kg`, `empty_kg`, `fuel_kg`, `payload_kg`, `budget: {group: {target_kg, tol_kg}}` (groups = part groups), `cases` (`name`, `fuel_fraction`, `payload`), `registry` (written by `analysis/mass.py --update-spec`: measured group masses and centroids of the detailed design in the flight pose, with `cg_turret_extended` / `cg_ground`, the fuel level table and the `refs` part sets of the allowances; sizing closes on it, items flagged `registry_allowance` itemise what the geometry does not model) |
 | `stability` | `mac`, `mac_le_x`, `np_x`, `cg_design` [x, y, z], `cg_range_x` [fwd, aft], `static_margin_range` [min, max] |
 | `performance` | reference copy of the sizing results (speeds, L/D, endurance, range, climb, ceiling, field lengths, payload) |
 | `structures` | limit load factors (+3.8 / −1.5), FoS 1.5, fitting factor, design speeds (VA, VC, VD), gust velocities, gear sink rate, standards references; `sizing` (structures phase, written by `analysis/structures.py --update-spec`): sized dimensions, spar-cap / web ply zones, joint, fitting and member sizes, and the `mass` block that `analysis/sizing.py` reads in place of the concept-model wing, carry-through, keel/floor and spindle terms |

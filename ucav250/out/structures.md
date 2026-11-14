@@ -2,7 +2,7 @@
 
 Üreten: `python3 -m ucav250.analysis.structures` (el hesapları, `analysis/structlib.py`); yöntem ve açıklamalar: `docs/04_yapi_hesaplari.md`. Uygulanan değer LİMİT yük/gerilme/birim şekil değiştirme (yalnız nihai durumlarda nihai), izin verilen değer NİHAİ tasarım değeridir; **MS = izin verilen / (uygulanan × toplam katsayı) − 1**.
 
-- Satır sayısı: 325 (303 emniyet payı, 22 gereksinim / bilgi satırı)
+- Satır sayısı: 326 (304 emniyet payı, 22 gereksinim / bilgi satırı)
 - En küçük MS: **0,000** (W-CAP-09); negatif MS: 0
 - Arayüz kontrolleri (yerleşim ↔ yapı boyutları): 18/18 uygun
 
@@ -207,7 +207,7 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | T-NODE-BASE-BOLTS | düğüm taban flanşı - yangın perdesi katmanı: 7 x M5 Ti-6Al-4V (x ekseni), kesme + çekme etkileşimi (en yüklü cıvata) | YD-16 | 1 | 3,66 | yük çarpanı | FoS 1,5 x bağlantı 1,15 (çarpan içinde) | 2,662 | elastik cıvata grubu (structlib.bolt_group_inplane / bolt_group_tension); Ti-6Al-4V (spec Ftu) |
 | T-NODE-FW-BR | düğüm taban cıvataları M5: yangın perdesi bandında ezilme (3,2 mm dolu lamine) | YD-16 | 1233,1 | 6677,3 | N | FoS 1,5 x kompozit 1,2 | 2,008 | QI ezilme ETW; stainless spacer tubes not credited |
 | T-NODE-FW-CORE | düğüm tabanı altında yangın perdesi sandviçi: taban momentinin düzlem dışı cıvata çekmesi, destek levhası çevresinin çekme yarısında çekirdek kesmesi | YD-16 | 0,459 | 1 | MPa | FoS 1,5 x kompozit 1,2 | 0,210 | tension half-perimeter 198 mm, d 6,4 mm; ROHACELL 71 WF core insert (structures.sizing.firewall.core_insert) |
-| T-CROSSBOLT | stabilatör tespit çapraz cıvatası M6 Ti-6Al-4V (çift kesme), menteşe ekseni ataleti 12 g | YD-17 | 202,9 | 22284 | N | FoS 1,5 x sık sökme 1,5 | 47,810 | Ti-6Al-4V (spec Ftu), 0,6 Rm A_s |
+| T-CROSSBOLT | stabilatör tespit çapraz cıvatası M5 A2-70 (çift kesme; 7075 kök parçasına dişli), menteşe ekseni ataleti 12 g | YD-17 | 202,9 | 11928 | N | FoS 1,5 x sık sökme 1,5 | 25,126 | ISO 3506-1 A2-70, 0,6 Rm A_s (M5) |
 | T-SOCKET-BR | stabilatör kök yuvası (7075 kovan) mil üzerinde ezilme, 0,10 m geçme | YD-14 | 4,2 | 999,7 | MPa | FoS 1,5 x ezilme 2 | 78,256 | doğrusal ezilme basıncı p = 6 M/(d L^2) + V/(d L); ezilme katsayısı 2,0 |
 | T-SOCKET-TUBE | stabilatör kök yuvası kovanı 29 x 2,0 mm 7075, kökte eğilme | YD-14 | 155,9 | 530,9 | MPa | FoS 1,5 x sık sökme 1,5 | 0,513 | M 167 N m; MMPDS Ftu; sık sökme 1,5 |
 | T-SOCKET-OD | kovanın stabilatör kök kaburgası / kiriş laminesi üzerinde ezilmesi (geçme uçları) | YD-14 | 3,62 | 175,4 | MPa | FoS 1,5 x ezilme 2 | 15,130 | p = 6 M/(D L^2) + V/(D L); QI OHC ETW as the bearing limit; ezilme katsayısı 2,0 |
@@ -218,13 +218,13 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | T-FINSPAR | dikey ön kiriş başlığı (12 kat x 25 mm UD) kök bağlantısında, bası birim şekil değiştirmesi | YD-18 | 337,5 | 3000,0 | µε | FoS 1,5 | 4,926 | STANAG UL13.1.2 |
 | T-FINSKIN | dikey kaplaması (tail_skin 0,6/4/0,4 mm) kökte: eğilme basısında kesme kıvrılması | YD-18 | 16,92 | 70,93 | N/mm | FoS 1,5 x kompozit 1,2 | 1,328 | Zenkert 1995: N = G_c d^2 / c |
 | T-FINROOT-FRONT | dikey ön kiriş kök bağlantısı YK250-CH-096: 2 x M6 Ti-6Al-4V çift kesme (başlık cıvataları 45 mm aralık) | YD-18 | 2930,1 | 22284 | N | FoS 1,5 x bağlantı 1,15 | 3,409 | Ti-6Al-4V (spec Ftu), 0,6 Rm A_s |
-| T-FINROOT-BR-FRONT | dikey ön kiriş kök bağlantısı: 7075 köşebent kulak ezilmesi (t 5 mm) | YD-18 | 2930,1 | 29992 | N | FoS 1,5 x bağlantı 1,15 | 4,934 | MMPDS Fbru |
+| T-FINROOT-BR-FRONT | dikey ön kiriş kök bağlantısı: 7075 köşebent kulak ezilmesi (t 5 mm, d 6 mm) | YD-18 | 2930,1 | 29992 | N | FoS 1,5 x bağlantı 1,15 | 4,934 | MMPDS Fbru |
 | T-FINFIT-FR-FRONT | dikey bağlantısı YK250-CH-096 - FS3480: 2 x M6, çerçeve kenar bandında ezilme (3,2 mm, en küçük cıvata) | YD-18 | 2930,1 | 8012,8 | N | FoS 1,5 x kompozit 1,2 | 0,519 | QI ezilme ETW |
-| T-FINROOT-REAR | dikey arka kiriş kök bağlantısı YK250-CH-086: 2 x M6 Ti-6Al-4V çift kesme (başlık cıvataları 45 mm aralık) | YD-18 | 1968,3 | 22284 | N | FoS 1,5 x bağlantı 1,15 | 5,563 | Ti-6Al-4V (spec Ftu), 0,6 Rm A_s |
-| T-FINROOT-BR-REAR | dikey arka kiriş kök bağlantısı: 7075 köşebent kulak ezilmesi (t 5 mm) | YD-18 | 1968,3 | 29992 | N | FoS 1,5 x bağlantı 1,15 | 7,833 | MMPDS Fbru |
+| T-FINROOT-REAR | dikey arka kiriş kök bağlantısı YK250-CH-086: 2 x M5 A2-70 çift kesme (başlık cıvataları 45 mm aralık) | YD-18 | 1968,3 | 11928 | N | FoS 1,5 x bağlantı 1,15 | 2,513 | ISO 3506-1 A2-70 (tapped in 7075), 0,6 Rm A_s |
+| T-FINROOT-BR-REAR | dikey arka kiriş kök bağlantısı: 7075 köşebent kulak ezilmesi (t 5 mm, d 5 mm) | YD-18 | 1968,3 | 24994 | N | FoS 1,5 x bağlantı 1,15 | 6,361 | MMPDS Fbru |
 | T-FINFIT-FR-REAR | dikey bağlantısı YK250-CH-086 - FS3670: 2 x M5 + 2 x M8, çerçeve kenar bandında ezilme (3,2 mm, en küçük cıvata) | YD-18 | 984,2 | 6677,3 | N | FoS 1,5 x kompozit 1,2 | 2,769 | QI ezilme ETW |
-| T-VENTRAL-BOLT | ventral kök bağlantıları: en yüklü kulak cıvatası M6 Ti-6Al-4V çift kesme | YD-19 | 3098,9 | 22284 | N | FoS 1,5 x bağlantı 1,15 | 3,169 | elastik cıvata grubu (omurga hattında 3 kulak); Ti-6Al-4V (spec Ftu), 0,6 Rm A_s |
-| T-VENTRAL-LUG | ventral kök kulağı ezilmesi (7075, t 6 mm) | YD-19 | 3098,9 | 35991 | N | FoS 1,5 x bağlantı 1,15 | 5,733 | MMPDS Fbru |
+| T-VENTRAL-BOLT | ventral kök bağlantıları: en yüklü kulak cıvatası M5 Ti-6Al-4V çift kesme | YD-19 | 3098,9 | 15743 | N | FoS 1,5 x bağlantı 1,15 | 1,945 | elastik cıvata grubu (omurga hattında 3 kulak); Ti-6Al-4V (spec Ftu), 0,6 Rm A_s (M5 as built, REG-05) |
+| T-VENTRAL-LUG | ventral kök kulağı ezilmesi (7075, t 6 mm, M5) | YD-19 | 3098,9 | 29992 | N | FoS 1,5 x bağlantı 1,15 | 4,611 | MMPDS Fbru |
 | T-AFTKEEL | arka omurga kirişi M-AFTKEEL (talaşlı 7075-T651 U 24 x 40 x 2,5) FS3738 gerisinde konsol, eğilme | YD-19 | 273,5 | 461,9 | MPa | FoS 1,5 | 0,126 | M = en arka ventral kulak yükü x FS3738'e kol; Fty (akma üstünde yerel flanş buruşması hesaba katılmadı) |
 | T-NODE-TEMP | silindir kafası bölgesinde stabilatör düğümü F-SPINDLE-NODE (7075-T651): düğüm tasarım sıcaklığında metal satırlarının gerektirdiği dayanım oranı | YD-14 | 0,661 | – | F_tu(T) / F_tu(RT) | - | gereksinim | belirleyici T-NODE-BOSS (MS 0,51 at room temperature): the 7075 strength at the node temperature must stay >= this fraction of RT; MMPDS elevated-temperature curves are not in the research data and the node temperature is not known (61805-ZZ bearing, stainless baffle between heads and node, layout.heat_protection): open item - measure in the engine run (fix round 2, PK2-09) |
 
@@ -293,7 +293,7 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | G-DOOR-DRIVE | ana iç kapak tahriki Volz DA 30 (EQ-DOORACT, yalnız iç kapak; düzeltme turu 3 PK3-07, entegrasyon turu IR-02): |Cp| 1,0 basınç üst sınırında 95 derecelik kapak işi / DA 30 anma torku 8,0 N m x krank hareketi 131 derece = 18,3 J (DA 22: 4,1 J) | YD-35 | 9,34 | 18,29 | J | FoS 1,5 (işlevsel) | 0,306 | components.yaml volz_da30 anma torku (continuous duty at rated speed); the closed door is held by the over-centre lock (G-DOOR-LOCK) |
 | G-TDOOR-LINK | ana mafsal kapağı (kendi mikro dişli motoru, krank + biyel, kapalıyken ölü nokta ötesi; GD-07): kapak menteşe momenti (V_LO'da hava yükü + ağırlık, limit) | YD-35 | 0,257 | – | N m | - | gereksinim | requirement for the gearmotor (estimate class ~0,3 N m output, docs/detail/gear.md) |
 | G-NDOOR-DRIVE | burun kapağı tahriki: iki kapak için tek Volz DA 22 (EQ-NDOORACT, kol NDOOR-LINKAGE), gerekli tork / anma torku | YD-36 | 0,632 | 1,8 | N m | FoS 1,5 (işlevsel) | 0,898 | components.yaml volz_da22_28v anma torku; the closed doors are held by the over-centre lock, not by the actuator |
-| G-UPLOCK | ana yukarı kilit bağlantısı F-UPLOCK: kuyu tavanının dökme insertlerine 4 x M5 (dökme r 12 mm, çekirdek 5,6 mm), insert sökülmesi (en yüklü, kanca kaçıklığı) | YD-58 | 165,2 | 422,2 | N | FoS 1,5 x kompozit 1,2 | 0,420 | structlib.insert_pullout P = 2 pi b_p c tau_c (core minimum shear, no test correction) |
+| G-UPLOCK | ana yukarı kilit bağlantısı F-UPLOCK: kuyu tavanının dökme insertlerine 4 x M5 (dökme r 12 mm, çekirdek 5,6 mm), insert sökülmesi (en yüklü, kanca kaçıklığı) | YD-59 | 165,2 | 422,2 | N | FoS 1,5 x kompozit 1,2 | 0,420 | structlib.insert_pullout P = 2 pi b_p c tau_c (core minimum shear, no test correction) |
 
 ### Motor bağlantısı
 
@@ -326,99 +326,100 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | P-SPINE-AX | omurga kanalı M-SPINE (44 x 24 x 0,8 mm, flanşlar 60 mm): tam x bileşeninin eksenel gerilmesi | YD-41 | 66,89 | 175,4 | MPa | yalnız nihai x kompozit 1,2 | 1,185 | QI open-hole compression ETW (screw holes along the flanges) |
 | P-SPINE-COL | çerçeveler arasında kolon olarak omurga kanalı (L 0,379 m, mafsallı, kaplama desteği sayılmadı) | YD-41 | 11345 | 49281 | N | yalnız nihai x kompozit 1,2 | 2,620 | Euler, QI modulus |
 | P-SPINE-LOCAL | omurga kanalı duvarları (24 mm, iki kenar mesnetli) eksenel gerilme altında yerel burkulma | YD-41 | 66,89 | 174,2 | MPa | yalnız nihai x kompozit 1,2 | 1,170 | SS plate k = 4 (Bruhn C5), QI modulus |
-| P-SPINE-SCREWS | omurga flanşları - P-MB-UPPER: 30 x M4 Ti-6Al-4V (25 mm aralık, FS1810 - FS-FUEL), x bileşeninin kesmesi (yuvarlak baş 0,8 x sınıf) | YD-41 | 378,2 | 2950,1 | N | yalnız nihai x bağlantı 1,15 | 5,784 | Ti-6Al-4V screws credited at ISO 3506-1 A2-70 (conservative) |
-| P-SPINE-SCREW-BR | omurga flanşı vidaları M4: kaplamanın 1,6 mm dolu kenar bandında ezilme | YD-41 | 378,2 | 2662,1 | N | yalnız nihai x kompozit 1,2 | 4,866 | QI ezilme ETW |
+| P-SPINE-SCREWS | omurga flanşları - P-MB-UPPER: 20 x M4 Ti-6Al-4V (32 mm aralık, FS1810 - FS-FUEL), x bileşeninin kesmesi (yuvarlak baş 0,8 x sınıf) | YD-41 | 567,2 | 2950,1 | N | yalnız nihai x bağlantı 1,15 | 3,522 | Ti-6Al-4V screws credited at ISO 3506-1 A2-70 (conservative) |
+| P-SPINE-SCREW-BR | omurga flanşı vidaları M4: kaplamanın 1,6 mm dolu kenar bandında ezilme | YD-41 | 567,2 | 2662,1 | N | yalnız nihai x kompozit 1,2 | 2,911 | QI ezilme ETW |
+| P-SPINE-TEAR | koparılabilir şerit P-SPINE ayrılması: 4 x M3 PA66 kesme vidasının bir uç çifti kuru akmada çekmede (825 N; kayış şeridi ön uçtan soyar) + cırt bant soyulması (9 N), açılmadaki kayış çekmesine karşı | YD-42 | 833,7 | 1272,9 | N | release check: pull / release (both bounds, no factor) | 0,527 | Zytel 101L ISO 527 dry yield 82 MPa x A_s; A-A-55126B Table I peel; opening force ~ q |
 | P-SPINE-SKIN | görev bölmesi üst kaplaması P-MB-UPPER (shell_secondary): net x bileşeninin omurga flanşlarından kenar uzun kirişlerine kesme akışı, yüz ilk katman hasarı | YD-41 | 14,96 | 97,04 | N/mm | yalnız nihai x kompozit 1,2 | 4,407 | CLT |
 
 ### Yakıt bölmeleri
 
 | No | Eleman / kontrol | Yük durumu | Uygulanan | İzin verilen | Birim | Katsayılar | MS | Referans |
 |---|---|---|---|---|---|---|---|---|
-| F-FACE-008 | FS-FUEL perdesi (rib_panel 0,4/6/0,4 mm), açıklık 0,212 m: yüz ilk katman hasarı | YD-42 | 18,43 | 98,85 | N/mm | nihai x kompozit 1,2 | 3,470 | sandviç şerit p b^2/8; CLT B-tabanı ETW |
-| F-DT-008 | FS-FUEL perdesi: yüz birim şekil değiştirmesi (sandviç, hasar toleransı) | YD-42 | 1040,9 | 2600,0 | µε | nihai | 1,498 | STANAG UL13.1.2 |
-| F-CORE-008 | FS-FUEL perdesi: çekirdek kesmesi (core_rohacell_51wf) | YD-42 | 0,348 | 0,5 | MPa | nihai x kompozit 1,2 | 0,198 | tau = (p b / 2) / d; ROHACELL minimum değerler |
-| F-FACE-029 | ön yakıt hücresi tabanı M-FWDDECK yük rayları arasında (rib_panel 0,4/6/0,4 mm), açıklık 0,200 m: yüz ilk katman hasarı | YD-42 | 16,40 | 98,85 | N/mm | nihai x kompozit 1,2 | 4,022 | sandviç şerit p b^2/8; CLT B-tabanı ETW |
-| F-DT-029 | ön yakıt hücresi tabanı M-FWDDECK yük rayları arasında: yüz birim şekil değiştirmesi (sandviç, hasar toleransı) | YD-42 | 926,4 | 2600,0 | µε | nihai | 1,806 | STANAG UL13.1.2 |
-| F-CORE-029 | ön yakıt hücresi tabanı M-FWDDECK yük rayları arasında: çekirdek kesmesi (core_rohacell_51wf) | YD-42 | 0,328 | 0,5 | MPa | nihai x kompozit 1,2 | 0,270 | tau = (p b / 2) / d; ROHACELL minimum değerler |
-| F-FACE-030 | arka hücre tabanı / kuyu tavanı M-WELLROOF (fuel_floor_wellroof 0,6/5,6/0,6 mm), açıklık 0,369 m: yüz ilk katman hasarı | YD-42 | 57,63 | 190,7 | N/mm | nihai x kompozit 1,2 | 1,757 | sandviç şerit p b^2/8; CLT B-tabanı ETW |
-| F-DT-030 | arka hücre tabanı / kuyu tavanı M-WELLROOF: yüz birim şekil değiştirmesi (sandviç, hasar toleransı) | YD-42 | 1844,6 | 2600,0 | µε | nihai | 0,410 | STANAG UL13.1.2 |
-| F-CORE-030 | arka hücre tabanı / kuyu tavanı M-WELLROOF: çekirdek kesmesi (core_rohacell_71wf) | YD-42 | 0,625 | 1 | MPa | nihai x kompozit 1,2 | 0,334 | tau = (p b / 2) / d; ROHACELL minimum değerler |
-| F-PAYRAIL | faydalı yük rayı (6061-T6 T 20 x 20 x 2,5) ön güverte takviyesi olarak, eğilme | YD-42 | 113,6 | 289,6 | MPa | nihai x bağlantı 1,15 | 1,216 | basit mesnetli, açıklık 0,298 m; MMPDS 6061-T6 Ftu |
-| F-WELLWEB | kuyu omurga gövdesi M-WELLKEEL (iki gövdeden her biri, dolu PW 1,0 mm, 120 mm yükseklik) kuyu tavanı tepkisiyle eğilme | YD-42 | 10,04 | 175,4 | MPa | nihai x kompozit 1,2 | 13,565 | kiriş, açıklık 0,223 m (kuyu ön duvarından FS-GEAR'e); OHC (menteşe dirseği delikleri) |
-| F-WELLWEB-BUCK | kuyu omurga gövdesi: düzlem içi eğilmede levha burkulması (k 23,9, basit mesnet) | YD-42 | 10,04 | 65,06 | MPa | nihai x kompozit 1,2 | 4,402 | Bruhn C5 / Timoshenko: k_b = 23,9 saf eğilmede; QI modülü (materials.yaml) |
+| F-FACE-008 | FS-FUEL perdesi (rib_panel 0,4/6/0,4 mm), açıklık 0,212 m: yüz ilk katman hasarı | YD-43 | 18,43 | 98,85 | N/mm | nihai x kompozit 1,2 | 3,470 | sandviç şerit p b^2/8; CLT B-tabanı ETW |
+| F-DT-008 | FS-FUEL perdesi: yüz birim şekil değiştirmesi (sandviç, hasar toleransı) | YD-43 | 1040,9 | 2600,0 | µε | nihai | 1,498 | STANAG UL13.1.2 |
+| F-CORE-008 | FS-FUEL perdesi: çekirdek kesmesi (core_rohacell_51wf) | YD-43 | 0,348 | 0,5 | MPa | nihai x kompozit 1,2 | 0,198 | tau = (p b / 2) / d; ROHACELL minimum değerler |
+| F-FACE-029 | ön yakıt hücresi tabanı M-FWDDECK yük rayları arasında (rib_panel 0,4/6/0,4 mm), açıklık 0,200 m: yüz ilk katman hasarı | YD-43 | 16,40 | 98,85 | N/mm | nihai x kompozit 1,2 | 4,022 | sandviç şerit p b^2/8; CLT B-tabanı ETW |
+| F-DT-029 | ön yakıt hücresi tabanı M-FWDDECK yük rayları arasında: yüz birim şekil değiştirmesi (sandviç, hasar toleransı) | YD-43 | 926,4 | 2600,0 | µε | nihai | 1,806 | STANAG UL13.1.2 |
+| F-CORE-029 | ön yakıt hücresi tabanı M-FWDDECK yük rayları arasında: çekirdek kesmesi (core_rohacell_51wf) | YD-43 | 0,328 | 0,5 | MPa | nihai x kompozit 1,2 | 0,270 | tau = (p b / 2) / d; ROHACELL minimum değerler |
+| F-FACE-030 | arka hücre tabanı / kuyu tavanı M-WELLROOF (fuel_floor_wellroof 0,6/5,6/0,6 mm), açıklık 0,369 m: yüz ilk katman hasarı | YD-43 | 57,63 | 190,7 | N/mm | nihai x kompozit 1,2 | 1,757 | sandviç şerit p b^2/8; CLT B-tabanı ETW |
+| F-DT-030 | arka hücre tabanı / kuyu tavanı M-WELLROOF: yüz birim şekil değiştirmesi (sandviç, hasar toleransı) | YD-43 | 1844,6 | 2600,0 | µε | nihai | 0,410 | STANAG UL13.1.2 |
+| F-CORE-030 | arka hücre tabanı / kuyu tavanı M-WELLROOF: çekirdek kesmesi (core_rohacell_71wf) | YD-43 | 0,625 | 1 | MPa | nihai x kompozit 1,2 | 0,334 | tau = (p b / 2) / d; ROHACELL minimum değerler |
+| F-PAYRAIL | faydalı yük rayı (6061-T6 T 20 x 20 x 2,5) ön güverte takviyesi olarak, eğilme | YD-43 | 113,6 | 289,6 | MPa | nihai x bağlantı 1,15 | 1,216 | basit mesnetli, açıklık 0,298 m; MMPDS 6061-T6 Ftu |
+| F-WELLWEB | kuyu omurga gövdesi M-WELLKEEL (iki gövdeden her biri, dolu PW 1,0 mm, 120 mm yükseklik) kuyu tavanı tepkisiyle eğilme | YD-43 | 10,04 | 175,4 | MPa | nihai x kompozit 1,2 | 13,565 | kiriş, açıklık 0,223 m (kuyu ön duvarından FS-GEAR'e); OHC (menteşe dirseği delikleri) |
+| F-WELLWEB-BUCK | kuyu omurga gövdesi: düzlem içi eğilmede levha burkulması (k 23,9, basit mesnet) | YD-43 | 10,04 | 65,06 | MPa | nihai x kompozit 1,2 | 4,402 | Bruhn C5 / Timoshenko: k_b = 23,9 saf eğilmede; QI modülü (materials.yaml) |
 
 ### Taret asansörü ve kapakları
 
 | No | Eleman / kontrol | Yük durumu | Uygulanan | İzin verilen | Birim | Katsayılar | MS | Referans |
 |---|---|---|---|---|---|---|---|---|
-| TU-SCREW | bilyalı vida d 8 x 2 ve somun: gerekli statik eksenel yük sayısı (nihai) | YD-43 | 580,2 | – | N | - | gereksinim | tedarik gereksinimi (katalog değeri araştırma verisinde yok) |
-| TU-RAIL | minyatür profil raylar (her birinde 2 taşıyıcı): taşıyıcı başına gerekli statik yük sayısı (ileri + yan, nihai) | YD-43 | 257,0 | – | N | - | gereksinim | tedarik gereksinimi |
-| TU-ROOF | tavan yatak bloğu: 4 x M4 Ti-6Al-4V geçme cıvata, 2 mm 7075 karşı plaka, çekme (asılı yük) | YD-43 | 126,1 | 6146,0 | N | yalnız nihai x bağlantı 1,15 | 41,369 | Ti-6Al-4V screws credited at ISO 3506-1 A2-70 Rm A_s (conservative, mass/CG closure round) |
-| TU-RAILSCR | ray ucu vidaları ray ucu başına 4 x M3 Ti-6Al-4V (2 ray, 2 uç), kesme | YD-43 | 27,94 | 2112,6 | N | yalnız nihai x bağlantı 1,15 | 64,761 | 0,6 Rm A_s |
-| TU-DOORDRIVE | kayar bölme kapağı tahriki: emme altında kapağı yürütme pinyon torku (ray sürtünmesi mu 0,3 tahmin, pinyon r 10 mm) / DA 22 anma torku | YD-44 | 0,133 | 1,8 | N m | FoS 1,5 (işlevsel) | 8,014 | components.yaml volz_da22_28v anma torku |
-| TU-DOORRAIL | kayar kapak ray dudağı (6061-T6 ray, 2 ray x 0,12 m), emmede kapak tutma, 1 mm dudak kesmesi | YD-45 | 44,38 | 44678 | N | FoS 1,5 x bağlantı 1,15 | > 100 | 6061-T6 Fsu (ray dudağı, tahmini geometri) |
+| TU-SCREW | bilyalı vida d 8 x 2 ve somun: gerekli statik eksenel yük sayısı (nihai) | YD-44 | 580,2 | – | N | - | gereksinim | tedarik gereksinimi (katalog değeri araştırma verisinde yok) |
+| TU-RAIL | minyatür profil raylar (her birinde 2 taşıyıcı): taşıyıcı başına gerekli statik yük sayısı (ileri + yan, nihai) | YD-44 | 257,0 | – | N | - | gereksinim | tedarik gereksinimi |
+| TU-ROOF | tavan yatak bloğu: 4 x M4 Ti-6Al-4V geçme cıvata, 2 mm 7075 karşı plaka, çekme (asılı yük) | YD-44 | 126,1 | 6146,0 | N | yalnız nihai x bağlantı 1,15 | 41,369 | Ti-6Al-4V screws credited at ISO 3506-1 A2-70 Rm A_s (conservative, mass/CG closure round) |
+| TU-RAILSCR | ray ucu vidaları ray ucu başına 4 x M3 Ti-6Al-4V (2 ray, 2 uç), kesme | YD-44 | 27,94 | 2112,6 | N | yalnız nihai x bağlantı 1,15 | 64,761 | 0,6 Rm A_s |
+| TU-DOORDRIVE | kayar bölme kapağı tahriki: emme altında kapağı yürütme pinyon torku (ray sürtünmesi mu 0,3 tahmin, pinyon r 10 mm) / DA 22 anma torku | YD-45 | 0,133 | 1,8 | N m | FoS 1,5 (işlevsel) | 8,014 | components.yaml volz_da22_28v anma torku |
+| TU-DOORRAIL | kayar kapak ray dudağı (6061-T6 ray, 2 ray x 0,12 m), emmede kapak tutma, 1 mm dudak kesmesi | YD-46 | 44,38 | 44678 | N | FoS 1,5 x bağlantı 1,15 | > 100 | 6061-T6 Fsu (ray dudağı, tahmini geometri) |
 
 ### Taşıma ve elleçleme
 
 | No | Eleman / kontrol | Yük durumu | Uygulanan | İzin verilen | Birim | Katsayılar | MS | Referans |
 |---|---|---|---|---|---|---|---|---|
-| TR-PAD | kızak yastıkları 2 x 150 x 25 mm, çerçeve başlığı üzerindeki sabit alt kaplamada (layout cradle_pads): çekirdek ezilmesi (ROHACELL 51 WF), yastığın dolu kenar bandı dışına taştığı yerde | YD-46 | 0,202 | 0,4 | MPa | FoS 1,5 x kompozit 1,2 | 0,102 | ROHACELL 51 WF minimum Fcu |
-| TR-FRAME | kızak üzerinde çerçeve gövdesi kenar basısı (rib_panel yüzleri) | YD-46 | 6,28 | 175,4 | MPa | FoS 1,5 x kompozit 1,2 | 14,508 | OHC (bağlantı delikli kenar bandı) |
-| TR-PANEL-LE | dış panel hücum kenarı üzerinde yastıklı rafta (2 yastık 0,10 x 0,04 m): hücum kenarı dolu lamine ezilmesi | YD-47 | 0,029 | 0,4 | MPa | FoS 1,5 x kompozit 1,2 | 6,654 | muhafazakâr: yastık basıncı bitişik sandviçin çekirdek ezilme dayanımıyla karşılaştırıldı |
+| TR-PAD | kızak yastıkları 2 x 150 x 25 mm, çerçeve başlığı üzerindeki sabit alt kaplamada (layout cradle_pads): çekirdek ezilmesi (ROHACELL 51 WF), yastığın dolu kenar bandı dışına taştığı yerde | YD-47 | 0,202 | 0,4 | MPa | FoS 1,5 x kompozit 1,2 | 0,102 | ROHACELL 51 WF minimum Fcu |
+| TR-FRAME | kızak üzerinde çerçeve gövdesi kenar basısı (rib_panel yüzleri) | YD-47 | 6,28 | 175,4 | MPa | FoS 1,5 x kompozit 1,2 | 14,508 | OHC (bağlantı delikli kenar bandı) |
+| TR-PANEL-LE | dış panel hücum kenarı üzerinde yastıklı rafta (2 yastık 0,10 x 0,04 m): hücum kenarı dolu lamine ezilmesi | YD-48 | 0,029 | 0,4 | MPa | FoS 1,5 x kompozit 1,2 | 6,654 | muhafazakâr: yastık basıncı bitişik sandviçin çekirdek ezilme dayanımıyla karşılaştırıldı |
 
 ### Gövde
 
 | No | Eleman / kontrol | Yük durumu | Uygulanan | İzin verilen | Birim | Katsayılar | MS | Referans |
 |---|---|---|---|---|---|---|---|---|
-| B-DORSAL | sırt uzun kirişi (şapka 25 x 20 x 2,0, UD başlık + PW) FS-GEAR'de, birim şekil değiştirme (<= 2 mm) | YD-48 | 592,9 | 2600,0 | µε | FoS 1,5 | 1,924 | STANAG UL13.1.2; yalnız uzun kirişler (kaplamalar = kesme gövdeleri) |
-| B-CHINE-AFT | kenar uzun kirişi (J 35 x 30 x 2,4) FS-GEAR'de, birim şekil değiştirme (> 2 mm) | YD-48 | 445,0 | 3000,0 | µε | FoS 1,5 | 3,494 | STANAG UL13.1.2 |
-| B-DORSAL-COL | FS-GEAR ile FS3480 arasında sırt uzun kirişi kolonu (L 0,384 m, yalnız şapka, PW modülü, mafsallı) | YD-48 | 6827,4 | 42684 | N | FoS 1,5 x kompozit 1,2 | 2,473 | Euler; bağlı kaplama (25-32 mm somun plakaları) hesaba katılmadı |
-| B-CHINE-FWD | FS-FUEL'de kenar uzun kirişi, birim şekil değiştirme (> 2 mm) | YD-49 | 470,6 | 3000,0 | µε | FoS 1,5 | 3,250 | STANAG UL13.1.2 |
-| B-MIDFLOOR | alt başlık olarak görev bölmesi tabanı M-MIDFLOOR (tepsi kesiği dışında sabit dış şeritler net 0,470 m, rib_panel yüzleri), birim şekil değiştirme (sandviç) | YD-49 | 867,5 | 2600,0 | µε | FoS 1,5 | 0,998 | STANAG UL13.1.2 |
-| B-MIDFLOOR-BUCK | görev bölmesi taban şeridi 0,38 x 0,235 m, kenar uzun kirişi ile kesik kenarı takviyesi arasında (2 yapıştırılmış şapka takviye) burkulma (bası) | YD-49 | 1 | 2,37 | yük çarpanı | FoS 1,5 x kompozit 1,2 | 0,315 | CLT D*, sandviç kesme düzeltmesi; SS edges |
-| B-SKIN-SHEAR | sabit arka kaplamalar P-AFT-UPPER / -LOWER (shell_secondary 0,4/5/0,4): yüz kesmesi, ilk katman hasarı | YD-50 | 12,33 | 97,04 | N/mm | FoS 1,5 x kompozit 1,2 | 3,372 | CLT |
-| B-SKIN-BUCK | sabit arka kaplama paneli kesme burkulması (çerçeve aralığı x uzun kirişler arası 0,25 m) | YD-50 | 1 | 4,95 | yük çarpanı | FoS 1,5 x kompozit 1,2 | 1,749 | Kollár & Springer uzun levha, sandviç düzeltmesi |
-| B-SCREW-SH | kaplama vida sırası ISO 7380 M4 Ti-6Al-4V, 32 mm aralık: kesme (yuvarlak baş 0,8 x sınıf) | YD-50 | 394,6 | 2950,1 | N | FoS 1,5 x bağlantı 1,15 | 3,334 | Ti-6Al-4V screws credited at ISO 3506-1 A2-70 (conservative); materials.yaml screw_types |
-| B-SCREW-BR | kaplama vida sırası M4: 1,6 mm dolu kenar bandında ezilme | YD-50 | 394,6 | 2662,1 | N | FoS 1,5 x kompozit 1,2 | 2,748 | QI ezilme ETW |
+| B-DORSAL | sırt uzun kirişi (şapka 25 x 20 x 2,0, UD başlık + PW) FS-GEAR'de, birim şekil değiştirme (<= 2 mm) | YD-49 | 592,9 | 2600,0 | µε | FoS 1,5 | 1,924 | STANAG UL13.1.2; yalnız uzun kirişler (kaplamalar = kesme gövdeleri) |
+| B-CHINE-AFT | kenar uzun kirişi (J 35 x 30 x 2,4) FS-GEAR'de, birim şekil değiştirme (> 2 mm) | YD-49 | 445,0 | 3000,0 | µε | FoS 1,5 | 3,494 | STANAG UL13.1.2 |
+| B-DORSAL-COL | FS-GEAR ile FS3480 arasında sırt uzun kirişi kolonu (L 0,384 m, yalnız şapka, PW modülü, mafsallı) | YD-49 | 6827,4 | 42684 | N | FoS 1,5 x kompozit 1,2 | 2,473 | Euler; bağlı kaplama (25-32 mm somun plakaları) hesaba katılmadı |
+| B-CHINE-FWD | FS-FUEL'de kenar uzun kirişi, birim şekil değiştirme (> 2 mm) | YD-50 | 470,6 | 3000,0 | µε | FoS 1,5 | 3,250 | STANAG UL13.1.2 |
+| B-MIDFLOOR | alt başlık olarak görev bölmesi tabanı M-MIDFLOOR (tepsi kesiği dışında sabit dış şeritler net 0,470 m, rib_panel yüzleri), birim şekil değiştirme (sandviç) | YD-50 | 867,5 | 2600,0 | µε | FoS 1,5 | 0,998 | STANAG UL13.1.2 |
+| B-MIDFLOOR-BUCK | görev bölmesi taban şeridi 0,38 x 0,235 m, kenar uzun kirişi ile kesik kenarı takviyesi arasında (2 yapıştırılmış şapka takviye) burkulma (bası) | YD-50 | 1 | 2,37 | yük çarpanı | FoS 1,5 x kompozit 1,2 | 0,315 | CLT D*, sandviç kesme düzeltmesi; SS edges |
+| B-SKIN-SHEAR | sabit arka kaplamalar P-AFT-UPPER / -LOWER (shell_secondary 0,4/5/0,4): yüz kesmesi, ilk katman hasarı | YD-51 | 12,33 | 97,04 | N/mm | FoS 1,5 x kompozit 1,2 | 3,372 | CLT |
+| B-SKIN-BUCK | sabit arka kaplama paneli kesme burkulması (çerçeve aralığı x uzun kirişler arası 0,25 m) | YD-51 | 1 | 4,95 | yük çarpanı | FoS 1,5 x kompozit 1,2 | 1,749 | Kollár & Springer uzun levha, sandviç düzeltmesi |
+| B-SCREW-SH | kaplama vida sırası ISO 7380 M4 Ti-6Al-4V, 32 mm aralık: kesme (yuvarlak baş 0,8 x sınıf) | YD-51 | 394,6 | 2950,1 | N | FoS 1,5 x bağlantı 1,15 | 3,334 | Ti-6Al-4V screws credited at ISO 3506-1 A2-70 (conservative); materials.yaml screw_types |
+| B-SCREW-BR | kaplama vida sırası M4: 1,6 mm dolu kenar bandında ezilme | YD-51 | 394,6 | 2662,1 | N | FoS 1,5 x kompozit 1,2 | 2,748 | QI ezilme ETW |
 
 ### frames
 
 | No | Eleman / kontrol | Yük durumu | Uygulanan | İzin verilen | Birim | Katsayılar | MS | Referans |
 |---|---|---|---|---|---|---|---|---|
-| FR-GEAR-WEB | FS-GEAR gövdesi takım kirişi uç bağlantısında (h 87 mm): kiriş ucu tepkisinin kesmesi, yüz ilk katman hasarı | YD-51 | 41,54 | 97,04 | N/mm | FoS 1,5 x kompozit 1,2 | 0,298 | CLT (rib_panel faces) |
-| FR-GEAR-CRIMP | FS-GEAR gövdesi kiriş ucunda: kesme kıvrılması | YD-51 | 41,54 | 95,61 | N/mm | FoS 1,5 x kompozit 1,2 | 0,279 | N = G_c d^2 / c |
-| FR-GEAR-BR | takım kirişi uç bağlantısı - FS-GEAR: 3 x M5 Ti, çerçeve bandında ezilme (3,2 mm) | YD-51 | 1204,6 | 6677,3 | N | FoS 1,5 x kompozit 1,2 | 2,080 | QI ezilme ETW |
-| FR-RS-WEB | FS-RS gövdesi takım kirişi uç bağlantısında (h 87 mm): kiriş ucu tepkisinin kesmesi, yüz ilk katman hasarı | YD-52 | 42,91 | 97,04 | N/mm | FoS 1,5 x kompozit 1,2 | 0,257 | CLT (rib_panel faces) |
-| FR-RS-CRIMP | FS-RS gövdesi kiriş ucunda: kesme kıvrılması | YD-52 | 42,91 | 95,61 | N/mm | FoS 1,5 x kompozit 1,2 | 0,238 | N = G_c d^2 / c |
-| FR-RS-BR | takım kirişi uç bağlantısı - FS-RS: 3 x M5 Ti, çerçeve bandında ezilme (3,2 mm) | YD-52 | 1244,3 | 6677,3 | N | FoS 1,5 x kompozit 1,2 | 1,981 | QI ezilme ETW |
-| FR-ROOF-SIDE | kuyu tavanı M-WELLROOF: takım yan yükü 4 tavan cıvatasıyla M6 (z ekseni), 3,2 mm bantta ezilme | YD-53 | 183,8 | 8012,8 | N | FoS 1,5 x kompozit 1,2 | 23,226 | QI ezilme ETW (fuel_floor_wellroof 0,6/5,6/0,6 mm deck, solid land) |
-| FR-MS-RING | FS-MS çerçeve gövdesi orta kutu dışında gövde yanı bağlantısında (rib_panel + yüz başına 1 kat ±45): gövde ataleti kesmesi, yüz ilk katman hasarı | YD-54 | 39,63 | 186,0 | N/mm | FoS 1,5 x kompozit 1,2 | 1,608 | CLT; FS-MS / FS-RS are full sandwich bulkheads above the box and 0,15 m wide posts beside the payload-bay cut-out below it, the body inertia enters at the box ends |
-| FR-RS-RING | FS-RS çerçeve gövdesi orta kutu dışında gövde yanı bağlantısında (rib_panel + yüz başına 0 kat ±45): gövde ataleti kesmesi, yüz ilk katman hasarı | YD-55 | 18,41 | 97,04 | N/mm | FoS 1,5 x kompozit 1,2 | 1,929 | CLT; FS-MS / FS-RS are full sandwich bulkheads above the box and 0,15 m wide posts beside the payload-bay cut-out below it, the body inertia enters at the box ends |
-| FW-FOOT-CORE | alt ayakta yangın perdesi sandviçi: bant kenarında en büyük çekirdek kesmesi (ROHACELL 71 WF parçası; tepe / ortalama 1,23; kesiklerde kalan kenar çemberi payı %0,0) | YD-56 | 0,802 | 1 | MPa | yalnız nihai x kompozit 1,2 | 0,039 | tau_peak = k P / (2 pi r (1 - f_cut) d), k from the plate-shear distribution (fix round 2, VS2-06), f_cut = share of the land-edge circle inside the FS3670 cut-outs; core minimum value |
-| FW-FOOT-LAND | yangın perdesi dolu bandı (22 kat, 4,4 mm) destek levhasında eğilme | YD-56 | 136,5 | 175,4 | MPa | yalnız nihai x kompozit 1,2 | 0,071 | simply supported circular plate, central patch (Timoshenko sec. 19); QI OHC ETW |
-| FW-FOOT-FACE | bant kenarında yangın perdesi sandviç yüzleri: kenar desteğine plaka eğilmesi | YD-56 | 96,55 | 175,4 | MPa | yalnız nihai x kompozit 1,2 | 0,514 | simply supported circular plate a = edge distance (Timoshenko sec. 19); QI OHC ETW |
-| FW-UPPER-SPLICE | üst ayak x yükü sırt uzun kirişine: köşe bağlantısı eki 2 x M5 Ti, uzun kirişte ezilme (2,0 mm) | YD-57 | 866,7 | 4159,6 | N | yalnız nihai x kompozit 1,2 | 2,999 | QI ezilme ETW |
-| FR-3738-KEEL | kuyruk tamponu çarpmasında FS3738'de arka omurga desteği: düşey tepki (omurga yangın perdesi ucunda mafsallı, FS3738'de destekli), talaşlı 7075 alt parça taşır (FR-3738-*) | YD-59 | 10219 | – | N | - | gereksinim | moment of the strike about the keel firewall end 617 N m / support spacing 0,0604 m (fix round 2, VS2-03: sized by FR-3738-SEG / -SEG-SH / -KEEL-* / -END-*) |
-| FR-3738-SEG | FS3738 alt parçası (talaşlı 7075 I 60 x 20 x 1,6 / 2,0 mm, halka bacakları arası 0,30 m): omurga tepkisi altında eğilme (basit mesnetli, yük ortada) | YD-59 | 270,1 | 461,9 | MPa | FoS 1,5 | 0,140 | M = R L / 4; Fty - fix round 2, VS2-03 |
-| FR-3738-SEG-SH | FS3738 alt parçası gövde kesmesi (halka bacaklarında) | YD-59 | 44,98 | 296,5 | MPa | FoS 1,5 | 3,394 | average web shear, Fsu |
-| FR-3738-KEEL-BOLTS | FS3738 alt parçası: arka omurga - parça gövdesi 4 x M5 12.9, tek kesme | YD-59 | 2554,8 | 10394 | N | FoS 1,5 x bağlantı 1,15 | 1,359 | ISO 898-1 12.9, 0,6 Rm A_s |
-| FR-3738-KEEL-BR | FS3738 alt parçası: omurga cıvatalarının 7075 gövdede ezilmesi (2,0 mm) | YD-59 | 2554,8 | 9997,4 | N | FoS 1,5 x bağlantı 1,15 | 1,268 | MMPDS Fbru (e/D 2) |
-| FR-3738-END-BOLTS | FS3738 alt parçası: her halka bacağına ek 3 x M5 12.9, tek kesme | YD-59 | 1703,2 | 10394 | N | FoS 1,5 x bağlantı 1,15 | 2,538 | ISO 898-1 12.9, 0,6 Rm A_s |
-| FR-3738-END-BR | FS3738 alt parçası: ek cıvatalarının 7075 gövdede ezilmesi (2,0 mm) | YD-59 | 1703,2 | 9997,4 | N | FoS 1,5 x bağlantı 1,15 | 2,403 | MMPDS Fbru (e/D 2) |
+| FR-GEAR-WEB | FS-GEAR gövdesi takım kirişi uç bağlantısında (h 87 mm): kiriş ucu tepkisinin kesmesi, yüz ilk katman hasarı | YD-52 | 41,54 | 97,04 | N/mm | FoS 1,5 x kompozit 1,2 | 0,298 | CLT (rib_panel faces) |
+| FR-GEAR-CRIMP | FS-GEAR gövdesi kiriş ucunda: kesme kıvrılması | YD-52 | 41,54 | 95,61 | N/mm | FoS 1,5 x kompozit 1,2 | 0,279 | N = G_c d^2 / c |
+| FR-GEAR-BR | takım kirişi uç bağlantısı - FS-GEAR: 3 x M5 Ti, çerçeve bandında ezilme (3,2 mm) | YD-52 | 1204,6 | 6677,3 | N | FoS 1,5 x kompozit 1,2 | 2,080 | QI ezilme ETW |
+| FR-RS-WEB | FS-RS gövdesi takım kirişi uç bağlantısında (h 87 mm): kiriş ucu tepkisinin kesmesi, yüz ilk katman hasarı | YD-53 | 42,91 | 97,04 | N/mm | FoS 1,5 x kompozit 1,2 | 0,257 | CLT (rib_panel faces) |
+| FR-RS-CRIMP | FS-RS gövdesi kiriş ucunda: kesme kıvrılması | YD-53 | 42,91 | 95,61 | N/mm | FoS 1,5 x kompozit 1,2 | 0,238 | N = G_c d^2 / c |
+| FR-RS-BR | takım kirişi uç bağlantısı - FS-RS: 3 x M5 Ti, çerçeve bandında ezilme (3,2 mm) | YD-53 | 1244,3 | 6677,3 | N | FoS 1,5 x kompozit 1,2 | 1,981 | QI ezilme ETW |
+| FR-ROOF-SIDE | kuyu tavanı M-WELLROOF: takım yan yükü 4 tavan cıvatasıyla M6 (z ekseni), 3,2 mm bantta ezilme | YD-54 | 183,8 | 8012,8 | N | FoS 1,5 x kompozit 1,2 | 23,226 | QI ezilme ETW (fuel_floor_wellroof 0,6/5,6/0,6 mm deck, solid land) |
+| FR-MS-RING | FS-MS çerçeve gövdesi orta kutu dışında gövde yanı bağlantısında (rib_panel + yüz başına 1 kat ±45): gövde ataleti kesmesi, yüz ilk katman hasarı | YD-55 | 39,63 | 186,0 | N/mm | FoS 1,5 x kompozit 1,2 | 1,608 | CLT; FS-MS / FS-RS are full sandwich bulkheads above the box and 0,15 m wide posts beside the payload-bay cut-out below it, the body inertia enters at the box ends |
+| FR-RS-RING | FS-RS çerçeve gövdesi orta kutu dışında gövde yanı bağlantısında (rib_panel + yüz başına 0 kat ±45): gövde ataleti kesmesi, yüz ilk katman hasarı | YD-56 | 18,41 | 97,04 | N/mm | FoS 1,5 x kompozit 1,2 | 1,929 | CLT; FS-MS / FS-RS are full sandwich bulkheads above the box and 0,15 m wide posts beside the payload-bay cut-out below it, the body inertia enters at the box ends |
+| FW-FOOT-CORE | alt ayakta yangın perdesi sandviçi: bant kenarında en büyük çekirdek kesmesi (ROHACELL 71 WF parçası; tepe / ortalama 1,23; kesiklerde kalan kenar çemberi payı %0,0) | YD-57 | 0,802 | 1 | MPa | yalnız nihai x kompozit 1,2 | 0,039 | tau_peak = k P / (2 pi r (1 - f_cut) d), k from the plate-shear distribution (fix round 2, VS2-06), f_cut = share of the land-edge circle inside the FS3670 cut-outs; core minimum value |
+| FW-FOOT-LAND | yangın perdesi dolu bandı (22 kat, 4,4 mm) destek levhasında eğilme | YD-57 | 136,5 | 175,4 | MPa | yalnız nihai x kompozit 1,2 | 0,071 | simply supported circular plate, central patch (Timoshenko sec. 19); QI OHC ETW |
+| FW-FOOT-FACE | bant kenarında yangın perdesi sandviç yüzleri: kenar desteğine plaka eğilmesi | YD-57 | 96,55 | 175,4 | MPa | yalnız nihai x kompozit 1,2 | 0,514 | simply supported circular plate a = edge distance (Timoshenko sec. 19); QI OHC ETW |
+| FW-UPPER-SPLICE | üst ayak x yükü sırt uzun kirişine: köşe bağlantısı eki 2 x M5 Ti, uzun kirişte ezilme (2,0 mm) | YD-58 | 866,7 | 4159,6 | N | yalnız nihai x kompozit 1,2 | 2,999 | QI ezilme ETW |
+| FR-3738-KEEL | kuyruk tamponu çarpmasında FS3738'de arka omurga desteği: düşey tepki (omurga yangın perdesi ucunda mafsallı, FS3738'de destekli), talaşlı 7075 alt parça taşır (FR-3738-*) | YD-60 | 10219 | – | N | - | gereksinim | moment of the strike about the keel firewall end 617 N m / support spacing 0,0604 m (fix round 2, VS2-03: sized by FR-3738-SEG / -SEG-SH / -KEEL-* / -END-*) |
+| FR-3738-SEG | FS3738 alt parçası (talaşlı 7075 I 60 x 20 x 1,6 / 2,0 mm, halka bacakları arası 0,30 m): omurga tepkisi altında eğilme (basit mesnetli, yük ortada) | YD-60 | 270,1 | 461,9 | MPa | FoS 1,5 | 0,140 | M = R L / 4; Fty - fix round 2, VS2-03 |
+| FR-3738-SEG-SH | FS3738 alt parçası gövde kesmesi (halka bacaklarında) | YD-60 | 44,98 | 296,5 | MPa | FoS 1,5 | 3,394 | average web shear, Fsu |
+| FR-3738-KEEL-BOLTS | FS3738 alt parçası: arka omurga - parça gövdesi 4 x M5 12.9, tek kesme | YD-60 | 2554,8 | 10394 | N | FoS 1,5 x bağlantı 1,15 | 1,359 | ISO 898-1 12.9, 0,6 Rm A_s |
+| FR-3738-KEEL-BR | FS3738 alt parçası: omurga cıvatalarının 7075 gövdede ezilmesi (2,0 mm) | YD-60 | 2554,8 | 9997,4 | N | FoS 1,5 x bağlantı 1,15 | 1,268 | MMPDS Fbru (e/D 2) |
+| FR-3738-END-BOLTS | FS3738 alt parçası: her halka bacağına ek 3 x M5 12.9, tek kesme | YD-60 | 1703,2 | 10394 | N | FoS 1,5 x bağlantı 1,15 | 2,538 | ISO 898-1 12.9, 0,6 Rm A_s |
+| FR-3738-END-BR | FS3738 alt parçası: ek cıvatalarının 7075 gövdede ezilmesi (2,0 mm) | YD-60 | 1703,2 | 9997,4 | N | FoS 1,5 x bağlantı 1,15 | 2,403 | MMPDS Fbru (e/D 2) |
 
 ### Teçhizat tutma
 
 | No | Eleman / kontrol | Yük durumu | Uygulanan | İzin verilen | Birim | Katsayılar | MS | Referans |
 |---|---|---|---|---|---|---|---|---|
-| EQ-BUFFER_BATTE | tampon batarya (12S2P Li-ion kutu): gerekli nihai tutma yükü (aşağı / ileri) | YD-60 | 241,1 | – | N | - | gereksinim | kütle 2,08 kg; tepsi / dirsek / kayış tasarım yükü x 1,15 bağlantı |
-| EQ-PDU_DCDC_FUS | PDU / DC-DC / sigortalar: gerekli nihai tutma yükü (aşağı / ileri) | YD-60 | 255,8 | – | N | - | gereksinim | kütle 2,21 kg; tepsi / dirsek / kayış tasarım yükü x 1,15 bağlantı |
-| EQ-AVIONICS | aviyonik (otopilot, veri bağları): gerekli nihai tutma yükü (aşağı / ileri) | YD-60 | 75,51 | – | N | - | gereksinim | kütle 0,65 kg; tepsi / dirsek / kayış tasarım yükü x 1,15 bağlantı |
-| EQ-PARACHUTE_UA | paraşüt kabı: gerekli nihai tutma yükü (aşağı / ileri) | YD-60 | 548,0 | – | N | - | gereksinim | kütle 4,72 kg; tepsi / dirsek / kayış tasarım yükü x 1,15 bağlantı |
-| EQ-FLIGHT_TERMI | UST + ışıklar: gerekli nihai tutma yükü (aşağı / ileri) | YD-60 | 48,60 | – | N | - | gereksinim | kütle 0,42 kg; tepsi / dirsek / kayış tasarım yükü x 1,15 bağlantı |
-| EQ-PARA-BRK | paraşüt kabı dirsekleri 4 x (2 x M5 Ti-6Al-4V), kesme (bir dirsek çifti yarısını taşır) | YD-60 | 137,0 | 5964,0 | N | yalnız nihai x bağlantı 1,15 | 36,851 | 0,6 Rm A_s (Ti-6Al-4V screws credited at A2-70, conservative) |
-| EQ-PAYTRAY | faydalı yük tepsisi (en büyük yük 17,25 kg) 4 x M5 Ti-6Al-4V tutsak vida, kesme | YD-61 | 385,1 | 5964,0 | N | yalnız nihai x bağlantı 1,15 | 12,468 | 0,6 Rm A_s |
-| EQ-BALLAST | burun safra bloğu 0,74 kg: TR-FWDBAY'den 4 x M4 Ti-6Al-4V, kesme (ileri) + çekme (yukarı), etkileşim | YD-60 | 1 | 210,4 | yük çarpanı | nihai x 1,15 bağlantı (çarpan içinde) | > 100 | Ti-6Al-4V (spec Ftu): çekme Rm A_s, kesme 0,6 Rm A_s; R_s^2 + R_t^2 = 1 |
-| EQ-BALLAST-BR | burun safrası cıvataları M4: 3 mm CFRP tepside ezilme | YD-60 | 18,58 | 4991,5 | N | yalnız nihai x kompozit 1,2 | > 100 | QI ezilme ETW |
+| EQ-BUFFER_BATTE | tampon batarya (12S2P Li-ion kutu): gerekli nihai tutma yükü (aşağı / ileri) | YD-61 | 241,1 | – | N | - | gereksinim | kütle 2,08 kg; tepsi / dirsek / kayış tasarım yükü x 1,15 bağlantı |
+| EQ-PDU_DCDC_FUS | PDU / DC-DC / sigortalar: gerekli nihai tutma yükü (aşağı / ileri) | YD-61 | 255,8 | – | N | - | gereksinim | kütle 2,21 kg; tepsi / dirsek / kayış tasarım yükü x 1,15 bağlantı |
+| EQ-AVIONICS | aviyonik (otopilot, veri bağları): gerekli nihai tutma yükü (aşağı / ileri) | YD-61 | 75,51 | – | N | - | gereksinim | kütle 0,65 kg; tepsi / dirsek / kayış tasarım yükü x 1,15 bağlantı |
+| EQ-PARACHUTE_UA | paraşüt kabı: gerekli nihai tutma yükü (aşağı / ileri) | YD-61 | 548,0 | – | N | - | gereksinim | kütle 4,72 kg; tepsi / dirsek / kayış tasarım yükü x 1,15 bağlantı |
+| EQ-FLIGHT_TERMI | UST + ışıklar: gerekli nihai tutma yükü (aşağı / ileri) | YD-61 | 48,60 | – | N | - | gereksinim | kütle 0,42 kg; tepsi / dirsek / kayış tasarım yükü x 1,15 bağlantı |
+| EQ-PARA-BRK | paraşüt kabı dirsekleri 4 x (2 x M5 Ti-6Al-4V), kesme (bir dirsek çifti yarısını taşır) | YD-61 | 137,0 | 5964,0 | N | yalnız nihai x bağlantı 1,15 | 36,851 | 0,6 Rm A_s (Ti-6Al-4V screws credited at A2-70, conservative) |
+| EQ-PAYTRAY | faydalı yük tepsisi (en büyük yük 17,25 kg) 4 x M5 Ti-6Al-4V tutsak vida, kesme | YD-62 | 385,1 | 5964,0 | N | yalnız nihai x bağlantı 1,15 | 12,468 | 0,6 Rm A_s |
+| EQ-BALLAST | burun safra bloğu 0,70 kg: TR-FWDBAY'den 4 x M4 Ti-6Al-4V, kesme (ileri) + çekme (yukarı), etkileşim | YD-61 | 1 | 220,9 | yük çarpanı | nihai x 1,15 bağlantı (çarpan içinde) | > 100 | Ti-6Al-4V (spec Ftu): çekme Rm A_s, kesme 0,6 Rm A_s; R_s^2 + R_t^2 = 1 |
+| EQ-BALLAST-BR | burun safrası cıvataları M4: 3 mm CFRP tepside ezilme | YD-61 | 17,70 | 4991,5 | N | yalnız nihai x kompozit 1,2 | > 100 | QI ezilme ETW |
 
 ## Yük durumları
 
@@ -465,26 +466,27 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | YD-39 | paraşüt açılma şoku 13,1 kN tek kayış ayağında (yalnız nihai, CRASH-004); yönler: statik ayak yönü etrafında 30° koni (birleşme halkası AM'nin 1,5 m üstünde) ve düşeyden 60° geriye (silkme); belirleyici ön ayak, düşeyden 0°: Fx 0, Fy 0, Fz 13100 N |
 | YD-40 | paraşüt açılma şoku 13,1 kN tek kayış ayağında (yalnız nihai, CRASH-004); yönler: statik ayak yönü etrafında 30° koni (birleşme halkası AM'nin 1,5 m üstünde) ve düşeyden 60° geriye (silkme); belirleyici arka ayak, düşeyden 37°: Fx -7879, Fy 0, Fz 10466 N |
 | YD-41 | paraşüt açılma şoku 13,1 kN tek kayış ayağında (yalnız nihai, CRASH-004); yönler: statik ayak yönü etrafında 30° koni (birleşme halkası AM'nin 1,5 m üstünde) ve düşeyden 60° geriye (silkme); belirleyici ön ayak, düşeyden 60°: Fx 11345, Fy 0, Fz 6550 N |
-| YD-42 | yakıt bölmesi tasarım basıncı 21,0 kPa nihai (1,5 x test pressure 14 kPa (CS-LUAS.965(b))) |
-| YD-43 | E180 büyüme tareti + taşıyıcı 4,35 kg; nihai n aşağı 11,83, ileri 10,24, yan 2,21 |
-| YD-44 | kapalı kapak emmesi |Cp| 1,0 x q(VD) 1990 Pa, 0,0223 m2 (üst sınır) |
-| YD-45 | VD'de kapalı kapak emmesi (limit) |
-| YD-46 | taşıma kızağı, orta gövde 88,5 kg (boş, dış paneller, stabilatörler ve pervane yok), AM x 2,56: kızak tepkileri 1 g'de 364 / 504 N; 3 g düşey (tasarım kararı) |
-| YD-47 | dış panel 7,9 kg, 3 g düşey (tasarım kararı) |
-| YD-48 | FS-GEAR'de arka gövde: arka kalemlerin n 6,71 (teçhizat n'i) ataleti + iki stabilatör paneli 484 N (aynı yön): M 1844 N m, V 2929 N (limit) |
-| YD-49 | FS-FUEL'de ön gövde: ön kalemlerin ataleti, n 6,71 (teçhizat n'i, belirleyici işaret): M 1897 N m (limit) |
-| YD-50 | arka gövde burulması 763 N m (iki dikey 572 N + %28 simetrik olmayan stabilatör) + yan kaplamalarda düşey kesme 2929 N (limit): q = 12331 N/m |
-| YD-51 | CS-LUAS Ek H: n_j 5,40; ana bacak başına P_v 3971 N (limit), bütün ana takım durumları; kiriş ucu tepkisi 3614 N (düşey bacak yükü payı % 55 + sürükleme çifti M_y / L) |
-| YD-52 | CS-LUAS Ek H: n_j 5,40; ana bacak başına P_v 3971 N (limit), bütün ana takım durumları; kiriş ucu tepkisi 3733 N (düşey bacak yükü payı % 45 + sürükleme çifti M_y / L) |
-| YD-53 | CS-LUAS Ek H: n_j 5,40; ana bacak başına P_v 3971 N (limit), bütün ana takım durumları; yan yük 735 N |
-| YD-54 | kanat tasarım durumu: FS-MS üzerinde gövde ataleti tepkisi 4998 N (limit, CT-ATT), taraf başına yarısı + kanat burulma çifti 403 N, gövde yanı kaburgasında 73 mm kutu derinliği |
-| YD-55 | kanat tasarım durumu: FS-RS üzerinde gövde ataleti tepkisi 1983 N (limit, CT-ATT), taraf başına yarısı + kanat burulma çifti 403 N, gövde yanı kaburgasında 76 mm kutu derinliği |
-| YD-56 | alt motor ayağı (y -0,11, z 0,12): en büyük düzlem dışı tepki 2151 N (nihai, 'hamle n 6,71 (en hafif durum) + MCP torku', E-FOOT), destek levhası 56 x 32 mm (c 24 mm), bant r 82 mm, kenar desteği 123 mm |
-| YD-57 | üst ayak: en büyük x tepkisi 1733 N (nihai, 'hamle n 6,71 (en hafif durum) + MCP torku') |
-| YD-58 | toplanmış ana bacak 4,20 kg, teçhizat yük katsayısı 6,71 (hamle matrisi): AM yarıçapı 0,159 m (0,7 x mafsal-dingil mesafesi), yukarı kilit yarıçapı 0,106 m: kanca yükü 413 N (limit) |
-| YD-59 | kuyruk tamponu çarpması 45°'de 1,0 x MTOM ağırlığı (tasarım kararı, limit): omurga yangın perdesi ucunda mafsallı, FS3738'de destekli: tepki 10219 N (çarpma momenti 617 N m / 0,0604 m) |
-| YD-60 | teçhizat tutma, nihai n: aşağı 11,83, yukarı 7,07, ileri 10,24, yan 2,21 |
-| YD-61 | MTOM'da en büyük faydalı yük, nihai n 9,10 (uçuş, iniş, acil, paraşüt en büyüğü) |
+| YD-42 | paraşüt açılma kuvveti 13,1 kN (GRS 4/240, VNE 66,7 m/s) dinamik basınçla en hafif uçuş kütlesinin (112,9 kg) 1 g temiz tutunma hızına (20,8 m/s) ölçeklendi |
+| YD-43 | yakıt bölmesi tasarım basıncı 21,0 kPa nihai (1,5 x test pressure 14 kPa (CS-LUAS.965(b))) |
+| YD-44 | E180 büyüme tareti + taşıyıcı 4,35 kg; nihai n aşağı 11,83, ileri 10,24, yan 2,21 |
+| YD-45 | kapalı kapak emmesi |Cp| 1,0 x q(VD) 1990 Pa, 0,0223 m2 (üst sınır) |
+| YD-46 | VD'de kapalı kapak emmesi (limit) |
+| YD-47 | taşıma kızağı, orta gövde 88,5 kg (boş, dış paneller, stabilatörler ve pervane yok), AM x 2,56: kızak tepkileri 1 g'de 364 / 504 N; 3 g düşey (tasarım kararı) |
+| YD-48 | dış panel 7,9 kg, 3 g düşey (tasarım kararı) |
+| YD-49 | FS-GEAR'de arka gövde: arka kalemlerin n 6,71 (teçhizat n'i) ataleti + iki stabilatör paneli 484 N (aynı yön): M 1844 N m, V 2929 N (limit) |
+| YD-50 | FS-FUEL'de ön gövde: ön kalemlerin ataleti, n 6,71 (teçhizat n'i, belirleyici işaret): M 1897 N m (limit) |
+| YD-51 | arka gövde burulması 763 N m (iki dikey 572 N + %28 simetrik olmayan stabilatör) + yan kaplamalarda düşey kesme 2929 N (limit): q = 12331 N/m |
+| YD-52 | CS-LUAS Ek H: n_j 5,40; ana bacak başına P_v 3971 N (limit), bütün ana takım durumları; kiriş ucu tepkisi 3614 N (düşey bacak yükü payı % 55 + sürükleme çifti M_y / L) |
+| YD-53 | CS-LUAS Ek H: n_j 5,40; ana bacak başına P_v 3971 N (limit), bütün ana takım durumları; kiriş ucu tepkisi 3733 N (düşey bacak yükü payı % 45 + sürükleme çifti M_y / L) |
+| YD-54 | CS-LUAS Ek H: n_j 5,40; ana bacak başına P_v 3971 N (limit), bütün ana takım durumları; yan yük 735 N |
+| YD-55 | kanat tasarım durumu: FS-MS üzerinde gövde ataleti tepkisi 4998 N (limit, CT-ATT), taraf başına yarısı + kanat burulma çifti 403 N, gövde yanı kaburgasında 73 mm kutu derinliği |
+| YD-56 | kanat tasarım durumu: FS-RS üzerinde gövde ataleti tepkisi 1983 N (limit, CT-ATT), taraf başına yarısı + kanat burulma çifti 403 N, gövde yanı kaburgasında 76 mm kutu derinliği |
+| YD-57 | alt motor ayağı (y -0,11, z 0,12): en büyük düzlem dışı tepki 2151 N (nihai, 'hamle n 6,71 (en hafif durum) + MCP torku', E-FOOT), destek levhası 56 x 32 mm (c 24 mm), bant r 82 mm, kenar desteği 123 mm |
+| YD-58 | üst ayak: en büyük x tepkisi 1733 N (nihai, 'hamle n 6,71 (en hafif durum) + MCP torku') |
+| YD-59 | toplanmış ana bacak 4,20 kg, teçhizat yük katsayısı 6,71 (hamle matrisi): AM yarıçapı 0,159 m (0,7 x mafsal-dingil mesafesi), yukarı kilit yarıçapı 0,106 m: kanca yükü 413 N (limit) |
+| YD-60 | kuyruk tamponu çarpması 45°'de 1,0 x MTOM ağırlığı (tasarım kararı, limit): omurga yangın perdesi ucunda mafsallı, FS3738'de destekli: tepki 10219 N (çarpma momenti 617 N m / 0,0604 m) |
+| YD-61 | teçhizat tutma, nihai n: aşağı 11,83, yukarı 7,07, ileri 10,24, yan 2,21 |
+| YD-62 | MTOM'da en büyük faydalı yük, nihai n 9,10 (uçuş, iniş, acil, paraşüt en büyüğü) |
 
 ## Boyutlandırılan ölçüler (spec.structures.sizing)
 

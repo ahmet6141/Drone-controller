@@ -2949,48 +2949,100 @@ mass:
   registry:
     method: 'analysis/mass.py --update-spec: registry of the detailed design (core.assemble.build_registry, all producers):
       geometry x density, datasheet masses of purchased parts; group = budget group (mass_item booking); the allowance items
-      (spec.mass.items registry_allowance) are not in it'
-    parts: 2416
-    empty_kg: 106.43
-    cg: [2.62895, -0.001215, 0.030085]
+      (spec.mass.items registry_allowance) are not in it; cg = flight pose (gear_retraction last state: gear up, doors closed;
+      turret retracted), cg_turret_extended (+ turret_extension last state), cg_ground (rest pose: gear down, doors open)'
+    parts: 2436
+    empty_kg: 106.595385
+    cg: [2.63207, -0.001109, 0.044905]
+    cg_ground: [2.627689, -0.001106, 0.030178]
     groups:
       chassis:
-        mass_kg: 19.8569
-        cg: [2.50616, 0.0004, 0.010359]
+        mass_kg: 19.822289
+        cg: [2.509881, 0.000401, 0.010432]
+        cg_turret_extended: [2.509881, 0.000401, 0.010432]
+        cg_ground: [2.509881, 0.000401, 0.010432]
       controls:
-        mass_kg: 8.1483
-        cg: [3.03735, -0.003967, 0.148837]
+        mass_kg: 8.148298
+        cg: [3.039693, -0.003967, 0.154053]
+        cg_turret_extended: [3.039693, -0.003967, 0.154053]
+        cg_ground: [3.037353, -0.003967, 0.148837]
       fuel:
         mass_kg: 2.36619
-        cg: [2.83242, 0.010526, 0.016782]
+        cg: [2.832424, 0.010526, 0.016782]
+        cg_turret_extended: [2.832424, 0.010526, 0.016782]
+        cg_ground: [2.832424, 0.010526, 0.016782]
       gear:
-        mass_kg: 12.7045
-        cg: [2.42878, -0.000948, -0.247564]
+        mass_kg: 12.704541
+        cg: [2.464011, -0.000972, -0.127784]
+        cg_turret_extended: [2.464011, -0.000972, -0.127784]
+        cg_ground: [2.428784, -0.000948, -0.247564]
       hardware:
-        mass_kg: 5.25326
-        cg: [2.57406, -0.000413, 0.029495]
+        mass_kg: 5.339273
+        cg: [2.572505, -0.000429, 0.033202]
+        cg_turret_extended: [2.572505, -0.000429, 0.032654]
+        cg_ground: [2.572422, -0.000427, 0.032149]
       propulsion:
-        mass_kg: 12.9672
+        mass_kg: 12.967222
         cg: [3.62763, -0.000916, 0.135101]
+        cg_turret_extended: [3.62763, -0.000916, 0.135101]
+        cg_ground: [3.62763, -0.000916, 0.135101]
       shell:
-        mass_kg: 10.2065
-        cg: [2.25777, 0.000422, -0.003232]
+        mass_kg: 10.206008
+        cg: [2.257787, 0.000422, -0.003241]
+        cg_turret_extended: [2.257787, 0.000422, -0.003241]
+        cg_ground: [2.257787, 0.000422, -0.003241]
       systems:
-        mass_kg: 15.2078
-        cg: [1.44537, -0.004381, -0.007502]
+        mass_kg: 15.322806
+        cg: [1.441268, -0.003598, -0.007632]
+        cg_turret_extended: [1.441268, -0.003598, -0.009583]
+        cg_ground: [1.441268, -0.003598, -0.007632]
       tail:
-        mass_kg: 7.42826
-        cg: [3.78244, -0.000134, 0.334479]
+        mass_kg: 7.428259
+        cg: [3.782437, -0.000134, 0.334479]
+        cg_turret_extended: [3.782437, -0.000134, 0.334479]
+        cg_ground: [3.782437, -0.000134, 0.334479]
       wing:
         mass_kg: 12.2905
-        cg: [2.76967, -0.003285, 0.052448]
+        cg: [2.769674, -0.003285, 0.052448]
+        cg_turret_extended: [2.769674, -0.003285, 0.052448]
+        cg_ground: [2.769674, -0.003285, 0.052448]
     fuel:
       mass_kg: 30.2313
-      cg: [2.61218, 0.0, 0.011493]
+      cg: [2.6056, 1.0e-06, 0.009564]
+      levels: [[0.5587, 2.91963, -0.0, -0.05622], [1.71, 2.7187, -0.0, -0.05233], [3.0626, 2.66114, 0.0, -0.04922], [4.422,
+          2.63933, 0.0, -0.04635], [5.7814, 2.62778, 0.0, -0.04354], [7.1408, 2.62063, 0.0, -0.04076], [8.4522, 2.61595,
+          0.0, -0.03808], [9.762, 2.61252, 0.0, -0.03539], [11.0718, 2.60991, 0.0, -0.03269], [12.3803, 2.60787, 0.0, -0.02999],
+        [13.6639, 2.60634, 0.0, -0.02733], [14.9122, 2.60514, 0.0, -0.02473], [16.1249, 2.6042, 0.0, -0.02218], [17.3014,
+          2.60346, 0.0, -0.01967], [18.4415, 2.60286, 0.0, -0.01721], [19.5448, 2.60239, 0.0, -0.01479], [20.6111, 2.60201,
+          0.0, -0.01242], [21.6401, 2.60171, 0.0, -0.0101], [22.6315, 2.60148, 0.0, -0.00782], [23.5852, 2.60131, 0.0, -0.00558],
+        [24.9584, 2.60221, 0.0, -0.00236], [26.3931, 2.60324, 0.0, 0.00094], [27.7653, 2.60415, 0.0, 0.00405], [29.0748,
+          2.60494, 0.0, 0.00698], [30.3212, 2.60565, 0.0, 0.00976], [31.5039, 2.60628, 0.0, 0.01241], [32.6227, 2.60685,
+          0.0, 0.01492], [33.6771, 2.60737, 0.0, 0.0173], [34.6668, 2.60784, 0.0, 0.01956], [35.5912, 2.60828, 0.0, 0.0217],
+        [36.45, 2.60867, 0.0, 0.02372], [37.2427, 2.60904, 0.0, 0.02561], [37.9688, 2.60938, 0.0, 0.02739], [38.6279, 2.6097,
+          0.0, 0.02903], [39.2194, 2.60999, 0.0, 0.03054], [39.7427, 2.61027, 0.0, 0.03191], [40.1972, 2.61053, 0.0, 0.03314],
+        [40.5822, 2.61077, 0.0, 0.0342], [40.8879, 2.61096, 0.0, 0.03508], [41.1219, 2.61114, 0.0, 0.03577]]
+      levels_note: 'fuel module level table: [fuel kg, x, y, z] of the fuel on board with a common free surface in the three
+        communicating bladders (bottom interconnects / saddle drain into the aft feed cell, fed from the aft cell), body
+        axes level'
     payload_parts:
       eo_ir_turret_hd59_mount:
-        mass_kg: 1.73632
-        cg: [1.22, 0.0, -0.065024]
+        mass_kg: 1.736324
+        cg: [1.22, -0.0, -0.065024]
+        cg_turret_extended: [1.22, 0.0, -0.193024]
+        cg_ground: [1.22, -0.0, -0.065024]
+    refs:
+      exhaust_pipes_silencers:
+        parts: [YK250-PR-504-L, YK250-PR-504-R]
+        mass_kg: 0.398718
+        cg: [3.860731, -0.0, 0.08977]
+      main_gear_retraction_emas:
+        parts: [YK250-LG-630-L, YK250-LG-630-R]
+        mass_kg: 0.54
+        cg: [2.891393, 0.0, -0.131468]
+      nose_gear_retraction_ema:
+        parts: [YK250-LG-632]
+        mass_kg: 0.27
+        cg: [0.666002, 0.023755, -0.06104]
 
 # ---------------------------------------------------------------------------------------------------------------------
 # stability: stability
@@ -4026,8 +4078,12 @@ structures:
         D_spindles: -0.143
         E_allocation_replacements: -0.02
       delta_total_kg: -0.017
+    requirements:
+      gear_ema_torque_Nm:
+        main: 14.025
+        nose: 25.71
     summary:
-      n_margins: 303
+      n_margins: 304
       n_requirements: 22
       ms_min: 0.0
       ms_min_id: W-CAP-09
@@ -4399,8 +4455,8 @@ materials:
     name: PA66 moulded (Celanese Zytel 101L NC010 class; tear-away shear screws)
     kind: polymer
     basis: 'datasheet ISO 527 yield stress dry 82 MPa / conditioned 55 MPa, tensile modulus 3100 / 1400 MPa, density ISO
-      1183 1140 kg/m3; Ftu = dry yield (the stronger state: upper bound of a release load, structures P-SPINE-TEAR);
-      Ftu_cond = conditioned yield'
+      1183 1140 kg/m3; Ftu = dry yield (the stronger state: upper bound of a release load, structures P-SPINE-TEAR); Ftu_cond
+      = conditioned yield'
     density: 1140.0
     E: 3100000000.0
     Ftu: 82000000.0
@@ -8022,11 +8078,12 @@ layout:
       tray: TR-FWDBAY
       material: ss_304_annealed
       process: cnc_milling_metal
-      box: [[0.336, -0.03, -0.068], [0.38, 0.03, -0.03259]]
-      mass_kg: 0.74
+      box: [[0.336, -0.03, -0.068], [0.38, 0.03, -0.03427]]
+      mass_kg: 0.705
       bolts: 4 x M4 Ti-6Al-4V through the block and the tray, nyloc + washer under the tray (structures EQ-BALLAST)
-      basis: 'mass/CG closure round: the smallest fixed mass at the most forward free location that brings the empty CG
-        of the registry (+ allowance items) onto the payload-bay datum; height = mass / (density x footprint)'
+      basis: 'mass/CG closure verification round: the fixed trim mass at the most forward free location that puts the minimum
+        static margin (registry in the flight pose + allowance items, fuel at its level CG, burn to empty) inside the sizing
+        dead band above R-09; height = mass / (density x footprint)'
     ground_handling:
       tow_point:
         point: [0.68, 0.0, -0.4479]
@@ -10522,13 +10579,13 @@ layout:
       name_tr: yedek C2 bağı Microhard
       group: systems
       box: [[0.86, 0.0725, -0.035], [0.937, 0.1275, -0.007]]
-      mass_kg: 0.05
+      mass_kg: 0.165
       mount:
         zone: avionics_side_bays
         tray: YK250-CH-122
       connector: +x face, 20 mm allowance
       source: 'layout.rules.bay_contents[datalink_backup] (components.yaml microhard_pddl2450 dimensions_m.note: enclosed
-        unit 77 x 55 x 28 mm (the O)'
+        unit 77 x 55 x 28 mm, mass_)'
       envelope_with_connector: [[0.86, 0.0725, -0.035], [0.957, 0.1275, -0.007]]
     - id: EQ-TRANSPONDER
       part: YK250-SY-734

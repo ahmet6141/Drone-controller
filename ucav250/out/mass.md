@@ -1,6 +1,8 @@
 # YK-250 kütle özellikleri
 
-Boş kütle (faydalı yük ve yakıt hariç; kayıt defteri parçaları + kalemlendirilmiş paylar): **108,17 kg**, AG x = 2,630 m (kayıt defteri parçaları yalnız: 106,43 kg, 2416 parça).
+Boş kütle (faydalı yük ve yakıt hariç; kayıt defteri parçaları + kalemlendirilmiş paylar): **108,33 kg**, AG x = 2,633 m uçuş duruşunda (takım yukarıda, kapaklar kapalı); yerde (takım aşağıda, kapaklar açık) x = 2,629 m (kayıt defteri parçaları yalnız: 106,60 kg, 2436 parça).
+
+Uçuş durumları kayıt defterini `gear_retraction` dizisinin son durumunda (takım yukarıda) ve taret açık durumlarda ayrıca `turret_extension` son durumunda konumlar; yakıt, yakıt modülünün seviye tablosundaki (üç hücrede ortak serbest yüzey) ağırlık merkezinde durur.
 
 ## Yükleme durumları
 
@@ -8,30 +10,30 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 
 | Durum | Kütle (kg) | Noktasal faydalı yük (kg) | AG x (m) | AG y (mm) | AG z (m) | %OAK (MAC) | Ixx | Iyy | Izz (kg·m²) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| mtow_design_payload_turret_retracted | 149,90 | 9,76 | 2,6055 | -0,9 | 0,0157 | 5,7 | 69,9 | 125,1 | 185,8 |
-| mtow_design_payload_turret_extended | 149,90 | 9,76 | 2,6055 | -0,9 | 0,0157 | 5,7 | 69,9 | 125,1 | 185,8 |
-| mtow_max_payload_turret_retracted | 149,90 | 18,26 | 2,6065 | -0,9 | 0,0077 | 5,9 | 69,8 | 124,6 | 184,9 |
-| mtow_max_payload_turret_extended | 149,90 | 18,26 | 2,6065 | -0,9 | 0,0077 | 5,9 | 69,8 | 124,6 | 184,9 |
-| full_fuel_baseline_sensors_only | 147,27 | 1,51 | 2,6044 | -0,9 | 0,0236 | 5,4 | 69,9 | 125,4 | 186,4 |
-| zero_fuel_design_payload | 119,67 | 9,76 | 2,6038 | -1,1 | 0,0167 | 5,3 | 68,8 | 122,8 | 182,5 |
-| zero_fuel_max_payload | 128,17 | 18,26 | 2,6056 | -1,0 | 0,0071 | 5,7 | 69,0 | 122,9 | 182,5 |
-| reserve_fuel_design_payload | 123,30 | 9,76 | 2,6041 | -1,0 | 0,0166 | 5,4 | 68,9 | 123,0 | 182,9 |
-| minimum_flying_turret_only | 112,94 | 0,01 | 2,6078 | -1,1 | 0,0287 | 6,1 | 68,7 | 122,3 | 182,4 |
-| e180_growth_turret_full_fuel | 149,90 | 9,76 | 2,5843 | -0,9 | 0,0142 | 1,3 | 70,0 | 129,4 | 190,1 |
+| mtow_design_payload_turret_retracted | 150,07 | 9,76 | 2,6064 | -0,8 | 0,0258 | 5,8 | 68,3 | 123,0 | 183,8 |
+| mtow_design_payload_turret_extended | 150,07 | 9,76 | 2,6064 | -0,8 | 0,0241 | 5,8 | 68,4 | 123,1 | 183,8 |
+| mtow_max_payload_turret_retracted | 150,07 | 18,26 | 2,6072 | -0,8 | 0,0152 | 6,0 | 68,2 | 122,5 | 182,8 |
+| mtow_max_payload_turret_extended | 150,07 | 18,26 | 2,6072 | -0,8 | 0,0135 | 6,0 | 68,3 | 122,6 | 182,8 |
+| full_fuel_baseline_sensors_only | 147,43 | 1,51 | 2,6057 | -0,8 | 0,0369 | 5,7 | 68,3 | 123,2 | 184,4 |
+| zero_fuel_design_payload | 119,83 | 9,76 | 2,6066 | -1,0 | 0,0278 | 5,9 | 67,3 | 120,5 | 180,2 |
+| zero_fuel_max_payload | 128,33 | 18,26 | 2,6082 | -0,9 | 0,0174 | 6,2 | 67,5 | 120,7 | 180,2 |
+| reserve_fuel_design_payload | 123,46 | 9,76 | 2,6080 | -1,0 | 0,0276 | 6,2 | 67,3 | 120,8 | 180,7 |
+| minimum_flying_turret_only | 113,11 | 0,01 | 2,6121 | -1,0 | 0,0410 | 7,0 | 67,1 | 120,1 | 180,1 |
+| e180_growth_turret_full_fuel | 150,07 | 9,76 | 2,5853 | -0,8 | 0,0226 | 1,5 | 68,5 | 127,4 | 188,0 |
 
 ## Gruplar
 
 | Grup | Kütle (kg) | AG x (m) |
 |---|---:|---:|
-| chassis | 19,86 | 2,506 |
-| systems | 15,21 | 1,445 |
+| chassis | 19,82 | 2,510 |
+| systems | 15,32 | 1,441 |
 | propulsion | 12,97 | 3,628 |
-| gear | 12,94 | 2,424 |
+| gear | 12,94 | 2,459 |
 | wing | 12,88 | 2,770 |
 | shell | 10,82 | 2,260 |
-| controls | 8,15 | 3,037 |
+| controls | 8,15 | 3,040 |
 | tail | 7,74 | 3,782 |
-| hardware | 5,25 | 2,574 |
+| hardware | 5,34 | 2,573 |
 | fuel | 2,37 | 2,832 |
 | payload | 1,74 | 1,220 |
 
@@ -49,14 +51,14 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 
 | Grup | Hesap (kg) | Bütçe (kg) | Tolerans | Durum |
 |---|---:|---:|---:|---|
-| chassis | 19,86 | 19,86 | ±0,60 | ✓ |
+| chassis | 19,82 | 19,86 | ±0,60 | ✓ |
 | controls | 8,15 | 8,15 | ±0,24 | ✓ |
 | fuel | 2,37 | 2,37 | ±0,07 | ✓ |
 | gear | 12,94 | 12,94 | ±0,39 | ✓ |
-| hardware | 5,25 | 5,26 | ±0,16 | ✓ |
+| hardware | 5,34 | 5,26 | ±0,16 | ✓ |
 | propulsion | 12,97 | 12,97 | ±0,39 | ✓ |
 | shell | 10,82 | 10,82 | ±0,32 | ✓ |
-| systems | 15,21 | 15,21 | ±0,46 | ✓ |
+| systems | 15,32 | 15,21 | ±0,46 | ✓ |
 | tail | 7,74 | 7,74 | ±0,23 | ✓ |
 | wing | 12,88 | 12,88 | ±0,39 | ✓ |
 
@@ -103,12 +105,12 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 
 | Parça | Kütle (kg) |
 |---|---:|
-| YK250-FU-596 | 14,291 |
-| YK250-FU-598 | 11,009 |
+| YK250-FU-596 | 15,787 |
+| YK250-FU-598 | 11,938 |
 | YK250-PR-500 | 6,533 |
-| YK250-FU-597 | 4,931 |
 | YK250-SY-800 | 4,412 |
 | YK250-CH-001 | 2,550 |
+| YK250-FU-597 | 2,506 |
 | YK250-SY-726 | 1,980 |
 | YK250-SY-720 | 1,600 |
 | YK250-PL-820 | 1,550 |
@@ -128,3 +130,30 @@ Her durum sizing.mass_cases ile aynı yüklemeyi taşır: kayıt defteri parçal
 | YK250-WG-154-L | 0,862 |
 | YK250-PR-510 | 0,800 |
 | YK250-SH-383 | 0,781 |
+
+## Sorunlar
+
+- zero_fuel_max_payload: CG x 2.6082 outside [2.58434, 2.60779]
+- reserve_fuel_design_payload: CG x 2.6080 outside [2.58434, 2.60779]
+- minimum_flying_turret_only: CG x 2.6121 outside [2.58434, 2.60779]
+- mtow_design_payload_turret_retracted: 150.07 kg exceeds spec mtow 149.9
+- mtow_design_payload_turret_extended: 150.07 kg exceeds spec mtow 149.9
+- mtow_max_payload_turret_retracted: 150.07 kg exceeds spec mtow 149.9
+- mtow_max_payload_turret_extended: 150.07 kg exceeds spec mtow 149.9
+- e180_growth_turret_full_fuel: 150.07 kg exceeds spec mtow 149.9
+- spec.mass.registry groups.chassis stale: 19.857 kg [2.5062, 0.0004, 0.0104] vs registry 19.822 kg [2.5099, 0.0004, 0.0104]
+- spec.mass.registry groups.controls stale: 8.148 kg [3.0373, -0.004, 0.1488] vs registry 8.148 kg [3.0397, -0.004, 0.1541]
+- spec.mass.registry groups.fuel stale: 2.366 kg [2.8324, 0.0105, 0.0168] vs registry 2.366 kg [2.8324, 0.0105, 0.0168]
+- spec.mass.registry groups.gear stale: 12.704 kg [2.4288, -0.0009, -0.2476] vs registry 12.705 kg [2.464, -0.001, -0.1278]
+- spec.mass.registry groups.hardware stale: 5.253 kg [2.5741, -0.0004, 0.0295] vs registry 5.339 kg [2.5725, -0.0004, 0.0332]
+- spec.mass.registry groups.propulsion stale: 12.967 kg [3.6276, -0.0009, 0.1351] vs registry 12.967 kg [3.6276, -0.0009, 0.1351]
+- spec.mass.registry groups.shell stale: 10.207 kg [2.2578, 0.0004, -0.0032] vs registry 10.206 kg [2.2578, 0.0004, -0.0032]
+- spec.mass.registry groups.systems stale: 15.208 kg [1.4454, -0.0044, -0.0075] vs registry 15.323 kg [1.4413, -0.0036, -0.0076]
+- spec.mass.registry groups.tail stale: 7.428 kg [3.7824, -0.0001, 0.3345] vs registry 7.428 kg [3.7824, -0.0001, 0.3345]
+- spec.mass.registry groups.wing stale: 12.290 kg [2.7697, -0.0033, 0.0524] vs registry 12.290 kg [2.7697, -0.0033, 0.0524]
+- spec.mass.registry fuel stale: 30.231 kg [2.6122, 0.0, 0.0115] vs registry 30.231 kg [2.6056, 0.0, 0.0096]
+- spec.mass.registry fuel.levels stale
+- spec.mass.registry payload_parts.eo_ir_turret_hd59_mount stale: 1.736 kg [1.22, 0.0, -0.065] vs registry 1.736 kg [1.22, -0.0, -0.065]
+- spec.mass.registry refs.exhaust_pipes_silencers missing
+- spec.mass.registry refs.main_gear_retraction_emas missing
+- spec.mass.registry refs.nose_gear_retraction_ema missing

@@ -237,8 +237,13 @@ def fuel_supports() -> list:
 # CG is brought back onto the payload-bay datum (layout.zones payload_bay, x 2.6288) by the smallest mass at the most
 # forward free location: a machined AISI 304 block on TR-FWDBAY ahead of the buffer battery, 4 x M4 Ti through the tray
 # (nyloc under it). BALLAST_KG: sized from the registry (analysis/mass.py) so that the empty CG incl. the allowance
-# items lies on the payload-bay datum (docs/detail/chassis.md).
-BALLAST_KG = 0.74
+# items lies on the payload-bay datum (docs/detail/chassis.md). Verification round of the closure (MC-01 / MC-02 /
+# REG-01): re-sized against the stability limit itself, not the datum: flight pose (gear up), the itemised silencer /
+# gear EMA / gasket allowances, the enclosed pDDL and the fuel-level CG with the burn to empty; 0.705 kg puts the
+# minimum static margin (minimum flying case, fuel burn) inside the sizing dead band above R-09 with the wing station
+# unchanged. The ballast is the trim item: a lighter final nose EMA (allowance forward of the CG) is replaced by
+# ballast (about 0.87 kg of ballast per kg at the EMA station), a heavier aft item adds ballast.
+BALLAST_KG = 0.705
 BALLAST_X = (0.336, 0.380)        # 8 mm ahead of the battery cradle (x 0.387), clear of the FS0300 tray flange bolt
 BALLAST_HW = 0.030                # half width (tray half-width at x 0.34 is ~35 mm; OML clearance >= 5 mm)
 BALLAST_MAT = "ss_304_annealed"
@@ -255,9 +260,10 @@ def nose_ballast() -> dict:
             "mass_kg": BALLAST_KG,
             "bolts": "4 x M4 Ti-6Al-4V through the block and the tray, nyloc + washer under the tray (structures "
                      "EQ-BALLAST)",
-            "basis": "mass/CG closure round: the smallest fixed mass at the most forward free location that brings "
-                     "the empty CG of the registry (+ allowance items) onto the payload-bay datum; height = mass / "
-                     "(density x footprint)"}
+            "basis": "mass/CG closure verification round: the fixed trim mass at the most forward free location "
+                     "that puts the minimum static margin (registry in the flight pose + allowance items, fuel at its "
+                     "level CG, burn to empty) inside the sizing dead band above R-09; height = mass / (density x "
+                     "footprint)"}
 
 
 def trays() -> list:

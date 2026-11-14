@@ -2452,7 +2452,9 @@ DENSE = 0.002                   # dense sampling step of a row line before the p
 RING_EXTRA = {"P-GNSS2": 0.002}  # small RF window on the V-roof: its row 2 mm further in
 
 
-SPINE_ROW_Y = 0.045 + GAP + EDGE_M4   # spine flange row: 10.5 mm outboard of the tear-away strip edge (y 0.045)
+# spine flange row: outboard of the tear-away strip edge (y 0.045) by the skin edge distance + the plan margin (the
+# skin edge sits at the 0.5 mm half gap; 10.5 mm left 10.1 mm measured edge distance, below the rule)
+SPINE_ROW_Y = 0.045 + GAP + EDGE_M4 + OWN_MARGIN
 SPINE_ROW_END = 0.034                  # row ends 34 mm from the FS1810 / FS-FUEL station planes (frame cap rows there)
 # tear-away strip screws (REG-02): PA66 (Celanese Zytel 101L class, spec.materials pa66_zytel_101l); installation
 # torque = nut factor 0.2 x preload x d with the preload at 25 % of the screw's dry yield load (estimate: hand-tight,
@@ -2692,8 +2694,9 @@ class Rows:
         M = sc.mem
         # spine-channel flanges: the mission-bay upper skin P-MB-UPPER lands on the outer part of the flanges beside the
         # tear-away strip (FS1810 -> FS-FUEL; over the fuel bay the fuel panels' inner-edge M3 rows use the flanges,
-        # special_rows). Verification REG-03: the row is given to P-MB-UPPER explicitly (the plan-region owner test
-        # keeps 1.5 mm more than the 10.5 mm edge distance of the row and found no owner, so no screw was committed);
+        # special_rows). Verification REG-03: the row is given to P-MB-UPPER explicitly and moved 1.5 mm outboard (at
+        # 10.5 mm from the strip edge the plan-region owner test found no owner and the measured skin edge distance
+        # was 10.1 mm, so no screw was committed);
         # span spine_row_span(), pitch of the panel's row kind (structures P-SPINE-SCREWS counts the same screws)
         k_mb = "P-MB-UPPER"
         xa, xb = spine_row_span(sc)

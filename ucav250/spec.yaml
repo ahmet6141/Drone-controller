@@ -6722,7 +6722,7 @@ layout:
       process: cnc_milling_metal
       mirror: true
       axis: [1.0, 0.0, 0.0]
-      pivot: [2.9734, 0.3478, -0.1314]
+      pivot: [2.9734, 0.34785, -0.13144]
       bearings:
       - x: 2.9244
         bore: 0.02
@@ -11174,8 +11174,8 @@ layout:
         name: main power/data trunk
         diameter: 0.02
         path: [[0.95, -0.11, 0.031], [1.11, -0.143, 0.035], [1.33, -0.1475, 0.049], [1.49, -0.195, 0.035], [1.81, -0.195,
-            0.035], [2.0, -0.27, -0.1], [2.1889, -0.27, -0.1], [2.5264, -0.28, -0.1], [2.8497, -0.29, -0.1], [2.8497, -0.15,
-            -0.085], [2.8497, 0.0, -0.085], [3.1128, 0.0, -0.085], [3.2728, 0.0, 0.03]]
+            0.035], [2.0, -0.27, -0.1], [2.1889, -0.27, -0.1], [2.5264, -0.28, -0.1], [2.8418, -0.2875, -0.1], [2.8497,
+            -0.29, -0.1], [2.8497, -0.15, -0.085], [2.8497, 0.0, -0.085], [3.1128, 0.0, -0.085], [3.2728, 0.0, 0.03]]
         penetrations:
         - member: M-WELLWALL-FWD
           point: [2.8656, 0.0, -0.085]
@@ -11286,7 +11286,7 @@ layout:
         part: YK250-SY-778
         name: fuel level probe branch (aft cell)
         diameter: 0.006
-        path: [[3.093, -0.095, 0.13], [3.12, -0.095, 0.13], [3.2, -0.06, 0.07], [3.235, -0.022, 0.04]]
+        path: [[3.0926, -0.095, 0.13], [3.12, -0.095, 0.13], [3.2, -0.06, 0.07], [3.235, -0.022, 0.04]]
         text: bulkhead connector of the aft-cell probe flying lead in FS-GEAR (C-HARN-FUELA, sealed) -> aft equipment bay
           -> breakout into H-MAIN ahead of the junction CN-TAIL
       rules: 'trunks are keep-out corridors (diameter + 10 mm: no object within 5 mm of the trunk surface, layout_check
@@ -11752,7 +11752,7 @@ layout:
       components:
       - what: H-MAIN
         fraction: 0.2195
-        at: [2.1976, -0.1763, -0.0418]
+        at: [2.1977, -0.1762, -0.0418]
       - what: H-COAX
         fraction: 0.1333
         at: [2.177, 0.1849, -0.0523]
@@ -11769,14 +11769,14 @@ layout:
         fraction: 0.0154
         at: [0.5362, 0.0568, 0.0286]
       - what: H-FIN (x2)
-        fraction: 0.0242
+        fraction: 0.0241
         at: [3.7354, 0.0, 0.5682]
       - what: H-FUEL
         fraction: 0.0082
         at: [2.2365, 0.0373, 0.1562]
       - what: H-FUEL-A
         fraction: 0.0014
-        at: [3.1703, -0.0686, 0.0903]
+        at: [3.1702, -0.0687, 0.0903]
       - what: outer-panel harnesses (x2, to the tips)
         fraction: 0.1686
         at: [2.8703, 0.0, 0.076]

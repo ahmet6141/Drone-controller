@@ -788,7 +788,10 @@ def fittings() -> list:
            for k, (dx, y) in enumerate((dx, y) for dx in (-0.049, 0.049) for y in (0.340, 0.362))]
     F.append({"id": "F-TRUNNION", "part": "YK250-CH-070", "name": "main-gear trunnion fitting",
               "name_tr": "ana takım mafsal bağlantısı", "material": "al_7075_t651_plate", "process": "cnc_milling_metal",
-              "mirror": True, "axis": [1.0, 0.0, 0.0], "pivot": r3(mg),
+              # pivot to 0.01 mm like the gear joint origin (landing_gear.main.trunnion): the bushings and lug bores
+              # are concentric with the leg's rotation axis (mass/CG closure verification round: at 0.1 mm the 0.04 mm
+              # offset made the stub axle sweep into the bushing CH-074 over the retraction)
+              "mirror": True, "axis": [1.0, 0.0, 0.0], "pivot": r3(mg, 5),
               "bearings": [{"x": r3(x0 - 0.049), "bore": 0.020, "fit": "20 H7 (sleeve bushing; match to the "
                             "selected gear unit)"}, {"x": r3(x0 + 0.049), "bore": 0.020, "fit": "20 H7"}],
               "boxes": r3(boxes), "box": _bbox(boxes), "bolts": bl,

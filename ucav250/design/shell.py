@@ -74,9 +74,10 @@ ROW_CAP = 0.0150            # fastener row offset from a frame web centre line (
 #                             line: 13 mm = 2.5 D of the Camloc stud + 1 mm; nutplate / receptacle clear of the web)
 EDGE_M4 = 0.0105            # M4 row distance from a panel edge (2.5 D = 10 mm + 0.5 mm)
 EDGE_CAM = 0.0125           # Camloc stud row distance from a panel edge (2.5 D = 12 mm + 0.5 mm)
-PITCH_NUT = 0.028           # structural skins 25-32 mm (layout.shell.rules.concept)
-PITCH_FUEL = 0.028          # fuel-bay panels 25-30 mm
-PITCH_CAM = 0.085           # hatches 75-100 mm
+PITCH_NUT = 0.032           # structural skins 25-32 mm (layout.shell.rules.concept); mass/CG closure round (HW-05):
+#                             28 -> 32 mm = 8 D (M4), the pitch structures B-SCREW-SH / B-SCREW-BR already analyse
+PITCH_FUEL = 0.030          # fuel-bay panels 25-30 mm (mass/CG closure round, HW-05: 28 -> 30 mm, sealing range kept)
+PITCH_CAM = 0.100           # hatches 75-100 mm (mass/CG closure round, HW-06: 85 -> 100 mm; hatches non-structural)
 PITCH_COWL = 0.080          # cowl 70-90 mm
 PITCH_INS = 0.080           # fairings 60-100 mm
 RIDGE_CLEAR = 0.012         # no fastener within 12 mm of the V-roof ridge (mid-plane ray leaves the laminate there)

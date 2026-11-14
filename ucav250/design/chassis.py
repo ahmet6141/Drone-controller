@@ -1014,9 +1014,20 @@ def build_clrib(C: Ctx, bx: Box) -> G.Mesh:
     return union(ms)
 
 
+KINK_BOND = 0.0001            # EA 9394 bond line between the kink plate and the cap face (mass/CG closure round: the
+#                               layout box face is rounded to 0.1 mm and sat 0.03 mm inside the re-sized cap)
+
+
 def build_kink(C: Ctx, fid: str) -> G.Mesh:
     f = C.fit[fid]
     (a0, a1), (b0, b1) = f["boxes"]
+    a0, a1, b0, b1 = (list(map(float, v)) for v in (a0, a1, b0, b1))
+    if fid.endswith("UP"):                      # plate / tab top face on the upper cap's inner face
+        a1[2] -= KINK_BOND
+        b1[2] -= KINK_BOND
+    else:                                       # plate / tab bottom face on the lower cap's inner face
+        a0[2] += KINK_BOND
+        b0[2] += KINK_BOND
     plate = box3(a0, a1)
     tab = box3((b0[0] - OV, b0[1], b0[2]), b1)
     return union([plate, tab])
@@ -1155,6 +1166,10 @@ def build_glove_ribs(C: Ctx, bx: Box) -> dict:
 JOINT_RIB_X1 = 2.905        # joint rib extended aft over the rear-spar slot fitting (layout box ends 2.8719)
 
 
+SLOT_AFT_OF_PIN = 0.018        # slot-fitting plates: aft edge behind the rear-pin axis (was the fixed x 2.894)
+SLOT_RELIEF = (0.005, 0.001)   # upper plate aft top-edge relief (x length, depth)
+
+
 def build_slot_fitting(C: Ctx, bx: Box) -> G.Mesh:
     """Rear-spar slot fitting (CH-054-R): web plate on the 16-ply rear-spar web pad (2 x M5 Ti) and two horizontal
     4 mm clevis plates 8.2 mm apart, open outboard, bore 8 H8 for the vertical rear pin."""
@@ -1174,7 +1189,7 @@ def build_slot_fitting(C: Ctx, bx: Box) -> G.Mesh:
         rings.append(np.array([[xf, y, zc - 0.0101], [xf + 0.004, y, zc - 0.0101], [xf + 0.004, y, zc + 0.0101],
                                [xf, y, zc + 0.0101]]))
     web = G.loft(rings)
-    x1 = 2.894
+    x1 = px + SLOT_AFT_OF_PIN                        # aft edge 18 mm behind the pin axis (e/D 2.25 for the 8 mm pin)
     plates = []
     for s in (1, -1):
         z0, z1 = (zc + 0.5 * gap, zc + 0.5 * gap + pt) if s > 0 else (zc - 0.5 * gap - pt, zc - 0.5 * gap)
@@ -1182,6 +1197,11 @@ def build_slot_fitting(C: Ctx, bx: Box) -> G.Mesh:
         poly = Polygon([(xs, SLOT_PLATE_Y0), (x1, SLOT_PLATE_Y0), (x1, yE), (xface(yE) + 0.004 - 0.001, yE)])
         plates.append(prism_z(poly, z0, z1))
     m = union([web] + plates)
+    # mass/CG closure round: 45-deg-class edge relief of the upper plate's aft top edge (5 x 1 mm), clear of the glove
+    # upper skin, which falls toward the trailing edge (the closure moved the wing 0.25 mm forward, the pin 0.1 mm up)
+    z_top = zc + 0.5 * gap + pt
+    m = diff(m, [box3((x1 - SLOT_RELIEF[0], SLOT_PLATE_Y0 - 0.001, z_top - SLOT_RELIEF[1]),
+                      (x1 + 0.001, yE + 0.001, z_top + 0.001))])
     r = 0.5 * float(pin["diameter"]) + 0.00001
     return diff(m, [bore((px, py, pz - 0.03), (px, py, pz + 0.03), r)])
 
@@ -1639,14 +1659,16 @@ def build_gearbeam(C: Ctx) -> G.Mesh:
                       for k, b in enumerate(m["boxes"])])
     y0, y1 = float(m["box"][0][1]), float(m["box"][1][1])
     f = C.fit["F-TRUNNION"]
-    bb = [(TRUN_BEAM_X.get(b["id"], b["point"][0]), TRUN_BEAM_Z.get(b["id"], b["point"][2])) for b in f["bolts"]
-          if b["group"] == "gear beam"]
+    dx = trun_dx(C)
+    bb = [(TRUN_BEAM_X[b["id"]] + dx if b["id"] in TRUN_BEAM_X else b["point"][0],
+           TRUN_BEAM_Z.get(b["id"], b["point"][2])) for b in f["bolts"] if b["group"] == "gear beam"]
     xs, zs = [p[0] for p in bb], [p[1] for p in bb]
-    xs_o = [x for x in xs if abs(x - 2.9759) > 0.01]
-    zs_o = [z for x, z in zip(xs, zs) if abs(x - 2.9759) > 0.01]
-    lands = [rect(min(xs_o) - 0.013, 2.9399 - 0.0005, min(zs_o) - 0.013, max(zs_o) + 0.013),
-             rect(3.0119 + 0.0005, max(xs_o) + 0.013, min(zs_o) - 0.013, max(zs_o) + 0.013),
-             rect(2.9759 - 0.013, 2.9759 + 0.013, TRUN_B3_Z - 0.013, TRUN_B3_Z + 0.013)]
+    xm = 2.9759 + dx
+    xs_o = [x for x in xs if abs(x - xm) > 0.01]
+    zs_o = [z for x, z in zip(xs, zs) if abs(x - xm) > 0.01]
+    lands = [rect(min(xs_o) - 0.013, TRUN_LUG_X[0] + dx - 0.0005, min(zs_o) - 0.013, max(zs_o) + 0.013),
+             rect(TRUN_LUG_X[1] + dx + 0.0005, max(xs_o) + 0.013, min(zs_o) - 0.013, max(zs_o) + 0.013),
+             rect(xm - 0.013, xm + 0.013, TRUN_B3_Z - 0.013, TRUN_B3_Z + 0.013)]
     wall = prism_y(clean_poly(xz), y0, y1)
     land = union([prism_y(l_, y0 - BEAM_LAND_PROUD, y0 + OV) for l_ in lands])
     beam = union([wall, land])
@@ -1854,6 +1876,8 @@ def build_trunnion(C: Ctx) -> G.Mesh:
     between the lugs and to 8 mm elsewhere (the roof-bolt plates fore and aft for the 4 roof bolts), clear of the
     retraction-EMA allocation envelope (ACT-MLG-EMA)."""
     f = C.fit["F-TRUNNION"]
+    dx = trun_dx(C)
+    lug_x = (TRUN_LUG_X[0] + dx, TRUN_LUG_X[1] + dx)
     yb = float(C.mem["M-GEARBEAM"]["box"][0][1]) - BEAM_LAND_PROUD          # land face
     boxes = []
     for k, (lo, hi) in enumerate(f["boxes"]):
@@ -1861,19 +1885,19 @@ def build_trunnion(C: Ctx) -> G.Mesh:
         if k < 3:                                     # beam flange boxes
             hi[1] = yb
         if k == 2:
-            hi[0] = TRUN_FLANGE_X1
+            hi[0] = TRUN_FLANGE_X1 + dx
         boxes.append((lo, hi))
-    x0, x1 = float(f["box"][0][0]), TRUN_FLANGE_X1
+    x0, x1 = float(f["box"][0][0]), TRUN_FLANGE_X1 + dx
     # top plate on the well roof extended fore and aft of the lugs for the roof bolts (inboard of the beam bolts)
     ya, yb = TRUN_ROOF_Y[0] - 0.012, TRUN_ROOF_Y[1] + 0.012
-    boxes.append(((x0, ya, -0.0868), (2.9399, yb, -0.0668)))         # over the lugs (not between them: leg swing)
-    boxes.append(((3.0119, ya, -0.0868), (x1, yb, -0.0668)))
+    boxes.append(((x0, ya, -0.0868), (lug_x[0], yb, -0.0668)))       # over the lugs (not between them: leg swing)
+    boxes.append(((lug_x[1], ya, -0.0868), (x1, yb, -0.0668)))
     m = fuse_boxes(boxes)
     px, py, pz = f["pivot"]
     cuts = [bore((b["x"] - 0.05, py, pz), (b["x"] + 0.05, py, pz), 0.5 * TRUN_BUSH_OD + BUSH_BOND, n=48)
             for b in f["bearings"]]                   # bonded sleeve bushings CH-074 (20 H7 inside)
     # roof-bolt plates fore and aft of the lugs: 8 mm (the 20 mm top plate stays over the lugs only, V03)
-    for xa_, xb_ in ((x0 - 0.001, TRUN_LUG_X[0] - 0.026), (TRUN_LUG_X[1] + 0.026, x1 + 0.001)):
+    for xa_, xb_ in ((x0 - 0.001, lug_x[0] - 0.026), (lug_x[1] + 0.026, x1 + 0.001)):
         cuts.append(box3((xa_, ya - 0.001, -0.0868 - 0.001), (xb_, yb + 0.001, TRUN_PLATE_Z1 - TRUN_ROOF_PLATE_T)))
     ema = next(a for a in C.L["systems"]["actuators"] if a["id"] == "ACT-MLG-EMA")["cylinder"]
     c = np.asarray(ema["center"], float)
@@ -1908,10 +1932,10 @@ def build_trunnion(C: Ctx) -> G.Mesh:
         reg_ = box3((xf - 0.03, q[1] - 0.02, float(dl["lug_bottom_z"]) - 0.002), (xf + 0.001, q[1] + 0.02, q[2]))
         cuts.append(diff(reg_, [C.body_env(MEM_IN, xf - 0.04, xf + 0.01)]))
     # the 12 mm strip of the top plate inboard of the lugs: 8 mm like the roof-bolt plates (V03)
-    cuts.append(box3((TRUN_LUG_X[0] - 0.026 - 0.001, ya - 0.001, TRUN_PLATE_Z0 - 0.001),
-                     (TRUN_LUG_X[1] + 0.026 + 0.001, TRUN_LUG_Y[0], TRUN_PLATE_Z1 - TRUN_ROOF_PLATE_T)))
-    cuts.append(box3((TRUN_LUG_X[0] + 0.004, TRUN_LUG_Y[0] + 0.004, TRUN_PLATE_Z0 - 0.001),
-                     (TRUN_LUG_X[1] - 0.004, TRUN_PLATE_Y1 - 0.004, TRUN_PLATE_Z1 - TRUN_PLATE_SKIN)))
+    cuts.append(box3((lug_x[0] - 0.026 - 0.001, ya - 0.001, TRUN_PLATE_Z0 - 0.001),
+                     (lug_x[1] + 0.026 + 0.001, TRUN_LUG_Y[0], TRUN_PLATE_Z1 - TRUN_ROOF_PLATE_T)))
+    cuts.append(box3((lug_x[0] + 0.004, TRUN_LUG_Y[0] + 0.004, TRUN_PLATE_Z0 - 0.001),
+                     (lug_x[1] - 0.004, TRUN_PLATE_Y1 - 0.004, TRUN_PLATE_Z1 - TRUN_PLATE_SKIN)))
     return diff(m, cuts)
 
 
@@ -1947,11 +1971,19 @@ TRUN_BEAM_Z = {"B1": -0.092, "B4": -0.092, "B5": -0.1125}   # beam bolts below t
 TRUN_BEAM_X = {"B4": 3.0509}
 TRUN_FLANGE_X1 = 3.0629
 TRUN_ROOF_X = (2.9029, 3.0489)  # ... fore / aft of the lugs (layout: in the lugs, above the 20 H7 bores)
+TRUN_PIVOT_X0 = 2.9758          # layout F-TRUNNION pivot x the TRUN_*_X values above were set for (integration round)
 
 
-def trunnion_roof_point(b: dict):
+def trun_dx(C: Ctx) -> float:
+    """Shift of the layout trunnion pivot from TRUN_PIVOT_X0: the TRUN_*_X stations follow the main gear (mass/CG
+    closure round: the payload-bay rule moved it 1.3 mm aft)."""
+    return float(C.fit["F-TRUNNION"]["pivot"][0]) - TRUN_PIVOT_X0
+
+
+def trunnion_roof_point(b: dict, dx: float = 0.0):
     x, y, z = b["point"]
-    return (TRUN_ROOF_X[0] if x < 2.9759 else TRUN_ROOF_X[1]), (TRUN_ROOF_Y[0] if y < 0.35 else TRUN_ROOF_Y[1]), z
+    return ((TRUN_ROOF_X[0] if x < 2.9759 + dx else TRUN_ROOF_X[1]) + dx, (TRUN_ROOF_Y[0] if y < 0.35 else
+                                                                            TRUN_ROOF_Y[1]), z)
 
 
 def wellroof_face_t(C: Ctx) -> float:
@@ -2902,7 +2934,8 @@ def build_fwdbay_tray(C: Ctx) -> G.Mesh:
 
 
 N_BALLAST = 127               # mass/CG closure round: nose ballast block (layout.chassis.ballast BAL-NOSE)
-BALLAST_BOLT_IN = 0.009       # M4 bolt centres 9 mm inside the block edges (>= 2 D in the steel block)
+BALLAST_BOLT_IN = 0.011       # M4 bolt centres 11 mm inside the block edges (>= 2 D in the steel block; >= 2.5 D to
+#                               the TR-FWDBAY tray edge, which narrows forward)
 
 
 def build_ballast(C: Ctx) -> G.Mesh:
@@ -3988,15 +4021,16 @@ def _fasteners(C: Ctx, R: _Reg, F: _Fast, bx: Box) -> None:
     f = fit["F-TRUNNION"]
     trn, beam = pid(70, "R"), C.ref("M-GEARBEAM")
     land_depth = float(C.mem["M-GEARBEAM"]["box"][1][1] - C.mem["M-GEARBEAM"]["box"][0][1]) + BEAM_LAND_PROUD
+    tdx = trun_dx(C)
     for b in f["bolts"]:
         if b["group"] == "gear beam":
-            pt = (TRUN_BEAM_X.get(b["id"], b["point"][0]), b["point"][1],
+            pt = (TRUN_BEAM_X[b["id"]] + tdx if b["id"] in TRUN_BEAM_X else b["point"][0], b["point"][1],
                   TRUN_B3_Z if b["id"] == "B3" else TRUN_BEAM_Z.get(b["id"], b["point"][2]))
             F.sym(6, pt, (0.0, 1.0, 0.0), [trn], nut="insert", insert_part=beam, insert_depth=land_depth,
                   grade=G129, label=f"F-TRUNNION {b['id']}",
                   notes="bonded through-thickness M6 insert in the solid land of the gear beam (no nut outboard)")
         else:
-            F.sym(6, trunnion_roof_point(b), (0.0, 0.0, 1.0), [trn, C.ref("M-WELLROOF")], nut="nutplate", grade=G129, label=f"F-TRUNNION {b['id']}", notes="sealed dome nutplate on the fuel side of the roof")
+            F.sym(6, trunnion_roof_point(b, tdx), (0.0, 0.0, 1.0), [trn, C.ref("M-WELLROOF")], nut="nutplate", grade=G129, label=f"F-TRUNNION {b['id']}", notes="sealed dome nutplate on the fuel side of the roof")
     # up-lock (layout F-UPLOCK: blind potted inserts from the well side, the fuel-side facesheet is not pierced, V09)
     px_u = float(fit["F-UPLOCK"]["point"][0])
     z_r = fit["F-UPLOCK"]["bolts"][0]["point"][2]
@@ -4469,6 +4503,12 @@ def mass_reconciliation(reg: Registry, spec: dict) -> list:
                      "delta_kg": kg - budget.get(item, 0.0), "parts": sorted(ids)})
     rows.append({"item": "wing_structure_pair (centre-box spar caps in CH-001)", "model_kg": caps, "budget_kg": None,
                  "delta_kg": None, "parts": [root]})
+    bal = [pid for pid, k in num_of.items() if k == N_BALLAST]
+    if bal:                                           # mass/CG closure round: no concept item; registry chassis group
+        seen.update(bal)
+        rows.append({"item": "nose ballast BAL-NOSE (layout.chassis.ballast; mass/CG closure round, no concept item)",
+                     "model_kg": sum(reg.mass(reg.parts[p]) for p in bal), "budget_kg": None, "delta_kg": None,
+                     "parts": bal})
     rest = sorted(set(num_of) - seen)
     if rest:
         rows.append({"item": "unassigned", "model_kg": sum(reg.mass(reg.parts[p]) for p in rest), "budget_kg": 0.0,

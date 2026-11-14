@@ -1321,10 +1321,10 @@ class Systems:
     def member_grommets(self):
         C = self.C
         pen = {p_["member"]: np.asarray(p_["point"], float) for p_ in C.trunk["H-WING"]["penetrations"]}
-        box_lo, _ = C.member_box("M-CTBOX")
         t_cov = layup_props(self.spec, "ct_box_cover")["thickness"]
-        p = pen["M-CTBOX"].copy()
-        p[2] = float(box_lo[2])
+        p = pen["M-CTBOX"].copy()      # layout point = outer face of the lower cover there (mass/CG closure round: the
+        #                               member box bottom is the envelope minimum, 8.7 mm lower; it only coincided
+        #                               with the cover within 0.2 mm before the closure moved the box)
         g1 = self.ring_grommet(self.pid("grom_ct", "R"), "harness grommet, centre-box lower cover, starboard",
                                "kablo geçiş rondelası, orta kutu alt kapağı, sağ", C.mem["M-CTBOX"]["part"], p,
                                (0, 0, 1), t_cov, 0.010, [("H-WING", 1)])

@@ -238,7 +238,7 @@ def fuel_supports() -> list:
 # forward free location: a machined AISI 304 block on TR-FWDBAY ahead of the buffer battery, 4 x M4 Ti through the tray
 # (nyloc under it). BALLAST_KG: sized from the registry (analysis/mass.py) so that the empty CG incl. the allowance
 # items lies on the payload-bay datum (docs/detail/chassis.md).
-BALLAST_KG = 0.66
+BALLAST_KG = 0.74
 BALLAST_X = (0.336, 0.380)        # 8 mm ahead of the battery cradle (x 0.387), clear of the FS0300 tray flange bolt
 BALLAST_HW = 0.030                # half width (tray half-width at x 0.34 is ~35 mm; OML clearance >= 5 mm)
 BALLAST_MAT = "ss_304_annealed"

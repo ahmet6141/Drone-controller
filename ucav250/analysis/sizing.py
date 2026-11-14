@@ -4817,8 +4817,10 @@ def registry_closure_items(S: dict, I: list, am: dict, wing_m: dict, tail_m: dic
                                  "incl. the growth allowance) withdrawn at its centroid; replaced by the registry item "
                                  "below (mass/CG closure round)"})
         c = [float(v) for v in rg["cg"]]
-        out.append({"name": f"{g}_detail_design_registry", "group": g, "mass_base_kg": round(float(rg["mass_kg"]), 4),
-                    "mass_kg": round(float(rg["mass_kg"]), 4), "x": round(c[0], 6), "y": round(c[1], 6),
+        # 6 decimals as spec.mass.registry (the 4-decimal rounding of the concept items left ~0.01 mm between the
+        # sizing case CGs and analysis/mass.py)
+        out.append({"name": f"{g}_detail_design_registry", "group": g, "mass_base_kg": round(float(rg["mass_kg"]), 6),
+                    "mass_kg": round(float(rg["mass_kg"]), 6), "x": round(c[0], 6), "y": round(c[1], 6),
                     "z": round(c[2], 6),
                     "basis": f"registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, "
                              f"{R.get('parts', '?')} parts): measured {g} group mass and centroid, no growth allowance"})

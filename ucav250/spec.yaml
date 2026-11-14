@@ -561,7 +561,7 @@ requirements:
 # mission: design mission
 # ---------------------------------------------------------------------------------------------------------------------
 mission:
-  payload_design_kg: 11.0
+  payload_design_kg: 11.5
   payload_max_kg: 20.0
   endurance_max_payload_requirement_h: 9.5
   payload_design_rule:
@@ -857,7 +857,7 @@ propeller:
     backplate_ahead_of_plane: 0.03
     length: 0.18
   clearance_checks:
-    radial_min_m: 0.0313716
+    radial_min_m: 0.0313796
     longitudinal_min_m: 0.0286059
     by_part:
       body:
@@ -873,12 +873,12 @@ propeller:
         radial_m: 0.0398689
         longitudinal_m: 0.0286059
       ventral:
-        radial_m: 0.0313716
-        longitudinal_m: 0.0489395
+        radial_m: 0.0313796
+        longitudinal_m: 0.0489403
     spinner_to_cowl_gap_m: 0.05
     fin_te_crossing_radius_m: 0.4687
     fin_guard_margin_over_tip_m: 0.0750001
-    ventral_guard_margin_over_tip_m: 0.0504004
+    ventral_guard_margin_over_tip_m: 0.0504101
     plane_behind_cowl_te_m: 0.08
     plane_behind_cowl_te_over_D: 0.1016
     guards:
@@ -900,8 +900,8 @@ propeller:
       margin_over_tip_m: 0.0750001
     - part: ventral
       angle_deg: 180.0
-      radius_m: 0.4441
-      margin_over_tip_m: 0.0504004
+      radius_m: 0.44411
+      margin_over_tip_m: 0.0504101
     open_sector_fraction_within_0p3m: 0.833333
     blade_tip_axial_half_extent_m: 0.00900428
 
@@ -1058,14 +1058,14 @@ wing:
         each. Take-off 35 deg (design choice: lower lift-off attitude -> shorter main gear, lower VS_TO and V_LOF; R-06/R-16/R-21);
         landing 0 deg (touch-down attitude R-20)'
       checks:
-        H_design_Nm: 11.1272
-        V_eas_m_s: 39.5849
+        H_design_Nm: 11.1261
+        V_eas_m_s: 39.5829
         servo_angle_at_range_deg: [-43.0306, 43.2957]
         travel_margin_deg: 41.7043
         ratio_min: 2.0
         ratio_max: 2.61689
-        rated_margin_min: 1.51151
-        peak_margin_min: 2.41842
+        rated_margin_min: 1.51167
+        peak_margin_min: 2.41866
         surface_rate_min_deg_s: 57.3199
         surface_rate_neutral_deg_s: 75.0
   sections:
@@ -1518,8 +1518,8 @@ tail:
         x_le_root: 3.52
         root_chord: 0.4
         tip_chord: 0.3
-        span: 0.16196
-        sweep_le_deg: 63.1608
+        span: 0.16197
+        sweep_le_deg: 63.1594
         airfoil: NACA-0010
         n_sections: 2
         root_embed: 0.015
@@ -1538,16 +1538,16 @@ tail:
         airfoil: NACA-0010
       - y: 0.0
         x_le: 3.84008
-        z_le: -0.23814
+        z_le: -0.23815
         span_dir: [0.0, 0.0, -1.0]
         chord: 0.3
         twist_deg: 0.0
         airfoil: NACA-0010
       bumper:
-        contact_point: [4.09508, 0.0, -0.25014]
+        contact_point: [4.09508, 0.0, -0.25015]
         skid: replaceable UHMW-PE shoe on a 4130 strap at the ventral-fin tip, under the propeller disc
       area: 0.05669
-      span: 0.16196
+      span: 0.16197
       mac: 0.35238
       x_ac: 3.76051
       sources:
@@ -1561,10 +1561,10 @@ tail:
     stabilator_trim_cl_max: 0.7
     cn_beta_target: 0.0585
   type: twin outward-canted fins with rudders + all-moving stabilators + ventral fin (tail bumper)
-  volume_h: 0.450046
-  volume_v: 0.0274253
-  arm_h: 1.12891
-  arm_v: 1.12492
+  volume_h: 0.449998
+  volume_v: 0.0274223
+  arm_h: 1.12879
+  arm_v: 1.1248
   sources:
     e_tail: endurance study
     fin_endplate_ar_factor: endurance study (end-plate effect)
@@ -1703,19 +1703,19 @@ landing_gear:
     trunnion_y_min: 0.15
     well_gap: 0.02
     leg_length_min: 0.15
-    axle_static: [2.977, 0.41805, -0.34763]
-    trunnion: [2.977, 0.34785, -0.13159]
+    axle_static: [2.9771, 0.41805, -0.34765]
+    trunnion: [2.9771, 0.34785, -0.13161]
     trunnion_axis: [1.0, 0.0, 0.0]
     leg_length: 0.22716
     track: 0.8361
     retraction:
       kind: inward about the longitudinal trunnion axis (starboard leg; port mirrored)
       angle_deg: 108.0
-      stowed_wheel_center: [2.977, 0.12069, -0.13159]
+      stowed_wheel_center: [2.9771, 0.12069, -0.13161]
       stowed_axle_direction: [0.0, -0.30902, -0.95106]
       wheel_attitude_stowed: tilted 18 deg from flat (= leg splay), leg horizontal under the wing box, wells side by side
     stowed_envelope:
-      box: [[2.87, 0.01893, -0.1897], [3.084, 0.37285, -0.07349]]
+      box: [[2.8701, 0.01893, -0.18971], [3.0841, 0.37285, -0.0735]]
       note: bounding box of the tyre envelope (+ well clearance) and the trunnion fitting, starboard well (port mirrored)
   nose:
     axle_x: 0.68
@@ -1724,17 +1724,17 @@ landing_gear:
     stroke: 0.07
     leg_frontal_width: 0.036
     leg_length_min: 0.12
-    axle_static: [0.68, 0.0, -0.44792]
-    pivot: [0.65, 0.0, -0.12292]
+    axle_static: [0.68, 0.0, -0.44794]
+    pivot: [0.65, 0.0, -0.12294]
     pivot_axis: [0.0, 1.0, 0.0]
     leg_length: 0.32638
     retraction:
       kind: aft about the lateral pivot axis
       angle_deg: 90.0
-      stowed_wheel_center: [0.975, 0.0, -0.09292]
+      stowed_wheel_center: [0.975, 0.0, -0.09294]
       wheel_attitude_stowed: vertical (keel slot well)
     stowed_envelope:
-      box: [[0.62, -0.039, -0.19992], [1.082, 0.039, 0.01408]]
+      box: [[0.62, -0.039, -0.19994], [1.082, 0.039, 0.01406]]
       note: bounding box of the stowed tyre envelope (+ well clearance) and the pivot fitting
   doors:
     nose: two clamshell doors hinged at the keel-slot edges (each 39 mm wide), open 90 deg while the gear is down
@@ -1769,33 +1769,33 @@ landing_gear:
     nose_load_max: 0.2
     design_margin_deg: 0.3
     clearance_design_margin: 0.005
-  wheelbase: 2.297
-  ground_z: -0.43063
+  wheelbase: 2.2971
+  ground_z: -0.43065
   checks:
-    z_g: -0.43063
+    z_g: -0.43065
     track: 0.8361
-    wheelbase: 2.297
-    h_cg: 0.443451
-    static_attitude_deg: 2.50002
-    tipback_deg: 40.1854
-    turnover_deg: 52.5021
-    nose_load_aft_cg: 0.163062
-    nose_load_fwd_cg: 0.172742
-    prop_clear_level: 0.25693
-    prop_clear_static: 0.208573
-    prop_clear_liftoff: 0.183595
-    prop_clear_touchdown_unloaded: 0.204202
-    prop_clear_min_925a: 0.183595
+    wheelbase: 2.2971
+    h_cg: 0.443707
+    static_attitude_deg: 2.49991
+    tipback_deg: 40.1718
+    turnover_deg: 52.5175
+    nose_load_aft_cg: 0.16307
+    nose_load_fwd_cg: 0.172726
+    prop_clear_level: 0.25695
+    prop_clear_static: 0.208599
+    prop_clear_liftoff: 0.183601
+    prop_clear_touchdown_unloaded: 0.204211
+    prop_clear_min_925a: 0.183601
     gear_unloaded_extension_m: 0.042
-    prop_clear_flat_tyre_bottomed: 0.0592164
-    prop_strike_deg: 13.1125
-    bumper_contact_deg: 9.17006
-    theta_lof_deg: 3.78307
-    theta_td_deg: 4.87047
-    theta_flare_deg: 6.87047
-    wingtip_ground_roll_deg: 10.2121
-    prop_clear_wingtip_on_ground_m: 0.320743
-    static_load_split_main_aft_cg: 0.836938
+    prop_clear_flat_tyre_bottomed: 0.0592493
+    prop_strike_deg: 13.1146
+    bumper_contact_deg: 9.17137
+    theta_lof_deg: 3.78412
+    theta_td_deg: 4.87149
+    theta_flare_deg: 6.87149
+    wingtip_ground_roll_deg: 10.2124
+    prop_clear_wingtip_on_ground_m: 0.320764
+    static_load_split_main_aft_cg: 0.83693
   sources:
     tyre: components.yaml#landing_gear (TOST 200x50, SAGITTA)
     main.stroke: components.yaml#landing_gear SAGITTA shock stroke 0.070 m (+ margin)
@@ -1813,7 +1813,7 @@ payload:
   mission_computer_kg: 1.0
   tray_harness_kg: 0.5
   research_allowance_max_kg: 16.75
-  research_allowance_design_kg: 7.75
+  research_allowance_design_kg: 8.25
   growth_turret_mass_kg: 4.0
   turret:
     ball_diameter: 0.147
@@ -1950,35 +1950,35 @@ aero:
     cn_beta_min: 0.057
     stabilator_clmax: 0.9
   reference:
-    cd0_clean: 0.0350847
-    k_clean: 0.0237204
-    e_clean: 0.83715
-    ld_max_clean: 17.3026
-    cd0_loiter_turret_extended: 0.0370361
-    ld_max_loiter: 16.808
-    cd0_gear_down: 0.0475602
+    cd0_clean: 0.0350867
+    k_clean: 0.0237155
+    e_clean: 0.837322
+    ld_max_clean: 17.3038
+    cd0_loiter_turret_extended: 0.0370381
+    ld_max_loiter: 16.8091
+    cd0_gear_down: 0.0475623
     CL_alpha_per_rad: 5.697
     CL_0: 0.493663
     clmax_wing: 1.33129
-    clmax_clean_trimmed: 1.29333
-    clmax_to_trimmed: 1.53448
-    clmax_ld_trimmed: 1.29333
+    clmax_clean_trimmed: 1.29346
+    clmax_to_trimmed: 1.53464
+    clmax_ld_trimmed: 1.29346
   drag_build_up_clean_cd:
     body: 0.00759634
     aft_body_upsweep: 0.00118152
     tail_stabilator: 0.00236841
     tail_stabilator_stub: 0.000401542
     tail_fin: 0.00219085
-    tail_ventral: 0.000165287
+    tail_ventral: 0.000165298
     landing_gear: 0.00039679
     eo_ir_turret: 9.27644e-05
-    engine_cooling: 0.00186459
+    engine_cooling: 0.00186682
     aft_closure_base: 0.0021582
     wing_body_junctions: 0.000244518
     tail_body_junctions: 0.00057876
     antennas_pitot_lights_vents: 0.000773036
     control_surface_gaps: 0.0008
-    leakage_protuberance: 0.00104063
+    leakage_protuberance: 0.00104074
   sources:
     corrections: baseline.yaml#aero tripped-polar rule (x_tr 0.075 c, cd x 1.15; cl_max x 0.94, 3-D x 0.95), endurance study
     drag_rules: 'Raymer 6th ed. (gear, upsweep), Hoerner 1965 (sphere, base pressure C_Db = 0.029/sqrt(C_Df), plain wing-body
@@ -1989,27 +1989,27 @@ aero:
       of joint) and the sealed control-surface hinge gaps (0.0002 CD per pair = 0.00065 m2 for about 2.5 m of hinge line);
       applied with gear_doors_sealed (flush doors with perimeter seals, v1.2) instead of the 10 % residual of the extended-gear
       drag
-  cd0: 0.0350847
-  e: 0.83715
-  k: 0.0237204
-  ld_max: 17.3026
-  clmax_clean: 1.29333
-  clmax_to: 1.53448
-  clmax_ld: 1.29333
+  cd0: 0.0350867
+  e: 0.837322
+  k: 0.0237155
+  ld_max: 17.3038
+  clmax_clean: 1.29346
+  clmax_to: 1.53464
+  clmax_ld: 1.29346
   polars:
     clean: out/sizing.json#aero.polars.clean (trimmed CL-CD table, design CG; fit cd0/k/e)
     loiter: out/sizing.json#aero.polars.loiter (trimmed CL-CD table, design CG; fit cd0/k/e)
     gear_down: out/sizing.json#aero.polars.gear_down (trimmed CL-CD table, design CG; fit cd0/k/e)
   power_on_trim:
-    max_abs_tail_cl_local: 0.693864
+    max_abs_tail_cl_local: 0.693694
     governing:
       case: e180_growth_turret_full_fuel
-      V: 24.1908
-      T: 331.602
-      tail_cl_local: 0.693864
-      thrust_arm_m: 0.0871025
-      x_cg: 2.58021
-      CL_wb: 1.41356
+      V: 24.1895
+      T: 331.608
+      tail_cl_local: 0.693694
+      thrust_arm_m: 0.0875116
+      x_cg: 2.58033
+      CL_wb: 1.41366
       gear: extended
   flaps:
     takeoff:
@@ -2031,14 +2031,14 @@ aero:
 mass:
   mtow_kg: 149.9
   mtow_cap_kg: 149.9
-  empty_kg: 108.346
-  fuel_kg: 30.5543
-  payload_kg: 11.0
-  fuel_cg: [2.61216, 0.0, 0.012099]
+  empty_kg: 108.163
+  fuel_kg: 30.2374
+  payload_kg: 11.5
+  fuel_cg: [2.61218, 0.0, 0.011508]
   budget:
     chassis:
-      target_kg: 19.78
-      tol_kg: 0.59
+      target_kg: 19.86
+      tol_kg: 0.6
     controls:
       target_kg: 8.15
       tol_kg: 0.24
@@ -2049,8 +2049,8 @@ mass:
       target_kg: 12.94
       tol_kg: 0.39
     hardware:
-      target_kg: 5.52
-      tol_kg: 0.17
+      target_kg: 5.25
+      tol_kg: 0.16
     propulsion:
       target_kg: 12.97
       tol_kg: 0.39
@@ -2102,13 +2102,14 @@ mass:
     (14.532), tail 7.60 -> 7.35 kg (7.341), wing 15.46 -> 15.34 kg (15.340); tol_kg = 3 % of the new ceilings (min 0.05
     kg) mass/CG closure round (detail design): the ceilings are re-based on the MEASURED registry of the detailed design
     (spec.mass.registry, analysis/mass.py --update-spec) + the itemised allowance items (paint, gear-door seals, brake lines;
-    registry_allowance), rounded up to 10 g: chassis 12.61 -> 19.68 kg (incl. the 1.0 kg CT-box spar caps the concept booked
-    in the wing item and the 0.64 kg nose ballast BAL-NOSE), controls 8.29 -> 8.15, fuel 2.35 -> 2.37, gear 14.57 -> 12.92,
-    hardware 1.51 -> 5.52 (1671 fasteners bottom-up after the Ti-6Al-4V screw change; the 0.025 fraction had no count basis),
-    propulsion 14.54 -> 12.97, shell 10.48 -> 10.82 (incl. paint 0.61), systems 14.79 -> 15.21, tail 7.35 -> 7.74 (incl.
-    paint 0.31, stabilator +2.8 % in the closure), wing 15.18 -> 12.88 kg (incl. paint 0.58); sum 108.26 kg; tol_kg = 3
-    % of the ceiling (min 0.05 kg). The ceilings now equal the measured design and are NOT closed against R-02b: R-56 reports
-    the shortfall (docs/02 sec. 14); no requirement was changed'
+    registry_allowance), rounded up to 10 g: chassis 12.61 -> 19.86 kg (incl. the 1.0 kg CT-box spar caps the concept booked
+    in the wing item and the 0.74 kg nose ballast BAL-NOSE), controls 8.29 -> 8.15, fuel 2.35 -> 2.37, gear 14.57 -> 12.94
+    (incl. door seals 0.10 and brake lines 0.135), hardware 1.51 -> 5.25 (bottom-up fasteners after the Ti-6Al-4V screw
+    change, two-alloy far side, thread geometry and the 32 / 30 / 100 mm shell row pitches; the 0.025 fraction had no count
+    basis), propulsion 14.54 -> 12.97, shell 10.48 -> 10.82 (incl. paint 0.61), systems 14.79 -> 15.21, tail 7.35 -> 7.74
+    (incl. paint 0.31), wing 15.18 -> 12.88 kg (incl. paint 0.58); sum 108.19 kg; tol_kg = 3 % of the ceiling (min 0.05
+    kg). The ceilings equal the measured design and are NOT closed against R-02b: R-56 reports the shortfall (docs/02 sec.
+    14); no requirement was changed'
   cases:
   - name: mtow_design_payload_turret_retracted
     fuel_fraction: 1.0
@@ -2121,21 +2122,21 @@ mass:
     payload: [eo_ir_turret_hd59_mount, mission_computer_recorder, payload_tray_harness, research_payload_allowance]
     note: 'payload: list of mass.payload_items names (truthy = with payload for analysis/mass.py)'
   - name: mtow_max_payload_turret_retracted
-    fuel_fraction: 0.705442
+    fuel_fraction: 0.718891
     fuel_rule: mtom
     turret: retracted
     payload: [eo_ir_turret_hd59_mount, mission_computer_recorder, payload_tray_harness, research_payload_allowance, research_payload_max_increment]
     note: 'payload: list of mass.payload_items names (truthy = with payload for analysis/mass.py); fuel_rule mtom: fuel
       fraction = (MTOM - zero-fuel mass) / mass.fuel_kg (derived)'
   - name: mtow_max_payload_turret_extended
-    fuel_fraction: 0.705442
+    fuel_fraction: 0.718891
     fuel_rule: mtom
     turret: extended
     payload: [eo_ir_turret_hd59_mount, mission_computer_recorder, payload_tray_harness, research_payload_allowance, research_payload_max_increment]
     note: 'payload: list of mass.payload_items names (truthy = with payload for analysis/mass.py); fuel_rule mtom: fuel
       fraction = (MTOM - zero-fuel mass) / mass.fuel_kg (derived)'
   - name: full_fuel_baseline_sensors_only
-    fuel_fraction: 1.17322
+    fuel_fraction: 1.18552
     fuel_rule: capacity
     turret: retracted
     payload: [eo_ir_turret_hd59_mount, mission_computer_recorder, payload_tray_harness]
@@ -2324,7 +2325,7 @@ mass:
     group: controls
     mass_base_kg: 0.64
     mass_kg: 0.672
-    x: 0.8403
+    x: 0.8404
     y: -0.0483
     z: -0.0443
     basis: 'Volz DA 26 x 2 (SAGITTA practice: steering + brake master cylinder) + 0.10 installation; position: layout.mass_placement
@@ -2357,7 +2358,7 @@ mass:
     group: gear
     mass_base_kg: 7.9947
     mass_kg: 8.3944
-    x: 2.9714
+    x: 2.9716
     y: 0.0
     z: -0.1316
     basis: 'components.yaml SAGITTA main leg 4.0 kg each (flight version, telescopic damper, EMA retraction, TOST wheel
@@ -2376,7 +2377,7 @@ mass:
     group: gear
     mass_base_kg: 3.3754
     mass_kg: 3.5442
-    x: 2.6153
+    x: 2.6155
     y: -0.0041
     z: -0.1359
     basis: 'V4-03 (fix round 5), door scheme landing_gear.doors: 6 doors 0.191 m2 (main inner 0.101 + leg 0.055 + nose clamshells
@@ -2484,7 +2485,7 @@ mass:
     group: chassis
     mass_base_kg: 0.6
     mass_kg: 0.63
-    x: 2.977
+    x: 2.9771
     y: 0.0
     z: -0.1316
     basis: gear frame (sandwich bulkhead pair) + 2 x 7075 trunnion fittings + side-brace/EMA mounts (estimate)
@@ -2667,7 +2668,7 @@ mass:
     group: gear
     mass_base_kg: 0.1005
     mass_kg: 0.1005
-    x: 2.5193
+    x: 2.5194
     y: 0.0
     z: -0.1
     basis: perimeter door seals 23.5 g/m (mass.rules.gear_doors.seal_kg_per_m, estimate) x 4.28 m of sealed door joint (no
@@ -2677,7 +2678,7 @@ mass:
     group: gear
     mass_base_kg: 0.135
     mass_kg: 0.135
-    x: 1.9485
+    x: 1.9486
     y: 0.0
     z: -0.0703
     basis: 'components.yaml landing_gear fixed-gear basis ''master cylinder and lines 0.20'' (estimate) less the 0.065 kg
@@ -2695,18 +2696,18 @@ mass:
       withdrawn at its centroid; replaced by the registry item below (mass/CG closure round)'
   - name: chassis_detail_design_registry
     group: chassis
-    mass_base_kg: 19.778
-    mass_kg: 19.778
-    x: 2.51453
-    y: 0.000402
-    z: 0.010559
-    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2466 parts): measured chassis
+    mass_base_kg: 19.857
+    mass_kg: 19.857
+    x: 2.50616
+    y: 0.0004
+    z: 0.010359
+    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2414 parts): measured chassis
       group mass and centroid, no growth allowance'
   - name: controls_concept_estimate_withdrawn
     group: controls
     mass_base_kg: -7.8848
     mass_kg: -8.2791
-    x: 3.04314
+    x: 3.04315
     y: -0.00392
     z: 0.149407
     basis: 'detail-design closure: the concept estimate of the controls group (8 items above, incl. the growth allowance)
@@ -2717,8 +2718,8 @@ mass:
     mass_kg: 8.1483
     x: 3.03735
     y: -0.003967
-    z: 0.14884
-    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2466 parts): measured controls
+    z: 0.148837
+    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2414 parts): measured controls
       group mass and centroid, no growth allowance'
   - name: fuel_concept_estimate_withdrawn
     group: fuel
@@ -2731,18 +2732,18 @@ mass:
       at its centroid; replaced by the registry item below (mass/CG closure round)'
   - name: fuel_detail_design_registry
     group: fuel
-    mass_base_kg: 2.3662
-    mass_kg: 2.3662
-    x: 2.83235
-    y: 0.010527
-    z: 0.016773
-    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2466 parts): measured fuel
+    mass_base_kg: 2.36619
+    mass_kg: 2.36619
+    x: 2.83242
+    y: 0.010526
+    z: 0.016782
+    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2414 parts): measured fuel
       group mass and centroid, no growth allowance'
   - name: gear_concept_estimate_withdrawn
     group: gear
     mass_base_kg: -14.8678
     mass_kg: -15.6112
-    x: 2.38979
+    x: 2.38995
     y: -0.000931
     z: -0.12526
     basis: 'detail-design closure: the concept estimate of the gear group (3 items above, incl. the growth allowance) withdrawn
@@ -2751,10 +2752,10 @@ mass:
     group: gear
     mass_base_kg: 12.7045
     mass_kg: 12.7045
-    x: 2.42862
+    x: 2.42878
     y: -0.000948
-    z: -0.247564
-    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2466 parts): measured gear
+    z: -0.247559
+    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2414 parts): measured gear
       group mass and centroid, no growth allowance'
   - name: hardware_concept_estimate_withdrawn
     group: hardware
@@ -2767,12 +2768,12 @@ mass:
       withdrawn at its centroid; replaced by the registry item below (mass/CG closure round)'
   - name: hardware_detail_design_registry
     group: hardware
-    mass_base_kg: 5.5108
-    mass_kg: 5.5108
-    x: 2.54249
-    y: -0.000397
-    z: 0.022554
-    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2466 parts): measured hardware
+    mass_base_kg: 5.24705
+    mass_kg: 5.24705
+    x: 2.57346
+    y: -0.000413
+    z: 0.02928
+    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2414 parts): measured hardware
       group mass and centroid, no growth allowance'
   - name: propulsion_concept_estimate_withdrawn
     group: propulsion
@@ -2787,10 +2788,10 @@ mass:
     group: propulsion
     mass_base_kg: 12.9672
     mass_kg: 12.9672
-    x: 3.62762
+    x: 3.62763
     y: -0.000916
     z: 0.135101
-    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2466 parts): measured propulsion
+    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2414 parts): measured propulsion
       group mass and centroid, no growth allowance'
   - name: shell_concept_estimate_withdrawn
     group: shell
@@ -2803,12 +2804,12 @@ mass:
       at its centroid; replaced by the registry item below (mass/CG closure round)'
   - name: shell_detail_design_registry
     group: shell
-    mass_base_kg: 10.2048
-    mass_kg: 10.2048
-    x: 2.25785
+    mass_base_kg: 10.2066
+    mass_kg: 10.2066
+    x: 2.25778
     y: 0.000422
-    z: -0.003214
-    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2466 parts): measured shell
+    z: -0.003231
+    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2414 parts): measured shell
       group mass and centroid, no growth allowance'
   - name: systems_concept_estimate_withdrawn
     group: systems
@@ -2821,12 +2822,12 @@ mass:
       withdrawn at its centroid; replaced by the registry item below (mass/CG closure round)'
   - name: systems_detail_design_registry
     group: systems
-    mass_base_kg: 15.2077
-    mass_kg: 15.2077
+    mass_base_kg: 15.2078
+    mass_kg: 15.2078
     x: 1.44537
     y: -0.004381
-    z: -0.007503
-    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2466 parts): measured systems
+    z: -0.007502
+    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2414 parts): measured systems
       group mass and centroid, no growth allowance'
   - name: tail_concept_estimate_withdrawn
     group: tail
@@ -2839,12 +2840,12 @@ mass:
       at its centroid; replaced by the registry item below (mass/CG closure round)'
   - name: tail_detail_design_registry
     group: tail
-    mass_base_kg: 7.4285
-    mass_kg: 7.4285
+    mass_base_kg: 7.42828
+    mass_kg: 7.42828
     x: 3.78244
     y: -0.000134
-    z: 0.334473
-    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2466 parts): measured tail
+    z: 0.334477
+    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2414 parts): measured tail
       group mass and centroid, no growth allowance'
   - name: wing_concept_estimate_withdrawn
     group: wing
@@ -2862,7 +2863,7 @@ mass:
     x: 2.76967
     y: -0.003285
     z: 0.052448
-    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2466 parts): measured wing
+    basis: 'registry of the detailed design (spec.mass.registry, analysis/mass.py --update-spec, 2414 parts): measured wing
       group mass and centroid, no growth allowance'
   payload_items:
   - name: eo_ir_turret_hd59_mount
@@ -2881,20 +2882,20 @@ mass:
     basis: baseline.yaml#payload_set
   - name: payload_tray_harness
     mass_kg: 0.5
-    x: 2.63
+    x: 2.6301
     y: 0.0
     z: -0.1287
     basis: baseline.yaml#payload_set.payload_tray_harness_kg
   - name: research_payload_allowance
-    mass_kg: 7.75
-    x: 2.63
+    mass_kg: 8.25
+    x: 2.6301
     y: 0.0
     z: -0.1287
     basis: design-mission payload (mission.payload_design_kg, payload-endurance rule) minus the baseline set; belly bay
       on the CG
   - name: research_payload_max_increment
-    mass_kg: 9.0
-    x: 2.63
+    mass_kg: 8.5
+    x: 2.6301
     y: 0.0
     z: -0.1287
     basis: maximum payload (mission.payload_max_kg, R-02b; baseline.yaml research allowance 16.75 kg) minus the design-mission
@@ -2908,7 +2909,7 @@ mass:
     basis: Octopus E180 class 4.0 kg incl. mount (baseline growth envelope) minus the HD59 set
   - name: research_payload_reduced_for_e180
     mass_kg: -2.25
-    x: 2.63
+    x: 2.6301
     y: 0.0
     z: -0.1287
     basis: keeps the design-mission payload with the E180 (research allowance reduced by the turret mass difference)
@@ -2949,47 +2950,47 @@ mass:
     method: 'analysis/mass.py --update-spec: registry of the detailed design (core.assemble.build_registry, all producers):
       geometry x density, datasheet masses of purchased parts; group = budget group (mass_item booking); the allowance items
       (spec.mass.items registry_allowance) are not in it'
-    parts: 2466
-    empty_kg: 106.606275
-    cg: [2.628832, -0.001213, 0.029781]
+    parts: 2414
+    empty_kg: 106.423
+    cg: [2.62892, -0.001215, 0.030075]
     groups:
       chassis:
-        mass_kg: 19.777768
-        cg: [2.51454, 0.000402, 0.010558]
+        mass_kg: 19.857
+        cg: [2.50616, 0.0004, 0.010359]
       controls:
-        mass_kg: 8.148298
-        cg: [3.037353, -0.003967, 0.14884]
+        mass_kg: 8.1483
+        cg: [3.03735, -0.003967, 0.148837]
       fuel:
         mass_kg: 2.36619
-        cg: [2.832362, 0.010526, 0.016773]
+        cg: [2.83242, 0.010526, 0.016782]
       gear:
-        mass_kg: 12.704501
-        cg: [2.428695, -0.000948, -0.247552]
+        mass_kg: 12.7045
+        cg: [2.42878, -0.000948, -0.247559]
       hardware:
-        mass_kg: 5.510848
-        cg: [2.542502, -0.000397, 0.022555]
+        mass_kg: 5.24705
+        cg: [2.57346, -0.000413, 0.02928]
       propulsion:
-        mass_kg: 12.967222
-        cg: [3.627627, -0.000916, 0.135101]
+        mass_kg: 12.9672
+        cg: [3.62763, -0.000916, 0.135101]
       shell:
-        mass_kg: 10.204839
-        cg: [2.257847, 0.000422, -0.003214]
+        mass_kg: 10.2066
+        cg: [2.25778, 0.000422, -0.003231]
       systems:
-        mass_kg: 15.207706
-        cg: [1.445369, -0.004381, -0.007503]
+        mass_kg: 15.2078
+        cg: [1.44537, -0.004381, -0.007502]
       tail:
-        mass_kg: 7.428402
-        cg: [3.782436, -0.000134, 0.334477]
+        mass_kg: 7.42828
+        cg: [3.78244, -0.000134, 0.334477]
       wing:
         mass_kg: 12.2905
-        cg: [2.769674, -0.003285, 0.052448]
+        cg: [2.76967, -0.003285, 0.052448]
     fuel:
-      mass_kg: 30.5544
-      cg: [2.612156, 0.0, 0.012107]
+      mass_kg: 30.2393
+      cg: [2.61218, 0.0, 0.011508]
     payload_parts:
       eo_ir_turret_hd59_mount:
-        mass_kg: 1.736324
-        cg: [1.22, -0.0, -0.065024]
+        mass_kg: 1.73632
+        cg: [1.22, 0.0, -0.065024]
 
 # ---------------------------------------------------------------------------------------------------------------------
 # stability: stability
@@ -2998,61 +2999,61 @@ stability:
   mac: 0.483876
   mac_le_x: 2.57816
   np_x: 2.65636
-  cg_design: [2.60536, -0.000862356, 0.0156762]
-  cg_range_x: [2.5842, 2.60771]
-  static_margin_range: [0.100541, 0.149126]
+  cg_design: [2.60549, -0.000862285, 0.0152759]
+  cg_range_x: [2.58432, 2.60777]
+  static_margin_range: [0.100419, 0.148881]
   cases_cg:
   - name: mtow_design_payload_turret_retracted
     m: 149.9
-    x: 2.60536
-    z: 0.0156762
+    x: 2.60549
+    z: 0.0152759
   - name: mtow_design_payload_turret_extended
     m: 149.9
-    x: 2.60536
-    z: 0.0141819
+    x: 2.60549
+    z: 0.0137816
   - name: mtow_max_payload_turret_retracted
     m: 149.9
-    x: 2.60644
-    z: 0.00722266
+    x: 2.6065
+    z: 0.00732553
   - name: mtow_max_payload_turret_extended
     m: 149.9
-    x: 2.60644
-    z: 0.00572833
+    x: 2.6065
+    z: 0.0058312
   - name: full_fuel_baseline_sensors_only
-    m: 147.443
-    x: 2.60431
-    z: 0.0231366
+    m: 147.26
+    x: 2.60436
+    z: 0.0231985
   - name: zero_fuel_design_payload
-    m: 119.346
-    x: 2.60363
-    z: 0.0147152
+    m: 119.663
+    x: 2.60379
+    z: 0.0143561
   - name: zero_fuel_max_payload
-    m: 128.346
-    x: 2.60548
-    z: 0.00465844
+    m: 128.163
+    x: 2.60554
+    z: 0.00486836
   - name: reserve_fuel_design_payload
-    m: 123.012
-    x: 2.60388
-    z: 0.0164581
+    m: 123.291
+    x: 2.60404
+    z: 0.0160892
   - name: minimum_flying_turret_only
-    m: 113.151
-    x: 2.60771
-    z: 0.0278736
+    m: 112.936
+    x: 2.60777
+    z: 0.0281381
   - name: e180_growth_turret_full_fuel
     m: 149.9
-    x: 2.5842
-    z: 0.0127124
+    x: 2.58432
+    z: 0.0123121
   computed:
     np_x: 2.65636
     np_x_classic: 2.66682
     np_x_vlm: 2.65636
     x_ac_wing_body: 2.57233
     Cm0_wing_body: -0.122892
-    volume_h: 0.450046
-    volume_v: 0.0274253
-    cn_beta_per_rad: 0.0586275
-    static_margin_min: 0.100541
-    static_margin_max: 0.149126
+    volume_h: 0.449998
+    volume_v: 0.0274223
+    cn_beta_per_rad: 0.0586174
+    static_margin_min: 0.100419
+    static_margin_max: 0.148881
     downwash_gradient: 0.384135
   method: NP = forward of (lifting-line wing AC + Multhopp lifting body + tails) and the vortex-lattice configuration NP
     (sizing.py)
@@ -3062,53 +3063,53 @@ stability:
 # ---------------------------------------------------------------------------------------------------------------------
 performance:
   reference:
-    endurance_h: 10.4169
-    loiter_time_h: 8.10869
-    range_km: 1159.15
-    ceiling_service_m: 7106.14
-    roc_sl_m_s: 4.21486
-    roc_3000m_m_s: 2.3841
-    takeoff_ground_roll_m: 179.159
-    takeoff_distance_15m_m: 325.901
-    landing_ground_roll_m: 182.543
-    vs_clean_sl_mtow_m_s: 23.9543
-    v_max_sl_m_s: 53.9888
-    loiter_tas_3000m_m_s: 33.059
-    loiter_eas_m_s: 28.4795
-    climb_time_to_loiter_altitude_min: 15.2879
-    endurance_max_payload_h: 6.95559
-    loiter_fuel_flow_kg_h: 2.6528
-    loiter_power_W: 4712.62
-    loiter_rpm: 4946.92
-    mtow_for_10h_mission_kg: 147.038
-    mission_loiter_start_tas_m_s: 32.4503
-    mission_loiter_start_eas_m_s: 27.9551
-    mission_loiter_start_rpm: 4854.14
-    mission_loiter_start_fuel_flow_kg_h: 2.55705
-    mission_loiter_start_generator_W: 486.708
-    mission_loiter_end_tas_m_s: 32.3459
-    mission_loiter_end_eas_m_s: 27.8652
+    endurance_h: 10.2942
+    loiter_time_h: 7.98702
+    range_km: 1144.63
+    ceiling_service_m: 7106.7
+    roc_sl_m_s: 4.215
+    roc_3000m_m_s: 2.38431
+    takeoff_ground_roll_m: 179.16
+    takeoff_distance_15m_m: 325.886
+    landing_ground_roll_m: 182.899
+    vs_clean_sl_mtow_m_s: 23.9531
+    v_max_sl_m_s: 53.9889
+    loiter_tas_3000m_m_s: 33.0572
+    loiter_eas_m_s: 28.478
+    climb_time_to_loiter_altitude_min: 15.2871
+    endurance_max_payload_h: 7.0258
+    loiter_fuel_flow_kg_h: 2.65251
+    loiter_power_W: 4711.91
+    loiter_rpm: 4946.65
+    mtow_for_10h_mission_kg: 147.876
+    mission_loiter_start_tas_m_s: 32.4486
+    mission_loiter_start_eas_m_s: 27.9536
+    mission_loiter_start_rpm: 4853.87
+    mission_loiter_start_fuel_flow_kg_h: 2.55677
+    mission_loiter_start_generator_W: 486.682
+    mission_loiter_end_tas_m_s: 32.3344
+    mission_loiter_end_eas_m_s: 27.8553
     mission_loiter_end_rpm: 4747.34
-    mission_loiter_end_fuel_flow_kg_h: 2.38647
+    mission_loiter_end_fuel_flow_kg_h: 2.38765
     mission_loiter_end_generator_W: 476.0
     takeoff_rotation_speed_m_s: 24.78
-    takeoff_liftoff_speed_m_s: 25.1772
-    takeoff_main_gear_load_at_rotation_N: 113.832
-    prop_clear_min_925a_m: 0.183595
-    prop_clear_radial_m: 0.0313716
+    takeoff_liftoff_speed_m_s: 25.1773
+    takeoff_main_gear_load_at_rotation_N: 113.85
+    prop_clear_min_925a_m: 0.183601
+    prop_clear_radial_m: 0.0313796
     prop_clear_longitudinal_m: 0.0286059
     generator_margin_loiter: 1.27614
-    stab_trim_cl_local_max: 0.693864
+    stab_trim_cl_local_max: 0.693694
     stab_hinge_peak_margin: 1.79318
   payload_endurance:
   - payload_kg: 3.25
     fuel_kg: 35.8469
-    takeoff_mass_kg: 147.443
-    endurance_h: 12.5944
-    loiter_time_h: 10.2757
+    takeoff_mass_kg: 147.26
+    endurance_h: 12.6029
+    loiter_time_h: 10.2843
     fuel_volume_limited: true
     turret: true
-    static_margin_range: [0.10756, 0.112766]
+    static_margin_range: [0.107462, 0.112661]
     permitted_loading: true
     e180_set_fits: false
     e180_peak_battery_draw_Wh: null
@@ -3116,12 +3117,12 @@ performance:
     e180_peak_share_exceeded: null
   - payload_kg: 5.0
     fuel_kg: 35.8469
-    takeoff_mass_kg: 149.193
-    endurance_h: 12.5103
-    loiter_time_h: 10.1951
+    takeoff_mass_kg: 149.01
+    endurance_h: 12.5203
+    loiter_time_h: 10.2044
     fuel_volume_limited: true
     turret: true
-    static_margin_range: [0.106937, 0.111866]
+    static_margin_range: [0.106838, 0.111758]
     permitted_loading: true
     e180_set_fits: false
     e180_peak_battery_draw_Wh: null
@@ -3129,173 +3130,173 @@ performance:
     e180_peak_share_exceeded: null
   - payload_kg: 5.5
     fuel_kg: 35.8469
-    takeoff_mass_kg: 149.693
-    endurance_h: 12.4845
-    loiter_time_h: 10.1709
+    takeoff_mass_kg: 149.51
+    endurance_h: 12.4945
+    loiter_time_h: 10.1803
     fuel_volume_limited: true
     turret: true
-    static_margin_range: [0.106762, 0.111614]
+    static_margin_range: [0.106662, 0.111505]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 159.974
-    e180_peak_supported_loiter_h: 8.08615
+    e180_peak_battery_draw_Wh: 160.902
+    e180_peak_supported_loiter_h: 8.041
     e180_peak_share_exceeded: true
-  - payload_kg: 5.7074
+  - payload_kg: 5.8905
     fuel_kg: 35.8469
     takeoff_mass_kg: 149.9
-    endurance_h: 12.4739
-    loiter_time_h: 10.1608
+    endurance_h: 12.4745
+    loiter_time_h: 10.1614
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.10669, 0.11151]
+    static_margin_range: [0.106525, 0.111309]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 158.988
-    e180_peak_supported_loiter_h: 8.13406
+    e180_peak_battery_draw_Wh: 159.046
+    e180_peak_supported_loiter_h: 8.13119
     e180_peak_share_exceeded: true
   - payload_kg: 6.0
-    fuel_kg: 35.5543
+    fuel_kg: 35.7374
     takeoff_mass_kg: 149.9
-    endurance_h: 12.3593
-    loiter_time_h: 10.0467
+    endurance_h: 12.4316
+    loiter_time_h: 10.1187
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.106618, 0.111364]
+    static_margin_range: [0.106498, 0.111254]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 157.062
-    e180_peak_supported_loiter_h: 8.13327
+    e180_peak_battery_draw_Wh: 158.326
+    e180_peak_supported_loiter_h: 8.13089
     e180_peak_share_exceeded: true
   - payload_kg: 7.5
-    fuel_kg: 34.0543
+    fuel_kg: 34.2374
     takeoff_mass_kg: 149.9
-    endurance_h: 11.775
-    loiter_time_h: 9.46326
+    endurance_h: 11.8467
+    loiter_time_h: 9.53492
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.106249, 0.110627]
+    static_margin_range: [0.106128, 0.110515]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 147.212
-    e180_peak_supported_loiter_h: 8.12923
+    e180_peak_battery_draw_Wh: 148.471
+    e180_peak_supported_loiter_h: 8.12684
     e180_peak_share_exceeded: true
   - payload_kg: 10.0
-    fuel_kg: 31.5543
+    fuel_kg: 31.7374
     takeoff_mass_kg: 149.9
-    endurance_h: 10.805
-    loiter_time_h: 8.49458
+    endurance_h: 10.8766
+    loiter_time_h: 8.56592
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.105634, 0.109441]
+    static_margin_range: [0.10551, 0.109325]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 130.859
-    e180_peak_supported_loiter_h: 8.1225
+    e180_peak_battery_draw_Wh: 132.113
+    e180_peak_supported_loiter_h: 8.12008
     e180_peak_share_exceeded: true
-  - payload_kg: 11.0
-    fuel_kg: 30.5543
+  - payload_kg: 11.5
+    fuel_kg: 30.2374
     takeoff_mass_kg: 149.9
-    endurance_h: 10.4169
-    loiter_time_h: 8.10869
+    endurance_h: 10.2942
+    loiter_time_h: 7.98702
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.105388, 0.108981]
+    static_margin_range: [0.105139, 0.108635]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 124.344
+    e180_peak_battery_draw_Wh: 122.34
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
-  - payload_kg: 11.5
-    fuel_kg: 30.0543
+  - payload_kg: 12.0
+    fuel_kg: 29.7374
     takeoff_mass_kg: 149.9
-    endurance_h: 10.2226
-    loiter_time_h: 7.91604
+    endurance_h: 10.1003
+    loiter_time_h: 7.79457
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.105265, 0.108753]
+    static_margin_range: [0.105016, 0.108409]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 121.092
+    e180_peak_battery_draw_Wh: 119.092
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   - payload_kg: 12.5
-    fuel_kg: 29.0543
+    fuel_kg: 29.2374
     takeoff_mass_kg: 149.9
-    endurance_h: 9.83539
-    loiter_time_h: 7.53118
+    endurance_h: 9.90669
+    loiter_time_h: 7.60214
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.105018, 0.108304]
+    static_margin_range: [0.104892, 0.108184]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 114.595
+    e180_peak_battery_draw_Wh: 115.843
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   - payload_kg: 15.0
-    fuel_kg: 26.5543
+    fuel_kg: 26.7374
     takeoff_mass_kg: 149.9
-    endurance_h: 8.87445
-    loiter_time_h: 6.57177
+    endurance_h: 8.94538
+    loiter_time_h: 6.64262
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.104403, 0.107213]
+    static_margin_range: [0.104275, 0.10709]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 98.3997
+    e180_peak_battery_draw_Wh: 99.6464
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   - payload_kg: 17.5
-    fuel_kg: 24.0543
+    fuel_kg: 24.2374
     takeoff_mass_kg: 149.9
-    endurance_h: 7.91285
-    loiter_time_h: 5.61247
+    endurance_h: 7.98386
+    loiter_time_h: 5.68306
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.103788, 0.106165]
+    static_margin_range: [0.103657, 0.106039]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 82.206
+    e180_peak_battery_draw_Wh: 83.4487
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   - payload_kg: 20.0
-    fuel_kg: 21.5543
+    fuel_kg: 21.7374
     takeoff_mass_kg: 149.9
-    endurance_h: 6.95559
-    loiter_time_h: 4.66125
+    endurance_h: 7.0258
+    loiter_time_h: 4.73124
     fuel_volume_limited: false
     turret: true
-    static_margin_range: [0.103173, 0.105159]
+    static_margin_range: [0.103039, 0.105029]
     permitted_loading: true
     e180_set_fits: true
-    e180_peak_battery_draw_Wh: 66.2586
+    e180_peak_battery_draw_Wh: 67.4868
     e180_peak_supported_loiter_h: null
     e180_peak_share_exceeded: false
   sensitivities_endurance_h:
-    bsfc_minus_12pct: 11.8671
-    bsfc_plus_12pct: 9.27705
-    cd0_plus_10pct_all_drag: 9.86529
-    empty_plus_5pct: 8.32852
-    loiter_at_1000m: 9.83805
-    no_transit_loiter_only: 10.3667
-    turret_retracted_whole_mission: 10.5482
-    k_inst_0p90: 10.2229
-    k_inst_0p95: 10.5402
-    k_inst_0p97: 10.6585
-    low_load_fuel_flow_willans_line: 10.3561
+    bsfc_minus_12pct: 11.7279
+    bsfc_plus_12pct: 9.16782
+    cd0_plus_10pct_all_drag: 9.74816
+    empty_plus_5pct: 8.21067
+    loiter_at_1000m: 9.72684
+    no_transit_loiter_only: 10.2454
+    turret_retracted_whole_mission: 10.4238
+    k_inst_0p90: 10.1022
+    k_inst_0p95: 10.4166
+    k_inst_0p97: 10.5341
+    low_load_fuel_flow_willans_line: 10.2338
   loiter_3000m:
-    V: 33.059
-    EAS: 28.4795
-    CL: 0.919948
-    LD: 16.1452
-    P_shaft: 4270.82
-    P_total: 4712.62
-    eta: 0.711318
-    rpm: 4946.92
-    power_fraction: 0.261812
-    bsfc_g_kWh: 562.913
-    ff_kg_h: 2.6528
-    gen_W: 496.011
-    tip_mach: 0.628814
+    V: 33.0572
+    EAS: 28.478
+    CL: 0.920045
+    LD: 16.147
+    P_shaft: 4270.11
+    P_total: 4711.91
+    eta: 0.711319
+    rpm: 4946.65
+    power_fraction: 0.261773
+    bsfc_g_kWh: 562.936
+    ff_kg_h: 2.65251
+    gen_W: 495.984
+    tip_mach: 0.628779
   note: reference copy of out/sizing.json (sizing --check compares it)
   payload_design_rule:
     rule: largest payload on a 0.5 kg grid (rounded down) with endurance >= 10.25 h (10.00 h + 0.25 h robustness margin),
@@ -3304,71 +3305,71 @@ performance:
       faydalı yük; azami yükü aşmaz
     target_h: 10.25
     step_kg: 0.5
-    spec_kg: 11.0
-    derived_kg: 11.0
-    endurance_at_derived_h: 10.4169
-    next_step_kg: 11.5
-    endurance_at_next_step_h: 10.2226
+    spec_kg: 11.5
+    derived_kg: 11.5
+    endurance_at_derived_h: 10.2942
+    next_step_kg: 12.0
+    endurance_at_next_step_h: 10.1003
     consistent: true
-    endurance_margin_to_target_h: 0.166877
-    empty_mass_headroom_kg: 0.429291
-    payload_at_target_kg_linear: 11.4295
-    payload_headroom_kg: 0.429493
+    endurance_margin_to_target_h: 0.0441698
+    empty_mass_headroom_kg: 0.114122
+    payload_at_target_kg_linear: 11.6139
+    payload_headroom_kg: 0.113888
   max_payload_mission:
     payload_kg: 20.0
-    fuel_kg: 21.5543
+    fuel_kg: 21.7374
     takeoff_mass_kg: 149.9
-    endurance_h: 6.95559
-    loiter_time_h: 4.66125
+    endurance_h: 7.0258
+    loiter_time_h: 4.73124
     requirement_h: 9.5
     case: mtow_max_payload_turret_retracted
   low_load_bsfc_bound:
-    endurance_h_bsfc_line: 10.4169
-    endurance_h_willans_line: 10.3561
-    descent_fuel_kg_bsfc_line: 0.236684
-    descent_power_fraction_range_bsfc_line: [0.0513371, 0.064239]
-    descent_fuel_kg_willans_line: 0.361384
-    descent_power_fraction_range_willans_line: [0.0514686, 0.0643616]
-    reserve_fuel_kg_bsfc_line: 2.05005
-    reserve_power_fraction_range_bsfc_line: [0.177763, 0.178966]
-    reserve_fuel_kg_willans_line: 2.06797
-    reserve_power_fraction_range_willans_line: [0.177815, 0.179025]
+    endurance_h_bsfc_line: 10.2942
+    endurance_h_willans_line: 10.2338
+    descent_fuel_kg_bsfc_line: 0.236502
+    descent_power_fraction_range_bsfc_line: [0.0512952, 0.0641885]
+    descent_fuel_kg_willans_line: 0.361268
+    descent_power_fraction_range_willans_line: [0.0514269, 0.0643115]
+    reserve_fuel_kg_bsfc_line: 2.02826
+    reserve_power_fraction_range_bsfc_line: [0.178021, 0.179211]
+    reserve_fuel_kg_willans_line: 2.04549
+    reserve_power_fraction_range_willans_line: [0.178072, 0.17927]
     lowest_bsfc_point_power_fraction: 0.2
   payload_permitted_loadings:
     static_margin_min_rule: 0.1
     x_cg_aft_limit_m: 2.60797
     baseline_set_kg: 3.25
-    fuel_volume_break_payload_kg: 5.70736
+    fuel_volume_break_payload_kg: 5.89046
     fuel_capacity_kg: 35.8469
     e180_set_kg: 5.5
     no_payload:
-      static_margin_range: [0.0544772, 0.0636446]
+      static_margin_range: [0.0542713, 0.0634898]
       permitted: false
-      nose_ballast_at_turret_mount_kg: 1.82753
+      nose_ballast_at_turret_mount_kg: 1.83299
       ballast_x_m: 1.22
     turret_only:
-      static_margin_range_full_tanks: [0.0984761, 0.100795]
-      fuel_max_for_R09_kg: 10.1281
+      static_margin_range_full_tanks: [0.0983669, 0.10067]
+      fuel_max_for_R09_kg: 8.46936
     rule_tr: izin verilen en hafif yükleme temel EO/IR setidir (taret + görev bilgisayarı + tepsi); yalnız taretle yakıt
       fuel_max_for_R09_kg ile sınırlıdır
   takeoff_pitch_inertia_effect:
     case: e180_growth_turret_full_fuel
-    I_yy_kg_m2: 112.767
+    I_yy_kg_m2: 112.772
     spin_up_time_s: 0.3
     V_R_m_s: 24.78
-    ground_roll_m: 179.159
-    V_lof_m_s: 25.1772
+    ground_roll_m: 179.16
+    V_lof_m_s: 25.1773
     without_pitch_inertia:
       V_R_m_s: 24.62
-      ground_roll_m: 176.145
-      V_lof_m_s: 25.0224
+      ground_roll_m: 175.645
+      V_lof_m_s: 24.9966
     spin_up_0p1s:
       V_R_m_s: 25.12
       ground_roll_m: 180.674
-      V_lof_m_s: 25.2569
-      download_margin_min_N: 1.53443
+      V_lof_m_s: 25.257
+      download_margin_min_N: 1.50426
     delta_V_R_m_s: 0.16
-    delta_ground_roll_m: 3.01405
+    delta_ground_roll_m: 3.51451
 
 # ---------------------------------------------------------------------------------------------------------------------
 # structures: structural design basis
@@ -3451,18 +3452,18 @@ structures:
     cl_alpha_configuration_per_rad: 6.23064
     n_limit_wing_design: 5.46854
     gust_matrix:
-    - mass_kg: 113.151
+    - mass_kg: 112.936
       altitude_m: 0.0
-      n_pos: 6.24521
-      n_neg: -4.24521
-    - mass_kg: 113.151
+      n_pos: 6.253
+      n_neg: -4.253
+    - mass_kg: 112.936
       altitude_m: 3000.0
-      n_pos: 6.55851
-      n_neg: -4.55851
-    - mass_kg: 113.151
+      n_pos: 6.56726
+      n_neg: -4.56726
+    - mass_kg: 112.936
       altitude_m: 4500.0
-      n_pos: 6.70119
-      n_neg: -4.70119
+      n_pos: 6.71039
+      n_neg: -4.71039
     - mass_kg: 149.9
       altitude_m: 0.0
       n_pos: 5.1835
@@ -3490,8 +3491,8 @@ structures:
       VNO_eas: 45.0
       fcs_speed_limit_eas: 45.0
       fcs_speed_limit_margin_m_s: 0.0
-      V_max_level_sl_eas: 53.9888
-      V_max_level_3000m_eas: 44.117
+      V_max_level_sl_eas: 53.9889
+      V_max_level_3000m_eas: 44.1176
       fcs_protection_required: true
       max_operating_altitude_m: 4500.0
       gust_envelope_top_altitude_m: 4500.0
@@ -4971,7 +4972,7 @@ layout:
       content: 'inside the GFRP nose cone on the forward face of FS0300 (port): Remote ID beacon (fix round 1, VPK-10: unobstructed
         RF path through the radome, away from the datalink radio and the carbon deck)'
     nose_gear_well:
-      box: [[0.62, -0.039, -0.19992], [1.082, 0.039, 0.01408]]
+      box: [[0.62, -0.039, -0.19994], [1.082, 0.039, 0.01406]]
       symmetric: true
       clearance: 0.0
       content: stowed nose wheel (vertical) + leg slot; checked on the tyre envelope
@@ -4987,12 +4988,12 @@ layout:
       clearance: 0.0
       content: spar box through the body
     main_gear_wells:
-      box: [[2.87, 0.0, -0.1897], [3.084, 0.37285, -0.07349]]
+      box: [[2.8701, 0.0, -0.18971], [3.0841, 0.37285, -0.0735]]
       symmetric: true
       clearance: 0.0
       content: stowed main wheels side by side + trunnion fittings; checked on the tyre envelopes (gear_stowage)
     payload_bay:
-      box: [[2.42, 0.0, -0.19737], [2.84, 0.2, -0.06]]
+      box: [[2.4201, 0.0, -0.19737], [2.8401, 0.2, -0.06]]
       symmetric: true
       clearance: 0.0
       content: belly research-payload bay under the forward fuel cell
@@ -5021,7 +5022,7 @@ layout:
         stabilator node fitting (layout F-SPINDLE-NODE, layout phase VPK-01), outboard bearing in the fixed root stub; ahead
         of the cylinders; checked by stab_spindle_check'
   firewall_x: 3.67
-  ground_z: -0.43063
+  ground_z: -0.43065
   bay_contents_check:
     fits: true
     failures: []
@@ -5572,7 +5573,7 @@ layout:
     subtype: spar frame
     x_faces: [2.7961, 2.8029]
   - id: FS-GEAR
-    x: 3.0964
+    x: 3.0965
     sweep_deg: 0.0
     role: 'aft main-gear frame + aft fuel-bay bulkhead (vapour-tight): aft ends of the gear beams and trunnion fittings,
       inner-door actuator mounts (aft face), forward wall of the aft equipment bay'
@@ -5642,7 +5643,7 @@ layout:
         past the notch corners into the edge band
       mass_note: clip + 4 x M4 Ti + U-doubler about 25 g per notch (estimate), inside the frame allowance mass.rules.frames_kg
         (rule mass, not bottom-up; doc 03 sec. 16)
-    x_faces: [3.093, 3.0998]
+    x_faces: [3.0931, 3.0999]
   - id: FS3480
     x: 3.48
     sweep_deg: 0.0
@@ -6052,7 +6053,7 @@ layout:
         type: 'flat sandwich (layups.fuel_floor_wellroof: PW 3 plies / ROHACELL 71 WF 5.6 mm / 3 plies, 6.8 mm; structures
           phase: aft fuel-cell pressure), supported on the centre line by the well keel web M-WELLKEEL'
         t: 0.0068
-      box: [[2.8029, -0.4, -0.0668], [3.093, 0.4, -0.06]]
+      box: [[2.8029, -0.4, -0.0668], [3.0931, 0.4, -0.06]]
       sides: skin
       load_path: gear + fuel loads -> well roof -> gear beams / well keel web / rear-spar frame / FS-GEAR
       touch: [ST-FS-RS, ST-FS-GEAR, M-GEARBEAM, M-WELLKEEL, F-TRUNNION, M-CHINE]
@@ -6072,13 +6073,13 @@ layout:
         type: sandwich wall (rib_panel) + UD caps, 7075 doubler at the trunnion fitting
         t: 0.0068
       boxes:
-      - [[2.8353, 0.385, -0.1578], [2.935, 0.3918, -0.0668]]
-      - [[2.935, 0.385, -0.134], [3.019, 0.3918, -0.0668]]
-      - [[3.019, 0.385, -0.1578], [3.093, 0.3918, -0.0668]]
-      box: [[2.8353, 0.385, -0.1578], [3.093, 0.3918, -0.0668]]
+      - [[2.8353, 0.385, -0.1578], [2.9351, 0.3918, -0.0668]]
+      - [[2.9351, 0.385, -0.134], [3.0191, 0.3918, -0.0668]]
+      - [[3.0191, 0.385, -0.1578], [3.0931, 0.3918, -0.0668]]
+      box: [[2.8353, 0.385, -0.1578], [3.0931, 0.3918, -0.0668]]
       bottom: skin
       notch:
-        x: [2.935, 3.019]
+        x: [2.9351, 3.0191]
         z_top: -0.134
         text: 'fix round 2 (PK2-03): reinforced notch in the lower edge round the leg (the splayed leg passes the wall at
           the skin): the lower UD cap runs up round the notch, the 7075 flange of F-TRUNNION (bolted fore and aft of it)
@@ -6103,7 +6104,7 @@ layout:
         h: 0.02
         t: 0.002
       paths:
-      - [[3.0998, 0.15, 0.1398], [3.2107, 0.15, 0.1735], [3.3216, 0.15, 0.2313], [3.4324, 0.15, 0.2789], [3.5433, 0.15,
+      - [[3.0999, 0.15, 0.1398], [3.2108, 0.15, 0.1735], [3.3216, 0.15, 0.2313], [3.4325, 0.15, 0.2789], [3.5433, 0.15,
           0.301], [3.6542, 0.15, 0.3051]]
       mirror: true
       load_path: fin root fittings -> FS3480 / firewall corner fitting -> dorsal longerons -> FS-GEAR
@@ -6120,7 +6121,7 @@ layout:
       section:
         type: solid laminate wall 1.6 mm (8 plies PW)
         t: 0.0016
-      box: [[2.8365, -0.204, -0.215], [2.8381, 0.204, -0.0532]]
+      box: [[2.8366, -0.204, -0.215], [2.8382, 0.204, -0.0532]]
       bottom: skin
       notes: 'fix round 3 (PK3-05): 3.5 mm ahead of the payload-bay zone end so that the lateral harness duct is >= 30 mm
         wide (H-MAIN 20 mm + the 10 mm corridor of layout.systems.harness.rules)'
@@ -6139,7 +6140,7 @@ layout:
       section:
         type: solid laminate wall 1.6 mm (8 plies PW)
         t: 0.0016
-      box: [[2.8684, -0.385, -0.215], [2.87, 0.385, -0.0668]]
+      box: [[2.8685, -0.385, -0.215], [2.8701, 0.385, -0.0668]]
       bottom: skin
       load_path: secondary (well closure, harness duct wall)
       touch: [M-GEARBEAM, M-WELLROOF, M-KEEL]
@@ -6158,7 +6159,7 @@ layout:
         type: solid laminate web 1.0 mm (5 plies PW, 0/90 and +-45 alternating) with bonded edge flanges, one per side of
           the harness channel
         t: 0.001
-      box: [[2.87, 0.015, -0.1868], [3.093, 0.016, -0.0668]]
+      box: [[2.8701, 0.015, -0.1868], [3.0931, 0.016, -0.0668]]
       notes: 'fix round 3 (PK3-05): webs at y +-0.015..0.016 (was +-0.0105..0.0115): 30 mm clear channel = H-MAIN 20 mm
         + the 10 mm harness corridor; the stowed tyre envelopes incl. their 12 mm clearance start at |y| 0.0189, so each
         tyre keeps >= 14.9 mm to its web; the inner-door hinge brackets on the lower-edge flanges reach 5 mm inboard to
@@ -6587,30 +6588,30 @@ layout:
       process: cnc_milling_metal
       mirror: true
       axis: [1.0, 0.0, 0.0]
-      pivot: [2.977, 0.3478, -0.1316]
+      pivot: [2.9771, 0.3478, -0.1316]
       bearings:
-      - x: 2.928
+      - x: 2.9281
         bore: 0.02
         fit: 20 H7 (sleeve bushing; match to the selected gear unit)
-      - x: 3.026
+      - x: 3.0261
         bore: 0.02
         fit: 20 H7
       boxes:
-      - [[2.892, 0.377, -0.128], [2.941, 0.385, -0.0668]]
-      - [[2.941, 0.377, -0.11], [3.013, 0.385, -0.0668]]
-      - [[3.013, 0.377, -0.128], [3.062, 0.385, -0.0668]]
-      - [[2.915, 0.326, -0.13], [2.941, 0.375, -0.0668]]
-      - [[2.915, 0.326, -0.1546], [2.941, 0.3709, -0.13]]
-      - [[3.013, 0.326, -0.13], [3.039, 0.375, -0.0668]]
-      - [[3.013, 0.326, -0.1546], [3.039, 0.3709, -0.13]]
-      - [[2.915, 0.375, -0.13], [2.941, 0.377, -0.0668]]
-      - [[3.013, 0.375, -0.13], [3.039, 0.377, -0.0668]]
-      - [[2.941, 0.326, -0.0868], [3.013, 0.377, -0.0668]]
-      - [[3.013, 0.3373, -0.1651], [3.039, 0.3584, -0.1546]]
-      box: [[2.892, 0.326, -0.1651], [3.062, 0.385, -0.0668]]
+      - [[2.8921, 0.377, -0.128], [2.9411, 0.385, -0.0668]]
+      - [[2.9411, 0.377, -0.11], [3.0131, 0.385, -0.0668]]
+      - [[3.0131, 0.377, -0.128], [3.0621, 0.385, -0.0668]]
+      - [[2.9151, 0.326, -0.13], [2.9411, 0.375, -0.0668]]
+      - [[2.9151, 0.326, -0.1546], [2.9411, 0.3709, -0.13]]
+      - [[3.0131, 0.326, -0.13], [3.0391, 0.375, -0.0668]]
+      - [[3.0131, 0.326, -0.1546], [3.0391, 0.3709, -0.13]]
+      - [[2.9151, 0.375, -0.13], [2.9411, 0.377, -0.0668]]
+      - [[3.0131, 0.375, -0.13], [3.0391, 0.377, -0.0668]]
+      - [[2.9411, 0.326, -0.0868], [3.0131, 0.377, -0.0668]]
+      - [[3.0131, 0.3373, -0.1651], [3.0391, 0.3584, -0.1546]]
+      box: [[2.8921, 0.326, -0.1651], [3.0621, 0.385, -0.0668]]
       bolts:
       - id: B1
-        point: [2.907, 0.385, -0.085]
+        point: [2.9071, 0.385, -0.085]
         axis: [0.0, 1.0, 0.0]
         d: 0.006
         spec: M6 12.9 (ISO 4762) from the well side (head and washer in the well), into a bonded through-thickness threaded
@@ -6619,7 +6620,7 @@ layout:
         joins: [M-GEARBEAM]
         group: gear beam
       - id: B2
-        point: [2.907, 0.385, -0.115]
+        point: [2.9071, 0.385, -0.115]
         axis: [0.0, 1.0, 0.0]
         d: 0.006
         spec: M6 12.9 (ISO 4762) from the well side (head and washer in the well), into a bonded through-thickness threaded
@@ -6628,7 +6629,7 @@ layout:
         joins: [M-GEARBEAM]
         group: gear beam
       - id: B3
-        point: [2.977, 0.385, -0.088]
+        point: [2.9771, 0.385, -0.088]
         axis: [0.0, 1.0, 0.0]
         d: 0.006
         spec: M6 12.9 (ISO 4762) from the well side (head and washer in the well), into a bonded through-thickness threaded
@@ -6637,7 +6638,7 @@ layout:
         joins: [M-GEARBEAM]
         group: gear beam
       - id: B4
-        point: [3.047, 0.385, -0.085]
+        point: [3.0471, 0.385, -0.085]
         axis: [0.0, 1.0, 0.0]
         d: 0.006
         spec: M6 12.9 (ISO 4762) from the well side (head and washer in the well), into a bonded through-thickness threaded
@@ -6646,7 +6647,7 @@ layout:
         joins: [M-GEARBEAM]
         group: gear beam
       - id: B5
-        point: [3.047, 0.385, -0.115]
+        point: [3.0471, 0.385, -0.115]
         axis: [0.0, 1.0, 0.0]
         d: 0.006
         spec: M6 12.9 (ISO 4762) from the well side (head and washer in the well), into a bonded through-thickness threaded
@@ -6655,7 +6656,7 @@ layout:
         joins: [M-GEARBEAM]
         group: gear beam
       - id: B6
-        point: [2.928, 0.34, -0.0668]
+        point: [2.9281, 0.34, -0.0668]
         axis: [0.0, 0.0, 1.0]
         d: 0.006
         spec: M6 12.9 (ISO 4762) from below (well side) into a sealed dome nutplate on the fuel side of the well roof (fuel-tight,
@@ -6663,7 +6664,7 @@ layout:
         joins: [M-WELLROOF]
         group: well roof
       - id: B7
-        point: [2.928, 0.362, -0.0668]
+        point: [2.9281, 0.362, -0.0668]
         axis: [0.0, 0.0, 1.0]
         d: 0.006
         spec: M6 12.9 (ISO 4762) from below (well side) into a sealed dome nutplate on the fuel side of the well roof (fuel-tight,
@@ -6671,7 +6672,7 @@ layout:
         joins: [M-WELLROOF]
         group: well roof
       - id: B8
-        point: [3.026, 0.34, -0.0668]
+        point: [3.0261, 0.34, -0.0668]
         axis: [0.0, 0.0, 1.0]
         d: 0.006
         spec: M6 12.9 (ISO 4762) from below (well side) into a sealed dome nutplate on the fuel side of the well roof (fuel-tight,
@@ -6679,7 +6680,7 @@ layout:
         joins: [M-WELLROOF]
         group: well roof
       - id: B9
-        point: [3.026, 0.362, -0.0668]
+        point: [3.0261, 0.362, -0.0668]
         axis: [0.0, 0.0, 1.0]
         d: 0.006
         spec: M6 12.9 (ISO 4762) from below (well side) into a sealed dome nutplate on the fuel side of the well roof (fuel-tight,
@@ -6716,14 +6717,14 @@ layout:
       actuator_anchor:
         kind: rotary EMA of the gear unit on the trunnion axis, flange on the fitting front face (layout.systems.actuators
           ACT-MLG-EMA)
-        point: [2.892, 0.3478, -0.1316]
+        point: [2.8921, 0.3478, -0.1316]
       locks: 'down-lock (gear detail round GD-03): spring-engaged, solenoid-withdrawn 4130 lock bolt d 14 along x in a bushed
         bore of a lower extension of the AFT bearing lug, 25 mm below the trunnion axis, engaging a bushed bore of the aft
         yoke arm in the gear-down position (single shear across the 1 mm lug-to-arm gap: a second clevis ear would stand
         in the swept leg; structures G-DOWNLOCK shear and G-DOWNLOCK-BEND bolt bending); up-lock: hook fitting F-UPLOCK
         under the well roof deck engaging a roller on the leg'
       downlock:
-        point: [3.026, 0.3478, -0.1566]
+        point: [3.0261, 0.3478, -0.1566]
         axis: [1.0, 0.0, 0.0]
         d: 0.014
         lug_bottom_z: -0.1651
@@ -6739,10 +6740,10 @@ layout:
       material: al_7075_t651_plate
       process: cnc_milling_metal
       mirror: true
-      box: [[2.957, 0.23, -0.09], [2.997, 0.27, -0.0668]]
-      point: [2.977, 0.25, -0.09]
+      box: [[2.9571, 0.23, -0.09], [2.9971, 0.27, -0.0668]]
+      point: [2.9771, 0.25, -0.09]
       pin:
-        point: [2.977, 0.25, -0.081]
+        point: [2.9771, 0.25, -0.081]
         d: 0.004
         axis: [0.0, 1.0, 0.0]
         boss_half_x: 0.0105
@@ -6750,28 +6751,28 @@ layout:
           fore / aft faces and 8.7 mm in the catch plates below the fitting base (gear detail round GD-10)'
       bolts:
       - id: B1
-        point: [2.967, 0.24, -0.0668]
+        point: [2.9671, 0.24, -0.0668]
         axis: [0.0, 0.0, 1.0]
         d: 0.005
         spec: M5 12.9 (ISO 4762) + self-locking nut
         joins: [M-WELLROOF]
         group: well roof
       - id: B2
-        point: [2.967, 0.26, -0.0668]
+        point: [2.9671, 0.26, -0.0668]
         axis: [0.0, 0.0, 1.0]
         d: 0.005
         spec: M5 12.9 (ISO 4762) + self-locking nut
         joins: [M-WELLROOF]
         group: well roof
       - id: B3
-        point: [2.987, 0.24, -0.0668]
+        point: [2.9871, 0.24, -0.0668]
         axis: [0.0, 0.0, 1.0]
         d: 0.005
         spec: M5 12.9 (ISO 4762) + self-locking nut
         joins: [M-WELLROOF]
         group: well roof
       - id: B4
-        point: [2.987, 0.26, -0.0668]
+        point: [2.9871, 0.26, -0.0668]
         axis: [0.0, 0.0, 1.0]
         d: 0.005
         spec: M5 12.9 (ISO 4762) + self-locking nut
@@ -7862,17 +7863,17 @@ layout:
         forward_leg:
           fitting: F-RISER-FWD
           point: [1.8394, 0.0, 0.173]
-          length: 1.585
+          length: 1.584
           route: straight up out of the container mouth
         aft_leg:
           fitting: F-RISER-AFT
           point: [2.7701, 0.0, 0.173]
-          length: 1.344
+          length: 1.343
           route: stowed in the dorsal spine channel M-SPINE under the tear-away cover strip P-SPINE from the forward fitting
             to the rear-spar frame
         confluence_above_cg: 1.5
         design_hang: about 3 deg nose-down at the MTOW CG (verified by layout_check for the CG range)
-        cg_used: [2.605, 0.0, 0.016]
+        cg_used: [2.605, 0.0, 0.015]
       load_path: 'fix round 1 (S1-04): canopy -> riser -> confluence ring -> 2 legs -> U-lug fittings F-RISER-FWD / F-RISER-AFT
         at the two ends of the dorsal spine channel M-SPINE -> x-components: the opposed leg components are a strut force
         in the spine (the spine closes the bridle triangle), the net x-component is diffused by shear into the screwed mission-bay
@@ -8009,8 +8010,8 @@ layout:
       tray: TR-FWDBAY
       material: ss_304_annealed
       process: cnc_milling_metal
-      box: [[0.336, -0.03, -0.068], [0.38, 0.03, -0.03642]]
-      mass_kg: 0.66
+      box: [[0.336, -0.03, -0.068], [0.38, 0.03, -0.03259]]
+      mass_kg: 0.74
       bolts: 4 x M4 Ti-6Al-4V through the block and the tray, nyloc + washer under the tray (structures EQ-BALLAST)
       basis: 'mass/CG closure round: the smallest fixed mass at the most forward free location that brings the empty CG
         of the registry (+ allowance items) onto the payload-bay datum; height = mass / (density x footprint)'
@@ -8035,7 +8036,7 @@ layout:
       - id: CR-FSGEAR
         station: FS-GEAR
         cap: aft
-        x: [3.0998, 3.1248]
+        x: [3.0999, 3.1249]
         y: [0.15, 0.3]
         mirror: true
         skin: P-AFT-LOWER (fixed)
@@ -8599,7 +8600,7 @@ layout:
       name: aft fuel-bay access panel
       name_tr: arka yakıt bölmesi kapağı
       surface: body_upper
-      x: [2.8071, 3.0934]
+      x: [2.8071, 3.0935]
       y: [0.055, 0.3]
       attach: removable
       fastening:
@@ -8611,7 +8612,7 @@ layout:
       material: cfrp_pw_mtm45_as4
       process: prepreg_ooa_vacbag
       layup: shell_secondary
-      outline: [[2.8071, 0.055], [3.0934, 0.055], [3.0934, 0.3], [2.8277, 0.3]]
+      outline: [[2.8071, 0.055], [3.0935, 0.055], [3.0935, 0.3], [2.8277, 0.3]]
       mirror: true
       lands: [ST-FS-RS, ST-FS-GEAR, P-CENTRE-UPPER]
       notes: 'fix round 1 (VPK-04): fore and aft edges parallel to the (swept) frames on the frame-cap T-flanges (25 mm
@@ -8623,7 +8624,7 @@ layout:
       name: upper centre skin (fuel bays)
       name_tr: üst orta gövde kaplaması
       surface: body_upper
-      x: [2.1893, 3.0964]
+      x: [2.1893, 3.0965]
       y: [-0.4, 0.4]
       attach: fixed
       fastening:
@@ -8651,7 +8652,7 @@ layout:
       name: payload-bay hatch (belly)
       name_tr: faydalı yük bölmesi kapağı (karın)
       surface: body_lower
-      x: [2.1923, 2.8416]
+      x: [2.1923, 2.8417]
       y: [-0.222, 0.222]
       attach: removable
       fastening:
@@ -8670,7 +8671,7 @@ layout:
       name: lower centre skin
       name_tr: alt orta gövde kaplaması
       surface: body_lower
-      x: [2.1893, 3.0964]
+      x: [2.1893, 3.0965]
       y: [-0.4, 0.4]
       attach: fixed
       fastening:
@@ -8726,7 +8727,7 @@ layout:
       name: aft equipment hatch (belly)
       name_tr: arka teçhizat kapağı (karın)
       surface: body_lower
-      x: [3.0964, 3.48]
+      x: [3.0965, 3.48]
       y: [-0.12, 0.12]
       attach: removable
       fastening:
@@ -8787,7 +8788,7 @@ layout:
       name: lower aft skin
       name_tr: alt arka kaplama
       surface: body_lower
-      x: [3.0964, 3.67]
+      x: [3.0965, 3.67]
       y: [-0.4, 0.4]
       attach: fixed
       fastening:
@@ -8812,7 +8813,7 @@ layout:
       name: upper aft skin
       name_tr: üst arka kaplama
       surface: body_upper
-      x: [3.0964, 3.67]
+      x: [3.0965, 3.67]
       y: [-0.4, 0.4]
       attach: fixed
       fastening:
@@ -9264,7 +9265,7 @@ layout:
       notes: all-moving stabilator about the stub spindle; + = TE down (both sides, axis +y)
     - name: main_gear_R
       kind: revolute
-      origin: [2.977, 0.34785, -0.13159]
+      origin: [2.9771, 0.34785, -0.13161]
       axis: [-1.0, 0.0, 0.0]
       lo: 0.0
       hi: 1.884956
@@ -9278,7 +9279,7 @@ layout:
         0 down, 1 up
     - name: main_gear_L
       kind: revolute
-      origin: [2.977, -0.34785, -0.13159]
+      origin: [2.9771, -0.34785, -0.13161]
       axis: [1.0, 0.0, 0.0]
       lo: 0.0
       hi: 1.884956
@@ -9291,8 +9292,8 @@ layout:
       mirror_of: main_gear_R
     - name: main_inner_door_R
       kind: revolute
-      origin: [2.977, 0.01, -0.20019]
-      axis: [-0.997587, 0.0, -0.06943]
+      origin: [2.9771, 0.01, -0.20019]
+      axis: [-0.997583, 0.0, -0.069485]
       lo: 0.0
       hi: 1.570796
       rest: 0.0
@@ -9307,8 +9308,8 @@ layout:
         to the horn on the door (over-centre in the closed position)
     - name: main_inner_door_L
       kind: revolute
-      origin: [2.977, -0.01, -0.20019]
-      axis: [0.997587, 0.0, 0.06943]
+      origin: [2.9771, -0.01, -0.20019]
+      axis: [0.997583, 0.0, 0.069485]
       lo: 0.0
       hi: 1.570796
       rest: 0.0
@@ -9320,7 +9321,7 @@ layout:
       mirror_of: main_inner_door_R
     - name: main_trunnion_door_R
       kind: revolute
-      origin: [2.977, 0.3918, -0.14171]
+      origin: [2.9771, 0.3918, -0.1417]
       axis: [1.0, 0.0, 0.0]
       lo: 0.0
       hi: 2.181662
@@ -9340,7 +9341,7 @@ layout:
         lo)'
     - name: main_trunnion_door_L
       kind: revolute
-      origin: [2.977, -0.3918, -0.14171]
+      origin: [2.9771, -0.3918, -0.1417]
       axis: [-1.0, 0.0, 0.0]
       lo: 0.0
       hi: 2.181662
@@ -9355,7 +9356,7 @@ layout:
       mirror_of: main_trunnion_door_R
     - name: nose_gear
       kind: revolute
-      origin: [0.65, 0.0, -0.12292]
+      origin: [0.65, 0.0, -0.12294]
       axis: [0.0, -1.0, 0.0]
       lo: 0.0
       hi: 1.570796
@@ -9368,7 +9369,7 @@ layout:
       notes: + = aft retraction 90 deg about the lateral pivot
     - name: nose_steer
       kind: revolute
-      origin: [0.65, 0.0, -0.12292]
+      origin: [0.65, 0.0, -0.12294]
       axis: [0.0, 0.0, -1.0]
       lo: -0.349066
       hi: 0.349066
@@ -9782,9 +9783,9 @@ layout:
       main_inner_door_R:
         joint: main_inner_door_R
         thickness: 0.004
-        outline: [[2.87, 0.01], [3.084, 0.01], [3.084, 0.245], [2.87, 0.245]]
+        outline: [[2.8701, 0.01], [3.0841, 0.01], [3.0841, 0.245], [2.8701, 0.245]]
         hinge:
-          stations: [[2.8835, 2.8965], [2.9585, 2.9715], [3.0435, 3.0565]]
+          stations: [[2.8836, 2.8966], [2.9586, 2.9716], [3.0436, 3.0566]]
           pin_d: 0.003
           cove_r: 0.0042
           text: 'GD-06: three stations (fixed bracket on the well keel web, door knuckle, pin d 3); the centre-strip skin
@@ -9794,7 +9795,7 @@ layout:
         joint: main_gear_R
         thickness: 0.004
         closed_at: hi
-        outline: [[2.945, 0.245], [3.009, 0.245], [3.009, 0.3], [2.945, 0.3]]
+        outline: [[2.9451, 0.245], [3.0091, 0.245], [3.0091, 0.3], [2.9451, 0.3]]
         text: 'leg door carried by the leg on two standoff brackets (closed = gear up): closes the leg slot (64 mm, between
           the bearing lugs of F-TRUNNION) from the inner door edge to y 0.3 (fix round 2, PK2-03: trimmed so that its sweep
           stays outside the fitting and the beam)'
@@ -9802,9 +9803,9 @@ layout:
         joint: main_trunnion_door_R
         thickness: 0.004
         closed_at: lo
-        outline: [[2.945, 0.3], [3.009, 0.3], [3.009, 0.3918], [2.945, 0.3918]]
+        outline: [[2.9451, 0.3], [3.0091, 0.3], [3.0091, 0.3918], [2.9451, 0.3918]]
         hinge:
-          stations: [[2.935, 3.019]]
+          stations: [[2.9351, 3.0191]]
           pin_d: 0.003
           cove_r: 0.0042
           text: 'GD-08: hinge blocks either side of the leg slot bolted to the gear-beam land, door knuckle over the slot
@@ -9941,7 +9942,7 @@ layout:
       text: after the 0.25 m aft stroke the engine is lifted 0.35 m clear of the fin-root strips and the fins
     - name: main_stub_axle_fwd_R
       kind: stub axle insertion from inside the leg yoke (gear down, maintenance mode)
-      start: [2.957, 0.3478, -0.1316]
+      start: [2.9571, 0.3478, -0.1316]
       axis: [-1.0, 0.0, 0.0]
       stroke: 0.03
       envelope:
@@ -9952,7 +9953,7 @@ layout:
       mirror: true
     - name: main_stub_axle_aft_R
       kind: stub axle insertion from inside the leg yoke (gear down, maintenance mode)
-      start: [2.997, 0.3478, -0.1316]
+      start: [2.9971, 0.3478, -0.1316]
       axis: [1.0, 0.0, 0.0]
       stroke: 0.03
       envelope:
@@ -10183,12 +10184,12 @@ layout:
     sequence: gear_retraction
     envelope:
       tyre:
-        axle_static: [2.977, 0.418, -0.3476]
+        axle_static: [2.9771, 0.418, -0.3477]
         diameter: 0.19
         width: 0.054
       leg:
-        from: [2.977, 0.3478, -0.1316]
-        to: [2.977, 0.418, -0.3476]
+        from: [2.9771, 0.3478, -0.1316]
+        to: [2.9771, 0.418, -0.3477]
         radius: 0.0225
     margin: 0.012
     text: tyre + leg (+ the leg door carried by the leg) swept about the trunnion axis over the joint range, and the inner
@@ -10619,7 +10620,7 @@ layout:
       name: EFI fuel pump, regulator, filter / gascolator
       name_tr: yakıt pompası, regülatör, filtre
       group: fuel
-      box: [[3.1064, 0.03, -0.06], [3.2064, 0.09, 0.005]]
+      box: [[3.1065, 0.03, -0.06], [3.2065, 0.09, 0.005]]
       mass_kg: 0.35
       mount:
         zone: equipment_bay_aft
@@ -10644,7 +10645,7 @@ layout:
       name: main inner-door actuator Volz DA 30 (28 V)
       name_tr: iç kapak eyleyicisi DA 30
       group: gear
-      box: [[3.1024, 0.0184, -0.1493], [3.2626, 0.1034, -0.1084]]
+      box: [[3.1025, 0.0184, -0.1493], [3.2627, 0.1034, -0.1084]]
       mirror: true
       mass_kg: 0.63
       mount:
@@ -10660,7 +10661,7 @@ layout:
         gearmotor (GD-07)'
       shaft:
         point: [3.0795, 0.044, -0.136]
-        axis: [0.997587, 0.0, 0.06943]
+        axis: [0.997583, 0.0, 0.069485]
         crank_travel_deg: 131.0
         text: crank axis in the drive plane x 3.0795 (the bearing housing on the forward face of FS-GEAR carries it; the
           DA 30 spline drives it through a splined coupling)
@@ -10918,9 +10919,9 @@ layout:
       part: YK250-SY-791
       name: tail position/strobe light (white, aft-facing)
       name_tr: kuyruk seyir ışığı
-      box: [[4.026, 0.4323, 1.037], [4.126, 0.4852, 1.0817]]
+      box: [[4.026, 0.4322, 1.0369], [4.126, 0.4852, 1.0816]]
       frame:
-        center: [4.076, 0.4588, 1.0594]
+        center: [4.076, 0.4587, 1.0593]
         axes: [[1.0, 0.0, 0.0], [0.0, -0.92718, 0.374616], [0.0, 0.374616, 0.92718]]
         half: [0.05, 0.0225, 0.015]
         text: 'light case on the tip face: axes = chord, thickness normal, span (half sizes)'
@@ -10992,11 +10993,11 @@ layout:
       mirror: true
       mass_item: main_gear_legs_wheels_brakes_emas_pair
       cylinder:
-        center: [2.895, 0.3478, -0.1316]
+        center: [2.8951, 0.3478, -0.1316]
         axis: [1.0, 0.0, 0.0]
         radius: 0.03
         half_length: 0.02
-      box: [[2.875, 0.3178, -0.1616], [2.915, 0.3779, -0.1016]]
+      box: [[2.8751, 0.3178, -0.1616], [2.9151, 0.3779, -0.1016]]
       drive: output spline on the forward stub axle of the leg yoke (trunnion axis), flange on the front face of the forward
         bearing lug of F-TRUNNION; torque requirement structures G-EMA-MAIN
       install: 'allocation envelope d 60 x 40 mm (estimate: DA-26-class BLDC EMA + planetary stage, SAGITTA practice; mass
@@ -11007,7 +11008,7 @@ layout:
       mass_item: nose_gear_leg_wheel_steering
       box: [[0.636, 0.006, -0.09], [0.696, 0.041, -0.033]]
       shaft:
-        point: [0.6658, 0.006, -0.06692]
+        point: [0.6658, 0.006, -0.06694]
         axis: [0.0, 1.0, 0.0]
         text: output shaft on the port face of the body; the crank, the drag link and the yoke horn work in the centre plane
           of the keel slot (y +-0.005)
@@ -11023,7 +11024,7 @@ layout:
       mass_item: actuators_nose_steering_brake_2x_DA26
       moves_with: nose_gear
       obb:
-        center: [0.6934, 0.0, -0.2336]
+        center: [0.6934, 0.0, -0.2337]
         axes: [[-0.9958, 0.0, -0.0919], [0.0, 1.0, 0.0], [0.0919, 0.0, -0.9958]]
         half: [0.013, 0.027, 0.0514]
       box: [[0.6757, -0.027, -0.286], [0.711, 0.027, -0.1813]]
@@ -11039,10 +11040,10 @@ layout:
         diameter: 0.02
         path: [[0.95, -0.11, 0.031], [1.11, -0.143, 0.035], [1.33, -0.1475, 0.049], [1.49, -0.195, 0.035], [1.81, -0.195,
             0.035], [2.0, -0.27, -0.1], [2.1893, -0.27, -0.1], [2.5268, -0.28, -0.1], [2.8533, -0.29, -0.1], [2.8533, -0.15,
-            -0.085], [2.8533, 0.0, -0.085], [3.1164, 0.0, -0.085], [3.2764, 0.0, 0.03]]
+            -0.085], [2.8533, 0.0, -0.085], [3.1165, 0.0, -0.085], [3.2765, 0.0, 0.03]]
         penetrations:
         - member: M-WELLWALL-FWD
-          point: [2.8692, 0.0, -0.085]
+          point: [2.8693, 0.0, -0.085]
           kind: sealed conduit entry (centre-line channel)
         supports: [M-DECK-NOSE, M-TURRETWALL, M-PARAWALL, M-MIDFLOOR]
         text: PDU (+ generator AC lines from the SG750, ECU-engine lines from the mission bay, two brake lines) -> port
@@ -11058,10 +11059,10 @@ layout:
         diameter: 0.016
         path: [[1.0, 0.15, -0.01], [1.11, 0.145, -0.005], [1.2, 0.1475, 0.049], [1.33, 0.1475, 0.049], [1.49, 0.195, 0.035],
           [1.81, 0.195, 0.035], [2.0, 0.27, -0.1], [2.1893, 0.27, -0.1], [2.5268, 0.28, -0.1], [2.8533, 0.29, -0.107], [
-            2.8533, 0.15, -0.107], [2.8533, 0.0, -0.107], [3.1164, 0.0, -0.107], [3.1964, 0.0, -0.05]]
+            2.8533, 0.15, -0.107], [2.8533, 0.0, -0.107], [3.1165, 0.0, -0.107], [3.1965, 0.0, -0.05]]
         penetrations:
         - member: M-WELLWALL-FWD
-          point: [2.8692, 0.0, -0.107]
+          point: [2.8693, 0.0, -0.107]
           kind: sealed conduit entry (centre-line channel, lower tier)
         supports: [M-DECK-NOSE, M-TURRETWALL, M-PARAWALL, M-MIDFLOOR]
         text: avionics side bay -> under the avionics deck to FS1110 -> starboard side of the turret and parachute bays
@@ -11096,7 +11097,7 @@ layout:
         name: tail branch (each side)
         diameter: 0.016
         mirror: true
-        path: [[3.2964, 0.04, 0.04], [3.45, 0.1, 0.18], [3.52, 0.12, 0.3013]]
+        path: [[3.2965, 0.04, 0.04], [3.45, 0.1, 0.18], [3.52, 0.12, 0.3013]]
         text: aft equipment bay -> FS3480 ring -> fin root (rudder actuator, fin-tip antenna coax, tail light); stabilator
           actuator leads on the firewall forward face
       - id: H-ENGINE
@@ -11206,14 +11207,14 @@ layout:
     name: bottom interconnect forward -> aft cell (check valve, each side)
     name_tr: alt ara bağlantı hattı ön -> arka (çek valfli, her iki yanda)
     diameter: 0.01
-    path: [[2.4795, 0.34, -0.05], [2.4795, 0.34, -0.0735], [2.5345, 0.34, -0.0735], [2.8281, 0.34, -0.0735], [2.8574, 0.34,
-        -0.0735], [2.8574, 0.34, -0.05]]
+    path: [[2.4795, 0.34, -0.05], [2.4795, 0.34, -0.0735], [2.5345, 0.34, -0.0735], [2.8281, 0.34, -0.0735], [2.8575, 0.34,
+        -0.0735], [2.8575, 0.34, -0.05]]
     penetrations:
     - member: M-FWDDECK
       point: [2.4795, 0.34, -0.0566]
       kind: sealed bulkhead union in the forward fuel deck
     - member: M-WELLROOF
-      point: [2.8574, 0.34, -0.0634]
+      point: [2.8575, 0.34, -0.0634]
       kind: sealed bulkhead union in the well roof (aft-cell floor)
     text: 'fix round 3 (PK3-01): from the flush bottom fitting at the aft-outboard low corner of the forward cell (outlet
       in the bladder floor) down through the forward fuel deck, aft under the deck and the lower cover of the centre wing
@@ -11225,7 +11226,7 @@ layout:
     valves:
     - id: CV-FA
       type: flapper check valve (forward -> aft)
-      point: [2.8574, 0.34, -0.05]
+      point: [2.8575, 0.34, -0.05]
     role: interconnect
   - id: FL-XFER-SA
     part: YK250-FU-594
@@ -11248,7 +11249,7 @@ layout:
     name: feed line aft-cell collector -> pump
     name_tr: besleme hattı (toplayıcı -> pompa)
     diameter: 0.012
-    path: [[3.0195, 0.04, -0.04], [3.0864, 0.04, -0.025], [3.1004, 0.04, -0.025]]
+    path: [[3.0195, 0.04, -0.04], [3.0865, 0.04, -0.025], [3.1005, 0.04, -0.025]]
     penetrations: []
     text: flop pickup at the bottom of the rigid collector (0.3 L, the header tank of components.yaml fuel_system) at the
       aft-cell low point, fed through flapper inlets 1 mm above the bladder floor -> FS-GEAR C-FUEL-FEED (sealed union)
@@ -11259,7 +11260,7 @@ layout:
     name: feed line pump -> shut-off valve
     name_tr: besleme hattı (pompa -> kesme vanası)
     diameter: 0.012
-    path: [[3.2124, 0.06, -0.02], [3.3, 0.06, -0.01], [3.594, 0.04, 0.02]]
+    path: [[3.2125, 0.06, -0.02], [3.3, 0.06, -0.01], [3.594, 0.04, 0.02]]
     penetrations: []
     text: along the aft equipment bay floor angles, through the FS3480 ring opening
     role: feed
@@ -11277,8 +11278,8 @@ layout:
     name: return line engine regulator -> aft cell
     name_tr: dönüş hattı
     diameter: 0.01
-    path: [[3.7, 0.052, 0.042], [3.648, 0.052, 0.042], [3.63, 0.08, 0.05], [3.3, 0.105, 0.0], [3.1264, 0.105, -0.017], [
-        3.0864, 0.105, -0.017], [3.0195, 0.09, 0.0]]
+    path: [[3.7, 0.052, 0.042], [3.648, 0.052, 0.042], [3.63, 0.08, 0.05], [3.3, 0.105, 0.0], [3.1265, 0.105, -0.017], [
+        3.0865, 0.105, -0.017], [3.0195, 0.09, 0.0]]
     penetrations: []
     text: firewall C-FW-FUEL (above the feed line) -> over the shut-off valve -> aft equipment bay outboard of the pump
       -> FS-GEAR C-FUEL-RET (sealed union) -> aft-cell return fitting
@@ -11322,7 +11323,7 @@ layout:
     name: vent line (cell tops -> anti-siphon loop -> flush NACA vent)
     name_tr: havalandırma hattı
     diameter: 0.01
-    path: [[2.9995, 0.036, 0.15], [3.0924, 0.05, 0.15], [3.1364, 0.06, 0.185], [3.17, 0.075, 0.175], [3.235, 0.075, 0.0],
+    path: [[2.9995, 0.036, 0.15], [3.0925, 0.05, 0.15], [3.1365, 0.06, 0.185], [3.17, 0.075, 0.175], [3.235, 0.075, 0.0],
       [3.235, 0.15, -0.1569]]
     penetrations: []
     text: 'fix round 3 (PK3-01): from the aft-cell top fitting (with FL-VENT-1/-2 every cell vents from its top) through
@@ -11355,13 +11356,13 @@ layout:
     name: aft-cell sump drain (collector)
     name_tr: arka hücre sump boşaltma hattı
     diameter: 0.008
-    path: [[3.0175, -0.05, -0.049], [3.0924, -0.05, -0.048], [3.1464, -0.07, -0.06], [3.1584, -0.07, -0.09], [3.265, -0.07,
-        -0.098], [3.265, -0.07, -0.1531]]
+    path: [[3.0175, -0.05, -0.049], [3.0925, -0.05, -0.048], [3.1465, -0.07, -0.06], [3.1585, -0.07, -0.09], [3.2698, -0.07,
+        -0.098], [3.2698, -0.07, -0.1522]]
     penetrations: []
     text: 'fix round 3 (PK3-01): drain fitting at the bottom of the aft-cell collector (the low point of the feed cell,
       into which the forward and saddle cells drain) through FS-GEAR C-FUEL-DRN (sealed union) to a flush quick-drain valve
       in the aft equipment hatch P-AFTHATCH; integration round (IR-02): runs aft over the port inner-door DA 30 case and
-      drops behind it (x 3.265)'
+      drops behind it (x FS-GEAR + 0.173)'
     end_fitting: skin
     role: drain
   - id: FL-DRAIN
@@ -11369,7 +11370,7 @@ layout:
     name: gascolator / filter drain
     name_tr: filtre boşaltma hattı
     diameter: 0.008
-    path: [[3.1564, 0.07, -0.066], [3.1564, 0.07, -0.088], [3.275, 0.07, -0.094], [3.275, 0.07, -0.1511]]
+    path: [[3.1565, 0.07, -0.066], [3.1565, 0.07, -0.088], [3.275, 0.07, -0.094], [3.275, 0.07, -0.1511]]
     penetrations: []
     text: 'drain valve flush with the aft equipment hatch P-AFTHATCH; integration round (IR-02): gascolator bowl at y 0.070,
       the drain line runs aft over the inner-door DA 30 case and drops behind it (x 3.275)'
@@ -11515,7 +11516,7 @@ layout:
         at: [2.1138, 0.0, -0.103]
       - what: fuel pump/regulator/filter (aft equipment bay)
         fraction: 0.0319
-        at: [3.1564, 0.06, -0.0275]
+        at: [3.1565, 0.06, -0.0275]
       - what: SG750 (crank rear, ahead of the mount face)
         fraction: 0.0401
         at: [3.7057, 0.0, 0.1873]
@@ -11596,13 +11597,13 @@ layout:
       position_sizing_phase: [3.7375, 0.0, 0.2183]
     actuators_nose_steering_brake_2x_DA26:
       mode: absolute
-      position: [0.8403, -0.0483, -0.0443]
+      position: [0.8404, -0.0483, -0.0443]
       basis: 'item basis: 2 x DA 26 datasheet + 0.10 installation (half each); the steering actuator travels with the leg
         (flight pose = retracted, layout_check actuator_prim)'
       components:
       - what: steering DA 26 + belt (ACT-STEER on the stowed leg)
         fraction: 0.5
-        at: [0.7607, 0.0, -0.0795]
+        at: [0.7608, 0.0, -0.0795]
       - what: brake DA 26 + master cylinder (EQ-BRAKE_UNIT)
         fraction: 0.5
         at: [0.92, -0.0965, -0.009]
@@ -11616,7 +11617,7 @@ layout:
       components:
       - what: H-MAIN
         fraction: 0.2197
-        at: [2.1994, -0.1764, -0.0419]
+        at: [2.1995, -0.1764, -0.0419]
       - what: H-COAX
         fraction: 0.1335
         at: [2.1789, 0.1851, -0.0524]
@@ -11646,7 +11647,7 @@ layout:
         at: [2.8703, 0.0, 0.076]
       - what: connectors at 53 connection points
         fraction: 0.3
-        at: [1.8567, 0.0, 0.0524]
+        at: [1.8567, 0.0, 0.0523]
       position_sizing_phase: [1.9, 0.0, 0.0]
     flight_termination_lights:
       mode: absolute
@@ -11661,7 +11662,7 @@ layout:
         at: [2.9746, 0.0, 0.155]
       - what: tail light (fin tip)
         fraction: 0.208
-        at: [4.076, 0.4587, 1.0594]
+        at: [4.076, 0.4587, 1.0593]
       position_sizing_phase: [1.6836, 0.0, 0.02]
     keel_beams_longerons:
       mode: absolute
@@ -11689,7 +11690,7 @@ layout:
         at: [3.7912, 0.0, -0.074]
       - what: M-WELLKEEL
         fraction: 0.0461
-        at: [2.9815, 0.0, -0.1268]
+        at: [2.9816, 0.0, -0.1268]
       position_sizing_phase: [2.0, 0.0, -0.05]
     frames_bulkheads:
       mode: absolute
@@ -11726,7 +11727,7 @@ layout:
         at: [2.7995, 0.0, -0.0114]
       - what: FS-GEAR
         fraction: 0.1222
-        at: [3.0964, 0.0, -0.023]
+        at: [3.0965, 0.0, -0.023]
       - what: FS3480
         fraction: 0.0313
         at: [3.48, 0.0, 0.1047]
@@ -11787,7 +11788,7 @@ layout:
         at: [1.65, 0.0, -0.1814]
       - what: payload-tray rails
         fraction: 0.0539
-        at: [2.63, 0.0, -0.065]
+        at: [2.6301, 0.0, -0.065]
       - what: aft equipment tray
         fraction: 0.0539
         at: [3.38, 0.0, -0.045]
@@ -11932,19 +11933,19 @@ layout:
       position_sizing_phase: [3.921, 0.0, 0.6312]
     main_gear_legs_wheels_brakes_emas_pair:
       mode: absolute
-      position: [2.9715, 0.0, -0.1316]
+      position: [2.9716, 0.0, -0.1316]
       basis: SAGITTA main leg 4.0 kg each (components.yaml) split as TOST wheel assembly 1.79 kg (research estimate) + DA-26-class
         EMA 0.27 kg (estimate) + leg remainder, in the retracted (flight) pose
       components:
       - what: 2 x TOST wheel + brake + tyre + tube (stowed wheel centre)
         fraction: 0.4475
-        at: [2.977, 0.0, -0.1316]
+        at: [2.9771, 0.0, -0.1316]
       - what: 2 x retraction EMA (ACT-MLG-EMA; DA-26-class mass, estimate)
         fraction: 0.0675
-        at: [2.895, 0.0, -0.1316]
+        at: [2.8951, 0.0, -0.1316]
       - what: 2 x leg, damper, yoke, stub axles, side-brace lock (stowed leg mid-point)
         fraction: 0.485
-        at: [2.977, 0.0, -0.1316]
+        at: [2.9771, 0.0, -0.1316]
       position_sizing_phase: [3.0006, 0.0, -0.127]
     nose_gear_leg_wheel_steering:
       mode: absolute
@@ -11964,31 +11965,31 @@ layout:
       position_sizing_phase: [0.8443, 0.0, -0.1244]
     gear_doors_wells_locks_sensors:
       mode: absolute
-      position: [2.6154, -0.0041, -0.1359]
+      position: [2.6155, -0.0041, -0.1359]
       basis: sizing.gear_doors_mass parts (door areas of the sizing door scheme, mass.rules.gear_doors) at the layout door
         outlines (closed), well centres and door drives
       components:
       - what: main inner doors
         fraction: 0.0814
-        at: [2.977, 0.0, -0.2035]
+        at: [2.9771, 0.0, -0.2035]
       - what: main leg + trunnion doors
         fraction: 0.0443
-        at: [2.977, 0.0, -0.1929]
+        at: [2.9771, 0.0, -0.1929]
       - what: nose clamshell doors
         fraction: 0.0292
         at: [0.8622, 0.0, -0.1943]
       - what: close-outs, reinforcement, locks/sensors (main wells, 2/3)
         fraction: 0.2192
-        at: [2.977, 0.0, -0.1316]
+        at: [2.9771, 0.0, -0.1316]
       - what: close-outs, reinforcement, locks/sensors (nose well, 1/3)
         fraction: 0.1096
         at: [0.851, 0.0, -0.0929]
       - what: main inner-door DA 30 + linkages (EQ-DOORACT)
         fraction: 0.397
-        at: [3.1825, 0.0, -0.1288]
+        at: [3.1826, 0.0, -0.1288]
       - what: leg-door brackets
         fraction: 0.0237
-        at: [2.977, 0.0, -0.2]
+        at: [2.9771, 0.0, -0.1999]
       - what: nose-door DA 22 + crank/pushrod (EQ-NDOORACT)
         fraction: 0.051
         at: [1.0593, -0.0795, -0.095]
@@ -11997,7 +11998,7 @@ layout:
         at: [1.095, 0.0, -0.1232]
       - what: door seals (main)
         fraction: 0.019
-        at: [2.977, 0.0, -0.1316]
+        at: [2.9771, 0.0, -0.1316]
       - what: door seals (nose)
         fraction: 0.0107
         at: [0.851, 0.0, -0.0929]

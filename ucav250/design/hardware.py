@@ -87,19 +87,18 @@ def _bolt_elements(f: Fastener) -> tuple[Mesh, Mesh | None]:
     else:                                               # ISO 4762 socket head (default)
         dk, k = C.ISO4762.get(size, (1.7 * f.d, f.d))
         parts.append(cylinder(dk / 2, p - (head_off + k) * a, p - head_off * a, n=32))
-    # shank slightly undersized (0.98 d) so it never touches the clearance-hole wall numerically; mass/CG closure round
-    # (hardware study HW-07, geometry fidelity, no factor): the threaded length is modelled at the pitch diameter
-    # d2 = d - 0.6495 P (the volume-equivalent section of an ISO metric thread), threaded length b: full length for
-    # ISO 7380 / ISO 4017 (fully threaded), else ISO 4762 / 4014 b = 2 d + 12 mm (2 d + 6 mm for ISO 4014), at most
-    # the shank length
-    b_thr = _thread_length(f, size)
+    # shank slightly undersized (0.98 d) so it never touches the clearance-hole wall numerically: the mesh is the thread's
+    # envelope (crests at d, as the hole and contact checks see it). Mass/CG closure round (hardware study HW-07, geometry
+    # fidelity, no factor): the screw's MASS takes the threaded length at the pitch diameter d2 = d - 0.6495 P (the
+    # volume-equivalent section of an ISO metric thread) over the threaded length b (full length for ISO 7380 / ISO 4017,
+    # fully threaded; else ISO 4762 / 4014 b = 2 d + 12 mm (2 d + 6 mm for ISO 4014), at most the shank length): the
+    # thread-groove volume between the envelope and the d2 cylinder (same 20-gon section as the mesh) is returned as the
+    # element's volume deduction
+    parts.append(cylinder(0.49 * f.d, p - head_off * a - 1e-4 * a, p + f.length * a, n=20))
+    b_thr = min(_thread_length(f, size), f.length)
     d2 = f.d - 0.6495 * _thread_pitch(f, size)
-    x_t = max(f.length - b_thr, 0.0)
-    if x_t > 2e-4:
-        parts.append(cylinder(0.49 * f.d, p - head_off * a - 1e-4 * a, p + (x_t + 1e-4) * a, n=20))
-        parts.append(cylinder(0.5 * d2, p + x_t * a, p + f.length * a, n=20))
-    else:
-        parts.append(cylinder(0.5 * d2, p - head_off * a - 1e-4 * a, p + f.length * a, n=20))
+    ngon = 0.5 * 20 * math.sin(2.0 * math.pi / 20)          # area of a regular 20-gon / r^2
+    groove = max(ngon * ((0.49 * f.d) ** 2 - (0.5 * d2) ** 2), 0.0) * b_thr
     head_group = union(parts)
     parts = []
     nut = f.nut.lower()
@@ -133,8 +132,8 @@ def _bolt_elements(f: Fastener) -> tuple[Mesh, Mesh | None]:
         ins = union([cylinder(fl / 2, q, q + 0.001 * a, n=24), cylinder(body / 2, q + 0.0009 * a, q + ln * a, n=24)])
         parts.append(difference(ins, [cylinder(0.5 * f.d, q - 1e-3 * a, q + (ln + 1e-3) * a, n=24)]))
     if not parts:
-        return head_group, None
-    return head_group, union(parts)
+        return head_group, None, groove
+    return head_group, union(parts), groove
 
 
 def _quarter_turn_elements(f: Fastener) -> tuple[Mesh, Mesh | None]:
@@ -152,22 +151,23 @@ def _quarter_turn_elements(f: Fastener) -> tuple[Mesh, Mesh | None]:
         bd, bh = Q["rec_barrel"]
         rec = union([box((L, W, t), center=q + 0.5 * t * a, R=R), cylinder(bd / 2, q + (t - 1e-4) * a, q + bh * a, n=24)])
         parts.append(difference(rec, [cylinder(Q["stud_d"] / 2 + 2e-4, q - 1e-3 * a, q + (bh + 1e-3) * a, n=24)]))
-    return head, (union(parts) if parts else None)
+    return head, (union(parts) if parts else None), 0.0
 
 
-def fastener_elements(f: Fastener) -> tuple[Mesh, Mesh | None]:
-    """(screw / stud / pin element, far-side element or None) of a fastener."""
+def fastener_elements(f: Fastener) -> tuple[Mesh, Mesh | None, float]:
+    """(screw / stud / pin element, far-side element or None, thread-groove volume of the screw element in m^3: the
+    screw's mass volume is its envelope mesh volume minus this) of a fastener."""
     if f.kind in ("camloc", "quarter_turn"):
         return _quarter_turn_elements(f)
     if f.kind in ("pin", "clevis_pin", "rivet"):
         a = unit(f.axis)
         p = np.asarray(f.position, float)
-        return cylinder(0.49 * f.d, p - 1e-4 * a, p + f.length * a, n=20), None
+        return cylinder(0.49 * f.d, p - 1e-4 * a, p + f.length * a, n=20), None, 0.0
     return _bolt_elements(f)
 
 
 def fastener_mesh(f: Fastener) -> Mesh:
-    s, far = fastener_elements(f)
+    s, far, _ = fastener_elements(f)
     return s if far is None else merge([s, far])
 
 
@@ -175,16 +175,16 @@ class _FastenerGeom:
     """Lazy geometry of one hardware part: the merged mesh (Part.mesh_fn) and the two-alloy mass (Part.mass_fn) from
     the same element meshes (built once; only their volumes are kept after the mesh is handed over)."""
 
-    def __init__(self, f: Fastener, rho_screw: float, rho_far: float):
-        self.f, self.rho = f, (rho_screw, rho_far)
+    def __init__(self, f: Fastener, mats: dict, mat_screw: str, mat_far: str):
+        self.f, self.mats, self.keys = f, mats, (mat_screw, mat_far)
         self._el = None
         self._vol = None
 
     def _elements(self):
         if self._el is None:
-            s, far = fastener_elements(self.f)
+            s, far, groove = fastener_elements(self.f)
             self._el = (s, far)
-            self._vol = (s.volume(), far.volume() if far is not None else 0.0)
+            self._vol = (s.volume() - groove, far.volume() if far is not None else 0.0)
         return self._el
 
     def mesh(self) -> Mesh:
@@ -195,7 +195,8 @@ class _FastenerGeom:
     def mass(self) -> float:
         if self._vol is None:
             self._elements()
-        return self._vol[0] * self.rho[0] + self._vol[1] * self.rho[1]
+        rho = [float(self.mats[k]["density"]) for k in self.keys]     # looked up when the mass is asked for
+        return self._vol[0] * rho[0] + self._vol[1] * rho[1]
 
 
 # fastener material -> spec.materials key with a density (first present): dedicated fastener entries if the spec has
@@ -254,7 +255,7 @@ def register(reg: Registry, spec: dict) -> None:
             raise ValueError(f"duplicate fastener id {f.id}")
         owner = reg.parts[f.joins[0]] if f.joins and f.joins[0] in reg.parts else None
         m_s, m_f = fastener_material(f.spec, mats), far_side_material(f, mats)
-        geo = _FastenerGeom(f, float(mats[m_s]["density"]), float(mats[m_f]["density"]))
+        geo = _FastenerGeom(f, mats, m_s, m_f)
         far_note = f"far side ({f.nut}): {m_f}" if f.nut and f.kind not in ("pin", "clevis_pin", "rivet") else ""
         reg.add(Part(id=pid, name=f.spec, name_tr=f.spec, group="hardware",
                      material=m_s, process="purchased", mesh_fn=geo.mesh, mass_fn=geo.mass, thickness=None,

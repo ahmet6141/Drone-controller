@@ -1340,6 +1340,7 @@ TD_X, TD_OM, TD_RC = 2.9845, (0.3657, -0.1166), 0.016   # trunnion-door drive pl
 TD_Q = (0.3761, -0.1360)                              # trunnion-door horn pin, door closed (y, z)
 TD_T = {"crank": (-0.00425, -0.00125), "link": (-0.0010, 0.0020), "horn": (0.00225, 0.00525)}
 TD_MOT = (0.008, 2.9620, 2.9800)                      # gearmotor envelope r 8 x 18 mm (estimate), x range
+TD_PIVOT_X0 = 2.9758                                  # layout trunnion pivot x for TD_X / TD_MOT (shifted with it)
 TD_PIN, TD_EYE = 0.003, 0.0062
 NG_RH, NG_AL, NG_RC = 0.033, math.radians(116.0), 0.0341   # nose drag-link horn pin (radius, angle about the pivot in
 #                                                            (x, z)), crank radius; folded toggle with the gear down
@@ -1570,20 +1571,25 @@ class TrunnionDoorDrive:
 
     def __init__(self, C: Ctx, Dr: "Doors"):
         self.C, self.Dr = C, Dr
+        # mass/CG closure round: the drive is clamped to the F-TRUNNION flange, so its x stations follow the layout
+        # trunnion pivot (TD_X / TD_MOT were set for the pivot at TD_PIVOT_X0)
+        dx = float(C.fit["F-TRUNNION"]["pivot"][0]) - TD_PIVOT_X0
+        self.tdx = TD_X + dx
+        self.tmot = (TD_MOT[0], TD_MOT[1] + dx, TD_MOT[2] + dx)
         jt = Dr.jt
         self.jt = jt
         u = np.array([1.0, 0.0, 0.0])
-        self.Cp = np.array([TD_X, TD_OM[0], TD_OM[1]])
+        self.Cp = np.array([self.tdx, TD_OM[0], TD_OM[1]])
         d_max = float(jt["hi"])
-        fb = best_fourbar(u, self.Cp, self.Cp, jt["origin"], TD_RC, (TD_X, TD_Q[0], TD_Q[1]),
+        fb = best_fourbar(u, self.Cp, self.Cp, jt["origin"], TD_RC, (self.tdx, TD_Q[0], TD_Q[1]),
                           math.copysign(1.0, float(_u(jt["axis"]) @ u)), True, d_max)
         self.m = Mech(fb, lambda st: st["main_trunnion_door_R"], float(jt["rest"]), d_max)
 
     def x(self, t):
-        return TD_X + t
+        return self.tdx + t
 
     def motor(self) -> G.Mesh:
-        r, x0, x1 = TD_MOT
+        r, x0, x1 = self.tmot
         y, z = TD_OM
         return G.difference(G.cylinder(r, (x0, y, z), (x1, y, z), n=40),
                             [G.cylinder(0.00155, (x1 - 0.0035, y, z), (x1 + 0.001, y, z), n=24)])
@@ -1593,7 +1599,7 @@ class TrunnionDoorDrive:
         t0, t1 = TD_T["crank"]
         plate = bar_mesh(fb, self.Cp, m.K3(), 0.0045, TD_EYE, t0, t1, hole1=0.5 * TD_PIN + 0.000025)
         y, z = TD_OM
-        stub = G.cylinder(0.0015, (TD_MOT[2] - 0.003, y, z), (self.x(t0) + 0.0005, y, z), n=24)
+        stub = G.cylinder(0.0015, (self.tmot[2] - 0.003, y, z), (self.x(t0) + 0.0005, y, z), n=24)
         return _clean(G.union([plate, stub]))
 
     def link(self) -> G.Mesh:
@@ -1616,7 +1622,7 @@ class TrunnionDoorDrive:
         """695: half-clamp over the gearmotor (bonded) with a web to a tab on the inboard face of the gear-beam web
         below the F-TRUNNION flange (one M3 into a potted insert of the beam)."""
         y, z = TD_OM
-        r = TD_MOT[0]
+        r = self.tmot[0]
         ang = np.linspace(0.0, math.pi, 25)
         ring = Polygon([(y + (r + 0.0020) * math.cos(a), z + (r + 0.0020) * math.sin(a)) for a in ang] +
                        [(y + (r + BOND_TB) * math.cos(a), z + (r + BOND_TB) * math.sin(a)) for a in ang[::-1]])
@@ -1624,11 +1630,11 @@ class TrunnionDoorDrive:
         web = rect(y + r + BOND_TB, yb - 0.003, z - 0.0015, z + 0.0015)
         tab = rect(yb - 0.003, yb, TD_TAB_Z[0], TD_TAB_Z[1])
         poly = unary_union([ring.buffer(0), web, tab])
-        return _clean(_plate(poly, (TD_MOT[1], 0.0, 0.0), (0, 1, 0), (0, 0, 1), 0.0, TD_MOT[2] - TD_MOT[1]))
+        return _clean(_plate(poly, (self.tmot[1], 0.0, 0.0), (0, 1, 0), (0, 0, 1), 0.0, self.tmot[2] - self.tmot[1]))
 
     def bracket_bolts(self):
         yb = float(self.C.mem["M-GEARBEAM"]["box"][0][1])
-        return [np.array([0.5 * (TD_MOT[1] + TD_MOT[2]), yb - 0.003, TD_BOLT_Z])]
+        return [np.array([0.5 * (self.tmot[1] + self.tmot[2]), yb - 0.003, TD_BOLT_Z])]
 
 
 TD_TAB_Z, TD_BOLT_Z = (-0.1335, -0.1105), -0.1220   # bracket tab on the beam web (between the notch top and the

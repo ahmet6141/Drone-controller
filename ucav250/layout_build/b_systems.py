@@ -438,7 +438,8 @@ ANT_DIPOLE = (0.109, 0.013)          # components.yaml southwest_antennas_1001_2
 ANT_XC = 0.42                         # chord fraction of the fin-tip dipoles on the tip rib (IR-06)
 LT_TAIL_XC = 0.40                     # chord fraction of the tail light centre on the fin tip face (IR-06): its aft
 #                                       screws keep 2.5 D in the mounting block (tail LIGHT_BLOCK_XC)
-LT_SEAT_GAP = 0.0003                  # light base above the cap tip face (the loft end plane leans ~0.1 mm on w)
+LT_SEAT_GAP = 0.0002                  # light base above the cap tip face (the loft end plane leans ~0.1 mm on w; mass/CG
+#                                       closure round: 0.3 -> 0.2 mm, the 0.05 mm centre rounding left 0.34 mm)
 Y_FUELB = 0.0165                      # H-FUEL in the spine channel: 5 mm corridor to the bridle aft leg (C04), the
 #                                       floor grommet's flanges trimmed flat at the starboard wall (systems)
 FIN_XC_BOX = 0.27                     # H-FIN chord line in the fin box between the front spar and the rudder actuator
@@ -844,6 +845,9 @@ def fuel_lines() -> list:
             d_["role"] = role
         return d_
     xg = X_GEARF
+    # mass/CG closure round: the FL-DRAIN-A drop behind the port DA 30 follows FS-GEAR (the actuator is mounted on it;
+    # the closure moved FS-GEAR 1.2 mm aft), 8 mm behind the actuator's aft end
+    x_dra = round(xg + 0.1733, 4)
     out = [
         L("FL-REFUEL", "YK250-FU-580", "refuel line (OBP dry-break AN6 -> forward cell)", "yakıt ikmal hattı", 0.016,
           [[2.340, -0.320, zr], [2.340, -0.320, -0.064], [2.340, -0.320, -0.050]],
@@ -937,12 +941,12 @@ def fuel_lines() -> list:
           role="drain"),
         L("FL-DRAIN-A", "YK250-FU-593", "aft-cell sump drain (collector)", "arka hücre sump boşaltma hattı", 0.008,
           [[xa[1] - 0.012, -0.050, za0 + 0.003], [xg - 0.004, -0.050, -0.048], [xg + 0.050, -0.070, -0.060],
-           [xg + 0.062, -0.070, -0.090], [3.265, -0.070, -0.098],
-           [3.265, -0.070, round(z_bot(3.265, 0.070) + 0.010, 4)]], (),
+           [xg + 0.062, -0.070, -0.090], [x_dra, -0.070, -0.098],
+           [x_dra, -0.070, round(z_bot(x_dra, 0.070) + 0.010, 4)]], (),
           "fix round 3 (PK3-01): drain fitting at the bottom of the aft-cell collector (the low point of the feed "
           "cell, into which the forward and saddle cells drain) through FS-GEAR C-FUEL-DRN (sealed union) to a flush "
           "quick-drain valve in the aft equipment hatch P-AFTHATCH; integration round (IR-02): runs aft over the "
-          "port inner-door DA 30 case and drops behind it (x 3.265)", end_fitting="skin", role="drain"),
+          "port inner-door DA 30 case and drops behind it (x FS-GEAR + 0.173)", end_fitting="skin", role="drain"),
         L("FL-DRAIN", "YK250-FU-589", "gascolator / filter drain", "filtre boşaltma hattı", 0.008,
           [[xg + 0.060, 0.070, -0.066], [xg + 0.060, 0.070, -0.088], [3.275, 0.070, -0.094],
            [3.275, 0.070, round(z_bot(3.275, 0.070) + 0.010, 4)]],

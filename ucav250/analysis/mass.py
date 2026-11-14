@@ -35,6 +35,7 @@ PAYLOAD_GROUP_ITEM_KEY = "payload_group"     # payload item whose registry parts
 REGISTRY_TOL_KG = 0.005                      # spec.mass.registry vs the registry (stale-block check)
 REGISTRY_TOL_M = 0.0005
 CG_RANGE_TOL = 1e-5                          # m: stability.cg_range_x is stored to 6 significant digits (0.01 mm)
+MTOW_TOL_KG = 5e-4                           # kg: the case loads are spec values stored to 0.1 g (fuel, items, payload)
 
 
 def _base_id(pid: str) -> str:
@@ -259,7 +260,7 @@ def run(reg: Registry, write: bool = True) -> dict:
             failures.append(f"budget {g}: {got:.2f} kg vs {tgt:.2f} ± {tol:.2f}")
     mtow = spec_mass.get("mtow_kg")
     for n, c in res_cases.items():
-        if mtow and c["mass"] > float(mtow) + 1e-6:
+        if mtow and c["mass"] > float(mtow) + MTOW_TOL_KG:
             failures.append(f"{n}: {c['mass']:.2f} kg exceeds spec mtow {mtow}")
     blk = registry_block(reg, props, bg)
     stale = registry_stale(spec_mass.get("registry"), blk)

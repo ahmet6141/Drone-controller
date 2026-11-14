@@ -640,6 +640,9 @@ class StabGeo:
         self.socket = (self.y_root, self.y_root + float(so["length_m"]))
         self.root_rib = (self.y_root, self.y_root + C.t_rib)
         self.sock_rib = (self.socket[1], self.socket[1] + C.t_rib)
+        # the spindle ends 0.1 mm short of the socket rib (layout span_y is rounded to 0.1 mm: with the panel root at
+        # y 0.34015 after the mass/CG closure round it reached 0.05 mm into the rib)
+        self.y_out = min(self.y_out, self.socket[1] - 0.0001)
         # drive (layout EQ-STABACT linkage)
         lk = C.eq["EQ-STABACT"]["linkage"]
         self.S = np.asarray(lk["servo_axis"], float)

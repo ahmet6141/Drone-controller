@@ -931,7 +931,15 @@ class Systems:
             r = 0.5 * float(C.trunk[tid]["diameter"])
             xd = float(C.member_box("M-PAYWALL-AFT")[1][0]) + r + 0.0005       # duct: payload-bay aft wall + 0.5 mm
             x_duct = float(P[-3][0]) if tid == "H-MAIN" else float(P[-4][0])
-            P[np.abs(P[:, 0] - x_duct) < 1e-6, 0] = xd
+            if tid == "H-MAIN":
+                # the layout bend into the duct (layout.systems.harness, 17 mm tangent) ends on x_duct: the bend is
+                # stretched in x from its start to the design duct station xd, so that its approach samples move with
+                # its end point (the end point alone would leave the bend kinked; verification round, SY-750)
+                x_a = x_duct - 0.0175
+                w = (P[:, 0] > x_a) & (P[:, 0] <= x_duct + 1e-6)
+                P[w, 0] = x_a + (P[w, 0] - x_a) * (xd - x_a) / (x_duct - x_a)
+            else:
+                P[np.abs(P[:, 0] - x_duct) < 1e-6, 0] = xd
             i_g = int(np.argmin(np.abs(P[:, 0] - self.x_gear_vertex(tid))))
             yc, zc = J_["conn"][tid]
             P = np.vstack([P[:i_g + 1], [J_["x_f"] - 0.050, yc, zc], [J_["x_f"] - TOUCH, yc, zc]])
@@ -991,6 +999,11 @@ class Systems:
         for i in range(1, len(P) - 1):
             V = P[i]
             out.append(V)
+            # the 14 mm straight continuation must lie inside the next leg: a vertex whose next leg is short (the bend into
+            # the duct: its start and the fine samples of the arc) gets none, else the bend is straightened and the sweep
+            # folds (verification round, SY-750)
+            if np.linalg.norm(P[i + 1] - V) < 0.050 or np.linalg.norm(V - P[i - 1]) < 0.020:
+                continue
             for s_ in C.L["stations"]:
                 if not s_.get("cutouts"):
                     continue
@@ -1006,7 +1019,11 @@ class Systems:
         if tid not in self._lines:
             d = float(self.C.trunk[tid]["diameter"])
             P = self.straight_through_frames(self.trunk_path(tid))
-            self._lines[tid] = resample_uniform(fillet(P, 4.0 * d, radius_of=self.corner_radius(tid)), 0.004)
+            Q = fillet(P, 4.0 * d, radius_of=self.corner_radius(tid))
+            # H-MAIN: uniform arc-length sampling (its fine bend into the duct next to 8 mm legs folds the sweep under a
+            # densify; verification round, SY-750). The other bundles keep their densified sampling (a change moved the
+            # H-TAIL / H-FIN clamps' contacts by > 1 mm^3).
+            self._lines[tid] = resample_uniform(Q, 0.004) if tid == "H-MAIN" else densify(Q, 0.008)
         return self._lines[tid]
 
     def link(self, pid: str, other: str):

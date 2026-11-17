@@ -85,9 +85,9 @@ içeride kalır (layout notu), önlerinde karbon yoktur.
 - **Gövde hatları** (`layout.systems.harness`): H-MAIN (Ø20, SY-750), H-COAX (Ø16, SY-751), H-WING (Ø12, SY-752-R/L),
   H-TAIL (Ø16, SY-753-R/L), H-ENGINE (Ø20, SY-754), H-NOSE (Ø12, SY-755). Demetler layout yolları üzerinde, köşeleri
   4 D yarıçapla yuvarlatılmış yuvarlak kesitlerdir; çerçeve düzlemindeki yol köşeleri "düz geçiş" noktasına çevrilir
-  (demet kesikten düz geçer, 14 mm sonra bükülür). Layout koridorları içinde kalan ayrıntı değişiklikleri:
+  (demet kesikten düz geçer, 14 mm sonra bükülür; düz geçiş yalnız sonraki bacağı ≥ 50 mm, öncesi ≥ 20 mm olan köşelere verilir, ince örneklenmiş kıvrım noktalarına değil). H-MAIN yay uzunluğu boyunca 4 mm düzgün örneklenir, öteki demetler 8 mm bacak örneklemesini korur. Layout koridorları içinde kalan ayrıntı değişiklikleri:
   - H-MAIN / H-COAX, 30 mm genişliğindeki yanal kanalda (yük bölmesi arka duvarı ile kuyu ön duvarı arası) 20 mm
-    yarıçapla merkez kanala döner (merkez çizgileri layout x'inin 4,6 / 6,2 mm arkasında) ve arka bölmedeki CN-TAIL
+    yarıçapla merkez kanala döner (merkez çizgileri layout x'inin 4,6 / 6,2 mm arkasında; H-MAIN kıvrımı bu kayışta x yönünde gerilir, sweep'te kendini kesmez) ve arka bölmedeki CN-TAIL
     braketine biter;
   - H-WING, ayrıldığı hattın yanında başlar (ortak kesiklerde yan yana), ana kiriş çerçevesinden düz geçer, ana hattın
     üstünden çaprazlar, orta kutu alt kapağından düz geçer ve CN-WING arka kılıfında biter;

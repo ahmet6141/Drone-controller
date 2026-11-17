@@ -193,6 +193,18 @@ def densify(Q, step: float = 0.01) -> np.ndarray:
     return np.asarray(out)
 
 
+def resample_uniform(Q, step: float) -> np.ndarray:
+    """Points at a uniform arc-length spacing (<= ``step``) along the polyline ``Q``. Verification (systems test
+    design_rule_checks_clean): densify() after fillet() leaves the fillet arcs at ~0.3 mm spacing next to 8 mm legs, and
+    the sweep's central-difference tangents at those transitions fold the 20 mm H-MAIN trunk on itself (SY-750); on a
+    uniform spacing the fillet arcs sweep clean."""
+    Q = np.asarray(Q, float)
+    s = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(Q, axis=0), axis=1))]
+    n = int(math.ceil(s[-1] / step)) + 1
+    t = np.linspace(0.0, s[-1], n)
+    return np.column_stack([np.interp(t, s, Q[:, k]) for k in range(3)])
+
+
 def bent_profile(points, t: float, r_in: float) -> Polygon:
     """Cross-section of a formed sheet part: the mid-thickness polyline ``points`` (2-D) filleted with the centre-line
     radius r_in + t/2 and thickened by t/2 each side (flat ends): inner bend radius r_in, outer r_in + t."""
@@ -994,7 +1006,7 @@ class Systems:
         if tid not in self._lines:
             d = float(self.C.trunk[tid]["diameter"])
             P = self.straight_through_frames(self.trunk_path(tid))
-            self._lines[tid] = densify(fillet(P, 4.0 * d, radius_of=self.corner_radius(tid)), 0.008)
+            self._lines[tid] = resample_uniform(fillet(P, 4.0 * d, radius_of=self.corner_radius(tid)), 0.004)
         return self._lines[tid]
 
     def link(self, pid: str, other: str):

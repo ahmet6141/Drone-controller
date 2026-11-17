@@ -118,7 +118,7 @@ class TestSizingCheck(unittest.TestCase):
     def test_endurance_and_payload_requirement(self):
         """Requirement decision (fix round 4): R-02 >= 10 h with the design-mission payload, which is the largest payload
         on the 0.5 kg grid giving >= 10.25 h (derived by sizing.py, equal to the spec value); R-02b: the 20 kg maximum
-        payload on the same mission >= 9.5 h; R-03: a 20 kg loading case at MTOM is checked."""
+        payload on the same mission >= 6.0 h; R-03: a 20 kg loading case at MTOM is checked."""
         M, S = self.out["metrics"], self.S
         mis = S["mission"]
         self.assertGreaterEqual(M["endurance_h"], float(mis["endurance_requirement_h"]))
@@ -141,7 +141,7 @@ class TestSizingCheck(unittest.TestCase):
         self.assertEqual(float(mis["payload_max_kg"]), 20.0)
         self.assertGreaterEqual(M["payload_max_checked_kg"], 20.0)
         self.assertGreaterEqual(M["endurance_max_payload_h"], float(mis["endurance_max_payload_requirement_h"]))
-        self.assertEqual(float(mis["endurance_max_payload_requirement_h"]), 9.5)
+        self.assertEqual(float(mis["endurance_max_payload_requirement_h"]), 6.0)
         mx = self.out["performance"]["max_payload_mission"]
         self.assertAlmostEqual(mx["takeoff_mass_kg"], S["mass"]["mtow_kg"], places=3)
         self.assertAlmostEqual(mx["fuel_kg"], S["mass"]["mtow_kg"] - S["mass"]["empty_kg"] - 20.0, delta=2e-3)
@@ -260,11 +260,11 @@ class TestSizingCheck(unittest.TestCase):
         self.assertGreaterEqual(hm["surface_travel_deg"], 20.0)
         self.assertEqual(self.out["tail_root_interference"]["n_conflicts"], 0)
         # R-56 (fix round 4: both payload requirements): the ceilings + reserve stay below the smaller of the empty masses
-        # that meet R-02 (design payload, 10 h) and R-02b (maximum payload, 9.5 h) exactly
+        # that meet R-02 (design payload, 10 h) and R-02b (maximum payload, 6.0 h) exactly
         self.assertAlmostEqual(bc["empty_kg_limit"], min(bc["empty_kg_at_R02_limit"], bc["empty_kg_at_R02b_limit"]),
                                places=9)
         self.assertLessEqual(bc["budget_sum_kg"], bc["empty_kg_limit"] - bc["reserve_kg"] + 1e-9)
-        self.assertAlmostEqual(bc["air_time_h_at_fuel_for_R02b"], 9.5, delta=1e-3)
+        self.assertAlmostEqual(bc["air_time_h_at_fuel_for_R02b"], 6.0, delta=1e-3)
         self.assertGreater(bc["margin_kg"], 0.0)
 
     def test_fix_round3_checks(self):

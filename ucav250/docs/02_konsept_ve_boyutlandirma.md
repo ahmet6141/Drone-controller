@@ -31,14 +31,14 @@ python3 -m ucav250.analysis.sizing --render       # Workbench görüntüleri (do
 | Gövde | boy 4,00 m (pervane göbeğiyle 4,23 m), genişlik 0,80 m, yükseklik 0,46 m |
 | Pervane | Mejzlik 31x12 3B, Ø 0,787 m, 5° aşağı itki hattı, statik uç Mach 0,712; kurulum katsayısı k_inst 0,93 tahmini (küt kaporta tabanı; test yok, duyarlılık §6.5) |
 | Elektrik | SG750 marş/jeneratörü (DC = 800 W × rpm/7500 × 0,94); tampon batarya 12S2P Li-ion (Molicel P45B, 1,98 kg, 389 Wh); E180 tepe yükü bekleme boyunca jeneratör + batarya tepe destek payıyla (R-52 1,031; jeneratör açığı en çok 17 W) |
-| Dayanım | **10,26 h** tasarım görevinde, 9,0 kg görev yüküyle (R-02 ≥ 10 h; görev yükü kuralı ≥ 10,25 h; bekleme 7,95 h). Azami 20 kg yükle **6,05 h** (R-02b ≥ 9,5 h: **karşılanmıyor**, boş kütle 9,02 kg fazla). E180 büyüme görevi 10,01 h. Feribot menzili 1.140 km |
+| Dayanım | **10,26 h** tasarım görevinde, 9,0 kg görev yüküyle (R-02 ≥ 10 h; görev yükü kuralı ≥ 10,25 h; bekleme 7,95 h). Azami 20 kg yükle **6,05 h** (R-02b ≥ 6,0 h: **karşılanıyor**; 17.11.2026 proje lideri kararıyla 9,5 h'ten 6,0 h'e indirildi). E180 büyüme görevi 10,01 h. Feribot menzili 1.140 km |
 | Aerodinamik | CD0 0,0350 (temiz), 0,0370 (taret dışarıda); (L/D)maks 17,2 / 16,7 |
 | Hızlar | VS 23,95 m/s (temiz, trimli, MTOM, en ön AM; kanat alanı kuralının hedefi 23,95 m/s). Görev beklemesi 27,96 → 27,83 m/s EAS. Düz uçuş Vmaks 54,0 m/s. VNE 51,3 m/s ve VNO 45,0 m/s EAS; uçuş kontrol sistemi hızı 45 m/s'de sınırlar |
 | Tırmanma / tavan | 4,21 m/s (DS), 2,38 m/s (3000 m); servis tavanı 7.086 m |
 | Pist | kalkış koşusu 178 m (belirleyici: E180 taretli MTOM; yunuslama ataletiyle), görev sonu iniş koşusu 183 m, MTOM'da acil iniş 219,9 m |
 | Kararlılık | statik marj %10,1–%16,9 OAK, yakıt bitimine kadar bütün seviyelerde (en arka durum: en hafif uçuş, yalnız taret, yakıt biterken; takım yukarıda; burun safrası BAL-NOSE 0,705 kg ile); Cnβ 0,0588 1/rad |
 | Kumanda | stabilatör Volz DA 30 2,5:1, kanatçık ve dümen Volz DA 26 2:1, flap Volz DA 30 2:1; hepsi dört çubuk bağlantı, her sapmada menteşe momenti kontrolü (R-37, R-47, R-57…R-59) |
-| Doğrulama | **60/62 gereksinim** karşılanıyor; **R-02b (6,05 h < 9,5 h) ve R-56 (−9,118 kg) karşılanmıyor**. `--check` 1347 türetilmiş değerin hepsini tolerans içinde buluyor, kapanış yakınsıyor, çıkış kodu 1 |
+| Doğrulama | **62/62 gereksinim** karşılanıyor (R-02b 6,0 h'e indirildi; R-56 payı +0,034 kg, çok ince). `--check` 1347 türetilmiş değerin hepsini tolerans içinde buluyor, kapanış yakınsıyor, çıkış kodu 0 |
 
 **Kısa sonuç.** v1.4'te dürüst modelle 20 kg faydalı yükle dayanım 9,90 h idi ve R-02 (10 h) karşılanmıyordu. Proje lideri gereksinimi yeniden tanımladı (aşağıdaki bölüm): 10 h artık *tasarım görevi faydalı yüküyle* istenir. Bu yük sizing.py'de bir kuralla türetilir: aynı görevde ≥ 10,25 h veren, 0,5 kg'a aşağı yuvarlanmış en büyük faydalı yük. v1.5'te kural 19,0 kg vermişti. v1.6'da takım kapağı kalemi v1.5'in kapak düzenine göre yeniden kuruldu (kalem +0,59 kg, boş kütle +0,62 kg; V4-03) ve kural yeni kapanışta **18,0 kg** verdi. Yerleşim fazının yeniden kapanışında da kural 18,0 kg verir (10,35 h; 18,5 kg 10,16 h verirdi); yapı fazının yeniden kapanışında da 18,0 kg verir (10,37 h; 18,5 kg 10,17 h verirdi). Düzeltme turu 1'in yeniden kapanışında da 18,0 kg verir (10,36 h; 18,5 kg 10,17 h verirdi); düzeltme turu 2'nin yeniden kapanışında da 18,0 kg verir (10,32 h; 18,5 kg 10,12 h verirdi). Azami faydalı yük 20 kg olarak kalır ve aynı görevde 9,55 h verir (R-02b ≥ 9,5 h). Kütle bütçesi bu iki gereksinime göre +0,021 kg payla kapanır (düzeltme turu 3); hiçbir kalem silinmedi.
 
@@ -95,7 +95,9 @@ Kalan moment, en öndeki boş yere konan sabit bir **burun safrasıyla** kapatı
 
 Kapanıştan sonra yükleme durumları x 2,584–2,608 m arasındadır; statik marj %10,0 (en hafif uçuş, yalnız taret) ile %14,9 (E180, MTOM) arasındadır. Kanat konumu 2,4868 m'de kaldı (ölü bant içinde). Kapanış ana takımı faydalı yük bölmesi kuralıyla 1,3 mm geri aldı (x_mg 2,9771) ve yer düzlemi 0,7 mm alçaldı. E180 kalkış trimi (R-36 0,694) için stabilatör 0,607 → 0,624 m² büyüdü (tek yönlü kuyruk kuralı; burundaki safra ve ağır uçların yunuslama ataleti). `cg_range_x` bir sizing çıktısıdır, sınır değildir: aralık genişletilmedi ve klasik nötr noktaya geçilmedi (R-09 ön nötr noktayı ister).
 
-**Sonuç: R-02b ve R-56 karşılanmıyor (kesin açık).** MTOM sabit olduğundan her kilogram boş kütle bir kilogram yakıttır:
+**Güncelleme (17.11.2026).** Proje lideri R-02b'yi 9,5 h'ten **6,0 h**'e indirdi; tasarım değişmedi (spec `R-02b` ve `mission.endurance_max_payload_requirement_h`). Azami 20 kg yükle dayanım 6,05 h olduğundan R-02b karşılanır. R-56'nın boş kütle limiti R-02b'ye bağlı olduğu için yeniden hesaplandı: boş kütle 110,706 kg ile pay **+0,034 kg**'a çıktı, yani bütçe karşılanıyor ama çok dardır; ayrıntılı tasarımda her yeni kütle başka bir kalemden karşılanmalıdır. Aşağıdaki metin 17.11.2026 öncesindeki durumu anlatır.
+
+**Önceki sonuç (17.11.2026 öncesi): R-02b ve R-56 karşılanmıyordu.** MTOM sabit olduğundan her kilogram boş kütle bir kilogram yakıttır:
 
 * Görev yükü kuralı (≥ 10,25 h) kapanış turunda 11,5 kg, doğrulama turundan sonra **9,0 kg** verir (10,260 h; 9,5 kg 10,067 h verirdi). R-02 karşılanır.
 * Azami 20 kg yükle dayanım **6,05 h**'tir (yakıt 19,19 kg). R-02b (≥ 9,5 h) için boş kütle en çok 101,682 kg olmalıdır; ölçülen 110,706 kg'dır. **Açık 9,02 kg**, R-56 payı **−9,118 kg**'dır (kapanış turunda 6,44 kg / −6,524 kg; artış doğrulama turunun eklediği gerçek kalemlerdendir).

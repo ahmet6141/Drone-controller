@@ -180,9 +180,9 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | CT-WEBDT-RS | orta kutu gövdesi FS-RS: yüz kesme birim şekil değiştirmesi (hasar toleransı) | YD-10 | 585,7 | 5200,0 | µε | FoS 1,5 | 4,919 | STANAG UL13.1.2 5200 µε |
 | CT-WEBCRIMP-RS | orta kutu gövdesi FS-RS: kesme kıvrılması | YD-10 | 7,61 | 95,61 | N/mm | FoS 1,5 x kompozit 1,2 | 5,978 | N = G_c d^2 / c |
 | CT-ATT-BR-MS | kutu - FS-MS çerçevesi bağlantısı taraf başına 4 x M6 Ti: çerçeve kenar bandında ezilme (3,2 mm dolu lamine) | YD-11 | 739,9 | 8012,8 | N | FoS 1,5 x kompozit 1,2 | 5,016 | QI ezilme (%2 öteleme) ETW (materials.yaml design_values_for_code) |
-| CT-ATT-SH-MS | kutu - FS-MS cıvataları M6 Ti, tek kesme | YD-11 | 739,9 | 16960 | N | FoS 1,5 x bağlantı 1,15 | 12,288 | Ti-6Al-4V Fsu |
-| CT-ATT-BR-RS | kutu - FS-RS çerçevesi bağlantısı taraf başına 4 x M6 Ti: çerçeve kenar bandında ezilme (3,2 mm dolu lamine) | YD-11 | 335,7 | 8012,8 | N | FoS 1,5 x kompozit 1,2 | 12,259 | QI ezilme (%2 öteleme) ETW (materials.yaml design_values_for_code) |
-| CT-ATT-SH-RS | kutu - FS-RS cıvataları M6 Ti, tek kesme | YD-11 | 335,7 | 16960 | N | FoS 1,5 x bağlantı 1,15 | 28,285 | Ti-6Al-4V Fsu |
+| CT-ATT-SH-MS | kutu - FS-MS cıvataları M6 Ti, tek kesme | YD-11 | 739,9 | 16960 | N | FoS 1,5 x bağlantı 1,15 | 12,287 | Ti-6Al-4V Fsu |
+| CT-ATT-BR-RS | kutu - FS-RS çerçevesi bağlantısı taraf başına 4 x M6 Ti: çerçeve kenar bandında ezilme (3,2 mm dolu lamine) | YD-11 | 335,7 | 8012,8 | N | FoS 1,5 x kompozit 1,2 | 12,260 | QI ezilme (%2 öteleme) ETW (materials.yaml design_values_for_code) |
+| CT-ATT-SH-RS | kutu - FS-RS cıvataları M6 Ti, tek kesme | YD-11 | 335,7 | 16960 | N | FoS 1,5 x bağlantı 1,15 | 28,286 | Ti-6Al-4V Fsu |
 | CT-KINK | y = 0 orta kırık bağlantısı (7075): ana başlık başına veter yönü kırılma kuvveti | YD-12 | 17308 | – | N | - | gereksinim | F = 2 F_cap sin(kink); kırık bağlantısıyla sandviç kapaklara ve FS-MS gövdesine aktarılır (detay tasarım) |
 | CT-KINK-COVER | kutu kapaklarının orta kırığı: kapak başına veter yönü kırılma kuvveti | YD-12 | 2907,0 | – | N | - | gereksinim | F = 2 N_cover w sin(kink), N_cover 37,1 N/mm over w 281 mm; added to CT-KINK-RIB / -BR / -RIBWEB (fix round 3, VS3-03) |
 | CT-KINK-BOLTS | kırık bağlantısı kulağı - orta hat kaburgası: 5 x M6 Ti, tek kesme | YD-13 | 3461,7 | 16960 | N | FoS 1,5 x bağlantı 1,15 | 1,840 | Ti-6Al-4V Fsu - fix round 2, VS2-03 |
@@ -364,7 +364,7 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | No | Eleman / kontrol | Yük durumu | Uygulanan | İzin verilen | Birim | Katsayılar | MS | Referans |
 |---|---|---|---|---|---|---|---|---|
 | TR-PAD | kızak yastıkları 2 x 150 x 25 mm, çerçeve başlığı üzerindeki sabit alt kaplamada (layout cradle_pads): çekirdek ezilmesi (ROHACELL 51 WF), yastığın dolu kenar bandı dışına taştığı yerde | YD-47 | 0,207 | 0,4 | MPa | FoS 1,5 x kompozit 1,2 | 0,071 | ROHACELL 51 WF minimum Fcu |
-| TR-FRAME | kızak üzerinde çerçeve gövdesi kenar basısı (rib_panel yüzleri) | YD-47 | 6,46 | 175,4 | MPa | FoS 1,5 x kompozit 1,2 | 14,077 | OHC (bağlantı delikli kenar bandı) |
+| TR-FRAME | kızak üzerinde çerçeve gövdesi kenar basısı (rib_panel yüzleri) | YD-47 | 6,46 | 175,4 | MPa | FoS 1,5 x kompozit 1,2 | 14,078 | OHC (bağlantı delikli kenar bandı) |
 | TR-PANEL-LE | dış panel hücum kenarı üzerinde yastıklı rafta (2 yastık 0,10 x 0,04 m): hücum kenarı dolu lamine ezilmesi | YD-48 | 0,0291 | 0,4 | MPa | FoS 1,5 x kompozit 1,2 | 6,641 | muhafazakâr: yastık basıncı bitişik sandviçin çekirdek ezilme dayanımıyla karşılaştırıldı |
 
 ### Gövde
@@ -435,7 +435,7 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | YD-08 | kanat tasarım durumu (limit), y 0,40: N_kaplama 42,7 N/mm |
 | YD-09 | kanat tasarım durumu n = 5,48 (üst kaplama) / -3,55 (alt kaplama), limit; LERX veteri boyunca kutu eğriliğinde düzlem kesitler |
 | YD-10 | kanat tasarım durumu, orta kutu kesmesi V 3247 N, y 0,20 (limit) + burulma kesme akışı 3303 N/m |
-| YD-11 | gövde ataleti m 130,1 kg x n 5,48 (limit), gövde AM x 2,571: FS-MS 5111 N, FS-RS 1878 N; gövde yanı kaburgasında kanat burulması 127 N m, taraf başına çerçeve çifti 404 N |
+| YD-11 | gövde ataleti m 130,1 kg x n 5,48 (limit), gövde AM x 2,571: FS-MS 5112 N, FS-RS 1878 N; gövde yanı kaburgasında kanat burulması 127 N m, taraf başına çerçeve çifti 404 N |
 | YD-12 | kanat tasarım durumu (limit) |
 | YD-13 | kanat tasarım durumu (limit): ana başlık başına ok kırılma kuvveti 17308 N (F = 2 F_başlık sin(kırık), y = 0'da F_başlık 62183 N) + kapak kırılma kuvveti 2907 N (düzeltme turu 3, VS3-03) |
 | YD-14 | VA'da tam sapmış stabilatör, CN_maks: panel başına N 484 N (limit; VC hamlesi 263 N), y 0,685; eyleyici durma torku 66,9 N m (DA 30 tepe x en büyük bağlantı oranı 4,18, CS-LUAS.395) |
@@ -464,7 +464,7 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | YD-37 | hamle n 6,61 (en hafif durum) + MCP torku; bağlantı üzerindeki motor grubu 10,10 kg (büyüme payı dahil), AM x 3,871 z 0,183; I_p 0,0227 kg m2; MCP torku x 6 = 154,7 N m; statik itki 492 N |
 | YD-38 | hamle n 6,61 (en hafif durum) + MCP torku (nihai); bağlantı üzerindeki motor grubu 10,10 kg (büyüme payı dahil), AM x 3,871 z 0,183; I_p 0,0227 kg m2; MCP torku x 6 = 154,7 N m; statik itki 492 N |
 | YD-39 | paraşüt açılma şoku 13,1 kN tek kayış ayağında (yalnız nihai, CRASH-004); yönler: statik ayak yönü etrafında 30° koni (birleşme halkası AM'nin 1,5 m üstünde) ve düşeyden 60° geriye (silkme); belirleyici ön ayak, düşeyden 0°: Fx 0, Fy 0, Fz 13100 N |
-| YD-40 | paraşüt açılma şoku 13,1 kN tek kayış ayağında (yalnız nihai, CRASH-004); yönler: statik ayak yönü etrafında 30° koni (birleşme halkası AM'nin 1,5 m üstünde) ve düşeyden 60° geriye (silkme); belirleyici arka ayak, düşeyden 37°: Fx -7912, Fy 0, Fz 10441 N |
+| YD-40 | paraşüt açılma şoku 13,1 kN tek kayış ayağında (yalnız nihai, CRASH-004); yönler: statik ayak yönü etrafında 30° koni (birleşme halkası AM'nin 1,5 m üstünde) ve düşeyden 60° geriye (silkme); belirleyici arka ayak, düşeyden 37°: Fx -7911, Fy 0, Fz 10442 N |
 | YD-41 | paraşüt açılma şoku 13,1 kN tek kayış ayağında (yalnız nihai, CRASH-004); yönler: statik ayak yönü etrafında 30° koni (birleşme halkası AM'nin 1,5 m üstünde) ve düşeyden 60° geriye (silkme); belirleyici ön ayak, düşeyden 60°: Fx 11345, Fy 0, Fz 6550 N |
 | YD-42 | paraşüt açılma kuvveti 13,1 kN (GRS 4/240, VNE 66,7 m/s) dinamik basınçla en hafif uçuş kütlesinin (115,5 kg) 1 g temiz tutunma hızına (21,0 m/s) ölçeklendi |
 | YD-43 | yakıt bölmesi tasarım basıncı 21,0 kPa nihai (1,5 x test pressure 14 kPa (CS-LUAS.965(b))) |
@@ -479,7 +479,7 @@ Yük durumu kodları (YD-xx) tablonun altında açıklanmıştır. Birimler: N, 
 | YD-52 | CS-LUAS Ek H: n_j 5,39; ana bacak başına P_v 3965 N (limit), bütün ana takım durumları; kiriş ucu tepkisi 3629 N (düşey bacak yükü payı % 54 + sürükleme çifti M_y / L) |
 | YD-53 | CS-LUAS Ek H: n_j 5,39; ana bacak başına P_v 3965 N (limit), bütün ana takım durumları; kiriş ucu tepkisi 3791 N (düşey bacak yükü payı % 46 + sürükleme çifti M_y / L) |
 | YD-54 | CS-LUAS Ek H: n_j 5,39; ana bacak başına P_v 3965 N (limit), bütün ana takım durumları; yan yük 735 N |
-| YD-55 | kanat tasarım durumu: FS-MS üzerinde gövde ataleti tepkisi 5111 N (limit, CT-ATT), taraf başına yarısı + kanat burulma çifti 404 N, gövde yanı kaburgasında 74 mm kutu derinliği |
+| YD-55 | kanat tasarım durumu: FS-MS üzerinde gövde ataleti tepkisi 5112 N (limit, CT-ATT), taraf başına yarısı + kanat burulma çifti 404 N, gövde yanı kaburgasında 74 mm kutu derinliği |
 | YD-56 | kanat tasarım durumu: FS-RS üzerinde gövde ataleti tepkisi 1878 N (limit, CT-ATT), taraf başına yarısı + kanat burulma çifti 404 N, gövde yanı kaburgasında 76 mm kutu derinliği |
 | YD-57 | alt motor ayağı (y -0,11, z 0,12): en büyük düzlem dışı tepki 2134 N (nihai, 'hamle n 6,61 (en hafif durum) + MCP torku', E-FOOT), destek levhası 56 x 32 mm (c 24 mm), bant r 82 mm, kenar desteği 123 mm |
 | YD-58 | üst ayak: en büyük x tepkisi 1717 N (nihai, 'hamle n 6,61 (en hafif durum) + MCP torku') |
